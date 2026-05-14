@@ -11,7 +11,7 @@ use thiserror::Error;
 
 use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
 
-use crate::orbits::{CartesianOrbit, TrajectorError, Trajectory};
+use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
 use crate::propagators::{Propagator, stumpff};
 use lox_frames::{
     DynFrame, NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial,
@@ -25,7 +25,7 @@ pub enum ValladoError {
     NotConverged,
     /// Error constructing the output trajectory.
     #[error(transparent)]
-    TrajectoryError(#[from] TrajectorError),
+    TrajectoryError(#[from] TrajectoryError),
     /// The origin body lacks a required physical property.
     #[error(transparent)]
     UndefinedOriginProperty(#[from] UndefinedOriginPropertyError),

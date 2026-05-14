@@ -12,7 +12,7 @@
 use std::collections::BTreeMap;
 
 use lox_core::coords::Cartesian;
-use lox_orbits::orbits::{DynCartesianOrbit, DynTrajectory, TrajectorError};
+use lox_orbits::orbits::{DynCartesianOrbit, DynTrajectory, TrajectoryError};
 use lox_time::time::DynTime;
 use nalgebra::Matrix6;
 
@@ -89,17 +89,10 @@ pub enum OemTrajectoryError {
     /// representable as `DynOrigin`/`DynFrame`.
     #[error(transparent)]
     CustomBodyOrFrame(#[from] CustomBodyOrFrameError),
-    /// The segment has fewer than 2 states; a `DynTrajectory` requires
-    /// at least 2 for interpolation.
-    #[error("OEM segment has {0} state vector(s); at least 2 are required for a trajectory")]
-    InsufficientStates(usize),
-}
-
-impl From<TrajectorError> for OemTrajectoryError {
-    fn from(err: TrajectorError) -> Self {
-        let TrajectorError::InsufficientStates(n) = err;
-        OemTrajectoryError::InsufficientStates(n)
-    }
+    /// Underlying trajectory construction failed (e.g. insufficient
+    /// states for interpolation).
+    #[error(transparent)]
+    Trajectory(#[from] TrajectoryError),
 }
 
 /// The Orbit Ephemeris Message (OEM, CCSDS 502.0-B-3 §5).
@@ -302,20 +295,18 @@ mod tests {
 
     #[test]
     fn oem_segment_try_into_trajectory_fails_for_insufficient_states() {
-        // NOTE: lox-orbits' `Trajectory::try_new` only reports
-        // `InsufficientStates(0)` (the upstream `peek` check never advances
-        // the iterator, so single-state inputs slip through to panic in
-        // `Self::new`). Test with an empty `states` vector so the error
-        // path is exercised against the upstream behaviour.
         let seg = OemSegment {
             metadata: sample_metadata(),
-            states: Vec::new(),
+            states: vec![(sample_epoch(), sample_state(0.0))],
             covariance_history: Vec::new(),
         };
         let err = seg
             .try_into_trajectory()
-            .expect_err("empty-state should fail");
-        assert!(matches!(err, OemTrajectoryError::InsufficientStates(0)));
+            .expect_err("single-state should fail");
+        assert!(matches!(
+            err,
+            OemTrajectoryError::Trajectory(TrajectoryError::InsufficientStates(1))
+        ));
     }
 
     fn sample_header() -> OdmHeader {

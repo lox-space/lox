@@ -23,7 +23,7 @@ use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::{DynTimeScale, TimeScale};
 use thiserror::Error;
 
-use crate::orbits::{CartesianOrbit, TrajectorError, Trajectory};
+use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
 use crate::propagators::Propagator;
 
 /// Number of maximum-size integration steps per characteristic orbital timescale (r/v).
@@ -44,7 +44,7 @@ pub enum NumericalError {
     InvalidTimeSteps,
     /// Error constructing the output trajectory.
     #[error(transparent)]
-    Trajectory(#[from] TrajectorError),
+    Trajectory(#[from] TrajectoryError),
 }
 
 /// Numerical orbit propagator with J2 zonal harmonic perturbation.

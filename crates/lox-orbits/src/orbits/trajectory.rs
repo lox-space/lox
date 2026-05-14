@@ -22,7 +22,7 @@ use lox_time::intervals::TimeInterval;
 
 use crate::propagators::Propagator;
 
-use super::{CartesianOrbit, Orbit, TrajectorError};
+use super::{CartesianOrbit, Orbit};
 
 /// A time-ordered sequence of Cartesian orbital states with Hermite cubic interpolation.
 ///
@@ -81,12 +81,11 @@ where
     /// Constructs a trajectory, returning an error if fewer than 2 states are provided.
     pub fn try_new(
         states: impl IntoIterator<Item = CartesianOrbit<T, O, R>>,
-    ) -> Result<Self, TrajectorError> {
-        let mut states = states.into_iter().peekable();
-        for i in 0..2 {
-            states.peek().ok_or(TrajectorError::InsufficientStates(i))?;
-        }
-        Ok(Self::new(states))
+    ) -> Result<Self, TrajectoryError> {
+        let mut iter = states.into_iter();
+        let first = iter.next().ok_or(TrajectoryError::InsufficientStates(0))?;
+        let second = iter.next().ok_or(TrajectoryError::InsufficientStates(1))?;
+        Ok(Self::new([first, second].into_iter().chain(iter)))
     }
 
     /// Interpolates the trajectory at the given absolute time.
@@ -313,9 +312,9 @@ where
     R: ReferenceFrame + Copy,
 {
     type Frame = R;
-    type Error = TrajectorError;
+    type Error = TrajectoryError;
 
-    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, TrajectorError> {
+    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, TrajectoryError> {
         Ok(self.at(time))
     }
 
@@ -354,7 +353,7 @@ impl From<csv::Error> for TrajectoryError {
 pub enum TrajectoryTransformationError {
     /// The underlying trajectory construction failed.
     #[error(transparent)]
-    TrajectoryError(#[from] TrajectorError),
+    TrajectoryError(#[from] TrajectoryError),
     /// A state transformation (e.g. origin change) failed.
     #[error("state transformation failed: {0}")]
     StateTransformationError(String),

@@ -28,7 +28,7 @@ use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::{DynTimeScale, TimeScale};
 use thiserror::Error;
 
-use crate::orbits::{CartesianOrbit, KeplerianOrbit, TrajectorError, Trajectory};
+use crate::orbits::{CartesianOrbit, KeplerianOrbit, Trajectory, TrajectoryError};
 use crate::propagators::Propagator;
 
 use super::kozai::{self, BodyConstants, SecularRates};
@@ -49,7 +49,7 @@ pub enum J4Error {
     Anomaly(#[from] AnomalyError),
     /// Error constructing the output trajectory.
     #[error(transparent)]
-    Trajectory(#[from] TrajectorError),
+    Trajectory(#[from] TrajectoryError),
 }
 
 impl From<std::convert::Infallible> for J4Error {
