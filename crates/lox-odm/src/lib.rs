@@ -10,3 +10,4 @@
 pub mod json;
 pub mod kvn;
 pub mod types;
+pub mod xml;

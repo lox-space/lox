@@ -24,6 +24,7 @@ lox-orbits.workspace = true
 lox-time.workspace = true
 nalgebra.workspace = true
 nom.workspace = true
+quick-xml.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 thiserror.workspace = true
