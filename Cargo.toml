@@ -31,6 +31,7 @@ lox-frames = { path = "crates/lox-frames", version = "0.1.0-alpha.17" }
 lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.21" }
 lox-itur = { path = "crates/lox-itur", version = "0.1.0-alpha.2" }
 lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.20" }
+lox-odm = { path = "crates/lox-odm", version = "0.1.0-alpha.1" }
 lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.36" }
 lox-test-utils = { path = "crates/lox-test-utils", version = "0.1.0-alpha.6" }
 lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.23" }
