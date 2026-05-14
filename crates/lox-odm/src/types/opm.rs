@@ -17,10 +17,9 @@ use lox_core::time::deltas::TimeDelta;
 use lox_core::units::{Mass, Velocity};
 use lox_orbits::orbits::DynCartesianOrbit;
 use lox_time::time::DynTime;
-use nalgebra::Matrix6;
 
 use crate::types::common::{
-    CustomBodyOrFrameError, OdmCenter, OdmFrame, OdmHeader, SpacecraftParameters,
+    Covariance, CustomBodyOrFrameError, OdmCenter, OdmFrame, OdmHeader, SpacecraftParameters,
 };
 
 /// Per-message metadata for the OPM (CCSDS 502.0-B-3 §3.3).
@@ -37,22 +36,6 @@ pub struct OpmMetadata {
     /// `REF_FRAME_EPOCH` — optional epoch at which the (rotating) frame
     /// is realised. Required only for rotating frames per §3.3.1.5.
     pub frame_epoch: Option<DynTime>,
-}
-
-/// Optional 6×6 Cartesian-state covariance carried by an OPM (CCSDS
-/// 502.0-B-3 §3.5).
-///
-/// The matrix layout is the standard (X, Y, Z, X_DOT, Y_DOT, Z_DOT)
-/// covariance; the 21 unique upper-triangle values from the wire
-/// (`CX_X`, `CY_X`, `CY_Y`, …) populate a full symmetric `Matrix6<f64>`
-/// when read.
-#[derive(Clone, Debug, PartialEq)]
-pub struct OpmCovariance {
-    /// `COV_REF_FRAME` — optional frame override; when `None` the
-    /// covariance is in the same frame as the state vector.
-    pub frame: Option<OdmFrame>,
-    /// The 6×6 covariance matrix.
-    pub matrix: Matrix6<f64>,
 }
 
 /// A single orbital maneuver carried by an OPM (CCSDS 502.0-B-3 §3.6).
@@ -97,7 +80,7 @@ pub struct Opm {
     /// Optional spacecraft physical properties.
     pub spacecraft: Option<SpacecraftParameters>,
     /// Optional 6×6 state covariance.
-    pub covariance: Option<OpmCovariance>,
+    pub covariance: Option<Covariance>,
     /// Zero or more maneuvers.
     pub maneuvers: Vec<Maneuver>,
     /// User-defined parameters (preserved verbatim for round-trip).
@@ -129,6 +112,7 @@ mod tests {
     use lox_bodies::DynOrigin;
     use lox_core::units::Distance;
     use lox_frames::DynFrame;
+    use nalgebra::Matrix6;
 
     #[test]
     fn maneuver_impulsive() {
@@ -165,7 +149,7 @@ mod tests {
 
     #[test]
     fn opm_covariance_construction() {
-        let cov = OpmCovariance {
+        let cov = Covariance {
             frame: None,
             matrix: Matrix6::identity(),
         };
@@ -176,7 +160,7 @@ mod tests {
 
     #[test]
     fn opm_covariance_with_frame_override() {
-        let cov = OpmCovariance {
+        let cov = Covariance {
             frame: Some(OdmFrame::Known(DynFrame::Itrf)),
             matrix: Matrix6::zeros(),
         };

@@ -19,6 +19,7 @@ use lox_bodies::{DynOrigin, Origin};
 use lox_core::units::{Area, Mass};
 use lox_frames::{DynFrame, traits::ReferenceFrame};
 use lox_time::time::DynTime;
+use nalgebra::Matrix6;
 
 /// Discriminator for the five ODM message variants.
 ///
@@ -213,6 +214,25 @@ pub struct SpacecraftParameters {
     pub drag_area: Option<Area>,
     /// `DRAG_COEFF` — dimensionless drag coefficient.
     pub drag_coeff: Option<f64>,
+}
+
+/// Single-snapshot 6×6 Cartesian-state covariance carried by OPM
+/// (CCSDS 502.0-B-3 §3.5) and OMM (§4.6).
+///
+/// The matrix layout is the standard (X, Y, Z, X_DOT, Y_DOT, Z_DOT)
+/// covariance; the 21 unique upper-triangle values from the wire
+/// (`CX_X`, `CY_X`, `CY_Y`, …) populate a full symmetric `Matrix6<f64>`
+/// when read.
+///
+/// OEM has a structurally different covariance (timestamped, in a list);
+/// see [`crate::types::oem::OemCovariance`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct Covariance {
+    /// `COV_REF_FRAME` — optional frame override; when `None` the
+    /// covariance is in the same frame as the message's state vector.
+    pub frame: Option<OdmFrame>,
+    /// The 6×6 covariance matrix.
+    pub matrix: Matrix6<f64>,
 }
 
 /// Returned by the `try_into_*` upgrade methods on ODM message types when
