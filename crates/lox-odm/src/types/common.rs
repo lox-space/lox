@@ -16,6 +16,7 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use lox_bodies::{DynOrigin, Origin};
+use lox_core::units::{Area, Mass};
 use lox_frames::{DynFrame, traits::ReferenceFrame};
 use lox_time::time::DynTime;
 
@@ -195,6 +196,41 @@ pub struct OdmHeader {
     pub message_id: Option<String>,
 }
 
+/// Optional spacecraft physical-properties block carried by OPM and OMM
+/// messages.
+///
+/// All fields are optional per CCSDS 502.0-B-3 §3.4 (OPM) and §4.4 (OMM).
+/// `SOLAR_RAD_COEFF` and `DRAG_COEFF` are dimensionless and stay as `f64`.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct SpacecraftParameters {
+    /// `MASS` — spacecraft mass.
+    pub mass: Option<Mass>,
+    /// `SOLAR_RAD_AREA` — area exposed to solar radiation pressure.
+    pub solar_rad_area: Option<Area>,
+    /// `SOLAR_RAD_COEFF` — dimensionless radiation-pressure coefficient.
+    pub solar_rad_coeff: Option<f64>,
+    /// `DRAG_AREA` — area exposed to atmospheric drag.
+    pub drag_area: Option<Area>,
+    /// `DRAG_COEFF` — dimensionless drag coefficient.
+    pub drag_coeff: Option<f64>,
+}
+
+/// Returned by the `try_into_*` upgrade methods on ODM message types when
+/// the message's [`OdmCenter`] or [`OdmFrame`] is `Custom(_)` and therefore
+/// cannot be converted to the typed `DynOrigin` / `DynFrame` required by
+/// `lox_orbits::Orbit` / `Trajectory`.
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+pub enum CustomBodyOrFrameError {
+    /// The message's center body is a custom name not recognised by
+    /// `DynOrigin`.
+    #[error("custom body `{0}` cannot be upgraded to DynOrigin")]
+    Body(String),
+    /// The message's reference frame is a custom name not recognised by
+    /// `DynFrame`.
+    #[error("custom frame `{0}` cannot be upgraded to DynFrame")]
+    Frame(String),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -371,5 +407,36 @@ mod tests {
         assert!(h.comments.is_empty());
         assert!(h.classification.is_none());
         assert!(h.message_id.is_none());
+    }
+
+    #[test]
+    fn custom_body_or_frame_error_displays_name() {
+        let e = CustomBodyOrFrameError::Body("APOPHIS".to_string());
+        assert!(format!("{e}").contains("APOPHIS"));
+        let e = CustomBodyOrFrameError::Frame("OPERATOR_LVLH".to_string());
+        assert!(format!("{e}").contains("OPERATOR_LVLH"));
+    }
+
+    #[test]
+    fn spacecraft_parameters_construction() {
+        let sp = SpacecraftParameters {
+            mass: Some(Mass::kilograms(120.5)),
+            solar_rad_area: Some(Area::square_meters(2.5)),
+            solar_rad_coeff: Some(1.2),
+            drag_area: Some(Area::square_meters(2.0)),
+            drag_coeff: Some(2.2),
+        };
+        assert_eq!(sp.mass.map(|m| m.to_kilograms()), Some(120.5));
+        assert_eq!(sp.solar_rad_coeff, Some(1.2));
+    }
+
+    #[test]
+    fn spacecraft_parameters_all_none() {
+        let sp = SpacecraftParameters::default();
+        assert!(sp.mass.is_none());
+        assert!(sp.solar_rad_area.is_none());
+        assert!(sp.solar_rad_coeff.is_none());
+        assert!(sp.drag_area.is_none());
+        assert!(sp.drag_coeff.is_none());
     }
 }
