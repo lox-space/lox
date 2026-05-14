@@ -10,8 +10,9 @@
 //! - [`grammar`]: per-line nom parsers and [`LineClass`] classification.
 //! - [`writer`]: [`Display`] implementation that emits canonical
 //!   KVN-formatted text.
-//! - (planned) `project`: AST ↔ typed-message conversions. Lands per
-//!   message in Phase 2b-opm/oem/omm/ci.
+//! - [`projection`]: AST ↔ typed-message conversions, one sub-module
+//!   per message kind ([`projection::opm`], plus OEM/OMM/CI as their
+//!   phases land).
 //!
 //! [`Display`]: std::fmt::Display
 //! [`LineClass`]: grammar::LineClass
@@ -20,8 +21,10 @@ pub mod ast;
 pub mod error;
 pub mod grammar;
 pub mod parser;
+pub mod projection;
 pub mod writer;
 
 pub use ast::{KvnDocument, KvnEntry, KvnField, KvnRow, KvnSection};
 pub use error::{KvnError, KvnErrorKind, Span};
 pub use parser::parse;
+pub use projection::opm::{read_opm, write_opm};

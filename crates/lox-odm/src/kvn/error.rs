@@ -6,7 +6,7 @@
 
 /// A position in the input — 1-based line number plus 0-based column
 /// range. `end_col` is exclusive (matches Rust slice semantics).
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Span {
     /// 1-based line number.
     pub line: usize,
@@ -39,9 +39,10 @@ pub struct KvnError {
 
 /// Categorisation of KVN parser failures.
 ///
-/// Projection-layer errors (invalid date, missing required field, etc.)
-/// live in the per-message projection modules (Phase 2b-opm/oem/omm/ci);
-/// `KvnErrorKind` covers only the grammar-level concerns of the AST parser.
+/// Covers both grammar-level concerns of the AST parser and the
+/// projection layer (Phase 2b-{opm,oem,omm,ci}) that maps a parsed
+/// [`KvnDocument`](crate::kvn::ast::KvnDocument) into the typed
+/// message structures.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum KvnErrorKind {
     /// The input is empty.
@@ -67,4 +68,33 @@ pub enum KvnErrorKind {
     /// EOF reached while a bracketed section was still open.
     #[error("unterminated section `{0}_START` — missing `{0}_STOP`")]
     UnterminatedSection(String),
+    /// A keyword required by the message type's schema was not present
+    /// in the parsed AST.
+    #[error("required field `{0}` is missing")]
+    MissingRequiredField(String),
+    /// A field's raw value text couldn't be parsed into the expected type.
+    #[error("invalid value for `{keyword}`: {reason}")]
+    InvalidValue {
+        /// The wire keyword whose value failed to parse.
+        keyword: String,
+        /// Underlying parse error message.
+        reason: String,
+    },
+    /// A keyword appeared that is not valid in this section / message kind.
+    #[error("unexpected keyword `{0}`")]
+    UnexpectedKeyword(String),
+    /// A scalar keyword that's only allowed once appeared more than once.
+    #[error("field `{0}` appeared more than once")]
+    DuplicateField(String),
+    /// An epoch field's value couldn't be parsed against the message's
+    /// `TIME_SYSTEM`.
+    #[error("invalid epoch `{value}` under TIME_SYSTEM `{time_system}`: {reason}")]
+    InvalidEpoch {
+        /// The raw value text on the wire.
+        value: String,
+        /// The TIME_SYSTEM keyword the value was parsed under.
+        time_system: String,
+        /// Underlying parse error message.
+        reason: String,
+    },
 }

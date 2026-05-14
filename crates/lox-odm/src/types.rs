@@ -21,4 +21,4 @@ pub use common::{
 };
 pub use oem::{Oem, OemCovariance, OemMetadata, OemSegment, OemTrajectoryError};
 pub use omm::{Omm, OmmMetadata, TleParameters};
-pub use opm::{Maneuver, Opm, OpmMetadata};
+pub use opm::{Maneuver, Opm, OpmKeplerian, OpmMetadata};
