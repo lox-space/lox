@@ -71,6 +71,16 @@ pub trait OffsetProvider {
         -D_TAI_TT
     }
 
+    /// Returns the constant TAI→GPS offset.
+    fn tai_to_gps(&self) -> TimeDelta {
+        D_TAI_GPS
+    }
+
+    /// Returns the constant GPS→TAI offset.
+    fn gps_to_tai(&self) -> TimeDelta {
+        -D_TAI_GPS
+    }
+
     /// Returns the TT→TCG offset at the given delta.
     fn tt_to_tcg(&self, delta: TimeDelta) -> TimeDelta {
         tt_to_tcg(delta)
@@ -131,6 +141,15 @@ impl OffsetProvider for DefaultOffsetProvider {
 
 /// The constant offset between TAI and TT.
 pub const D_TAI_TT: TimeDelta = TimeDelta::builder().seconds(32).milliseconds(184).build();
+
+// TAI <-> GPS
+
+/// Constant offset from TAI to GPS time: `GPS = TAI − 19s`.
+///
+/// This is the value added when converting TAI to GPS (negative 19
+/// seconds, since GPS-time labels are 19 seconds less than the
+/// corresponding TAI-time labels).
+pub const D_TAI_GPS: TimeDelta = TimeDelta::builder().seconds(-19).build();
 
 // TT <-> TCG
 

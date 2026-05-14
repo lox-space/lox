@@ -8,7 +8,7 @@ use lox_core::time::deltas::TimeDelta;
 
 use crate::{
     offsets::{Offset, OffsetProvider, TryOffset},
-    time_scales::{DynTimeScale, Tai, Tcb, Tcg, Tdb, Tt, Ut1},
+    time_scales::{DynTimeScale, Gps, Tai, Tcb, Tcg, Tdb, Tt, Ut1},
 };
 
 // No-ops
@@ -35,7 +35,7 @@ macro_rules! impl_noop {
     };
 }
 
-impl_noop!(Tai, Tcb, Tcg, Tdb, Tt, Ut1);
+impl_noop!(Gps, Tai, Tcb, Tcg, Tdb, Tt, Ut1);
 
 // TAI <-> TT
 
@@ -68,6 +68,40 @@ where
         _delta: TimeDelta,
     ) -> Result<TimeDelta, Self::Error> {
         Ok(self.tt_to_tai())
+    }
+}
+
+// TAI <-> GPS
+
+impl<T> TryOffset<Tai, Gps> for T
+where
+    T: OffsetProvider,
+{
+    type Error = Infallible;
+
+    fn try_offset(
+        &self,
+        _origin: Tai,
+        _target: Gps,
+        _delta: TimeDelta,
+    ) -> Result<TimeDelta, Self::Error> {
+        Ok(self.tai_to_gps())
+    }
+}
+
+impl<T> TryOffset<Gps, Tai> for T
+where
+    T: OffsetProvider,
+{
+    type Error = Infallible;
+
+    fn try_offset(
+        &self,
+        _origin: Gps,
+        _target: Tai,
+        _delta: TimeDelta,
+    ) -> Result<TimeDelta, Self::Error> {
+        Ok(self.gps_to_tai())
     }
 }
 
@@ -253,7 +287,11 @@ impl_two_step!(
     (Tai, Tt, Tcg),
     (Tai, Tdb, Tcb),
     (Tt, Tdb, Tcb),
-    (Tcb, Tdb, Tcg)
+    (Tcb, Tdb, Tcg),
+    (Gps, Tai, Tt),
+    (Gps, Tai, Tcg),
+    (Gps, Tai, Tdb),
+    (Gps, Tai, Tcb)
 );
 
 macro_rules! impl_two_step_ut1 {
@@ -298,7 +336,7 @@ macro_rules! impl_two_step_ut1 {
     };
 }
 
-impl_two_step_ut1!(Tcb, Tcg, Tdb, Tt);
+impl_two_step_ut1!(Gps, Tcb, Tcg, Tdb, Tt);
 
 // Dynamic
 
@@ -318,37 +356,55 @@ where
             return Ok(TimeDelta::default());
         }
         match (origin, target) {
+            (DynTimeScale::Gps, DynTimeScale::Tai) => Ok(self.offset(Gps, Tai, delta)),
+            (DynTimeScale::Gps, DynTimeScale::Tcb) => Ok(self.offset(Gps, Tcb, delta)),
+            (DynTimeScale::Gps, DynTimeScale::Tcg) => Ok(self.offset(Gps, Tcg, delta)),
+            (DynTimeScale::Gps, DynTimeScale::Tdb) => Ok(self.offset(Gps, Tdb, delta)),
+            (DynTimeScale::Gps, DynTimeScale::Tt) => Ok(self.offset(Gps, Tt, delta)),
+            (DynTimeScale::Gps, DynTimeScale::Ut1) => self.try_offset(Gps, Ut1, delta),
+            (DynTimeScale::Tai, DynTimeScale::Gps) => Ok(self.offset(Tai, Gps, delta)),
             (DynTimeScale::Tai, DynTimeScale::Tcb) => Ok(self.offset(Tai, Tcb, delta)),
             (DynTimeScale::Tai, DynTimeScale::Tcg) => Ok(self.offset(Tai, Tcg, delta)),
             (DynTimeScale::Tai, DynTimeScale::Tdb) => Ok(self.offset(Tai, Tdb, delta)),
             (DynTimeScale::Tai, DynTimeScale::Tt) => Ok(self.offset(Tai, Tt, delta)),
             (DynTimeScale::Tai, DynTimeScale::Ut1) => self.try_offset(Tai, Ut1, delta),
+            (DynTimeScale::Tcb, DynTimeScale::Gps) => Ok(self.offset(Tcb, Gps, delta)),
             (DynTimeScale::Tcb, DynTimeScale::Tai) => Ok(self.offset(Tcb, Tai, delta)),
             (DynTimeScale::Tcb, DynTimeScale::Tcg) => Ok(self.offset(Tcb, Tcg, delta)),
             (DynTimeScale::Tcb, DynTimeScale::Tdb) => Ok(self.offset(Tcb, Tdb, delta)),
             (DynTimeScale::Tcb, DynTimeScale::Tt) => Ok(self.offset(Tcb, Tt, delta)),
             (DynTimeScale::Tcb, DynTimeScale::Ut1) => self.try_offset(Tcb, Ut1, delta),
+            (DynTimeScale::Tcg, DynTimeScale::Gps) => Ok(self.offset(Tcg, Gps, delta)),
             (DynTimeScale::Tcg, DynTimeScale::Tai) => Ok(self.offset(Tcg, Tai, delta)),
             (DynTimeScale::Tcg, DynTimeScale::Tcb) => Ok(self.offset(Tcg, Tcb, delta)),
             (DynTimeScale::Tcg, DynTimeScale::Tdb) => Ok(self.offset(Tcg, Tdb, delta)),
             (DynTimeScale::Tcg, DynTimeScale::Tt) => Ok(self.offset(Tcg, Tt, delta)),
             (DynTimeScale::Tcg, DynTimeScale::Ut1) => self.try_offset(Tcg, Ut1, delta),
+            (DynTimeScale::Tdb, DynTimeScale::Gps) => Ok(self.offset(Tdb, Gps, delta)),
             (DynTimeScale::Tdb, DynTimeScale::Tai) => Ok(self.offset(Tdb, Tai, delta)),
             (DynTimeScale::Tdb, DynTimeScale::Tcb) => Ok(self.offset(Tdb, Tcb, delta)),
             (DynTimeScale::Tdb, DynTimeScale::Tcg) => Ok(self.offset(Tdb, Tcg, delta)),
             (DynTimeScale::Tdb, DynTimeScale::Tt) => Ok(self.offset(Tdb, Tt, delta)),
             (DynTimeScale::Tdb, DynTimeScale::Ut1) => self.try_offset(Tdb, Ut1, delta),
+            (DynTimeScale::Tt, DynTimeScale::Gps) => Ok(self.offset(Tt, Gps, delta)),
             (DynTimeScale::Tt, DynTimeScale::Tai) => Ok(self.offset(Tt, Tai, delta)),
             (DynTimeScale::Tt, DynTimeScale::Tcb) => Ok(self.offset(Tt, Tcb, delta)),
             (DynTimeScale::Tt, DynTimeScale::Tcg) => Ok(self.offset(Tt, Tcg, delta)),
             (DynTimeScale::Tt, DynTimeScale::Tdb) => Ok(self.offset(Tt, Tdb, delta)),
             (DynTimeScale::Tt, DynTimeScale::Ut1) => self.try_offset(Tt, Ut1, delta),
+            (DynTimeScale::Ut1, DynTimeScale::Gps) => self.try_offset(Ut1, Gps, delta),
             (DynTimeScale::Ut1, DynTimeScale::Tai) => self.try_offset(Ut1, Tai, delta),
             (DynTimeScale::Ut1, DynTimeScale::Tcb) => self.try_offset(Ut1, Tcb, delta),
             (DynTimeScale::Ut1, DynTimeScale::Tcg) => self.try_offset(Ut1, Tcg, delta),
             (DynTimeScale::Ut1, DynTimeScale::Tdb) => self.try_offset(Ut1, Tdb, delta),
             (DynTimeScale::Ut1, DynTimeScale::Tt) => self.try_offset(Ut1, Tt, delta),
-            (_, _) => Ok(TimeDelta::default()),
+            (DynTimeScale::Gps, DynTimeScale::Gps)
+            | (DynTimeScale::Tai, DynTimeScale::Tai)
+            | (DynTimeScale::Tcb, DynTimeScale::Tcb)
+            | (DynTimeScale::Tcg, DynTimeScale::Tcg)
+            | (DynTimeScale::Tdb, DynTimeScale::Tdb)
+            | (DynTimeScale::Tt, DynTimeScale::Tt)
+            | (DynTimeScale::Ut1, DynTimeScale::Ut1) => Ok(TimeDelta::default()),
         }
     }
 }
@@ -393,4 +449,32 @@ macro_rules! impl_dyn {
     };
 }
 
-impl_dyn!(Tai, Tcb, Tcg, Tdb, Tt, Ut1);
+impl_dyn!(Gps, Tai, Tcb, Tcg, Tdb, Tt, Ut1);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::offsets::DefaultOffsetProvider;
+
+    #[test]
+    fn tai_to_gps_is_negative_19_seconds() {
+        let p = DefaultOffsetProvider;
+        let delta = p.offset(Tai, Gps, TimeDelta::default());
+        assert_eq!(delta, TimeDelta::builder().seconds(-19).build());
+    }
+
+    #[test]
+    fn gps_to_tai_is_positive_19_seconds() {
+        let p = DefaultOffsetProvider;
+        let delta = p.offset(Gps, Tai, TimeDelta::default());
+        assert_eq!(delta, TimeDelta::builder().seconds(19).build());
+    }
+
+    #[test]
+    fn tai_gps_round_trip_is_zero() {
+        let p = DefaultOffsetProvider;
+        let to_gps = p.offset(Tai, Gps, TimeDelta::default());
+        let back_to_tai = p.offset(Gps, Tai, to_gps);
+        assert_eq!(to_gps + back_to_tai, TimeDelta::default());
+    }
+}
