@@ -7,5 +7,6 @@
 //! See `docs/superpowers/specs/2026-05-14-lox-odm-rewrite-design.md`
 //! for the design driving this crate.
 
+pub mod json;
 pub mod kvn;
 pub mod types;
