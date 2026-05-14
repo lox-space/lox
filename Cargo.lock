@@ -1355,9 +1355,13 @@ name = "lox-odm"
 version = "0.1.0-alpha.1"
 dependencies = [
  "lox-bodies",
+ "lox-core",
  "lox-frames",
+ "lox-orbits",
  "lox-time",
+ "nalgebra",
  "rstest",
+ "thiserror",
 ]
 
 [[package]]
