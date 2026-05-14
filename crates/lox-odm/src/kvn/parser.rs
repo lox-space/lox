@@ -149,7 +149,7 @@ pub fn parse(input: &str) -> Result<KvnDocument, KvnError> {
                     unit: unit.map(|u| u.to_string()),
                 }));
             }
-            LineClass::EphemerisRow(values) => {
+            LineClass::PositionalRow(values) => {
                 current.entries.push(KvnEntry::Row(KvnRow {
                     values: values.iter().map(|v| v.to_string()).collect(),
                 }));

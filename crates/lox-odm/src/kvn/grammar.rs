@@ -39,10 +39,11 @@ pub enum LineClass<'a> {
         value: &'a str,
         unit: Option<&'a str>,
     },
-    /// A positional row — whitespace-separated tokens whose first token
-    /// looks like a CCSDS epoch (`YYYY-MM-DDThh:mm:ss[.fff]` or
-    /// `YYYY-DDDThh:mm:ss[.fff]`). Used for OEM/OCM ephemeris bodies.
-    EphemerisRow(Vec<&'a str>),
+    /// A positional row of whitespace-separated tokens. Used for OEM
+    /// ephemeris bodies (epoch + 6 state components) and OEM
+    /// covariance blocks (1–6 lower-triangular f64 values per row).
+    /// Token-content validation happens in the projection layer.
+    PositionalRow(Vec<&'a str>),
 }
 
 /// Classify a single line (already stripped of trailing newline).
@@ -55,7 +56,7 @@ pub fn classify_line(line: &str) -> Result<Option<LineClass<'_>>, String> {
     }
 
     // Order matters: version header before generic field; comment before
-    // section markers; section markers before generic ephemeris row.
+    // section markers; section markers before generic positional row.
     if let Ok((_, vh)) = version_header(trimmed) {
         return Ok(Some(vh));
     }
@@ -71,8 +72,9 @@ pub fn classify_line(line: &str) -> Result<Option<LineClass<'_>>, String> {
     if let Ok((_, f)) = field_line(trimmed) {
         return Ok(Some(f));
     }
-    // Fallback: treat as positional row (OEM/OCM ephemeris).
-    if let Ok((_, r)) = ephemeris_row(trimmed) {
+    // Fallback: treat as positional row (OEM/OCM ephemeris + covariance
+    // bodies). Content validation lives in the projection layer.
+    if let Ok((_, r)) = positional_row(trimmed) {
         return Ok(Some(r));
     }
     Err(format!("could not classify line: {trimmed:?}"))
@@ -152,34 +154,16 @@ fn field_line(input: &str) -> IResult<&str, LineClass<'_>> {
     Ok((input, LineClass::Field { key, value, unit }))
 }
 
-fn ephemeris_row(input: &str) -> IResult<&str, LineClass<'_>> {
+fn positional_row(input: &str) -> IResult<&str, LineClass<'_>> {
     let (input, _) = multispace0(input)?;
-    // The first token must look like a CCSDS epoch — 4 digits then `-`.
-    // This catches both the calendar form `YYYY-MM-DDThh:mm:ss[.fff]` and
-    // the day-of-year form `YYYY-DDDThh:mm:ss[.fff]` while rejecting bare
-    // operators, words, or other non-timestamp text.
-    let (input, first) = verify(take_while1(|c: char| !c.is_whitespace()), |s: &str| {
-        looks_like_epoch(s)
-    })
-    .parse(input)?;
+    let (input, first) = take_while1(|c: char| !c.is_whitespace()).parse(input)?;
     let (input, mut rest) =
         many0(preceded(space1, take_while1(|c: char| !c.is_whitespace()))).parse(input)?;
     let (input, _) = (space0, eof).parse(input)?;
     let mut values = Vec::with_capacity(1 + rest.len());
     values.push(first);
     values.append(&mut rest);
-    Ok((input, LineClass::EphemerisRow(values)))
-}
-
-/// Cheap heuristic for "is the leading token plausibly a CCSDS epoch?"
-/// Both the calendar form `YYYY-MM-DDThh:mm:ss[.fff]` and the
-/// day-of-year form `YYYY-DDDThh:mm:ss[.fff]` start with four ASCII
-/// digits followed by `-`. We don't validate further at the grammar
-/// layer — full epoch parsing happens in the projection layer where the
-/// resulting [`String`] is converted to a `DynTime`.
-fn looks_like_epoch(s: &str) -> bool {
-    let bytes = s.as_bytes();
-    bytes.len() >= 5 && bytes[0..4].iter().all(|b| b.is_ascii_digit()) && bytes[4] == b'-'
+    Ok((input, LineClass::PositionalRow(values)))
 }
 
 #[cfg(test)]
@@ -266,8 +250,8 @@ mod tests {
     fn classifies_ephemeris_row() {
         let line = "2024-01-01T00:00:00 7000.0 0.0 0.0 0.0 7.5 0.0";
         let result = classify_line(line).unwrap().unwrap();
-        let LineClass::EphemerisRow(values) = result else {
-            panic!("expected EphemerisRow, got {result:?}");
+        let LineClass::PositionalRow(values) = result else {
+            panic!("expected PositionalRow, got {result:?}");
         };
         assert_eq!(values.len(), 7);
         assert_eq!(values[0], "2024-01-01T00:00:00");
@@ -275,12 +259,17 @@ mod tests {
     }
 
     #[test]
-    fn rejects_non_epoch_leading_row() {
-        // A bare `= 5.0` is not a valid KVN line — neither field-shaped
-        // nor epoch-leading — so the classifier must reject it.
-        assert!(classify_line("= 5.0").is_err());
-        // Random word-leading text is also rejected.
-        assert!(classify_line("foo 1.0 2.0").is_err());
+    fn accepts_non_epoch_positional_row() {
+        // Loosened from the original strict epoch-prefix requirement —
+        // the grammar now treats any whitespace-separated token sequence
+        // as a positional row (OEM covariance bodies need numeric rows
+        // like `3.3e-04 4.6e-04 6.7e-04`). Content validation lives in
+        // the projection layer.
+        let result = classify_line("3.3e-04 4.6e-04 6.7e-04").unwrap().unwrap();
+        let LineClass::PositionalRow(values) = result else {
+            panic!("expected PositionalRow, got {result:?}");
+        };
+        assert_eq!(values, vec!["3.3e-04", "4.6e-04", "6.7e-04"]);
     }
 
     #[test]
@@ -288,8 +277,8 @@ mod tests {
         // CCSDS allows day-of-year format epochs: YYYY-DDDThh:mm:ss.
         let line = "2024-001T00:00:00 7000.0 0.0 0.0 0.0 7.5 0.0";
         let result = classify_line(line).unwrap().unwrap();
-        let LineClass::EphemerisRow(values) = result else {
-            panic!("expected EphemerisRow, got {result:?}");
+        let LineClass::PositionalRow(values) = result else {
+            panic!("expected PositionalRow, got {result:?}");
         };
         assert_eq!(values.len(), 7);
         assert_eq!(values[0], "2024-001T00:00:00");
