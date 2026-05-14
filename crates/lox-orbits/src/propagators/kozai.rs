@@ -17,25 +17,8 @@
 
 use lox_core::anomalies::{AnomalyError, MeanAnomaly, TrueAnomaly};
 use lox_core::coords::Cartesian;
-use lox_core::elements::{Eccentricity, GravitationalParameter, Keplerian};
+use lox_core::elements::{Eccentricity, GravitationalParameter, Keplerian, MeanElements};
 use lox_core::units::{AngleUnits, Distance};
-
-/// Mean Keplerian elements at a given epoch.
-#[derive(Debug, Clone, Copy)]
-pub struct MeanElements {
-    /// Semi-major axis [m].
-    pub a: f64,
-    /// Eccentricity.
-    pub e: f64,
-    /// Inclination [rad].
-    pub i: f64,
-    /// RAAN [rad].
-    pub raan: f64,
-    /// Argument of periapsis [rad].
-    pub aop: f64,
-    /// Mean anomaly [rad].
-    pub m: f64,
-}
 
 /// Body constants needed by the propagator.
 #[derive(Debug, Clone, Copy)]
