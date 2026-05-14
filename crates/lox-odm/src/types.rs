@@ -16,8 +16,8 @@ pub mod opm;
 
 pub use ci::OdmCi;
 pub use common::{
-    Covariance, CustomBodyOrFrameError, MessageKind, OdmCenter, OdmFrame, OdmHeader,
-    SpacecraftParameters,
+    Covariance, CustomBodyOrFrameError, MessageKind, OdmCenter, OdmFrame, OdmHeader, OdmTime,
+    OdmTimeError, SpacecraftParameters,
 };
 pub use oem::{Oem, OemCovariance, OemMetadata, OemSegment, OemTrajectoryError};
 pub use omm::{Omm, OmmMetadata, TleParameters};

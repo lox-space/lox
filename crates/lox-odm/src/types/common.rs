@@ -18,7 +18,9 @@ use std::str::FromStr;
 use lox_bodies::{DynOrigin, Origin};
 use lox_core::units::{Area, Mass};
 use lox_frames::{DynFrame, traits::ReferenceFrame};
-use lox_time::time::DynTime;
+use lox_time::time::{DynTime, Time};
+use lox_time::time_scales::{DynTimeScale, TimeScale};
+use lox_time::utc::Utc;
 use nalgebra::Matrix6;
 
 /// Discriminator for the five ODM message variants.
@@ -190,7 +192,7 @@ pub struct OdmHeader {
     /// Optional `CLASSIFICATION` marker (e.g. `UNCLASSIFIED`, `SECRET`).
     pub classification: Option<String>,
     /// Mandatory `CREATION_DATE` of the message.
-    pub creation_date: DynTime,
+    pub creation_date: OdmTime,
     /// Mandatory `ORIGINATOR` (the organisation that produced the message).
     pub originator: String,
     /// Optional `MESSAGE_ID` (unique identifier assigned by the originator).
@@ -249,6 +251,89 @@ pub enum CustomBodyOrFrameError {
     /// `DynFrame`.
     #[error("custom frame `{0}` cannot be upgraded to DynFrame")]
     Frame(String),
+}
+
+/// An epoch from an ODM message.
+///
+/// CCSDS `TIME_SYSTEM` permits both continuous atomic scales (TAI, TCB,
+/// TCG, TDB, TT, UT1, GPS) and the discontinuous UTC scale with leap
+/// seconds. Continuous scales fit naturally into [`DynTime`]; UTC needs
+/// special handling because of its non-monotonic seconds during leap
+/// events. `OdmTime` preserves the wire-format choice so that
+/// `read → write` round-trips emit the same `TIME_SYSTEM` keyword.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OdmTime {
+    /// Continuous time scale: TAI, TCB, TCG, TDB, TT, UT1, or GPS.
+    Time(DynTime),
+    /// UTC — leap seconds make it discontinuous.
+    Utc(Utc),
+}
+
+impl OdmTime {
+    /// Parses an ISO-formatted timestamp under the wire `TIME_SYSTEM`
+    /// keyword (e.g. `"TAI"`, `"UTC"`, `"GPS"`).
+    pub fn from_wire(time_system: &str, iso: &str) -> Result<Self, OdmTimeError> {
+        if time_system.eq_ignore_ascii_case("UTC") {
+            let utc = Utc::from_iso(iso).map_err(|_| OdmTimeError::InvalidIso(iso.to_string()))?;
+            return Ok(OdmTime::Utc(utc));
+        }
+        let scale = DynTimeScale::from_str(time_system)
+            .map_err(|_| OdmTimeError::UnknownTimeSystem(time_system.to_string()))?;
+        let t =
+            Time::from_iso(scale, iso).map_err(|_| OdmTimeError::InvalidIso(iso.to_string()))?;
+        Ok(OdmTime::Time(t))
+    }
+
+    /// Returns the continuous-scale [`DynTime`] view of this epoch. UTC
+    /// times are converted to TAI via the built-in leap-seconds table.
+    pub fn to_dyn_time(&self) -> DynTime {
+        match self {
+            OdmTime::Time(t) => *t,
+            OdmTime::Utc(u) => u.to_dyn_time(),
+        }
+    }
+
+    /// Returns the wire-format `TIME_SYSTEM` keyword for this epoch
+    /// (e.g. `"TAI"`, `"UTC"`, `"GPS"`).
+    pub fn time_system(&self) -> &'static str {
+        match self {
+            OdmTime::Time(t) => t.scale().abbreviation(),
+            OdmTime::Utc(_) => "UTC",
+        }
+    }
+}
+
+impl std::fmt::Display for OdmTime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OdmTime::Time(t) => write!(f, "{t}"),
+            OdmTime::Utc(u) => write!(f, "{u}"),
+        }
+    }
+}
+
+impl From<DynTime> for OdmTime {
+    fn from(t: DynTime) -> Self {
+        OdmTime::Time(t)
+    }
+}
+
+impl From<Utc> for OdmTime {
+    fn from(u: Utc) -> Self {
+        OdmTime::Utc(u)
+    }
+}
+
+/// Error returned by [`OdmTime::from_wire`].
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+pub enum OdmTimeError {
+    /// The `TIME_SYSTEM` keyword wasn't one of the supported continuous
+    /// scales (TAI, TCB, TCG, TDB, TT, UT1, GPS) or `UTC`.
+    #[error("unknown time-system keyword: {0:?}")]
+    UnknownTimeSystem(String),
+    /// The ISO timestamp string couldn't be parsed.
+    #[error("invalid ISO timestamp: {0:?}")]
+    InvalidIso(String),
 }
 
 #[cfg(test)]
@@ -395,10 +480,10 @@ mod tests {
         assert_eq!(format!("{custom}"), "OPERATOR_LVLH");
     }
 
-    fn sample_epoch() -> DynTime {
-        // Construct a valid DynTime for fixture use. The specific value
-        // doesn't matter for OdmHeader tests — only that we have a DynTime.
-        Time::j2000(DynTimeScale::Tai)
+    fn sample_epoch() -> OdmTime {
+        // Construct a valid OdmTime for fixture use. The specific value
+        // doesn't matter for OdmHeader tests — only that we have an OdmTime.
+        OdmTime::Time(Time::j2000(DynTimeScale::Tai))
     }
 
     #[test]
@@ -458,5 +543,54 @@ mod tests {
         assert!(sp.solar_rad_coeff.is_none());
         assert!(sp.drag_area.is_none());
         assert!(sp.drag_coeff.is_none());
+    }
+
+    #[test]
+    fn odm_time_from_wire_tai() {
+        let t = OdmTime::from_wire("TAI", "2024-01-01T00:00:00").unwrap();
+        assert!(matches!(t, OdmTime::Time(_)));
+        assert_eq!(t.time_system(), "TAI");
+    }
+
+    #[test]
+    fn odm_time_from_wire_utc() {
+        let t = OdmTime::from_wire("UTC", "2024-01-01T00:00:00").unwrap();
+        assert!(matches!(t, OdmTime::Utc(_)));
+        assert_eq!(t.time_system(), "UTC");
+    }
+
+    #[test]
+    fn odm_time_from_wire_gps() {
+        let t = OdmTime::from_wire("GPS", "2024-01-01T00:00:00").unwrap();
+        assert!(matches!(t, OdmTime::Time(_)));
+        assert_eq!(t.time_system(), "GPS");
+    }
+
+    #[test]
+    fn odm_time_from_wire_rejects_unknown_system() {
+        let result = OdmTime::from_wire("XYZ", "2024-01-01T00:00:00");
+        assert!(matches!(
+            result.unwrap_err(),
+            OdmTimeError::UnknownTimeSystem(_)
+        ));
+    }
+
+    #[test]
+    fn odm_time_from_wire_rejects_invalid_iso() {
+        let result = OdmTime::from_wire("TAI", "not-a-date");
+        assert!(matches!(result.unwrap_err(), OdmTimeError::InvalidIso(_)));
+    }
+
+    #[test]
+    fn odm_time_to_dyn_time_passes_through_for_continuous_scale() {
+        let original = Time::j2000(DynTimeScale::Tai);
+        let odm = OdmTime::Time(original);
+        assert_eq!(odm.to_dyn_time(), original);
+    }
+
+    #[test]
+    fn odm_time_from_dyn_time_via_into() {
+        let t: OdmTime = Time::j2000(DynTimeScale::Tai).into();
+        assert!(matches!(t, OdmTime::Time(_)));
     }
 }

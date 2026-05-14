@@ -13,10 +13,9 @@ use std::collections::BTreeMap;
 
 use lox_core::coords::Cartesian;
 use lox_orbits::orbits::{DynCartesianOrbit, DynTrajectory, TrajectoryError};
-use lox_time::time::DynTime;
 use nalgebra::Matrix6;
 
-use crate::types::common::{CustomBodyOrFrameError, OdmCenter, OdmFrame, OdmHeader};
+use crate::types::common::{CustomBodyOrFrameError, OdmCenter, OdmFrame, OdmHeader, OdmTime};
 
 /// Per-segment metadata for the OEM (CCSDS 502.0-B-3 §5.3).
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -30,15 +29,15 @@ pub struct OemMetadata {
     /// `REF_FRAME` — reference frame of the state vectors.
     pub frame: OdmFrame,
     /// `REF_FRAME_EPOCH` — optional rotating-frame realisation epoch.
-    pub frame_epoch: Option<DynTime>,
+    pub frame_epoch: Option<OdmTime>,
     /// `START_TIME` — mandatory start of the segment's time interval.
-    pub start_time: DynTime,
+    pub start_time: OdmTime,
     /// `USEABLE_START_TIME` — optional interpolation-quality lower bound.
-    pub useable_start_time: Option<DynTime>,
+    pub useable_start_time: Option<OdmTime>,
     /// `USEABLE_STOP_TIME` — optional interpolation-quality upper bound.
-    pub useable_stop_time: Option<DynTime>,
+    pub useable_stop_time: Option<OdmTime>,
     /// `STOP_TIME` — mandatory end of the segment's time interval.
-    pub stop_time: DynTime,
+    pub stop_time: OdmTime,
     /// `INTERPOLATION` — optional interpolation method name
     /// (e.g. `"HERMITE"`, `"LAGRANGE"`). Stored verbatim; the OEM model
     /// does not interpret it.
@@ -56,7 +55,7 @@ pub struct OemMetadata {
 #[derive(Clone, Debug, PartialEq)]
 pub struct OemCovariance {
     /// `EPOCH` — the epoch this covariance is valid at.
-    pub epoch: DynTime,
+    pub epoch: OdmTime,
     /// `COV_REF_FRAME` — optional frame override; when `None` the
     /// covariance is in the same frame as the segment's state vectors.
     pub frame: Option<OdmFrame>,
@@ -76,7 +75,7 @@ pub struct OemSegment {
     /// Per-segment metadata.
     pub metadata: OemMetadata,
     /// Time-ordered ephemeris state vectors.
-    pub states: Vec<(DynTime, Cartesian)>,
+    pub states: Vec<(OdmTime, Cartesian)>,
     /// Optional covariance history (empty when the segment has no
     /// `COVARIANCE` section).
     pub covariance_history: Vec<OemCovariance>,
@@ -112,7 +111,7 @@ pub struct Oem {
 
 impl OemSegment {
     /// Borrowing iterator over the segment's state vectors.
-    pub fn iter_states(&self) -> impl Iterator<Item = &(DynTime, Cartesian)> {
+    pub fn iter_states(&self) -> impl Iterator<Item = &(OdmTime, Cartesian)> {
         self.states.iter()
     }
 
@@ -129,10 +128,9 @@ impl OemSegment {
         let frame = self.metadata.frame.known().ok_or_else(|| {
             CustomBodyOrFrameError::Frame(self.metadata.frame.name().into_owned())
         })?;
-        let orbits = self
-            .states
-            .iter()
-            .map(|(epoch, state)| DynCartesianOrbit::from_state(*state, *epoch, origin, frame));
+        let orbits = self.states.iter().map(|(epoch, state)| {
+            DynCartesianOrbit::from_state(*state, epoch.to_dyn_time(), origin, frame)
+        });
         Ok(DynTrajectory::try_new(orbits)?)
     }
 }
@@ -147,8 +145,12 @@ mod tests {
     use lox_time::time::Time;
     use lox_time::time_scales::DynTimeScale;
 
-    fn sample_epoch() -> DynTime {
-        Time::j2000(DynTimeScale::Tai)
+    fn sample_epoch() -> OdmTime {
+        OdmTime::Time(Time::j2000(DynTimeScale::Tai))
+    }
+
+    fn sample_epoch_plus(seconds: i64) -> OdmTime {
+        OdmTime::Time(Time::j2000(DynTimeScale::Tai) + TimeDelta::from_seconds(seconds))
     }
 
     #[test]
@@ -255,10 +257,7 @@ mod tests {
             metadata: sample_metadata(),
             states: vec![
                 (sample_epoch(), sample_state(0.0)),
-                (
-                    sample_epoch() + TimeDelta::from_seconds(60),
-                    sample_state(1.0),
-                ),
+                (sample_epoch_plus(60), sample_state(1.0)),
             ],
             covariance_history: Vec::new(),
         };
@@ -277,10 +276,7 @@ mod tests {
             metadata,
             states: vec![
                 (sample_epoch(), sample_state(0.0)),
-                (
-                    sample_epoch() + TimeDelta::from_seconds(60),
-                    sample_state(1.0),
-                ),
+                (sample_epoch_plus(60), sample_state(1.0)),
             ],
             covariance_history: Vec::new(),
         };
@@ -324,10 +320,7 @@ mod tests {
             metadata: sample_metadata(),
             states: vec![
                 (sample_epoch(), sample_state(0.0)),
-                (
-                    sample_epoch() + TimeDelta::from_seconds(60),
-                    sample_state(1.0),
-                ),
+                (sample_epoch_plus(60), sample_state(1.0)),
             ],
             covariance_history: Vec::new(),
         }
