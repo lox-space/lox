@@ -10,11 +10,11 @@
 
 use std::collections::BTreeMap;
 
+use crate::types::common::{
+    Covariance, OdmCenter, OdmFrame, OdmHeader, OdmTime, SpacecraftParameters,
+};
 use lox_core::elements::MeanElements;
 use lox_core::units::AreaToMass;
-use lox_time::time::DynTime;
-
-use crate::types::common::{Covariance, OdmCenter, OdmFrame, OdmHeader, SpacecraftParameters};
 
 /// Per-message metadata for the OMM (CCSDS 502.0-B-3 §4.3).
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -28,7 +28,7 @@ pub struct OmmMetadata {
     /// `REF_FRAME` — reference frame of the mean elements.
     pub frame: OdmFrame,
     /// `REF_FRAME_EPOCH` — optional rotating-frame realisation epoch.
-    pub frame_epoch: Option<DynTime>,
+    pub frame_epoch: Option<OdmTime>,
     /// `MEAN_ELEMENT_THEORY` — propagation theory the elements are
     /// tuned for. CCSDS does not enumerate values; preserved verbatim
     /// (e.g. `"SGP/SGP4"`, `"DSST"`, `"USM"`).
@@ -84,7 +84,7 @@ pub struct Omm {
     /// OMM-specific metadata (object id, center, frame, theory).
     pub metadata: OmmMetadata,
     /// Mean-elements epoch.
-    pub epoch: DynTime,
+    pub epoch: OdmTime,
     /// Mean Keplerian elements.
     ///
     /// On the wire, the size element may appear as either
@@ -154,8 +154,8 @@ mod tests {
         assert_eq!(p.bstar, Some(8.4553e-5));
     }
 
-    fn sample_epoch() -> DynTime {
-        Time::j2000(DynTimeScale::Tai)
+    fn sample_epoch() -> OdmTime {
+        OdmTime::Time(Time::j2000(DynTimeScale::Tai))
     }
 
     fn sample_header() -> OdmHeader {
