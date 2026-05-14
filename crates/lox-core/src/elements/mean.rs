@@ -9,7 +9,7 @@
 //! exchange mean orbital element sets (e.g. CCSDS OMM messages).
 
 /// Mean Keplerian elements at a given epoch.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MeanElements {
     /// Semi-major axis [m].

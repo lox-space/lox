@@ -10,10 +10,13 @@
 
 pub mod common;
 pub mod oem;
+pub mod omm;
 pub mod opm;
 
 pub use common::{
-    CustomBodyOrFrameError, MessageKind, OdmCenter, OdmFrame, OdmHeader, SpacecraftParameters,
+    Covariance, CustomBodyOrFrameError, MessageKind, OdmCenter, OdmFrame, OdmHeader,
+    SpacecraftParameters,
 };
 pub use oem::{Oem, OemCovariance, OemMetadata, OemSegment, OemTrajectoryError};
-pub use opm::{Maneuver, Opm, OpmCovariance, OpmMetadata};
+pub use omm::{Omm, OmmMetadata, TleParameters};
+pub use opm::{Maneuver, Opm, OpmMetadata};
