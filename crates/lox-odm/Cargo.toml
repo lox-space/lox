@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+[package]
+name = "lox-odm"
+description = "CCSDS Orbit Data Message (ODM) types and (de-)serialization for the Lox ecosystem"
+version = "0.1.0-alpha.1"
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+
+[dependencies]
+lox-bodies.workspace = true
+lox-frames.workspace = true
+lox-time.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
