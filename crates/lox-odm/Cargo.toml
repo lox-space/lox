@@ -20,7 +20,6 @@ readme = "README.md"
 lox-bodies.workspace = true
 lox-core.workspace = true
 lox-frames.workspace = true
-lox-orbits.workspace = true
 lox-time.workspace = true
 nalgebra.workspace = true
 nom.workspace = true

@@ -245,22 +245,6 @@ pub struct Covariance {
     pub matrix: Matrix6<f64>,
 }
 
-/// Returned by the `try_into_*` upgrade methods on ODM message types when
-/// the message's [`OdmCenter`] or [`OdmFrame`] is `Custom(_)` and therefore
-/// cannot be converted to the typed `DynOrigin` / `DynFrame` required by
-/// `lox_orbits::Orbit` / `Trajectory`.
-#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
-pub enum CustomBodyOrFrameError {
-    /// The message's center body is a custom name not recognised by
-    /// `DynOrigin`.
-    #[error("custom body `{0}` cannot be upgraded to DynOrigin")]
-    Body(String),
-    /// The message's reference frame is a custom name not recognised by
-    /// `DynFrame`.
-    #[error("custom frame `{0}` cannot be upgraded to DynFrame")]
-    Frame(String),
-}
-
 /// An epoch from an ODM message.
 ///
 /// CCSDS `TIME_SYSTEM` permits both continuous atomic scales (TAI, TCB,
@@ -526,14 +510,6 @@ mod tests {
         assert!(h.comments.is_empty());
         assert!(h.classification.is_none());
         assert!(h.message_id.is_none());
-    }
-
-    #[test]
-    fn custom_body_or_frame_error_displays_name() {
-        let e = CustomBodyOrFrameError::Body("APOPHIS".to_string());
-        assert!(format!("{e}").contains("APOPHIS"));
-        let e = CustomBodyOrFrameError::Frame("OPERATOR_LVLH".to_string());
-        assert!(format!("{e}").contains("OPERATOR_LVLH"));
     }
 
     #[test]
