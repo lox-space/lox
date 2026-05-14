@@ -16,10 +16,10 @@ use lox_core::elements::Keplerian;
 use lox_core::time::deltas::TimeDelta;
 use lox_core::units::{Mass, Velocity};
 use lox_orbits::orbits::DynCartesianOrbit;
-use lox_time::time::DynTime;
 
 use crate::types::common::{
-    Covariance, CustomBodyOrFrameError, OdmCenter, OdmFrame, OdmHeader, SpacecraftParameters,
+    Covariance, CustomBodyOrFrameError, OdmCenter, OdmFrame, OdmHeader, OdmTime,
+    SpacecraftParameters,
 };
 
 /// Per-message metadata for the OPM (CCSDS 502.0-B-3 §3.3).
@@ -35,7 +35,7 @@ pub struct OpmMetadata {
     pub frame: OdmFrame,
     /// `REF_FRAME_EPOCH` — optional epoch at which the (rotating) frame
     /// is realised. Required only for rotating frames per §3.3.1.5.
-    pub frame_epoch: Option<DynTime>,
+    pub frame_epoch: Option<OdmTime>,
 }
 
 /// A single orbital maneuver carried by an OPM (CCSDS 502.0-B-3 §3.6).
@@ -46,7 +46,7 @@ pub struct OpmMetadata {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Maneuver {
     /// `MAN_EPOCH_IGNITION` — epoch at which the maneuver starts.
-    pub ignition_epoch: DynTime,
+    pub ignition_epoch: OdmTime,
     /// `MAN_DURATION` — burn duration; zero for impulsive maneuvers.
     pub duration: TimeDelta,
     /// `MAN_DELTA_MASS` — change in spacecraft mass (typically negative
@@ -72,7 +72,7 @@ pub struct Opm {
     /// OPM-specific metadata (object id, center, frame).
     pub metadata: OpmMetadata,
     /// State-vector epoch.
-    pub epoch: DynTime,
+    pub epoch: OdmTime,
     /// Cartesian state (position and velocity in the metadata frame).
     pub state: Cartesian,
     /// Optional osculating Keplerian element section (CCSDS §3.4.2).
@@ -101,7 +101,10 @@ impl Opm {
             CustomBodyOrFrameError::Frame(self.metadata.frame.name().into_owned())
         })?;
         Ok(DynCartesianOrbit::from_state(
-            self.state, self.epoch, origin, frame,
+            self.state,
+            self.epoch.to_dyn_time(),
+            origin,
+            frame,
         ))
     }
 }
@@ -116,7 +119,9 @@ mod tests {
 
     #[test]
     fn maneuver_impulsive() {
-        let epoch = lox_time::time::Time::j2000(lox_time::time_scales::DynTimeScale::Tai);
+        let epoch = OdmTime::Time(lox_time::time::Time::j2000(
+            lox_time::time_scales::DynTimeScale::Tai,
+        ));
         let m = Maneuver {
             ignition_epoch: epoch,
             duration: TimeDelta::from_seconds(0),
@@ -169,7 +174,8 @@ mod tests {
     }
 
     fn sample_opm(center: OdmCenter, frame: OdmFrame) -> Opm {
-        let epoch = lox_time::time::Time::j2000(lox_time::time_scales::DynTimeScale::Tai);
+        let time = lox_time::time::Time::j2000(lox_time::time_scales::DynTimeScale::Tai);
+        let epoch = OdmTime::Time(time);
         Opm {
             header: crate::types::common::OdmHeader {
                 comments: Vec::new(),

@@ -73,17 +73,17 @@ impl From<Omm> for OdmCi {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::common::{OdmCenter, OdmFrame, OdmHeader};
+    use crate::types::common::{OdmCenter, OdmFrame, OdmHeader, OdmTime};
     use crate::types::omm::OmmMetadata;
     use lox_bodies::DynOrigin;
     use lox_core::elements::MeanElements;
     use lox_frames::DynFrame;
-    use lox_time::time::{DynTime, Time};
+    use lox_time::time::Time;
     use lox_time::time_scales::DynTimeScale;
     use std::collections::BTreeMap;
 
-    fn sample_epoch() -> DynTime {
-        Time::j2000(DynTimeScale::Tai)
+    fn sample_epoch() -> OdmTime {
+        OdmTime::Time(Time::j2000(DynTimeScale::Tai))
     }
 
     fn sample_omm() -> Omm {
