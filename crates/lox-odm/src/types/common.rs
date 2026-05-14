@@ -313,9 +313,15 @@ impl OdmTime {
 
 impl std::fmt::Display for OdmTime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Default to microsecond precision (6 decimals); callers may
+        // override via `{:.N}`. The underlying `Time<T>` and `Utc`
+        // Display impls default to milliseconds, which loses precision
+        // for typical operational fixtures (e.g. CCSDS Annex examples
+        // use microseconds).
+        let precision = f.precision().unwrap_or(6);
         match self {
-            OdmTime::Time(t) => write!(f, "{t}"),
-            OdmTime::Utc(u) => write!(f, "{u}"),
+            OdmTime::Time(t) => write!(f, "{t:.precision$}"),
+            OdmTime::Utc(u) => write!(f, "{u:.precision$}"),
         }
     }
 }
