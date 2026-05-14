@@ -35,6 +35,9 @@ pub mod itur;
 #[cfg(feature = "math")]
 pub mod math;
 
+#[cfg(feature = "odm")]
+pub mod odm;
+
 #[cfg(feature = "orbits")]
 pub mod orbits;
 

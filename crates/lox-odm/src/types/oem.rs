@@ -12,10 +12,9 @@
 use std::collections::BTreeMap;
 
 use lox_core::coords::Cartesian;
-use lox_orbits::orbits::{DynCartesianOrbit, DynTrajectory, TrajectoryError};
 use nalgebra::Matrix6;
 
-use crate::types::common::{CustomBodyOrFrameError, OdmCenter, OdmFrame, OdmHeader, OdmTime};
+use crate::types::common::{OdmCenter, OdmFrame, OdmHeader, OdmTime};
 
 /// Per-segment metadata for the OEM (CCSDS 502.0-B-3 §5.3).
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -89,19 +88,6 @@ pub struct OemSegment {
     pub covariance_history: Vec<OemCovariance>,
 }
 
-/// Returned by [`OemSegment::try_into_trajectory`].
-#[derive(Clone, Debug, PartialEq, thiserror::Error)]
-pub enum OemTrajectoryError {
-    /// The segment's center or frame is `Custom(_)` and therefore not
-    /// representable as `DynOrigin`/`DynFrame`.
-    #[error(transparent)]
-    CustomBodyOrFrame(#[from] CustomBodyOrFrameError),
-    /// Underlying trajectory construction failed (e.g. insufficient
-    /// states for interpolation).
-    #[error(transparent)]
-    Trajectory(#[from] TrajectoryError),
-}
-
 /// The Orbit Ephemeris Message (OEM, CCSDS 502.0-B-3 §5).
 ///
 /// A common header plus one or more time-ordered segments. Each segment
@@ -121,25 +107,6 @@ impl OemSegment {
     /// Borrowing iterator over the segment's state vectors.
     pub fn iter_states(&self) -> impl Iterator<Item = &(OdmTime, Cartesian)> {
         self.states.iter()
-    }
-
-    /// Upgrades the segment to a fully-typed [`DynTrajectory`].
-    ///
-    /// Requires `≥ 2` state vectors and `Known` center + frame. Returns
-    /// [`OemTrajectoryError`] otherwise. Per-segment metadata fields
-    /// (interpolation hints, useable-time bounds) and the covariance
-    /// history are not propagated to the trajectory.
-    pub fn try_into_trajectory(&self) -> Result<DynTrajectory, OemTrajectoryError> {
-        let origin = self.metadata.center.known().ok_or_else(|| {
-            CustomBodyOrFrameError::Body(self.metadata.center.name().into_owned())
-        })?;
-        let frame = self.metadata.frame.known().ok_or_else(|| {
-            CustomBodyOrFrameError::Frame(self.metadata.frame.name().into_owned())
-        })?;
-        let orbits = self.states.iter().map(|(epoch, state)| {
-            DynCartesianOrbit::from_state(*state, epoch.to_dyn_time(), origin, frame)
-        });
-        Ok(DynTrajectory::try_new(orbits)?)
     }
 }
 
@@ -263,63 +230,6 @@ mod tests {
         };
         let collected: Vec<_> = seg.iter_states().collect();
         assert_eq!(collected.len(), 3);
-    }
-
-    #[test]
-    fn oem_segment_try_into_trajectory_succeeds_for_known() {
-        let seg = OemSegment {
-            data_comments: Vec::new(),
-            metadata: sample_metadata(),
-            states: vec![
-                (sample_epoch(), sample_state(0.0)),
-                (sample_epoch_plus(60), sample_state(1.0)),
-            ],
-            covariance_history: Vec::new(),
-        };
-        let traj = seg
-            .try_into_trajectory()
-            .expect("known center+frame and 2+ states");
-        // Smoke-test: trajectory constructed successfully.
-        let _ = traj;
-    }
-
-    #[test]
-    fn oem_segment_try_into_trajectory_fails_for_custom_body() {
-        let mut metadata = sample_metadata();
-        metadata.center = OdmCenter::Custom("APOPHIS".to_string());
-        let seg = OemSegment {
-            data_comments: Vec::new(),
-            metadata,
-            states: vec![
-                (sample_epoch(), sample_state(0.0)),
-                (sample_epoch_plus(60), sample_state(1.0)),
-            ],
-            covariance_history: Vec::new(),
-        };
-        let err = seg
-            .try_into_trajectory()
-            .expect_err("custom body should fail");
-        assert!(matches!(
-            err,
-            OemTrajectoryError::CustomBodyOrFrame(CustomBodyOrFrameError::Body(ref s)) if s == "APOPHIS"
-        ));
-    }
-
-    #[test]
-    fn oem_segment_try_into_trajectory_fails_for_insufficient_states() {
-        let seg = OemSegment {
-            data_comments: Vec::new(),
-            metadata: sample_metadata(),
-            states: vec![(sample_epoch(), sample_state(0.0))],
-            covariance_history: Vec::new(),
-        };
-        let err = seg
-            .try_into_trajectory()
-            .expect_err("single-state should fail");
-        assert!(matches!(
-            err,
-            OemTrajectoryError::Trajectory(TrajectoryError::InsufficientStates(1))
-        ));
     }
 
     fn sample_header() -> OdmHeader {

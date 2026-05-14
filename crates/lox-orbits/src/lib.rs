@@ -16,6 +16,9 @@ pub mod constellations;
 pub mod events;
 /// Ground location and observables computation.
 pub mod ground;
+#[cfg(feature = "odm")]
+/// ODM integration: builders and conversions for OPM/OEM messages.
+pub mod odm;
 /// Orbit types, trajectories, ensembles, and builders.
 pub mod orbits;
 /// Orbit propagators (Vallado, J2, SGP4, trajectory replay).

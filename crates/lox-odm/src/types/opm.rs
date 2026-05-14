@@ -11,17 +11,14 @@
 
 use std::collections::BTreeMap;
 
+use crate::types::common::{
+    Covariance, OdmCenter, OdmFrame, OdmHeader, OdmTime, SpacecraftParameters,
+};
 use lox_bodies::TryPointMass;
 use lox_core::coords::Cartesian;
 use lox_core::elements::{GravitationalParameter, Keplerian};
 use lox_core::time::deltas::TimeDelta;
 use lox_core::units::{Mass, Velocity};
-use lox_orbits::orbits::DynCartesianOrbit;
-
-use crate::types::common::{
-    Covariance, CustomBodyOrFrameError, OdmCenter, OdmFrame, OdmHeader, OdmTime,
-    SpacecraftParameters,
-};
 
 /// Per-message metadata for the OPM (CCSDS 502.0-B-3 §3.3).
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -136,26 +133,6 @@ impl Opm {
                 .known()
                 .and_then(|o| o.try_gravitational_parameter().ok())
         })
-    }
-
-    /// Upgrades the OPM to a fully-typed [`DynCartesianOrbit`].
-    ///
-    /// Fails with [`CustomBodyOrFrameError`] when the message's center
-    /// body or reference frame is `Custom(_)` and therefore not
-    /// representable as `DynOrigin` / `DynFrame`.
-    pub fn try_into_orbit(&self) -> Result<DynCartesianOrbit, CustomBodyOrFrameError> {
-        let origin = self.metadata.center.known().ok_or_else(|| {
-            CustomBodyOrFrameError::Body(self.metadata.center.name().into_owned())
-        })?;
-        let frame = self.metadata.frame.known().ok_or_else(|| {
-            CustomBodyOrFrameError::Frame(self.metadata.frame.name().into_owned())
-        })?;
-        Ok(DynCartesianOrbit::from_state(
-            self.state,
-            self.epoch.to_dyn_time(),
-            origin,
-            frame,
-        ))
     }
 }
 
@@ -274,37 +251,6 @@ mod tests {
         assert_eq!(opm.metadata.object_name, "TEST-SAT");
         assert!(opm.maneuvers.is_empty());
         assert!(opm.user_defined.is_empty());
-    }
-
-    #[test]
-    fn opm_try_into_orbit_succeeds_for_known() {
-        let opm = sample_opm(
-            OdmCenter::Known(DynOrigin::Earth),
-            OdmFrame::Known(DynFrame::Icrf),
-        );
-        let orbit = opm.try_into_orbit().expect("known body and frame");
-        assert_eq!(orbit.origin(), DynOrigin::Earth);
-        assert_eq!(orbit.reference_frame(), DynFrame::Icrf);
-    }
-
-    #[test]
-    fn opm_try_into_orbit_fails_for_custom_body() {
-        let opm = sample_opm(
-            OdmCenter::Custom("APOPHIS".to_string()),
-            OdmFrame::Known(DynFrame::Icrf),
-        );
-        let err = opm.try_into_orbit().expect_err("custom body should fail");
-        assert!(matches!(err, CustomBodyOrFrameError::Body(ref s) if s == "APOPHIS"));
-    }
-
-    #[test]
-    fn opm_try_into_orbit_fails_for_custom_frame() {
-        let opm = sample_opm(
-            OdmCenter::Known(DynOrigin::Earth),
-            OdmFrame::Custom("OPERATOR_LVLH".to_string()),
-        );
-        let err = opm.try_into_orbit().expect_err("custom frame should fail");
-        assert!(matches!(err, CustomBodyOrFrameError::Frame(ref s) if s == "OPERATOR_LVLH"));
     }
 
     #[test]

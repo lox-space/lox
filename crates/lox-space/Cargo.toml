@@ -34,6 +34,7 @@ lox-frames = { workspace = true, optional = true }
 lox-io = { workspace = true, optional = true }
 lox-itur = { workspace = true, optional = true }
 lox-math = { workspace = true, optional = true }
+lox-odm = { workspace = true, optional = true }
 lox-orbits = { workspace = true, optional = true }
 lox-time = { workspace = true, optional = true, features = ["chrono"] }
 lox-units = { workspace = true, optional = true }
@@ -71,6 +72,7 @@ default = [
   "coverage",
   "io",
   "math",
+  "odm",
   "orbits",
   "time",
   "units",
@@ -86,6 +88,7 @@ ephem = ["math", "dep:lox-ephem"]
 frames = ["bodies", "earth", "math", "time", "units", "dep:lox-frames"]
 io = ["dep:lox-io"]
 math = ["dep:lox-math"]
+odm = ["orbits", "dep:lox-odm", "lox-orbits?/odm"]
 orbits = [
   "bodies",
   "core",
