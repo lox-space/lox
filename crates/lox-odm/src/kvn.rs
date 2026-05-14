@@ -27,6 +27,7 @@ pub mod writer;
 pub use ast::{KvnDocument, KvnEntry, KvnField, KvnRow, KvnSection};
 pub use error::{KvnError, KvnErrorKind, Span};
 pub use parser::parse;
+pub use projection::ci::{read_ci, write_ci};
 pub use projection::oem::{read_oem, write_oem};
 pub use projection::omm::{read_omm, write_omm};
 pub use projection::opm::{read_opm, write_opm};
