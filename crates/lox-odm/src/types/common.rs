@@ -73,11 +73,12 @@ pub enum OdmCenter {
 impl OdmCenter {
     /// Parses a wire-format `CENTER_NAME` string.
     ///
-    /// Tries [`DynOrigin::from_str`] first (which accepts both the
-    /// canonical capitalised form and the all-lowercase form). On
-    /// failure, wraps the original input as [`OdmCenter::Custom`].
+    /// CCSDS wire form is uppercase (e.g. `EARTH`, `SUN`,
+    /// `SOLAR SYSTEM BARYCENTER`). The lookup folds case so any
+    /// reasonable casing accepted.
+    /// On failure, wraps the original input as [`OdmCenter::Custom`].
     pub fn from_wire(s: &str) -> Self {
-        match DynOrigin::from_str(s) {
+        match DynOrigin::from_str(&s.to_lowercase()) {
             Ok(origin) => OdmCenter::Known(origin),
             Err(_) => OdmCenter::Custom(s.to_string()),
         }
@@ -85,12 +86,12 @@ impl OdmCenter {
 
     /// The wire-equivalent name for this center.
     ///
-    /// For [`OdmCenter::Known`] this is the canonical body name from
-    /// [`Origin::name`]; for [`OdmCenter::Custom`] it is the stored
-    /// string.
+    /// For [`OdmCenter::Known`] this is the body name in CCSDS wire
+    /// form (uppercase, e.g. `"EARTH"`, `"SOLAR SYSTEM BARYCENTER"`).
+    /// For [`OdmCenter::Custom`] it is the stored string verbatim.
     pub fn name(&self) -> Cow<'_, str> {
         match self {
-            OdmCenter::Known(o) => Cow::Borrowed(o.name()),
+            OdmCenter::Known(o) => Cow::Owned(o.name().to_uppercase()),
             OdmCenter::Custom(s) => Cow::Borrowed(s.as_str()),
         }
     }
@@ -146,13 +147,14 @@ impl OdmFrame {
 
     /// The wire-equivalent name for this frame.
     ///
-    /// For [`OdmFrame::Known`] this is the canonical frame name from
-    /// [`ReferenceFrame::name`] (returned as [`Cow::Owned`] because the
-    /// underlying call returns `String`). For [`OdmFrame::Custom`] it
-    /// is the stored string as [`Cow::Borrowed`].
+    /// For [`OdmFrame::Known`] this is the canonical frame
+    /// abbreviation from [`ReferenceFrame::abbreviation`] (e.g.
+    /// `"ICRF"`, `"TOD"`, `"EME2000"`) — the form used on the wire by
+    /// CCSDS ODM messages, not the human-readable long name. For
+    /// [`OdmFrame::Custom`] it is the stored string verbatim.
     pub fn name(&self) -> Cow<'_, str> {
         match self {
-            OdmFrame::Known(f) => Cow::Owned(f.name()),
+            OdmFrame::Known(f) => Cow::Owned(f.abbreviation()),
             OdmFrame::Custom(s) => Cow::Borrowed(s.as_str()),
         }
     }
@@ -204,8 +206,12 @@ pub struct OdmHeader {
 ///
 /// All fields are optional per CCSDS 502.0-B-3 §3.4 (OPM) and §4.4 (OMM).
 /// `SOLAR_RAD_COEFF` and `DRAG_COEFF` are dimensionless and stay as `f64`.
+/// `COMMENT` lines that precede the block in the wire format are preserved
+/// in `comments` so that KVN→typed→KVN round-trips reproduce them exactly.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SpacecraftParameters {
+    /// `COMMENT` lines for this sub-block, in document order.
+    pub comments: Vec<String>,
     /// `MASS` — spacecraft mass.
     pub mass: Option<Mass>,
     /// `SOLAR_RAD_AREA` — area exposed to solar radiation pressure.
@@ -230,6 +236,8 @@ pub struct SpacecraftParameters {
 /// see [`crate::types::oem::OemCovariance`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct Covariance {
+    /// `COMMENT` lines for this sub-block, in document order.
+    pub comments: Vec<String>,
     /// `COV_REF_FRAME` — optional frame override; when `None` the
     /// covariance is in the same frame as the message's state vector.
     pub frame: Option<OdmFrame>,
@@ -382,7 +390,7 @@ mod tests {
     #[test]
     fn odm_center_name_known() {
         let c = OdmCenter::Known(DynOrigin::Mars);
-        assert_eq!(c.name(), Cow::Borrowed("Mars"));
+        assert_eq!(c.name(), Cow::Borrowed("MARS"));
     }
 
     #[test]
@@ -406,7 +414,7 @@ mod tests {
     #[test]
     fn odm_center_display() {
         let earth = OdmCenter::Known(DynOrigin::Earth);
-        assert_eq!(format!("{earth}"), "Earth");
+        assert_eq!(format!("{earth}"), "EARTH");
         let asteroid = OdmCenter::Custom("APOPHIS".to_string());
         assert_eq!(format!("{asteroid}"), "APOPHIS");
     }
@@ -525,6 +533,7 @@ mod tests {
     #[test]
     fn spacecraft_parameters_construction() {
         let sp = SpacecraftParameters {
+            comments: Vec::new(),
             mass: Some(Mass::kilograms(120.5)),
             solar_rad_area: Some(Area::square_meters(2.5)),
             solar_rad_coeff: Some(1.2),
