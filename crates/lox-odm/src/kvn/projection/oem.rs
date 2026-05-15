@@ -1343,4 +1343,218 @@ COVARIANCE_STOP
         assert_eq!(parsed.segments[0].covariance_history.len(), 1);
         assert_eq!(parsed.segments[1].covariance_history.len(), 0);
     }
+
+    // -----------------------------------------------------------------
+    // Error-path coverage for orphan rows / covariance / malformed
+    // covariance entries.
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn covariance_before_meta_returns_error_top_level() {
+        // Construct an AST directly with a top-level COVARIANCE
+        // bracketed section appearing before any META section.
+        use crate::kvn::ast::{KvnDocument, KvnEntry, KvnField, KvnRow, KvnSection};
+
+        let cov_section = KvnSection {
+            keyword: "COVARIANCE".to_string(),
+            bracketed: true,
+            entries: vec![
+                KvnEntry::Field(KvnField {
+                    key: "EPOCH".to_string(),
+                    value: "2024-01-01T00:00:00".to_string(),
+                    unit: None,
+                }),
+                KvnEntry::Row(KvnRow {
+                    values: vec!["1.0".to_string()],
+                }),
+                KvnEntry::Row(KvnRow {
+                    values: vec!["0.0".to_string(); 2],
+                }),
+                KvnEntry::Row(KvnRow {
+                    values: vec!["0.0".to_string(); 3],
+                }),
+                KvnEntry::Row(KvnRow {
+                    values: vec!["0.0".to_string(); 4],
+                }),
+                KvnEntry::Row(KvnRow {
+                    values: vec!["0.0".to_string(); 5],
+                }),
+                KvnEntry::Row(KvnRow {
+                    values: vec!["0.0".to_string(); 6],
+                }),
+            ],
+        };
+        let doc = KvnDocument {
+            message_kind: MessageKind::Oem,
+            version: "3.0".to_string(),
+            preamble: Vec::new(),
+            sections: vec![
+                KvnSection {
+                    keyword: "HEADER".to_string(),
+                    bracketed: false,
+                    entries: vec![
+                        KvnEntry::Field(KvnField {
+                            key: "CREATION_DATE".to_string(),
+                            value: "2024-01-01T00:00:00".to_string(),
+                            unit: None,
+                        }),
+                        KvnEntry::Field(KvnField {
+                            key: "ORIGINATOR".to_string(),
+                            value: "TEST".to_string(),
+                            unit: None,
+                        }),
+                    ],
+                },
+                cov_section,
+            ],
+        };
+        let err = Oem::try_from(doc).expect_err("orphan covariance");
+        assert!(
+            matches!(&err.kind, KvnErrorKind::UnexpectedKeyword(k) if k.contains("COVARIANCE")),
+            "wrong error: {err:?}"
+        );
+    }
+
+    #[test]
+    fn covariance_row_value_not_numeric_returns_error() {
+        let kvn = "\
+CCSDS_OEM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+
+META_START
+OBJECT_NAME = SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+START_TIME = 2024-01-01T00:00:00
+STOP_TIME = 2024-01-01T00:01:00
+META_STOP
+
+2024-01-01T00:00:00 7000.0 0.0 0.0 0.0 7.5 0.0
+2024-01-01T00:01:00 7001.0 0.0 0.0 0.0 7.5 0.0
+
+COVARIANCE_START
+EPOCH = 2024-01-01T00:00:00
+not-a-number
+0.0 1.0
+0.0 0.0 1.0
+0.0 0.0 0.0 1.0
+0.0 0.0 0.0 0.0 1.0
+0.0 0.0 0.0 0.0 0.0 1.0
+COVARIANCE_STOP
+";
+        let err = read_oem(kvn).expect_err("malformed covariance value");
+        assert!(
+            matches!(
+                &err.kind,
+                KvnErrorKind::InvalidValue { keyword, .. } if keyword == "COVARIANCE"
+            ),
+            "wrong error: {err:?}"
+        );
+    }
+
+    #[test]
+    fn covariance_wrong_row_count_returns_error() {
+        let kvn = "\
+CCSDS_OEM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+
+META_START
+OBJECT_NAME = SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+START_TIME = 2024-01-01T00:00:00
+STOP_TIME = 2024-01-01T00:01:00
+META_STOP
+
+2024-01-01T00:00:00 7000.0 0.0 0.0 0.0 7.5 0.0
+2024-01-01T00:01:00 7001.0 0.0 0.0 0.0 7.5 0.0
+
+COVARIANCE_START
+EPOCH = 2024-01-01T00:00:00
+1.0
+0.0 1.0
+0.0 0.0 1.0
+COVARIANCE_STOP
+";
+        let err = read_oem(kvn).expect_err("wrong covariance row count");
+        assert!(
+            matches!(
+                &err.kind,
+                KvnErrorKind::InvalidValue { keyword, reason } if keyword == "COVARIANCE" && reason.contains("6 covariance rows")
+            ),
+            "wrong error: {err:?}"
+        );
+    }
+
+    #[test]
+    fn covariance_wrong_row_width_returns_error() {
+        // Each row i should have i+1 values; here row 2 has 4 values
+        // instead of 3.
+        let kvn = "\
+CCSDS_OEM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+
+META_START
+OBJECT_NAME = SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+START_TIME = 2024-01-01T00:00:00
+STOP_TIME = 2024-01-01T00:01:00
+META_STOP
+
+2024-01-01T00:00:00 7000.0 0.0 0.0 0.0 7.5 0.0
+2024-01-01T00:01:00 7001.0 0.0 0.0 0.0 7.5 0.0
+
+COVARIANCE_START
+EPOCH = 2024-01-01T00:00:00
+1.0
+0.0 1.0
+0.0 0.0 1.0 9.9
+0.0 0.0 0.0 1.0
+0.0 0.0 0.0 0.0 1.0
+0.0 0.0 0.0 0.0 0.0 1.0
+COVARIANCE_STOP
+";
+        let err = read_oem(kvn).expect_err("wrong covariance row width");
+        assert!(
+            matches!(
+                &err.kind,
+                KvnErrorKind::InvalidValue { keyword, reason } if keyword == "COVARIANCE" && reason.contains("expected")
+            ),
+            "wrong error: {err:?}"
+        );
+    }
+
+    #[test]
+    fn read_oem_wrong_message_kind_returns_error() {
+        // Feed an OPM message to read_oem.
+        let kvn = "\
+CCSDS_OPM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+OBJECT_NAME = SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+EPOCH = 2024-01-01T00:00:00
+X = 7000.0 [km]
+Y = 0.0 [km]
+Z = 0.0 [km]
+X_DOT = 0.0 [km/s]
+Y_DOT = 7.5 [km/s]
+Z_DOT = 0.0 [km/s]
+";
+        let err = read_oem(kvn).expect_err("wrong kind");
+        assert!(matches!(&err.kind, KvnErrorKind::UnexpectedKeyword(_)));
+    }
 }
