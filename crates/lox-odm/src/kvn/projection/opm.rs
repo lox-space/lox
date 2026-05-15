@@ -1544,4 +1544,467 @@ Z_DOT = 0.0 [km/s]
             "metadata comments count mismatch"
         );
     }
+
+    // -----------------------------------------------------------------------
+    // Additional read direction tests for error paths and optional blocks
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn read_wrong_message_kind_returns_error() {
+        // An OMM document fed to read_opm (which calls OPM TryFrom) must fail.
+        let kvn = "\
+CCSDS_OMM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = TEME
+TIME_SYSTEM = TAI
+MEAN_ELEMENT_THEORY = SGP4
+EPOCH = 2024-01-01T00:00:00
+SEMI_MAJOR_AXIS = 6860.0 [km]
+ECCENTRICITY = 0.001
+INCLINATION = 45.0 [deg]
+RA_OF_ASC_NODE = 0.0 [deg]
+ARG_OF_PERICENTER = 0.0 [deg]
+MEAN_ANOMALY = 0.0 [deg]
+";
+        let err = read_opm(kvn).expect_err("should fail on wrong message kind");
+        assert!(
+            matches!(err.kind, KvnErrorKind::UnexpectedKeyword(_)),
+            "unexpected error kind: {err}"
+        );
+    }
+
+    #[test]
+    fn read_opm_with_keplerian_block() {
+        let kvn = "\
+CCSDS_OPM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+EPOCH = 2024-01-01T00:00:00
+X = 7000.0 [km]
+Y = 0.0 [km]
+Z = 0.0 [km]
+X_DOT = 0.0 [km/s]
+Y_DOT = 7.5 [km/s]
+Z_DOT = 0.0 [km/s]
+SEMI_MAJOR_AXIS = 7000.0 [km]
+ECCENTRICITY = 0.001
+INCLINATION = 45.0 [deg]
+RA_OF_ASC_NODE = 0.0 [deg]
+ARG_OF_PERICENTER = 0.0 [deg]
+TRUE_ANOMALY = 0.0 [deg]
+GM = 398600.4415 [km**3/s**2]
+";
+        let parsed = read_opm(kvn).expect("parse failed");
+        let kep = parsed.keplerian.expect("keplerian block should be present");
+        assert!(kep.gm.is_some(), "GM should be parsed");
+    }
+
+    #[test]
+    fn read_opm_missing_true_anomaly_returns_error() {
+        let kvn = "\
+CCSDS_OPM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+EPOCH = 2024-01-01T00:00:00
+X = 7000.0 [km]
+Y = 0.0 [km]
+Z = 0.0 [km]
+X_DOT = 0.0 [km/s]
+Y_DOT = 7.5 [km/s]
+Z_DOT = 0.0 [km/s]
+SEMI_MAJOR_AXIS = 7000.0 [km]
+ECCENTRICITY = 0.001
+INCLINATION = 45.0 [deg]
+RA_OF_ASC_NODE = 0.0 [deg]
+ARG_OF_PERICENTER = 0.0 [deg]
+MEAN_ANOMALY = 0.0 [deg]
+";
+        let err = read_opm(kvn).expect_err("should fail on missing TRUE_ANOMALY");
+        assert!(
+            matches!(err.kind, KvnErrorKind::MissingRequiredField(ref k) if k == "TRUE_ANOMALY"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn read_opm_with_spacecraft_parameters() {
+        let kvn = "\
+CCSDS_OPM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+EPOCH = 2024-01-01T00:00:00
+X = 7000.0 [km]
+Y = 0.0 [km]
+Z = 0.0 [km]
+X_DOT = 0.0 [km/s]
+Y_DOT = 7.5 [km/s]
+Z_DOT = 0.0 [km/s]
+MASS = 500.0 [kg]
+SOLAR_RAD_AREA = 2.0 [m**2]
+SOLAR_RAD_COEFF = 1.2
+DRAG_AREA = 1.5 [m**2]
+DRAG_COEFF = 2.2
+";
+        let parsed = read_opm(kvn).expect("parse failed");
+        let sp = parsed
+            .spacecraft
+            .expect("spacecraft block should be present");
+        assert!((sp.mass.unwrap().to_kilograms() - 500.0).abs() < 1e-9);
+        assert_eq!(sp.solar_rad_coeff, Some(1.2));
+        assert_eq!(sp.drag_coeff, Some(2.2));
+    }
+
+    #[test]
+    fn read_opm_with_covariance_with_frame() {
+        let mut opm = sample_opm();
+        opm.covariance = Some(Covariance {
+            comments: Vec::new(),
+            frame: Some(OdmFrame::Known(lox_frames::DynFrame::Icrf)),
+            matrix: Matrix6::identity(),
+        });
+        let written = write_opm(&opm);
+        let parsed = read_opm(&written).expect("parse failed");
+        let cov = parsed.covariance.expect("covariance should be present");
+        assert!(cov.frame.is_some(), "covariance frame should be preserved");
+    }
+
+    #[test]
+    fn read_opm_maneuver_with_ref_frame() {
+        use lox_core::time::deltas::TimeDelta;
+
+        let mut opm = sample_opm();
+        opm.maneuvers.push(Maneuver {
+            comments: Vec::new(),
+            ignition_epoch: sample_epoch(),
+            duration: TimeDelta::from_seconds(30),
+            delta_mass: Mass::kilograms(-0.5),
+            frame: Some(OdmFrame::Known(lox_frames::DynFrame::Icrf)),
+            delta_v: [
+                Velocity::kilometers_per_second(0.01),
+                Velocity::kilometers_per_second(0.0),
+                Velocity::kilometers_per_second(0.0),
+            ],
+        });
+        let written = write_opm(&opm);
+        let parsed = read_opm(&written).expect("parse failed");
+        assert_eq!(parsed.maneuvers.len(), 1);
+        assert!(
+            parsed.maneuvers[0].frame.is_some(),
+            "maneuver frame should be preserved"
+        );
+    }
+
+    #[test]
+    fn read_opm_maneuver_duplicate_dv1_returns_error() {
+        let base = "\
+CCSDS_OPM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+EPOCH = 2024-01-01T00:00:00
+X = 7000.0 [km]
+Y = 0.0 [km]
+Z = 0.0 [km]
+X_DOT = 0.0 [km/s]
+Y_DOT = 7.5 [km/s]
+Z_DOT = 0.0 [km/s]
+MAN_EPOCH_IGNITION = 2024-01-01T00:00:00
+MAN_DURATION = 60 [s]
+MAN_DELTA_MASS = -1.0 [kg]
+MAN_DV_1 = 0.1 [km/s]
+MAN_DV_1 = 0.2 [km/s]
+MAN_DV_2 = 0.0 [km/s]
+MAN_DV_3 = 0.0 [km/s]
+";
+        let err = read_opm(base).expect_err("should fail on duplicate MAN_DV_1");
+        assert!(
+            matches!(err.kind, KvnErrorKind::DuplicateField(ref k) if k == "MAN_DV_1"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn read_opm_maneuver_field_before_epoch_returns_error() {
+        let kvn = "\
+CCSDS_OPM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+EPOCH = 2024-01-01T00:00:00
+X = 7000.0 [km]
+Y = 0.0 [km]
+Z = 0.0 [km]
+X_DOT = 0.0 [km/s]
+Y_DOT = 7.5 [km/s]
+Z_DOT = 0.0 [km/s]
+MAN_DURATION = 60 [s]
+";
+        let err = read_opm(kvn).expect_err("should fail on maneuver field before ignition epoch");
+        assert!(
+            matches!(err.kind, KvnErrorKind::UnexpectedKeyword(_)),
+            "unexpected error kind: {err}"
+        );
+    }
+
+    #[test]
+    fn read_opm_missing_maneuver_dv3_returns_error() {
+        let kvn = "\
+CCSDS_OPM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+EPOCH = 2024-01-01T00:00:00
+X = 7000.0 [km]
+Y = 0.0 [km]
+Z = 0.0 [km]
+X_DOT = 0.0 [km/s]
+Y_DOT = 7.5 [km/s]
+Z_DOT = 0.0 [km/s]
+MAN_EPOCH_IGNITION = 2024-01-01T00:00:00
+MAN_DURATION = 60 [s]
+MAN_DELTA_MASS = -1.0 [kg]
+MAN_DV_1 = 0.1 [km/s]
+MAN_DV_2 = 0.0 [km/s]
+";
+        let err = read_opm(kvn).expect_err("should fail on missing MAN_DV_3");
+        assert!(
+            matches!(err.kind, KvnErrorKind::MissingRequiredField(ref k) if k == "MAN_DV_3"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn write_opm_with_spacecraft_all_fields() {
+        use crate::types::common::SpacecraftParameters;
+        use lox_core::units::Area;
+
+        let mut opm = sample_opm();
+        opm.spacecraft = Some(SpacecraftParameters {
+            comments: Vec::new(),
+            mass: Some(Mass::kilograms(500.0)),
+            solar_rad_area: Some(Area::square_meters(2.0)),
+            solar_rad_coeff: Some(1.2),
+            drag_area: Some(Area::square_meters(1.5)),
+            drag_coeff: Some(2.2),
+        });
+
+        let output = write_opm(&opm);
+        assert!(
+            output.contains("MASS = 500 [kg]"),
+            "missing MASS; got:\n{output}"
+        );
+        assert!(
+            output.contains("DRAG_COEFF = 2.2"),
+            "missing DRAG_COEFF; got:\n{output}"
+        );
+    }
+
+    #[test]
+    fn round_trip_opm_with_keplerian_and_spacecraft() {
+        use crate::types::common::SpacecraftParameters;
+        use lox_core::units::Area;
+
+        let mut opm = sample_opm();
+        opm.keplerian = Some(OpmKeplerian {
+            comments: Vec::new(),
+            elements: keplerian_elements_roundtrip_safe(),
+            gm: None,
+        });
+        opm.spacecraft = Some(SpacecraftParameters {
+            comments: vec!["Spacecraft comment".to_string()],
+            mass: Some(Mass::kilograms(200.0)),
+            solar_rad_area: Some(Area::square_meters(3.0)),
+            solar_rad_coeff: Some(1.5),
+            drag_area: Some(Area::square_meters(2.0)),
+            drag_coeff: Some(2.5),
+        });
+
+        let written = write_opm(&opm);
+        let parsed = read_opm(&written).expect("parse failed");
+        assert!(
+            parsed.keplerian.is_some(),
+            "keplerian block should survive round-trip"
+        );
+        let sp = parsed
+            .spacecraft
+            .expect("spacecraft block should survive round-trip");
+        assert!((sp.mass.unwrap().to_kilograms() - 200.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn write_opm_with_maneuver_with_frame() {
+        use lox_core::time::deltas::TimeDelta;
+
+        let mut opm = sample_opm();
+        opm.maneuvers.push(Maneuver {
+            comments: Vec::new(),
+            ignition_epoch: sample_epoch(),
+            duration: TimeDelta::from_seconds(60),
+            delta_mass: Mass::kilograms(-1.0),
+            frame: Some(OdmFrame::Known(lox_frames::DynFrame::Icrf)),
+            delta_v: [
+                Velocity::kilometers_per_second(0.1),
+                Velocity::kilometers_per_second(0.0),
+                Velocity::kilometers_per_second(0.0),
+            ],
+        });
+
+        let output = write_opm(&opm);
+        assert!(
+            output.contains("MAN_REF_FRAME = ICRF"),
+            "missing MAN_REF_FRAME; got:\n{output}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Missing-required-field coverage matrix
+    //
+    // Each `.ok_or_else(|| KvnError { ... MissingRequiredField })` site
+    // is a distinct closure in LLVM coverage. The tests below take the
+    // path missing exactly one required field, exercising every such
+    // closure on the read path.
+    // -----------------------------------------------------------------
+
+    /// Builds a full OPM KVN string with header + metadata + state +
+    /// Keplerian + a single maneuver, then strips the named field by
+    /// removing the matching line.
+    fn opm_kvn_without_field(missing: &str) -> String {
+        let full = "\
+CCSDS_OPM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+EPOCH = 2024-01-01T00:00:00
+X = 7000.0 [km]
+Y = 0.0 [km]
+Z = 0.0 [km]
+X_DOT = 0.0 [km/s]
+Y_DOT = 7.5 [km/s]
+Z_DOT = 0.0 [km/s]
+SEMI_MAJOR_AXIS = 7000.0 [km]
+ECCENTRICITY = 0.001
+INCLINATION = 45.0 [deg]
+RA_OF_ASC_NODE = 0.0 [deg]
+ARG_OF_PERICENTER = 0.0 [deg]
+TRUE_ANOMALY = 0.0 [deg]
+MAN_EPOCH_IGNITION = 2024-01-01T00:01:00
+MAN_DURATION = 60 [s]
+MAN_DELTA_MASS = -1.0 [kg]
+MAN_DV_1 = 0.1 [km/s]
+MAN_DV_2 = 0.0 [km/s]
+MAN_DV_3 = 0.0 [km/s]
+";
+        full.lines()
+            .filter(|line| !line.trim_start().starts_with(&format!("{missing} =")))
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n"
+    }
+
+    fn assert_missing_field(input: &str, expected: &str) {
+        let err = read_opm(input).expect_err(&format!("expected missing {expected}"));
+        let KvnErrorKind::MissingRequiredField(ref k) = err.kind else {
+            panic!("expected MissingRequiredField({expected}), got: {err:?}");
+        };
+        assert_eq!(k, expected, "wrong missing-field name");
+    }
+
+    #[test]
+    fn missing_x_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("X"), "X");
+    }
+    #[test]
+    fn missing_y_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("Y"), "Y");
+    }
+    #[test]
+    fn missing_z_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("Z"), "Z");
+    }
+    #[test]
+    fn missing_x_dot_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("X_DOT"), "X_DOT");
+    }
+    #[test]
+    fn missing_y_dot_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("Y_DOT"), "Y_DOT");
+    }
+    #[test]
+    fn missing_z_dot_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("Z_DOT"), "Z_DOT");
+    }
+    #[test]
+    fn missing_semi_major_axis_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("SEMI_MAJOR_AXIS"), "SEMI_MAJOR_AXIS");
+    }
+    #[test]
+    fn missing_eccentricity_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("ECCENTRICITY"), "ECCENTRICITY");
+    }
+    #[test]
+    fn missing_inclination_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("INCLINATION"), "INCLINATION");
+    }
+    #[test]
+    fn missing_ra_of_asc_node_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("RA_OF_ASC_NODE"), "RA_OF_ASC_NODE");
+    }
+    #[test]
+    fn missing_arg_of_pericenter_returns_error() {
+        assert_missing_field(
+            &opm_kvn_without_field("ARG_OF_PERICENTER"),
+            "ARG_OF_PERICENTER",
+        );
+    }
+    #[test]
+    fn missing_man_duration_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("MAN_DURATION"), "MAN_DURATION");
+    }
+    #[test]
+    fn missing_man_delta_mass_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("MAN_DELTA_MASS"), "MAN_DELTA_MASS");
+    }
+    #[test]
+    fn missing_man_dv_1_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("MAN_DV_1"), "MAN_DV_1");
+    }
+    #[test]
+    fn missing_man_dv_2_returns_error() {
+        assert_missing_field(&opm_kvn_without_field("MAN_DV_2"), "MAN_DV_2");
+    }
 }

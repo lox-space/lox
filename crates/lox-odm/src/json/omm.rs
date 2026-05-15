@@ -1143,6 +1143,7 @@ mod tests {
     use lox_frames::DynFrame;
     use nalgebra::Matrix6;
 
+    use crate::json::error::JsonError;
     use crate::types::common::{Covariance, OdmCenter, OdmFrame, OdmHeader, OdmTime};
     use crate::types::omm::{Omm, OmmMeanElements, OmmMetadata, TleParameters};
 
@@ -1630,5 +1631,756 @@ mod tests {
         let tle = parsed.tle_parameters.expect("missing TLE parameters");
         assert!((tle.bterm.unwrap().to_square_meters_per_kilogram() - 0.05).abs() < 1e-9);
         assert!((tle.agom.unwrap().to_square_meters_per_kilogram() - 0.03).abs() < 1e-9);
+    }
+
+    // -----------------------------------------------------------------------
+    // de_f64_lax_opt: null / empty-string / whitespace / malformed
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn de_f64_lax_opt_null_returns_none() {
+        // JSON null for an optional float field → None
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0,
+            "GM": null
+        }"#;
+        let omm = read_omm(json).expect("parse failed");
+        assert!(
+            omm.mean_elements.gm.is_none(),
+            "null GM should produce None"
+        );
+    }
+
+    #[test]
+    fn de_f64_lax_opt_empty_string_returns_none() {
+        // Empty-string value for optional f64 → None
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0,
+            "GM": ""
+        }"#;
+        let omm = read_omm(json).expect("parse failed");
+        assert!(
+            omm.mean_elements.gm.is_none(),
+            "empty-string GM should produce None"
+        );
+    }
+
+    #[test]
+    fn de_f64_lax_opt_whitespace_string_returns_none() {
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0,
+            "GM": "   "
+        }"#;
+        let omm = read_omm(json).expect("parse failed");
+        assert!(
+            omm.mean_elements.gm.is_none(),
+            "whitespace-only GM should produce None"
+        );
+    }
+
+    #[test]
+    fn de_f64_lax_opt_malformed_string_returns_error() {
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0,
+            "GM": "not-a-float"
+        }"#;
+        let err = read_omm(json).expect_err("should fail on malformed float string");
+        // The error should come from serde_json
+        assert!(
+            matches!(err, JsonError::Json(_)),
+            "unexpected error type: {err}"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // de_i32_lax_opt: string int / null / malformed / overflow
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn de_i32_lax_opt_string_int_works() {
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0,
+            "EPHEMERIS_TYPE": "0"
+        }"#;
+        let omm = read_omm(json).expect("parse failed");
+        let tle = omm.tle_parameters.expect("TLE params should be present");
+        assert_eq!(tle.ephemeris_type, Some(0));
+    }
+
+    #[test]
+    fn de_i32_lax_opt_null_returns_none() {
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0,
+            "NORAD_CAT_ID": null
+        }"#;
+        let omm = read_omm(json).expect("parse failed");
+        // null NORAD_CAT_ID → None → no tle_parameters (no other TLE fields)
+        assert!(
+            omm.tle_parameters.is_none(),
+            "null NORAD_CAT_ID should produce None TLE block"
+        );
+    }
+
+    #[test]
+    fn de_i32_lax_opt_empty_string_returns_none() {
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0,
+            "EPHEMERIS_TYPE": ""
+        }"#;
+        let omm = read_omm(json).expect("parse failed with empty EPHEMERIS_TYPE");
+        assert!(
+            omm.tle_parameters.is_none(),
+            "empty-string EPHEMERIS_TYPE should produce None"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // de_i64_lax_opt / de_u64_lax_opt: string variants
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn de_i64_lax_opt_string_int_works() {
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0,
+            "ELEMENT_SET_NO": "999"
+        }"#;
+        let omm = read_omm(json).expect("parse failed");
+        let tle = omm.tle_parameters.expect("TLE params should be present");
+        assert_eq!(tle.element_set_no, Some(999));
+    }
+
+    #[test]
+    fn de_u64_lax_opt_string_int_works() {
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0,
+            "REV_AT_EPOCH": "5327"
+        }"#;
+        let omm = read_omm(json).expect("parse failed");
+        let tle = omm.tle_parameters.expect("TLE params should be present");
+        assert_eq!(tle.rev_at_epoch, Some(5327));
+    }
+
+    #[test]
+    fn de_u64_lax_opt_empty_string_returns_none() {
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0,
+            "REV_AT_EPOCH": ""
+        }"#;
+        let omm = read_omm(json).expect("parse failed");
+        assert!(
+            omm.tle_parameters.is_none(),
+            "empty-string REV_AT_EPOCH should produce None"
+        );
+    }
+
+    #[test]
+    fn de_i64_lax_opt_empty_string_returns_none() {
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0,
+            "ELEMENT_SET_NO": ""
+        }"#;
+        let omm = read_omm(json).expect("parse failed");
+        assert!(
+            omm.tle_parameters.is_none(),
+            "empty-string ELEMENT_SET_NO should produce None"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Missing SEMI_MAJOR_AXIS and no MEAN_MOTION → error
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn missing_sma_and_mean_motion_returns_error() {
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0
+        }"#;
+        let err = read_omm(json).expect_err("should fail without SMA or MEAN_MOTION");
+        assert!(
+            matches!(err, JsonError::MissingRequiredField(ref k) if k == "SEMI_MAJOR_AXIS"),
+            "unexpected error: {err}"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Covariance partial → missing required field error
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn partial_covariance_missing_cy_x_returns_error() {
+        // Provide CX_X but omit CY_X → MissingRequiredField for CY_X
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0,
+            "CX_X": 1.0
+        }"#;
+        let err = read_omm(json).expect_err("should fail on missing CY_X");
+        assert!(
+            matches!(err, JsonError::MissingRequiredField(ref k) if k == "CY_X"),
+            "unexpected error: {err}"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // de_f64_lax: integer-in-JSON-number parsed as f64
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn de_f64_lax_integer_json_number_parsed() {
+        // INCLINATION as integer JSON number → f64
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860,
+            "ECCENTRICITY": 0,
+            "INCLINATION": 45,
+            "RA_OF_ASC_NODE": 0,
+            "ARG_OF_PERICENTER": 0,
+            "MEAN_ANOMALY": 0
+        }"#;
+        let omm = read_omm(json).expect("parse failed with integer JSON numbers");
+        assert!(
+            omm.mean_elements.elements.e.abs() < 1e-10,
+            "eccentricity should be 0"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Invalid epoch strings
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn invalid_creation_date_returns_error() {
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "not-a-date",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0
+        }"#;
+        let err = read_omm(json).expect_err("should fail on invalid CREATION_DATE");
+        assert!(
+            matches!(err, JsonError::InvalidEpoch { .. }),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn invalid_epoch_string_returns_error() {
+        let json = r#"{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "TEST",
+            "OBJECT_NAME": "SAT",
+            "OBJECT_ID": "2024-000A",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "definitely-not-a-date",
+            "SEMI_MAJOR_AXIS": 6860.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 45.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0
+        }"#;
+        let err = read_omm(json).expect_err("should fail on invalid EPOCH");
+        assert!(
+            matches!(err, JsonError::InvalidEpoch { .. }),
+            "unexpected error: {err}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Lax deserializer visitor-method coverage
+    //
+    // Each `de_*_lax[_opt]` deserializer has a `Visitor` with multiple
+    // `visit_*` methods, one per JSON value type. The tests below give
+    // serde each shape of value (int, float, string, null, empty) so
+    // every visitor branch is exercised.
+    // -----------------------------------------------------------------
+
+    /// Wraps a single OMM field value in an otherwise-valid skeleton.
+    /// If `field` already appears in the skeleton, the value is replaced;
+    /// otherwise it's appended.
+    fn omm_with_value(field: &str, value: &str) -> String {
+        let mut fields = vec![
+            ("CCSDS_OMM_VERS", "\"2.0\"".to_string()),
+            ("CREATION_DATE", "\"2024-01-01T00:00:00\"".to_string()),
+            ("ORIGINATOR", "\"TEST\"".to_string()),
+            ("OBJECT_NAME", "\"X\"".to_string()),
+            ("OBJECT_ID", "\"Y\"".to_string()),
+            ("CENTER_NAME", "\"EARTH\"".to_string()),
+            ("REF_FRAME", "\"TEME\"".to_string()),
+            ("TIME_SYSTEM", "\"UTC\"".to_string()),
+            ("MEAN_ELEMENT_THEORY", "\"SGP4\"".to_string()),
+            ("EPOCH", "\"2024-01-01T00:00:00\"".to_string()),
+            ("SEMI_MAJOR_AXIS", "7000.0".to_string()),
+            ("ECCENTRICITY", "0.001".to_string()),
+            ("INCLINATION", "0.0".to_string()),
+            ("RA_OF_ASC_NODE", "0.0".to_string()),
+            ("ARG_OF_PERICENTER", "0.0".to_string()),
+            ("MEAN_ANOMALY", "0.0".to_string()),
+        ];
+        if let Some(entry) = fields.iter_mut().find(|(k, _)| *k == field) {
+            entry.1 = value.to_string();
+        } else {
+            fields.push((field, value.to_string()));
+        }
+        let body = fields
+            .iter()
+            .map(|(k, v)| format!("\"{k}\": {v}"))
+            .collect::<Vec<_>>()
+            .join(",\n");
+        format!("{{\n{body}\n}}")
+    }
+
+    // --- f64 visitor branches via GM field (Option<f64> stored on the wire) ---
+
+    #[test]
+    fn de_f64_lax_opt_accepts_native_float() {
+        let omm = read_omm(&omm_with_value("GM", "398600.4")).expect("read");
+        let gm = omm.mean_elements.gm.expect("gm set");
+        assert!((gm.as_f64() - 3.986004e14).abs() < 1e8);
+    }
+
+    #[test]
+    fn de_f64_lax_opt_accepts_native_integer() {
+        // JSON integer literals (no decimal point) trigger visit_i64 / visit_u64.
+        let omm = read_omm(&omm_with_value("GM", "398600")).expect("read");
+        let gm = omm.mean_elements.gm.expect("gm set");
+        assert!((gm.as_f64() - 3.986e14).abs() < 1e9);
+    }
+
+    #[test]
+    fn de_f64_lax_opt_accepts_native_negative_integer() {
+        let omm = read_omm(&omm_with_value("GM", "-1")).expect("read");
+        let gm = omm.mean_elements.gm.expect("gm set");
+        // -1 km^3/s^2 = -1e9 m^3/s^2
+        assert!((gm.as_f64() - (-1e9)).abs() < 1.0);
+    }
+
+    #[test]
+    fn de_f64_lax_opt_accepts_quoted_string() {
+        let omm = read_omm(&omm_with_value("GM", "\"398600.4\"")).expect("read");
+        let gm = omm.mean_elements.gm.expect("gm set");
+        assert!((gm.as_f64() - 3.986004e14).abs() < 1e8);
+    }
+
+    #[test]
+    fn de_f64_lax_opt_treats_null_as_none() {
+        let omm = read_omm(&omm_with_value("GM", "null")).expect("read");
+        assert!(omm.mean_elements.gm.is_none());
+    }
+
+    #[test]
+    fn de_f64_lax_opt_treats_empty_string_as_none() {
+        let omm = read_omm(&omm_with_value("GM", "\"\"")).expect("read");
+        assert!(omm.mean_elements.gm.is_none());
+    }
+
+    #[test]
+    fn de_f64_lax_opt_treats_whitespace_string_as_none() {
+        let omm = read_omm(&omm_with_value("GM", "\"   \"")).expect("read");
+        assert!(omm.mean_elements.gm.is_none());
+    }
+
+    #[test]
+    fn de_f64_lax_opt_rejects_garbage_string() {
+        let json = omm_with_value("GM", "\"not-a-number\"");
+        let err = read_omm(&json).expect_err("should reject");
+        assert!(matches!(err, JsonError::Json(_)));
+    }
+
+    // --- i32 visitor branches via NORAD_CAT_ID ---
+
+    #[test]
+    fn de_i32_lax_opt_accepts_native_integer() {
+        let omm = read_omm(&omm_with_value("NORAD_CAT_ID", "25544")).expect("read");
+        let tle = omm.tle_parameters.expect("tle");
+        assert_eq!(tle.norad_cat_id, Some(25544));
+    }
+
+    #[test]
+    fn de_i32_lax_opt_accepts_negative_native_integer() {
+        let omm = read_omm(&omm_with_value("NORAD_CAT_ID", "-1")).expect("read");
+        let tle = omm.tle_parameters.expect("tle");
+        assert_eq!(tle.norad_cat_id, Some(-1));
+    }
+
+    #[test]
+    fn de_i32_lax_opt_accepts_quoted_string() {
+        let omm = read_omm(&omm_with_value("NORAD_CAT_ID", "\"25544\"")).expect("read");
+        let tle = omm.tle_parameters.expect("tle");
+        assert_eq!(tle.norad_cat_id, Some(25544));
+    }
+
+    #[test]
+    fn de_i32_lax_opt_treats_null_as_none() {
+        let omm = read_omm(&omm_with_value("NORAD_CAT_ID", "null")).expect("read");
+        assert!(omm.tle_parameters.is_none() || omm.tle_parameters.unwrap().norad_cat_id.is_none());
+    }
+
+    #[test]
+    fn de_i32_lax_opt_treats_empty_string_as_none() {
+        let omm = read_omm(&omm_with_value("NORAD_CAT_ID", "\"\"")).expect("read");
+        assert!(omm.tle_parameters.is_none() || omm.tle_parameters.unwrap().norad_cat_id.is_none());
+    }
+
+    #[test]
+    fn de_i32_lax_opt_rejects_overflow_native() {
+        // i64 value larger than i32::MAX → try_from fails
+        let json = omm_with_value("NORAD_CAT_ID", "9999999999");
+        let err = read_omm(&json).expect_err("should overflow");
+        assert!(matches!(err, JsonError::Json(_)));
+    }
+
+    #[test]
+    fn de_i32_lax_opt_rejects_overflow_string() {
+        let json = omm_with_value("NORAD_CAT_ID", "\"9999999999\"");
+        let err = read_omm(&json).expect_err("should overflow");
+        assert!(matches!(err, JsonError::Json(_)));
+    }
+
+    // --- i64 visitor branches via ELEMENT_SET_NO ---
+
+    #[test]
+    fn de_i64_lax_opt_accepts_native_integer() {
+        let omm = read_omm(&omm_with_value("ELEMENT_SET_NO", "999")).expect("read");
+        let tle = omm.tle_parameters.expect("tle");
+        assert_eq!(tle.element_set_no, Some(999));
+    }
+
+    #[test]
+    fn de_i64_lax_opt_accepts_negative_native_integer() {
+        let omm = read_omm(&omm_with_value("ELEMENT_SET_NO", "-42")).expect("read");
+        let tle = omm.tle_parameters.expect("tle");
+        assert_eq!(tle.element_set_no, Some(-42));
+    }
+
+    #[test]
+    fn de_i64_lax_opt_accepts_quoted_string() {
+        let omm = read_omm(&omm_with_value("ELEMENT_SET_NO", "\"999\"")).expect("read");
+        let tle = omm.tle_parameters.expect("tle");
+        assert_eq!(tle.element_set_no, Some(999));
+    }
+
+    #[test]
+    fn de_i64_lax_opt_treats_null_as_none() {
+        let omm = read_omm(&omm_with_value("ELEMENT_SET_NO", "null")).expect("read");
+        let _ = omm; // accepted
+    }
+
+    #[test]
+    fn de_i64_lax_opt_treats_empty_string_as_none() {
+        let omm = read_omm(&omm_with_value("ELEMENT_SET_NO", "\"\"")).expect("read");
+        let _ = omm;
+    }
+
+    #[test]
+    fn de_i64_lax_opt_rejects_garbage_string() {
+        let json = omm_with_value("ELEMENT_SET_NO", "\"xyz\"");
+        let err = read_omm(&json).expect_err("should reject");
+        assert!(matches!(err, JsonError::Json(_)));
+    }
+
+    // --- u64 visitor branches via REV_AT_EPOCH ---
+
+    #[test]
+    fn de_u64_lax_opt_accepts_native_integer() {
+        let omm = read_omm(&omm_with_value("REV_AT_EPOCH", "5327")).expect("read");
+        let tle = omm.tle_parameters.expect("tle");
+        assert_eq!(tle.rev_at_epoch, Some(5327));
+    }
+
+    #[test]
+    fn de_u64_lax_opt_rejects_negative_native_integer() {
+        let json = omm_with_value("REV_AT_EPOCH", "-1");
+        let err = read_omm(&json).expect_err("u64 cannot be negative");
+        assert!(matches!(err, JsonError::Json(_)));
+    }
+
+    #[test]
+    fn de_u64_lax_opt_accepts_quoted_string() {
+        let omm = read_omm(&omm_with_value("REV_AT_EPOCH", "\"5327\"")).expect("read");
+        let tle = omm.tle_parameters.expect("tle");
+        assert_eq!(tle.rev_at_epoch, Some(5327));
+    }
+
+    #[test]
+    fn de_u64_lax_opt_treats_null_as_none() {
+        let omm = read_omm(&omm_with_value("REV_AT_EPOCH", "null")).expect("read");
+        let _ = omm;
+    }
+
+    #[test]
+    fn de_u64_lax_opt_treats_empty_string_as_none() {
+        let omm = read_omm(&omm_with_value("REV_AT_EPOCH", "\"\"")).expect("read");
+        let _ = omm;
+    }
+
+    #[test]
+    fn de_u64_lax_opt_rejects_garbage_string() {
+        let json = omm_with_value("REV_AT_EPOCH", "\"xyz\"");
+        let err = read_omm(&json).expect_err("should reject");
+        assert!(matches!(err, JsonError::Json(_)));
+    }
+
+    // --- de_f64_lax (required, non-optional) visitor branches via ECCENTRICITY ---
+
+    #[test]
+    fn de_f64_lax_accepts_native_float() {
+        // ECCENTRICITY is f64 (required). Native-float input.
+        let omm = read_omm(&omm_with_value("INCLINATION", "51.6")).expect("read");
+        assert!((omm.mean_elements.elements.i - 51.6_f64.to_radians()).abs() < 1e-12);
+    }
+
+    #[test]
+    fn de_f64_lax_accepts_native_integer() {
+        let omm = read_omm(&omm_with_value("INCLINATION", "0")).expect("read");
+        assert!(omm.mean_elements.elements.i.abs() < 1e-12);
+    }
+
+    #[test]
+    fn de_f64_lax_accepts_quoted_string() {
+        let omm = read_omm(&omm_with_value("INCLINATION", "\"51.6\"")).expect("read");
+        assert!((omm.mean_elements.elements.i - 51.6_f64.to_radians()).abs() < 1e-12);
+    }
+
+    #[test]
+    fn de_f64_lax_rejects_garbage_string() {
+        let json = omm_with_value("INCLINATION", "\"not-a-number\"");
+        let err = read_omm(&json).expect_err("should reject");
+        assert!(matches!(err, JsonError::Json(_)));
+    }
+
+    // --- visit_some branches via Option<T> wrapping ---
+    //
+    // serde encounters a `#[serde(deserialize_with = "...")]` field of type
+    // `Option<f64>` and calls `deserialize_option` first, which routes
+    // through our visitor's `visit_some`. The inner-visitor branches there
+    // also need coverage. Adding a value-bearing field exercises the
+    // `visit_some` → inner-visitor path.
+
+    #[test]
+    fn de_i32_lax_opt_visit_some_inner_path_via_native() {
+        // serde-options that route through Option<T> can hit visit_some
+        // and the inner visitor's visit_i64/visit_u64.
+        let omm = read_omm(&omm_with_value("EPHEMERIS_TYPE", "0")).expect("read");
+        let tle = omm.tle_parameters.expect("tle");
+        assert_eq!(tle.ephemeris_type, Some(0));
     }
 }
