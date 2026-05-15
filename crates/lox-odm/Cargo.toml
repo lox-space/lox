@@ -29,4 +29,9 @@ serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+divan.workspace = true
 rstest.workspace = true
+
+[[bench]]
+name = "parse"
+harness = false

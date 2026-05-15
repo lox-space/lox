@@ -1331,4 +1331,242 @@ mod tests {
             "missing DRAG_COEFF; got:\n{output}"
         );
     }
+
+    // -----------------------------------------------------------------------
+    // Additional error-path and branch tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn read_wrong_message_kind_returns_error() {
+        let kvn = "\
+CCSDS_OPM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+EPOCH = 2024-01-01T00:00:00
+X = 7000.0 [km]
+Y = 0.0 [km]
+Z = 0.0 [km]
+X_DOT = 0.0 [km/s]
+Y_DOT = 7.5 [km/s]
+Z_DOT = 0.0 [km/s]
+";
+        let err = read_omm(kvn).expect_err("should fail on wrong message kind");
+        assert!(
+            matches!(err.kind, KvnErrorKind::UnexpectedKeyword(_)),
+            "unexpected error kind: {err}"
+        );
+    }
+
+    #[test]
+    fn read_omm_unknown_keyword_returns_error() {
+        let mut kvn = minimal_omm_kvn();
+        kvn.push_str("UNKNOWN_FIELD = foo\n");
+
+        let err = read_omm(&kvn).expect_err("should fail on unknown keyword");
+        assert!(
+            matches!(err.kind, KvnErrorKind::UnexpectedKeyword(ref k) if k == "UNKNOWN_FIELD"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn read_omm_duplicate_eccentricity_returns_error() {
+        let kvn = "CCSDS_OMM_VERS = 3.0\n\
+                   CREATION_DATE = 2024-01-01T00:00:00\n\
+                   ORIGINATOR = TEST\n\
+                   OBJECT_NAME = TEST-SAT\n\
+                   OBJECT_ID = 2024-000A\n\
+                   CENTER_NAME = EARTH\n\
+                   REF_FRAME = TEME\n\
+                   TIME_SYSTEM = TAI\n\
+                   MEAN_ELEMENT_THEORY = SGP/SGP4\n\
+                   EPOCH = 2024-01-01T00:00:00\n\
+                   SEMI_MAJOR_AXIS = 6860.0 [km]\n\
+                   ECCENTRICITY = 0.001\n\
+                   ECCENTRICITY = 0.002\n\
+                   INCLINATION = 45.0 [deg]\n\
+                   RA_OF_ASC_NODE = 0.0 [deg]\n\
+                   ARG_OF_PERICENTER = 0.0 [deg]\n\
+                   MEAN_ANOMALY = 0.0 [deg]\n";
+
+        let err = read_omm(kvn).expect_err("should fail on duplicate ECCENTRICITY");
+        assert!(
+            matches!(err.kind, KvnErrorKind::DuplicateField(ref k) if k == "ECCENTRICITY"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn read_omm_missing_both_sma_and_mean_motion_returns_error() {
+        let kvn = "CCSDS_OMM_VERS = 3.0\n\
+                   CREATION_DATE = 2024-01-01T00:00:00\n\
+                   ORIGINATOR = TEST\n\
+                   OBJECT_NAME = TEST-SAT\n\
+                   OBJECT_ID = 2024-000A\n\
+                   CENTER_NAME = EARTH\n\
+                   REF_FRAME = TEME\n\
+                   TIME_SYSTEM = TAI\n\
+                   MEAN_ELEMENT_THEORY = SGP/SGP4\n\
+                   EPOCH = 2024-01-01T00:00:00\n\
+                   ECCENTRICITY = 0.001\n\
+                   INCLINATION = 45.0 [deg]\n\
+                   RA_OF_ASC_NODE = 0.0 [deg]\n\
+                   ARG_OF_PERICENTER = 0.0 [deg]\n\
+                   MEAN_ANOMALY = 0.0 [deg]\n";
+
+        let err = read_omm(kvn).expect_err("should fail without SMA or MEAN_MOTION");
+        assert!(
+            matches!(err.kind, KvnErrorKind::MissingRequiredField(ref k) if k == "SEMI_MAJOR_AXIS"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn read_omm_tle_invalid_integer_returns_error() {
+        let mut kvn = minimal_omm_kvn();
+        kvn.push_str("EPHEMERIS_TYPE = not-a-number\n");
+
+        let err = read_omm(&kvn).expect_err("should fail on invalid EPHEMERIS_TYPE");
+        assert!(
+            matches!(err.kind, KvnErrorKind::InvalidValue { ref keyword, .. } if keyword == "EPHEMERIS_TYPE"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn read_omm_tle_invalid_i64_returns_error() {
+        let mut kvn = minimal_omm_kvn();
+        kvn.push_str("ELEMENT_SET_NO = not-an-integer\n");
+
+        let err = read_omm(&kvn).expect_err("should fail on invalid ELEMENT_SET_NO");
+        assert!(
+            matches!(err.kind, KvnErrorKind::InvalidValue { ref keyword, .. } if keyword == "ELEMENT_SET_NO"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn read_omm_tle_invalid_u64_returns_error() {
+        let mut kvn = minimal_omm_kvn();
+        kvn.push_str("REV_AT_EPOCH = not-a-u64\n");
+
+        let err = read_omm(&kvn).expect_err("should fail on invalid REV_AT_EPOCH");
+        assert!(
+            matches!(err.kind, KvnErrorKind::InvalidValue { ref keyword, .. } if keyword == "REV_AT_EPOCH"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn round_trip_omm_with_spacecraft_and_user_defined() {
+        let mut omm = sample_omm();
+        omm.spacecraft = Some(SpacecraftParameters {
+            comments: Vec::new(),
+            mass: Some(Mass::kilograms(150.0)),
+            solar_rad_area: None,
+            solar_rad_coeff: None,
+            drag_area: None,
+            drag_coeff: None,
+        });
+        omm.user_defined
+            .insert("OPERATOR".to_string(), "GSOC".to_string());
+
+        let written = write_omm(&omm);
+        let parsed = read_omm(&written).expect("parse failed");
+        let sp = parsed.spacecraft.expect("spacecraft block should survive");
+        assert!((sp.mass.unwrap().to_kilograms() - 150.0).abs() < 1e-9);
+        assert_eq!(
+            parsed.user_defined.get("OPERATOR"),
+            Some(&"GSOC".to_string())
+        );
+    }
+
+    #[test]
+    fn read_omm_comments_in_tle_block_routed_correctly() {
+        let kvn = "CCSDS_OMM_VERS = 3.0\n\
+                   CREATION_DATE = 2024-01-01T00:00:00\n\
+                   ORIGINATOR = TEST\n\
+                   OBJECT_NAME = TEST-SAT\n\
+                   OBJECT_ID = 2024-000A\n\
+                   CENTER_NAME = EARTH\n\
+                   REF_FRAME = TEME\n\
+                   TIME_SYSTEM = TAI\n\
+                   MEAN_ELEMENT_THEORY = SGP/SGP4\n\
+                   EPOCH = 2024-01-01T00:00:00\n\
+                   SEMI_MAJOR_AXIS = 6860.0 [km]\n\
+                   ECCENTRICITY = 0.001\n\
+                   INCLINATION = 45.0 [deg]\n\
+                   RA_OF_ASC_NODE = 0.0 [deg]\n\
+                   ARG_OF_PERICENTER = 0.0 [deg]\n\
+                   MEAN_ANOMALY = 0.0 [deg]\n\
+                   COMMENT TLE data comment\n\
+                   EPHEMERIS_TYPE = 0\n";
+
+        let parsed = read_omm(kvn).expect("parse failed");
+        let tle = parsed
+            .tle_parameters
+            .expect("TLE parameters should be present");
+        assert_eq!(tle.ephemeris_type, Some(0));
+        // The comment should be routed to tle_comments
+        assert_eq!(tle.comments.len(), 1, "TLE comment count mismatch");
+    }
+
+    #[test]
+    fn read_omm_missing_mean_element_theory_returns_error() {
+        let kvn = "CCSDS_OMM_VERS = 3.0\n\
+                   CREATION_DATE = 2024-01-01T00:00:00\n\
+                   ORIGINATOR = TEST\n\
+                   OBJECT_NAME = TEST-SAT\n\
+                   OBJECT_ID = 2024-000A\n\
+                   CENTER_NAME = EARTH\n\
+                   REF_FRAME = TEME\n\
+                   TIME_SYSTEM = TAI\n\
+                   EPOCH = 2024-01-01T00:00:00\n\
+                   SEMI_MAJOR_AXIS = 6860.0 [km]\n\
+                   ECCENTRICITY = 0.001\n\
+                   INCLINATION = 45.0 [deg]\n\
+                   RA_OF_ASC_NODE = 0.0 [deg]\n\
+                   ARG_OF_PERICENTER = 0.0 [deg]\n\
+                   MEAN_ANOMALY = 0.0 [deg]\n";
+
+        let err = read_omm(kvn).expect_err("should fail on missing MEAN_ELEMENT_THEORY");
+        assert!(
+            matches!(err.kind, KvnErrorKind::MissingRequiredField(ref k) if k == "MEAN_ELEMENT_THEORY"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn write_omm_header_message_id_and_classification() {
+        let mut omm = sample_omm();
+        omm.header.message_id = Some("MSG-001".to_string());
+        omm.header.classification = Some("UNCLASSIFIED".to_string());
+
+        let output = write_omm(&omm);
+        assert!(
+            output.contains("MESSAGE_ID = MSG-001"),
+            "missing MESSAGE_ID; got:\n{output}"
+        );
+        assert!(
+            output.contains("CLASSIFICATION = UNCLASSIFIED"),
+            "missing CLASSIFICATION; got:\n{output}"
+        );
+    }
+
+    #[test]
+    fn write_omm_metadata_frame_epoch() {
+        let mut omm = sample_omm();
+        omm.metadata.frame_epoch = Some(sample_epoch());
+
+        let output = write_omm(&omm);
+        assert!(
+            output.contains("REF_FRAME_EPOCH ="),
+            "missing REF_FRAME_EPOCH; got:\n{output}"
+        );
+    }
 }

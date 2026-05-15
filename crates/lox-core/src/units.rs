@@ -1015,116 +1015,6 @@ impl AreaToMassUnits for i64 {
     }
 }
 
-/// Standard gravitational acceleration at Earth's surface, m/s².
-/// CGPM 1901 definition, used as the unit `g₀` in many engineering contexts.
-pub const STANDARD_GRAVITY: f64 = 9.806_65;
-
-type MetersPerSecondSquared = f64;
-
-/// Acceleration in meters per second squared.
-#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[repr(transparent)]
-pub struct Acceleration(MetersPerSecondSquared);
-
-impl Acceleration {
-    /// Creates a new acceleration from an `f64` value in m/s².
-    pub const fn new(mps2: f64) -> Self {
-        Self(mps2)
-    }
-
-    /// Creates a new acceleration from an `f64` value in m/s².
-    pub const fn meters_per_second_squared(mps2: f64) -> Self {
-        Self(mps2)
-    }
-
-    /// Creates a new acceleration from an `f64` value in km/s².
-    pub const fn kilometers_per_second_squared(kps2: f64) -> Self {
-        Self(kps2 * 1e3)
-    }
-
-    /// Creates a new acceleration from an `f64` value in standard gravities (g₀).
-    pub const fn standard_gravities(g: f64) -> Self {
-        Self(g * STANDARD_GRAVITY)
-    }
-
-    /// Returns the value in m/s² as an `f64`.
-    pub const fn as_f64(&self) -> f64 {
-        self.0
-    }
-
-    /// Returns the value in m/s².
-    pub const fn to_meters_per_second_squared(&self) -> f64 {
-        self.0
-    }
-
-    /// Returns the value in km/s².
-    pub const fn to_kilometers_per_second_squared(&self) -> f64 {
-        self.0 * 1e-3
-    }
-
-    /// Returns the value in standard gravities (g₀).
-    pub const fn to_standard_gravities(&self) -> f64 {
-        self.0 / STANDARD_GRAVITY
-    }
-}
-
-impl Display for Acceleration {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " m/s²")
-    }
-}
-
-/// A trait for creating [`Acceleration`] instances from primitives.
-///
-/// By default it is implemented for [`f64`] and [`i64`].
-///
-/// # Examples
-///
-/// ```
-/// use lox_core::units::AccelerationUnits;
-///
-/// let a = 9.81.mps2();
-/// assert_eq!(a.to_meters_per_second_squared(), 9.81);
-/// ```
-pub trait AccelerationUnits {
-    /// Creates an acceleration from a value in m/s².
-    fn mps2(&self) -> Acceleration;
-    /// Creates an acceleration from a value in km/s².
-    fn kps2(&self) -> Acceleration;
-    /// Creates an acceleration from a value in standard gravities (g₀).
-    fn g0(&self) -> Acceleration;
-}
-
-impl AccelerationUnits for f64 {
-    fn mps2(&self) -> Acceleration {
-        Acceleration::meters_per_second_squared(*self)
-    }
-
-    fn kps2(&self) -> Acceleration {
-        Acceleration::kilometers_per_second_squared(*self)
-    }
-
-    fn g0(&self) -> Acceleration {
-        Acceleration::standard_gravities(*self)
-    }
-}
-
-impl AccelerationUnits for i64 {
-    fn mps2(&self) -> Acceleration {
-        Acceleration::meters_per_second_squared(*self as f64)
-    }
-
-    fn kps2(&self) -> Acceleration {
-        Acceleration::kilometers_per_second_squared(*self as f64)
-    }
-
-    fn g0(&self) -> Acceleration {
-        Acceleration::standard_gravities(*self as f64)
-    }
-}
-
 /// Temperature in Kelvin (deprecated type alias, use [`Temperature`] instead).
 pub type Kelvin = f64;
 
@@ -1434,7 +1324,6 @@ macro_rules! trait_impls {
 }
 
 trait_impls!(
-    Acceleration,
     Angle,
     AngularRate,
     Area,
@@ -1940,48 +1829,577 @@ mod tests {
         assert_eq!(AreaToMass(-1.0), -1.0.m2_per_kg())
     }
 
+    // -----------------------------------------------------------------------
+    // Angle — additional constructors, accessors, and trig functions
+    // -----------------------------------------------------------------------
+
     #[test]
-    fn test_acceleration_meters_per_second_squared() {
-        let a = Acceleration::meters_per_second_squared(9.81);
-        assert_eq!(a.to_meters_per_second_squared(), 9.81);
+    fn test_angle_from_hms() {
+        // 6h 0m 0s → 90°
+        let a = Angle::from_hms(6, 0, 0.0);
+        assert_approx_eq!(a.to_degrees(), 90.0, rtol <= 1e-10);
     }
 
     #[test]
-    fn test_acceleration_kilometers_per_second_squared() {
-        let a = Acceleration::kilometers_per_second_squared(1e-3);
-        assert_approx_eq!(a.to_meters_per_second_squared(), 1.0, rtol <= 1e-12);
+    fn test_angle_arcseconds_roundtrip() {
+        let a = Angle::arcseconds(3600.0); // = 1 degree
+        assert_approx_eq!(a.to_degrees(), 1.0, rtol <= 1e-10);
+        assert_approx_eq!(a.to_arcseconds(), 3600.0, rtol <= 1e-10);
     }
 
     #[test]
-    fn test_acceleration_standard_gravities() {
-        let a = Acceleration::standard_gravities(2.0);
-        assert_approx_eq!(a.to_meters_per_second_squared(), 19.6133, rtol <= 1e-6);
+    fn test_angle_arcseconds_normalized() {
+        // ARCSECONDS_IN_CIRCLE + 3600 should normalize to 3600 arcsec = 1 deg
+        let a = Angle::arcseconds_normalized(ARCSECONDS_IN_CIRCLE + 3600.0);
+        assert_approx_eq!(a.to_arcseconds(), 3600.0, rtol <= 1e-10);
     }
 
     #[test]
-    fn test_acceleration_units_mps2() {
-        let a = 9.81.mps2();
-        assert_eq!(a.to_meters_per_second_squared(), 9.81);
+    fn test_angle_arcseconds_normalized_signed() {
+        let a = Angle::arcseconds_normalized_signed(-ARCSECONDS_IN_CIRCLE - 3600.0);
+        // Signed normalisation: just removes full circles, sign preserved
+        let deg = a.to_degrees();
+        assert!(deg < 0.0);
     }
 
     #[test]
-    fn test_acceleration_units_g0() {
-        let a = 1.0.g0();
+    fn test_angle_degrees_normalized() {
+        let a = Angle::degrees_normalized(370.0); // 370 mod 360 = 10, then to [0, 2π)
+        assert_approx_eq!(a.to_degrees(), 10.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_degrees_normalized_signed() {
+        let a = Angle::degrees_normalized_signed(-10.0);
+        assert_approx_eq!(a.to_degrees(), -10.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_radians_normalized() {
+        use std::f64::consts::TAU;
+        let a = Angle::radians_normalized(TAU + 0.5);
+        assert_approx_eq!(a.as_f64(), 0.5, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_radians_normalized_signed() {
+        use std::f64::consts::TAU;
+        let a = Angle::radians_normalized_signed(-TAU - 0.5);
+        assert!(a.as_f64() < 0.0);
+    }
+
+    #[test]
+    fn test_angle_is_zero() {
+        assert!(Angle::ZERO.is_zero());
+        assert!(!Angle::PI.is_zero());
+    }
+
+    #[test]
+    fn test_angle_abs() {
+        let a = Angle::radians(-1.5);
+        assert_approx_eq!(a.abs().as_f64(), 1.5, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_from_asin() {
+        let a = Angle::from_asin(1.0);
+        assert_approx_eq!(a.to_degrees(), 90.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_from_acos() {
+        let a = Angle::from_acos(1.0);
+        assert_approx_eq!(a.to_degrees(), 0.0, atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_from_atan() {
+        let a = Angle::from_atan(1.0);
+        assert_approx_eq!(a.to_degrees(), 45.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_from_atan2() {
+        let a = Angle::from_atan2(1.0, 1.0); // 45 deg
+        assert_approx_eq!(a.to_degrees(), 45.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_from_asinh() {
+        let a = Angle::from_asinh(0.0);
+        assert_approx_eq!(a.as_f64(), 0.0, atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_from_acosh() {
+        let a = Angle::from_acosh(1.0);
+        assert_approx_eq!(a.as_f64(), 0.0, atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_from_atanh() {
+        let a = Angle::from_atanh(0.0);
+        assert_approx_eq!(a.as_f64(), 0.0, atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_trig_functions() {
+        let a = Angle::FRAC_PI_2;
+        assert_approx_eq!(a.sin(), 1.0, rtol <= 1e-10);
+        assert_approx_eq!(a.cos(), 0.0, atol <= 1e-10);
+        let (s, c) = a.sin_cos();
+        assert_approx_eq!(s, 1.0, rtol <= 1e-10);
+        assert_approx_eq!(c, 0.0, atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_tan() {
+        let a = Angle::degrees(45.0);
+        assert_approx_eq!(a.tan(), 1.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_hyperbolic_trig() {
+        let a = Angle::radians(1.0);
+        assert_approx_eq!(a.sinh(), 1.0_f64.sinh(), rtol <= 1e-10);
+        assert_approx_eq!(a.cosh(), 1.0_f64.cosh(), rtol <= 1e-10);
+        assert_approx_eq!(a.tanh(), 1.0_f64.tanh(), rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_mod_two_pi() {
+        use std::f64::consts::TAU;
+        let a = Angle::radians(TAU + 1.0).mod_two_pi();
+        assert_approx_eq!(a.as_f64(), 1.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_mod_two_pi_signed() {
+        use std::f64::consts::TAU;
+        let a = Angle::radians(TAU + 1.0).mod_two_pi_signed();
+        assert_approx_eq!(a.as_f64(), 1.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_rotation_matrices() {
+        let a = Angle::ZERO;
+        // Rotation by zero should give identity
+        let rx = a.rotation_x();
+        let ry = a.rotation_y();
+        let rz = a.rotation_z();
+        for i in 0..3 {
+            for j in 0..3 {
+                let expected = if i == j { 1.0 } else { 0.0 };
+                assert_approx_eq!(rx.col(i)[j], expected, atol <= 1e-10);
+                assert_approx_eq!(ry.col(i)[j], expected, atol <= 1e-10);
+                assert_approx_eq!(rz.col(i)[j], expected, atol <= 1e-10);
+            }
+        }
+    }
+
+    #[test]
+    fn test_angle_arithmetic() {
+        let a = Angle::degrees(30.0);
+        let b = Angle::degrees(60.0);
+        assert_approx_eq!((a + b).to_degrees(), 90.0, rtol <= 1e-10);
+        assert_approx_eq!((b - a).to_degrees(), 30.0, rtol <= 1e-10);
+        let mut c = a;
+        c += b;
+        assert_approx_eq!(c.to_degrees(), 90.0, rtol <= 1e-10);
+        let mut d = b;
+        d -= a;
+        assert_approx_eq!(d.to_degrees(), 30.0, rtol <= 1e-10);
+        let scaled = 2.0 * a;
+        assert_approx_eq!(scaled.to_degrees(), 60.0, rtol <= 1e-10);
+        let f: f64 = a.into();
+        assert_approx_eq!(f, a.as_f64(), rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_i64_units() {
+        let a = 90_i64.deg();
+        assert_approx_eq!(a.to_degrees(), 90.0, rtol <= 1e-10);
+        let b = 1_i64.rad();
+        assert_approx_eq!(b.as_f64(), 1.0, rtol <= 1e-10);
+        let c = 3600_i64.arcsec();
+        assert_approx_eq!(c.to_degrees(), 1.0, rtol <= 1e-10);
+        let d = 1000_i64.mas();
+        assert_approx_eq!(d.to_degrees(), 1.0 / 3600.0, rtol <= 1e-8);
+        let e = 1_000_000_i64.uas();
+        assert_approx_eq!(e.to_degrees(), 1.0 / 3600.0, rtol <= 1e-8);
+    }
+
+    #[test]
+    fn test_angle_f64_mas_uas() {
+        let a = 1000.0_f64.mas();
+        assert_approx_eq!(a.to_degrees(), 1.0 / 3600.0, rtol <= 1e-8);
+        let b = 1_000_000.0_f64.uas();
+        assert_approx_eq!(b.to_degrees(), 1.0 / 3600.0, rtol <= 1e-8);
+    }
+
+    // -----------------------------------------------------------------------
+    // Distance — additional accessors and units
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_distance_to_astronomical_units() {
+        let d = Distance::astronomical_units(1.0);
+        assert_approx_eq!(d.to_astronomical_units(), 1.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_distance_as_f64() {
+        let d = Distance::meters(5000.0);
+        assert_eq!(d.as_f64(), 5000.0);
+    }
+
+    #[test]
+    fn test_distance_new() {
+        let d = Distance::new(1234.0);
+        assert_eq!(d.to_meters(), 1234.0);
+    }
+
+    #[test]
+    fn test_distance_to_meters() {
+        let d = Distance::kilometers(1.0);
+        assert_eq!(d.to_meters(), 1000.0);
+    }
+
+    #[test]
+    fn test_distance_i64_units() {
+        let d = 7_i64.km();
+        assert_eq!(d.to_meters(), 7000.0);
+        let e = 1000_i64.m();
+        assert_eq!(e.to_meters(), 1000.0);
+        let f = 1_i64.au();
+        assert_approx_eq!(f.to_meters(), ASTRONOMICAL_UNIT, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_distance_arithmetic() {
+        let a = Distance::meters(100.0);
+        let b = Distance::meters(50.0);
+        assert_eq!((a + b).to_meters(), 150.0);
+        assert_eq!((a - b).to_meters(), 50.0);
+        let mut c = a;
+        c += b;
+        assert_eq!(c.to_meters(), 150.0);
+        let mut d = a;
+        d -= b;
+        assert_eq!(d.to_meters(), 50.0);
+        let scaled = 2.0 * a;
+        assert_eq!(scaled.to_meters(), 200.0);
+        let f: f64 = a.into();
+        assert_eq!(f, 100.0);
+    }
+
+    // -----------------------------------------------------------------------
+    // Velocity — additional constructors/accessors
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_velocity_astronomical_units_per_day() {
+        let v = Velocity::astronomical_units_per_day(1.0);
+        let expected = ASTRONOMICAL_UNIT / SECONDS_PER_DAY;
+        assert_approx_eq!(v.to_meters_per_second(), expected, rtol <= 1e-10);
+        assert_approx_eq!(v.to_astronomical_units_per_day(), 1.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_velocity_fraction_of_speed_of_light() {
+        let v = Velocity::fraction_of_speed_of_light(1.0);
+        assert_approx_eq!(v.to_meters_per_second(), SPEED_OF_LIGHT, rtol <= 1e-10);
+        assert_approx_eq!(v.to_fraction_of_speed_of_light(), 1.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_velocity_new() {
+        let v = Velocity::new(300.0);
+        assert_eq!(v.as_f64(), 300.0);
+    }
+
+    #[test]
+    fn test_velocity_to_km_per_second() {
+        let v = Velocity::meters_per_second(3000.0);
+        assert_approx_eq!(v.to_kilometers_per_second(), 3.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_velocity_i64_units() {
+        let a = 7_i64.kps();
+        assert_eq!(a.to_meters_per_second(), 7000.0);
+        let b = 1_i64.mps();
+        assert_eq!(b.to_meters_per_second(), 1.0);
+        let c = 1_i64.aud();
         assert_approx_eq!(
-            a.to_meters_per_second_squared(),
-            STANDARD_GRAVITY,
-            rtol <= 1e-12
+            c.to_meters_per_second(),
+            ASTRONOMICAL_UNIT / SECONDS_PER_DAY,
+            rtol <= 1e-10
         );
+        let d = 1_i64.c();
+        assert_approx_eq!(d.to_meters_per_second(), SPEED_OF_LIGHT, rtol <= 1e-10);
     }
 
     #[test]
-    fn test_acceleration_display() {
-        let a = 9.81.mps2();
-        assert_eq!(format!("{:.2}", a), "9.81 m/s²");
+    fn test_velocity_arithmetic() {
+        let a = Velocity::meters_per_second(500.0);
+        let b = Velocity::meters_per_second(250.0);
+        assert_eq!((a + b).to_meters_per_second(), 750.0);
+        assert_eq!((a - b).to_meters_per_second(), 250.0);
+        let scaled = 3.0 * b;
+        assert_eq!(scaled.to_meters_per_second(), 750.0);
+        let f: f64 = a.into();
+        assert_eq!(f, 500.0);
+    }
+
+    // -----------------------------------------------------------------------
+    // Mass — additional constructors and i64 metric_tons
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_mass_new() {
+        let m = Mass::new(1.5);
+        assert_eq!(m.as_f64(), 1.5);
     }
 
     #[test]
-    fn test_acceleration_neg() {
-        assert_eq!(Acceleration(-1.0), -1.0.mps2())
+    fn test_mass_to_grams() {
+        let m = Mass::kilograms(2.0);
+        assert_approx_eq!(m.to_grams(), 2000.0, rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_mass_to_metric_tons() {
+        let m = Mass::kilograms(1000.0);
+        assert_approx_eq!(m.to_metric_tons(), 1.0, rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_mass_i64_metric_tons() {
+        let m = 1_i64.t();
+        assert_approx_eq!(m.to_kilograms(), 1000.0, rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_mass_arithmetic() {
+        let a = Mass::kilograms(100.0);
+        let b = Mass::kilograms(50.0);
+        assert_eq!((a + b).to_kilograms(), 150.0);
+        assert_eq!((a - b).to_kilograms(), 50.0);
+        let mut c = a;
+        c += b;
+        assert_eq!(c.to_kilograms(), 150.0);
+        let scaled = 2.0 * b;
+        assert_eq!(scaled.to_kilograms(), 100.0);
+        let f: f64 = a.into();
+        assert_eq!(f, 100.0);
+    }
+
+    // -----------------------------------------------------------------------
+    // Area — new/as_f64
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_area_new() {
+        let a = Area::new(5.0);
+        assert_eq!(a.as_f64(), 5.0);
+    }
+
+    #[test]
+    fn test_area_to_square_kilometers() {
+        let a = Area::square_meters(1_000_000.0);
+        assert_approx_eq!(a.to_square_kilometers(), 1.0, rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_area_i64_units() {
+        let a = 4_i64.m2();
+        assert_eq!(a.to_square_meters(), 4.0);
+        let b = 2_i64.km2();
+        assert_approx_eq!(b.to_square_meters(), 2e6, rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_area_arithmetic() {
+        let a = Area::square_meters(4.0);
+        let b = Area::square_meters(2.0);
+        assert_eq!((a + b).to_square_meters(), 6.0);
+        assert_eq!((a - b).to_square_meters(), 2.0);
+        let scaled = 3.0 * b;
+        assert_eq!(scaled.to_square_meters(), 6.0);
+        let f: f64 = a.into();
+        assert_eq!(f, 4.0);
+    }
+
+    // -----------------------------------------------------------------------
+    // AreaToMass — new/as_f64/i64 units/arithmetic
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_area_to_mass_new() {
+        let r = AreaToMass::new(0.1);
+        assert_eq!(r.as_f64(), 0.1);
+    }
+
+    #[test]
+    fn test_area_to_mass_i64_units() {
+        let r = 1_i64.m2_per_kg();
+        assert_eq!(r.to_square_meters_per_kilogram(), 1.0);
+    }
+
+    #[test]
+    fn test_area_to_mass_arithmetic() {
+        let a = AreaToMass::square_meters_per_kilogram(0.1);
+        let b = AreaToMass::square_meters_per_kilogram(0.05);
+        assert_approx_eq!((a + b).as_f64(), 0.15, rtol <= 1e-10);
+        assert_approx_eq!((a - b).as_f64(), 0.05, rtol <= 1e-10);
+        let scaled = 2.0 * b;
+        assert_approx_eq!(scaled.as_f64(), 0.1, rtol <= 1e-10);
+        let f: f64 = a.into();
+        assert_approx_eq!(f, 0.1, rtol <= 1e-10);
+    }
+
+    // -----------------------------------------------------------------------
+    // Frequency — additional
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_frequency_new() {
+        let f = Frequency::new(1e9);
+        assert_eq!(f.to_hertz(), 1e9);
+    }
+
+    #[test]
+    fn test_frequency_to_kilohertz() {
+        let f = Frequency::megahertz(1.0);
+        assert_approx_eq!(f.to_kilohertz(), 1000.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_frequency_to_terahertz() {
+        let f = Frequency::terahertz(1.0);
+        assert_approx_eq!(f.to_terahertz(), 1.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_frequency_arithmetic() {
+        let a = Frequency::gigahertz(1.0);
+        let b = Frequency::gigahertz(0.5);
+        assert_approx_eq!((a + b).to_gigahertz(), 1.5, rtol <= 1e-10);
+        assert_approx_eq!((a - b).to_gigahertz(), 0.5, rtol <= 1e-10);
+        let scaled = 2.0 * b;
+        assert_approx_eq!(scaled.to_gigahertz(), 1.0, rtol <= 1e-10);
+        let f: f64 = a.into();
+        assert_approx_eq!(f, 1e9, rtol <= 1e-10);
+    }
+
+    // -----------------------------------------------------------------------
+    // Temperature — arithmetic
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_temperature_neg() {
+        let t = Temperature::kelvin(100.0);
+        assert_eq!((-t).as_f64(), -100.0);
+    }
+
+    #[test]
+    fn test_temperature_add_assign_sub_assign() {
+        let mut a = Temperature::kelvin(200.0);
+        a += Temperature::kelvin(50.0);
+        assert_eq!(a.as_f64(), 250.0);
+        a -= Temperature::kelvin(100.0);
+        assert_eq!(a.as_f64(), 150.0);
+    }
+
+    // -----------------------------------------------------------------------
+    // Pressure — new/arithmetic
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_pressure_new() {
+        let p = Pressure::new(101325.0);
+        assert_eq!(p.as_f64(), 101325.0);
+    }
+
+    #[test]
+    fn test_pressure_arithmetic() {
+        let a = Pressure::pa(1000.0);
+        let b = Pressure::pa(500.0);
+        assert_eq!((a + b).to_pa(), 1500.0);
+        assert_eq!((a - b).to_pa(), 500.0);
+        assert_eq!((-b).to_pa(), -500.0);
+        let scaled = 2.0 * b;
+        assert_eq!(scaled.to_pa(), 1000.0);
+        let f: f64 = a.into();
+        assert_eq!(f, 1000.0);
+    }
+
+    // -----------------------------------------------------------------------
+    // Power — new/add_assign/sub_assign
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_power_new() {
+        let p = Power::new(500.0);
+        assert_eq!(p.as_f64(), 500.0);
+    }
+
+    #[test]
+    fn test_power_add_assign_sub_assign() {
+        let mut p = Power::watts(200.0);
+        p += Power::watts(100.0);
+        assert_eq!(p.to_watts(), 300.0);
+        p -= Power::watts(50.0);
+        assert_eq!(p.to_watts(), 250.0);
+    }
+
+    // -----------------------------------------------------------------------
+    // AngularRate — new/as_f64/arithmetic
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_angular_rate_new() {
+        let ar = AngularRate::new(2.0);
+        assert_eq!(ar.as_f64(), 2.0);
+    }
+
+    #[test]
+    fn test_angular_rate_add_assign_sub_assign() {
+        let mut ar = AngularRate::radians_per_second(1.0);
+        ar += AngularRate::radians_per_second(0.5);
+        assert_approx_eq!(ar.as_f64(), 1.5, rtol <= 1e-10);
+        ar -= AngularRate::radians_per_second(0.5);
+        assert_approx_eq!(ar.as_f64(), 1.0, rtol <= 1e-10);
+        let f: f64 = ar.into();
+        assert_approx_eq!(f, 1.0, rtol <= 1e-10);
+    }
+
+    // -----------------------------------------------------------------------
+    // Decibel — add_assign/sub_assign/neg/i64
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_decibel_add_assign_sub_assign() {
+        let mut d = Decibel::new(10.0);
+        d += Decibel::new(3.0);
+        assert_approx_eq!(d.as_f64(), 13.0, rtol <= 1e-10);
+        d -= Decibel::new(3.0);
+        assert_approx_eq!(d.as_f64(), 10.0, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_decibel_i64_units() {
+        let d = 10_i64.db();
+        assert_eq!(d.as_f64(), 10.0);
+    }
+
+    #[test]
+    fn test_decibel_mul_and_into() {
+        let d = Decibel::new(5.0);
+        let scaled = 2.0 * d;
+        assert_approx_eq!(scaled.as_f64(), 10.0, rtol <= 1e-10);
+        let f: f64 = d.into();
+        assert_eq!(f, 5.0);
     }
 }
