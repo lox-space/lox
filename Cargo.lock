@@ -1348,6 +1348,7 @@ dependencies = [
 name = "lox-odm"
 version = "0.1.0-alpha.1"
 dependencies = [
+ "codspeed-divan-compat",
  "lox-bodies",
  "lox-core",
  "lox-frames",

@@ -1074,4 +1074,248 @@ COVARIANCE_STOP
         );
         assert_eq!(parsed.segments[0].metadata.interpolation_degree, Some(7));
     }
+
+    // -----------------------------------------------------------------------
+    // Additional tests for uncovered branches
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn read_wrong_message_kind_returns_error() {
+        let kvn = "\
+CCSDS_OPM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+EPOCH = 2024-01-01T00:00:00
+X = 7000.0 [km]
+Y = 0.0 [km]
+Z = 0.0 [km]
+X_DOT = 0.0 [km/s]
+Y_DOT = 7.5 [km/s]
+Z_DOT = 0.0 [km/s]
+";
+        let err = read_oem(kvn).expect_err("should fail on wrong message kind");
+        assert!(
+            matches!(err.kind, KvnErrorKind::UnexpectedKeyword(_)),
+            "unexpected error kind: {err}"
+        );
+    }
+
+    #[test]
+    fn read_state_row_wrong_width_returns_error() {
+        // A state row that has only 6 values (missing vz) should fail.
+        let kvn = "\
+CCSDS_OEM_VERS = 3.0
+CREATION_DATE = 2000-01-01T11:58:55.816
+ORIGINATOR = TEST
+META_START
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+START_TIME = 2000-01-01T11:58:55.816
+STOP_TIME = 2000-01-01T11:59:55.816
+META_STOP
+2000-01-01T11:58:55.816 7000.0 0.0 0.0 0.0 7.5
+";
+        let err = read_oem(kvn).expect_err("should fail on wrong state row width");
+        assert!(
+            matches!(err.kind, KvnErrorKind::InvalidValue { .. }),
+            "unexpected error kind: {err}"
+        );
+    }
+
+    #[test]
+    fn read_covariance_wrong_row_count_returns_error() {
+        // COVARIANCE block with only 5 rows (need 6).
+        let kvn = "\
+CCSDS_OEM_VERS = 3.0
+CREATION_DATE = 2000-01-01T11:58:55.816
+ORIGINATOR = TEST
+META_START
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+START_TIME = 2000-01-01T11:58:55.816
+STOP_TIME = 2000-01-01T11:59:55.816
+META_STOP
+2000-01-01T11:58:55.816 7000.0 0.0 0.0 0.0 7.5 0.0
+COVARIANCE_START
+EPOCH = 2000-01-01T11:58:55.816
+1.0
+2.0 3.0
+3.0 4.0 5.0
+4.0 5.0 6.0 7.0
+5.0 6.0 7.0 8.0 9.0
+COVARIANCE_STOP
+";
+        let err = read_oem(kvn).expect_err("should fail on wrong covariance row count");
+        assert!(
+            matches!(err.kind, KvnErrorKind::InvalidValue { .. }),
+            "unexpected error kind: {err}"
+        );
+    }
+
+    #[test]
+    fn write_oem_with_useable_times() {
+        let mut oem = sample_oem();
+        oem.segments[0].metadata.useable_start_time = Some(sample_epoch());
+        oem.segments[0].metadata.useable_stop_time = Some(sample_epoch_plus(60));
+
+        let output = write_oem(&oem);
+        assert!(
+            output.contains("USEABLE_START_TIME ="),
+            "missing USEABLE_START_TIME; got:\n{output}"
+        );
+        assert!(
+            output.contains("USEABLE_STOP_TIME ="),
+            "missing USEABLE_STOP_TIME; got:\n{output}"
+        );
+    }
+
+    #[test]
+    fn round_trip_oem_with_useable_times() {
+        let mut oem = sample_oem();
+        oem.segments[0].metadata.useable_start_time = Some(sample_epoch());
+        oem.segments[0].metadata.useable_stop_time = Some(sample_epoch_plus(60));
+
+        let written = write_oem(&oem);
+        let parsed = read_oem(&written).expect("parse failed");
+        assert!(
+            parsed.segments[0].metadata.useable_start_time.is_some(),
+            "useable_start_time should survive round-trip"
+        );
+        assert!(
+            parsed.segments[0].metadata.useable_stop_time.is_some(),
+            "useable_stop_time should survive round-trip"
+        );
+    }
+
+    #[test]
+    fn round_trip_oem_segment_with_comments() {
+        let mut oem = sample_oem();
+        oem.segments[0]
+            .data_comments
+            .push("Data row comment".to_string());
+
+        let written = write_oem(&oem);
+        let parsed = read_oem(&written).expect("parse failed");
+        assert_eq!(
+            parsed.segments[0].data_comments.len(),
+            1,
+            "data_comments should survive round-trip"
+        );
+    }
+
+    #[test]
+    fn round_trip_oem_with_covariance_and_frame() {
+        let mut oem = sample_oem();
+        oem.segments[0].covariance_history.push(OemCovariance {
+            comments: Vec::new(),
+            epoch: sample_epoch(),
+            frame: Some(OdmFrame::Known(DynFrame::Icrf)),
+            matrix: Matrix6::identity(),
+        });
+
+        let written = write_oem(&oem);
+        let parsed = read_oem(&written).expect("parse failed");
+        let cov = &parsed.segments[0].covariance_history[0];
+        assert!(
+            cov.frame.is_some(),
+            "covariance frame should survive round-trip"
+        );
+    }
+
+    #[test]
+    fn round_trip_oem_with_covariance_comments() {
+        let mut oem = sample_oem();
+        oem.segments[0].covariance_history.push(OemCovariance {
+            comments: vec!["Covariance comment".to_string()],
+            epoch: sample_epoch(),
+            frame: None,
+            matrix: Matrix6::identity(),
+        });
+
+        let written = write_oem(&oem);
+        let parsed = read_oem(&written).expect("parse failed");
+        let cov = &parsed.segments[0].covariance_history[0];
+        assert_eq!(
+            cov.comments.len(),
+            1,
+            "covariance comments should survive round-trip"
+        );
+    }
+
+    #[test]
+    fn round_trip_oem_header_classification_and_message_id() {
+        let mut oem = sample_oem();
+        oem.header.classification = Some("UNCLASSIFIED".to_string());
+        oem.header.message_id = Some("OEM-001".to_string());
+
+        let written = write_oem(&oem);
+        let parsed = read_oem(&written).expect("parse failed");
+        assert_eq!(
+            parsed.header.classification.as_deref(),
+            Some("UNCLASSIFIED")
+        );
+        assert_eq!(parsed.header.message_id.as_deref(), Some("OEM-001"));
+    }
+
+    #[test]
+    fn round_trip_oem_frame_epoch_in_metadata() {
+        let mut oem = sample_oem();
+        oem.segments[0].metadata.frame_epoch = Some(sample_epoch());
+
+        let written = write_oem(&oem);
+        let parsed = read_oem(&written).expect("parse failed");
+        assert!(
+            parsed.segments[0].metadata.frame_epoch.is_some(),
+            "frame_epoch should survive round-trip"
+        );
+    }
+
+    #[test]
+    fn read_interpolation_degree_invalid_returns_error() {
+        // Build a valid OEM and replace the interpolation degree with a non-integer
+        let mut oem = sample_oem();
+        oem.segments[0].metadata.interpolation = Some("HERMITE".to_string());
+        oem.segments[0].metadata.interpolation_degree = Some(7);
+
+        let written = write_oem(&oem);
+        // Inject an invalid interpolation degree
+        let patched = written.replace("INTERPOLATION_DEGREE = 7", "INTERPOLATION_DEGREE = bad");
+
+        let err = read_oem(&patched).expect_err("should fail on invalid INTERPOLATION_DEGREE");
+        assert!(
+            matches!(err.kind, KvnErrorKind::InvalidValue { ref keyword, .. } if keyword == "INTERPOLATION_DEGREE"),
+            "unexpected error kind: {err}"
+        );
+    }
+
+    #[test]
+    fn round_trip_multi_segment_oem_with_covariance() {
+        let mut oem = sample_oem();
+        // Add covariance to first segment
+        oem.segments[0].covariance_history.push(OemCovariance {
+            comments: Vec::new(),
+            epoch: sample_epoch(),
+            frame: None,
+            matrix: Matrix6::identity(),
+        });
+        // Add a second segment
+        oem.segments.push(sample_segment());
+
+        let written = write_oem(&oem);
+        let parsed = read_oem(&written).expect("parse failed");
+        assert_eq!(parsed.segments.len(), 2);
+        assert_eq!(parsed.segments[0].covariance_history.len(), 1);
+        assert_eq!(parsed.segments[1].covariance_history.len(), 0);
+    }
 }

@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+[package]
+name = "lox-odm-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+lox-odm = { path = ".." }
+
+[[bin]]
+name = "kvn_parse"
+path = "fuzz_targets/kvn_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "kvn_read_opm"
+path = "fuzz_targets/kvn_read_opm.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "xml_read_opm"
+path = "fuzz_targets/xml_read_opm.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "json_read_omm"
+path = "fuzz_targets/json_read_omm.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "detect_format"
+path = "fuzz_targets/detect_format.rs"
+test = false
+doc = false
+bench = false
