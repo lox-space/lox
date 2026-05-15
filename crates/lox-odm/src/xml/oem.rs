@@ -529,9 +529,12 @@ pub fn read_oem(input: &str) -> Result<Oem, XmlError> {
 }
 
 /// Serialise a typed [`Oem`] to an XML string.
-pub fn write_oem(oem: &Oem) -> String {
+///
+/// Returns [`XmlError::XmlSer`] if `quick-xml` rejects any field — most
+/// realistically a non-finite `f64` (NaN/Infinity) in a numeric slot.
+pub fn write_oem(oem: &Oem) -> Result<String, XmlError> {
     let xml = OemXml::from(oem);
-    quick_xml::se::to_string(&xml).expect("OemXml serialisation is infallible")
+    Ok(quick_xml::se::to_string(&xml)?)
 }
 
 // ---------------------------------------------------------------------------
@@ -632,7 +635,7 @@ mod tests {
     #[test]
     fn minimal_oem_round_trip() {
         let oem = sample_oem();
-        let xml_str = write_oem(&oem);
+        let xml_str = write_oem(&oem).unwrap();
         let parsed = read_oem(&xml_str).expect("round-trip parse failed");
         assert_eq!(oem, parsed, "minimal round-trip mismatch");
     }
@@ -655,7 +658,7 @@ mod tests {
         ];
         oem.segments.push(seg2);
 
-        let xml_str = write_oem(&oem);
+        let xml_str = write_oem(&oem).unwrap();
         let parsed = read_oem(&xml_str).expect("multi-segment round-trip parse failed");
         assert_eq!(oem, parsed, "multi-segment round-trip mismatch");
         assert_eq!(parsed.segments.len(), 2);
@@ -685,7 +688,7 @@ mod tests {
             matrix,
         });
 
-        let xml_str = write_oem(&oem);
+        let xml_str = write_oem(&oem).unwrap();
         let parsed = read_oem(&xml_str).expect("covariance round-trip parse failed");
         assert_eq!(oem, parsed, "covariance round-trip mismatch");
         assert_eq!(parsed.segments[0].covariance_history.len(), 1);
@@ -712,7 +715,7 @@ mod tests {
             .data_comments
             .push("Data block comment".to_string());
 
-        let xml_str = write_oem(&oem);
+        let xml_str = write_oem(&oem).unwrap();
         let parsed = read_oem(&xml_str).expect("comments round-trip parse failed");
         assert_eq!(parsed.header.comments, vec!["Header comment".to_string()]);
         assert_eq!(
@@ -738,7 +741,7 @@ mod tests {
         oem.segments[0].metadata.useable_stop_time = Some(tai_epoch_plus(3590));
         oem.segments[0].metadata.frame_epoch = Some(tai_epoch_plus(0));
 
-        let xml_str = write_oem(&oem);
+        let xml_str = write_oem(&oem).unwrap();
         let parsed = read_oem(&xml_str).expect("optional metadata round-trip parse failed");
         assert_eq!(oem, parsed, "optional metadata round-trip mismatch");
         assert_eq!(
@@ -769,7 +772,7 @@ mod tests {
             });
         }
 
-        let xml_str = write_oem(&oem);
+        let xml_str = write_oem(&oem).unwrap();
         let parsed = read_oem(&xml_str).expect("multiple covariance parse failed");
         assert_eq!(parsed.segments[0].covariance_history.len(), 3);
         assert_eq!(parsed.segments[0].covariance_history[2].matrix[(0, 0)], 3.0);

@@ -265,9 +265,9 @@ const COVARIANCE_FIXTURE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 #[test]
 fn single_segment_fixture_ast_round_trip() {
     let first = read_oem(SINGLE_SEGMENT_FIXTURE).expect("first parse failed");
-    let serialised = write_oem(&first);
+    let serialised = write_oem(&first).unwrap();
     let second = read_oem(&serialised).expect("second parse failed");
-    let serialised2 = write_oem(&second);
+    let serialised2 = write_oem(&second).unwrap();
     let third = read_oem(&serialised2).expect("third parse failed");
     assert_eq!(second, third, "double round-trip mismatch");
 }
@@ -302,9 +302,9 @@ fn multi_segment_count_and_state_count() {
     );
 
     // Double round-trip stable
-    let serialised = write_oem(&oem);
+    let serialised = write_oem(&oem).unwrap();
     let second = read_oem(&serialised).expect("second parse failed");
-    let serialised2 = write_oem(&second);
+    let serialised2 = write_oem(&second).unwrap();
     let third = read_oem(&serialised2).expect("third parse failed");
     assert_eq!(second, third, "multi-segment double round-trip mismatch");
 }
@@ -353,9 +353,9 @@ fn covariance_fixture_round_trip_structural_equality() {
     assert_eq!(cov0.matrix[(3, 0)], cov0.matrix[(0, 3)]);
 
     // Double round-trip: matrices must be identical
-    let serialised = write_oem(&first);
+    let serialised = write_oem(&first).unwrap();
     let second = read_oem(&serialised).expect("second parse failed");
-    let serialised2 = write_oem(&second);
+    let serialised2 = write_oem(&second).unwrap();
     let third = read_oem(&serialised2).expect("third parse failed");
 
     let cov0_r3 = &third.segments[0].covariance_history[0];

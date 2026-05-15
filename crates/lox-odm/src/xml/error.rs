@@ -4,12 +4,16 @@
 
 //! Error type for the XML reader/writer.
 
-/// Error returned by the XML readers.
+/// Error returned by the XML readers and writers.
 #[derive(Debug, thiserror::Error)]
 pub enum XmlError {
     /// Underlying `quick-xml` deserialisation failure.
     #[error(transparent)]
     Xml(#[from] quick_xml::DeError),
+    /// Underlying `quick-xml` serialisation failure (e.g. non-finite
+    /// floats, names that fail the XML-name validator).
+    #[error(transparent)]
+    XmlSer(#[from] quick_xml::SeError),
     /// A required wire field was absent or empty.
     #[error("required field `{0}` is missing")]
     MissingRequiredField(String),
@@ -31,7 +35,4 @@ pub enum XmlError {
         /// Underlying parse error.
         reason: String,
     },
-    /// `read_ci` received a root element name it doesn't dispatch.
-    #[error("unsupported XML root element `<{0}>` for OdmCi")]
-    UnsupportedCiRoot(String),
 }

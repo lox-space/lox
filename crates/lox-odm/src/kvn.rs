@@ -11,8 +11,7 @@
 //! - [`writer`]: [`Display`] implementation that emits canonical
 //!   KVN-formatted text.
 //! - [`projection`]: AST ↔ typed-message conversions, one sub-module
-//!   per message kind ([`projection::opm`], plus OEM/OMM/CI as their
-//!   phases land).
+//!   per message kind ([`projection::opm`], OEM and OMM).
 //!
 //! [`Display`]: std::fmt::Display
 //! [`LineClass`]: grammar::LineClass
@@ -27,7 +26,6 @@ pub mod writer;
 pub use ast::{KvnDocument, KvnEntry, KvnField, KvnRow, KvnSection};
 pub use error::{KvnError, KvnErrorKind, Span};
 pub use parser::parse;
-pub use projection::ci::{read_ci, write_ci};
 pub use projection::oem::{read_oem, write_oem};
 pub use projection::omm::{read_omm, write_omm};
 pub use projection::opm::{read_opm, write_opm};

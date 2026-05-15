@@ -15,6 +15,5 @@ fuzz_target!(|data: &[u8]| {
         let _ = lox_odm::read_opm(s);
         let _ = lox_odm::read_oem(s);
         let _ = lox_odm::read_omm(s);
-        let _ = lox_odm::read_ci(s);
     }
 });

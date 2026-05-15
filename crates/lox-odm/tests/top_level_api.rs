@@ -6,12 +6,10 @@
 //! `write_*` / `read_*_file` / `write_*_file` functions in `lib.rs`,
 //! plus `detect_format`, `Format`, and `OdmError`.
 
-use lox_odm::types::ci::OdmCi;
 use lox_odm::types::common::MessageKind;
 use lox_odm::{
-    Format, OdmError, detect_format, read_ci, read_ci_file, read_oem, read_oem_file, read_omm,
-    read_omm_file, read_opm, read_opm_file, write_ci, write_ci_file, write_oem, write_oem_file,
-    write_omm, write_omm_file, write_opm, write_opm_file,
+    Format, OdmError, detect_format, read_oem, read_oem_file, read_omm, read_omm_file, read_opm,
+    read_opm_file, write_oem, write_oem_file, write_omm, write_omm_file, write_opm, write_opm_file,
 };
 
 const OPM_KVN: &str = "\
@@ -175,24 +173,6 @@ fn read_omm_auto_detects_json() {
     assert_eq!(omm.metadata.object_name, "SAT");
 }
 
-#[test]
-fn read_ci_kvn_dispatches_to_opm() {
-    let ci = read_ci(OPM_KVN).unwrap();
-    assert_eq!(ci.kind(), MessageKind::Opm);
-}
-
-#[test]
-fn read_ci_xml_dispatches_to_opm() {
-    let ci = read_ci(OPM_XML).unwrap();
-    assert_eq!(ci.kind(), MessageKind::Opm);
-}
-
-#[test]
-fn read_ci_json_dispatches_to_omm() {
-    let ci = read_ci(OMM_JSON).unwrap();
-    assert_eq!(ci.kind(), MessageKind::Omm);
-}
-
 // ---------------------------------------------------------------------------
 // Top-level write_* with Format selection
 // ---------------------------------------------------------------------------
@@ -232,24 +212,6 @@ fn write_omm_each_supported_format() {
     assert!(write_omm(&omm, Format::Xml).unwrap().contains("<omm"));
     let json = write_omm(&omm, Format::Json).unwrap();
     assert!(json.contains("OBJECT_NAME"));
-}
-
-#[test]
-fn write_ci_delegates_per_variant() {
-    let opm_ci = read_ci(OPM_KVN).unwrap();
-    assert!(
-        write_ci(&opm_ci, Format::Kvn)
-            .unwrap()
-            .starts_with("CCSDS_OPM_VERS")
-    );
-
-    let omm_ci = read_ci(OMM_JSON).unwrap();
-    let json = write_ci(&omm_ci, Format::Json).unwrap();
-    assert!(json.contains("OBJECT_NAME"));
-
-    // OPM ↛ JSON
-    let err = write_ci(&opm_ci, Format::Json).unwrap_err();
-    assert!(matches!(err, OdmError::UnsupportedFormat { .. }));
 }
 
 // ---------------------------------------------------------------------------
@@ -301,16 +263,6 @@ fn omm_file_round_trip_all_three_formats() {
 }
 
 #[test]
-fn ci_file_round_trip() {
-    let ci = read_ci(OPM_KVN).unwrap();
-    let path = tmpdir().join("ci.kvn");
-    write_ci_file(&ci, &path, Format::Kvn).unwrap();
-    let ci2 = read_ci_file(&path).unwrap();
-    assert_eq!(ci.kind(), ci2.kind());
-    assert!(matches!(ci2, OdmCi::Opm(_)));
-}
-
-#[test]
 fn read_opm_file_errors_on_missing_path() {
     let err = read_opm_file("/nonexistent/path.kvn").unwrap_err();
     assert!(matches!(err, OdmError::Io(_)));
@@ -325,12 +277,6 @@ fn read_oem_file_errors_on_missing_path() {
 #[test]
 fn read_omm_file_errors_on_missing_path() {
     let err = read_omm_file("/nonexistent/path.kvn").unwrap_err();
-    assert!(matches!(err, OdmError::Io(_)));
-}
-
-#[test]
-fn read_ci_file_errors_on_missing_path() {
-    let err = read_ci_file("/nonexistent/path.kvn").unwrap_err();
     assert!(matches!(err, OdmError::Io(_)));
 }
 

@@ -19,7 +19,6 @@ pub use format::{Format, detect_format};
 
 use std::path::Path;
 
-use crate::types::ci::OdmCi;
 use crate::types::common::MessageKind;
 use crate::types::oem::Oem;
 use crate::types::omm::Omm;
@@ -66,21 +65,11 @@ pub fn read_omm(input: &str) -> Result<Omm, OdmError> {
     }
 }
 
-/// Parse an [`OdmCi`] from `input`, auto-detecting the wire format
-/// and then dispatching to the per-kind reader.
-pub fn read_ci(input: &str) -> Result<OdmCi, OdmError> {
-    match detect_format(input)? {
-        Format::Kvn => Ok(kvn::read_ci(input)?),
-        Format::Xml => Ok(xml::read_ci(input)?),
-        Format::Json => Ok(OdmCi::Omm(json::read_omm(input)?)),
-    }
-}
-
 /// Serialise an OPM in the requested wire format.
 pub fn write_opm(opm: &Opm, format: Format) -> Result<String, OdmError> {
     match format {
         Format::Kvn => Ok(kvn::write_opm(opm)),
-        Format::Xml => Ok(xml::write_opm(opm)),
+        Format::Xml => Ok(xml::write_opm(opm)?),
         Format::Json => Err(OdmError::UnsupportedFormat {
             kind: MessageKind::Opm,
             format: Format::Json,
@@ -92,7 +81,7 @@ pub fn write_opm(opm: &Opm, format: Format) -> Result<String, OdmError> {
 pub fn write_oem(oem: &Oem, format: Format) -> Result<String, OdmError> {
     match format {
         Format::Kvn => Ok(kvn::write_oem(oem)),
-        Format::Xml => Ok(xml::write_oem(oem)),
+        Format::Xml => Ok(xml::write_oem(oem)?),
         Format::Json => Err(OdmError::UnsupportedFormat {
             kind: MessageKind::Oem,
             format: Format::Json,
@@ -104,18 +93,8 @@ pub fn write_oem(oem: &Oem, format: Format) -> Result<String, OdmError> {
 pub fn write_omm(omm: &Omm, format: Format) -> Result<String, OdmError> {
     match format {
         Format::Kvn => Ok(kvn::write_omm(omm)),
-        Format::Xml => Ok(xml::write_omm(omm)),
-        Format::Json => Ok(json::write_omm(omm)),
-    }
-}
-
-/// Serialise an [`OdmCi`] in the requested wire format, delegating to
-/// the per-kind writer. JSON is only valid when the variant is `Omm`.
-pub fn write_ci(ci: &OdmCi, format: Format) -> Result<String, OdmError> {
-    match (ci, format) {
-        (OdmCi::Opm(o), f) => write_opm(o, f),
-        (OdmCi::Oem(o), f) => write_oem(o, f),
-        (OdmCi::Omm(o), f) => write_omm(o, f),
+        Format::Xml => Ok(xml::write_omm(omm)?),
+        Format::Json => Ok(json::write_omm(omm)?),
     }
 }
 
@@ -141,12 +120,6 @@ pub fn read_omm_file(path: impl AsRef<Path>) -> Result<Omm, OdmError> {
     read_omm(&content)
 }
 
-/// Read an [`OdmCi`] from a file (format auto-detected from contents).
-pub fn read_ci_file(path: impl AsRef<Path>) -> Result<OdmCi, OdmError> {
-    let content = std::fs::read_to_string(path)?;
-    read_ci(&content)
-}
-
 /// Write an OPM to a file in the requested format.
 pub fn write_opm_file(opm: &Opm, path: impl AsRef<Path>, format: Format) -> Result<(), OdmError> {
     let s = write_opm(opm, format)?;
@@ -162,11 +135,5 @@ pub fn write_oem_file(oem: &Oem, path: impl AsRef<Path>, format: Format) -> Resu
 /// Write an OMM to a file in the requested format.
 pub fn write_omm_file(omm: &Omm, path: impl AsRef<Path>, format: Format) -> Result<(), OdmError> {
     let s = write_omm(omm, format)?;
-    std::fs::write(path, s).map_err(OdmError::from)
-}
-
-/// Write an [`OdmCi`] to a file in the requested format.
-pub fn write_ci_file(ci: &OdmCi, path: impl AsRef<Path>, format: Format) -> Result<(), OdmError> {
-    let s = write_ci(ci, format)?;
     std::fs::write(path, s).map_err(OdmError::from)
 }
