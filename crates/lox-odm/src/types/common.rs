@@ -28,11 +28,12 @@ use lox_time::utc::Utc;
 use lox_time::utc::transformations::ToUtc;
 use nalgebra::Matrix6;
 
-/// Discriminator for the five ODM message variants.
+/// Discriminator for the four ODM message variants.
 ///
 /// Mirrors the `CCSDS_<KIND>_VERS` keyword on the wire:
-/// `CCSDS_OPM_VERS`, `CCSDS_OEM_VERS`, `CCSDS_OMM_VERS`, `CCSDS_OCM_VERS`,
-/// and the combined-instantiation `CCSDS_NDM_VERS`.
+/// `CCSDS_OPM_VERS`, `CCSDS_OEM_VERS`, `CCSDS_OMM_VERS`, `CCSDS_OCM_VERS`.
+/// The NDM-CI envelope (`CCSDS_NDM_VERS = 1.0`) is out of scope for this
+/// crate.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum MessageKind {
     /// Orbit Parameter Message.
@@ -43,9 +44,6 @@ pub enum MessageKind {
     Omm,
     /// Orbit Comprehensive Message.
     Ocm,
-    /// ODM Combined Instantiation — a wrapper containing one or more
-    /// of the four message types above.
-    Ci,
 }
 
 impl Display for MessageKind {
@@ -55,7 +53,6 @@ impl Display for MessageKind {
             MessageKind::Oem => "OEM",
             MessageKind::Omm => "OMM",
             MessageKind::Ocm => "OCM",
-            MessageKind::Ci => "ODM-CI",
         };
         f.write_str(s)
     }
@@ -140,11 +137,12 @@ pub enum OdmFrame {
 impl OdmFrame {
     /// Parses a wire-format `REF_FRAME` string.
     ///
-    /// Tries [`DynFrame::from_str`] first (which accepts mixed case via
-    /// uppercase folding). On failure, wraps the original input as
-    /// [`OdmFrame::Custom`].
+    /// CCSDS wire form is uppercase (e.g. `ICRF`, `EME2000`, `TEME`). The
+    /// lookup folds case explicitly so any reasonable casing is accepted
+    /// — symmetric with [`OdmCenter::from_wire`].
+    /// On failure, wraps the original input as [`OdmFrame::Custom`].
     pub fn from_wire(s: &str) -> Self {
-        match DynFrame::from_str(s) {
+        match DynFrame::from_str(&s.to_uppercase()) {
             Ok(frame) => OdmFrame::Known(frame),
             Err(_) => OdmFrame::Custom(s.to_string()),
         }
@@ -544,7 +542,6 @@ mod tests {
         assert_eq!(format!("{}", MessageKind::Oem), "OEM");
         assert_eq!(format!("{}", MessageKind::Omm), "OMM");
         assert_eq!(format!("{}", MessageKind::Ocm), "OCM");
-        assert_eq!(format!("{}", MessageKind::Ci), "ODM-CI");
     }
 
     #[test]

@@ -1366,6 +1366,7 @@ dependencies = [
 name = "lox-orbits"
 version = "0.1.0-alpha.36"
 dependencies = [
+ "chrono",
  "csv",
  "differential-equations",
  "itertools 0.14.0",

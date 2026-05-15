@@ -16,7 +16,6 @@ use crate::kvn::ast::{KvnEntry, KvnField};
 use crate::kvn::error::{KvnError, KvnErrorKind, Span};
 use crate::types::common::OdmTime;
 
-pub mod ci;
 pub mod oem;
 pub mod omm;
 pub mod opm;

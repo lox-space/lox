@@ -96,7 +96,7 @@ fn nusat_8_header_comment_preserved() {
 #[test]
 fn round_trip_nusat_8_preserves_structure() {
     let omm = read_omm(NUSAT_8).expect("read");
-    let written = write_omm(&omm);
+    let written = write_omm(&omm).unwrap();
     let omm2 = read_omm(&written).expect("re-read");
     assert_eq!(omm.metadata.object_name, omm2.metadata.object_name);
     assert_eq!(omm.metadata.object_id, omm2.metadata.object_id);
@@ -121,7 +121,7 @@ fn round_trip_nusat_8_preserves_structure() {
 #[test]
 fn write_emits_native_numbers_not_strings() {
     let omm = read_omm(NUSAT_8).expect("read");
-    let written = write_omm(&omm);
+    let written = write_omm(&omm).unwrap();
     // The wire sends numbers as strings (`"MEAN_MOTION": "15.27989249"`);
     // we emit them as native numbers (no quotes).
     assert!(
@@ -143,19 +143,39 @@ fn read_omm_list_handles_array() {
 #[test]
 fn write_omm_list_emits_json_array() {
     let omm = read_omm(NUSAT_8).expect("read");
-    let written = write_omm_list(&[omm.clone(), omm]);
+    let written = write_omm_list(&[omm.clone(), omm]).unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&written).expect("valid JSON");
     assert!(parsed.is_array());
     assert_eq!(parsed.as_array().unwrap().len(), 2);
 }
 
 #[test]
-fn space_track_extras_silently_dropped_on_write() {
-    // Round-trip should NOT re-emit TLE_LINE0/1/2 etc.
+fn space_track_extras_round_trip_on_write() {
+    // Operator-supplied non-CCSDS fields (TLE_LINE0/1/2, OBJECT_TYPE, …)
+    // must round-trip through `provider_extras` so downstream callers
+    // don't lose them on a read→write cycle.
     let omm = read_omm(NUSAT_8).expect("read");
-    let written = write_omm(&omm);
-    assert!(!written.contains("TLE_LINE0"));
-    assert!(!written.contains("OBJECT_TYPE"));
-    assert!(!written.contains("RCS_SIZE"));
-    assert!(!written.contains("COUNTRY_CODE"));
+
+    // The typed model exposes the extras.
+    assert!(omm.provider_extras.contains_key("TLE_LINE0"));
+    assert!(omm.provider_extras.contains_key("OBJECT_TYPE"));
+
+    let written = write_omm(&omm).unwrap();
+    assert!(
+        written.contains("TLE_LINE0"),
+        "TLE_LINE0 must survive write"
+    );
+    assert!(
+        written.contains("OBJECT_TYPE"),
+        "OBJECT_TYPE must survive write"
+    );
+    assert!(written.contains("RCS_SIZE"), "RCS_SIZE must survive write");
+    assert!(
+        written.contains("COUNTRY_CODE"),
+        "COUNTRY_CODE must survive write"
+    );
+
+    // Reading the written JSON should reproduce the same extras.
+    let reparsed = read_omm(&written).expect("re-parse");
+    assert_eq!(omm.provider_extras, reparsed.provider_extras);
 }

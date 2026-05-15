@@ -29,6 +29,7 @@ lox-test-utils.workspace = true
 lox-time = { workspace = true, features = ["chrono"] }
 lox-units.workspace = true
 
+chrono.workspace = true
 csv.workspace = true
 differential-equations.workspace = true
 itertools.workspace = true

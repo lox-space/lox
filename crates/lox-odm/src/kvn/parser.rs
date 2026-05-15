@@ -60,8 +60,11 @@ pub fn parse(input: &str) -> Result<KvnDocument, KvnError> {
         "OEM" => MessageKind::Oem,
         "OMM" => MessageKind::Omm,
         "OCM" => MessageKind::Ocm,
-        "NDM" => MessageKind::Ci,
         _ => {
+            // `NDM` (the multi-message Combined-Instantiation envelope)
+            // is intentionally not supported — it lands here as an
+            // unknown kind so callers see a clear error instead of a
+            // half-working dispatch helper.
             return Err(KvnError {
                 span: Span::whole_line(header_line_no, 0),
                 kind: KvnErrorKind::UnknownMessageKind(kind_token),

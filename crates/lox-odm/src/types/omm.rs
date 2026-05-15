@@ -128,6 +128,16 @@ pub struct Omm {
     pub covariance: Option<Covariance>,
     /// User-defined parameters (preserved verbatim for round-trip).
     pub user_defined: BTreeMap<String, String>,
+    /// Non-CCSDS extras carried by Space-Track / Celestrak JSON OMMs
+    /// (`TLE_LINE0`/`1`/`2`, `OBJECT_TYPE`, `RCS_SIZE`, `COUNTRY_CODE`,
+    /// `LAUNCH_DATE`, `SITE`, `DECAY_DATE`, `FILE`, `GP_ID`, `PERIOD`,
+    /// `APOAPSIS`, `PERIAPSIS`, `SEMIMAJOR_AXIS`, …).
+    ///
+    /// Populated only by the JSON reader; the KVN and XML wire formats
+    /// have no equivalent extension mechanism and leave this empty. The
+    /// JSON writer re-emits these keys verbatim, preserving round-trip
+    /// for operator-supplied data.
+    pub provider_extras: BTreeMap<String, serde_json::Value>,
 }
 
 impl Omm {
@@ -254,6 +264,7 @@ mod tests {
             spacecraft: None,
             covariance: None,
             user_defined: BTreeMap::new(),
+            provider_extras: BTreeMap::new(),
         };
         assert_eq!(omm.metadata.mean_element_theory, "SGP/SGP4");
         assert!(omm.tle_parameters.is_none());
@@ -270,6 +281,7 @@ mod tests {
             spacecraft: None,
             covariance: None,
             user_defined: BTreeMap::new(),
+            provider_extras: BTreeMap::new(),
         }
     }
 
@@ -309,6 +321,7 @@ mod tests {
             spacecraft: None,
             covariance: None,
             user_defined: BTreeMap::new(),
+            provider_extras: BTreeMap::new(),
         };
         assert_eq!(omm.tle_parameters.and_then(|p| p.norad_cat_id), Some(45018));
     }
