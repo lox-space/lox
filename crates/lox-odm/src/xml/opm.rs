@@ -712,9 +712,12 @@ pub fn read_opm(input: &str) -> Result<Opm, XmlError> {
 }
 
 /// Serialise a typed [`Opm`] to an XML string.
-pub fn write_opm(opm: &Opm) -> String {
+///
+/// Returns [`XmlError::XmlSer`] if `quick-xml` rejects any field — most
+/// realistically a non-finite `f64` (NaN/Infinity) in a numeric slot.
+pub fn write_opm(opm: &Opm) -> Result<String, XmlError> {
     let xml = OpmXml::from(opm);
-    quick_xml::se::to_string(&xml).expect("OpmXml serialisation is infallible")
+    Ok(quick_xml::se::to_string(&xml)?)
 }
 
 // ---------------------------------------------------------------------------
@@ -797,7 +800,7 @@ mod tests {
     #[test]
     fn minimal_opm_round_trip() {
         let opm = sample_opm();
-        let xml_str = write_opm(&opm);
+        let xml_str = write_opm(&opm).unwrap();
         let parsed = read_opm(&xml_str).expect("round-trip parse failed");
         assert_eq!(opm, parsed, "minimal round-trip mismatch");
     }
@@ -858,7 +861,7 @@ mod tests {
             ],
         });
 
-        let xml_str = write_opm(&opm);
+        let xml_str = write_opm(&opm).unwrap();
         let parsed = read_opm(&xml_str).expect("full round-trip parse failed");
         assert_eq!(opm, parsed, "full round-trip mismatch");
     }
@@ -877,7 +880,7 @@ mod tests {
             gm: Some(wire_gm),
         });
 
-        let xml_str = write_opm(&opm);
+        let xml_str = write_opm(&opm).unwrap();
         let parsed = read_opm(&xml_str).expect("GM round-trip parse failed");
         let parsed_gm = parsed.keplerian.unwrap().gm.unwrap();
         let diff = (parsed_gm.as_f64() - wire_gm.as_f64()).abs();
@@ -898,7 +901,7 @@ mod tests {
         opm.header.comments.push("Header comment two".to_string());
         opm.metadata.comments.push("Metadata comment".to_string());
 
-        let xml_str = write_opm(&opm);
+        let xml_str = write_opm(&opm).unwrap();
         let parsed = read_opm(&xml_str).expect("comments round-trip parse failed");
         assert_eq!(
             parsed.header.comments,

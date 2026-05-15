@@ -22,12 +22,12 @@
 //! Space-Track / Celestrak sends additional non-CCSDS fields
 //! (`TLE_LINE0`, `TLE_LINE1`, `TLE_LINE2`, `OBJECT_TYPE`, `RCS_SIZE`,
 //! `COUNTRY_CODE`, `LAUNCH_DATE`, `SITE`, `DECAY_DATE`, `FILE`, `GP_ID`,
-//! `PERIOD`, `APOAPSIS`, `PERIAPSIS`, `SEMIMAJOR_AXIS`).  These are absorbed
-//! by the `_extras` catch-all field and silently dropped; they are never
-//! serialised on write.
+//! `PERIOD`, `APOAPSIS`, `PERIAPSIS`, `SEMIMAJOR_AXIS`).  These are
+//! captured via `#[serde(flatten)]` into [`Omm::provider_extras`] and
+//! re-emitted verbatim on write, so a JSON OMM round-trip preserves
+//! everything the operator sent.
 
 use std::collections::BTreeMap;
-use std::collections::HashMap;
 use std::f64::consts::PI;
 
 use lox_bodies::TryPointMass;
@@ -347,7 +347,8 @@ where
 ///
 /// All fields use CCSDS wire-spelling as the JSON key.  Required string fields
 /// default to an empty string; numeric fields default to `None`.  The
-/// `_extras` catch-all absorbs Space-Track non-CCSDS fields silently.
+/// `extras` catch-all preserves Space-Track non-CCSDS fields across
+/// read→write via `#[serde(flatten)]`.
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 struct OmmJson {
@@ -638,10 +639,10 @@ struct OmmJson {
     )]
     cz_dot_z_dot: Option<f64>,
 
-    /// Absorbs all Space-Track non-CCSDS extras silently.
-    /// Never serialised on write.
-    #[serde(flatten, skip_serializing)]
-    _extras: HashMap<String, serde_json::Value>,
+    /// Catches all Space-Track / Celestrak non-CCSDS extras and rolls
+    /// them through `Omm::provider_extras` so they survive read→write.
+    #[serde(flatten)]
+    extras: BTreeMap<String, serde_json::Value>,
 }
 
 // ---------------------------------------------------------------------------
@@ -837,7 +838,7 @@ impl From<&Omm> for OmmJson {
             cz_dot_x_dot,
             cz_dot_y_dot,
             cz_dot_z_dot,
-            _extras: HashMap::new(),
+            extras: omm.provider_extras.clone(),
         }
     }
 }
@@ -1096,6 +1097,7 @@ impl TryFrom<OmmJson> for Omm {
             spacecraft,
             covariance,
             user_defined: BTreeMap::new(),
+            provider_extras: j.extras,
         })
     }
 }
@@ -1117,15 +1119,20 @@ pub fn read_omm_list(input: &str) -> Result<Vec<Omm>, JsonError> {
 }
 
 /// Serialise a single OMM to pretty-printed JSON.
-pub fn write_omm(omm: &Omm) -> String {
+///
+/// Returns [`JsonError::Json`] if `serde_json` rejects any value — most
+/// realistically a non-finite `f64` (NaN/Infinity) in a numeric slot.
+pub fn write_omm(omm: &Omm) -> Result<String, JsonError> {
     let json: OmmJson = omm.into();
-    serde_json::to_string_pretty(&json).expect("infallible serialize")
+    Ok(serde_json::to_string_pretty(&json)?)
 }
 
 /// Serialise an array of OMMs to pretty-printed JSON.
-pub fn write_omm_list(omms: &[Omm]) -> String {
+///
+/// See [`write_omm`] for the failure mode.
+pub fn write_omm_list(omms: &[Omm]) -> Result<String, JsonError> {
     let jsons: Vec<OmmJson> = omms.iter().map(OmmJson::from).collect();
-    serde_json::to_string_pretty(&jsons).expect("infallible serialize")
+    Ok(serde_json::to_string_pretty(&jsons)?)
 }
 
 // ---------------------------------------------------------------------------
@@ -1195,6 +1202,7 @@ mod tests {
             spacecraft: None,
             covariance: None,
             user_defined: BTreeMap::new(),
+            provider_extras: BTreeMap::new(),
         }
     }
 
@@ -1205,7 +1213,7 @@ mod tests {
     #[test]
     fn round_trip_minimal() {
         let omm = sample_omm();
-        let json = write_omm(&omm);
+        let json = write_omm(&omm).unwrap();
         let parsed = read_omm(&json).expect("round-trip parse failed");
 
         assert_eq!(parsed.header.originator, omm.header.originator);
@@ -1247,7 +1255,7 @@ mod tests {
             agom: None,
         });
 
-        let json = write_omm(&omm);
+        let json = write_omm(&omm).unwrap();
         let parsed = read_omm(&json).expect("round-trip parse failed");
 
         let tle = parsed.tle_parameters.expect("missing TLE parameters");
@@ -1414,7 +1422,7 @@ mod tests {
     fn read_omm_list_parses_two_elements() {
         let omm = sample_omm();
         let list = vec![omm.clone(), omm];
-        let json = write_omm_list(&list);
+        let json = write_omm_list(&list).unwrap();
         let parsed = read_omm_list(&json).expect("list parse failed");
         assert_eq!(parsed.len(), 2);
         assert_eq!(parsed[0].metadata.object_name, "TEST-SAT");
@@ -1427,7 +1435,7 @@ mod tests {
     #[test]
     fn write_omm_list_emits_array() {
         let omm = sample_omm();
-        let json = write_omm_list(&[omm]);
+        let json = write_omm_list(&[omm]).unwrap();
         assert!(json.trim_start().starts_with('['), "expected JSON array");
         assert!(json.trim_end().ends_with(']'), "expected JSON array end");
     }
@@ -1471,7 +1479,7 @@ mod tests {
         let mut omm = sample_omm();
         omm.header.comments = vec!["A single comment".to_string()];
 
-        let json = write_omm(&omm);
+        let json = write_omm(&omm).unwrap();
         let parsed = read_omm(&json).expect("parse failed");
 
         assert_eq!(parsed.header.comments, vec!["A single comment"]);
@@ -1486,18 +1494,18 @@ mod tests {
         let mut omm = sample_omm();
         omm.header.comments = vec!["Line one".to_string(), "Line two".to_string()];
 
-        let json = write_omm(&omm);
+        let json = write_omm(&omm).unwrap();
         let parsed = read_omm(&json).expect("parse failed");
 
         assert_eq!(parsed.header.comments, vec!["Line one", "Line two"]);
     }
 
     // -----------------------------------------------------------------------
-    // 13. Space-Track extras silently dropped
+    // 13. Space-Track extras round-trip via provider_extras
     // -----------------------------------------------------------------------
 
     #[test]
-    fn space_track_extras_silently_dropped() {
+    fn space_track_extras_preserved_on_read() {
         let json = r#"{
             "CCSDS_OMM_VERS": "2.0",
             "COMMENT": "GENERATED VIA SPACE-TRACK.ORG API",
@@ -1544,9 +1552,33 @@ mod tests {
         let omm = read_omm(json).expect("Space-Track fixture parse failed");
         assert_eq!(omm.metadata.object_name, "NUSAT-8 (MARIE)");
         assert_eq!(omm.metadata.object_id, "2020-003C");
-        let tle = omm.tle_parameters.expect("missing TLE parameters");
+        let tle = omm.tle_parameters.as_ref().expect("missing TLE parameters");
         assert_eq!(tle.norad_cat_id, Some(45018));
         assert!((tle.bstar.unwrap() - 8.4553e-5).abs() < 1e-9);
+
+        // Provider extras (non-CCSDS keys) must be captured on read.
+        for key in [
+            "TLE_LINE0",
+            "TLE_LINE1",
+            "TLE_LINE2",
+            "OBJECT_TYPE",
+            "RCS_SIZE",
+            "COUNTRY_CODE",
+            "LAUNCH_DATE",
+            "SITE",
+            "DECAY_DATE",
+            "FILE",
+            "GP_ID",
+            "PERIOD",
+            "APOAPSIS",
+            "PERIAPSIS",
+            "SEMIMAJOR_AXIS",
+        ] {
+            assert!(
+                omm.provider_extras.contains_key(key),
+                "expected provider extra `{key}` to be captured"
+            );
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -1559,7 +1591,7 @@ mod tests {
         let wire_gm = GravitationalParameter::km3_per_s2(398600.4415);
         omm.mean_elements.gm = Some(wire_gm);
 
-        let json = write_omm(&omm);
+        let json = write_omm(&omm).unwrap();
         let parsed = read_omm(&json).expect("parse failed");
 
         let stored_gm = parsed.mean_elements.gm.expect("GM not preserved");
@@ -1580,7 +1612,7 @@ mod tests {
             matrix: Matrix6::identity(),
         });
 
-        let json = write_omm(&omm);
+        let json = write_omm(&omm).unwrap();
         let parsed = read_omm(&json).expect("parse failed");
 
         let cov = parsed.covariance.expect("covariance not preserved");
@@ -1603,7 +1635,7 @@ mod tests {
             drag_coeff: Some(2.2),
         });
 
-        let json = write_omm(&omm);
+        let json = write_omm(&omm).unwrap();
         let parsed = read_omm(&json).expect("parse failed");
 
         let sp = parsed.spacecraft.expect("spacecraft not preserved");
@@ -1625,7 +1657,7 @@ mod tests {
             ..TleParameters::default()
         });
 
-        let json = write_omm(&omm);
+        let json = write_omm(&omm).unwrap();
         let parsed = read_omm(&json).expect("parse failed");
 
         let tle = parsed.tle_parameters.expect("missing TLE parameters");

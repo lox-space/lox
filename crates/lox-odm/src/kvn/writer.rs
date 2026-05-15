@@ -25,7 +25,6 @@ impl Display for KvnDocument {
             MessageKind::Oem => "OEM",
             MessageKind::Omm => "OMM",
             MessageKind::Ocm => "OCM",
-            MessageKind::Ci => "NDM",
         };
         writeln!(f, "CCSDS_{kind_token}_VERS = {}", self.version)?;
 

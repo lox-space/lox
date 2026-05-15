@@ -611,6 +611,22 @@ fn parse_covariance(section: &KvnSection) -> Result<Covariance, KvnError> {
     })
 }
 
+/// AST → typed [`Opm`] projection.
+///
+/// ## Comment preservation
+///
+/// COMMENT lines are preserved on the typed model wherever there is a
+/// comment slot:
+/// - Header / metadata / state-vector / Keplerian / spacecraft / covariance
+///   blocks each carry a `comments: Vec<String>`.
+/// - Per-maneuver comments are collected on [`Maneuver::comments`], including
+///   any comments interleaved *inside* the maneuver body. Positional ordering
+///   of those interleaved comments relative to specific maneuver fields is
+///   not preserved — they re-emit at the head of the maneuver block.
+///
+/// **Lossy boundary**: COMMENT lines immediately preceding a `USER_DEFINED_*`
+/// field are dropped. The typed `user_defined` is a `BTreeMap<String, String>`
+/// with no per-key comment slot.
 impl TryFrom<KvnDocument> for Opm {
     type Error = KvnError;
 
@@ -686,11 +702,16 @@ impl TryFrom<KvnDocument> for Opm {
                             ));
                         }
                         KeywordRole::ManeuverField => {
-                            pending_comments.clear(); // comments within maneuver body are dropped
                             let builder = current_maneuver.as_mut().ok_or_else(|| KvnError {
                                 span: Span::default(),
                                 kind: KvnErrorKind::UnexpectedKeyword(field.key.clone()),
                             })?;
+                            // Comments interleaved within a maneuver body are
+                            // preserved on the maneuver's `comments` list.
+                            // Positional ordering relative to specific maneuver
+                            // fields is *not* preserved — the writer re-emits
+                            // them all at the head of the maneuver block.
+                            builder.comments.append(&mut pending_comments);
                             builder.set_field(&field.key, field.clone())?;
                         }
                         KeywordRole::UserDefined(suffix) => {
@@ -1856,6 +1877,57 @@ MAN_DV_2 = 0.0 [km/s]
             .spacecraft
             .expect("spacecraft block should survive round-trip");
         assert!((sp.mass.unwrap().to_kilograms() - 200.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn read_opm_preserves_mid_maneuver_comments() {
+        // COMMENT lines interleaved within a maneuver body (between
+        // MAN_EPOCH_IGNITION and the trailing MAN_DV_* fields) must
+        // survive on `Maneuver::comments`. The lossy-but-acceptable
+        // behaviour is that positional ordering is collapsed to the
+        // start of the maneuver block on re-emit.
+        let input = "\
+CCSDS_OPM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+OBJECT_NAME = SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+EPOCH = 2024-01-01T00:00:00
+X = 7000.0 [km]
+Y = 0.0 [km]
+Z = 0.0 [km]
+X_DOT = 0.0 [km/s]
+Y_DOT = 7.5 [km/s]
+Z_DOT = 0.0 [km/s]
+COMMENT leading-1
+COMMENT leading-2
+MAN_EPOCH_IGNITION = 2024-01-01T00:01:00
+MAN_DURATION = 60.0 [s]
+COMMENT interleaved-1
+MAN_DELTA_MASS = -1.0 [kg]
+COMMENT interleaved-2
+MAN_DV_1 = 0.001 [km/s]
+MAN_DV_2 = 0.0 [km/s]
+MAN_DV_3 = 0.0 [km/s]
+";
+        let opm = read_opm(input).expect("read");
+        assert_eq!(opm.maneuvers.len(), 1);
+        let man = &opm.maneuvers[0];
+        // All four COMMENT lines (2 leading + 2 interleaved) are present.
+        assert_eq!(
+            man.comments,
+            vec![
+                "leading-1".to_string(),
+                "leading-2".to_string(),
+                "interleaved-1".to_string(),
+                "interleaved-2".to_string(),
+            ],
+            "expected 4 comments (2 leading + 2 interleaved); got {:?}",
+            man.comments,
+        );
     }
 
     #[test]

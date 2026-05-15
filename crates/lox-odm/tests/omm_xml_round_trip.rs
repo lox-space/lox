@@ -85,9 +85,9 @@ fn goes_13_omm_parse_succeeds() {
 fn goes_13_omm_structural_round_trip() {
     // First pass normalises epoch-string precision; subsequent passes must agree.
     let first = read_omm(GOES_13_OMM).expect("first parse failed");
-    let serialised = write_omm(&first);
+    let serialised = write_omm(&first).unwrap();
     let second = read_omm(&serialised).expect("second parse failed");
-    let serialised2 = write_omm(&second);
+    let serialised2 = write_omm(&second).unwrap();
     let third = read_omm(&serialised2).expect("third parse failed");
 
     // Structural identity (field-by-field, not full PartialEq, to tolerate
@@ -163,7 +163,7 @@ fn tle_parameters_round_trip_full_fields() {
     assert_eq!(tle.mean_motion_ddot, Some(0.0));
 
     // Write and re-read to confirm TLE fields survive serialisation.
-    let written = write_omm(&omm);
+    let written = write_omm(&omm).unwrap();
     let reparsed = read_omm(&written).expect("re-parse after write failed");
     let tle2 = reparsed
         .tle_parameters
@@ -207,7 +207,7 @@ fn header_comments_preserved() {
     assert!(!tle_comments.is_empty(), "TLE comments lost");
 
     // After write + re-read, comments are preserved.
-    let written = write_omm(&omm);
+    let written = write_omm(&omm).unwrap();
     let reparsed = read_omm(&written).expect("re-parse failed");
     assert_eq!(omm.header.comments, reparsed.header.comments);
     assert_eq!(omm.mean_elements.comments, reparsed.mean_elements.comments);

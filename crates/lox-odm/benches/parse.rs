@@ -219,7 +219,7 @@ fn xml_parse_oem(bencher: Bencher) {
 fn xml_round_trip_opm(bencher: Bencher) {
     let opm = lox_odm::xml::read_opm(OPM_XML).unwrap();
     bencher.bench(|| {
-        let s = lox_odm::xml::write_opm(black_box(&opm));
+        let s = lox_odm::xml::write_opm(black_box(&opm)).unwrap();
         lox_odm::xml::read_opm(&s).unwrap()
     });
 }
@@ -228,7 +228,7 @@ fn xml_round_trip_opm(bencher: Bencher) {
 fn xml_round_trip_oem(bencher: Bencher) {
     let oem = lox_odm::xml::read_oem(OEM_XML).unwrap();
     bencher.bench(|| {
-        let s = lox_odm::xml::write_oem(black_box(&oem));
+        let s = lox_odm::xml::write_oem(black_box(&oem)).unwrap();
         lox_odm::xml::read_oem(&s).unwrap()
     });
 }
@@ -246,7 +246,7 @@ fn json_parse_omm(bencher: Bencher) {
 fn json_round_trip_omm(bencher: Bencher) {
     let omm = lox_odm::json::read_omm(OMM_JSON).unwrap();
     bencher.bench(|| {
-        let s = lox_odm::json::write_omm(black_box(&omm));
+        let s = lox_odm::json::write_omm(black_box(&omm)).unwrap();
         lox_odm::json::read_omm(&s).unwrap()
     });
 }

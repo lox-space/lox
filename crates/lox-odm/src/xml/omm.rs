@@ -661,6 +661,7 @@ impl TryFrom<OmmXml> for Omm {
             spacecraft,
             covariance,
             user_defined,
+            provider_extras: BTreeMap::new(),
         })
     }
 }
@@ -676,9 +677,12 @@ pub fn read_omm(input: &str) -> Result<Omm, XmlError> {
 }
 
 /// Serialise a typed [`Omm`] to an XML string.
-pub fn write_omm(omm: &Omm) -> String {
+///
+/// Returns [`XmlError::XmlSer`] if `quick-xml` rejects any field — most
+/// realistically a non-finite `f64` (NaN/Infinity) in a numeric slot.
+pub fn write_omm(omm: &Omm) -> Result<String, XmlError> {
     let xml = OmmXml::from(omm);
-    quick_xml::se::to_string(&xml).expect("OmmXml serialisation is infallible")
+    Ok(quick_xml::se::to_string(&xml)?)
 }
 
 // ---------------------------------------------------------------------------
@@ -748,6 +752,7 @@ mod tests {
             spacecraft: None,
             covariance: None,
             user_defined: BTreeMap::new(),
+            provider_extras: BTreeMap::new(),
         }
     }
 
@@ -758,7 +763,7 @@ mod tests {
     #[test]
     fn minimal_omm_round_trip() {
         let omm = sample_omm();
-        let xml_str = write_omm(&omm);
+        let xml_str = write_omm(&omm).unwrap();
         let parsed = read_omm(&xml_str).expect("round-trip parse failed");
 
         assert_eq!(parsed.header, omm.header, "header mismatch");
@@ -799,7 +804,7 @@ mod tests {
             agom: Some(AreaToMass::square_meters_per_kilogram(0.03)),
         });
 
-        let xml_str = write_omm(&omm);
+        let xml_str = write_omm(&omm).unwrap();
         let parsed = read_omm(&xml_str).expect("TLE round-trip parse failed");
 
         let tle = parsed.tle_parameters.expect("TLE parameters missing");
@@ -825,7 +830,7 @@ mod tests {
         let mut omm = sample_omm();
         omm.mean_elements.gm = Some(wire_gm);
 
-        let xml_str = write_omm(&omm);
+        let xml_str = write_omm(&omm).unwrap();
         let parsed = read_omm(&xml_str).expect("GM round-trip parse failed");
 
         let parsed_gm = parsed.mean_elements.gm.expect("wire GM not preserved");
@@ -955,7 +960,7 @@ mod tests {
             .comments
             .push("Mean elements comment".to_string());
 
-        let xml_str = write_omm(&omm);
+        let xml_str = write_omm(&omm).unwrap();
         let parsed = read_omm(&xml_str).expect("comments round-trip parse failed");
 
         assert_eq!(
@@ -987,7 +992,7 @@ mod tests {
         omm.user_defined
             .insert("CUSTOM_KEY".to_string(), "custom_value".to_string());
 
-        let xml_str = write_omm(&omm);
+        let xml_str = write_omm(&omm).unwrap();
         let parsed = read_omm(&xml_str).expect("user-defined round-trip parse failed");
 
         assert_eq!(
@@ -1021,7 +1026,7 @@ mod tests {
             matrix: Matrix6::identity(),
         });
 
-        let xml_str = write_omm(&omm);
+        let xml_str = write_omm(&omm).unwrap();
         let parsed = read_omm(&xml_str).expect("spacecraft+covariance parse failed");
 
         let sp = parsed.spacecraft.expect("spacecraft missing");

@@ -117,10 +117,10 @@ const LEGACY_FIXTURE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 fn legacy_fixture_ast_round_trip() {
     // First pass: parse the fixture and normalise
     let first = read_opm(LEGACY_FIXTURE).expect("first parse failed");
-    let serialised = write_opm(&first);
+    let serialised = write_opm(&first).unwrap();
     // Second pass: parse the normalised XML — this and a third pass should agree
     let second = read_opm(&serialised).expect("second parse failed");
-    let serialised2 = write_opm(&second);
+    let serialised2 = write_opm(&second).unwrap();
     let third = read_opm(&serialised2).expect("third parse failed");
     assert_eq!(second, third, "double round-trip mismatch");
 }
@@ -176,9 +176,9 @@ fn legacy_fixture_keplerian_with_wire_gm() {
 fn legacy_fixture_covariance_round_trip() {
     // Normalise epoch precision first
     let first = read_opm(LEGACY_FIXTURE).expect("first parse failed");
-    let serialised = write_opm(&first);
+    let serialised = write_opm(&first).unwrap();
     let second = read_opm(&serialised).expect("second parse failed");
-    let serialised2 = write_opm(&second);
+    let serialised2 = write_opm(&second).unwrap();
     let third = read_opm(&serialised2).expect("third parse failed");
 
     let cov1 = second

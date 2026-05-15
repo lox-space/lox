@@ -9,8 +9,20 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
+use std::f64::consts::PI;
+
+use chrono::{DateTime, Utc as ChronoUtc};
 use lox_bodies::{DynOrigin, Origin};
+use lox_core::anomalies::{AnomalyError, MeanAnomaly};
 use lox_core::coords::Cartesian;
+use lox_core::elements::{
+    Keplerian, MeanElements,
+    keplerian::{
+        ArgumentOfPeriapsis, Eccentricity, Inclination, LongitudeOfAscendingNode, SemiMajorAxis,
+    },
+};
+use lox_core::f64::consts::SECONDS_PER_DAY;
+use lox_core::units::Angle;
 use lox_frames::{DynFrame, ReferenceFrame};
 use lox_odm::Format;
 use lox_odm::OdmError;
@@ -18,11 +30,16 @@ use lox_odm::types::common::{
     OdmCenter, OdmFrame, OdmHeader, OdmTime, OdmTimeScale, SpacecraftParameters,
 };
 use lox_odm::types::oem::{Oem, OemMetadata, OemSegment};
+use lox_odm::types::omm::{Omm, OmmMeanElements, OmmMetadata};
 use lox_odm::types::opm::{Opm, OpmMetadata};
 use lox_time::time::DynTime;
 use lox_time::time_scales::{DynTimeScale, TimeScale};
 
-use crate::orbits::{CartesianOrbit, DynCartesianOrbit, DynTrajectory, Orbit, Trajectory};
+use crate::orbits::{
+    CartesianOrbit, DynCartesianOrbit, DynKeplerianOrbit, DynTrajectory, KeplerianOrbit, Orbit,
+    Trajectory,
+};
+use crate::propagators::sgp4::{Sgp4, Sgp4Error};
 
 // ----------------------------------------------------------------------------
 // Helper: convert a `Time<T>` (where T: Into<DynTimeScale>) to `OdmTime`
@@ -226,6 +243,14 @@ impl OpmBuilder {
     /// `T`/`O`/`R` are inferred from the orbit. The orbit's epoch, state,
     /// center, and frame are used to populate the message. If
     /// `creation_date` was not set, it defaults to the orbit's epoch.
+    ///
+    /// **Lossy boundary**: a [`Cartesian`] orbit carries only the
+    /// 6-element state. CCSDS-optional sub-blocks that the source OPM may
+    /// have included — `keplerian`, `covariance`, and the `maneuvers` list —
+    /// are not represented in the orbit and are therefore emitted as
+    /// empty/`None` regardless of what the original message contained.
+    /// Round-tripping `OPM(with maneuvers) → DynCartesianOrbit → OpmBuilder`
+    /// drops those sections.
     pub fn build<T, O, R>(self, orbit: &Orbit<Cartesian, T, O, R>) -> Opm
     where
         T: TimeScale + Copy + Into<DynTimeScale>,
@@ -380,6 +405,7 @@ pub struct OemBuilder {
     object_id: String,
     creation_date: Option<OdmTime>,
     message_id: Option<String>,
+    classification: Option<String>,
     header_comments: Vec<String>,
     metadata_comments: Vec<String>,
     data_comments: Vec<String>,
@@ -406,6 +432,7 @@ impl OemBuilder {
             object_id: object_id.into(),
             creation_date: None,
             message_id: None,
+            classification: None,
             header_comments: Vec::new(),
             metadata_comments: Vec::new(),
             data_comments: Vec::new(),
@@ -422,6 +449,12 @@ impl OemBuilder {
     /// Sets `CREATION_DATE`. Defaults to the trajectory's start epoch when not set.
     pub fn creation_date(mut self, t: OdmTime) -> Self {
         self.creation_date = Some(t);
+        self
+    }
+
+    /// Sets the header `CLASSIFICATION` marker.
+    pub fn classification(mut self, s: impl Into<String>) -> Self {
+        self.classification = Some(s.into());
         self
     }
 
@@ -544,7 +577,7 @@ impl OemBuilder {
         Oem {
             header: OdmHeader {
                 comments: self.header_comments,
-                classification: None,
+                classification: self.classification,
                 creation_date,
                 originator: self.originator,
                 message_id: self.message_id,
@@ -669,6 +702,513 @@ impl DynTrajectory {
     pub fn from_oem_file(path: impl AsRef<Path>) -> Result<Self, OemReadError> {
         let oem = lox_odm::read_oem_file(path)?;
         Ok(Self::from_oem(&oem)?)
+    }
+}
+
+// ============================================================================
+// OMM ↔ SGP4 / KeplerianOrbit
+// ============================================================================
+
+/// Error when converting an OMM to a typed propagator/orbit.
+#[derive(Debug, thiserror::Error)]
+pub enum OmmFromOdmError {
+    /// The OMM center is a free-form custom name.
+    #[error("OMM center `{0}` is not a known body")]
+    CustomCenter(String),
+    /// The OMM reference frame is a free-form custom name.
+    #[error("OMM frame `{0}` is not a known reference frame")]
+    CustomFrame(String),
+    /// No wire `GM` and the centre body has no canonical gravitational parameter.
+    #[error("OMM has no `GM` and centre `{0}` has no canonical gravitational parameter")]
+    MissingGm(String),
+    /// The epoch could not be converted to UTC (required by `sgp4::Elements`).
+    #[error("failed to convert OMM epoch to UTC: {0}")]
+    EpochConversion(String),
+    /// SGP4 rejected the elements (e.g. unphysical mean motion).
+    #[error(transparent)]
+    Sgp4(#[from] Sgp4Error),
+    /// An element-validation error from the typed Keplerian model.
+    #[error("invalid Keplerian element: {0}")]
+    InvalidElement(String),
+}
+
+/// Composite error for `Sgp4::from_omm_str` / `from_omm_file` and the
+/// analogous `DynKeplerianOrbit::from_omm_*` constructors.
+#[derive(Debug, thiserror::Error)]
+pub enum OmmReadError {
+    /// The underlying ODM parsing or I/O failed.
+    #[error(transparent)]
+    Odm(#[from] OdmError),
+    /// The parsed OMM could not be converted to the target type.
+    #[error(transparent)]
+    Convert(#[from] OmmFromOdmError),
+}
+
+/// Error when building an [`Omm`] from a [`KeplerianOrbit`].
+#[derive(Debug, thiserror::Error)]
+pub enum OmmBuildError {
+    /// The orbit's true anomaly could not be converted to a mean anomaly.
+    /// This happens only for hyperbolic orbits whose true anomaly is
+    /// outside the asymptote limits, or when an iterative solver fails to
+    /// converge. CCSDS OMMs are typically used for periodic (Earth) orbits
+    /// where this conversion is total.
+    #[error("failed to convert true anomaly to mean anomaly: {0}")]
+    Anomaly(#[from] AnomalyError),
+}
+
+/// Composite error for `OmmBuilder::write_str` / `write_file` and the
+/// `KeplerianOrbit::to_omm_str` / `to_omm_file` shortcuts.
+#[derive(Debug, thiserror::Error)]
+pub enum OmmWriteError {
+    /// Constructing the typed [`Omm`] from the orbit failed.
+    #[error(transparent)]
+    Build(#[from] OmmBuildError),
+    /// Serialising the typed [`Omm`] to the wire format failed.
+    #[error(transparent)]
+    Odm(#[from] OdmError),
+}
+
+// ----------------------------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------------------------
+
+/// Convert an [`OdmTime`] to a UTC-naive timestamp for `sgp4::Elements`.
+fn omm_epoch_to_naive_utc(epoch: OdmTime) -> Result<chrono::NaiveDateTime, OmmFromOdmError> {
+    let utc_epoch = epoch.in_scale(OdmTimeScale::Utc);
+    // `OdmTime::Utc(_)` is the only variant we expect after `in_scale(Utc)`.
+    let utc = match utc_epoch {
+        OdmTime::Utc(u) => u,
+        OdmTime::Time(_) => {
+            return Err(OmmFromOdmError::EpochConversion(
+                "expected UTC after in_scale; got continuous scale".to_string(),
+            ));
+        }
+    };
+    let dt: DateTime<ChronoUtc> = utc.try_into().map_err(|e: lox_time::chrono::ChronoError| {
+        OmmFromOdmError::EpochConversion(e.to_string())
+    })?;
+    Ok(dt.naive_utc())
+}
+
+fn classification_from_str(s: Option<&str>) -> sgp4::Classification {
+    match s.map(str::trim) {
+        Some("C") => sgp4::Classification::Classified,
+        Some("S") => sgp4::Classification::Secret,
+        _ => sgp4::Classification::Unclassified,
+    }
+}
+
+/// Compute SGP4's `mean_motion` (rev/day) from semi-major axis (m). Inverse
+/// of [`mean_motion_to_sma`].
+fn sma_to_mean_motion(sma_m: f64, gm_m3_per_s2: f64) -> f64 {
+    let n_rad_per_s = (gm_m3_per_s2 / sma_m.powi(3)).sqrt();
+    n_rad_per_s * SECONDS_PER_DAY / (2.0 * PI)
+}
+
+// ----------------------------------------------------------------------------
+// Sgp4::from_omm / to_omm
+// ----------------------------------------------------------------------------
+
+impl Sgp4 {
+    /// Constructs an [`Sgp4`] propagator from a typed [`Omm`].
+    ///
+    /// The OMM's mean elements (`SEMI_MAJOR_AXIS` or `MEAN_MOTION`),
+    /// `BSTAR`, `MEAN_MOTION_DOT`/`DDOT`, and TLE-parameter block are
+    /// translated into an [`sgp4::Elements`]. The epoch is converted to UTC
+    /// (SGP4's wire format). Missing TLE parameters default to `0`.
+    ///
+    /// # Errors
+    ///
+    /// - [`OmmFromOdmError::CustomCenter`] if the OMM centre is not Earth.
+    /// - [`OmmFromOdmError::MissingGm`] if no `GM` is available to derive
+    ///   the SGP4 `MEAN_MOTION` from `SEMI_MAJOR_AXIS`.
+    /// - [`OmmFromOdmError::Sgp4`] if SGP4 itself rejects the elements.
+    pub fn from_omm(omm: &Omm) -> Result<Self, OmmFromOdmError> {
+        let centre = omm.metadata.center.known().ok_or_else(|| {
+            OmmFromOdmError::CustomCenter(omm.metadata.center.name().into_owned())
+        })?;
+        if centre != DynOrigin::Earth {
+            return Err(OmmFromOdmError::CustomCenter(format!(
+                "SGP4 only supports Earth; got {}",
+                omm.metadata.center.name()
+            )));
+        }
+
+        let gm = omm
+            .gm()
+            .ok_or_else(|| OmmFromOdmError::MissingGm(omm.metadata.center.name().into_owned()))?;
+
+        let me = &omm.mean_elements.elements;
+        let datetime = omm_epoch_to_naive_utc(omm.epoch)?;
+
+        let tle = omm.tle_parameters.as_ref();
+        let elements = sgp4::Elements {
+            object_name: Some(omm.metadata.object_name.clone()),
+            international_designator: Some(omm.metadata.object_id.clone()),
+            norad_id: tle
+                .and_then(|t| t.norad_cat_id)
+                .map(|i| i.max(0) as u64)
+                .unwrap_or(0),
+            classification: classification_from_str(
+                tle.and_then(|t| t.classification_type.as_deref()),
+            ),
+            datetime,
+            mean_motion_dot: tle.and_then(|t| t.mean_motion_dot).unwrap_or(0.0),
+            mean_motion_ddot: tle.and_then(|t| t.mean_motion_ddot).unwrap_or(0.0),
+            drag_term: tle.and_then(|t| t.bstar).unwrap_or(0.0),
+            element_set_number: tle
+                .and_then(|t| t.element_set_no)
+                .map(|i| i.max(0) as u64)
+                .unwrap_or(0),
+            inclination: me.i.to_degrees(),
+            right_ascension: me.raan.to_degrees(),
+            eccentricity: me.e,
+            argument_of_perigee: me.aop.to_degrees(),
+            mean_anomaly: me.m.to_degrees(),
+            mean_motion: sma_to_mean_motion(me.a, gm.as_f64()),
+            revolution_number: tle.and_then(|t| t.rev_at_epoch).unwrap_or(0),
+            ephemeris_type: tle
+                .and_then(|t| t.ephemeris_type)
+                .map(|i| i.max(0) as u8)
+                .unwrap_or(0),
+        };
+
+        Ok(Self::new(elements)?)
+    }
+
+    /// Parses an OMM from `input` (auto-detecting wire format) and
+    /// constructs an [`Sgp4`] propagator.
+    pub fn from_omm_str(input: &str) -> Result<Self, OmmReadError> {
+        let omm = lox_odm::read_omm(input)?;
+        Ok(Self::from_omm(&omm)?)
+    }
+
+    /// Reads an OMM from a file (auto-detecting format) and constructs an
+    /// [`Sgp4`] propagator.
+    pub fn from_omm_file(path: impl AsRef<Path>) -> Result<Self, OmmReadError> {
+        let omm = lox_odm::read_omm_file(path)?;
+        Ok(Self::from_omm(&omm)?)
+    }
+}
+
+// ----------------------------------------------------------------------------
+// OmmBuilder (KeplerianOrbit → OMM)
+// ----------------------------------------------------------------------------
+
+/// Fluent builder for constructing an [`Omm`] from a [`KeplerianOrbit`].
+///
+/// The orbit's Keplerian elements populate the OMM mean-elements block
+/// (true anomaly → mean anomaly is a geometric conversion, independent of
+/// the chosen `MEAN_ELEMENT_THEORY`). No TLE-parameters block is emitted —
+/// those are SGP4-specific data that a generic [`KeplerianOrbit`] does not
+/// carry. Callers needing an SGP4-tuned OMM with `BSTAR`/`MEAN_MOTION_DOT`
+/// etc. should construct the typed [`Omm`] directly.
+pub struct OmmBuilder {
+    originator: String,
+    object_name: String,
+    object_id: String,
+    creation_date: Option<OdmTime>,
+    message_id: Option<String>,
+    classification: Option<String>,
+    header_comments: Vec<String>,
+    metadata_comments: Vec<String>,
+    data_comments: Vec<String>,
+    frame_epoch: Option<OdmTime>,
+    mean_element_theory: String,
+    spacecraft: Option<SpacecraftParameters>,
+    user_defined: BTreeMap<String, String>,
+    time_system: Option<OdmTimeScale>,
+}
+
+impl OmmBuilder {
+    /// Creates a new builder with the three CCSDS-mandatory identification
+    /// fields. `MEAN_ELEMENT_THEORY` defaults to `"SGP/SGP4"` and can be
+    /// overridden via [`Self::mean_element_theory`].
+    pub fn new(
+        originator: impl Into<String>,
+        object_name: impl Into<String>,
+        object_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            originator: originator.into(),
+            object_name: object_name.into(),
+            object_id: object_id.into(),
+            creation_date: None,
+            message_id: None,
+            classification: None,
+            header_comments: Vec::new(),
+            metadata_comments: Vec::new(),
+            data_comments: Vec::new(),
+            frame_epoch: None,
+            mean_element_theory: "SGP/SGP4".to_string(),
+            spacecraft: None,
+            user_defined: BTreeMap::new(),
+            time_system: None,
+        }
+    }
+
+    /// Sets `CREATION_DATE`. Defaults to the orbit's epoch when not set.
+    pub fn creation_date(mut self, t: OdmTime) -> Self {
+        self.creation_date = Some(t);
+        self
+    }
+
+    /// Forces the wire-format `TIME_SYSTEM` keyword. See
+    /// [`OpmBuilder::time_system`] for the round-trip rationale.
+    pub fn time_system(mut self, scale: OdmTimeScale) -> Self {
+        self.time_system = Some(scale);
+        self
+    }
+
+    /// Sets `MESSAGE_ID`.
+    pub fn message_id(mut self, s: impl Into<String>) -> Self {
+        self.message_id = Some(s.into());
+        self
+    }
+
+    /// Sets the header `CLASSIFICATION` marker.
+    pub fn classification(mut self, s: impl Into<String>) -> Self {
+        self.classification = Some(s.into());
+        self
+    }
+
+    /// Appends a header `COMMENT`.
+    pub fn header_comment(mut self, s: impl Into<String>) -> Self {
+        self.header_comments.push(s.into());
+        self
+    }
+
+    /// Appends a metadata `COMMENT`.
+    pub fn metadata_comment(mut self, s: impl Into<String>) -> Self {
+        self.metadata_comments.push(s.into());
+        self
+    }
+
+    /// Appends a mean-elements `COMMENT`.
+    pub fn data_comment(mut self, s: impl Into<String>) -> Self {
+        self.data_comments.push(s.into());
+        self
+    }
+
+    /// Sets `REF_FRAME_EPOCH`.
+    pub fn frame_epoch(mut self, t: OdmTime) -> Self {
+        self.frame_epoch = Some(t);
+        self
+    }
+
+    /// Overrides `MEAN_ELEMENT_THEORY` (default `"SGP/SGP4"`).
+    pub fn mean_element_theory(mut self, s: impl Into<String>) -> Self {
+        self.mean_element_theory = s.into();
+        self
+    }
+
+    /// Attaches the spacecraft physical-properties block.
+    pub fn spacecraft(mut self, sp: SpacecraftParameters) -> Self {
+        self.spacecraft = Some(sp);
+        self
+    }
+
+    /// Inserts a user-defined key/value pair.
+    pub fn user_defined(mut self, k: impl Into<String>, v: impl Into<String>) -> Self {
+        self.user_defined.insert(k.into(), v.into());
+        self
+    }
+
+    /// Builds the [`Omm`] from a [`KeplerianOrbit`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OmmBuildError::Anomaly`] if the orbit's true anomaly
+    /// cannot be converted to a mean anomaly — only possible for
+    /// hyperbolic orbits whose true anomaly is outside the asymptote
+    /// limits.
+    pub fn build<T, O, R>(self, orbit: &KeplerianOrbit<T, O, R>) -> Result<Omm, OmmBuildError>
+    where
+        T: TimeScale + Copy + Into<DynTimeScale>,
+        O: Origin + Copy + Into<DynOrigin>,
+        R: ReferenceFrame + Copy + Into<DynFrame>,
+    {
+        let kep = orbit.state();
+        let ecc = kep.eccentricity();
+        // True → mean is a geometric conversion. For hyperbolic orbits
+        // it can fail when the true anomaly exceeds the asymptote limit;
+        // propagate that as a typed error instead of panicking.
+        let mean_anomaly_rad = kep.true_anomaly().to_mean(ecc)?.as_f64();
+
+        let mean_elements = MeanElements {
+            a: kep.semi_major_axis().to_meters(),
+            e: ecc.as_f64(),
+            i: kep.inclination().as_f64(),
+            raan: kep.longitude_of_ascending_node().as_f64(),
+            aop: kep.argument_of_periapsis().as_f64(),
+            m: mean_anomaly_rad,
+        };
+
+        let raw_epoch = orbit_epoch_to_odm_time(orbit.time());
+        let epoch = apply_time_system(raw_epoch, self.time_system);
+        let creation_date = self.creation_date.unwrap_or(epoch);
+        let frame_epoch = self
+            .frame_epoch
+            .map(|e| apply_time_system(e, self.time_system));
+        let center = OdmCenter::from_wire(orbit.origin().name());
+        let frame = OdmFrame::from_wire(&orbit.reference_frame().abbreviation());
+
+        Ok(Omm {
+            header: OdmHeader {
+                comments: self.header_comments,
+                classification: self.classification,
+                creation_date,
+                originator: self.originator,
+                message_id: self.message_id,
+            },
+            metadata: OmmMetadata {
+                comments: self.metadata_comments,
+                object_name: self.object_name,
+                object_id: self.object_id,
+                center,
+                frame,
+                frame_epoch,
+                mean_element_theory: self.mean_element_theory,
+            },
+            epoch,
+            mean_elements: OmmMeanElements {
+                comments: self.data_comments,
+                elements: mean_elements,
+                gm: None,
+            },
+            tle_parameters: None,
+            spacecraft: self.spacecraft,
+            covariance: None,
+            user_defined: self.user_defined,
+            provider_extras: BTreeMap::new(),
+        })
+    }
+
+    /// Builds the OMM and serialises it to the requested wire format.
+    pub fn write_str<T, O, R>(
+        self,
+        orbit: &KeplerianOrbit<T, O, R>,
+        format: Format,
+    ) -> Result<String, OmmWriteError>
+    where
+        T: TimeScale + Copy + Into<DynTimeScale>,
+        O: Origin + Copy + Into<DynOrigin>,
+        R: ReferenceFrame + Copy + Into<DynFrame>,
+    {
+        let omm = self.build(orbit)?;
+        Ok(lox_odm::write_omm(&omm, format)?)
+    }
+
+    /// Builds the OMM and writes it to a file in the requested format.
+    pub fn write_file<T, O, R>(
+        self,
+        orbit: &KeplerianOrbit<T, O, R>,
+        path: impl AsRef<Path>,
+        format: Format,
+    ) -> Result<(), OmmWriteError>
+    where
+        T: TimeScale + Copy + Into<DynTimeScale>,
+        O: Origin + Copy + Into<DynOrigin>,
+        R: ReferenceFrame + Copy + Into<DynFrame>,
+    {
+        let omm = self.build(orbit)?;
+        Ok(lox_odm::write_omm_file(&omm, path, format)?)
+    }
+}
+
+// ----------------------------------------------------------------------------
+// KeplerianOrbit::to_omm (inherent shortcuts mirroring OPM/OEM)
+// ----------------------------------------------------------------------------
+
+impl<T, O, R> KeplerianOrbit<T, O, R>
+where
+    T: TimeScale + Copy + Into<DynTimeScale>,
+    O: Origin + Copy + Into<DynOrigin>,
+    R: ReferenceFrame + Copy + Into<DynFrame>,
+{
+    /// Converts this orbit into an OMM using the provided builder.
+    pub fn to_omm(&self, builder: OmmBuilder) -> Result<Omm, OmmBuildError> {
+        builder.build(self)
+    }
+
+    /// Builds the OMM and serialises it to the requested wire format.
+    pub fn to_omm_str(&self, builder: OmmBuilder, format: Format) -> Result<String, OmmWriteError> {
+        builder.write_str(self, format)
+    }
+
+    /// Builds the OMM and writes it to a file in the requested format.
+    pub fn to_omm_file(
+        &self,
+        builder: OmmBuilder,
+        path: impl AsRef<Path>,
+        format: Format,
+    ) -> Result<(), OmmWriteError> {
+        builder.write_file(self, path, format)
+    }
+}
+
+// ----------------------------------------------------------------------------
+// DynKeplerianOrbit::from_omm
+// ----------------------------------------------------------------------------
+
+impl DynKeplerianOrbit {
+    /// Constructs a [`DynKeplerianOrbit`] from a typed OMM by treating the
+    /// stored mean elements as Keplerian orbital elements.
+    ///
+    /// **Caveat:** OMM mean elements are tuned for a specific propagation
+    /// theory (see [`OmmMetadata::mean_element_theory`]). For SGP4-tuned
+    /// OMMs they live in TEME and are *not* osculating — converting them
+    /// to a Cartesian state via [`KeplerianOrbit::to_cartesian`] will not
+    /// match the SGP4 prediction. Use [`Sgp4::from_omm`] for actual
+    /// propagation of SGP4-tuned OMMs.
+    pub fn from_omm(omm: &Omm) -> Result<Self, OmmFromOdmError> {
+        let origin = omm.metadata.center.known().ok_or_else(|| {
+            OmmFromOdmError::CustomCenter(omm.metadata.center.name().into_owned())
+        })?;
+        let frame =
+            omm.metadata.frame.known().ok_or_else(|| {
+                OmmFromOdmError::CustomFrame(omm.metadata.frame.name().into_owned())
+            })?;
+        let me = &omm.mean_elements.elements;
+
+        let eccentricity = Eccentricity::try_new(me.e)
+            .map_err(|e| OmmFromOdmError::InvalidElement(e.to_string()))?;
+        let mean_anomaly = MeanAnomaly::new(Angle::radians(me.m));
+        let true_anomaly = mean_anomaly
+            .to_true(eccentricity)
+            .map_err(|e| OmmFromOdmError::InvalidElement(e.to_string()))?;
+
+        let kep = Keplerian::new(
+            SemiMajorAxis::meters(me.a),
+            eccentricity,
+            Inclination::try_new(Angle::radians(me.i))
+                .map_err(|e| OmmFromOdmError::InvalidElement(e.to_string()))?,
+            LongitudeOfAscendingNode::try_new(Angle::radians(me.raan))
+                .map_err(|e| OmmFromOdmError::InvalidElement(e.to_string()))?,
+            ArgumentOfPeriapsis::try_new(Angle::radians(me.aop))
+                .map_err(|e| OmmFromOdmError::InvalidElement(e.to_string()))?,
+            true_anomaly,
+        );
+
+        // Use raw `Orbit::from_state` because TEME is not in
+        // `DynFrame::TryQuasiInertial`'s permitted set, but for typed-view
+        // purposes we still want to allow construction.
+        let time = omm.epoch.to_dyn_time();
+        Ok(Orbit::from_state(kep, time, origin, frame))
+    }
+
+    /// Parses an OMM from `input` (auto-detecting wire format) and converts
+    /// it to a [`DynKeplerianOrbit`].
+    pub fn from_omm_str(input: &str) -> Result<Self, OmmReadError> {
+        let omm = lox_odm::read_omm(input)?;
+        Ok(Self::from_omm(&omm)?)
+    }
+
+    /// Reads an OMM from a file (auto-detecting format) and converts it to
+    /// a [`DynKeplerianOrbit`].
+    pub fn from_omm_file(path: impl AsRef<Path>) -> Result<Self, OmmReadError> {
+        let omm = lox_odm::read_omm_file(path)?;
+        Ok(Self::from_omm(&omm)?)
     }
 }
 

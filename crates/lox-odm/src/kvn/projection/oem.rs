@@ -556,9 +556,16 @@ fn process_entries(
             KvnEntry::Field(f) => {
                 if let Some(suffix) = f.key.strip_prefix("USER_DEFINED_") {
                     user_defined.insert(suffix.to_string(), f.value.trim().to_string());
+                } else {
+                    // OEM DATA sections only carry positional rows,
+                    // COVARIANCE subsections, and USER_DEFINED_* fields.
+                    // Any other key is a wire-format error and must not be
+                    // silently dropped.
+                    return Err(KvnError {
+                        span: Span::default(),
+                        kind: KvnErrorKind::UnexpectedKeyword(f.key.clone()),
+                    });
                 }
-                // Other fields in DATA sections are silently ignored; they
-                // don't belong to the OEM data grammar.
             }
         }
     }
@@ -1117,6 +1124,34 @@ META_STOP
         assert!(
             matches!(err.kind, KvnErrorKind::InvalidValue { .. }),
             "unexpected error kind: {err}"
+        );
+    }
+
+    #[test]
+    fn read_oem_unknown_data_field_returns_error() {
+        // A stray keyword inside the DATA section (not USER_DEFINED_*, not
+        // a positional row, not COVARIANCE) must surface as
+        // `UnexpectedKeyword` instead of being silently dropped.
+        let kvn = "\
+CCSDS_OEM_VERS = 3.0
+CREATION_DATE = 2000-01-01T11:58:55.816
+ORIGINATOR = TEST
+META_START
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+START_TIME = 2000-01-01T11:58:55.816
+STOP_TIME = 2000-01-01T11:59:55.816
+META_STOP
+2000-01-01T11:58:55.816 7000.0 0.0 0.0 0.0 7.5 0.0
+NOT_A_REAL_FIELD = 42
+";
+        let err = read_oem(kvn).expect_err("stray DATA field must error");
+        assert!(
+            matches!(&err.kind, KvnErrorKind::UnexpectedKeyword(k) if k == "NOT_A_REAL_FIELD"),
+            "expected UnexpectedKeyword(NOT_A_REAL_FIELD), got {err}",
         );
     }
 

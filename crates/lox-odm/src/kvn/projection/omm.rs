@@ -528,6 +528,17 @@ fn parse_covariance(section: &KvnSection) -> Result<Covariance, KvnError> {
     })
 }
 
+/// AST → typed [`Omm`] projection.
+///
+/// ## Comment preservation
+///
+/// COMMENT lines are preserved on the typed model wherever there is a
+/// comment slot: header / metadata / mean-elements / TLE-parameters /
+/// spacecraft / covariance blocks each carry a `comments: Vec<String>`.
+///
+/// **Lossy boundary**: COMMENT lines immediately preceding a
+/// `USER_DEFINED_*` field are dropped. The typed `user_defined` is a
+/// `BTreeMap<String, String>` with no per-key comment slot.
 impl TryFrom<KvnDocument> for Omm {
     type Error = KvnError;
 
@@ -811,6 +822,7 @@ impl TryFrom<KvnDocument> for Omm {
             spacecraft,
             covariance,
             user_defined,
+            provider_extras: BTreeMap::new(),
         })
     }
 }
@@ -880,6 +892,7 @@ mod tests {
             spacecraft: None,
             covariance: None,
             user_defined: BTreeMap::new(),
+            provider_extras: BTreeMap::new(),
         }
     }
 

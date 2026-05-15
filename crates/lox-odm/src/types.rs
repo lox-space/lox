@@ -8,13 +8,11 @@
 //! semantic content of an ODM independent of whether it was parsed
 //! from KVN, XML, or JSON.
 
-pub mod ci;
 pub mod common;
 pub mod oem;
 pub mod omm;
 pub mod opm;
 
-pub use ci::OdmCi;
 pub use common::{
     Covariance, MessageKind, OdmCenter, OdmFrame, OdmHeader, OdmTime, OdmTimeError,
     SpacecraftParameters,

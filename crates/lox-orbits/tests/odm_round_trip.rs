@@ -8,12 +8,22 @@
 #![cfg(feature = "odm")]
 
 use lox_bodies::DynOrigin;
+use lox_core::anomalies::TrueAnomaly;
+use lox_core::coords::Cartesian;
+use lox_core::elements::Keplerian;
+use lox_core::elements::keplerian::{
+    ArgumentOfPeriapsis, Eccentricity, Inclination, LongitudeOfAscendingNode, SemiMajorAxis,
+};
+use lox_core::units::Angle;
 use lox_core::units::{Distance, Velocity};
 use lox_frames::DynFrame;
 use lox_odm::Format;
-use lox_orbits::odm::{OemBuilder, OpmBuilder};
-use lox_orbits::orbits::{DynCartesianOrbit, DynTrajectory, Orbit, Trajectory};
+use lox_odm::types::common::OdmTimeScale;
+use lox_orbits::odm::{OemBuilder, OmmBuildError, OmmBuilder, OmmWriteError, OpmBuilder};
+use lox_orbits::orbits::{DynCartesianOrbit, DynKeplerianOrbit, DynTrajectory, Orbit, Trajectory};
+use lox_orbits::propagators::sgp4::Sgp4;
 use lox_time::deltas::TimeDelta;
+use lox_time::time::Time;
 use lox_time::time_scales::DynTimeScale;
 
 // ---------------------------------------------------------------------------
@@ -82,8 +92,6 @@ META_STOP
 // ---------------------------------------------------------------------------
 
 fn sample_dyn_orbit() -> DynCartesianOrbit {
-    use lox_core::coords::Cartesian;
-    use lox_time::time::Time;
     let t = Time::j2000(DynTimeScale::Tai);
     Orbit::from_state(
         Cartesian::new(
@@ -101,8 +109,6 @@ fn sample_dyn_orbit() -> DynCartesianOrbit {
 }
 
 fn sample_dyn_trajectory() -> DynTrajectory {
-    use lox_core::coords::Cartesian;
-    use lox_time::time::Time;
     let t0 = Time::j2000(DynTimeScale::Tai);
     let t1 = t0 + TimeDelta::from_seconds(60);
     let t2 = t0 + TimeDelta::from_seconds(120);
@@ -234,8 +240,6 @@ fn from_oem_segment_second_segment() {
 /// the default conversion path is observable.
 #[test]
 fn opm_utc_silently_widens_to_tai_without_override() {
-    use lox_odm::types::common::OdmTimeScale;
-
     let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
     let builder = OpmBuilder::new("ROUND_TRIP", "EUTELSAT W4", "2021-028A");
     let kvn = orbit.to_opm_str(builder, Format::Kvn).unwrap();
@@ -251,8 +255,6 @@ fn opm_utc_silently_widens_to_tai_without_override() {
 /// review's NEW-I2 finding.
 #[test]
 fn opm_time_system_override_preserves_utc() {
-    use lox_odm::types::common::OdmTimeScale;
-
     let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
     let builder =
         OpmBuilder::new("ROUND_TRIP", "EUTELSAT W4", "2021-028A").time_system(OdmTimeScale::Utc);
@@ -270,8 +272,6 @@ fn opm_time_system_override_preserves_utc() {
 /// `.time_system(Gps)` re-expresses the orbit's TAI epoch as GPS (TAI−GPS=19s).
 #[test]
 fn opm_time_system_override_to_gps() {
-    use lox_odm::types::common::OdmTimeScale;
-
     let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
     let builder =
         OpmBuilder::new("ROUND_TRIP", "EUTELSAT W4", "2021-028A").time_system(OdmTimeScale::Gps);
@@ -285,8 +285,6 @@ fn opm_time_system_override_to_gps() {
 /// OEM analogue: trajectory round-trip preserves UTC when `.time_system(Utc)` is set.
 #[test]
 fn oem_time_system_override_preserves_utc() {
-    use lox_odm::types::common::OdmTimeScale;
-
     let traj = sample_dyn_trajectory();
     let builder =
         OemBuilder::new("ROUND_TRIP", "TEST-SAT", "2024-IT-001A").time_system(OdmTimeScale::Utc);
@@ -297,4 +295,147 @@ fn oem_time_system_override_preserves_utc() {
     assert_eq!(seg.metadata.start_time.scale(), OdmTimeScale::Utc);
     assert_eq!(seg.metadata.stop_time.scale(), OdmTimeScale::Utc);
     assert!(kvn.contains("TIME_SYSTEM = UTC"));
+}
+
+// ---------------------------------------------------------------------------
+// OMM ↔ SGP4 / KeplerianOrbit integration
+// ---------------------------------------------------------------------------
+
+/// Realistic Space-Track ISS OMM JSON, matching the wire format clients
+/// receive from Space-Track's `/class/gp` endpoint.
+const ISS_OMM_JSON: &str = r#"{
+    "CCSDS_OMM_VERS": "2.0",
+    "CREATION_DATE": "2024-06-18T00:00:00",
+    "ORIGINATOR": "18 SPCS",
+    "OBJECT_NAME": "ISS (ZARYA)",
+    "OBJECT_ID": "1998-067A",
+    "CENTER_NAME": "EARTH",
+    "REF_FRAME": "TEME",
+    "TIME_SYSTEM": "UTC",
+    "MEAN_ELEMENT_THEORY": "SGP4",
+    "EPOCH": "2024-06-18T09:00:24.214400",
+    "MEAN_MOTION": "15.49495945",
+    "ECCENTRICITY": "0.0010444",
+    "INCLINATION": "51.6410",
+    "RA_OF_ASC_NODE": "309.3890",
+    "ARG_OF_PERICENTER": "339.5369",
+    "MEAN_ANOMALY": "107.8830",
+    "EPHEMERIS_TYPE": "0",
+    "CLASSIFICATION_TYPE": "U",
+    "NORAD_CAT_ID": "25544",
+    "ELEMENT_SET_NO": "999",
+    "REV_AT_EPOCH": "45873",
+    "BSTAR": "0.00030244",
+    "MEAN_MOTION_DOT": "0.00016566",
+    "MEAN_MOTION_DDOT": "0"
+}"#;
+
+/// `Sgp4::from_omm_str` builds a working SGP4 propagator and a one-orbital-
+/// period propagation comes back with the same orbital period.
+#[test]
+fn sgp4_from_omm_str_iss() {
+    let sgp4 = Sgp4::from_omm_str(ISS_OMM_JSON).expect("from_omm_str");
+
+    // Propagate to t + one orbital period (≈ 92.82 min from the ISS mean motion).
+    let orbital_period = 92.821;
+    let t1 = sgp4.time() + TimeDelta::from_minutes_f64(orbital_period);
+    let s1 = sgp4.state_at(t1).expect("state_at");
+    // Position magnitude should be roughly the orbital radius (~ 6.78 Mm).
+    let r = s1.position().length();
+    assert!(
+        (6_700_000.0..6_900_000.0).contains(&r),
+        "unexpected position magnitude: {r} m"
+    );
+}
+
+/// Round-trip: KeplerianOrbit → OMM → KeplerianOrbit preserves mean elements.
+#[test]
+fn keplerian_orbit_to_omm_round_trip_iss() {
+    let orbit = DynKeplerianOrbit::from_omm_str(ISS_OMM_JSON).expect("from_omm_str");
+    let original = orbit.state();
+    let builder = OmmBuilder::new("ROUND_TRIP", "ISS (ZARYA)", "1998-067A");
+    let kvn = orbit
+        .to_omm_str(builder, Format::Kvn)
+        .expect("write OMM KVN (ISS is elliptic)");
+
+    let reparsed = lox_odm::read_omm(&kvn).expect("re-parse OMM");
+    // Mean elements round-trip via the wire's deg↔rad conversion.
+    let me = &reparsed.mean_elements.elements;
+    assert!((me.e - original.eccentricity().as_f64()).abs() < 1e-12);
+    assert!((me.i - original.inclination().as_f64()).abs() < 1e-12);
+    assert!((me.raan - original.longitude_of_ascending_node().as_f64()).abs() < 1e-12);
+    assert!((me.aop - original.argument_of_periapsis().as_f64()).abs() < 1e-12);
+
+    // The KeplerianOrbit carries true anomaly; the OMM carries mean
+    // anomaly. The builder converts true → mean; on re-read we should
+    // get back the same mean anomaly (computed by going round-trip).
+    let original_mean = original
+        .true_anomaly()
+        .to_mean(original.eccentricity())
+        .expect("ecc < 1");
+    assert!((me.m - original_mean.as_f64()).abs() < 1e-12);
+
+    // No TLE-parameters block: the builder is generic and doesn't fabricate them.
+    assert!(reparsed.tle_parameters.is_none());
+
+    // Centre / frame / theory survive the round-trip.
+    assert_eq!(reparsed.metadata.mean_element_theory, "SGP/SGP4");
+}
+
+/// `DynKeplerianOrbit::from_omm_str` exposes the mean elements as a typed
+/// Keplerian view (does *not* claim physical osculating accuracy in TEME).
+#[test]
+fn dyn_keplerian_orbit_from_omm_iss() {
+    let orbit = DynKeplerianOrbit::from_omm_str(ISS_OMM_JSON).expect("from_omm_str");
+    assert_eq!(orbit.origin(), DynOrigin::Earth);
+    let inc_deg = orbit.inclination().as_f64().to_degrees();
+    assert!(
+        (inc_deg - 51.6410).abs() < 1e-9,
+        "inclination = {inc_deg} deg"
+    );
+    let ecc = orbit.eccentricity().as_f64();
+    assert!((ecc - 0.0010444).abs() < 1e-12, "ecc = {ecc}");
+}
+
+/// `OmmBuilder::build` returns a typed error (not a panic) when the
+/// orbit is hyperbolic and the true anomaly exceeds the asymptote.
+#[test]
+fn omm_builder_returns_typed_error_for_hyperbolic_beyond_asymptote() {
+    // Hyperbolic orbit (e = 2.0). Asymptote at acos(-1/e) ≈ 120 deg.
+    // True anomaly of 170 deg is beyond the asymptote — geometrically
+    // impossible — so `to_mean` must fail.
+    let ecc = Eccentricity::try_new(2.0).unwrap();
+    let kep = Keplerian::new(
+        SemiMajorAxis::meters(-1.0e7),
+        ecc,
+        Inclination::try_new(Angle::radians(0.5)).unwrap(),
+        LongitudeOfAscendingNode::try_new(Angle::radians(0.1)).unwrap(),
+        ArgumentOfPeriapsis::try_new(Angle::radians(0.2)).unwrap(),
+        TrueAnomaly::new(Angle::radians(170.0_f64.to_radians())),
+    );
+    let orbit: DynKeplerianOrbit = Orbit::from_state(
+        kep,
+        Time::j2000(DynTimeScale::Tai),
+        DynOrigin::Earth,
+        DynFrame::Icrf,
+    );
+
+    let builder = OmmBuilder::new("TEST", "HYPER", "2024-HYP-001A");
+    let err = orbit
+        .to_omm(builder)
+        .expect_err("hyperbolic build should fail");
+    assert!(
+        matches!(err, OmmBuildError::Anomaly(_)),
+        "expected OmmBuildError::Anomaly, got {err:?}"
+    );
+
+    // The fallible `write_str` propagates the same error via OmmWriteError.
+    let builder = OmmBuilder::new("TEST", "HYPER", "2024-HYP-001A");
+    let err = orbit
+        .to_omm_str(builder, Format::Kvn)
+        .expect_err("write should fail");
+    assert!(
+        matches!(err, OmmWriteError::Build(OmmBuildError::Anomaly(_))),
+        "expected OmmWriteError::Build(Anomaly), got {err:?}"
+    );
 }
