@@ -111,6 +111,12 @@ pub fn parse(input: &str) -> Result<KvnDocument, KvnError> {
                 ));
             }
             LineClass::SectionStop { keyword } => {
+                if !current.bracketed {
+                    return Err(KvnError {
+                        span: Span::whole_line(line_no, content.len()),
+                        kind: KvnErrorKind::StraySectionStop(keyword.to_string()),
+                    });
+                }
                 if current.keyword != keyword {
                     return Err(KvnError {
                         span: Span::whole_line(line_no, content.len()),
@@ -120,9 +126,12 @@ pub fn parse(input: &str) -> Result<KvnDocument, KvnError> {
                         },
                     });
                 }
-                let parent = section_stack.pop().expect(
-                    "section_stack non-empty when closing — guaranteed by START/STOP balance",
-                );
+                // Invariant: a bracketed `current` is always paired with a
+                // parent section pushed onto `section_stack` at the matching
+                // `_START`, so this `pop` cannot fail.
+                let parent = section_stack
+                    .pop()
+                    .expect("bracketed section without parent on stack");
                 let closed = std::mem::replace(&mut current, parent);
                 if section_stack.is_empty() && current.keyword == "HEADER" {
                     // Top-level bracketed section closed; flush HEADER and
@@ -328,6 +337,37 @@ COVARIANCE_STOP
 ";
         let err = parse(input).unwrap_err();
         assert!(matches!(err.kind, KvnErrorKind::UnexpectedStop { .. }));
+    }
+
+    #[test]
+    fn rejects_stray_stop_against_implicit_header() {
+        let input = "\
+CCSDS_OPM_VERS = 3.0
+HEADER_STOP
+";
+        let err = parse(input).unwrap_err();
+        assert!(
+            matches!(&err.kind, KvnErrorKind::StraySectionStop(k) if k == "HEADER"),
+            "expected StraySectionStop(HEADER), got {:?}",
+            err.kind
+        );
+    }
+
+    #[test]
+    fn rejects_stray_stop_against_implicit_data() {
+        let input = "\
+CCSDS_OPM_VERS = 3.0
+META_START
+OBJECT_NAME = ISS
+META_STOP
+DATA_STOP
+";
+        let err = parse(input).unwrap_err();
+        assert!(
+            matches!(&err.kind, KvnErrorKind::StraySectionStop(k) if k == "DATA"),
+            "expected StraySectionStop(DATA), got {:?}",
+            err.kind
+        );
     }
 
     #[test]

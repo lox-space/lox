@@ -351,7 +351,7 @@ impl From<&Opm> for OpmXml {
         let header = OdmHeaderXml {
             comments: opm.header.comments.clone(),
             classification: opm.header.classification.clone(),
-            creation_date: format!("{}", opm.header.creation_date),
+            creation_date: opm.header.creation_date.iso(),
             originator: opm.header.originator.clone(),
             message_id: opm.header.message_id.clone(),
         };
@@ -362,7 +362,7 @@ impl From<&Opm> for OpmXml {
             object_id: opm.metadata.object_id.clone(),
             center_name: opm.metadata.center.name().into_owned(),
             ref_frame: opm.metadata.frame.name().into_owned(),
-            ref_frame_epoch: opm.metadata.frame_epoch.map(|e| format!("{e}")),
+            ref_frame_epoch: opm.metadata.frame_epoch.map(|e| e.iso()),
             time_system: opm.epoch.time_system().to_string(),
         };
 
@@ -371,7 +371,7 @@ impl From<&Opm> for OpmXml {
 
         let state_vector = StateVectorXml {
             comments: opm.state_comments.clone(),
-            epoch: format!("{}", opm.epoch),
+            epoch: opm.epoch.iso(),
             x: ValueWithUnits::new(pos.x / 1000.0, "km"),
             y: ValueWithUnits::new(pos.y / 1000.0, "km"),
             z: ValueWithUnits::new(pos.z / 1000.0, "km"),
@@ -459,7 +459,7 @@ impl From<&Opm> for OpmXml {
             .iter()
             .map(|man| ManeuverParametersXml {
                 comments: man.comments.clone(),
-                man_epoch_ignition: format!("{}", man.ignition_epoch),
+                man_epoch_ignition: man.ignition_epoch.iso(),
                 man_duration: ValueWithUnits::new(man.duration.to_seconds().to_f64(), "s"),
                 man_delta_mass: ValueWithUnits::new(man.delta_mass.to_kilograms(), "kg"),
                 man_ref_frame: man.frame.as_ref().map(|f| f.name().into_owned()),

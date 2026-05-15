@@ -775,11 +775,11 @@ impl From<&Omm> for OmmJson {
             ),
         };
 
-        let ref_frame_epoch = omm.metadata.frame_epoch.map(|e| format!("{e}"));
+        let ref_frame_epoch = omm.metadata.frame_epoch.map(|e| e.iso());
 
         OmmJson {
             vers: "2.0".to_string(),
-            creation_date: format!("{}", omm.header.creation_date),
+            creation_date: omm.header.creation_date.iso(),
             originator: omm.header.originator.clone(),
             message_id: omm.header.message_id.clone(),
             classification: omm.header.classification.clone(),
@@ -791,7 +791,7 @@ impl From<&Omm> for OmmJson {
             ref_frame_epoch,
             time_system: omm.epoch.time_system().to_string(),
             mean_element_theory: omm.metadata.mean_element_theory.clone(),
-            epoch: format!("{}", omm.epoch),
+            epoch: omm.epoch.iso(),
             semi_major_axis,
             mean_motion: None,
             eccentricity: omm.mean_elements.elements.e,

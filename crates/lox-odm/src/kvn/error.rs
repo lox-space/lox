@@ -65,6 +65,9 @@ pub enum KvnErrorKind {
         /// The keyword of the currently open section.
         expected: String,
     },
+    /// A `*_STOP` marker appeared with no matching `*_START` open.
+    #[error("stray `{0}_STOP` with no open section")]
+    StraySectionStop(String),
     /// EOF reached while a bracketed section was still open.
     #[error("unterminated section `{0}_START` — missing `{0}_STOP`")]
     UnterminatedSection(String),
