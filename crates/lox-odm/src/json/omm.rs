@@ -2415,4 +2415,234 @@ mod tests {
         let tle = omm.tle_parameters.expect("tle");
         assert_eq!(tle.ephemeris_type, Some(0));
     }
+
+    // -----------------------------------------------------------------
+    // Per-field missing-required-string coverage
+    //
+    // Each `require_str` call site is a separate `?` early-exit. Each
+    // test below omits one required string and asserts the matching
+    // MissingRequiredField error.
+    // -----------------------------------------------------------------
+
+    /// Build a JSON OMM with the named required string replaced by `""`
+    /// (which `require_str` treats as missing).
+    fn omm_json_empty(field: &str) -> String {
+        omm_with_value(field, "\"\"")
+    }
+
+    fn assert_missing_str(input: &str, expected: &str) {
+        let err = read_omm(input).expect_err(&format!("expected missing {expected}"));
+        let JsonError::MissingRequiredField(ref k) = err else {
+            panic!("expected MissingRequiredField({expected}), got: {err:?}");
+        };
+        assert_eq!(k, expected);
+    }
+
+    #[test]
+    fn missing_originator_returns_error() {
+        assert_missing_str(&omm_json_empty("ORIGINATOR"), "ORIGINATOR");
+    }
+    #[test]
+    fn missing_creation_date_returns_error() {
+        assert_missing_str(&omm_json_empty("CREATION_DATE"), "CREATION_DATE");
+    }
+    #[test]
+    fn missing_object_id_returns_error() {
+        assert_missing_str(&omm_json_empty("OBJECT_ID"), "OBJECT_ID");
+    }
+    #[test]
+    fn missing_center_name_returns_error() {
+        assert_missing_str(&omm_json_empty("CENTER_NAME"), "CENTER_NAME");
+    }
+    #[test]
+    fn missing_ref_frame_returns_error() {
+        assert_missing_str(&omm_json_empty("REF_FRAME"), "REF_FRAME");
+    }
+    #[test]
+    fn missing_time_system_returns_error() {
+        assert_missing_str(&omm_json_empty("TIME_SYSTEM"), "TIME_SYSTEM");
+    }
+    #[test]
+    fn missing_mean_element_theory_returns_error() {
+        assert_missing_str(
+            &omm_json_empty("MEAN_ELEMENT_THEORY"),
+            "MEAN_ELEMENT_THEORY",
+        );
+    }
+    #[test]
+    fn missing_epoch_returns_error() {
+        assert_missing_str(&omm_json_empty("EPOCH"), "EPOCH");
+    }
+
+    // -----------------------------------------------------------------
+    // Partial covariance missing-field coverage
+    //
+    // The covariance block has 21 entries, each requiring all-or-nothing.
+    // Once CX_X is present, every other entry must also be present.
+    // Each `get(...)` closure call is a distinct `?` path.
+    // -----------------------------------------------------------------
+
+    /// Build an OMM JSON with all 21 covariance fields set to 1.0,
+    /// then remove the named one to trigger a MissingRequiredField.
+    /// CX_X must be present (it's the gate condition); pass any other
+    /// field name to omit it.
+    fn omm_with_covariance_missing(missing: &str) -> String {
+        let all = [
+            "CX_X",
+            "CY_X",
+            "CY_Y",
+            "CZ_X",
+            "CZ_Y",
+            "CZ_Z",
+            "CX_DOT_X",
+            "CX_DOT_Y",
+            "CX_DOT_Z",
+            "CX_DOT_X_DOT",
+            "CY_DOT_X",
+            "CY_DOT_Y",
+            "CY_DOT_Z",
+            "CY_DOT_X_DOT",
+            "CY_DOT_Y_DOT",
+            "CZ_DOT_X",
+            "CZ_DOT_Y",
+            "CZ_DOT_Z",
+            "CZ_DOT_X_DOT",
+            "CZ_DOT_Y_DOT",
+            "CZ_DOT_Z_DOT",
+        ];
+        let fields = all
+            .iter()
+            .filter(|k| **k != missing)
+            .map(|k| format!(r#""{k}": 1.0"#))
+            .collect::<Vec<_>>()
+            .join(",\n  ");
+        format!(
+            r#"{{
+            "CCSDS_OMM_VERS": "2.0",
+            "CREATION_DATE": "2024-01-01T00:00:00",
+            "ORIGINATOR": "T",
+            "OBJECT_NAME": "X",
+            "OBJECT_ID": "Y",
+            "CENTER_NAME": "EARTH",
+            "REF_FRAME": "TEME",
+            "TIME_SYSTEM": "UTC",
+            "MEAN_ELEMENT_THEORY": "SGP4",
+            "EPOCH": "2024-01-01T00:00:00",
+            "SEMI_MAJOR_AXIS": 7000.0,
+            "ECCENTRICITY": 0.001,
+            "INCLINATION": 0.0,
+            "RA_OF_ASC_NODE": 0.0,
+            "ARG_OF_PERICENTER": 0.0,
+            "MEAN_ANOMALY": 0.0,
+            {fields}
+        }}"#
+        )
+    }
+
+    fn assert_missing_covariance_field(field: &str) {
+        let input = omm_with_covariance_missing(field);
+        let err = read_omm(&input).expect_err(&format!("expected missing {field}"));
+        // Note: `CX_X` missing is the gate condition; without it the
+        // covariance block isn't attempted, so omitting it yields no
+        // covariance rather than an error. Test the others.
+        let JsonError::MissingRequiredField(ref k) = err else {
+            panic!("expected MissingRequiredField({field}), got: {err:?}");
+        };
+        assert_eq!(k, field);
+    }
+
+    #[test]
+    fn missing_cy_x_in_covariance_returns_error() {
+        assert_missing_covariance_field("CY_X");
+    }
+    #[test]
+    fn missing_cy_y_in_covariance_returns_error() {
+        assert_missing_covariance_field("CY_Y");
+    }
+    #[test]
+    fn missing_cz_x_in_covariance_returns_error() {
+        assert_missing_covariance_field("CZ_X");
+    }
+    #[test]
+    fn missing_cz_y_in_covariance_returns_error() {
+        assert_missing_covariance_field("CZ_Y");
+    }
+    #[test]
+    fn missing_cz_z_in_covariance_returns_error() {
+        assert_missing_covariance_field("CZ_Z");
+    }
+    #[test]
+    fn missing_cx_dot_x_in_covariance_returns_error() {
+        assert_missing_covariance_field("CX_DOT_X");
+    }
+    #[test]
+    fn missing_cx_dot_y_in_covariance_returns_error() {
+        assert_missing_covariance_field("CX_DOT_Y");
+    }
+    #[test]
+    fn missing_cx_dot_z_in_covariance_returns_error() {
+        assert_missing_covariance_field("CX_DOT_Z");
+    }
+    #[test]
+    fn missing_cx_dot_x_dot_in_covariance_returns_error() {
+        assert_missing_covariance_field("CX_DOT_X_DOT");
+    }
+    #[test]
+    fn missing_cy_dot_x_in_covariance_returns_error() {
+        assert_missing_covariance_field("CY_DOT_X");
+    }
+    #[test]
+    fn missing_cy_dot_y_in_covariance_returns_error() {
+        assert_missing_covariance_field("CY_DOT_Y");
+    }
+    #[test]
+    fn missing_cy_dot_z_in_covariance_returns_error() {
+        assert_missing_covariance_field("CY_DOT_Z");
+    }
+    #[test]
+    fn missing_cy_dot_x_dot_in_covariance_returns_error() {
+        assert_missing_covariance_field("CY_DOT_X_DOT");
+    }
+    #[test]
+    fn missing_cy_dot_y_dot_in_covariance_returns_error() {
+        assert_missing_covariance_field("CY_DOT_Y_DOT");
+    }
+    #[test]
+    fn missing_cz_dot_x_in_covariance_returns_error() {
+        assert_missing_covariance_field("CZ_DOT_X");
+    }
+    #[test]
+    fn missing_cz_dot_y_in_covariance_returns_error() {
+        assert_missing_covariance_field("CZ_DOT_Y");
+    }
+    #[test]
+    fn missing_cz_dot_z_in_covariance_returns_error() {
+        assert_missing_covariance_field("CZ_DOT_Z");
+    }
+    #[test]
+    fn missing_cz_dot_x_dot_in_covariance_returns_error() {
+        assert_missing_covariance_field("CZ_DOT_X_DOT");
+    }
+    #[test]
+    fn missing_cz_dot_y_dot_in_covariance_returns_error() {
+        assert_missing_covariance_field("CZ_DOT_Y_DOT");
+    }
+    #[test]
+    fn missing_cz_dot_z_dot_in_covariance_returns_error() {
+        assert_missing_covariance_field("CZ_DOT_Z_DOT");
+    }
+
+    // -----------------------------------------------------------------
+    // REF_FRAME_EPOCH invalid → InvalidEpoch
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn invalid_ref_frame_epoch_returns_error() {
+        let json = omm_with_value("REF_FRAME_EPOCH", "\"not-a-date\"");
+        let err = read_omm(&json).expect_err("expected InvalidEpoch for REF_FRAME_EPOCH");
+        assert!(
+            matches!(err, JsonError::InvalidEpoch { ref value, .. } if value == "not-a-date"),
+            "wrong error: {err:?}"
+        );
+    }
 }
