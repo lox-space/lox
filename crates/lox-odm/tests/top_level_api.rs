@@ -333,3 +333,58 @@ fn read_ci_file_errors_on_missing_path() {
     let err = read_ci_file("/nonexistent/path.kvn").unwrap_err();
     assert!(matches!(err, OdmError::Io(_)));
 }
+
+/// Wire-format conformance: scale-system abbreviations (TAI, UTC, GPS, …)
+/// must not leak into wire-format date/epoch fields. The TIME_SYSTEM keyword
+/// carries the scale separately. CCSDS validators reject mixed forms like
+/// `<EPOCH>2024-01-01T00:00:00.000000 TAI</EPOCH>`.
+fn assert_no_scale_suffix_in_wire_dates(written: &str, fmt: Format, msg: &str) {
+    for scale in ["TAI", "UTC", "GPS", "TCB", "TCG", "TDB", "TT", "UT1"] {
+        let needle = format!(" {scale}");
+        // Find every occurrence and verify each is inside a `TIME_SYSTEM`
+        // assignment (KVN/XML/JSON), not embedded in an ISO timestamp.
+        for (idx, _) in written.match_indices(&needle) {
+            let prefix = &written[..idx];
+            let nearest_newline = prefix.rfind('\n').map(|n| n + 1).unwrap_or(0);
+            let line = &written[nearest_newline..idx + needle.len()];
+            // Allowed: lines like `TIME_SYSTEM = TAI`, `<TIME_SYSTEM>TAI`,
+            // `"TIME_SYSTEM": "TAI"`. Disallowed: any ISO date followed by
+            // ` <scale>`. Detect the ISO pattern: a `T` between two digits
+            // preceding the scale token within ~30 chars.
+            let candidate_iso = line.chars().rev().take(40).collect::<String>();
+            let looks_like_iso_epoch = candidate_iso.contains('T') && candidate_iso.contains(':');
+            assert!(
+                !looks_like_iso_epoch,
+                "{msg}: {fmt:?} writer leaked `{scale}` scale suffix into a date \
+                 field; line: {line:?}\nfull output:\n{written}",
+            );
+        }
+    }
+}
+
+#[test]
+fn opm_writers_emit_bare_iso_dates() {
+    let opm = read_opm(OPM_KVN).unwrap();
+    for fmt in [Format::Kvn, Format::Xml] {
+        let written = write_opm(&opm, fmt).unwrap();
+        assert_no_scale_suffix_in_wire_dates(&written, fmt, "OPM");
+    }
+}
+
+#[test]
+fn oem_writers_emit_bare_iso_dates() {
+    let oem = read_oem(OEM_KVN).unwrap();
+    for fmt in [Format::Kvn, Format::Xml] {
+        let written = write_oem(&oem, fmt).unwrap();
+        assert_no_scale_suffix_in_wire_dates(&written, fmt, "OEM");
+    }
+}
+
+#[test]
+fn omm_writers_emit_bare_iso_dates() {
+    let omm = read_omm(OMM_KVN).unwrap();
+    for fmt in [Format::Kvn, Format::Xml, Format::Json] {
+        let written = write_omm(&omm, fmt).unwrap();
+        assert_no_scale_suffix_in_wire_dates(&written, fmt, "OMM");
+    }
+}

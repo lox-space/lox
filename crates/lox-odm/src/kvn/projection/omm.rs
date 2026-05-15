@@ -50,11 +50,7 @@ fn build_header_section(omm: &Omm) -> KvnSection {
         entries.push(fld("CLASSIFICATION", cls, None));
     }
 
-    entries.push(fld(
-        "CREATION_DATE",
-        format!("{}", omm.header.creation_date),
-        None,
-    ));
+    entries.push(fld("CREATION_DATE", omm.header.creation_date.iso(), None));
     entries.push(fld("ORIGINATOR", &omm.header.originator, None));
 
     if let Some(mid) = &omm.header.message_id {
@@ -81,7 +77,7 @@ fn build_metadata_section(omm: &Omm) -> KvnSection {
     entries.push(fld("REF_FRAME", omm.metadata.frame.name(), None));
 
     if let Some(epoch) = &omm.metadata.frame_epoch {
-        entries.push(fld("REF_FRAME_EPOCH", format!("{epoch}"), None));
+        entries.push(fld("REF_FRAME_EPOCH", epoch.iso(), None));
     }
 
     entries.push(fld("TIME_SYSTEM", omm.epoch.time_system(), None));
@@ -107,7 +103,7 @@ fn build_data_section(omm: &Omm) -> KvnSection {
     }
 
     // Epoch
-    entries.push(fld("EPOCH", format!("{}", omm.epoch), None));
+    entries.push(fld("EPOCH", omm.epoch.iso(), None));
 
     // Semi-major axis (meters → km on wire)
     entries.push(fld(

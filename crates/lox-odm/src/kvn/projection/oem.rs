@@ -30,16 +30,11 @@ use crate::types::oem::{Oem, OemCovariance, OemMetadata, OemSegment};
 /// Format an [`OdmTime`] as ISO-8601 only, without the trailing time-scale
 /// abbreviation.
 ///
-/// The KVN writer includes the scale abbreviation in `Display` (e.g.
-/// `"2000-01-01T11:58:55.816 TAI"`), which is fine for keyword-value fields
-/// where the value string is consumed as a unit. However, OEM positional rows
-/// embed the epoch as the first whitespace-separated token, so the scale
-/// abbreviation would be parsed as a separate (second) token and produce 8
-/// values instead of 7. This helper strips everything after the first space.
+/// Wire-format ISO timestamp for an [`OdmTime`] — no time-scale suffix.
+///
+/// Kept as a thin shim around [`OdmTime::iso`] so call sites read naturally.
 fn epoch_iso(epoch: &crate::types::common::OdmTime) -> String {
-    let full = format!("{epoch}");
-    // `Display` emits `<iso> <scale>` for continuous scales; strip the suffix.
-    full.split_whitespace().next().unwrap_or(&full).to_string()
+    epoch.iso()
 }
 
 /// Build a single `KEY = VALUE [unit]` entry.
@@ -62,11 +57,7 @@ fn build_header_section(oem: &Oem) -> KvnSection {
         entries.push(fld("CLASSIFICATION", cls, None));
     }
 
-    entries.push(fld(
-        "CREATION_DATE",
-        format!("{}", oem.header.creation_date),
-        None,
-    ));
+    entries.push(fld("CREATION_DATE", oem.header.creation_date.iso(), None));
     entries.push(fld("ORIGINATOR", &oem.header.originator, None));
 
     if let Some(mid) = &oem.header.message_id {
@@ -94,20 +85,20 @@ fn build_metadata_section(segment: &OemSegment) -> KvnSection {
     entries.push(fld("REF_FRAME", meta.frame.name(), None));
 
     if let Some(epoch) = &meta.frame_epoch {
-        entries.push(fld("REF_FRAME_EPOCH", format!("{epoch}"), None));
+        entries.push(fld("REF_FRAME_EPOCH", epoch.iso(), None));
     }
 
     entries.push(fld("TIME_SYSTEM", meta.start_time.time_system(), None));
-    entries.push(fld("START_TIME", format!("{}", meta.start_time), None));
+    entries.push(fld("START_TIME", meta.start_time.iso(), None));
 
     if let Some(t) = &meta.useable_start_time {
-        entries.push(fld("USEABLE_START_TIME", format!("{t}"), None));
+        entries.push(fld("USEABLE_START_TIME", t.iso(), None));
     }
     if let Some(t) = &meta.useable_stop_time {
-        entries.push(fld("USEABLE_STOP_TIME", format!("{t}"), None));
+        entries.push(fld("USEABLE_STOP_TIME", t.iso(), None));
     }
 
-    entries.push(fld("STOP_TIME", format!("{}", meta.stop_time), None));
+    entries.push(fld("STOP_TIME", meta.stop_time.iso(), None));
 
     if let Some(interp) = &meta.interpolation {
         entries.push(fld("INTERPOLATION", interp, None));
@@ -164,7 +155,7 @@ fn build_covariance_subsection(cov: &OemCovariance) -> KvnSection {
         entries.push(KvnEntry::Comment(comment.clone()));
     }
 
-    entries.push(fld("EPOCH", format!("{}", cov.epoch), None));
+    entries.push(fld("EPOCH", cov.epoch.iso(), None));
 
     if let Some(frame) = &cov.frame {
         entries.push(fld("COV_REF_FRAME", frame.name(), None));
@@ -651,16 +642,15 @@ impl TryFrom<KvnDocument> for Oem {
 
         // 4. Parse header fields.
         // OEM has no top-level TIME_SYSTEM (it lives inside each META block).
-        // When `write_oem` serialises `CREATION_DATE`, the epoch Display
-        // includes the scale abbreviation as a trailing token (e.g.
-        // `"2000-01-01T11:58:55.816 TAI"`). Extract it from the value to
-        // feed back to `parse_epoch`, falling back to "UTC" for externally-
-        // produced files that omit the trailing abbreviation.
+        // CCSDS 502.0-B-2 §5.2.2 specifies `CREATION_DATE` as UTC, but real
+        // files often reuse the message's data time-scale. We adopt the
+        // first segment's `TIME_SYSTEM` when one is present (which also
+        // round-trips files we wrote ourselves), and fall back to UTC for
+        // headerless / segmentless inputs.
         let creation_date_field = require_field(&header_entries, "CREATION_DATE")?;
-        let time_system_for_header = creation_date_field
-            .value
-            .split_whitespace()
-            .nth(1)
+        let time_system_for_header = segment_builders
+            .first()
+            .map(|b| b.metadata.start_time.time_system())
             .unwrap_or("UTC");
         let creation_date = parse_epoch(creation_date_field, time_system_for_header)?;
         let originator = parse_string_required(&header_entries, "ORIGINATOR")?;
