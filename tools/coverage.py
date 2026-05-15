@@ -65,12 +65,19 @@ def main():
     print("\nRunning Rust tests...")
     run(["cargo", "nextest", "run", "--all-features"], env=cov_env)
 
-    # Build PyO3 extension with maturin
+    # Sync the venv without building the project — maturin develop below
+    # will build it once with coverage instrumentation.
+    print("\nSyncing Python dependencies...")
+    run(["uv", "sync", "--no-install-project"], env=cov_env)
+
+    # Build PyO3 extension with maturin.
+    # Use --no-sync so uv does not rebuild the project without coverage flags.
     print("\nBuilding PyO3 extension...")
     run(
         [
             "uv",
             "run",
+            "--no-sync",
             "--",
             "maturin",
             "develop",
@@ -80,7 +87,6 @@ def main():
     )
 
     # Run Python tests with coverage
-    # Use --no-sync to prevent uv from rebuilding the extension without coverage instrumentation
     print("\nRunning Python tests...")
     run(
         [
