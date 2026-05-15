@@ -14,7 +14,9 @@ use lox_core::coords::Cartesian;
 use lox_frames::{DynFrame, ReferenceFrame};
 use lox_odm::Format;
 use lox_odm::OdmError;
-use lox_odm::types::common::{OdmCenter, OdmFrame, OdmHeader, OdmTime, SpacecraftParameters};
+use lox_odm::types::common::{
+    OdmCenter, OdmFrame, OdmHeader, OdmTime, OdmTimeScale, SpacecraftParameters,
+};
 use lox_odm::types::oem::{Oem, OemMetadata, OemSegment};
 use lox_odm::types::opm::{Opm, OpmMetadata};
 use lox_time::time::DynTime;
@@ -31,6 +33,17 @@ where
     T: TimeScale + Copy + Into<DynTimeScale>,
 {
     OdmTime::Time(time.into_dyn())
+}
+
+/// Apply an optional [`OdmTimeScale`] override to an epoch derived from the
+/// orbit/trajectory. Used by the builders so that a UTC-origin OPM round-
+/// trip (read → orbit → write) can re-emit `TIME_SYSTEM = UTC` instead of
+/// silently widening to TAI.
+fn apply_time_system(epoch: OdmTime, target: Option<OdmTimeScale>) -> OdmTime {
+    match target {
+        Some(scale) => epoch.in_scale(scale),
+        None => epoch,
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -110,6 +123,7 @@ pub struct OpmBuilder {
     frame_epoch: Option<OdmTime>,
     spacecraft: Option<SpacecraftParameters>,
     user_defined: BTreeMap<String, String>,
+    time_system: Option<OdmTimeScale>,
 }
 
 impl OpmBuilder {
@@ -133,12 +147,29 @@ impl OpmBuilder {
             frame_epoch: None,
             spacecraft: None,
             user_defined: BTreeMap::new(),
+            time_system: None,
         }
     }
 
     /// Sets `CREATION_DATE`. Defaults to the orbit's epoch when not set.
     pub fn creation_date(mut self, t: OdmTime) -> Self {
         self.creation_date = Some(t);
+        self
+    }
+
+    /// Forces the wire-format `TIME_SYSTEM` keyword and re-expresses every
+    /// orbit-derived epoch in that scale.
+    ///
+    /// Use this to preserve the original time system across a round-trip
+    /// through a typed orbit: e.g. an OPM read with `TIME_SYSTEM = UTC`
+    /// becomes a [`DynCartesianOrbit`] in TAI (because [`DynTimeScale`]
+    /// has no UTC variant), and setting `.time_system(OdmTimeScale::Utc)`
+    /// on the builder restores UTC on output.
+    ///
+    /// When unset, the builder uses the orbit's native scale. Explicitly-set
+    /// epochs (e.g. via [`Self::creation_date`]) are left untouched.
+    pub fn time_system(mut self, scale: OdmTimeScale) -> Self {
+        self.time_system = Some(scale);
         self
     }
 
@@ -201,10 +232,13 @@ impl OpmBuilder {
         O: Origin + Copy + Into<DynOrigin>,
         R: ReferenceFrame + Copy + Into<DynFrame>,
     {
-        let epoch = orbit_epoch_to_odm_time(orbit.time());
+        let epoch = apply_time_system(orbit_epoch_to_odm_time(orbit.time()), self.time_system);
         let creation_date = self.creation_date.unwrap_or(epoch);
         let center = OdmCenter::from_wire(orbit.origin().name());
         let frame = OdmFrame::from_wire(&orbit.reference_frame().abbreviation());
+        let frame_epoch = self
+            .frame_epoch
+            .map(|e| apply_time_system(e, self.time_system));
 
         Opm {
             header: OdmHeader {
@@ -220,7 +254,7 @@ impl OpmBuilder {
                 object_id: self.object_id,
                 center,
                 frame,
-                frame_epoch: self.frame_epoch,
+                frame_epoch,
             },
             epoch,
             state: orbit.state(),
@@ -355,6 +389,7 @@ pub struct OemBuilder {
     interpolation: Option<String>,
     interpolation_degree: Option<u64>,
     user_defined: BTreeMap<String, String>,
+    time_system: Option<OdmTimeScale>,
 }
 
 impl OemBuilder {
@@ -380,12 +415,24 @@ impl OemBuilder {
             interpolation: None,
             interpolation_degree: None,
             user_defined: BTreeMap::new(),
+            time_system: None,
         }
     }
 
     /// Sets `CREATION_DATE`. Defaults to the trajectory's start epoch when not set.
     pub fn creation_date(mut self, t: OdmTime) -> Self {
         self.creation_date = Some(t);
+        self
+    }
+
+    /// Forces the segment's wire-format `TIME_SYSTEM` keyword and
+    /// re-expresses every trajectory-derived epoch (`START_TIME`,
+    /// `STOP_TIME`, state-vector epochs, optional useable times and
+    /// `REF_FRAME_EPOCH`) in that scale.
+    ///
+    /// See [`OpmBuilder::time_system`] for the motivating round-trip case.
+    pub fn time_system(mut self, scale: OdmTimeScale) -> Self {
+        self.time_system = Some(scale);
         self
     }
 
@@ -456,8 +503,9 @@ impl OemBuilder {
         O: Origin + Copy + Into<DynOrigin>,
         R: ReferenceFrame + Copy + Into<DynFrame>,
     {
-        let start_time = orbit_epoch_to_odm_time(trajectory.start_time());
-        let stop_time = orbit_epoch_to_odm_time(trajectory.end_time());
+        let ts = self.time_system;
+        let start_time = apply_time_system(orbit_epoch_to_odm_time(trajectory.start_time()), ts);
+        let stop_time = apply_time_system(orbit_epoch_to_odm_time(trajectory.end_time()), ts);
         let creation_date = self.creation_date.unwrap_or(start_time);
         let center = OdmCenter::from_wire(trajectory.origin().name());
         let frame = OdmFrame::from_wire(&trajectory.reference_frame().abbreviation());
@@ -465,7 +513,12 @@ impl OemBuilder {
         let states: Vec<(OdmTime, Cartesian)> = trajectory
             .states()
             .into_iter()
-            .map(|s| (orbit_epoch_to_odm_time(s.time()), s.state()))
+            .map(|s| {
+                (
+                    apply_time_system(orbit_epoch_to_odm_time(s.time()), ts),
+                    s.state(),
+                )
+            })
             .collect();
 
         let segment = OemSegment {
@@ -475,10 +528,10 @@ impl OemBuilder {
                 object_id: self.object_id,
                 center,
                 frame,
-                frame_epoch: self.frame_epoch,
+                frame_epoch: self.frame_epoch.map(|e| apply_time_system(e, ts)),
                 start_time,
-                useable_start_time: self.useable_start_time,
-                useable_stop_time: self.useable_stop_time,
+                useable_start_time: self.useable_start_time.map(|t| apply_time_system(t, ts)),
+                useable_stop_time: self.useable_stop_time.map(|t| apply_time_system(t, ts)),
                 stop_time,
                 interpolation: self.interpolation,
                 interpolation_degree: self.interpolation_degree,

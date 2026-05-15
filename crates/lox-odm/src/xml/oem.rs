@@ -250,7 +250,7 @@ impl From<&Oem> for OemXml {
         let header = OdmHeaderXml {
             comments: oem.header.comments.clone(),
             classification: oem.header.classification.clone(),
-            creation_date: format!("{}", oem.header.creation_date),
+            creation_date: oem.header.creation_date.iso(),
             originator: oem.header.originator.clone(),
             message_id: oem.header.message_id.clone(),
         };
@@ -268,12 +268,12 @@ impl From<&Oem> for OemXml {
                     object_id: meta.object_id.clone(),
                     center_name: meta.center.name().into_owned(),
                     ref_frame: meta.frame.name().into_owned(),
-                    ref_frame_epoch: meta.frame_epoch.map(|e| format!("{e}")),
+                    ref_frame_epoch: meta.frame_epoch.map(|e| e.iso()),
                     time_system: time_system.to_string(),
-                    start_time: format!("{}", meta.start_time),
-                    useable_start_time: meta.useable_start_time.map(|t| format!("{t}")),
-                    useable_stop_time: meta.useable_stop_time.map(|t| format!("{t}")),
-                    stop_time: format!("{}", meta.stop_time),
+                    start_time: meta.start_time.iso(),
+                    useable_start_time: meta.useable_start_time.map(|t| t.iso()),
+                    useable_stop_time: meta.useable_stop_time.map(|t| t.iso()),
+                    stop_time: meta.stop_time.iso(),
                     interpolation: meta.interpolation.clone(),
                     interpolation_degree: meta.interpolation_degree,
                 };
@@ -285,7 +285,7 @@ impl From<&Oem> for OemXml {
                         let pos = state.position();
                         let vel = state.velocity();
                         StateVectorXml {
-                            epoch: format!("{epoch}"),
+                            epoch: epoch.iso(),
                             x: ValueWithUnits::new(pos.x / 1000.0, "km"),
                             y: ValueWithUnits::new(pos.y / 1000.0, "km"),
                             z: ValueWithUnits::new(pos.z / 1000.0, "km"),
@@ -303,7 +303,7 @@ impl From<&Oem> for OemXml {
                         let m = &cov.matrix;
                         CovarianceMatrixXml {
                             comments: cov.comments.clone(),
-                            epoch: format!("{}", cov.epoch),
+                            epoch: cov.epoch.iso(),
                             cov_ref_frame: cov.frame.as_ref().map(|f| f.name().into_owned()),
                             cx_x: m[(0, 0)],
                             cy_x: m[(1, 0)],

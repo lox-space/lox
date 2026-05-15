@@ -223,3 +223,78 @@ fn from_oem_segment_second_segment() {
     assert_eq!(traj.states().len(), 3);
     assert_eq!(traj.origin(), DynOrigin::MarsBarycenter);
 }
+
+// ---------------------------------------------------------------------------
+// Round-trip TIME_SYSTEM preservation (resolves NEW-I2 from review).
+// ---------------------------------------------------------------------------
+
+/// Without `.time_system(...)`, a UTC-origin OPM silently widens to TAI on
+/// re-emission because the intermediate `DynCartesianOrbit` cannot represent
+/// UTC. This baseline is intentionally tested so that any future change to
+/// the default conversion path is observable.
+#[test]
+fn opm_utc_silently_widens_to_tai_without_override() {
+    use lox_odm::types::common::OdmTimeScale;
+
+    let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
+    let builder = OpmBuilder::new("ROUND_TRIP", "EUTELSAT W4", "2021-028A");
+    let kvn = orbit.to_opm_str(builder, Format::Kvn).unwrap();
+
+    let reparsed = lox_odm::read_opm(&kvn).unwrap();
+    // Source was UTC; default round-trip lands in TAI.
+    assert_eq!(reparsed.epoch.scale(), OdmTimeScale::Tai);
+    assert!(kvn.contains("TIME_SYSTEM = TAI"));
+}
+
+/// With `.time_system(OdmTimeScale::Utc)`, the same round-trip preserves the
+/// original UTC wire-format. This is the documented escape hatch from the
+/// review's NEW-I2 finding.
+#[test]
+fn opm_time_system_override_preserves_utc() {
+    use lox_odm::types::common::OdmTimeScale;
+
+    let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
+    let builder =
+        OpmBuilder::new("ROUND_TRIP", "EUTELSAT W4", "2021-028A").time_system(OdmTimeScale::Utc);
+    let kvn = orbit.to_opm_str(builder, Format::Kvn).unwrap();
+
+    let reparsed = lox_odm::read_opm(&kvn).unwrap();
+    assert_eq!(reparsed.epoch.scale(), OdmTimeScale::Utc);
+    assert!(kvn.contains("TIME_SYSTEM = UTC"), "got:\n{kvn}");
+
+    // EPOCH itself round-trips losslessly under UTC.
+    let orig_opm = lox_odm::read_opm(GSOC_OPM_KVN).unwrap();
+    assert_eq!(reparsed.epoch, orig_opm.epoch);
+}
+
+/// `.time_system(Gps)` re-expresses the orbit's TAI epoch as GPS (TAI−GPS=19s).
+#[test]
+fn opm_time_system_override_to_gps() {
+    use lox_odm::types::common::OdmTimeScale;
+
+    let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
+    let builder =
+        OpmBuilder::new("ROUND_TRIP", "EUTELSAT W4", "2021-028A").time_system(OdmTimeScale::Gps);
+    let kvn = orbit.to_opm_str(builder, Format::Kvn).unwrap();
+
+    let reparsed = lox_odm::read_opm(&kvn).unwrap();
+    assert_eq!(reparsed.epoch.scale(), OdmTimeScale::Gps);
+    assert!(kvn.contains("TIME_SYSTEM = GPS"));
+}
+
+/// OEM analogue: trajectory round-trip preserves UTC when `.time_system(Utc)` is set.
+#[test]
+fn oem_time_system_override_preserves_utc() {
+    use lox_odm::types::common::OdmTimeScale;
+
+    let traj = sample_dyn_trajectory();
+    let builder =
+        OemBuilder::new("ROUND_TRIP", "TEST-SAT", "2024-IT-001A").time_system(OdmTimeScale::Utc);
+    let kvn = traj.to_oem_str(builder, Format::Kvn).unwrap();
+
+    let reparsed = lox_odm::read_oem(&kvn).unwrap();
+    let seg = &reparsed.segments[0];
+    assert_eq!(seg.metadata.start_time.scale(), OdmTimeScale::Utc);
+    assert_eq!(seg.metadata.stop_time.scale(), OdmTimeScale::Utc);
+    assert!(kvn.contains("TIME_SYSTEM = UTC"));
+}

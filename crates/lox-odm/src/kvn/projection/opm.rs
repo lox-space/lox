@@ -47,11 +47,7 @@ fn build_header_section(opm: &Opm) -> KvnSection {
         entries.push(fld("CLASSIFICATION", cls, None));
     }
 
-    entries.push(fld(
-        "CREATION_DATE",
-        format!("{}", opm.header.creation_date),
-        None,
-    ));
+    entries.push(fld("CREATION_DATE", opm.header.creation_date.iso(), None));
     entries.push(fld("ORIGINATOR", &opm.header.originator, None));
 
     if let Some(mid) = &opm.header.message_id {
@@ -78,7 +74,7 @@ fn build_metadata_section(opm: &Opm) -> KvnSection {
     entries.push(fld("REF_FRAME", opm.metadata.frame.name(), None));
 
     if let Some(epoch) = &opm.metadata.frame_epoch {
-        entries.push(fld("REF_FRAME_EPOCH", format!("{epoch}"), None));
+        entries.push(fld("REF_FRAME_EPOCH", epoch.iso(), None));
     }
 
     entries.push(fld("TIME_SYSTEM", opm.epoch.time_system(), None));
@@ -102,7 +98,7 @@ fn build_data_section(opm: &Opm) -> KvnSection {
     let pos = opm.state.position();
     let vel = opm.state.velocity();
 
-    entries.push(fld("EPOCH", format!("{}", opm.epoch), None));
+    entries.push(fld("EPOCH", opm.epoch.iso(), None));
     entries.push(fld("X", format!("{}", pos.x / 1000.0), Some("km")));
     entries.push(fld("Y", format!("{}", pos.y / 1000.0), Some("km")));
     entries.push(fld("Z", format!("{}", pos.z / 1000.0), Some("km")));
@@ -254,7 +250,7 @@ fn build_data_section(opm: &Opm) -> KvnSection {
 
         entries.push(fld(
             "MAN_EPOCH_IGNITION",
-            format!("{}", maneuver.ignition_epoch),
+            maneuver.ignition_epoch.iso(),
             None,
         ));
         entries.push(fld(
