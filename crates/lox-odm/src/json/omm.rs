@@ -99,16 +99,8 @@ where
             f.write_str("a float, a string containing a float, or null")
         }
 
-        fn visit_none<E: de::Error>(self) -> Result<Option<f64>, E> {
-            Ok(None)
-        }
-
         fn visit_unit<E: de::Error>(self) -> Result<Option<f64>, E> {
             Ok(None)
-        }
-
-        fn visit_some<D2: Deserializer<'de>>(self, d: D2) -> Result<Option<f64>, D2::Error> {
-            de_f64_lax(d).map(Some)
         }
 
         fn visit_f64<E: de::Error>(self, v: f64) -> Result<Option<f64>, E> {
@@ -152,34 +144,8 @@ where
             f.write_str("an integer, a string containing an integer, or null")
         }
 
-        fn visit_none<E: de::Error>(self) -> Result<Option<i32>, E> {
-            Ok(None)
-        }
-
         fn visit_unit<E: de::Error>(self) -> Result<Option<i32>, E> {
             Ok(None)
-        }
-
-        fn visit_some<D2: Deserializer<'de>>(self, d: D2) -> Result<Option<i32>, D2::Error> {
-            struct Inner;
-            impl<'de> de::Visitor<'de> for Inner {
-                type Value = i32;
-                fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    f.write_str("an integer or string integer")
-                }
-                fn visit_i64<E: de::Error>(self, v: i64) -> Result<i32, E> {
-                    i32::try_from(v).map_err(de::Error::custom)
-                }
-                fn visit_u64<E: de::Error>(self, v: u64) -> Result<i32, E> {
-                    i32::try_from(v).map_err(de::Error::custom)
-                }
-                fn visit_str<E: de::Error>(self, v: &str) -> Result<i32, E> {
-                    v.trim()
-                        .parse::<i32>()
-                        .map_err(|_| de::Error::invalid_value(Unexpected::Str(v), &"an i32 string"))
-                }
-            }
-            d.deserialize_any(Inner).map(Some)
         }
 
         fn visit_i64<E: de::Error>(self, v: i64) -> Result<Option<i32>, E> {
@@ -219,34 +185,8 @@ where
             f.write_str("an integer, a string containing an integer, or null")
         }
 
-        fn visit_none<E: de::Error>(self) -> Result<Option<i64>, E> {
-            Ok(None)
-        }
-
         fn visit_unit<E: de::Error>(self) -> Result<Option<i64>, E> {
             Ok(None)
-        }
-
-        fn visit_some<D2: Deserializer<'de>>(self, d: D2) -> Result<Option<i64>, D2::Error> {
-            struct Inner;
-            impl<'de> de::Visitor<'de> for Inner {
-                type Value = i64;
-                fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    f.write_str("an integer or string integer")
-                }
-                fn visit_i64<E: de::Error>(self, v: i64) -> Result<i64, E> {
-                    Ok(v)
-                }
-                fn visit_u64<E: de::Error>(self, v: u64) -> Result<i64, E> {
-                    i64::try_from(v).map_err(de::Error::custom)
-                }
-                fn visit_str<E: de::Error>(self, v: &str) -> Result<i64, E> {
-                    v.trim()
-                        .parse::<i64>()
-                        .map_err(|_| de::Error::invalid_value(Unexpected::Str(v), &"an i64 string"))
-                }
-            }
-            d.deserialize_any(Inner).map(Some)
         }
 
         fn visit_i64<E: de::Error>(self, v: i64) -> Result<Option<i64>, E> {
@@ -286,34 +226,8 @@ where
             f.write_str("a non-negative integer, a string containing one, or null")
         }
 
-        fn visit_none<E: de::Error>(self) -> Result<Option<u64>, E> {
-            Ok(None)
-        }
-
         fn visit_unit<E: de::Error>(self) -> Result<Option<u64>, E> {
             Ok(None)
-        }
-
-        fn visit_some<D2: Deserializer<'de>>(self, d: D2) -> Result<Option<u64>, D2::Error> {
-            struct Inner;
-            impl<'de> de::Visitor<'de> for Inner {
-                type Value = u64;
-                fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    f.write_str("a u64 or string u64")
-                }
-                fn visit_i64<E: de::Error>(self, v: i64) -> Result<u64, E> {
-                    u64::try_from(v).map_err(de::Error::custom)
-                }
-                fn visit_u64<E: de::Error>(self, v: u64) -> Result<u64, E> {
-                    Ok(v)
-                }
-                fn visit_str<E: de::Error>(self, v: &str) -> Result<u64, E> {
-                    v.trim()
-                        .parse::<u64>()
-                        .map_err(|_| de::Error::invalid_value(Unexpected::Str(v), &"a u64 string"))
-                }
-            }
-            d.deserialize_any(Inner).map(Some)
         }
 
         fn visit_i64<E: de::Error>(self, v: i64) -> Result<Option<u64>, E> {
