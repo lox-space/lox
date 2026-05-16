@@ -21,7 +21,7 @@ use lox_core::time::time_of_day::CivilTime;
 use lox_core::units::{Area, Mass};
 use lox_frames::{DynFrame, traits::ReferenceFrame};
 use lox_time::deltas::ToDelta;
-use lox_time::offsets::{DefaultOffsetProvider, TryOffset};
+use lox_time::offsets::{DefaultOffsetProvider, OffsetProvider, TryOffset};
 use lox_time::time::{DynTime, Time};
 use lox_time::time_scales::{DynTimeScale, Tai, TimeScale};
 use lox_time::utc::Utc;
@@ -302,64 +302,75 @@ impl OdmTime {
         }
     }
 
-    /// Re-expresses this epoch in `target`.
+    /// Re-expresses this epoch in `target` using the [`DefaultOffsetProvider`].
     ///
-    /// Continuous-to-continuous conversions route through the appropriate
-    /// offset provider (TAI as a pivot when needed). UTC ↔ continuous
-    /// conversions apply the leap-seconds table. A no-op return if `target`
-    /// already matches [`Self::scale`].
+    /// Convenience wrapper around [`Self::try_in_scale_with`]. See that
+    /// method for the conversion semantics and error contract.
+    pub fn try_in_scale(&self, target: OdmTimeScale) -> Result<Self, OdmTimeError> {
+        self.try_in_scale_with(target, &DefaultOffsetProvider)
+    }
+
+    /// Re-expresses this epoch in `target` using the supplied offset provider.
     ///
-    /// # Panics
+    /// Continuous-to-continuous conversions route through `provider`
+    /// (TAI as a pivot when needed). UTC ↔ continuous conversions apply
+    /// the leap-seconds table. A no-op return if `target` already matches
+    /// [`Self::scale`].
     ///
-    /// Panics if either the source or target is [`OdmTimeScale::Ut1`] and
-    /// the UT1-UTC table does not cover the epoch. All other conversions
-    /// are infallible. Callers needing fallibility for UT1 should check
-    /// the scale first and convert manually.
-    pub fn in_scale(&self, target: OdmTimeScale) -> Self {
+    /// Returns [`OdmTimeError::OffsetUnavailable`] when the provider has
+    /// no offset for the requested conversion at this epoch.
+    pub fn try_in_scale_with<P: OffsetProvider>(
+        &self,
+        target: OdmTimeScale,
+        provider: &P,
+    ) -> Result<Self, OdmTimeError> {
         if self.scale() == target {
-            return *self;
+            return Ok(*self);
         }
         match target {
-            OdmTimeScale::Utc => OdmTime::Utc(self.tai_pivot().to_utc()),
+            OdmTimeScale::Utc => Ok(OdmTime::Utc(self.try_tai_pivot_with(provider)?.to_utc())),
             _ => {
                 let target_dyn = target
                     .as_continuous()
                     .expect("non-Utc OdmTimeScale always maps to a DynTimeScale");
                 let dyn_source = self.to_dyn_time();
                 if dyn_source.scale() == target_dyn {
-                    return OdmTime::Time(dyn_source);
+                    return Ok(OdmTime::Time(dyn_source));
                 }
-                let offset = DefaultOffsetProvider
+                let offset = provider
                     .try_offset(dyn_source.scale(), target_dyn, dyn_source.to_delta())
-                    .unwrap_or_else(|e| {
-                        panic!(
-                            "time-scale offset from {} to {} is undefined for this epoch: {e}",
-                            dyn_source.scale().abbreviation(),
-                            target_dyn.abbreviation(),
-                        )
-                    });
-                OdmTime::Time(Time::from_delta(target_dyn, dyn_source.to_delta() + offset))
+                    .map_err(|e| OdmTimeError::OffsetUnavailable {
+                        from: dyn_source.scale().abbreviation(),
+                        to: target_dyn.abbreviation(),
+                        reason: e.to_string(),
+                    })?;
+                Ok(OdmTime::Time(Time::from_delta(
+                    target_dyn,
+                    dyn_source.to_delta() + offset,
+                )))
             }
         }
     }
 
-    /// `Time<Tai>` pivot used by [`Self::in_scale`].
-    fn tai_pivot(&self) -> Time<Tai> {
+    /// `Time<Tai>` pivot used by [`Self::try_in_scale_with`].
+    fn try_tai_pivot_with<P: OffsetProvider>(
+        &self,
+        provider: &P,
+    ) -> Result<Time<Tai>, OdmTimeError> {
         match self {
-            OdmTime::Utc(u) => u.to_time(),
+            OdmTime::Utc(u) => Ok(u.to_time()),
             OdmTime::Time(d) => {
                 if d.scale() == DynTimeScale::Tai {
-                    Time::from_delta(Tai, d.to_delta())
+                    Ok(Time::from_delta(Tai, d.to_delta()))
                 } else {
-                    let offset = DefaultOffsetProvider
+                    let offset = provider
                         .try_offset(d.scale(), DynTimeScale::Tai, d.to_delta())
-                        .unwrap_or_else(|e| {
-                            panic!(
-                                "{} → TAI offset is undefined for this epoch: {e}",
-                                d.scale().abbreviation()
-                            )
-                        });
-                    Time::from_delta(Tai, d.to_delta() + offset)
+                        .map_err(|e| OdmTimeError::OffsetUnavailable {
+                            from: d.scale().abbreviation(),
+                            to: "TAI",
+                            reason: e.to_string(),
+                        })?;
+                    Ok(Time::from_delta(Tai, d.to_delta() + offset))
                 }
             }
         }
@@ -413,7 +424,7 @@ impl From<Utc> for OdmTime {
     }
 }
 
-/// Error returned by [`OdmTime::from_wire`].
+/// Error returned by [`OdmTime::from_wire`] / [`OdmTime::try_in_scale`].
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum OdmTimeError {
     /// The `TIME_SYSTEM` keyword wasn't one of the supported continuous
@@ -423,6 +434,18 @@ pub enum OdmTimeError {
     /// The ISO timestamp string couldn't be parsed.
     #[error("invalid ISO timestamp: {0:?}")]
     InvalidIso(String),
+    /// The offset provider has no data covering this epoch for the
+    /// requested `from → to` conversion. Currently only emitted for UT1
+    /// conversions outside the EOP table's range.
+    #[error("time-scale offset from {from} to {to} is undefined for this epoch: {reason}")]
+    OffsetUnavailable {
+        /// Source scale abbreviation (e.g. `"UT1"`).
+        from: &'static str,
+        /// Target scale abbreviation (e.g. `"TAI"`).
+        to: &'static str,
+        /// Provider-supplied explanation.
+        reason: String,
+    },
 }
 
 /// The eight time systems permitted by CCSDS ODM messages.
@@ -524,8 +547,37 @@ impl From<DynTimeScale> for OdmTimeScale {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lox_time::deltas::TimeDelta;
     use lox_time::time::Time;
     use lox_time::time_scales::DynTimeScale;
+
+    /// Offset provider that errors on every UT1 conversion. Used to
+    /// exercise the [`OdmTimeError::OffsetUnavailable`] path; the
+    /// bundled [`DefaultOffsetProvider`] uses `Infallible` and so cannot
+    /// reach it.
+    #[derive(Debug, Default)]
+    struct FailingUt1Provider;
+
+    #[derive(Debug)]
+    struct FailingUt1Error;
+
+    impl fmt::Display for FailingUt1Error {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("UT1 offset unavailable")
+        }
+    }
+
+    impl std::error::Error for FailingUt1Error {}
+
+    impl OffsetProvider for FailingUt1Provider {
+        type Error = FailingUt1Error;
+        fn tai_to_ut1(&self, _delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+            Err(FailingUt1Error)
+        }
+        fn ut1_to_tai(&self, _delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+            Err(FailingUt1Error)
+        }
+    }
 
     #[test]
     fn message_kind_is_copy_clone_eq() {
@@ -837,18 +889,18 @@ mod tests {
     #[test]
     fn odm_time_in_scale_noop_when_target_matches_source() {
         let tai = OdmTime::Time(Time::j2000(DynTimeScale::Tai));
-        assert_eq!(tai.in_scale(OdmTimeScale::Tai), tai);
+        assert_eq!(tai.try_in_scale(OdmTimeScale::Tai).unwrap(), tai);
 
         let utc = OdmTime::from_wire("UTC", "2024-01-01T00:00:00").unwrap();
-        assert_eq!(utc.in_scale(OdmTimeScale::Utc), utc);
+        assert_eq!(utc.try_in_scale(OdmTimeScale::Utc).unwrap(), utc);
     }
 
     #[test]
     fn odm_time_in_scale_tai_to_utc_then_back_is_lossless_for_post_1972_epoch() {
         let utc_in = OdmTime::from_wire("UTC", "2024-06-15T12:34:56").unwrap();
-        let tai = utc_in.in_scale(OdmTimeScale::Tai);
+        let tai = utc_in.try_in_scale(OdmTimeScale::Tai).unwrap();
         assert_eq!(tai.scale(), OdmTimeScale::Tai);
-        let utc_out = tai.in_scale(OdmTimeScale::Utc);
+        let utc_out = tai.try_in_scale(OdmTimeScale::Utc).unwrap();
         assert_eq!(utc_out, utc_in);
     }
 
@@ -858,20 +910,71 @@ mod tests {
         // converting the same instant to GPS must be 19 s "earlier" in
         // GPS-second-count terms (i.e. GPS reads 19s lower).
         let tai = OdmTime::Time(Time::j2000(DynTimeScale::Tai));
-        let gps = tai.in_scale(OdmTimeScale::Gps);
+        let gps = tai.try_in_scale(OdmTimeScale::Gps).unwrap();
         assert_eq!(gps.scale(), OdmTimeScale::Gps);
         // Round-trip through TAI must return the original.
-        let tai_again = gps.in_scale(OdmTimeScale::Tai);
+        let tai_again = gps.try_in_scale(OdmTimeScale::Tai).unwrap();
         assert_eq!(tai_again, tai);
     }
 
     #[test]
     fn odm_time_in_scale_utc_to_gps_via_tai_pivot() {
         let utc = OdmTime::from_wire("UTC", "2024-06-15T12:00:00").unwrap();
-        let gps = utc.in_scale(OdmTimeScale::Gps);
+        let gps = utc.try_in_scale(OdmTimeScale::Gps).unwrap();
         assert_eq!(gps.scale(), OdmTimeScale::Gps);
-        let utc_back = gps.in_scale(OdmTimeScale::Utc);
+        let utc_back = gps.try_in_scale(OdmTimeScale::Utc).unwrap();
         assert_eq!(utc_back, utc);
+    }
+
+    #[test]
+    fn try_in_scale_with_propagates_offset_failure_from_ut1_source() {
+        let ut1 = OdmTime::from_wire("UT1", "2024-06-15T12:00:00").unwrap();
+        let err = ut1
+            .try_in_scale_with(OdmTimeScale::Tai, &FailingUt1Provider)
+            .unwrap_err();
+        assert!(
+            matches!(
+                err,
+                OdmTimeError::OffsetUnavailable {
+                    from: "UT1",
+                    to: "TAI",
+                    ..
+                }
+            ),
+            "expected OffsetUnavailable(UT1 → TAI), got {err:?}"
+        );
+    }
+
+    #[test]
+    fn try_in_scale_with_propagates_offset_failure_for_ut1_target() {
+        let tai = OdmTime::Time(Time::j2000(DynTimeScale::Tai));
+        let err = tai
+            .try_in_scale_with(OdmTimeScale::Ut1, &FailingUt1Provider)
+            .unwrap_err();
+        assert!(
+            matches!(
+                err,
+                OdmTimeError::OffsetUnavailable {
+                    from: "TAI",
+                    to: "UT1",
+                    ..
+                }
+            ),
+            "expected OffsetUnavailable(TAI → UT1), got {err:?}"
+        );
+    }
+
+    #[test]
+    fn try_in_scale_with_propagates_failure_through_utc_pivot() {
+        // UT1 → UTC pivots through TAI; the UT1 → TAI step fails first.
+        let ut1 = OdmTime::from_wire("UT1", "2024-06-15T12:00:00").unwrap();
+        let err = ut1
+            .try_in_scale_with(OdmTimeScale::Utc, &FailingUt1Provider)
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            OdmTimeError::OffsetUnavailable { from: "UT1", .. }
+        ));
     }
 
     #[test]

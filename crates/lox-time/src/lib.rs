@@ -14,8 +14,8 @@
       continuous astronomical time scales;
     - the concrete type [Time] representing an instant in a [TimeScale];
     - [Utc], the only discontinuous time representation supported by Lox;
-    - the [TryToScale] and [ToScale] traits, supporting transformations between pairs of time
-      scales;
+    - the [`TryOffset`](offsets::TryOffset) and [`Offset`](offsets::Offset) traits, supporting
+      transformations between pairs of time scales;
     - standard implementations of the most common time scale transformations.
 
     # Continuous vs discontinuous timescales
