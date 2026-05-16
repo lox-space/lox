@@ -45,6 +45,12 @@ where
     R: ReferenceFrame + Copy,
 {
     /// Constructs a trajectory from an iterator of Cartesian orbital states.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the iterator yields fewer than 2 states. The Hermite cubic
+    /// spline requires at least two knots; callers responsible for that
+    /// invariant should use [`Self::try_new`] for a fallible variant.
     pub fn new(states: impl IntoIterator<Item = CartesianOrbit<T, O, R>>) -> Self {
         let mut states = states.into_iter().peekable();
         let first = states.peek().unwrap();
@@ -427,6 +433,9 @@ where
     O: Origin + Copy,
     R: ReferenceFrame + Copy,
 {
+    /// Delegates to [`Trajectory::new`] and inherits its panic on fewer
+    /// than 2 states. Callers without that guarantee should collect into
+    /// a `Vec` first and use [`Trajectory::try_new`].
     fn from_iter<U: IntoIterator<Item = CartesianOrbit<T, O, R>>>(iter: U) -> Self {
         Self::new(iter)
     }
