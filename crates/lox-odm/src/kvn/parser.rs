@@ -259,6 +259,27 @@ CCSDS_OPM_VERS = 3.0
     }
 
     #[test]
+    fn skips_blank_lines_in_preamble() {
+        // Blank lines before the version header are tolerated.
+        let input = "\n\n   \nCCSDS_OPM_VERS = 3.0\n";
+        let doc = parse(input).unwrap();
+        assert_eq!(doc.message_kind, MessageKind::Opm);
+        assert!(doc.preamble.is_empty());
+    }
+
+    #[test]
+    fn rejects_second_version_header_in_body() {
+        // A second `CCSDS_*_VERS` line after the file header is malformed.
+        let input = "\
+CCSDS_OPM_VERS = 3.0
+ORIGINATOR = TEST
+CCSDS_OPM_VERS = 3.0
+";
+        let err = parse(input).unwrap_err();
+        assert!(matches!(err.kind, KvnErrorKind::MalformedLine(_)));
+    }
+
+    #[test]
     fn rejects_unknown_message_kind() {
         let result = parse("CCSDS_XYZ_VERS = 1.0\n");
         let err = result.unwrap_err();
