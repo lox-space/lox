@@ -76,8 +76,10 @@ impl OdmCenter {
     /// Parses a wire-format `CENTER_NAME` string.
     ///
     /// CCSDS wire form is uppercase (e.g. `EARTH`, `SUN`,
-    /// `SOLAR SYSTEM BARYCENTER`). The lookup folds case so any
-    /// reasonable casing accepted.
+    /// `SOLAR SYSTEM BARYCENTER`). [`DynOrigin::from_str`] matches
+    /// lowercase identifiers, so the input is lowercased before lookup
+    /// (asymmetric with [`OdmFrame::from_wire`], which uppercases for
+    /// [`DynFrame::from_str`]).
     /// On failure, wraps the original input as [`OdmCenter::Custom`].
     pub fn from_wire(s: &str) -> Self {
         match DynOrigin::from_str(&s.to_lowercase()) {
@@ -137,9 +139,10 @@ pub enum OdmFrame {
 impl OdmFrame {
     /// Parses a wire-format `REF_FRAME` string.
     ///
-    /// CCSDS wire form is uppercase (e.g. `ICRF`, `EME2000`, `TEME`). The
-    /// lookup folds case explicitly so any reasonable casing is accepted
-    /// — symmetric with [`OdmCenter::from_wire`].
+    /// CCSDS wire form is uppercase (e.g. `ICRF`, `EME2000`, `TEME`).
+    /// [`DynFrame::from_str`] matches uppercase identifiers, so the input
+    /// is uppercased before lookup (mirror of [`OdmCenter::from_wire`],
+    /// which lowercases for [`DynOrigin::from_str`]).
     /// On failure, wraps the original input as [`OdmFrame::Custom`].
     pub fn from_wire(s: &str) -> Self {
         match DynFrame::from_str(&s.to_uppercase()) {
