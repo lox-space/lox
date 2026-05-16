@@ -940,6 +940,9 @@ fn omm_epoch_to_naive_utc(epoch: OdmTime) -> Result<chrono::NaiveDateTime, OmmFr
     Ok(dt.naive_utc())
 }
 
+/// Decode the single-letter TLE `CLASSIFICATION_TYPE` from the OMM
+/// TLE-parameters block (not the free-form `OdmHeader::classification`
+/// marker, which uses CCSDS labels like `UNCLASSIFIED`/`SECRET`).
 fn classification_from_str(s: Option<&str>) -> sgp4::Classification {
     match s.map(str::trim) {
         Some("C") => sgp4::Classification::Classified,
