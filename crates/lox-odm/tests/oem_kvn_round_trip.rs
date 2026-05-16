@@ -163,3 +163,148 @@ fn jpl_oem_covariance_round_trip_has_six_rows() {
     // Symmetry check: matrix[(1,0)] == matrix[(0,1)]
     assert_eq!(cov.matrix[(1, 0)], cov.matrix[(0, 1)]);
 }
+
+// ---------------------------------------------------------------------------
+// Coverage for branches the JPL fixture doesn't exercise: COMMENT lines
+// inside the header and metadata sub-blocks, and the structural error
+// paths in the OEM TryFrom projection.
+// ---------------------------------------------------------------------------
+
+const OEM_HEADER_AND_METADATA_COMMENTS: &str = "\
+CCSDS_OEM_VERS = 3.0
+COMMENT header comment one
+COMMENT header comment two
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+
+META_START
+COMMENT metadata comment one
+COMMENT metadata comment two
+OBJECT_NAME = SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+START_TIME = 2024-01-01T00:00:00
+STOP_TIME = 2024-01-01T00:01:00
+META_STOP
+
+2024-01-01T00:00:00 7000.0 0.0 0.0 0.0 7.5 0.0
+2024-01-01T00:01:00 7001.0 0.0 0.0 0.0 7.5 0.0
+";
+
+#[test]
+fn oem_header_comments_preserved() {
+    let oem = read_oem(OEM_HEADER_AND_METADATA_COMMENTS).expect("read");
+    assert_eq!(
+        oem.header.comments,
+        vec!["header comment one", "header comment two"]
+    );
+
+    // Round-trip: header comments survive write → re-parse.
+    let written = write_oem(&oem);
+    let reparsed = read_oem(&written).expect("re-read");
+    assert_eq!(reparsed.header.comments, oem.header.comments);
+}
+
+#[test]
+fn oem_metadata_comments_preserved() {
+    let oem = read_oem(OEM_HEADER_AND_METADATA_COMMENTS).expect("read");
+    let seg = &oem.segments[0];
+    assert_eq!(
+        seg.metadata.comments,
+        vec!["metadata comment one", "metadata comment two"]
+    );
+
+    let written = write_oem(&oem);
+    let reparsed = read_oem(&written).expect("re-read");
+    assert_eq!(
+        reparsed.segments[0].metadata.comments,
+        seg.metadata.comments
+    );
+}
+
+#[test]
+fn oem_rejects_data_row_before_meta() {
+    // An unknown bracketed section opens the implicit DATA section. A
+    // subsequent ephemeris row inside DATA has no segment context, so
+    // the projection layer must refuse it.
+    let input = "\
+CCSDS_OEM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+
+WEIRD_START
+WEIRD_STOP
+
+2024-01-01T00:00:00 7000.0 0.0 0.0 0.0 7.5 0.0
+";
+    let err = read_oem(input).expect_err("expected projection error");
+    assert!(
+        format!("{err}").contains("data row before META"),
+        "expected 'data row before META', got: {err}"
+    );
+}
+
+#[test]
+fn oem_rejects_covariance_subsection_before_meta() {
+    // After an unknown top-level bracketed section opens the implicit
+    // DATA, a COVARIANCE subsection with no preceding META must be
+    // rejected by process_entries.
+    let input = "\
+CCSDS_OEM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+
+WEIRD_START
+WEIRD_STOP
+
+COVARIANCE_START
+EPOCH = 2024-01-01T00:00:00
+COV_REF_FRAME = ICRF
+1.0
+0.0 1.0
+0.0 0.0 1.0
+0.0 0.0 0.0 1.0
+0.0 0.0 0.0 0.0 1.0
+0.0 0.0 0.0 0.0 0.0 1.0
+COVARIANCE_STOP
+";
+    let err = read_oem(input).expect_err("expected projection error");
+    assert!(
+        format!("{err}").contains("COVARIANCE before META"),
+        "expected 'COVARIANCE before META', got: {err}"
+    );
+}
+
+#[test]
+fn oem_ignores_unknown_nested_subsection_inside_data() {
+    // After META closes, an unrelated bracketed subsection nested in
+    // the implicit DATA section should be walked recursively (so any
+    // nested META/COVARIANCE/rows inside it are still processed) and
+    // skipped otherwise — not rejected outright.
+    let input = "\
+CCSDS_OEM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+
+META_START
+OBJECT_NAME = SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+START_TIME = 2024-01-01T00:00:00
+STOP_TIME = 2024-01-01T00:01:00
+META_STOP
+
+2024-01-01T00:00:00 7000.0 0.0 0.0 0.0 7.5 0.0
+2024-01-01T00:01:00 7001.0 0.0 0.0 0.0 7.5 0.0
+
+UNKNOWN_START
+UNKNOWN_STOP
+";
+    let oem = read_oem(input).expect("unknown nested subsection should be ignored");
+    assert_eq!(oem.segments.len(), 1);
+    assert_eq!(oem.segments[0].states.len(), 2);
+}

@@ -2645,4 +2645,65 @@ mod tests {
             "wrong error: {err:?}"
         );
     }
+
+    // -----------------------------------------------------------------
+    // Lax-deserializer branches not reached by the realistic
+    // string/native-number fixtures above.
+    // -----------------------------------------------------------------
+
+    // The *required* `de_f64_lax` Visitor (used for ECCENTRICITY etc.)
+    // sees JSON integer literals via `visit_i64` / `visit_u64`. The
+    // happy-path fixtures all use decimal literals, so add explicit
+    // integer-literal coverage.
+    #[test]
+    fn de_f64_lax_accepts_native_positive_integer_literal() {
+        // INCLINATION as a bare integer (no decimal point) routes through
+        // visit_u64 → f64 coercion in the required F64 visitor.
+        let omm = read_omm(&omm_with_value("INCLINATION", "45")).expect("read");
+        assert!((omm.mean_elements.elements.i - 45.0_f64.to_radians()).abs() < 1e-12);
+    }
+
+    #[test]
+    fn de_f64_lax_accepts_native_negative_integer_literal() {
+        // ECCENTRICITY < 0 is unphysical but the lax deserializer still
+        // accepts it; the value lands in visit_i64.
+        let omm = read_omm(&omm_with_value("ECCENTRICITY", "-1")).expect("read");
+        assert_eq!(omm.mean_elements.elements.e, -1.0);
+    }
+
+    // Each lax Visitor has an `expecting()` method that serde invokes
+    // only when synthesising an `invalid_type` error message. Feeding a
+    // JSON array into each field reaches that method.
+    fn assert_invalid_type_error(input: &str) {
+        let err = read_omm(input).expect_err("expected JSON type error");
+        assert!(
+            matches!(err, JsonError::Json(_)),
+            "expected JsonError::Json wrapping invalid_type, got: {err:?}"
+        );
+    }
+
+    #[test]
+    fn de_f64_lax_required_rejects_array_via_expecting() {
+        assert_invalid_type_error(&omm_with_value("ECCENTRICITY", "[1.0]"));
+    }
+
+    #[test]
+    fn de_f64_lax_opt_rejects_array_via_expecting() {
+        assert_invalid_type_error(&omm_with_value("GM", "[1.0]"));
+    }
+
+    #[test]
+    fn de_i32_lax_opt_rejects_array_via_expecting() {
+        assert_invalid_type_error(&omm_with_value("NORAD_CAT_ID", "[1]"));
+    }
+
+    #[test]
+    fn de_i64_lax_opt_rejects_array_via_expecting() {
+        assert_invalid_type_error(&omm_with_value("ELEMENT_SET_NO", "[1]"));
+    }
+
+    #[test]
+    fn de_u64_lax_opt_rejects_array_via_expecting() {
+        assert_invalid_type_error(&omm_with_value("REV_AT_EPOCH", "[1]"));
+    }
 }
