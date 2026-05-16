@@ -19,7 +19,7 @@ use lox_core::units::{Distance, Velocity};
 use lox_frames::DynFrame;
 use lox_odm::Format;
 use lox_odm::types::common::OdmTimeScale;
-use lox_orbits::odm::{OemBuilder, OmmBuildError, OmmBuilder, OmmWriteError, OpmBuilder};
+use lox_orbits::odm::{OmmBuildError, OmmWriteError};
 use lox_orbits::orbits::{DynCartesianOrbit, DynKeplerianOrbit, DynTrajectory, Orbit, Trajectory};
 use lox_orbits::propagators::sgp4::Sgp4;
 use lox_time::deltas::TimeDelta;
@@ -158,8 +158,11 @@ fn gsoc_opm_to_dyn_orbit() {
 #[test]
 fn dyn_orbit_opm_kvn_round_trip() {
     let orbit = sample_dyn_orbit();
-    let builder = OpmBuilder::new("INTEGRATION_TEST", "TEST-SAT", "2024-IT-001A");
-    let kvn = orbit.to_opm_str(builder, Format::Kvn).unwrap();
+    let kvn = orbit
+        .build_opm("TEST-SAT", "2024-IT-001A")
+        .originator("INTEGRATION_TEST")
+        .write_str(Format::Kvn)
+        .unwrap();
 
     let reparsed = DynCartesianOrbit::from_opm_str(&kvn).unwrap();
     assert_eq!(reparsed.origin(), orbit.origin());
@@ -176,8 +179,11 @@ fn dyn_orbit_opm_kvn_round_trip() {
 #[test]
 fn dyn_orbit_opm_xml_round_trip() {
     let orbit = sample_dyn_orbit();
-    let builder = OpmBuilder::new("INTEGRATION_TEST", "TEST-SAT", "2024-IT-001A");
-    let xml = orbit.to_opm_str(builder, Format::Xml).unwrap();
+    let xml = orbit
+        .build_opm("TEST-SAT", "2024-IT-001A")
+        .originator("INTEGRATION_TEST")
+        .write_str(Format::Xml)
+        .unwrap();
 
     let reparsed = DynCartesianOrbit::from_opm_str(&xml).unwrap();
     assert_eq!(reparsed.origin(), orbit.origin());
@@ -211,12 +217,17 @@ fn jpl_oem_to_dyn_trajectory_segment_count() {
 fn dyn_trajectory_oem_kvn_round_trip() {
     let traj = sample_dyn_trajectory();
     let n_states = traj.states().len();
-    let builder = OemBuilder::new("INTEGRATION_TEST", "TEST-SAT", "2024-IT-001A");
-    let kvn = traj.to_oem_str(builder, Format::Kvn).unwrap();
+    let origin = traj.origin();
+    let frame = traj.reference_frame();
+    let kvn = traj
+        .build_oem("TEST-SAT", "2024-IT-001A")
+        .originator("INTEGRATION_TEST")
+        .write_str(Format::Kvn)
+        .unwrap();
 
     let reparsed = DynTrajectory::from_oem_str(&kvn).unwrap();
-    assert_eq!(reparsed.origin(), traj.origin());
-    assert_eq!(reparsed.reference_frame(), traj.reference_frame());
+    assert_eq!(reparsed.origin(), origin);
+    assert_eq!(reparsed.reference_frame(), frame);
     assert_eq!(reparsed.states().len(), n_states);
 }
 
@@ -241,8 +252,11 @@ fn from_oem_segment_second_segment() {
 #[test]
 fn opm_utc_silently_widens_to_tai_without_override() {
     let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
-    let builder = OpmBuilder::new("ROUND_TRIP", "EUTELSAT W4", "2021-028A");
-    let kvn = orbit.to_opm_str(builder, Format::Kvn).unwrap();
+    let kvn = orbit
+        .build_opm("EUTELSAT W4", "2021-028A")
+        .originator("ROUND_TRIP")
+        .write_str(Format::Kvn)
+        .unwrap();
 
     let reparsed = lox_odm::read_opm(&kvn).unwrap();
     // Source was UTC; default round-trip lands in TAI.
@@ -256,9 +270,12 @@ fn opm_utc_silently_widens_to_tai_without_override() {
 #[test]
 fn opm_time_system_override_preserves_utc() {
     let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
-    let builder =
-        OpmBuilder::new("ROUND_TRIP", "EUTELSAT W4", "2021-028A").time_system(OdmTimeScale::Utc);
-    let kvn = orbit.to_opm_str(builder, Format::Kvn).unwrap();
+    let kvn = orbit
+        .build_opm("EUTELSAT W4", "2021-028A")
+        .originator("ROUND_TRIP")
+        .time_system(OdmTimeScale::Utc)
+        .write_str(Format::Kvn)
+        .unwrap();
 
     let reparsed = lox_odm::read_opm(&kvn).unwrap();
     assert_eq!(reparsed.epoch.scale(), OdmTimeScale::Utc);
@@ -273,9 +290,12 @@ fn opm_time_system_override_preserves_utc() {
 #[test]
 fn opm_time_system_override_to_gps() {
     let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
-    let builder =
-        OpmBuilder::new("ROUND_TRIP", "EUTELSAT W4", "2021-028A").time_system(OdmTimeScale::Gps);
-    let kvn = orbit.to_opm_str(builder, Format::Kvn).unwrap();
+    let kvn = orbit
+        .build_opm("EUTELSAT W4", "2021-028A")
+        .originator("ROUND_TRIP")
+        .time_system(OdmTimeScale::Gps)
+        .write_str(Format::Kvn)
+        .unwrap();
 
     let reparsed = lox_odm::read_opm(&kvn).unwrap();
     assert_eq!(reparsed.epoch.scale(), OdmTimeScale::Gps);
@@ -285,10 +305,12 @@ fn opm_time_system_override_to_gps() {
 /// OEM analogue: trajectory round-trip preserves UTC when `.time_system(Utc)` is set.
 #[test]
 fn oem_time_system_override_preserves_utc() {
-    let traj = sample_dyn_trajectory();
-    let builder =
-        OemBuilder::new("ROUND_TRIP", "TEST-SAT", "2024-IT-001A").time_system(OdmTimeScale::Utc);
-    let kvn = traj.to_oem_str(builder, Format::Kvn).unwrap();
+    let kvn = sample_dyn_trajectory()
+        .build_oem("TEST-SAT", "2024-IT-001A")
+        .originator("ROUND_TRIP")
+        .time_system(OdmTimeScale::Utc)
+        .write_str(Format::Kvn)
+        .unwrap();
 
     let reparsed = lox_odm::read_oem(&kvn).unwrap();
     let seg = &reparsed.segments[0];
@@ -353,9 +375,10 @@ fn sgp4_from_omm_str_iss() {
 fn keplerian_orbit_to_omm_round_trip_iss() {
     let orbit = DynKeplerianOrbit::from_omm_str(ISS_OMM_JSON).expect("from_omm_str");
     let original = orbit.state();
-    let builder = OmmBuilder::new("ROUND_TRIP", "ISS (ZARYA)", "1998-067A");
     let kvn = orbit
-        .to_omm_str(builder, Format::Kvn)
+        .build_omm("ISS (ZARYA)", "1998-067A")
+        .originator("ROUND_TRIP")
+        .write_str(Format::Kvn)
         .expect("write OMM KVN (ISS is elliptic)");
 
     let reparsed = lox_odm::read_omm(&kvn).expect("re-parse OMM");
@@ -420,9 +443,10 @@ fn omm_builder_returns_typed_error_for_hyperbolic_beyond_asymptote() {
         DynFrame::Icrf,
     );
 
-    let builder = OmmBuilder::new("TEST", "HYPER", "2024-HYP-001A");
     let err = orbit
-        .to_omm(builder)
+        .build_omm("HYPER", "2024-HYP-001A")
+        .originator("TEST")
+        .build()
         .expect_err("hyperbolic build should fail");
     assert!(
         matches!(err, OmmBuildError::Anomaly(_)),
@@ -430,9 +454,10 @@ fn omm_builder_returns_typed_error_for_hyperbolic_beyond_asymptote() {
     );
 
     // The fallible `write_str` propagates the same error via OmmWriteError.
-    let builder = OmmBuilder::new("TEST", "HYPER", "2024-HYP-001A");
     let err = orbit
-        .to_omm_str(builder, Format::Kvn)
+        .build_omm("HYPER", "2024-HYP-001A")
+        .originator("TEST")
+        .write_str(Format::Kvn)
         .expect_err("write should fail");
     assert!(
         matches!(err, OmmWriteError::Build(OmmBuildError::Anomaly(_))),
