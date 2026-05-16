@@ -650,6 +650,12 @@ impl CartesianTrajectory {
     /// using velocity (vx, vy, vz) as the known derivatives. Velocity components
     /// are stored as cubic splines for raw data access but the [`velocity`] and
     /// [`at`] methods derive velocity from the position spline derivative.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the iterator yields fewer than 2 states. Hermite cubic
+    /// interpolation requires at least two knots; callers must enforce this
+    /// invariant.
     pub fn from_states(states: impl IntoIterator<Item = TimeStampedCartesian>) -> Self {
         let mut iter = states.into_iter().peekable();
         let epoch = iter.peek().expect("should have at least two states").time;
