@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.7](https://github.com/lox-space/lox/compare/lox-test-utils-v0.1.0-alpha.6...lox-test-utils-v0.1.0-alpha.7) - 2026-05-16
+
+### Other
+
+- updated the following local packages: lox-derive
+
 ## [0.1.0-alpha.6](https://github.com/lox-space/lox/compare/lox-test-utils-v0.1.0-alpha.5...lox-test-utils-v0.1.0-alpha.6) - 2026-03-26
 
 ### Other
