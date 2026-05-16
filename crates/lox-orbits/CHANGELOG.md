@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.37](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.36...lox-orbits-v0.1.0-alpha.37) - 2026-05-16
+
+### Added
+
+- *(lox-odm)* integrate with other crates
+
+### Fixed
+
+- *(lox-odm)* fix offset handling
+- *(lox-odm)* fix parser bugs
+
+### Other
+
+- *(lox-orbits/lox-odm)* use fluent ODM builder API
+- document trajectory constructor panics
+- *(lox-odm)* address review comments
+- *(lox-odm)* address review comments
+- *(lox-orbits)* fix try_new bug and consolidate trajectory error
+- move `MeanElements` to `lox-core`
+
 ## [0.1.0-alpha.36](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.35...lox-orbits-v0.1.0-alpha.36) - 2026-05-11
 
 ### Fixed
