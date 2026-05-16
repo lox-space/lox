@@ -27,11 +27,12 @@ use lox_frames::{DynFrame, ReferenceFrame};
 use lox_odm::Format;
 use lox_odm::OdmError;
 use lox_odm::types::common::{
-    OdmCenter, OdmFrame, OdmHeader, OdmTime, OdmTimeScale, SpacecraftParameters,
+    OdmCenter, OdmFrame, OdmHeader, OdmTime, OdmTimeError, OdmTimeScale, SpacecraftParameters,
 };
 use lox_odm::types::oem::{Oem, OemMetadata, OemSegment};
 use lox_odm::types::omm::{Omm, OmmMeanElements, OmmMetadata};
 use lox_odm::types::opm::{Opm, OpmMetadata};
+use lox_time::offsets::{DefaultOffsetProvider, OffsetProvider};
 use lox_time::time::DynTime;
 use lox_time::time_scales::{DynTimeScale, TimeScale};
 
@@ -56,10 +57,14 @@ where
 /// orbit/trajectory. Used by the builders so that a UTC-origin OPM round-
 /// trip (read → orbit → write) can re-emit `TIME_SYSTEM = UTC` instead of
 /// silently widening to TAI.
-fn apply_time_system(epoch: OdmTime, target: Option<OdmTimeScale>) -> OdmTime {
+fn apply_time_system<P: OffsetProvider>(
+    epoch: OdmTime,
+    target: Option<OdmTimeScale>,
+    provider: &P,
+) -> Result<OdmTime, OdmTimeError> {
     match target {
-        Some(scale) => epoch.in_scale(scale),
-        None => epoch,
+        Some(scale) => epoch.try_in_scale_with(scale, provider),
+        None => Ok(epoch),
     }
 }
 
@@ -87,6 +92,27 @@ pub enum OpmReadError {
     /// The parsed OPM could not be converted to a typed orbit.
     #[error(transparent)]
     Convert(#[from] OpmFromOdmError),
+}
+
+/// Error when building an [`Opm`] from a typed orbit.
+#[derive(Debug, thiserror::Error)]
+pub enum OpmBuildError {
+    /// An epoch could not be re-expressed in the requested `TIME_SYSTEM`
+    /// because the offset table does not cover it (currently only UT1).
+    #[error(transparent)]
+    TimeSystem(#[from] OdmTimeError),
+}
+
+/// Composite error for `OpmBuilder::write_str` / `write_file` and the
+/// `Orbit::to_opm_str` / `to_opm_file` shortcuts.
+#[derive(Debug, thiserror::Error)]
+pub enum OpmWriteError {
+    /// Constructing the typed [`Opm`] from the orbit failed.
+    #[error(transparent)]
+    Build(#[from] OpmBuildError),
+    /// Serialising the typed [`Opm`] to the wire format failed.
+    #[error(transparent)]
+    Odm(#[from] OdmError),
 }
 
 /// Error when converting an OEM segment to a [`DynTrajectory`].
@@ -117,6 +143,28 @@ pub enum OemReadError {
     Convert(#[from] OemFromOdmError),
 }
 
+/// Error when building an [`Oem`] from a typed trajectory.
+#[derive(Debug, thiserror::Error)]
+pub enum OemBuildError {
+    /// An epoch (segment start/stop, useable times, frame epoch, or a
+    /// per-state-vector timestamp) could not be re-expressed in the
+    /// requested `TIME_SYSTEM`.
+    #[error(transparent)]
+    TimeSystem(#[from] OdmTimeError),
+}
+
+/// Composite error for `OemBuilder::write_str` / `write_file` and the
+/// `Trajectory::to_oem_str` / `to_oem_file` shortcuts.
+#[derive(Debug, thiserror::Error)]
+pub enum OemWriteError {
+    /// Constructing the typed [`Oem`] from the trajectory failed.
+    #[error(transparent)]
+    Build(#[from] OemBuildError),
+    /// Serialising the typed [`Oem`] to the wire format failed.
+    #[error(transparent)]
+    Odm(#[from] OdmError),
+}
+
 // ----------------------------------------------------------------------------
 // OpmBuilder
 // ----------------------------------------------------------------------------
@@ -127,7 +175,13 @@ pub enum OemReadError {
 /// front; all optional CCSDS header/metadata fields are set via chained
 /// method calls. Call [`build`](OpmBuilder::build) (or a `write_*` variant)
 /// to consume the builder.
-pub struct OpmBuilder {
+///
+/// The builder is generic over an [`OffsetProvider`] used by any
+/// [`time_system`](Self::time_system) conversion. The default is
+/// [`DefaultOffsetProvider`]; swap it via
+/// [`offset_provider`](Self::offset_provider) if you need a custom UT1
+/// table or a stricter error policy.
+pub struct OpmBuilder<P = DefaultOffsetProvider> {
     originator: String,
     object_name: String,
     object_id: String,
@@ -141,11 +195,14 @@ pub struct OpmBuilder {
     spacecraft: Option<SpacecraftParameters>,
     user_defined: BTreeMap<String, String>,
     time_system: Option<OdmTimeScale>,
+    provider: P,
 }
 
-impl OpmBuilder {
+impl OpmBuilder<DefaultOffsetProvider> {
     /// Creates a new builder with the three CCSDS-mandatory identification
-    /// fields. All other fields default to `None` / empty.
+    /// fields. All other fields default to `None` / empty. Uses the
+    /// [`DefaultOffsetProvider`]; call
+    /// [`offset_provider`](Self::offset_provider) to swap it.
     pub fn new(
         originator: impl Into<String>,
         object_name: impl Into<String>,
@@ -165,6 +222,29 @@ impl OpmBuilder {
             spacecraft: None,
             user_defined: BTreeMap::new(),
             time_system: None,
+            provider: DefaultOffsetProvider,
+        }
+    }
+}
+
+impl<P> OpmBuilder<P> {
+    /// Replaces the [`OffsetProvider`] used by [`time_system`](Self::time_system).
+    pub fn offset_provider<P2>(self, provider: P2) -> OpmBuilder<P2> {
+        OpmBuilder {
+            originator: self.originator,
+            object_name: self.object_name,
+            object_id: self.object_id,
+            creation_date: self.creation_date,
+            message_id: self.message_id,
+            classification: self.classification,
+            header_comments: self.header_comments,
+            metadata_comments: self.metadata_comments,
+            state_comments: self.state_comments,
+            frame_epoch: self.frame_epoch,
+            spacecraft: self.spacecraft,
+            user_defined: self.user_defined,
+            time_system: self.time_system,
+            provider,
         }
     }
 
@@ -237,7 +317,9 @@ impl OpmBuilder {
         self.user_defined.insert(k.into(), v.into());
         self
     }
+}
 
+impl<P: OffsetProvider> OpmBuilder<P> {
     /// Builds the [`Opm`], consuming the builder.
     ///
     /// `T`/`O`/`R` are inferred from the orbit. The orbit's epoch, state,
@@ -251,21 +333,26 @@ impl OpmBuilder {
     /// empty/`None` regardless of what the original message contained.
     /// Round-tripping `OPM(with maneuvers) → DynCartesianOrbit → OpmBuilder`
     /// drops those sections.
-    pub fn build<T, O, R>(self, orbit: &Orbit<Cartesian, T, O, R>) -> Opm
+    pub fn build<T, O, R>(self, orbit: &Orbit<Cartesian, T, O, R>) -> Result<Opm, OpmBuildError>
     where
         T: TimeScale + Copy + Into<DynTimeScale>,
         O: Origin + Copy + Into<DynOrigin>,
         R: ReferenceFrame + Copy + Into<DynFrame>,
     {
-        let epoch = apply_time_system(orbit_epoch_to_odm_time(orbit.time()), self.time_system);
+        let epoch = apply_time_system(
+            orbit_epoch_to_odm_time(orbit.time()),
+            self.time_system,
+            &self.provider,
+        )?;
         let creation_date = self.creation_date.unwrap_or(epoch);
         let center = OdmCenter::from_wire(orbit.origin().name());
         let frame = OdmFrame::from_wire(&orbit.reference_frame().abbreviation());
         let frame_epoch = self
             .frame_epoch
-            .map(|e| apply_time_system(e, self.time_system));
+            .map(|e| apply_time_system(e, self.time_system, &self.provider))
+            .transpose()?;
 
-        Opm {
+        Ok(Opm {
             header: OdmHeader {
                 comments: self.header_comments,
                 classification: self.classification,
@@ -289,7 +376,7 @@ impl OpmBuilder {
             covariance: None,
             maneuvers: Vec::new(),
             user_defined: self.user_defined,
-        }
+        })
     }
 
     /// Builds the OPM and serializes it to the requested wire format.
@@ -297,14 +384,14 @@ impl OpmBuilder {
         self,
         orbit: &Orbit<Cartesian, T, O, R>,
         format: Format,
-    ) -> Result<String, OdmError>
+    ) -> Result<String, OpmWriteError>
     where
         T: TimeScale + Copy + Into<DynTimeScale>,
         O: Origin + Copy + Into<DynOrigin>,
         R: ReferenceFrame + Copy + Into<DynFrame>,
     {
-        let opm = self.build(orbit);
-        lox_odm::write_opm(&opm, format)
+        let opm = self.build(orbit)?;
+        Ok(lox_odm::write_opm(&opm, format)?)
     }
 
     /// Builds the OPM and writes it to a file in the requested format.
@@ -313,14 +400,14 @@ impl OpmBuilder {
         orbit: &Orbit<Cartesian, T, O, R>,
         path: impl AsRef<Path>,
         format: Format,
-    ) -> Result<(), OdmError>
+    ) -> Result<(), OpmWriteError>
     where
         T: TimeScale + Copy + Into<DynTimeScale>,
         O: Origin + Copy + Into<DynOrigin>,
         R: ReferenceFrame + Copy + Into<DynFrame>,
     {
-        let opm = self.build(orbit);
-        lox_odm::write_opm_file(&opm, path, format)
+        let opm = self.build(orbit)?;
+        Ok(lox_odm::write_opm_file(&opm, path, format)?)
     }
 }
 
@@ -335,22 +422,26 @@ where
     R: ReferenceFrame + Copy + Into<DynFrame>,
 {
     /// Converts this orbit into an OPM using the provided builder configuration.
-    pub fn to_opm(&self, builder: OpmBuilder) -> Opm {
+    pub fn to_opm<P: OffsetProvider>(&self, builder: OpmBuilder<P>) -> Result<Opm, OpmBuildError> {
         builder.build(self)
     }
 
     /// Builds the OPM and serializes it to the requested wire format.
-    pub fn to_opm_str(&self, builder: OpmBuilder, format: Format) -> Result<String, OdmError> {
+    pub fn to_opm_str<P: OffsetProvider>(
+        &self,
+        builder: OpmBuilder<P>,
+        format: Format,
+    ) -> Result<String, OpmWriteError> {
         builder.write_str(self, format)
     }
 
     /// Builds the OPM and writes it to a file in the requested format.
-    pub fn to_opm_file(
+    pub fn to_opm_file<P: OffsetProvider>(
         &self,
-        builder: OpmBuilder,
+        builder: OpmBuilder<P>,
         path: impl AsRef<Path>,
         format: Format,
-    ) -> Result<(), OdmError> {
+    ) -> Result<(), OpmWriteError> {
         builder.write_file(self, path, format)
     }
 }
@@ -399,7 +490,10 @@ impl DynCartesianOrbit {
 ///
 /// Required fields (`originator`, `object_name`, `object_id`) are provided
 /// up front. All optional CCSDS fields are set via chained method calls.
-pub struct OemBuilder {
+/// The builder is generic over an [`OffsetProvider`] used by
+/// [`time_system`](Self::time_system) conversions; see
+/// [`offset_provider`](Self::offset_provider).
+pub struct OemBuilder<P = DefaultOffsetProvider> {
     originator: String,
     object_name: String,
     object_id: String,
@@ -416,11 +510,13 @@ pub struct OemBuilder {
     interpolation_degree: Option<u64>,
     user_defined: BTreeMap<String, String>,
     time_system: Option<OdmTimeScale>,
+    provider: P,
 }
 
-impl OemBuilder {
+impl OemBuilder<DefaultOffsetProvider> {
     /// Creates a new builder with the three CCSDS-mandatory identification
-    /// fields.
+    /// fields. Uses the [`DefaultOffsetProvider`]; call
+    /// [`offset_provider`](Self::offset_provider) to swap it.
     pub fn new(
         originator: impl Into<String>,
         object_name: impl Into<String>,
@@ -443,6 +539,32 @@ impl OemBuilder {
             interpolation_degree: None,
             user_defined: BTreeMap::new(),
             time_system: None,
+            provider: DefaultOffsetProvider,
+        }
+    }
+}
+
+impl<P> OemBuilder<P> {
+    /// Replaces the [`OffsetProvider`] used by [`time_system`](Self::time_system).
+    pub fn offset_provider<P2>(self, provider: P2) -> OemBuilder<P2> {
+        OemBuilder {
+            originator: self.originator,
+            object_name: self.object_name,
+            object_id: self.object_id,
+            creation_date: self.creation_date,
+            message_id: self.message_id,
+            classification: self.classification,
+            header_comments: self.header_comments,
+            metadata_comments: self.metadata_comments,
+            data_comments: self.data_comments,
+            frame_epoch: self.frame_epoch,
+            useable_start_time: self.useable_start_time,
+            useable_stop_time: self.useable_stop_time,
+            interpolation: self.interpolation,
+            interpolation_degree: self.interpolation_degree,
+            user_defined: self.user_defined,
+            time_system: self.time_system,
+            provider,
         }
     }
 
@@ -524,21 +646,29 @@ impl OemBuilder {
         self.user_defined.insert(k.into(), v.into());
         self
     }
+}
 
+impl<P: OffsetProvider> OemBuilder<P> {
     /// Builds the [`Oem`], consuming the builder.
     ///
     /// The trajectory's epoch (start/stop), origin, and frame populate the
     /// single segment's metadata. State vectors are taken from the
     /// trajectory's knot points via [`Trajectory::states`].
-    pub fn build<T, O, R>(self, trajectory: &Trajectory<T, O, R>) -> Oem
+    pub fn build<T, O, R>(self, trajectory: &Trajectory<T, O, R>) -> Result<Oem, OemBuildError>
     where
         T: TimeScale + Copy + Into<DynTimeScale>,
         O: Origin + Copy + Into<DynOrigin>,
         R: ReferenceFrame + Copy + Into<DynFrame>,
     {
         let ts = self.time_system;
-        let start_time = apply_time_system(orbit_epoch_to_odm_time(trajectory.start_time()), ts);
-        let stop_time = apply_time_system(orbit_epoch_to_odm_time(trajectory.end_time()), ts);
+        let provider = &self.provider;
+        let start_time = apply_time_system(
+            orbit_epoch_to_odm_time(trajectory.start_time()),
+            ts,
+            provider,
+        )?;
+        let stop_time =
+            apply_time_system(orbit_epoch_to_odm_time(trajectory.end_time()), ts, provider)?;
         let creation_date = self.creation_date.unwrap_or(start_time);
         let center = OdmCenter::from_wire(trajectory.origin().name());
         let frame = OdmFrame::from_wire(&trajectory.reference_frame().abbreviation());
@@ -547,12 +677,23 @@ impl OemBuilder {
             .states()
             .into_iter()
             .map(|s| {
-                (
-                    apply_time_system(orbit_epoch_to_odm_time(s.time()), ts),
-                    s.state(),
-                )
+                apply_time_system(orbit_epoch_to_odm_time(s.time()), ts, provider)
+                    .map(|t| (t, s.state()))
             })
-            .collect();
+            .collect::<Result<_, _>>()?;
+
+        let frame_epoch = self
+            .frame_epoch
+            .map(|e| apply_time_system(e, ts, provider))
+            .transpose()?;
+        let useable_start_time = self
+            .useable_start_time
+            .map(|t| apply_time_system(t, ts, provider))
+            .transpose()?;
+        let useable_stop_time = self
+            .useable_stop_time
+            .map(|t| apply_time_system(t, ts, provider))
+            .transpose()?;
 
         let segment = OemSegment {
             metadata: OemMetadata {
@@ -561,10 +702,10 @@ impl OemBuilder {
                 object_id: self.object_id,
                 center,
                 frame,
-                frame_epoch: self.frame_epoch.map(|e| apply_time_system(e, ts)),
+                frame_epoch,
                 start_time,
-                useable_start_time: self.useable_start_time.map(|t| apply_time_system(t, ts)),
-                useable_stop_time: self.useable_stop_time.map(|t| apply_time_system(t, ts)),
+                useable_start_time,
+                useable_stop_time,
                 stop_time,
                 interpolation: self.interpolation,
                 interpolation_degree: self.interpolation_degree,
@@ -574,7 +715,7 @@ impl OemBuilder {
             covariance_history: Vec::new(),
         };
 
-        Oem {
+        Ok(Oem {
             header: OdmHeader {
                 comments: self.header_comments,
                 classification: self.classification,
@@ -584,7 +725,7 @@ impl OemBuilder {
             },
             segments: vec![segment],
             user_defined: self.user_defined,
-        }
+        })
     }
 
     /// Builds the OEM and serializes it to the requested wire format.
@@ -592,14 +733,14 @@ impl OemBuilder {
         self,
         trajectory: &Trajectory<T, O, R>,
         format: Format,
-    ) -> Result<String, OdmError>
+    ) -> Result<String, OemWriteError>
     where
         T: TimeScale + Copy + Into<DynTimeScale>,
         O: Origin + Copy + Into<DynOrigin>,
         R: ReferenceFrame + Copy + Into<DynFrame>,
     {
-        let oem = self.build(trajectory);
-        lox_odm::write_oem(&oem, format)
+        let oem = self.build(trajectory)?;
+        Ok(lox_odm::write_oem(&oem, format)?)
     }
 
     /// Builds the OEM and writes it to a file in the requested format.
@@ -608,14 +749,14 @@ impl OemBuilder {
         trajectory: &Trajectory<T, O, R>,
         path: impl AsRef<Path>,
         format: Format,
-    ) -> Result<(), OdmError>
+    ) -> Result<(), OemWriteError>
     where
         T: TimeScale + Copy + Into<DynTimeScale>,
         O: Origin + Copy + Into<DynOrigin>,
         R: ReferenceFrame + Copy + Into<DynFrame>,
     {
-        let oem = self.build(trajectory);
-        lox_odm::write_oem_file(&oem, path, format)
+        let oem = self.build(trajectory)?;
+        Ok(lox_odm::write_oem_file(&oem, path, format)?)
     }
 }
 
@@ -631,22 +772,26 @@ where
 {
     /// Converts this trajectory into an OEM using the provided builder
     /// configuration.
-    pub fn to_oem(&self, builder: OemBuilder) -> Oem {
+    pub fn to_oem<P: OffsetProvider>(&self, builder: OemBuilder<P>) -> Result<Oem, OemBuildError> {
         builder.build(self)
     }
 
     /// Builds the OEM and serializes it to the requested wire format.
-    pub fn to_oem_str(&self, builder: OemBuilder, format: Format) -> Result<String, OdmError> {
+    pub fn to_oem_str<P: OffsetProvider>(
+        &self,
+        builder: OemBuilder<P>,
+        format: Format,
+    ) -> Result<String, OemWriteError> {
         builder.write_str(self, format)
     }
 
     /// Builds the OEM and writes it to a file in the requested format.
-    pub fn to_oem_file(
+    pub fn to_oem_file<P: OffsetProvider>(
         &self,
-        builder: OemBuilder,
+        builder: OemBuilder<P>,
         path: impl AsRef<Path>,
         format: Format,
-    ) -> Result<(), OdmError> {
+    ) -> Result<(), OemWriteError> {
         builder.write_file(self, path, format)
     }
 }
@@ -754,6 +899,9 @@ pub enum OmmBuildError {
     /// where this conversion is total.
     #[error("failed to convert true anomaly to mean anomaly: {0}")]
     Anomaly(#[from] AnomalyError),
+    /// An epoch could not be re-expressed in the requested `TIME_SYSTEM`.
+    #[error(transparent)]
+    TimeSystem(#[from] OdmTimeError),
 }
 
 /// Composite error for `OmmBuilder::write_str` / `write_file` and the
@@ -774,8 +922,10 @@ pub enum OmmWriteError {
 
 /// Convert an [`OdmTime`] to a UTC-naive timestamp for `sgp4::Elements`.
 fn omm_epoch_to_naive_utc(epoch: OdmTime) -> Result<chrono::NaiveDateTime, OmmFromOdmError> {
-    let utc_epoch = epoch.in_scale(OdmTimeScale::Utc);
-    // `OdmTime::Utc(_)` is the only variant we expect after `in_scale(Utc)`.
+    let utc_epoch = epoch
+        .try_in_scale(OdmTimeScale::Utc)
+        .map_err(|e| OmmFromOdmError::EpochConversion(e.to_string()))?;
+    // `OdmTime::Utc(_)` is the only variant we expect after `try_in_scale(Utc)`.
     let utc = match utc_epoch {
         OdmTime::Utc(u) => u,
         OdmTime::Time(_) => {
@@ -903,7 +1053,11 @@ impl Sgp4 {
 /// those are SGP4-specific data that a generic [`KeplerianOrbit`] does not
 /// carry. Callers needing an SGP4-tuned OMM with `BSTAR`/`MEAN_MOTION_DOT`
 /// etc. should construct the typed [`Omm`] directly.
-pub struct OmmBuilder {
+///
+/// The builder is generic over an [`OffsetProvider`] used by
+/// [`time_system`](Self::time_system) conversions; see
+/// [`offset_provider`](Self::offset_provider).
+pub struct OmmBuilder<P = DefaultOffsetProvider> {
     originator: String,
     object_name: String,
     object_id: String,
@@ -918,12 +1072,15 @@ pub struct OmmBuilder {
     spacecraft: Option<SpacecraftParameters>,
     user_defined: BTreeMap<String, String>,
     time_system: Option<OdmTimeScale>,
+    provider: P,
 }
 
-impl OmmBuilder {
+impl OmmBuilder<DefaultOffsetProvider> {
     /// Creates a new builder with the three CCSDS-mandatory identification
     /// fields. `MEAN_ELEMENT_THEORY` defaults to `"SGP/SGP4"` and can be
-    /// overridden via [`Self::mean_element_theory`].
+    /// overridden via [`Self::mean_element_theory`]. Uses the
+    /// [`DefaultOffsetProvider`]; call
+    /// [`offset_provider`](Self::offset_provider) to swap it.
     pub fn new(
         originator: impl Into<String>,
         object_name: impl Into<String>,
@@ -944,6 +1101,30 @@ impl OmmBuilder {
             spacecraft: None,
             user_defined: BTreeMap::new(),
             time_system: None,
+            provider: DefaultOffsetProvider,
+        }
+    }
+}
+
+impl<P> OmmBuilder<P> {
+    /// Replaces the [`OffsetProvider`] used by [`time_system`](Self::time_system).
+    pub fn offset_provider<P2>(self, provider: P2) -> OmmBuilder<P2> {
+        OmmBuilder {
+            originator: self.originator,
+            object_name: self.object_name,
+            object_id: self.object_id,
+            creation_date: self.creation_date,
+            message_id: self.message_id,
+            classification: self.classification,
+            header_comments: self.header_comments,
+            metadata_comments: self.metadata_comments,
+            data_comments: self.data_comments,
+            frame_epoch: self.frame_epoch,
+            mean_element_theory: self.mean_element_theory,
+            spacecraft: self.spacecraft,
+            user_defined: self.user_defined,
+            time_system: self.time_system,
+            provider,
         }
     }
 
@@ -1013,15 +1194,19 @@ impl OmmBuilder {
         self.user_defined.insert(k.into(), v.into());
         self
     }
+}
 
+impl<P: OffsetProvider> OmmBuilder<P> {
     /// Builds the [`Omm`] from a [`KeplerianOrbit`].
     ///
     /// # Errors
     ///
-    /// Returns [`OmmBuildError::Anomaly`] if the orbit's true anomaly
-    /// cannot be converted to a mean anomaly — only possible for
-    /// hyperbolic orbits whose true anomaly is outside the asymptote
-    /// limits.
+    /// - [`OmmBuildError::Anomaly`] if the orbit's true anomaly cannot be
+    ///   converted to a mean anomaly — only possible for hyperbolic
+    ///   orbits whose true anomaly is outside the asymptote limits.
+    /// - [`OmmBuildError::TimeSystem`] if a [`time_system`](Self::time_system)
+    ///   override requires an offset that the builder's
+    ///   [`OffsetProvider`] can't resolve for the orbit's epoch.
     pub fn build<T, O, R>(self, orbit: &KeplerianOrbit<T, O, R>) -> Result<Omm, OmmBuildError>
     where
         T: TimeScale + Copy + Into<DynTimeScale>,
@@ -1045,11 +1230,12 @@ impl OmmBuilder {
         };
 
         let raw_epoch = orbit_epoch_to_odm_time(orbit.time());
-        let epoch = apply_time_system(raw_epoch, self.time_system);
+        let epoch = apply_time_system(raw_epoch, self.time_system, &self.provider)?;
         let creation_date = self.creation_date.unwrap_or(epoch);
         let frame_epoch = self
             .frame_epoch
-            .map(|e| apply_time_system(e, self.time_system));
+            .map(|e| apply_time_system(e, self.time_system, &self.provider))
+            .transpose()?;
         let center = OdmCenter::from_wire(orbit.origin().name());
         let frame = OdmFrame::from_wire(&orbit.reference_frame().abbreviation());
 
@@ -1127,19 +1313,23 @@ where
     R: ReferenceFrame + Copy + Into<DynFrame>,
 {
     /// Converts this orbit into an OMM using the provided builder.
-    pub fn to_omm(&self, builder: OmmBuilder) -> Result<Omm, OmmBuildError> {
+    pub fn to_omm<P: OffsetProvider>(&self, builder: OmmBuilder<P>) -> Result<Omm, OmmBuildError> {
         builder.build(self)
     }
 
     /// Builds the OMM and serialises it to the requested wire format.
-    pub fn to_omm_str(&self, builder: OmmBuilder, format: Format) -> Result<String, OmmWriteError> {
+    pub fn to_omm_str<P: OffsetProvider>(
+        &self,
+        builder: OmmBuilder<P>,
+        format: Format,
+    ) -> Result<String, OmmWriteError> {
         builder.write_str(self, format)
     }
 
     /// Builds the OMM and writes it to a file in the requested format.
-    pub fn to_omm_file(
+    pub fn to_omm_file<P: OffsetProvider>(
         &self,
-        builder: OmmBuilder,
+        builder: OmmBuilder<P>,
         path: impl AsRef<Path>,
         format: Format,
     ) -> Result<(), OmmWriteError> {
@@ -1225,8 +1415,36 @@ mod tests {
     use lox_frames::{DynFrame, Icrf};
     use lox_odm::Format;
     use lox_odm::types::common::{OdmCenter, OdmFrame, OdmTime};
+    use lox_time::deltas::TimeDelta;
     use lox_time::time_scales::Tai;
     use lox_time::{Time, time};
+
+    /// Offset provider that errors on every UT1 conversion. Used to
+    /// exercise the [`OdmTimeError::OffsetUnavailable`] path end-to-end
+    /// through the builders.
+    #[derive(Debug, Default)]
+    struct FailingUt1Provider;
+
+    #[derive(Debug)]
+    struct FailingUt1Error;
+
+    impl std::fmt::Display for FailingUt1Error {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("UT1 offset unavailable")
+        }
+    }
+
+    impl std::error::Error for FailingUt1Error {}
+
+    impl OffsetProvider for FailingUt1Provider {
+        type Error = FailingUt1Error;
+        fn tai_to_ut1(&self, _delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+            Err(FailingUt1Error)
+        }
+        fn ut1_to_tai(&self, _delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+            Err(FailingUt1Error)
+        }
+    }
 
     fn sample_cartesian() -> Cartesian {
         Cartesian::new(
@@ -1299,7 +1517,7 @@ mod tests {
     fn to_opm_from_dyn_orbit() {
         let orbit = sample_dyn_orbit();
         let builder = OpmBuilder::new("TEST_ORG", "TEST-SAT", "2024-000A");
-        let opm = orbit.to_opm(builder);
+        let opm = orbit.to_opm(builder).unwrap();
         assert_eq!(opm.metadata.object_name, "TEST-SAT");
         assert_eq!(opm.metadata.object_id, "2024-000A");
         assert_eq!(opm.header.originator, "TEST_ORG");
@@ -1312,7 +1530,7 @@ mod tests {
     fn to_opm_from_static_orbit() {
         let orbit = sample_static_orbit();
         let builder = OpmBuilder::new("STATIC_ORG", "STATIC-SAT", "2024-001A");
-        let opm = orbit.to_opm(builder);
+        let opm = orbit.to_opm(builder).unwrap();
         assert_eq!(opm.metadata.center, OdmCenter::Known(DynOrigin::Earth));
         assert_eq!(opm.metadata.frame, OdmFrame::Known(DynFrame::Icrf));
         assert_eq!(opm.state, sample_cartesian());
@@ -1332,7 +1550,7 @@ mod tests {
     fn from_opm_reconstructs_dyn_orbit() {
         let orbit = sample_dyn_orbit();
         let builder = OpmBuilder::new("TEST_ORG", "TEST-SAT", "2024-000A");
-        let opm = orbit.to_opm(builder);
+        let opm = orbit.to_opm(builder).unwrap();
         let reconstructed = DynCartesianOrbit::from_opm(&opm).unwrap();
         assert_eq!(reconstructed.origin(), DynOrigin::Earth);
         assert_eq!(reconstructed.reference_frame(), DynFrame::Icrf);
@@ -1346,6 +1564,35 @@ mod tests {
         let kvn = orbit.to_opm_str(builder, Format::Kvn).unwrap();
         let reconstructed = DynCartesianOrbit::from_opm_str(&kvn).unwrap();
         assert_eq!(reconstructed.state(), orbit.state());
+    }
+
+    #[test]
+    fn opm_builder_propagates_offset_provider_failure() {
+        let orbit = sample_dyn_orbit();
+        let builder = OpmBuilder::new("TEST", "SAT", "2024-000A")
+            .offset_provider(FailingUt1Provider)
+            .time_system(OdmTimeScale::Ut1);
+        let err = orbit.to_opm(builder).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                OpmBuildError::TimeSystem(OdmTimeError::OffsetUnavailable { to: "UT1", .. })
+            ),
+            "expected TimeSystem(OffsetUnavailable {{ to: UT1, .. }}), got {err:?}"
+        );
+    }
+
+    #[test]
+    fn opm_builder_write_str_propagates_offset_provider_failure() {
+        let orbit = sample_dyn_orbit();
+        let builder = OpmBuilder::new("TEST", "SAT", "2024-000A")
+            .offset_provider(FailingUt1Provider)
+            .time_system(OdmTimeScale::Ut1);
+        let err = orbit.to_opm_str(builder, Format::Kvn).unwrap_err();
+        assert!(matches!(
+            err,
+            OpmWriteError::Build(OpmBuildError::TimeSystem(_))
+        ));
     }
 
     #[test]
@@ -1391,7 +1638,7 @@ mod tests {
     fn to_oem_from_dyn_trajectory() {
         let traj = sample_dyn_trajectory();
         let builder = OemBuilder::new("TEST_ORG", "TEST-SAT", "2024-000A");
-        let oem = traj.to_oem(builder);
+        let oem = traj.to_oem(builder).unwrap();
         assert_eq!(oem.segments.len(), 1);
         let seg = &oem.segments[0];
         assert_eq!(seg.metadata.center, OdmCenter::Known(DynOrigin::Earth));
@@ -1403,11 +1650,24 @@ mod tests {
     fn from_oem_reconstructs_dyn_trajectory() {
         let traj = sample_dyn_trajectory();
         let builder = OemBuilder::new("TEST_ORG", "TEST-SAT", "2024-000A");
-        let oem = traj.to_oem(builder);
+        let oem = traj.to_oem(builder).unwrap();
         let reconstructed = DynTrajectory::from_oem(&oem).unwrap();
         assert_eq!(reconstructed.origin(), DynOrigin::Earth);
         assert_eq!(reconstructed.reference_frame(), DynFrame::Icrf);
         assert_eq!(reconstructed.states().len(), traj.states().len());
+    }
+
+    #[test]
+    fn oem_builder_propagates_offset_provider_failure() {
+        let traj = sample_dyn_trajectory();
+        let builder = OemBuilder::new("TEST", "SAT", "2024-000A")
+            .offset_provider(FailingUt1Provider)
+            .time_system(OdmTimeScale::Ut1);
+        let err = traj.to_oem(builder).unwrap_err();
+        assert!(matches!(
+            err,
+            OemBuildError::TimeSystem(OdmTimeError::OffsetUnavailable { to: "UT1", .. })
+        ));
     }
 
     #[test]
@@ -1454,7 +1714,7 @@ mod tests {
             .interpolation("HERMITE", 7)
             .useable_start_time(start_time)
             .useable_stop_time(stop_time);
-        let oem = traj.to_oem(builder);
+        let oem = traj.to_oem(builder).unwrap();
         let seg = &oem.segments[0];
         assert_eq!(seg.metadata.interpolation.as_deref(), Some("HERMITE"));
         assert_eq!(seg.metadata.interpolation_degree, Some(7));
