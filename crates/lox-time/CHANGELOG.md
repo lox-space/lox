@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.24](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.23...lox-time-v0.1.0-alpha.24) - 2026-05-16
+
+### Added
+
+- *(lox-time)* add GPS time scale
+
+### Fixed
+
+- *(lox-odm)* fix offset handling
+
 ## [0.1.0-alpha.23](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.22...lox-time-v0.1.0-alpha.23) - 2026-05-11
 
 ### Fixed
