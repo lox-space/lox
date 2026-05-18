@@ -133,10 +133,20 @@ impl Subsecond {
         let rem = value % 1.0;
         // Ensure remainder is in [0, 1) range (Rust's % can return negative values)
         let rem = if rem < 0.0 { rem + 1.0 } else { rem };
-        // Convert to attoseconds with rounding to handle floating-point precision issues
-        let attoseconds =
-            crate::math::float::round(rem / crate::f64::consts::SECONDS_PER_ATTOSECOND) as i64;
-        Some(Self::from_attoseconds(attoseconds))
+        // Convert to attoseconds with rounding (half away from zero) to handle
+        // floating-point precision issues. Inlined const-compatible round; the
+        // scaled value is bounded by 1e18, well within `i64` range.
+        let scaled = rem / crate::f64::consts::SECONDS_PER_ATTOSECOND;
+        let i = scaled as i64 as f64;
+        let frac = scaled - i;
+        let rounded = if frac >= 0.5 {
+            i + 1.0
+        } else if frac <= -0.5 {
+            i - 1.0
+        } else {
+            i
+        };
+        Some(Self::from_attoseconds(rounded as i64))
     }
 
     /// Sets the millisecond component (10⁻³ seconds).

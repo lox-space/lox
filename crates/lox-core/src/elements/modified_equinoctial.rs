@@ -15,11 +15,9 @@
 use crate::anomalies::AnomalyError;
 use crate::coords::Cartesian;
 use crate::elements::keplerian::{GravitationalParameter, Keplerian, KeplerianError};
+use crate::math::float::{atan, atan2, cos, sin, sqrt, tan};
 use crate::units::{Angle, AngleUnits, Distance};
 use glam::DVec3;
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use num_traits::Float;
 use thiserror::Error;
 
 /// Modified Equinoctial Elements (MEE).
@@ -92,8 +90,8 @@ impl ModifiedEquinoctial {
 
         let r_orb = DVec3::new(r_mag * cos_l, r_mag * sin_l, 0.0);
         let v_orb = DVec3::new(
-            -(mu_f64 / p).sqrt() * (sin_l + self.g),
-            (mu_f64 / p).sqrt() * (cos_l + self.f),
+            -sqrt(mu_f64 / p) * (sin_l + self.g),
+            sqrt(mu_f64 / p) * (cos_l + self.f),
             0.0,
         );
 
@@ -106,10 +104,10 @@ impl ModifiedEquinoctial {
     /// Converts modified equinoctial elements back to Keplerian.
     pub fn to_keplerian(&self) -> Result<Keplerian, ModifiedEquinoctialError> {
         let e = self.eccentricity();
-        let pomega = self.g.atan2(self.f); // ω + Ω
-        let half_i_tan = (self.h * self.h + self.k * self.k).sqrt();
-        let i = 2.0 * half_i_tan.atan();
-        let big_omega = self.k.atan2(self.h);
+        let pomega = atan2(self.g, self.f); // ω + Ω
+        let half_i_tan = sqrt(self.h * self.h + self.k * self.k);
+        let i = 2.0 * atan(half_i_tan);
+        let big_omega = atan2(self.k, self.h);
 
         let omega = pomega - big_omega;
         let nu = self.l.as_f64() - pomega;
@@ -158,12 +156,12 @@ impl ModifiedEquinoctial {
 
     /// Returns the eccentricity e = √(f² + g²).
     pub fn eccentricity(&self) -> f64 {
-        (self.f * self.f + self.g * self.g).sqrt()
+        sqrt(self.f * self.f + self.g * self.g)
     }
 
     /// Returns the inclination i = 2·atan(√(h² + k²)) in radians.
     pub fn inclination(&self) -> f64 {
-        2.0 * (self.h * self.h + self.k * self.k).sqrt().atan()
+        2.0 * atan(sqrt(self.h * self.h + self.k * self.k))
     }
 }
 
@@ -220,11 +218,11 @@ impl Keplerian {
         let p_val = self.semi_parameter();
         let pomega = omega + big_omega; // longitude of periapsis
 
-        let f = e * pomega.cos();
-        let g = e * pomega.sin();
-        let half_i_tan = (i / 2.0).tan();
-        let h = half_i_tan * big_omega.cos();
-        let k = half_i_tan * big_omega.sin();
+        let f = e * cos(pomega);
+        let g = e * sin(pomega);
+        let half_i_tan = tan(i / 2.0);
+        let h = half_i_tan * cos(big_omega);
+        let k = half_i_tan * sin(big_omega);
         let l = Angle::new(pomega + nu);
 
         ModifiedEquinoctial {

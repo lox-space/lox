@@ -6,10 +6,9 @@
 
 use alloc::boxed::Box;
 use lox_test_utils::approx_eq;
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use num_traits::Float;
 use thiserror::Error;
+
+use crate::math::float::{abs, powi, sqrt};
 
 /// Error returned by root-finding algorithms.
 #[derive(Debug, Error)]
@@ -104,7 +103,7 @@ impl Default for Steffensen {
     fn default() -> Self {
         Self {
             max_iter: 1000,
-            tolerance: f64::EPSILON.sqrt(),
+            tolerance: sqrt(f64::EPSILON),
         }
     }
 }
@@ -118,7 +117,7 @@ where
         for _ in 0..self.max_iter {
             let f1 = p0 + f.call(p0).map_err(RootFinderError::Callback)?;
             let f2 = f1 + f.call(f1).map_err(RootFinderError::Callback)?;
-            let p = p0 - (f1 - p0).powi(2) / (f2 - 2.0 * f1 + p0);
+            let p = p0 - powi(f1 - p0, 2) / (f2 - 2.0 * f1 + p0);
             if approx_eq!(p, p0, atol <= self.tolerance) {
                 return Ok(p);
             }
@@ -139,7 +138,7 @@ impl Default for Newton {
     fn default() -> Self {
         Self {
             max_iter: 50,
-            tolerance: f64::EPSILON.sqrt(),
+            tolerance: sqrt(f64::EPSILON),
         }
     }
 }
@@ -182,7 +181,7 @@ impl Default for Brent {
         Self {
             max_iter: 100,
             abs_tol: 1e-6,
-            rel_tol: f64::EPSILON.sqrt(),
+            rel_tol: sqrt(f64::EPSILON),
         }
     }
 }
@@ -221,7 +220,7 @@ where
                 scur = xcur - xpre;
             }
 
-            if fblk.abs() < fcur.abs() {
+            if abs(fblk) < abs(fcur) {
                 xpre = xcur;
                 xcur = xblk;
                 xblk = xpre;
@@ -230,14 +229,14 @@ where
                 fblk = fpre;
             }
 
-            let delta = (self.abs_tol + self.rel_tol * xcur.abs()) / 2.0;
+            let delta = (self.abs_tol + self.rel_tol * abs(xcur)) / 2.0;
             let sbis = (xblk - xcur) / 2.0;
 
-            if approx_eq!(fcur, 0.0, atol <= self.abs_tol) || sbis.abs() < delta {
+            if approx_eq!(fcur, 0.0, atol <= self.abs_tol) || abs(sbis) < delta {
                 return Ok(xcur);
             }
 
-            if spre.abs() > delta && fcur.abs() < fpre.abs() {
+            if abs(spre) > delta && abs(fcur) < abs(fpre) {
                 let stry = if approx_eq!(xpre, xblk, rtol <= self.rel_tol) {
                     // interpolate
                     -fcur * (xcur - xpre) / (fcur - fpre)
@@ -248,7 +247,7 @@ where
                     -fcur * (fblk * dblk - fpre * dpre) / (dblk * dpre * (fblk - fpre))
                 };
 
-                if 2.0 * stry.abs() < spre.abs().min(3.0 * sbis.abs() - delta) {
+                if 2.0 * abs(stry) < abs(spre).min(3.0 * abs(sbis) - delta) {
                     spre = scur;
                     scur = stry;
                 } else {
@@ -265,7 +264,7 @@ where
             xpre = xcur;
             fpre = fcur;
 
-            if scur.abs() > delta {
+            if abs(scur) > delta {
                 xcur += scur
             } else {
                 xcur += if sbis > 0.0 { delta } else { -delta };
@@ -290,7 +289,7 @@ impl Default for Secant {
     fn default() -> Self {
         Self {
             max_iter: 100,
-            rel_tol: f64::EPSILON.sqrt(),
+            rel_tol: sqrt(f64::EPSILON),
             abs_tol: 1e-6,
         }
     }
@@ -306,7 +305,7 @@ where
         let mut p1 = x1;
         let mut q0 = f.call(p0).map_err(RootFinderError::Callback)?;
         let mut q1 = f.call(p1).map_err(RootFinderError::Callback)?;
-        if q1.abs() < q0.abs() {
+        if abs(q1) < abs(q0) {
             core::mem::swap(&mut p0, &mut p1);
             core::mem::swap(&mut q0, &mut q1);
         }
@@ -317,7 +316,7 @@ where
                 }
                 return Ok((p1 + p0) / 2.0);
             }
-            let p = if q1.abs() > q0.abs() {
+            let p = if abs(q1) > abs(q0) {
                 (-q0 / q1 * p1 + p0) / (1.0 - q0 / q1)
             } else {
                 (-q1 / q0 * p0 + p1) / (1.0 - q1 / q0)
@@ -353,6 +352,7 @@ mod tests {
     use lox_test_utils::assert_approx_eq;
 
     use super::*;
+    use crate::math::float::{cos, sin};
 
     type Result = core::result::Result<f64, BoxedError>;
 
@@ -361,8 +361,8 @@ mod tests {
         fn mean_to_ecc(mean: f64, eccentricity: f64) -> core::result::Result<f64, RootFinderError> {
             let newton = Newton::default();
             newton.find_with_derivative(
-                |e: f64| -> Result { Ok(e - eccentricity * e.sin() - mean) },
-                |e: f64| -> Result { Ok(1.0 - eccentricity * e.cos()) },
+                |e: f64| -> Result { Ok(e - eccentricity * sin(e) - mean) },
+                |e: f64| -> Result { Ok(1.0 - eccentricity * cos(e)) },
                 mean,
             )
         }
@@ -375,8 +375,8 @@ mod tests {
         let newton = Newton::default();
         let act = newton
             .find_with_derivative(
-                |x: f64| -> Result { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
-                |x: f64| -> Result { Ok(2.0 * x.powi(2) + 8.0 * x) },
+                |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) },
+                |x: f64| -> Result { Ok(2.0 * powi(x, 2) + 8.0 * x) },
                 1.5,
             )
             .expect("should converge");
@@ -388,7 +388,7 @@ mod tests {
         let steffensen = Steffensen::default();
         let act = steffensen
             .find(
-                |x: f64| -> Result { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
+                |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) },
                 1.5,
             )
             .expect("should converge");
@@ -400,7 +400,7 @@ mod tests {
         let brent = Brent::default();
         let act = brent
             .find_in_bracket(
-                |x: f64| -> Result { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
+                |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) },
                 (1.0, 1.5),
             )
             .expect("should converge");
@@ -412,7 +412,7 @@ mod tests {
         let secant = Secant::default();
         let act = secant
             .find_in_bracket(
-                |x: f64| -> Result { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
+                |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) },
                 (1.0, 1.5),
             )
             .expect("should converge");
@@ -420,7 +420,7 @@ mod tests {
 
         let act = secant
             .find(
-                |x: f64| -> Result { Ok(x.powi(3) + 4.0 * x.powi(2) - 10.0) },
+                |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) },
                 1.0,
             )
             .expect("should converge");

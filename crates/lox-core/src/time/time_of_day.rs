@@ -18,13 +18,9 @@ use alloc::string::String;
 use core::cmp::Ordering;
 use core::fmt::Display;
 use core::str::FromStr;
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use num_traits::Float;
 
 use crate::units::Angle;
 use nom::{Parser, combinator::all_consuming};
-use num_traits::ToPrimitive;
 use thiserror::Error;
 
 use super::iso;
@@ -221,8 +217,8 @@ impl TimeOfDay {
         if !(0.0..86401.0).contains(&seconds) {
             return Err(TimeOfDayError::InvalidSeconds(InvalidSeconds(seconds)));
         }
-        let second = seconds.trunc() as u8;
-        let fraction = seconds.fract();
+        let second = crate::math::float::trunc(seconds) as u8;
+        let fraction = crate::math::float::fract(seconds);
         let subsecond = Subsecond::from_f64(fraction)
             .ok_or(TimeOfDayError::InvalidSeconds(InvalidSeconds(seconds)))?;
         Ok(Self::new(hour, minute, second)?.with_subsecond(subsecond))
@@ -254,12 +250,8 @@ impl TimeOfDay {
         if second_of_day.is_negative() {
             second_of_day += SECONDS_PER_DAY;
         }
-        Self::from_second_of_day(
-            second_of_day
-                .to_u64()
-                .unwrap_or_else(|| unreachable!("second of day should be positive")),
-        )
-        .unwrap_or_else(|_| unreachable!("second of day should be in range"))
+        Self::from_second_of_day(second_of_day as u64)
+            .unwrap_or_else(|_| unreachable!("second of day should be in range"))
     }
 
     /// Sets the [TimeOfDay]'s subsecond component.
