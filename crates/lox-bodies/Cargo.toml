@@ -18,12 +18,15 @@ categories.workspace = true
 readme = "README.md"
 
 [dependencies]
-lox-core = { workspace = true, features = ["std"] }
+lox-core = { workspace = true, default-features = false }
 
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [features]
+default = ["std"]
+std = ["lox-core/std", "serde?/std"]
+libm = ["lox-core/libm"]
 serde = ["dep:serde", "lox-core/serde"]
 
 [dev-dependencies]
