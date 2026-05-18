@@ -17,6 +17,8 @@ use core::fmt::Display;
 use core::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use lox_test_utils::approx_eq::ApproxEq;
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
 
 use crate::f64;
 use crate::i64::consts::{

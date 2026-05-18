@@ -5,6 +5,8 @@
 //! Bracketed optimization algorithms.
 
 use lox_test_utils::approx_eq;
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
 
 use super::roots::{Callback, RootFinderError};
 

@@ -5,6 +5,8 @@
 //! Root-finding algorithms: Steffensen, Newton, Brent, and Secant methods.
 
 use lox_test_utils::approx_eq;
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
 use thiserror::Error;
 
 /// Error returned by root-finding algorithms.

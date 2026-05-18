@@ -20,6 +20,8 @@
 //! diverges. For retrograde orbits, Type II equinoctial elements using
 //! cot(i/2) should be used instead (not yet implemented).
 
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
 use thiserror::Error;
 
 use crate::anomalies::AnomalyError;
