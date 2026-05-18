@@ -14,9 +14,11 @@
 extern crate alloc;
 
 pub use crate::dynamic::DynOrigin;
+use alloc::borrow::ToOwned;
 use alloc::string::String;
 use core::fmt::{Display, Formatter};
 pub use generated::*;
+use lox_core::coords::Ellipsoid;
 use lox_core::elements::GravitationalParameter;
 use lox_core::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 use lox_core::math::float::{cos, powi, sin};
@@ -99,6 +101,14 @@ pub trait Spheroid: TriaxialEllipsoid {
     fn flattening(&self) -> f64 {
         flattening(self.equatorial_radius(), self.polar_radius())
     }
+
+    /// Returns the ellipsoid for this body's spheroid model.
+    ///
+    /// `Spheroid` invariants guarantee a valid ellipsoid; uses the
+    /// panicking [`Ellipsoid::new`].
+    fn ellipsoid(&self) -> Ellipsoid {
+        Ellipsoid::new(self.equatorial_radius(), self.flattening())
+    }
 }
 
 /// Fallible accessor for the spheroid properties of a body.
@@ -112,6 +122,17 @@ pub trait TrySpheroid: TryTriaxialEllipsoid {
     /// Returns the flattening factor, or an error if undefined.
     fn try_flattening(&self) -> Result<f64, UndefinedOriginPropertyError> {
         self.try_radii().map(|radii| flattening(radii.0, radii.2))
+    }
+
+    /// Returns the ellipsoid for this body's spheroid model, or an error
+    /// if any underlying property is undefined.
+    fn try_ellipsoid(&self) -> Result<Ellipsoid, UndefinedOriginPropertyError> {
+        let r_eq = self.try_equatorial_radius()?;
+        let f = self.try_flattening()?;
+        Ellipsoid::try_new(r_eq, f).map_err(|_| UndefinedOriginPropertyError {
+            origin: self.name().to_owned(),
+            prop: "ellipsoid".to_owned(),
+        })
     }
 }
 

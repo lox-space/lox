@@ -1,27 +1,25 @@
 // SPDX-FileCopyrightText: 2025 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2013-2021 NumFOCUS Foundation
 //
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0 AND LicenseRef-ERFA
 
 //! Coordinate types for representing positions, velocities, and trajectories.
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use core::f64::consts::{FRAC_PI_2, PI, TAU};
+use core::f64::consts::{FRAC_PI_2, TAU};
 use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use glam::{DMat3, DVec3};
 use lox_test_utils::ApproxEq;
 
-use crate::math::float::{abs, asin, atan2, cos, powi, sin, sqrt, tan};
+use crate::math::float::{abs, atan2, powi, sin_cos, sqrt};
 use thiserror::Error;
 
 use crate::{
-    math::{
-        roots::{FindRoot, RootFinderError, Secant},
-        series::{InterpolationType, Series},
-    },
+    math::series::{InterpolationType, Series},
     time::deltas::TimeDelta,
-    units::{Angle, Distance, Velocity},
+    units::{Angle, AngularRate, Distance, Velocity},
 };
 
 /// Azimuth-elevation pair for representing direction in a topocentric frame.
@@ -105,6 +103,81 @@ impl AzElBuilder {
     }
 }
 
+/// Reference ellipsoid (rotational, oblate) defined by its equatorial
+/// radius and flattening. Construction validates that `equatorial_radius
+/// > 0` and `flattening ∈ [0, 1)`.
+#[derive(Copy, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Ellipsoid {
+    equatorial_radius: Distance,
+    flattening: f64,
+}
+
+impl Ellipsoid {
+    /// Creates an `Ellipsoid` from equatorial radius and flattening.
+    ///
+    /// `const fn` for compile-time use (e.g., associated constants).
+    /// **Panics** if `equatorial_radius <= 0` or `flattening` is not in
+    /// `[0, 1)`. Use [`Ellipsoid::try_new`] for runtime values that may
+    /// not satisfy the invariants.
+    pub const fn new(equatorial_radius: Distance, flattening: f64) -> Self {
+        assert!(
+            equatorial_radius.to_meters() > 0.0,
+            "equatorial radius must be > 0"
+        );
+        assert!(
+            flattening >= 0.0 && flattening < 1.0,
+            "flattening must be in [0, 1)"
+        );
+        Self {
+            equatorial_radius,
+            flattening,
+        }
+    }
+
+    /// Fallible constructor for runtime values.
+    pub fn try_new(equatorial_radius: Distance, flattening: f64) -> Result<Self, EllipsoidError> {
+        if equatorial_radius.to_meters() <= 0.0 {
+            return Err(EllipsoidError::InvalidEquatorialRadius(equatorial_radius));
+        }
+        if !(0.0..1.0).contains(&flattening) {
+            return Err(EllipsoidError::InvalidFlattening(flattening));
+        }
+        Ok(Self {
+            equatorial_radius,
+            flattening,
+        })
+    }
+
+    /// Returns the equatorial radius.
+    pub const fn equatorial_radius(&self) -> Distance {
+        self.equatorial_radius
+    }
+
+    /// Returns the flattening factor.
+    pub const fn flattening(&self) -> f64 {
+        self.flattening
+    }
+
+    /// WGS84 reference ellipsoid (`a = 6378137.0 m`, `f ≈ 1/298.257223563`).
+    pub const WGS84: Self = Self::new(Distance::meters(6378137.0), 1.0 / 298.257223563);
+    /// GRS80 reference ellipsoid (`a = 6378137.0 m`, `f ≈ 1/298.257222101`).
+    pub const GRS80: Self = Self::new(Distance::meters(6378137.0), 1.0 / 298.257222101);
+    /// WGS72 reference ellipsoid (`a = 6378135.0 m`, `f ≈ 1/298.26`).
+    pub const WGS72: Self = Self::new(Distance::meters(6378135.0), 1.0 / 298.26);
+}
+
+/// Error returned when constructing an [`Ellipsoid`] with invalid parameters.
+#[derive(Copy, Clone, Debug, Error, PartialEq)]
+pub enum EllipsoidError {
+    /// Equatorial radius must be strictly positive.
+    #[error("equatorial radius must be > 0, got {0}")]
+    InvalidEquatorialRadius(Distance),
+    /// Flattening must be in `[0, 1)`.
+    #[error("flattening must be in [0, 1), got {0}")]
+    InvalidFlattening(f64),
+}
+
 /// Geodetic coordinates: longitude, latitude, and altitude.
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -140,13 +213,19 @@ impl LonLatAlt {
         self.2
     }
 
-    /// Converts geodetic coordinates (LLA) to body-fixed Cartesian position (meters).
-    pub fn to_body_fixed(&self, equatorial_radius: Distance, flattening: f64) -> DVec3 {
+    /// Converts geodetic coordinates (LLA) to body-fixed Cartesian position
+    /// in meters.
+    ///
+    /// # References
+    ///
+    /// - ERFA [`gd2gce`](https://github.com/liberfa/erfa/blob/master/src/gd2gce.c)
+    pub fn to_body_fixed(&self, ellipsoid: &Ellipsoid) -> DVec3 {
         let alt = self.alt().to_meters();
         let (lon_sin, lon_cos) = self.lon().sin_cos();
         let (lat_sin, lat_cos) = self.lat().sin_cos();
-        let r_eq = equatorial_radius.to_meters();
-        let e = sqrt(2.0 * flattening - powi(flattening, 2));
+        let r_eq = ellipsoid.equatorial_radius().to_meters();
+        let f = ellipsoid.flattening();
+        let e = sqrt(2.0 * f - powi(f, 2));
         let c = r_eq / sqrt(1.0 - powi(e, 2) * powi(lat_sin, 2));
         let s = c * (1.0 - powi(e, 2));
         let r_delta = (c + alt) * lat_cos;
@@ -156,69 +235,90 @@ impl LonLatAlt {
 
     /// Converts a body-fixed Cartesian position (meters) to geodetic coordinates (LLA).
     ///
-    /// Returns [`FromBodyFixedError::ZeroPosition`] if the position vector has
-    /// zero length. Polar positions (where the equatorial projection is zero)
-    /// are handled as a special case without root-finding.
-    pub fn from_body_fixed(
-        pos: DVec3,
-        equatorial_radius: Distance,
-        flattening: f64,
-    ) -> Result<Self, FromBodyFixedError> {
-        let r_eq = equatorial_radius.to_meters();
-        let rm = pos.length();
+    /// # Errors
+    ///
+    /// - [`FromBodyFixedError::ZeroPosition`] if `pos` is the zero vector.
+    ///
+    /// # References
+    ///
+    /// - ERFA [`gc2gde`](https://github.com/liberfa/erfa/blob/master/src/gc2gde.c)
+    pub fn from_body_fixed(pos: DVec3, ellipsoid: &Ellipsoid) -> Result<Self, FromBodyFixedError> {
+        let f = ellipsoid.flattening();
+        let a = ellipsoid.equatorial_radius().to_meters();
 
-        if rm < 1e-10 {
+        // Only exact zero is rejected. Small but non-zero positions are
+        // routed to the polar case by ERFA `gc2gde`'s `p² > aeps2` test
+        // below; the Halley iteration is numerically stable there. This
+        // matches ERFA; the previous secant-based implementation used a
+        // 1e-10 m tolerance, which is intentionally relaxed.
+        if pos.length_squared() == 0.0 {
             return Err(FromBodyFixedError::ZeroPosition);
         }
 
-        let r_delta = sqrt(powi(pos.x, 2) + powi(pos.y, 2));
+        // Functions of ellipsoid parameters.
+        let aeps2 = a * a * 1e-32;
+        let e2 = (2.0 - f) * f;
+        let e4t = e2 * e2 * 1.5;
+        // f ∈ [0, 1) implies e2 < 1 implies ec2 > 0; no guard needed.
+        let ec2 = 1.0 - e2;
+        let ec = sqrt(ec2);
+        let b = a * ec;
 
-        // Polar special case: r_delta ≈ 0 means we're on or near a pole.
-        // The iterative solver divides by r_delta so we handle this directly.
-        if r_delta < 1e-10 {
-            let lat = if pos.z >= 0.0 { FRAC_PI_2 } else { -FRAC_PI_2 };
-            let e = sqrt(2.0 * flattening - powi(flattening, 2));
-            let r_polar = r_eq * sqrt(1.0 - powi(e, 2));
-            let alt = abs(pos.z) - r_polar;
-            return Ok(LonLatAlt(
-                Angle::radians(0.0),
-                Angle::radians(lat),
-                Distance::meters(alt),
-            ));
+        let x = pos.x;
+        let y = pos.y;
+        let z = pos.z;
+        let p2 = x * x + y * y;
+
+        // Longitude.
+        let lon = if p2 > 0.0 { atan2(y, x) } else { 0.0 };
+
+        // Unsigned z.
+        let absz = abs(z);
+
+        // Latitude and height.
+        let (mut phi, height) = if p2 > aeps2 {
+            // General case.
+            let p = sqrt(p2);
+            let s0 = absz / a;
+            let pn = p / a;
+            let zc = ec * s0;
+
+            // Newton correction factors.
+            let c0 = ec * pn;
+            let c02 = c0 * c0;
+            let c03 = c02 * c0;
+            let s02 = s0 * s0;
+            let s03 = s02 * s0;
+            let a02 = c02 + s02;
+            let a0 = sqrt(a02);
+            let a03 = a02 * a0;
+            let d0 = zc * a03 + e2 * s03;
+            let f0 = pn * a03 - e2 * c03;
+
+            // Halley correction factor.
+            let b0 = e4t * s02 * c02 * pn * (a0 - ec);
+            let s1 = d0 * f0 - b0 * s0;
+            let cc = ec * (f0 * f0 - b0 * c0);
+
+            let phi = atan2(s1, cc);
+            let s12 = s1 * s1;
+            let cc2 = cc * cc;
+            let height = (p * cc + absz * s1 - a * sqrt(ec2 * s12 + cc2)) / sqrt(s12 + cc2);
+            (phi, height)
+        } else {
+            // Polar case.
+            (FRAC_PI_2, absz - b)
+        };
+
+        // Restore sign of latitude.
+        if z < 0.0 {
+            phi = -phi;
         }
-
-        let mut lon = atan2(pos.y, pos.x);
-
-        if abs(lon) >= PI {
-            if lon < 0.0 {
-                lon += TAU;
-            } else {
-                lon -= TAU;
-            }
-        }
-
-        let delta = asin(pos.z / rm);
-
-        let root_finder = Secant::default();
-
-        let f = flattening;
-        let lat = root_finder.find(
-            |lat: f64| {
-                let e = sqrt(2.0 * f - powi(f, 2));
-                let c = r_eq / sqrt(1.0 - powi(e, 2) * powi(sin(lat), 2));
-                Ok(pos.z + c * powi(e, 2) * sin(lat)).map(|v| v / r_delta - tan(lat))
-            },
-            delta,
-        )?;
-
-        let e = sqrt(2.0 * f - powi(f, 2));
-        let c = r_eq / sqrt(1.0 - powi(e, 2) * powi(sin(lat), 2));
-        let alt = r_delta / cos(lat) - c;
 
         Ok(LonLatAlt(
             Angle::radians(lon),
-            Angle::radians(lat),
-            Distance::meters(alt),
+            Angle::radians(phi),
+            Distance::meters(height),
         ))
     }
 
@@ -244,15 +344,12 @@ pub enum LonLatAltError {
     InvalidAltitude(Distance),
 }
 
-/// Error returned when converting from body-fixed coordinates to geodetic.
-#[derive(Debug, Error)]
+/// Error returned by [`LonLatAlt::from_body_fixed`].
+#[derive(Copy, Clone, Debug, Error, PartialEq)]
 pub enum FromBodyFixedError {
     /// The position vector has zero length.
     #[error("position vector has zero length")]
     ZeroPosition,
-    /// The root finder failed to converge.
-    #[error(transparent)]
-    RootFinder(#[from] RootFinderError),
 }
 
 /// Builder for constructing validated [`LonLatAlt`] instances.
@@ -312,6 +409,231 @@ impl LonLatAltBuilder {
     /// Builds the [`LonLatAlt`], returning an error if any value is invalid.
     pub fn build(&self) -> Result<LonLatAlt, LonLatAltError> {
         Ok(LonLatAlt(self.longitude?, self.latitude?, self.altitude?))
+    }
+}
+
+/// Spherical coordinates: longitude (θ), latitude (φ), and radius.
+///
+/// `lon` is not auto-normalized (callers choose whether to work in
+/// `[-π, π]` or `[0, 2π]`). `lat` is expected in `[-π/2, π/2]` but is not
+/// enforced.
+#[derive(Copy, Clone, Debug, Default, PartialEq, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Spherical {
+    lon: Angle,
+    lat: Angle,
+    r: Distance,
+}
+
+impl Spherical {
+    /// Creates new spherical coordinates.
+    pub const fn new(lon: Angle, lat: Angle, r: Distance) -> Self {
+        Self { lon, lat, r }
+    }
+
+    /// Returns the longitude (θ).
+    pub fn lon(&self) -> Angle {
+        self.lon
+    }
+
+    /// Returns the latitude (φ).
+    pub fn lat(&self) -> Angle {
+        self.lat
+    }
+
+    /// Returns the radius.
+    pub fn r(&self) -> Distance {
+        self.r
+    }
+
+    /// Converts spherical direction (θ, φ) to a unit Cartesian vector.
+    /// `r` is ignored.
+    ///
+    /// # References
+    ///
+    /// - ERFA [`s2c`](https://github.com/liberfa/erfa/blob/master/src/s2c.c)
+    pub fn to_unit_vector(&self) -> DVec3 {
+        let (sin_lat, cos_lat) = self.lat.sin_cos();
+        let (sin_lon, cos_lon) = self.lon.sin_cos();
+        DVec3::new(cos_lon * cos_lat, sin_lon * cos_lat, sin_lat)
+    }
+
+    /// Converts spherical (θ, φ, r) to a Cartesian position vector in
+    /// meters (`r * to_unit_vector()`).
+    ///
+    /// # References
+    ///
+    /// - ERFA [`s2p`](https://github.com/liberfa/erfa/blob/master/src/s2p.c)
+    pub fn to_cartesian(&self) -> DVec3 {
+        self.to_unit_vector() * self.r.to_meters()
+    }
+
+    /// Converts a Cartesian position vector to spherical (θ, φ, r).
+    ///
+    /// At the origin returns `(0, 0, 0)`. On the polar axis (`x=y=0`)
+    /// returns `lon = 0` and `lat = ±π/2`.
+    ///
+    /// # References
+    ///
+    /// - ERFA [`p2s`](https://github.com/liberfa/erfa/blob/master/src/p2s.c)
+    pub fn from_cartesian(pos: DVec3) -> Self {
+        let xy2 = pos.x * pos.x + pos.y * pos.y;
+        let lon = if xy2 == 0.0 { 0.0 } else { atan2(pos.y, pos.x) };
+        let lat = if xy2 == 0.0 && pos.z == 0.0 {
+            0.0
+        } else {
+            atan2(pos.z, sqrt(xy2))
+        };
+        let r = sqrt(xy2 + pos.z * pos.z);
+        Self {
+            lon: Angle::radians(lon),
+            lat: Angle::radians(lat),
+            r: Distance::meters(r),
+        }
+    }
+}
+
+/// Spherical state: position in spherical coordinates and its first
+/// time derivative.
+#[derive(Copy, Clone, Debug, Default, PartialEq, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct SphericalState {
+    pos: Spherical,
+    lon_dot: AngularRate,
+    lat_dot: AngularRate,
+    r_dot: Velocity,
+}
+
+impl SphericalState {
+    /// Creates a new spherical state.
+    pub const fn new(
+        pos: Spherical,
+        lon_dot: AngularRate,
+        lat_dot: AngularRate,
+        r_dot: Velocity,
+    ) -> Self {
+        Self {
+            pos,
+            lon_dot,
+            lat_dot,
+            r_dot,
+        }
+    }
+
+    /// Returns the spherical position component.
+    pub fn position(&self) -> Spherical {
+        self.pos
+    }
+
+    /// Returns the rate of change of longitude.
+    pub fn lon_dot(&self) -> AngularRate {
+        self.lon_dot
+    }
+
+    /// Returns the rate of change of latitude.
+    pub fn lat_dot(&self) -> AngularRate {
+        self.lat_dot
+    }
+
+    /// Returns the radial velocity (rate of change of radius).
+    pub fn r_dot(&self) -> Velocity {
+        self.r_dot
+    }
+
+    /// Converts spherical state to a Cartesian state (position + velocity)
+    /// in meters and m/s.
+    ///
+    /// # References
+    ///
+    /// - ERFA [`s2pv`](https://github.com/liberfa/erfa/blob/master/src/s2pv.c)
+    pub fn to_cartesian(&self) -> Cartesian {
+        let theta = self.pos.lon.to_radians();
+        let phi = self.pos.lat.to_radians();
+        let r = self.pos.r.to_meters();
+        let td = self.lon_dot.to_radians_per_second();
+        let pd = self.lat_dot.to_radians_per_second();
+        let rd = self.r_dot.to_meters_per_second();
+
+        let (st, ct) = sin_cos(theta);
+        let (sp, cp) = sin_cos(phi);
+        let rcp = r * cp;
+        let x = rcp * ct;
+        let y = rcp * st;
+        let rpd = r * pd;
+        let w = rpd * sp - cp * rd;
+        let vx = -y * td - w * ct;
+        let vy = x * td - w * st;
+        let vz = rpd * cp + sp * rd;
+        let z = r * sp;
+
+        Cartesian::from_vecs(DVec3::new(x, y, z), DVec3::new(vx, vy, vz))
+    }
+
+    /// Converts a Cartesian state to a spherical state.
+    ///
+    /// Degenerate cases:
+    ///
+    /// - At the origin (`position == 0`), spatial direction is taken from
+    ///   the velocity vector; the returned radius is 0.
+    /// - On the polar axis (`x == y == 0`), the returned longitude is 0
+    ///   and `lon_dot` is 0; `lat_dot` is derived from the velocity.
+    ///
+    /// # References
+    ///
+    /// - ERFA [`pv2s`](https://github.com/liberfa/erfa/blob/master/src/pv2s.c)
+    pub fn from_cartesian(state: Cartesian) -> Self {
+        let p = state.position();
+        let v = state.velocity();
+        let x = p.x;
+        let y = p.y;
+        let z = p.z;
+        let xd = v.x;
+        let yd = v.y;
+        let zd = v.z;
+
+        let rxy2 = x * x + y * y;
+        let r2 = rxy2 + z * z;
+        let rtrue = sqrt(r2);
+
+        // Degenerate case: at the origin, take direction from the velocity.
+        let (rw, p_x, p_y, p_z) = if rtrue == 0.0 {
+            let rw = sqrt(xd * xd + yd * yd + zd * zd);
+            (if rw == 0.0 { 1.0 } else { rw }, xd, yd, zd)
+        } else {
+            (rtrue, x, y, z)
+        };
+
+        let rxy2 = p_x * p_x + p_y * p_y;
+        let rxy = sqrt(rxy2);
+        let xyp = p_x * xd + p_y * yd;
+        let (lon_dot, lat_dot) = if rxy2 != 0.0 {
+            let lon_dot = (p_x * yd - p_y * xd) / rxy2;
+            let lat_dot = (zd * rxy2 - p_z * xyp) / (rxy * rw * rw);
+            (lon_dot, lat_dot)
+        } else {
+            // On the polar axis.
+            let lat_dot = if p_z != 0.0 { -xyp / (p_z * p_z) } else { 0.0 };
+            (0.0, lat_dot)
+        };
+        let r_dot = (xyp + p_z * zd) / rw;
+
+        let lon = if rxy2 == 0.0 { 0.0 } else { atan2(p_y, p_x) };
+        let lat = if rxy == 0.0 && p_z == 0.0 {
+            0.0
+        } else {
+            atan2(p_z, rxy)
+        };
+
+        Self {
+            pos: Spherical {
+                lon: Angle::radians(lon),
+                lat: Angle::radians(lat),
+                r: Distance::meters(rtrue),
+            },
+            lon_dot: AngularRate::radians_per_second(lon_dot),
+            lat_dot: AngularRate::radians_per_second(lat_dot),
+            r_dot: Velocity::meters_per_second(r_dot),
+        }
     }
 }
 
@@ -898,9 +1220,10 @@ impl FromIterator<TimeStampedCartesian> for CartesianTrajectory {
 
 #[cfg(test)]
 mod tests {
+    use lox_test_utils::assert_approx_eq;
     use rstest::rstest;
 
-    use crate::units::{AngleUnits, DistanceUnits, VelocityUnits};
+    use crate::units::{AngleUnits, AngularRate, DistanceUnits, VelocityUnits};
 
     use super::*;
 
@@ -983,8 +1306,8 @@ mod tests {
     #[test]
     fn test_lla_to_body_fixed() {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
-        let r_eq = Distance::meters(EARTH_R_EQ);
-        let result = coords.to_body_fixed(r_eq, EARTH_F);
+        let ellipsoid = Ellipsoid::new(Distance::meters(EARTH_R_EQ), EARTH_F);
+        let result = coords.to_body_fixed(&ellipsoid);
         let expected = DVec3::new(4846130.017870638, -370132.8551351891, 4116364.272747229);
         assert!((result - expected).length() < 1e-3);
     }
@@ -992,9 +1315,9 @@ mod tests {
     #[test]
     fn test_lla_from_body_fixed_roundtrip() {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 100.0).unwrap();
-        let r_eq = Distance::meters(EARTH_R_EQ);
-        let body_fixed = coords.to_body_fixed(r_eq, EARTH_F);
-        let roundtrip = LonLatAlt::from_body_fixed(body_fixed, r_eq, EARTH_F).unwrap();
+        let ellipsoid = Ellipsoid::new(Distance::meters(EARTH_R_EQ), EARTH_F);
+        let body_fixed = coords.to_body_fixed(&ellipsoid);
+        let roundtrip = LonLatAlt::from_body_fixed(body_fixed, &ellipsoid).unwrap();
         assert!((roundtrip.lon().to_degrees() - coords.lon().to_degrees()).abs() < 1e-6);
         assert!((roundtrip.lat().to_degrees() - coords.lat().to_degrees()).abs() < 1e-6);
         assert!((roundtrip.alt().to_meters() - coords.alt().to_meters()).abs() < 1e-3);
@@ -1021,31 +1344,362 @@ mod tests {
 
     #[test]
     fn test_from_body_fixed_north_pole() {
-        let r_eq = Distance::meters(EARTH_R_EQ);
+        let ellipsoid = Ellipsoid::new(Distance::meters(EARTH_R_EQ), EARTH_F);
         let e = (2.0 * EARTH_F - EARTH_F.powi(2)).sqrt();
         let r_polar = EARTH_R_EQ * (1.0 - e.powi(2)).sqrt();
         let pos = DVec3::new(0.0, 0.0, r_polar);
-        let result = LonLatAlt::from_body_fixed(pos, r_eq, EARTH_F).unwrap();
+        let result = LonLatAlt::from_body_fixed(pos, &ellipsoid).unwrap();
         assert!((result.lat().to_degrees() - 90.0).abs() < 1e-10);
         assert!(result.alt().to_meters().abs() < 1e-3);
     }
 
     #[test]
     fn test_from_body_fixed_south_pole() {
-        let r_eq = Distance::meters(EARTH_R_EQ);
+        let ellipsoid = Ellipsoid::new(Distance::meters(EARTH_R_EQ), EARTH_F);
         let e = (2.0 * EARTH_F - EARTH_F.powi(2)).sqrt();
         let r_polar = EARTH_R_EQ * (1.0 - e.powi(2)).sqrt();
         let pos = DVec3::new(0.0, 0.0, -r_polar - 1000.0);
-        let result = LonLatAlt::from_body_fixed(pos, r_eq, EARTH_F).unwrap();
+        let result = LonLatAlt::from_body_fixed(pos, &ellipsoid).unwrap();
         assert!((result.lat().to_degrees() + 90.0).abs() < 1e-10);
         assert!((result.alt().to_meters() - 1000.0).abs() < 1e-3);
     }
 
     #[test]
     fn test_from_body_fixed_zero_position() {
-        let r_eq = Distance::meters(EARTH_R_EQ);
+        let ellipsoid = Ellipsoid::new(Distance::meters(EARTH_R_EQ), EARTH_F);
         let pos = DVec3::ZERO;
-        let result = LonLatAlt::from_body_fixed(pos, r_eq, EARTH_F);
+        let result = LonLatAlt::from_body_fixed(pos, &ellipsoid);
         assert!(matches!(result, Err(FromBodyFixedError::ZeroPosition)));
+    }
+
+    #[test]
+    fn test_from_body_fixed_equator() {
+        // A point on the equator at WGS84-ish radius: z = 0, p² >> aeps2.
+        // Expected: lat = 0, alt = a + h, lon = atan2(y, x).
+        let ellipsoid = Ellipsoid::new(Distance::meters(EARTH_R_EQ), EARTH_F);
+        let h = 100.0;
+        let surface_radius = EARTH_R_EQ + h;
+        let pos = DVec3::new(surface_radius, 0.0, 0.0);
+        let lla = LonLatAlt::from_body_fixed(pos, &ellipsoid).unwrap();
+        assert_approx_eq!(lla.lon().to_radians(), 0.0, atol <= 1e-12);
+        assert_approx_eq!(lla.lat().to_radians(), 0.0, atol <= 1e-12);
+        assert_approx_eq!(lla.alt().to_meters(), h, atol <= 1e-6);
+    }
+
+    #[test]
+    fn test_spherical_api() {
+        let s = Spherical::new(1.0.rad(), 0.5.rad(), 100.0.m());
+        assert_eq!(s.lon(), 1.0.rad());
+        assert_eq!(s.lat(), 0.5.rad());
+        assert_eq!(s.r(), 100.0.m());
+    }
+
+    #[test]
+    fn test_spherical_default_is_zero() {
+        let s = Spherical::default();
+        assert_eq!(s.lon(), Angle::ZERO);
+        assert_eq!(s.lat(), Angle::ZERO);
+        assert_eq!(s.r(), Distance::default());
+    }
+
+    #[test]
+    fn test_spherical_to_unit_vector_erfa_s2c() {
+        let s = Spherical::new(3.0123.rad(), (-0.999).rad(), 1.0.m());
+        let c = s.to_unit_vector();
+        assert_approx_eq!(c.x, -0.536_626_766_726_052_4, atol <= 1e-12);
+        assert_approx_eq!(c.y, 0.069_771_110_976_514_53, atol <= 1e-12);
+        assert_approx_eq!(c.z, -0.840_930_261_856_621_5, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_spherical_to_cartesian_erfa_s2p() {
+        let s = Spherical::new((-3.21).rad(), 0.123.rad(), 0.456.m());
+        let p = s.to_cartesian();
+        assert_approx_eq!(p.x, -0.451_496_467_388_016_5, atol <= 1e-12);
+        assert_approx_eq!(p.y, 0.030_933_942_773_425_867, atol <= 1e-12);
+        assert_approx_eq!(p.z, 0.055_946_681_051_087_79, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_spherical_from_cartesian_erfa_p2s() {
+        let p = DVec3::new(100.0, -50.0, 25.0);
+        let s = Spherical::from_cartesian(p);
+        assert_approx_eq!(
+            s.lon().to_radians(),
+            -0.463_647_609_000_806_1,
+            atol <= 1e-12
+        );
+        assert_approx_eq!(
+            s.lat().to_radians(),
+            0.219_987_977_395_459_44,
+            atol <= 1e-12
+        );
+        assert_approx_eq!(s.r().to_meters(), 114.564_392_373_896, atol <= 1e-9);
+    }
+
+    #[test]
+    fn test_spherical_from_cartesian_origin() {
+        let s = Spherical::from_cartesian(DVec3::ZERO);
+        assert_eq!(s.lon(), Angle::ZERO);
+        assert_eq!(s.lat(), Angle::ZERO);
+        assert_eq!(s.r(), Distance::default());
+    }
+
+    #[test]
+    fn test_spherical_from_cartesian_north_pole() {
+        let s = Spherical::from_cartesian(DVec3::new(0.0, 0.0, 10.0));
+        assert_eq!(s.lon(), Angle::ZERO);
+        assert_approx_eq!(
+            s.lat().to_radians(),
+            core::f64::consts::FRAC_PI_2,
+            atol <= 1e-12
+        );
+        assert_approx_eq!(s.r().to_meters(), 10.0, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_spherical_from_cartesian_south_pole() {
+        // On the -z axis: lat = -π/2, lon = 0.
+        let s = Spherical::from_cartesian(DVec3::new(0.0, 0.0, -10.0));
+        assert_eq!(s.lon(), Angle::ZERO);
+        assert_approx_eq!(
+            s.lat().to_radians(),
+            -core::f64::consts::FRAC_PI_2,
+            atol <= 1e-12
+        );
+        assert_approx_eq!(s.r().to_meters(), 10.0, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_spherical_state_from_cartesian_erfa_pv2s() {
+        let cart = Cartesian::from_array([
+            -0.4514964673880165,
+            0.03093394277342585,
+            0.05594668105108779,
+            1.292_270_850_663_26e-5,
+            2.652814182060692e-6,
+            2.568431853930293e-6,
+        ]);
+        let s = SphericalState::from_cartesian(cart);
+        assert_approx_eq!(
+            s.position().lon().to_radians(),
+            3.073_185_307_179_586_7,
+            atol <= 1e-12
+        );
+        assert_approx_eq!(s.position().lat().to_radians(), 0.123, atol <= 1e-12);
+        assert_approx_eq!(
+            s.position().r().to_meters(),
+            0.455_999_999_999_999_96,
+            atol <= 1e-12
+        );
+        assert_approx_eq!(s.lon_dot().to_radians_per_second(), -7.8e-6, atol <= 1e-16);
+        assert_approx_eq!(
+            s.lat_dot().to_radians_per_second(),
+            9.010_000_000_000_002e-6,
+            atol <= 1e-16
+        );
+        assert_approx_eq!(
+            s.r_dot().to_meters_per_second(),
+            -1.229_999_999_999_999_9e-5,
+            atol <= 1e-16
+        );
+    }
+
+    #[test]
+    fn test_spherical_state_from_cartesian_polar_axis() {
+        // On the +z axis with non-zero z. Exercises the rxy² == 0 branch:
+        // lon = 0, lon_dot = 0, lat_dot = -xyp / z² where xyp = x*xd + y*yd = 0 here,
+        // so all derivatives in xy contribute zero to lat_dot.
+        let cart = Cartesian::from_array([0.0, 0.0, 10.0, 1.0, 2.0, 0.5]);
+        let s = SphericalState::from_cartesian(cart);
+        assert_eq!(s.position().lon(), Angle::ZERO);
+        assert_approx_eq!(
+            s.position().lat().to_radians(),
+            core::f64::consts::FRAC_PI_2,
+            atol <= 1e-12
+        );
+        assert_approx_eq!(s.position().r().to_meters(), 10.0, atol <= 1e-12);
+        assert_eq!(s.lon_dot(), AngularRate::radians_per_second(0.0));
+        assert_approx_eq!(s.lat_dot().to_radians_per_second(), 0.0, atol <= 1e-12);
+        assert_approx_eq!(s.r_dot().to_meters_per_second(), 0.5, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_spherical_state_to_cartesian_erfa_s2pv() {
+        let pos = Spherical::new((-3.21).rad(), 0.123.rad(), 0.456.m());
+        let state = SphericalState::new(
+            pos,
+            AngularRate::radians_per_second(-7.8e-6),
+            AngularRate::radians_per_second(9.01e-6),
+            Velocity::meters_per_second(-1.23e-5),
+        );
+        let c = state.to_cartesian();
+        assert_approx_eq!(c.position().x, -0.451_496_467_388_016_5, atol <= 1e-12);
+        assert_approx_eq!(c.position().y, 0.030_933_942_773_425_867, atol <= 1e-12);
+        assert_approx_eq!(c.position().z, 0.055_946_681_051_087_79, atol <= 1e-12);
+        assert_approx_eq!(c.velocity().x, 1.292_270_850_663_260_2e-5, atol <= 1e-16);
+        assert_approx_eq!(c.velocity().y, 2.652_814_182_060_691_4e-6, atol <= 1e-16);
+        assert_approx_eq!(c.velocity().z, 2.568_431_853_930_292e-6, atol <= 1e-16);
+    }
+
+    #[test]
+    fn test_spherical_state_api() {
+        let pos = Spherical::new(1.0.rad(), 0.5.rad(), 100.0.m());
+        let s = SphericalState::new(
+            pos,
+            AngularRate::radians_per_second(1e-3),
+            AngularRate::radians_per_second(2e-3),
+            Velocity::meters_per_second(0.5),
+        );
+        assert_eq!(s.position(), pos);
+        assert_eq!(s.lon_dot(), AngularRate::radians_per_second(1e-3));
+        assert_eq!(s.lat_dot(), AngularRate::radians_per_second(2e-3));
+        assert_eq!(s.r_dot(), Velocity::meters_per_second(0.5));
+    }
+
+    #[test]
+    fn test_lla_to_body_fixed_erfa_gd2gce() {
+        // ERFA t_erfa_c.c::t_gd2gce
+        let lla = LonLatAlt::builder()
+            .longitude(Angle::radians(3.1))
+            .latitude(Angle::radians(-0.5))
+            .altitude(Distance::meters(2500.0))
+            .build()
+            .unwrap();
+        let ellipsoid = Ellipsoid::new(Distance::meters(6378136.0), 0.0033528);
+        let xyz = lla.to_body_fixed(&ellipsoid);
+        assert_approx_eq!(xyz.x, -5598999.6665116328, atol <= 1e-7);
+        assert_approx_eq!(xyz.y, 233_011.635_146_305_72, atol <= 1e-7);
+        assert_approx_eq!(xyz.z, -3_040_909.051_731_413, atol <= 1e-7);
+    }
+
+    #[test]
+    fn test_lla_from_body_fixed_erfa_gc2gde() {
+        // ERFA t_erfa_c.c::t_gc2gde
+        let xyz = DVec3::new(2e6, 3e6, 5.244e6);
+        let ellipsoid = Ellipsoid::new(Distance::meters(6378136.0), 0.0033528);
+        let lla = LonLatAlt::from_body_fixed(xyz, &ellipsoid).unwrap();
+        assert_approx_eq!(lla.lon().to_radians(), 0.982_793_723_247_329, atol <= 1e-14);
+        assert_approx_eq!(
+            lla.lat().to_radians(),
+            0.971_601_837_757_041_1,
+            atol <= 1e-14
+        );
+        assert_approx_eq!(lla.alt().to_meters(), 332.368_624_957_644, atol <= 1e-8);
+    }
+
+    #[test]
+    fn test_ellipsoid_try_new_valid() {
+        let e = Ellipsoid::try_new(Distance::meters(6378137.0), 1.0 / 298.257223563).unwrap();
+        assert_eq!(e.equatorial_radius(), Distance::meters(6378137.0));
+        assert_approx_eq!(e.flattening(), 1.0 / 298.257223563, atol <= 1e-15);
+    }
+
+    #[test]
+    fn test_ellipsoid_try_new_invalid_radius() {
+        assert!(matches!(
+            Ellipsoid::try_new(Distance::meters(0.0), 0.003),
+            Err(EllipsoidError::InvalidEquatorialRadius(_))
+        ));
+        assert!(matches!(
+            Ellipsoid::try_new(Distance::meters(-1.0), 0.003),
+            Err(EllipsoidError::InvalidEquatorialRadius(_))
+        ));
+    }
+
+    #[test]
+    fn test_ellipsoid_try_new_invalid_flattening() {
+        assert!(matches!(
+            Ellipsoid::try_new(Distance::meters(6378137.0), -0.1),
+            Err(EllipsoidError::InvalidFlattening(_))
+        ));
+        assert!(matches!(
+            Ellipsoid::try_new(Distance::meters(6378137.0), 1.0),
+            Err(EllipsoidError::InvalidFlattening(_))
+        ));
+    }
+
+    #[test]
+    fn test_ellipsoid_constants_are_valid() {
+        // const fn `new` would have panicked at compile time if invalid.
+        // Just verify the values look right.
+        assert_eq!(
+            Ellipsoid::WGS84.equatorial_radius(),
+            Distance::meters(6378137.0)
+        );
+        assert_approx_eq!(
+            Ellipsoid::WGS84.flattening(),
+            1.0 / 298.257223563,
+            atol <= 1e-15
+        );
+        assert_approx_eq!(
+            Ellipsoid::GRS80.flattening(),
+            1.0 / 298.257222101,
+            atol <= 1e-15
+        );
+        assert_approx_eq!(Ellipsoid::WGS72.flattening(), 1.0 / 298.26, atol <= 1e-15);
+    }
+
+    // Round-trip tolerance: combined atol+rtol so that both small (near-zero) components
+    // and large-magnitude vectors pass. atol=1e-14 absorbs cos(π/2) style FP noise;
+    // rtol=1e-12 keeps the relative error bound tight for km-scale coordinates.
+    #[rstest]
+    #[case(DVec3::new(1.0, 0.0, 0.0))]
+    #[case(DVec3::new(0.0, 1.0, 0.0))]
+    #[case(DVec3::new(1.0, 2.0, 3.0))]
+    #[case(DVec3::new(-100.0, 50.0, -25.0))]
+    #[case(DVec3::new(1e7, 1e7, 1e7))]
+    #[case(DVec3::new(0.0, 0.0, 1.0))]
+    fn test_spherical_roundtrip(#[case] pos: DVec3) {
+        let s = Spherical::from_cartesian(pos);
+        let pos_back = s.to_cartesian();
+        assert_approx_eq!(pos_back.x, pos.x, atol <= 1e-14, rtol <= 1e-12);
+        assert_approx_eq!(pos_back.y, pos.y, atol <= 1e-14, rtol <= 1e-12);
+        assert_approx_eq!(pos_back.z, pos.z, atol <= 1e-14, rtol <= 1e-12);
+    }
+
+    #[rstest]
+    #[case(Cartesian::from_array([1.0, 2.0, 3.0, 0.1, 0.2, 0.3]))]
+    #[case(Cartesian::from_array([-100.0, 50.0, -25.0, -0.5, 0.5, 1.5]))]
+    #[case(Cartesian::from_array([1e6, 2e6, 3e6, 10.0, 20.0, 30.0]))]
+    fn test_spherical_state_roundtrip(#[case] cart: Cartesian) {
+        let s = SphericalState::from_cartesian(cart);
+        let back = s.to_cartesian();
+        assert_approx_eq!(
+            back.position().x,
+            cart.position().x,
+            atol <= 1e-14,
+            rtol <= 1e-12
+        );
+        assert_approx_eq!(
+            back.position().y,
+            cart.position().y,
+            atol <= 1e-14,
+            rtol <= 1e-12
+        );
+        assert_approx_eq!(
+            back.position().z,
+            cart.position().z,
+            atol <= 1e-14,
+            rtol <= 1e-12
+        );
+        assert_approx_eq!(
+            back.velocity().x,
+            cart.velocity().x,
+            atol <= 1e-14,
+            rtol <= 1e-12
+        );
+        assert_approx_eq!(
+            back.velocity().y,
+            cart.velocity().y,
+            atol <= 1e-14,
+            rtol <= 1e-12
+        );
+        assert_approx_eq!(
+            back.velocity().z,
+            cart.velocity().z,
+            atol <= 1e-14,
+            rtol <= 1e-12
+        );
     }
 }

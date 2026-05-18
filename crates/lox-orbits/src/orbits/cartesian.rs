@@ -118,11 +118,7 @@ where
     /// Converts this body-fixed Cartesian orbit to a ground location.
     pub fn to_ground_location(&self) -> Result<GroundLocation<O>, FromBodyFixedError> {
         let origin = self.origin();
-        let coords = LonLatAlt::from_body_fixed(
-            self.position(),
-            origin.equatorial_radius(),
-            origin.flattening(),
-        )?;
+        let coords = LonLatAlt::from_body_fixed(self.position(), &origin.ellipsoid())?;
         Ok(GroundLocation::new(coords, origin))
     }
 }
@@ -226,11 +222,11 @@ impl DynCartesianOrbit {
                 frame.name().to_string(),
             ));
         }
-        let (Ok(r_eq), Ok(f)) = (origin.try_equatorial_radius(), origin.try_flattening()) else {
-            return Err(StateToDynGroundError::UndefinedSpheroid(origin));
-        };
+        let ellipsoid = origin
+            .try_ellipsoid()
+            .map_err(|_| StateToDynGroundError::UndefinedSpheroid(origin))?;
 
-        let coords = LonLatAlt::from_body_fixed(self.position(), r_eq, f)?;
+        let coords = LonLatAlt::from_body_fixed(self.position(), &ellipsoid)?;
         Ok(DynGroundLocation::try_new(coords, origin).unwrap())
     }
 
