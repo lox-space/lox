@@ -1355,7 +1355,6 @@ dependencies = [
  "nalgebra",
  "nom",
  "quick-xml",
- "rstest",
  "serde",
  "serde_json",
  "thiserror",
