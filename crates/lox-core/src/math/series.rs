@@ -12,6 +12,9 @@ use core::fmt;
 use core::str::FromStr;
 
 use fast_polynomial::poly_array;
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use num_traits::Float;
 use thiserror::Error;
 
 use crate::math::slices::Monotonic;
@@ -367,6 +370,8 @@ impl Series {
 
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
+    use alloc::vec;
     use rstest::rstest;
 
     use lox_test_utils::assert_approx_eq;

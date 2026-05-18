@@ -134,7 +134,8 @@ impl Subsecond {
         // Ensure remainder is in [0, 1) range (Rust's % can return negative values)
         let rem = if rem < 0.0 { rem + 1.0 } else { rem };
         // Convert to attoseconds with rounding to handle floating-point precision issues
-        let attoseconds = (rem / crate::f64::consts::SECONDS_PER_ATTOSECOND).round() as i64;
+        let attoseconds =
+            crate::math::float::round(rem / crate::f64::consts::SECONDS_PER_ATTOSECOND) as i64;
         Some(Self::from_attoseconds(attoseconds))
     }
 

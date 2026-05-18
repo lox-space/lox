@@ -6,6 +6,7 @@
 
 //! Mathematical utilities: root-finding, interpolation, optimization, and linear algebra.
 
+pub(crate) mod float;
 pub mod glam;
 pub mod linear_algebra;
 pub mod optim;

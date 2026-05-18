@@ -12,6 +12,9 @@ use core::fmt::Display;
 use glam::DVec3;
 use lox_test_utils::ApproxEq;
 use lox_test_utils::approx_eq;
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use num_traits::Float;
 use thiserror::Error;
 
 use crate::anomalies::AnomalyError;

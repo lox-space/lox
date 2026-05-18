@@ -17,6 +17,9 @@ use core::fmt::Display;
 use core::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use lox_test_utils::approx_eq::ApproxEq;
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use num_traits::Float;
 
 use crate::f64;
 use crate::i64::consts::{
@@ -372,19 +375,21 @@ impl TimeDelta {
         if value > i64::MAX as f64 {
             return TimeDelta::PosInf;
         }
-        let seconds = value.round_ties_even();
+        let seconds = crate::math::float::round_ties_even(value);
         let subseconds = value - seconds;
         if subseconds.is_sign_negative() {
             let seconds = seconds as i64 - 1;
-            let attoseconds =
-                (subseconds * ATTOSECONDS_IN_SECOND as f64).round() as i64 + ATTOSECONDS_IN_SECOND;
+            let attoseconds = crate::math::float::round(subseconds * ATTOSECONDS_IN_SECOND as f64)
+                as i64
+                + ATTOSECONDS_IN_SECOND;
             TimeDelta::Valid {
                 seconds,
                 attoseconds,
             }
         } else {
             let seconds = seconds as i64;
-            let attoseconds = (subseconds * ATTOSECONDS_IN_SECOND as f64).round() as i64;
+            let attoseconds =
+                crate::math::float::round(subseconds * ATTOSECONDS_IN_SECOND as f64) as i64;
             TimeDelta::Valid {
                 seconds,
                 attoseconds,

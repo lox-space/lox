@@ -17,6 +17,9 @@ use crate::coords::Cartesian;
 use crate::elements::keplerian::{GravitationalParameter, Keplerian, KeplerianError};
 use crate::units::{Angle, AngleUnits, Distance};
 use glam::DVec3;
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use num_traits::Float;
 use thiserror::Error;
 
 /// Modified Equinoctial Elements (MEE).
@@ -237,6 +240,7 @@ impl Keplerian {
 
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
     use lox_test_utils::assert_approx_eq;
 
     use crate::elements::keplerian::GravitationalParameter;

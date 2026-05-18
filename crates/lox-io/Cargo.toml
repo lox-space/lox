@@ -21,8 +21,8 @@ readme = "README.md"
 lox-core.workspace = true
 lox-time.workspace = true
 nom = { workspace = true, features = ["std"] }
-thiserror.workspace = true
+thiserror = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
-lox-test-utils.workspace = true
+lox-test-utils = { workspace = true, features = ["std"] }
 rstest.workspace = true

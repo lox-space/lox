@@ -12,6 +12,9 @@ use core::{
 
 use glam::DMat3;
 use lox_test_utils::ApproxEq;
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use num_traits::Float;
 
 use crate::f64::consts::SECONDS_PER_DAY;
 
@@ -202,7 +205,7 @@ impl Angle {
     /// Returns a new angle that is normalized to a (-π, π) interval
     /// centered around `center`.
     pub const fn normalize_two_pi(&self, center: Self) -> Self {
-        Self(self.0 - TAU * ((self.0 + PI - center.0) / TAU).floor())
+        Self(self.0 - TAU * crate::math::float::floor((self.0 + PI - center.0) / TAU))
     }
 
     /// Returns the value of the angle in radians.

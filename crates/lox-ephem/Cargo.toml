@@ -26,7 +26,7 @@ arrayvec.workspace = true
 itertools.workspace = true
 nom = { workspace = true, features = ["std"] }
 serde = { workspace = true, optional = true }
-thiserror.workspace = true
+thiserror = { workspace = true, features = ["std"] }
 
 [features]
 serde = ["dep:serde", "lox-core/serde"]

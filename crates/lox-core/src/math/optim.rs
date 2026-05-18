@@ -156,6 +156,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
     use core::f64::consts::PI;
     use lox_test_utils::assert_approx_eq;
 
