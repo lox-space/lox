@@ -29,7 +29,7 @@ thiserror.workspace = true
 serde = ["dep:serde", "lox-core/serde"]
 
 [dev-dependencies]
-lox-test-utils.workspace = true
+lox-test-utils = { workspace = true, features = ["std"] }
 rstest.workspace = true
 
 [lib]

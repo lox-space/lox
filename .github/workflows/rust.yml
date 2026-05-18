@@ -55,6 +55,35 @@ jobs:
       - name: Linting
         run: cargo clippy --all-features --all-targets -- -D warnings
 
+  no-std-test:
+    name: Test (no_std)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: no-std
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+      - name: Run tests with no_std library
+        run: cargo nextest run -p lox-core -p lox-test-utils --no-default-features --features libm
+
+  no-std-check:
+    name: Clippy (no_std, bare-metal)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: thumbv7em-none-eabi
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: no-std-baremetal
+      - name: Bare-metal lint
+        run: cargo clippy -p lox-core -p lox-test-utils --no-default-features --features libm --target thumbv7em-none-eabi -- -D warnings
+
   reuse:
     name: REUSE Compliance
     runs-on: ubuntu-latest

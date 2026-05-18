@@ -19,7 +19,7 @@ readme = "README.md"
 
 [dependencies]
 lox-core.workspace = true
-lox-test-utils.workspace = true
+lox-test-utils = { workspace = true, features = ["std"] }
 
 chrono = { workspace = true, optional = true }
 itertools.workspace = true

@@ -25,7 +25,7 @@ lox-ephem.workspace = true
 lox-frames.workspace = true
 lox-math.workspace = true
 lox-odm = { workspace = true, optional = true }
-lox-test-utils.workspace = true
+lox-test-utils = { workspace = true, features = ["std"] }
 lox-time = { workspace = true, features = ["chrono"] }
 lox-units.workspace = true
 
