@@ -18,7 +18,7 @@ categories.workspace = true
 readme = "README.md"
 
 [dependencies]
-lox-core.workspace = true
+lox-core = { workspace = true, features = ["std"] }
 lox-time.workspace = true
 nom = { workspace = true, features = ["std"] }
 thiserror = { workspace = true, features = ["std"] }

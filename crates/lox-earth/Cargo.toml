@@ -18,7 +18,7 @@ categories.workspace = true
 readme = "README.md"
 
 [dependencies]
-lox-core.workspace = true
+lox-core = { workspace = true, features = ["std"] }
 lox-frames.workspace = true
 lox-io.workspace = true
 lox-time.workspace = true

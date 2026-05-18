@@ -19,7 +19,7 @@ readme = "README.md"
 
 [dependencies]
 lox-bodies.workspace = true
-lox-core.workspace = true
+lox-core = { workspace = true, features = ["std"] }
 lox-test-utils = { workspace = true, features = ["std"] }
 lox-time.workspace = true
 lox-units.workspace = true

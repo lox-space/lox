@@ -27,7 +27,7 @@ lox-test-utils = { workspace = true, features = ["std"] }
 lox-analysis = { workspace = true, optional = true }
 lox-bodies = { workspace = true, optional = true }
 lox-comms = { workspace = true, optional = true }
-lox-core = { workspace = true, optional = true }
+lox-core = { workspace = true, optional = true, features = ["std"] }
 lox-earth = { workspace = true, optional = true }
 lox-ephem = { workspace = true, optional = true }
 lox-frames = { workspace = true, optional = true }
