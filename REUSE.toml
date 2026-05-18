@@ -30,6 +30,7 @@ path = [
   "**/CHANGELOG.md",
   "**/Cargo.lock",
   "**/uv.lock",
+  "**/pnpm-lock.yaml",
   "**/proptest-regressions/**",
 ]
 SPDX-FileCopyrightText = "NONE"

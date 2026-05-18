@@ -35,8 +35,5 @@
   "publishConfig": {
     "access": "public",
     "provenance": true
-  },
-  "devDependencies": {
-    "wasm-pack": "^0.14.0"
   }
 }
