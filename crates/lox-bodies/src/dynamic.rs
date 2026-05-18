@@ -3,8 +3,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::{Earth, J2, J4, NaifId, Origin, TryJ2, TryJ4, UndefinedOriginPropertyError};
-use std::fmt::{Display, Formatter};
-use std::str::FromStr;
+use alloc::borrow::ToOwned;
+use alloc::string::{String, ToString};
+use core::fmt::{Display, Formatter};
+use core::str::FromStr;
 use thiserror::Error;
 
 /// Error returned when an origin name is not recognized.
@@ -623,7 +625,7 @@ impl Origin for DynOrigin {
 }
 
 impl Display for DynOrigin {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }

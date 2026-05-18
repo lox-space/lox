@@ -3,6 +3,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+#![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
 
 //! Definitions for celestial bodies, barycenters, and minor bodies in the solar system.
@@ -10,12 +11,16 @@
 //! Body properties such as gravitational parameters, radii, and rotational elements are derived
 //! from the IAU/NAIF SPICE planetary constants kernel (PCK).
 
+extern crate alloc;
+
 pub use crate::dynamic::DynOrigin;
+use alloc::string::String;
+use core::fmt::{Display, Formatter};
 pub use generated::*;
 use lox_core::elements::GravitationalParameter;
 use lox_core::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
+use lox_core::math::float::{cos, powi, sin};
 use lox_core::units::Distance;
-use std::fmt::{Display, Formatter};
 use thiserror::Error;
 
 /// Dynamic dispatch variants of origin types.
@@ -30,7 +35,7 @@ mod generated;
 pub struct NaifId(pub i32);
 
 impl Display for NaifId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.0)
     }
 }
@@ -174,15 +179,15 @@ pub(crate) enum RotationalElementType {
 impl RotationalElementType {
     fn sincos(&self, val: f64) -> f64 {
         match self {
-            RotationalElementType::Declination => val.cos(),
-            _ => val.sin(),
+            RotationalElementType::Declination => cos(val),
+            _ => sin(val),
         }
     }
 
     fn sincos_dot(&self, val: f64) -> f64 {
         match self {
-            RotationalElementType::Declination => val.sin(),
-            _ => val.cos(),
+            RotationalElementType::Declination => sin(val),
+            _ => cos(val),
         }
     }
 
@@ -242,13 +247,13 @@ impl<const N: usize> RotationalElement<N> {
     fn angle(&self, t: f64) -> f64 {
         self.c0
             + self.c1 * t / self.typ.dt()
-            + self.c2 * t.powi(2) / self.typ.dt().powi(2)
+            + self.c2 * powi(t, 2) / powi(self.typ.dt(), 2)
             + self.trig_term(t)
     }
 
     fn angle_dot(&self, t: f64) -> f64 {
         self.c1 / self.typ.dt()
-            + 2.0 * self.c2 * t / self.typ.dt().powi(2)
+            + 2.0 * self.c2 * t / powi(self.typ.dt(), 2)
             + self.typ.sign() * self.trig_term_dot(t)
     }
 }
