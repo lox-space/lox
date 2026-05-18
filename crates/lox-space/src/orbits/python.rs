@@ -1937,7 +1937,8 @@ impl PyGroundLocation {
             .build()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(PyGroundLocation(
-            DynGroundLocation::try_new(coordinates, origin.0).map_err(PyValueError::new_err)?,
+            DynGroundLocation::try_new(coordinates, origin.0)
+                .map_err(PyUndefinedOriginPropertyError)?,
         ))
     }
 
@@ -2036,10 +2037,8 @@ impl From<PyGroundPropagatorError> for PyErr {
 #[pymethods]
 impl PyGroundPropagator {
     #[new]
-    fn new(location: PyGroundLocation) -> PyResult<Self> {
-        Ok(PyGroundPropagator(
-            DynGroundPropagator::try_new(location.0).map_err(PyValueError::new_err)?,
-        ))
+    fn new(location: PyGroundLocation) -> Self {
+        PyGroundPropagator(DynGroundPropagator::new_dyn(location.0))
     }
 
     /// Propagate the ground station.
