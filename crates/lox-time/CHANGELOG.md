@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.25](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.24...lox-time-v0.1.0-alpha.25) - 2026-05-18
+
+### Added
+
+- *(lox-time)* add no_std compat
+- *(lox-math/lox-units)* add no_std compat
+- *(lox-core)* make lox-core no_std compatible
+
+### Other
+
+- remove num* dependencies
+- *(lox-core)* add no_std tests and clippy
+- *(lox-core)* replace datetime regex with nom parser
+
 ## [0.1.0-alpha.24](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.23...lox-time-v0.1.0-alpha.24) - 2026-05-16
 
 ### Added

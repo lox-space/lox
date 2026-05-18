@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.38](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.37...lox-orbits-v0.1.0-alpha.38) - 2026-05-18
+
+### Added
+
+- *(lox-core)* [**breaking**] port ERFA spherical and geodetic helpers
+- *(lox-math/lox-units)* add no_std compat
+
+### Other
+
+- *(lox-core)* add no_std tests and clippy
+
 ## [0.1.0-alpha.37](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.36...lox-orbits-v0.1.0-alpha.37) - 2026-05-16
 
 ### Added
