@@ -20,6 +20,8 @@
 //! diverges. For retrograde orbits, Type II equinoctial elements using
 //! cot(i/2) should be used instead (not yet implemented).
 
+use thiserror::Error;
+
 use crate::anomalies::AnomalyError;
 use crate::coords::Cartesian;
 use crate::elements::keplerian::{GravitationalParameter, Keplerian, KeplerianError};
@@ -46,35 +48,14 @@ pub struct Equinoctial {
 }
 
 /// Error returned when constructing or converting equinoctial elements.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Error)]
 pub enum EquinoctialError {
     /// The anomaly conversion failed.
-    Anomaly(AnomalyError),
+    #[error(transparent)]
+    Anomaly(#[from] AnomalyError),
     /// The Keplerian conversion failed.
-    Keplerian(KeplerianError),
-}
-
-impl std::fmt::Display for EquinoctialError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Anomaly(e) => write!(f, "{e}"),
-            Self::Keplerian(e) => write!(f, "{e}"),
-        }
-    }
-}
-
-impl std::error::Error for EquinoctialError {}
-
-impl From<AnomalyError> for EquinoctialError {
-    fn from(e: AnomalyError) -> Self {
-        Self::Anomaly(e)
-    }
-}
-
-impl From<KeplerianError> for EquinoctialError {
-    fn from(e: KeplerianError) -> Self {
-        Self::Keplerian(e)
-    }
+    #[error(transparent)]
+    Keplerian(#[from] KeplerianError),
 }
 
 impl Equinoctial {
