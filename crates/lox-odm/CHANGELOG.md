@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.2](https://github.com/lox-space/lox/compare/lox-odm-v0.1.0-alpha.1...lox-odm-v0.1.0-alpha.2) - 2026-05-18
+
+### Added
+
+- *(lox-math/lox-units)* add no_std compat
+- *(lox-core)* make lox-core no_std compatible
+
+### Other
+
+- remove unused deps and files
+- *(lox-core)* add no_std tests and clippy
+
 ## [0.1.0-alpha.1](https://github.com/lox-space/lox/releases/tag/lox-odm-v0.1.0-alpha.1) - 2026-05-16
 
 ### Added

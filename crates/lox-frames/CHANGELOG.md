@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.0-alpha.19](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.18...lox-frames-v0.1.0-alpha.19) - 2026-05-18
+
+### Added
+
+- *(lox-core)* [**breaking**] port ERFA angle and day-fraction helpers
+- *(lox-math/lox-units)* add no_std compat
+- *(lox-core)* make lox-core no_std compatible
+
+### Other
+
+- *(lox-core)* add no_std tests and clippy
+
 ## [0.1.0-alpha.18](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.17...lox-frames-v0.1.0-alpha.18) - 2026-05-16
 
 ### Other
