@@ -14,6 +14,8 @@
     [LSK]: https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/time.html#The%20Leapseconds%20Kernel%20LSK
 */
 
+use alloc::vec::Vec;
+
 use crate::calendar_dates::Date;
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::time::Time;

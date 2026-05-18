@@ -30,7 +30,10 @@
     transformations to the crate boundaries.
 */
 
+#![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
+
+extern crate alloc;
 
 /// Calendar date types (re-exported from `lox-core`).
 pub mod calendar_dates;

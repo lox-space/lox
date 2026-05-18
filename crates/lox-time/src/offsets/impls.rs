@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::convert::Infallible;
+use core::convert::Infallible;
 
 use lox_core::time::deltas::TimeDelta;
 

@@ -2,7 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::{
+use alloc::vec::Vec;
+use core::{
     cmp::{max, min},
     fmt::Display,
     ops::{Add, Sub},
@@ -27,7 +28,7 @@ pub struct Interval<T> {
     end: T,
 }
 
-impl<T: ApproxEq + std::fmt::Debug> ApproxEq for Interval<T> {
+impl<T: ApproxEq + core::fmt::Debug> ApproxEq for Interval<T> {
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
         let mut results = ApproxEqResults::new();
         results.merge("start", self.start.approx_eq(&rhs.start, atol, rtol));
@@ -317,7 +318,7 @@ impl<T> Display for Interval<T>
 where
     T: Display,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.start.fmt(f)?;
         write!(f, " – ")?;
         self.end.fmt(f)
@@ -326,6 +327,10 @@ where
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
+    use alloc::vec;
+    use alloc::vec::Vec;
+
     use crate::{time, time_scales::Tai};
 
     use super::*;
