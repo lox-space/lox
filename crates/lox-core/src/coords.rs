@@ -11,9 +11,8 @@ use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAss
 
 use glam::{DMat3, DVec3};
 use lox_test_utils::ApproxEq;
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use num_traits::Float;
+
+use crate::math::float::{abs, asin, atan2, cos, powi, sin, sqrt, tan};
 use thiserror::Error;
 
 use crate::{
@@ -147,9 +146,9 @@ impl LonLatAlt {
         let (lon_sin, lon_cos) = self.lon().sin_cos();
         let (lat_sin, lat_cos) = self.lat().sin_cos();
         let r_eq = equatorial_radius.to_meters();
-        let e = (2.0 * flattening - flattening.powi(2)).sqrt();
-        let c = r_eq / (1.0 - e.powi(2) * lat_sin.powi(2)).sqrt();
-        let s = c * (1.0 - e.powi(2));
+        let e = sqrt(2.0 * flattening - powi(flattening, 2));
+        let c = r_eq / sqrt(1.0 - powi(e, 2) * powi(lat_sin, 2));
+        let s = c * (1.0 - powi(e, 2));
         let r_delta = (c + alt) * lat_cos;
         let r_kappa = (s + alt) * lat_sin;
         DVec3::new(r_delta * lon_cos, r_delta * lon_sin, r_kappa)
@@ -172,15 +171,15 @@ impl LonLatAlt {
             return Err(FromBodyFixedError::ZeroPosition);
         }
 
-        let r_delta = (pos.x.powi(2) + pos.y.powi(2)).sqrt();
+        let r_delta = sqrt(powi(pos.x, 2) + powi(pos.y, 2));
 
         // Polar special case: r_delta ≈ 0 means we're on or near a pole.
         // The iterative solver divides by r_delta so we handle this directly.
         if r_delta < 1e-10 {
             let lat = if pos.z >= 0.0 { FRAC_PI_2 } else { -FRAC_PI_2 };
-            let e = (2.0 * flattening - flattening.powi(2)).sqrt();
-            let r_polar = r_eq * (1.0 - e.powi(2)).sqrt();
-            let alt = pos.z.abs() - r_polar;
+            let e = sqrt(2.0 * flattening - powi(flattening, 2));
+            let r_polar = r_eq * sqrt(1.0 - powi(e, 2));
+            let alt = abs(pos.z) - r_polar;
             return Ok(LonLatAlt(
                 Angle::radians(0.0),
                 Angle::radians(lat),
@@ -188,9 +187,9 @@ impl LonLatAlt {
             ));
         }
 
-        let mut lon = pos.y.atan2(pos.x);
+        let mut lon = atan2(pos.y, pos.x);
 
-        if lon.abs() >= PI {
+        if abs(lon) >= PI {
             if lon < 0.0 {
                 lon += TAU;
             } else {
@@ -198,23 +197,23 @@ impl LonLatAlt {
             }
         }
 
-        let delta = (pos.z / rm).asin();
+        let delta = asin(pos.z / rm);
 
         let root_finder = Secant::default();
 
         let f = flattening;
         let lat = root_finder.find(
             |lat: f64| {
-                let e = (2.0 * f - f.powi(2)).sqrt();
-                let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
-                Ok(pos.z + c * e.powi(2) * lat.sin()).map(|v| v / r_delta - lat.tan())
+                let e = sqrt(2.0 * f - powi(f, 2));
+                let c = r_eq / sqrt(1.0 - powi(e, 2) * powi(sin(lat), 2));
+                Ok(pos.z + c * powi(e, 2) * sin(lat)).map(|v| v / r_delta - tan(lat))
             },
             delta,
         )?;
 
-        let e = (2.0 * f - f.powi(2)).sqrt();
-        let c = r_eq / (1.0 - e.powi(2) * lat.sin().powi(2)).sqrt();
-        let alt = r_delta / lat.cos() - c;
+        let e = sqrt(2.0 * f - powi(f, 2));
+        let c = r_eq / sqrt(1.0 - powi(e, 2) * powi(sin(lat), 2));
+        let alt = r_delta / cos(lat) - c;
 
         Ok(LonLatAlt(
             Angle::radians(lon),

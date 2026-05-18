@@ -7,6 +7,7 @@
 use lox_test_utils::approx_eq;
 
 use super::roots::{Callback, RootFinderError};
+use crate::math::float::abs;
 
 /// Finds the minimum of a function within a bracket.
 pub trait FindBracketedMinimum<F>
@@ -67,17 +68,17 @@ where
 
         for _ in 0..self.max_iter {
             let midpoint = 0.5 * (a + b);
-            let tol1 = self.abs_tol * x.abs() + 1e-10;
+            let tol1 = self.abs_tol * abs(x) + 1e-10;
             let tol2 = 2.0 * tol1;
 
             // Check convergence.
-            if (x - midpoint).abs() <= tol2 - 0.5 * (b - a) {
+            if abs(x - midpoint) <= tol2 - 0.5 * (b - a) {
                 return Ok(x);
             }
 
             // Try parabolic interpolation.
             let mut use_golden = true;
-            if e.abs() > tol1 {
+            if abs(e) > tol1 {
                 // Fit parabola through x, v, w.
                 let r = (x - w) * (fx - fv);
                 let q = (x - v) * (fx - fw);
@@ -86,7 +87,7 @@ where
                 let (p, q) = if q > 0.0 { (-p, q) } else { (p, -q) };
 
                 // Is the parabola acceptable?
-                if p.abs() < (0.5 * q * e).abs() && p > q * (a - x) && p < q * (b - x) {
+                if abs(p) < abs(0.5 * q * e) && p > q * (a - x) && p < q * (b - x) {
                     e = d;
                     d = p / q;
                     let u = x + d;
@@ -106,7 +107,7 @@ where
             }
 
             // f must not be evaluated too close to x.
-            let u = if d.abs() >= tol1 {
+            let u = if abs(d) >= tol1 {
                 x + d
             } else if d > 0.0 {
                 x + tol1
@@ -161,6 +162,7 @@ mod tests {
     use lox_test_utils::assert_approx_eq;
 
     use super::*;
+    use crate::math::float::{cos, powi};
 
     type BoxedError = Box<dyn core::error::Error + Send + Sync + 'static>;
     type Result = core::result::Result<f64, BoxedError>;
@@ -169,7 +171,7 @@ mod tests {
     fn test_brent_minimizer_quadratic() {
         let minimizer = BrentMinimizer::default();
         let x = minimizer
-            .find_minimum_in_bracket(|x: f64| -> Result { Ok((x - 3.0).powi(2)) }, (0.0, 5.0))
+            .find_minimum_in_bracket(|x: f64| -> Result { Ok(powi(x - 3.0, 2)) }, (0.0, 5.0))
             .expect("should converge");
         assert_approx_eq!(x, 3.0, atol <= 1e-8);
     }
@@ -180,7 +182,7 @@ mod tests {
         let minimizer = BrentMinimizer::default();
         let x = minimizer
             .find_minimum_in_bracket(
-                |x: f64| -> Result { Ok(x.cos()) },
+                |x: f64| -> Result { Ok(cos(x)) },
                 (PI / 2.0, 3.0 * PI / 2.0),
             )
             .expect("should converge");
@@ -191,7 +193,7 @@ mod tests {
     fn test_brent_minimizer_reversed_bracket() {
         let minimizer = BrentMinimizer::default();
         let x = minimizer
-            .find_minimum_in_bracket(|x: f64| -> Result { Ok((x - 2.0).powi(2)) }, (5.0, 0.0))
+            .find_minimum_in_bracket(|x: f64| -> Result { Ok(powi(x - 2.0, 2)) }, (5.0, 0.0))
             .expect("should converge");
         assert_approx_eq!(x, 2.0, atol <= 1e-8);
     }
@@ -203,7 +205,7 @@ mod tests {
             abs_tol: 1e-4,
         };
         let x = minimizer
-            .find_minimum_in_bracket(|x: f64| -> Result { Ok((x - 1.0).powi(2)) }, (-2.0, 5.0))
+            .find_minimum_in_bracket(|x: f64| -> Result { Ok(powi(x - 1.0, 2)) }, (-2.0, 5.0))
             .expect("should converge");
         assert_approx_eq!(x, 1.0, atol <= 1e-3);
     }
@@ -215,7 +217,7 @@ mod tests {
             abs_tol: 1e-15,
         };
         let result = minimizer
-            .find_minimum_in_bracket(|x: f64| -> Result { Ok((x - 1.0).powi(2)) }, (0.0, 5.0));
+            .find_minimum_in_bracket(|x: f64| -> Result { Ok(powi(x - 1.0, 2)) }, (0.0, 5.0));
         assert!(result.is_err());
     }
 }

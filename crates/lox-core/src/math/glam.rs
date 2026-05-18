@@ -5,10 +5,8 @@
 //! Extension traits for `glam` vector types.
 
 use glam::DVec3;
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use num_traits::Float;
 
+use crate::math::float::atan2;
 use crate::types::units::Radians;
 
 /// Computes the azimuth angle of a vector in the XY plane.
@@ -19,6 +17,6 @@ pub trait Azimuth {
 
 impl Azimuth for DVec3 {
     fn azimuth(&self) -> Radians {
-        self.y.atan2(self.x)
+        atan2(self.y, self.x)
     }
 }

@@ -12,11 +12,12 @@ use core::{
 
 use glam::DMat3;
 use lox_test_utils::ApproxEq;
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use num_traits::Float;
 
 use crate::f64::consts::SECONDS_PER_DAY;
+use crate::math::float::{
+    abs, acos, acosh, asin, asinh, atan, atan2, atanh, cos, cosh, log10, powf, sin, sin_cos, sinh,
+    tan, tanh, to_degrees, to_radians,
+};
 
 /// Degrees in full circle
 pub const DEGREES_IN_CIRCLE: f64 = 360.0;
@@ -71,7 +72,7 @@ impl Angle {
 
     /// Creates a new angle from an `f64` value in degrees.
     pub const fn degrees(deg: f64) -> Self {
-        Self(deg.to_radians())
+        Self(to_radians(deg))
     }
 
     /// Creates a new angle from hours, minutes, and seconds (HMS notation).
@@ -82,13 +83,13 @@ impl Angle {
     /// Creates a new angle from an `f64` value in degrees and normalize the angle
     /// to the interval [0.0, 2π).
     pub const fn degrees_normalized(deg: f64) -> Self {
-        Self((deg % DEGREES_IN_CIRCLE).to_radians()).mod_two_pi()
+        Self(to_radians(deg % DEGREES_IN_CIRCLE)).mod_two_pi()
     }
 
     /// Creates a new angle from an `f64` value in degrees and normalize the angle
     /// to the interval (-2π, 2π).
     pub const fn degrees_normalized_signed(deg: f64) -> Self {
-        Self((deg % DEGREES_IN_CIRCLE).to_radians())
+        Self(to_radians(deg % DEGREES_IN_CIRCLE))
     }
 
     /// Creates a new angle from an `f64` value in arcseconds.
@@ -114,78 +115,78 @@ impl Angle {
     }
 
     /// Returns the absolute value of the angle.
-    pub const fn abs(&self) -> Self {
-        Self(self.0.abs())
+    pub fn abs(&self) -> Self {
+        Self(abs(self.0))
     }
 
     /// Creates an angle from the arcsine of a value.
     pub fn from_asin(value: f64) -> Self {
-        Self(value.asin())
+        Self(asin(value))
     }
 
     /// Creates an angle from the inverse hyperbolic sine of a value.
     pub fn from_asinh(value: f64) -> Self {
-        Self(value.asinh())
+        Self(asinh(value))
     }
 
     /// Creates an angle from the arccosine of a value.
     pub fn from_acos(value: f64) -> Self {
-        Self(value.acos())
+        Self(acos(value))
     }
 
     /// Creates an angle from the inverse hyperbolic cosine of a value.
     pub fn from_acosh(value: f64) -> Self {
-        Self(value.acosh())
+        Self(acosh(value))
     }
 
     /// Creates an angle from the arctangent of a value.
     pub fn from_atan(value: f64) -> Self {
-        Self(value.atan())
+        Self(atan(value))
     }
 
     /// Creates an angle from the inverse hyperbolic tangent of a value.
     pub fn from_atanh(value: f64) -> Self {
-        Self(value.atanh())
+        Self(atanh(value))
     }
 
     /// Creates an angle from the two-argument arctangent of `y` and `x`.
     pub fn from_atan2(y: f64, x: f64) -> Self {
-        Self(y.atan2(x))
+        Self(atan2(y, x))
     }
 
     /// Returns the cosine of the angle.
     pub fn cos(&self) -> f64 {
-        self.0.cos()
+        cos(self.0)
     }
 
     /// Returns the hyperbolic cosine of the angle.
     pub fn cosh(&self) -> f64 {
-        self.0.cosh()
+        cosh(self.0)
     }
 
     /// Returns the sine of the angle.
     pub fn sin(&self) -> f64 {
-        self.0.sin()
+        sin(self.0)
     }
 
     /// Returns the hyperbolic sine of the angle.
     pub fn sinh(&self) -> f64 {
-        self.0.sinh()
+        sinh(self.0)
     }
 
     /// Returns sine and cosine of the angle.
     pub fn sin_cos(&self) -> (f64, f64) {
-        self.0.sin_cos()
+        sin_cos(self.0)
     }
 
     /// Returns the tangent of the angle.
     pub fn tan(&self) -> f64 {
-        self.0.tan()
+        tan(self.0)
     }
 
     /// Returns the hyperbolic tangent of the angle.
     pub fn tanh(&self) -> f64 {
-        self.0.tanh()
+        tanh(self.0)
     }
 
     /// Returns a new angle that is normalized to the interval [0.0, 2π).
@@ -205,7 +206,12 @@ impl Angle {
     /// Returns a new angle that is normalized to a (-π, π) interval
     /// centered around `center`.
     pub const fn normalize_two_pi(&self, center: Self) -> Self {
-        Self(self.0 - TAU * crate::math::float::floor((self.0 + PI - center.0) / TAU))
+        // Inline const-compatible floor (f64::floor isn't const in no_std).
+        // The quotient is bounded by the angle range so the `as i64` cast is safe.
+        let q = (self.0 + PI - center.0) / TAU;
+        let i = q as i64 as f64;
+        let floor_q = if q < i { i - 1.0 } else { i };
+        Self(self.0 - TAU * floor_q)
     }
 
     /// Returns the value of the angle in radians.
@@ -220,7 +226,7 @@ impl Angle {
 
     /// Returns the value of the angle in degrees.
     pub const fn to_degrees(&self) -> f64 {
-        self.0.to_degrees()
+        to_degrees(self.0)
     }
 
     /// Returns the value of the angle in arcseconds.
@@ -246,7 +252,7 @@ impl Angle {
 
 impl Display for Angle {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.to_degrees().fmt(f)?;
+        to_degrees(self.0).fmt(f)?;
         write!(f, " deg")
     }
 }
@@ -1146,7 +1152,7 @@ impl Power {
 
     /// Returns the value in dBW.
     pub fn to_dbw(&self) -> f64 {
-        10.0 * self.0.log10()
+        10.0 * log10(self.0)
     }
 }
 
@@ -1178,7 +1184,7 @@ impl AngularRate {
 
     /// Creates a new angular rate from an `f64` value in deg/s.
     pub const fn degrees_per_second(dps: f64) -> Self {
-        Self(dps.to_radians())
+        Self(to_radians(dps))
     }
 
     /// Returns the value in rad/s as an `f64`.
@@ -1193,13 +1199,13 @@ impl AngularRate {
 
     /// Returns the value in deg/s.
     pub const fn to_degrees_per_second(&self) -> f64 {
-        self.0.to_degrees()
+        to_degrees(self.0)
     }
 }
 
 impl Display for AngularRate {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.to_degrees().fmt(f)?;
+        to_degrees(self.0).fmt(f)?;
         write!(f, " deg/s")
     }
 }
@@ -1220,12 +1226,12 @@ impl Decibel {
 
     /// Converts a linear power-ratio value to decibels.
     pub fn from_linear(val: f64) -> Self {
-        Self(10.0 * val.log10())
+        Self(10.0 * log10(val))
     }
 
     /// Converts this decibel value to a linear power-ratio.
     pub fn to_linear(self) -> f64 {
-        10.0_f64.powf(self.0 / 10.0)
+        powf(10.0_f64, self.0 / 10.0)
     }
 
     /// Returns the raw `f64` value in dB.
@@ -1964,9 +1970,9 @@ mod tests {
     #[test]
     fn test_angle_hyperbolic_trig() {
         let a = Angle::radians(1.0);
-        assert_approx_eq!(a.sinh(), 1.0_f64.sinh(), rtol <= 1e-10);
-        assert_approx_eq!(a.cosh(), 1.0_f64.cosh(), rtol <= 1e-10);
-        assert_approx_eq!(a.tanh(), 1.0_f64.tanh(), rtol <= 1e-10);
+        assert_approx_eq!(a.sinh(), sinh(1.0_f64), rtol <= 1e-10);
+        assert_approx_eq!(a.cosh(), cosh(1.0_f64), rtol <= 1e-10);
+        assert_approx_eq!(a.tanh(), tanh(1.0_f64), rtol <= 1e-10);
     }
 
     #[test]

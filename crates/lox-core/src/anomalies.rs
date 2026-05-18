@@ -24,11 +24,9 @@
 //! - For parabolic orbits: represents parabolic anomaly D (stored as radians)
 
 use lox_test_utils::approx_eq::{ApproxEq, ApproxEqResults};
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use num_traits::Float;
 use thiserror::Error;
 
+use crate::math::float::{abs, atan, atanh, cbrt, cos, cosh, powi, sin, sinh, sqrt, tan, tanh};
 use crate::{
     elements::{Eccentricity, OrbitType},
     units::{Angle, AngleUnits},
@@ -355,8 +353,8 @@ pub type Result<T> = core::result::Result<T, AnomalyError>;
 pub fn true_to_eccentric(nu: Angle, e: Eccentricity) -> Angle {
     let ecc = e.as_f64();
     // Half-angle formula (most numerically stable)
-    let factor = ((1.0_f64 - ecc) / (1.0_f64 + ecc)).sqrt();
-    let ecc_half = Angle::from_atan(factor * (nu.as_f64() / 2.0).tan());
+    let factor = sqrt((1.0_f64 - ecc) / (1.0_f64 + ecc));
+    let ecc_half = Angle::from_atan(factor * tan(nu.as_f64() / 2.0));
     let ecc_angle = Angle::new(2.0 * ecc_half.as_f64());
 
     // Normalize to (-π, π]
@@ -376,8 +374,8 @@ pub fn true_to_eccentric(nu: Angle, e: Eccentricity) -> Angle {
 pub fn eccentric_to_true(ecc: Angle, e: Eccentricity) -> Angle {
     let ecc_val = e.as_f64();
     // Half-angle formula
-    let factor = ((1.0_f64 + ecc_val) / (1.0_f64 - ecc_val)).sqrt();
-    let nu_half = Angle::from_atan(factor * (ecc.as_f64() / 2.0).tan());
+    let factor = sqrt((1.0_f64 + ecc_val) / (1.0_f64 - ecc_val));
+    let nu_half = Angle::from_atan(factor * tan(ecc.as_f64() / 2.0));
     let nu = Angle::new(2.0 * nu_half.as_f64());
 
     // Normalize to (-π, π]
@@ -435,8 +433,8 @@ pub fn mean_to_eccentric(
 
     // Newton-Raphson iteration with second-order correction
     for _iteration in 0..max_iterations {
-        let sin_e = ecc_anomaly.sin();
-        let cos_e = ecc_anomaly.cos();
+        let sin_e = sin(ecc_anomaly);
+        let cos_e = cos(ecc_anomaly);
 
         // Function: f(E) = E - e*sin(E) - M
         let f = ecc_anomaly - ecc * sin_e - m;
@@ -450,14 +448,14 @@ pub fn mean_to_eccentric(
         let delta = f / d_prime;
         ecc_anomaly -= delta;
 
-        if delta.abs() < tol {
+        if abs(delta) < tol {
             return Ok(Angle::new(ecc_anomaly).normalize_two_pi(Angle::ZERO));
         }
     }
 
     Err(AnomalyError::ConvergenceFailure {
         iterations: max_iterations,
-        residual: (ecc_anomaly - ecc * ecc_anomaly.sin() - m).abs(),
+        residual: abs(ecc_anomaly - ecc * sin(ecc_anomaly) - m),
     })
 }
 
@@ -491,7 +489,7 @@ pub fn mean_to_true(mean: Angle, e: Eccentricity) -> Result<Angle> {
 /// # Returns
 /// Parabolic anomaly (dimensionless, unbounded)
 pub fn true_to_parabolic(nu: Angle) -> f64 {
-    (nu.as_f64() / 2.0).tan()
+    tan(nu.as_f64() / 2.0)
 }
 
 /// Convert parabolic anomaly to true anomaly.
@@ -504,7 +502,7 @@ pub fn true_to_parabolic(nu: Angle) -> f64 {
 /// # Returns
 /// True anomaly, in range (-π, π)
 pub fn parabolic_to_true(parabolic: f64) -> Angle {
-    Angle::new(2.0 * parabolic.atan())
+    Angle::new(2.0 * atan(parabolic))
 }
 
 /// Convert parabolic anomaly to parabolic mean anomaly.
@@ -517,7 +515,7 @@ pub fn parabolic_to_true(parabolic: f64) -> Angle {
 /// # Returns
 /// Parabolic mean anomaly
 pub fn parabolic_to_mean(parabolic: f64) -> f64 {
-    parabolic + parabolic.powi(3) / 3.0
+    parabolic + powi(parabolic, 3) / 3.0
 }
 
 /// Convert parabolic mean anomaly to parabolic anomaly.
@@ -537,7 +535,7 @@ pub fn mean_to_parabolic(mean_parabolic: f64) -> f64 {
 
     // z = cbrt(A + sqrt(A² + 1))
     let discriminant = a * a + 1.0;
-    let z = (a + discriminant.sqrt()).cbrt();
+    let z = cbrt(a + sqrt(discriminant));
 
     // D = z - 1/z
     z - 1.0 / z
@@ -576,16 +574,16 @@ pub fn true_to_hyperbolic(nu: Angle, e: Eccentricity) -> Result<Angle> {
     let ecc = e.as_f64();
     // Check if true anomaly is within asymptote limits
     let nu_max = Angle::from_acos(-1.0 / ecc);
-    if nu.as_f64().abs() >= nu_max.as_f64() {
+    if abs(nu.as_f64()) >= nu_max.as_f64() {
         return Err(AnomalyError::InvalidTrueAnomaly { nu, max_nu: nu_max });
     }
 
     // Half-angle formula
-    let factor = ((ecc - 1.0_f64) / (ecc + 1.0_f64)).sqrt();
-    let tanh_f_half = factor * (nu.as_f64() / 2.0).tan();
+    let factor = sqrt((ecc - 1.0_f64) / (ecc + 1.0_f64));
+    let tanh_f_half = factor * tan(nu.as_f64() / 2.0);
 
     // F = 2 * atanh(tanh(F/2))
-    let f_half = tanh_f_half.atanh();
+    let f_half = atanh(tanh_f_half);
     Ok(Angle::new(2.0 * f_half))
 }
 
@@ -603,10 +601,10 @@ pub fn hyperbolic_to_true(hyperbolic: Angle, e: Eccentricity) -> Angle {
     let hyperbolic = hyperbolic.as_f64();
     let ecc = e.as_f64();
     // Half-angle formula
-    let factor = ((ecc + 1.0) / (ecc - 1.0)).sqrt();
-    let tan_nu_half = factor * (hyperbolic / 2.0).tanh();
+    let factor = sqrt((ecc + 1.0) / (ecc - 1.0));
+    let tan_nu_half = factor * tanh(hyperbolic / 2.0);
 
-    Angle::new(2.0 * tan_nu_half.atan())
+    Angle::new(2.0 * atan(tan_nu_half))
 }
 
 /// Convert hyperbolic eccentric anomaly to hyperbolic mean anomaly.
@@ -620,7 +618,7 @@ pub fn hyperbolic_to_true(hyperbolic: Angle, e: Eccentricity) -> Angle {
 /// # Returns
 /// Hyperbolic mean anomaly
 pub fn hyperbolic_to_mean(hyperbolic: Angle, e: Eccentricity) -> Angle {
-    Angle::new(e.as_f64() * hyperbolic.sinh() - hyperbolic.as_f64())
+    Angle::new(e.as_f64() * sinh(hyperbolic.as_f64()) - hyperbolic.as_f64())
 }
 
 /// Convert hyperbolic mean anomaly to hyperbolic eccentric anomaly.
@@ -648,12 +646,12 @@ pub fn mean_to_hyperbolic(
 
     // Initial guess using domain-informed approximation
     // arcsinh(M/e) provides excellent starting point for hyperbolic case
-    let mut f = (mean_hyperbolic / ecc).asinh();
+    let mut f = crate::math::float::asinh(mean_hyperbolic / ecc);
 
     // Newton-Raphson iteration
     for _iteration in 0..max_iterations {
-        let sinh_f = f.sinh();
-        let cosh_f = f.cosh();
+        let sinh_f = sinh(f);
+        let cosh_f = cosh(f);
 
         // Function: g(F) = e*sinh(F) - F - M_h
         let g = ecc * sinh_f - f - mean_hyperbolic;
@@ -664,14 +662,14 @@ pub fn mean_to_hyperbolic(
         let delta = g / dg;
         f -= delta;
 
-        if delta.abs() < tol {
+        if abs(delta) < tol {
             return Ok(f.rad());
         }
     }
 
     Err(AnomalyError::ConvergenceFailure {
         iterations: max_iterations,
-        residual: (ecc * f.sinh() - f - mean_hyperbolic).abs(),
+        residual: abs(ecc * sinh(f) - f - mean_hyperbolic),
     })
 }
 

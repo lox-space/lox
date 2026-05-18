@@ -2,154 +2,387 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! `const fn`-compatible float helpers for `f64`.
-//!
-//! `f64::floor`, `f64::round`, and `f64::round_ties_even` are inherent methods
-//! that became `const fn` in Rust 1.83. They're available unconditionally in
-//! `std` builds but absent from `core` (no_std). [`num_traits::Float`] provides
-//! these in no_std, but the trait methods are not `const fn`, which would force
-//! us to drop `const` from a chain of `TimeDelta` and `Subsecond` constructors.
-//!
-//! This module dispatches to the inherent `const fn` methods in `std` mode and
-//! to manual `const fn` implementations (using `f64 -> i64 -> f64` casts) in
-//! no_std mode. The manual implementations are correct for finite values within
-//! `i64` range, which covers every call site in this crate.
+//! `f64` math dispatched per build mode: inherent methods under `std`,
+//! [`libm`] under no_std. Free-function form (`sqrt(x)` not `x.sqrt()`) so
+//! call sites don't need `cfg`-gated trait imports.
 
-/// `const fn` equivalent of `f64::floor`.
-///
-/// For finite inputs within `i64::MIN..=i64::MAX`, returns the largest integer
-/// `<= x`. NaN and infinities are returned unchanged.
+// Rounding helpers
+// ================
+
+/// Truncates toward zero.
 #[inline]
-pub(crate) const fn floor(x: f64) -> f64 {
+pub fn trunc(x: f64) -> f64 {
     #[cfg(feature = "std")]
     {
-        x.floor()
+        x.trunc()
     }
     #[cfg(not(feature = "std"))]
     {
-        if x.is_nan() || x.is_infinite() {
-            return x;
-        }
-        // f64 -> i64 cast truncates toward zero (saturates on overflow, NaN -> 0).
-        let i = x as i64 as f64;
-        if x < i { i - 1.0 } else { i }
+        libm::trunc(x)
     }
 }
 
-/// `const fn` equivalent of `f64::round` (round half away from zero).
-///
-/// For finite inputs within `i64::MIN..=i64::MAX`, rounds ties away from zero.
-/// NaN and infinities are returned unchanged.
+/// Returns the fractional part (`x - trunc(x)`).
 #[inline]
-pub(crate) const fn round(x: f64) -> f64 {
+pub fn fract(x: f64) -> f64 {
     #[cfg(feature = "std")]
     {
-        x.round()
+        x.fract()
     }
     #[cfg(not(feature = "std"))]
     {
-        if x.is_nan() || x.is_infinite() {
-            return x;
-        }
-        let i = x as i64 as f64;
-        let frac = x - i;
-        if frac >= 0.5 {
-            i + 1.0
-        } else if frac <= -0.5 {
-            i - 1.0
+        x - libm::trunc(x)
+    }
+}
+
+// Algebraic
+// =========
+
+/// Absolute value.
+#[inline]
+pub fn abs(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.abs()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::fabs(x)
+    }
+}
+
+/// Sign function: `1.0`, `-1.0`, or `NaN`.
+#[inline]
+pub fn signum(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.signum()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        if x.is_nan() {
+            f64::NAN
         } else {
-            i
+            libm::copysign(1.0, x)
         }
     }
 }
 
-/// `const fn` equivalent of `f64::round_ties_even` (banker's rounding).
-///
-/// For finite inputs within `i64::MIN..=i64::MAX`, rounds half-integers to the
-/// nearest even integer. NaN and infinities are returned unchanged.
+/// Square root.
 #[inline]
-pub(crate) const fn round_ties_even(x: f64) -> f64 {
+pub fn sqrt(x: f64) -> f64 {
     #[cfg(feature = "std")]
     {
-        x.round_ties_even()
+        x.sqrt()
     }
     #[cfg(not(feature = "std"))]
     {
-        if x.is_nan() || x.is_infinite() {
-            return x;
-        }
-        let i = x as i64 as f64;
-        let frac = x - i;
-        if frac > 0.5 {
-            i + 1.0
-        } else if frac < -0.5 {
-            i - 1.0
-        } else if frac == 0.5 {
-            if (i as i64) % 2 == 0 { i } else { i + 1.0 }
-        } else if frac == -0.5 {
-            if (i as i64) % 2 == 0 { i } else { i - 1.0 }
-        } else {
-            i
-        }
+        libm::sqrt(x)
     }
+}
+
+/// Cube root.
+#[inline]
+pub fn cbrt(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.cbrt()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::cbrt(x)
+    }
+}
+
+/// Raises `x` to an integer power.
+#[inline]
+pub fn powi(x: f64, n: i32) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.powi(n)
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::pow(x, n as f64)
+    }
+}
+
+/// Raises `x` to a floating-point power.
+#[inline]
+pub fn powf(x: f64, n: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.powf(n)
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::pow(x, n)
+    }
+}
+
+/// Fused multiply-add: `a * b + c` with a single rounding.
+#[inline]
+pub fn mul_add(a: f64, b: f64, c: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        a.mul_add(b, c)
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::fma(a, b, c)
+    }
+}
+
+// Trigonometric
+// =============
+
+/// Sine.
+#[inline]
+pub fn sin(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.sin()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::sin(x)
+    }
+}
+
+/// Cosine.
+#[inline]
+pub fn cos(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.cos()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::cos(x)
+    }
+}
+
+/// Tangent.
+#[inline]
+pub fn tan(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.tan()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::tan(x)
+    }
+}
+
+/// Sine and cosine in a single call.
+#[inline]
+pub fn sin_cos(x: f64) -> (f64, f64) {
+    #[cfg(feature = "std")]
+    {
+        x.sin_cos()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::sincos(x)
+    }
+}
+
+/// Arcsine.
+#[inline]
+pub fn asin(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.asin()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::asin(x)
+    }
+}
+
+/// Arccosine.
+#[inline]
+pub fn acos(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.acos()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::acos(x)
+    }
+}
+
+/// Arctangent.
+#[inline]
+pub fn atan(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.atan()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::atan(x)
+    }
+}
+
+/// Four-quadrant arctangent of `y/x`.
+#[inline]
+pub fn atan2(y: f64, x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        y.atan2(x)
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::atan2(y, x)
+    }
+}
+
+// Hyperbolic
+// ==========
+
+/// Hyperbolic sine.
+#[inline]
+pub fn sinh(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.sinh()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::sinh(x)
+    }
+}
+
+/// Hyperbolic cosine.
+#[inline]
+pub fn cosh(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.cosh()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::cosh(x)
+    }
+}
+
+/// Hyperbolic tangent.
+#[inline]
+pub fn tanh(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.tanh()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::tanh(x)
+    }
+}
+
+/// Inverse hyperbolic sine.
+#[inline]
+pub fn asinh(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.asinh()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::asinh(x)
+    }
+}
+
+/// Inverse hyperbolic cosine.
+#[inline]
+pub fn acosh(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.acosh()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::acosh(x)
+    }
+}
+
+/// Inverse hyperbolic tangent.
+#[inline]
+pub fn atanh(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.atanh()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::atanh(x)
+    }
+}
+
+// Exponential and logarithmic
+// ===========================
+
+/// Natural logarithm.
+#[inline]
+pub fn ln(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.ln()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::log(x)
+    }
+}
+
+/// Base-10 logarithm.
+#[inline]
+pub fn log10(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.log10()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::log10(x)
+    }
+}
+
+// Angle conversion (pure arithmetic, identical in both modes)
+// ===========================================================
+
+/// Converts radians to degrees.
+#[inline]
+pub const fn to_degrees(x: f64) -> f64 {
+    x * (180.0 / core::f64::consts::PI)
+}
+
+/// Converts degrees to radians.
+#[inline]
+pub const fn to_radians(x: f64) -> f64 {
+    x * (core::f64::consts::PI / 180.0)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rstest::rstest;
 
-    #[rstest]
-    #[case(1.5, 1.0)]
-    #[case(-1.5, -2.0)]
-    #[case(0.0, 0.0)]
-    #[case(-0.0, 0.0)]
-    #[case(3.7, 3.0)]
-    #[case(-3.7, -4.0)]
-    fn test_floor(#[case] input: f64, #[case] expected: f64) {
-        assert_eq!(floor(input), expected);
-    }
-
-    #[rstest]
-    #[case(0.5, 1.0)]
-    #[case(-0.5, -1.0)]
-    #[case(1.5, 2.0)]
-    #[case(-1.5, -2.0)]
-    #[case(0.3, 0.0)]
-    #[case(-0.3, 0.0)]
-    fn test_round(#[case] input: f64, #[case] expected: f64) {
-        assert_eq!(round(input), expected);
-    }
-
-    #[rstest]
-    #[case(0.5, 0.0)]
-    #[case(1.5, 2.0)]
-    #[case(2.5, 2.0)]
-    #[case(3.5, 4.0)]
-    #[case(-0.5, 0.0)]
-    #[case(-1.5, -2.0)]
-    #[case(-2.5, -2.0)]
-    #[case(0.3, 0.0)]
-    #[case(0.7, 1.0)]
-    fn test_round_ties_even(#[case] input: f64, #[case] expected: f64) {
-        assert_eq!(round_ties_even(input), expected);
+    #[test]
+    fn test_sqrt() {
+        assert!(abs(sqrt(2.0) - core::f64::consts::SQRT_2) < 1e-15);
     }
 
     #[test]
-    fn test_const_floor_compiles() {
-        const X: f64 = floor(3.7);
-        assert_eq!(X, 3.0);
+    fn test_sin_cos_matches() {
+        let (s, c) = sin_cos(0.5);
+        assert!(abs(s - sin(0.5)) < 1e-15);
+        assert!(abs(c - cos(0.5)) < 1e-15);
     }
 
     #[test]
-    fn test_const_round_compiles() {
-        const X: f64 = round(0.5);
-        assert_eq!(X, 1.0);
-    }
-
-    #[test]
-    fn test_const_round_ties_even_compiles() {
-        const X: f64 = round_ties_even(2.5);
-        assert_eq!(X, 2.0);
+    fn test_atan2() {
+        assert!(abs(atan2(1.0, 1.0) - core::f64::consts::FRAC_PI_4) < 1e-15);
     }
 }

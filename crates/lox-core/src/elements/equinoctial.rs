@@ -20,14 +20,12 @@
 //! diverges. For retrograde orbits, Type II equinoctial elements using
 //! cot(i/2) should be used instead (not yet implemented).
 
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use num_traits::Float;
 use thiserror::Error;
 
 use crate::anomalies::AnomalyError;
 use crate::coords::Cartesian;
 use crate::elements::keplerian::{GravitationalParameter, Keplerian, KeplerianError};
+use crate::math::float::{atan, atan2, cos, sin, sqrt, tan};
 use crate::units::{AngleUnits, Distance};
 
 /// Type I equinoctial orbital elements.
@@ -90,11 +88,11 @@ impl Equinoctial {
         let big_omega = kep.longitude_of_ascending_node().as_f64();
 
         let pomega = omega + big_omega; // longitude of periapsis
-        let k = e * pomega.cos();
-        let h = e * pomega.sin();
-        let half_i_tan = (i / 2.0).tan();
-        let p = half_i_tan * big_omega.cos();
-        let q = half_i_tan * big_omega.sin();
+        let k = e * cos(pomega);
+        let h = e * sin(pomega);
+        let half_i_tan = tan(i / 2.0);
+        let p = half_i_tan * cos(big_omega);
+        let q = half_i_tan * sin(big_omega);
         let lambda = m + pomega;
 
         Ok(Self {
@@ -110,10 +108,10 @@ impl Equinoctial {
     /// Converts equinoctial elements back to Keplerian.
     pub fn to_keplerian(&self) -> Result<Keplerian, EquinoctialError> {
         let e = self.eccentricity();
-        let pomega = self.h.atan2(self.k); // ω + Ω
-        let half_i_tan = (self.p * self.p + self.q * self.q).sqrt();
-        let i = 2.0 * half_i_tan.atan();
-        let big_omega = self.q.atan2(self.p);
+        let pomega = atan2(self.h, self.k); // ω + Ω
+        let half_i_tan = sqrt(self.p * self.p + self.q * self.q);
+        let i = 2.0 * atan(half_i_tan);
+        let big_omega = atan2(self.q, self.p);
         let omega = pomega - big_omega;
         let m = self.lambda - pomega;
 
@@ -173,12 +171,12 @@ impl Equinoctial {
 
     /// Returns the eccentricity e = √(k² + h²).
     pub fn eccentricity(&self) -> f64 {
-        (self.k * self.k + self.h * self.h).sqrt()
+        sqrt(self.k * self.k + self.h * self.h)
     }
 
     /// Returns the inclination i = 2·atan(√(p² + q²)) in radians.
     pub fn inclination(&self) -> f64 {
-        2.0 * (self.p * self.p + self.q * self.q).sqrt().atan()
+        2.0 * atan(sqrt(self.p * self.p + self.q * self.q))
     }
 }
 

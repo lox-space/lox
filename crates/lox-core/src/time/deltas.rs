@@ -17,9 +17,8 @@ use core::fmt::Display;
 use core::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use lox_test_utils::approx_eq::ApproxEq;
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use num_traits::Float;
+
+use crate::math::float::mul_add;
 
 use crate::f64;
 use crate::i64::consts::{
@@ -285,7 +284,7 @@ fn two_sum(a: f64, b: f64) -> (f64, f64) {
 #[inline]
 fn two_prod(a: f64, b: f64) -> (f64, f64) {
     let p = a * b;
-    let e = a.mul_add(b, -p); // FMA: a * b - p
+    let e = mul_add(a, b, -p); // FMA: a * b - p
     (p, e)
 }
 
@@ -375,24 +374,43 @@ impl TimeDelta {
         if value > i64::MAX as f64 {
             return TimeDelta::PosInf;
         }
-        let seconds = crate::math::float::round_ties_even(value);
+        // Inline const-compatible round_ties_even (banker's rounding). The
+        // bounds check above guarantees `value` fits in `i64::MIN..=i64::MAX`.
+        let i = value as i64 as f64;
+        let frac = value - i;
+        let seconds = if frac > 0.5 {
+            i + 1.0
+        } else if frac < -0.5 {
+            i - 1.0
+        } else if frac == 0.5 {
+            if (i as i64) % 2 == 0 { i } else { i + 1.0 }
+        } else if frac == -0.5 {
+            if (i as i64) % 2 == 0 { i } else { i - 1.0 }
+        } else {
+            i
+        };
         let subseconds = value - seconds;
+        // Inline const-compatible round (half away from zero). The product is
+        // bounded by `ATTOSECONDS_IN_SECOND` (1e18), within `i64` range.
+        let scaled = subseconds * ATTOSECONDS_IN_SECOND as f64;
+        let si = scaled as i64 as f64;
+        let sfrac = scaled - si;
+        let attos_rounded = if sfrac >= 0.5 {
+            si + 1.0
+        } else if sfrac <= -0.5 {
+            si - 1.0
+        } else {
+            si
+        };
         if subseconds.is_sign_negative() {
-            let seconds = seconds as i64 - 1;
-            let attoseconds = crate::math::float::round(subseconds * ATTOSECONDS_IN_SECOND as f64)
-                as i64
-                + ATTOSECONDS_IN_SECOND;
             TimeDelta::Valid {
-                seconds,
-                attoseconds,
+                seconds: seconds as i64 - 1,
+                attoseconds: attos_rounded as i64 + ATTOSECONDS_IN_SECOND,
             }
         } else {
-            let seconds = seconds as i64;
-            let attoseconds =
-                crate::math::float::round(subseconds * ATTOSECONDS_IN_SECOND as f64) as i64;
             TimeDelta::Valid {
-                seconds,
-                attoseconds,
+                seconds: seconds as i64,
+                attoseconds: attos_rounded as i64,
             }
         }
     }
@@ -1043,6 +1061,7 @@ impl TimeDeltaBuilder {
 mod tests {
     use super::*;
     use crate::i64::consts::ATTOSECONDS_IN_SECOND;
+    use crate::math::float::abs;
 
     #[test]
     fn test_new_normalizes_attoseconds() {
@@ -1335,7 +1354,7 @@ mod tests {
         let expected = 0.0001000000123456789;
 
         // Check within attosecond precision
-        assert!((result_f64 - expected).abs() < 1e-17);
+        assert!(abs(result_f64 - expected) < 1e-17);
     }
 
     #[test]
@@ -1397,7 +1416,7 @@ mod tests {
         // Should be -65.5 microseconds = -6.55e-5 seconds
         let expected = -65.5e-6;
         assert!(
-            (dt.to_seconds().to_f64() - expected).abs() < 1e-15,
+            abs(dt.to_seconds().to_f64() - expected) < 1e-15,
             "expected {} but got {}",
             expected,
             dt.to_seconds().to_f64()
@@ -1454,10 +1473,10 @@ mod tests {
         // -725803167.816 = -725803168 + 0.184
         assert_eq!(tf.hi, -725803168.0);
         // lo should be the subsecond fraction (1.0 - 0.816 = 0.184)
-        assert!((tf.lo - 0.184).abs() < 1e-15);
+        assert!(abs(tf.lo - 0.184) < 1e-15);
 
         // Combined should give the correct value
-        assert!((tf.to_f64() - (-725803167.816)).abs() < 1e-9);
+        assert!(abs(tf.to_f64() - (-725803167.816)) < 1e-9);
     }
 
     #[test]

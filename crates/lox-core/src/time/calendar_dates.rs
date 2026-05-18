@@ -18,7 +18,6 @@ use core::{
 
 use crate::time::deltas::TimeDelta;
 use nom::{Parser, combinator::all_consuming};
-use num_traits::ToPrimitive;
 use thiserror::Error;
 
 use super::iso;
@@ -306,9 +305,7 @@ fn find_month(day_in_year: u16, is_leap: bool) -> u8 {
     } else {
         (10 * day_in_year + offset) / 306
     };
-    month
-        .to_u8()
-        .unwrap_or_else(|| unreachable!("month could not be represented as u8: {}", month))
+    month as u8
 }
 
 fn find_day(day_in_year: u16, month: u8, is_leap: bool) -> Result<u8, DateError> {
@@ -321,9 +318,7 @@ fn find_day(day_in_year: u16, month: u8, is_leap: bool) -> Result<u8, DateError>
             PREVIOUS_MONTH_END_DAY
         };
         let day = day_in_year - previous_days[(month - 1) as usize];
-        Ok(day
-            .to_u8()
-            .unwrap_or_else(|| unreachable!("day could not be represented as u8: {}", day)))
+        Ok(day as u8)
     }
 }
 

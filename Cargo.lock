@@ -1247,9 +1247,9 @@ dependencies = [
  "chrono",
  "fast_polynomial",
  "glam 0.30.10",
+ "libm",
  "lox-test-utils",
  "nom",
- "num-traits",
  "proptest",
  "rstest",
  "serde",
@@ -1421,8 +1421,8 @@ version = "0.1.0-alpha.7"
 dependencies = [
  "codspeed-divan-compat",
  "glam 0.30.10",
+ "libm",
  "lox-derive",
- "num-traits",
 ]
 
 [[package]]

@@ -12,10 +12,9 @@ use core::fmt;
 use core::str::FromStr;
 
 use fast_polynomial::poly_array;
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use num_traits::Float;
 use thiserror::Error;
+
+use crate::math::float::powi;
 
 use crate::math::slices::Monotonic;
 
@@ -218,13 +217,13 @@ impl Series {
         let delta = x[2] - x[0];
         b.insert(
             0,
-            ((dx[0] + 2.0 * delta) * dx[1] * slope[0] + dx[0].powi(2) * slope[1]) / delta,
+            ((dx[0] + 2.0 * delta) * dx[1] * slope[0] + powi(dx[0], 2) * slope[1]) / delta,
         );
         d.push(dx[nd - 2]);
         let delta = x[n - 1] - x[n - 3];
         dl.push(delta);
         b.push(
-            (dx[nd - 1].powi(2) * slope[nd - 2]
+            (powi(dx[nd - 1], 2) * slope[nd - 2]
                 + (2.0 * delta + dx[nd - 1]) * dx[nd - 2] * slope[nd - 1])
                 / delta,
         );
