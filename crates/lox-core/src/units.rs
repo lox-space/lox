@@ -4,7 +4,7 @@
 
 //! Newtype wrappers for unitful [`f64`] double precision values
 
-use std::{
+use core::{
     f64::consts::{FRAC_PI_2, FRAC_PI_4, PI, TAU},
     fmt::{Display, Formatter, Result},
     ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign},
@@ -1341,7 +1341,7 @@ trait_impls!(
 #[cfg(test)]
 mod tests {
     use alloc::format;
-    use std::f64::consts::{FRAC_PI_2, PI};
+    use core::f64::consts::{FRAC_PI_2, PI};
 
     use lox_test_utils::assert_approx_eq;
     use rstest::rstest;
@@ -1876,14 +1876,14 @@ mod tests {
 
     #[test]
     fn test_angle_radians_normalized() {
-        use std::f64::consts::TAU;
+        use core::f64::consts::TAU;
         let a = Angle::radians_normalized(TAU + 0.5);
         assert_approx_eq!(a.as_f64(), 0.5, rtol <= 1e-10);
     }
 
     #[test]
     fn test_angle_radians_normalized_signed() {
-        use std::f64::consts::TAU;
+        use core::f64::consts::TAU;
         let a = Angle::radians_normalized_signed(-TAU - 0.5);
         assert!(a.as_f64() < 0.0);
     }
@@ -1968,14 +1968,14 @@ mod tests {
 
     #[test]
     fn test_angle_mod_two_pi() {
-        use std::f64::consts::TAU;
+        use core::f64::consts::TAU;
         let a = Angle::radians(TAU + 1.0).mod_two_pi();
         assert_approx_eq!(a.as_f64(), 1.0, rtol <= 1e-10);
     }
 
     #[test]
     fn test_angle_mod_two_pi_signed() {
-        use std::f64::consts::TAU;
+        use core::f64::consts::TAU;
         let a = Angle::radians(TAU + 1.0).mod_two_pi_signed();
         assert_approx_eq!(a.as_f64(), 1.0, rtol <= 1e-10);
     }

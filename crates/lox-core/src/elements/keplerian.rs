@@ -4,9 +4,9 @@
 
 //! Data types for representing orbital elements.
 
-use std::f64::consts::PI;
-use std::f64::consts::TAU;
-use std::fmt::Display;
+use core::f64::consts::PI;
+use core::f64::consts::TAU;
+use core::fmt::Display;
 
 use glam::DVec3;
 use lox_test_utils::ApproxEq;
@@ -48,7 +48,7 @@ impl GravitationalParameter {
 }
 
 impl Display for GravitationalParameter {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         (self.0 * 1e-9).fmt(f)?;
         write!(f, " km³/s²")
     }
@@ -72,7 +72,7 @@ pub enum OrbitType {
 }
 
 impl Display for OrbitType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             OrbitType::Circular => "circular".fmt(f),
             OrbitType::Elliptic => "elliptic".fmt(f),
@@ -148,7 +148,7 @@ impl Eccentricity {
 }
 
 impl Display for Eccentricity {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -181,7 +181,7 @@ impl Inclination {
 }
 
 impl Display for Inclination {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -216,7 +216,7 @@ impl LongitudeOfAscendingNode {
 }
 
 impl Display for LongitudeOfAscendingNode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -251,7 +251,7 @@ impl ArgumentOfPeriapsis {
 }
 
 impl Display for ArgumentOfPeriapsis {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.0.fmt(f)
     }
 }

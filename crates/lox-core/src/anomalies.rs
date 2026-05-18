@@ -31,14 +31,14 @@ use crate::{
     units::{Angle, AngleUnits},
 };
 
-use core::marker::PhantomData;
-use std::{
+use core::{
     fmt::Display,
+    marker::PhantomData,
     ops::{Add, Neg, Sub},
 };
 
 /// Sealed marker trait for anomaly kinds
-pub trait AnomalyKind: sealed::Sealed + std::fmt::Debug {}
+pub trait AnomalyKind: sealed::Sealed + core::fmt::Debug {}
 
 mod sealed {
     /// Sealed trait to prevent external implementation
@@ -80,7 +80,7 @@ impl<K> Display for Anomaly<K>
 where
     K: AnomalyKind,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.anomaly.fmt(f)
     }
 }
@@ -333,7 +333,7 @@ pub enum AnomalyError {
 }
 
 /// A type alias for `Result<T, AnomalyError>`.
-pub type Result<T> = std::result::Result<T, AnomalyError>;
+pub type Result<T> = core::result::Result<T, AnomalyError>;
 
 // ============================================================================
 // ELLIPTIC ORBIT CONVERSIONS (0 < e < 1)
