@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
 // SPDX-FileCopyrightText: 2026 Marijan Smetko <msmetko@msmetko.xyz>
 //
 // SPDX-License-Identifier: MPL-2.0
@@ -16,6 +17,8 @@ use crate::coords::Cartesian;
 use crate::elements::keplerian::{GravitationalParameter, Keplerian, KeplerianError};
 use crate::units::{Angle, AngleUnits, Distance};
 use glam::DVec3;
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
 use thiserror::Error;
 
 /// Modified Equinoctial Elements (MEE).
