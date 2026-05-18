@@ -3,8 +3,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::{Earth, J2, J4, NaifId, Origin, TryJ2, TryJ4, UndefinedOriginPropertyError};
-use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::{FromPrimitive, ToPrimitive};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use thiserror::Error;
@@ -20,10 +18,9 @@ pub struct UnknownOriginName(String);
 pub struct UnknownOriginId(i32);
 
 /// Enum representation of all known origins, for use in dynamic dispatch contexts.
-#[derive(
-    Debug, Copy, Clone, Default, Eq, PartialEq, Hash, FromPrimitive, ToPrimitive, PartialOrd, Ord,
-)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(i32)]
 pub enum DynOrigin {
     /// Sun (NAIF ID: 10).
     Sun = 10,
@@ -418,7 +415,7 @@ pub enum DynOrigin {
 
 impl Origin for DynOrigin {
     fn id(&self) -> NaifId {
-        NaifId(self.to_i32().unwrap())
+        NaifId(*self as i32)
     }
 
     fn name(&self) -> &'static str {
@@ -635,7 +632,199 @@ impl TryFrom<i32> for DynOrigin {
     type Error = UnknownOriginId;
 
     fn try_from(value: i32) -> Result<Self, Self::Error> {
-        DynOrigin::from_i32(value).ok_or(UnknownOriginId(value))
+        match value {
+            10 => Ok(DynOrigin::Sun),
+            199 => Ok(DynOrigin::Mercury),
+            299 => Ok(DynOrigin::Venus),
+            399 => Ok(DynOrigin::Earth),
+            499 => Ok(DynOrigin::Mars),
+            599 => Ok(DynOrigin::Jupiter),
+            699 => Ok(DynOrigin::Saturn),
+            799 => Ok(DynOrigin::Uranus),
+            899 => Ok(DynOrigin::Neptune),
+            999 => Ok(DynOrigin::Pluto),
+            0 => Ok(DynOrigin::SolarSystemBarycenter),
+            1 => Ok(DynOrigin::MercuryBarycenter),
+            2 => Ok(DynOrigin::VenusBarycenter),
+            3 => Ok(DynOrigin::EarthBarycenter),
+            4 => Ok(DynOrigin::MarsBarycenter),
+            5 => Ok(DynOrigin::JupiterBarycenter),
+            6 => Ok(DynOrigin::SaturnBarycenter),
+            7 => Ok(DynOrigin::UranusBarycenter),
+            8 => Ok(DynOrigin::NeptuneBarycenter),
+            9 => Ok(DynOrigin::PlutoBarycenter),
+            301 => Ok(DynOrigin::Moon),
+            401 => Ok(DynOrigin::Phobos),
+            402 => Ok(DynOrigin::Deimos),
+            501 => Ok(DynOrigin::Io),
+            502 => Ok(DynOrigin::Europa),
+            503 => Ok(DynOrigin::Ganymede),
+            504 => Ok(DynOrigin::Callisto),
+            505 => Ok(DynOrigin::Amalthea),
+            506 => Ok(DynOrigin::Himalia),
+            507 => Ok(DynOrigin::Elara),
+            508 => Ok(DynOrigin::Pasiphae),
+            509 => Ok(DynOrigin::Sinope),
+            510 => Ok(DynOrigin::Lysithea),
+            511 => Ok(DynOrigin::Carme),
+            512 => Ok(DynOrigin::Ananke),
+            513 => Ok(DynOrigin::Leda),
+            514 => Ok(DynOrigin::Thebe),
+            515 => Ok(DynOrigin::Adrastea),
+            516 => Ok(DynOrigin::Metis),
+            517 => Ok(DynOrigin::Callirrhoe),
+            518 => Ok(DynOrigin::Themisto),
+            519 => Ok(DynOrigin::Magaclite),
+            520 => Ok(DynOrigin::Taygete),
+            521 => Ok(DynOrigin::Chaldene),
+            522 => Ok(DynOrigin::Harpalyke),
+            523 => Ok(DynOrigin::Kalyke),
+            524 => Ok(DynOrigin::Iocaste),
+            525 => Ok(DynOrigin::Erinome),
+            526 => Ok(DynOrigin::Isonoe),
+            527 => Ok(DynOrigin::Praxidike),
+            528 => Ok(DynOrigin::Autonoe),
+            529 => Ok(DynOrigin::Thyone),
+            530 => Ok(DynOrigin::Hermippe),
+            531 => Ok(DynOrigin::Aitne),
+            532 => Ok(DynOrigin::Eurydome),
+            533 => Ok(DynOrigin::Euanthe),
+            534 => Ok(DynOrigin::Euporie),
+            535 => Ok(DynOrigin::Orthosie),
+            536 => Ok(DynOrigin::Sponde),
+            537 => Ok(DynOrigin::Kale),
+            538 => Ok(DynOrigin::Pasithee),
+            539 => Ok(DynOrigin::Hegemone),
+            540 => Ok(DynOrigin::Mneme),
+            541 => Ok(DynOrigin::Aoede),
+            542 => Ok(DynOrigin::Thelxinoe),
+            543 => Ok(DynOrigin::Arche),
+            544 => Ok(DynOrigin::Kallichore),
+            545 => Ok(DynOrigin::Helike),
+            546 => Ok(DynOrigin::Carpo),
+            547 => Ok(DynOrigin::Eukelade),
+            548 => Ok(DynOrigin::Cyllene),
+            549 => Ok(DynOrigin::Kore),
+            550 => Ok(DynOrigin::Herse),
+            553 => Ok(DynOrigin::Dia),
+            601 => Ok(DynOrigin::Mimas),
+            602 => Ok(DynOrigin::Enceladus),
+            603 => Ok(DynOrigin::Tethys),
+            604 => Ok(DynOrigin::Dione),
+            605 => Ok(DynOrigin::Rhea),
+            606 => Ok(DynOrigin::Titan),
+            607 => Ok(DynOrigin::Hyperion),
+            608 => Ok(DynOrigin::Iapetus),
+            609 => Ok(DynOrigin::Phoebe),
+            610 => Ok(DynOrigin::Janus),
+            611 => Ok(DynOrigin::Epimetheus),
+            612 => Ok(DynOrigin::Helene),
+            613 => Ok(DynOrigin::Telesto),
+            614 => Ok(DynOrigin::Calypso),
+            615 => Ok(DynOrigin::Atlas),
+            616 => Ok(DynOrigin::Prometheus),
+            617 => Ok(DynOrigin::Pandora),
+            618 => Ok(DynOrigin::Pan),
+            619 => Ok(DynOrigin::Ymir),
+            620 => Ok(DynOrigin::Paaliaq),
+            621 => Ok(DynOrigin::Tarvos),
+            622 => Ok(DynOrigin::Ijiraq),
+            623 => Ok(DynOrigin::Suttungr),
+            624 => Ok(DynOrigin::Kiviuq),
+            625 => Ok(DynOrigin::Mundilfari),
+            626 => Ok(DynOrigin::Albiorix),
+            627 => Ok(DynOrigin::Skathi),
+            628 => Ok(DynOrigin::Erriapus),
+            629 => Ok(DynOrigin::Siarnaq),
+            630 => Ok(DynOrigin::Thrymr),
+            631 => Ok(DynOrigin::Narvi),
+            632 => Ok(DynOrigin::Methone),
+            633 => Ok(DynOrigin::Pallene),
+            634 => Ok(DynOrigin::Polydeuces),
+            635 => Ok(DynOrigin::Daphnis),
+            636 => Ok(DynOrigin::Aegir),
+            637 => Ok(DynOrigin::Bebhionn),
+            638 => Ok(DynOrigin::Bergelmir),
+            639 => Ok(DynOrigin::Bestla),
+            640 => Ok(DynOrigin::Farbauti),
+            641 => Ok(DynOrigin::Fenrir),
+            642 => Ok(DynOrigin::Fornjot),
+            643 => Ok(DynOrigin::Hati),
+            644 => Ok(DynOrigin::Hyrrokkin),
+            645 => Ok(DynOrigin::Kari),
+            646 => Ok(DynOrigin::Loge),
+            647 => Ok(DynOrigin::Skoll),
+            648 => Ok(DynOrigin::Surtur),
+            649 => Ok(DynOrigin::Anthe),
+            650 => Ok(DynOrigin::Jarnsaxa),
+            651 => Ok(DynOrigin::Greip),
+            652 => Ok(DynOrigin::Tarqeq),
+            653 => Ok(DynOrigin::Aegaeon),
+            701 => Ok(DynOrigin::Ariel),
+            702 => Ok(DynOrigin::Umbriel),
+            703 => Ok(DynOrigin::Titania),
+            704 => Ok(DynOrigin::Oberon),
+            705 => Ok(DynOrigin::Miranda),
+            706 => Ok(DynOrigin::Cordelia),
+            707 => Ok(DynOrigin::Ophelia),
+            708 => Ok(DynOrigin::Bianca),
+            709 => Ok(DynOrigin::Cressida),
+            710 => Ok(DynOrigin::Desdemona),
+            711 => Ok(DynOrigin::Juliet),
+            712 => Ok(DynOrigin::Portia),
+            713 => Ok(DynOrigin::Rosalind),
+            714 => Ok(DynOrigin::Belinda),
+            715 => Ok(DynOrigin::Puck),
+            716 => Ok(DynOrigin::Caliban),
+            717 => Ok(DynOrigin::Sycorax),
+            718 => Ok(DynOrigin::Prospero),
+            719 => Ok(DynOrigin::Setebos),
+            720 => Ok(DynOrigin::Stephano),
+            721 => Ok(DynOrigin::Trinculo),
+            722 => Ok(DynOrigin::Francisco),
+            723 => Ok(DynOrigin::Margaret),
+            724 => Ok(DynOrigin::Ferdinand),
+            725 => Ok(DynOrigin::Perdita),
+            726 => Ok(DynOrigin::Mab),
+            727 => Ok(DynOrigin::Cupid),
+            801 => Ok(DynOrigin::Triton),
+            802 => Ok(DynOrigin::Nereid),
+            803 => Ok(DynOrigin::Naiad),
+            804 => Ok(DynOrigin::Thalassa),
+            805 => Ok(DynOrigin::Despina),
+            806 => Ok(DynOrigin::Galatea),
+            807 => Ok(DynOrigin::Larissa),
+            808 => Ok(DynOrigin::Proteus),
+            809 => Ok(DynOrigin::Halimede),
+            810 => Ok(DynOrigin::Psamathe),
+            811 => Ok(DynOrigin::Sao),
+            812 => Ok(DynOrigin::Laomedeia),
+            813 => Ok(DynOrigin::Neso),
+            901 => Ok(DynOrigin::Charon),
+            902 => Ok(DynOrigin::Nix),
+            903 => Ok(DynOrigin::Hydra),
+            904 => Ok(DynOrigin::Kerberos),
+            905 => Ok(DynOrigin::Styx),
+            9511010 => Ok(DynOrigin::Gaspra),
+            2431010 => Ok(DynOrigin::Ida),
+            2431011 => Ok(DynOrigin::Dactyl),
+            2000001 => Ok(DynOrigin::Ceres),
+            2000002 => Ok(DynOrigin::Pallas),
+            2000004 => Ok(DynOrigin::Vesta),
+            2000016 => Ok(DynOrigin::Psyche),
+            2000021 => Ok(DynOrigin::Lutetia),
+            2000216 => Ok(DynOrigin::Kleopatra),
+            2000433 => Ok(DynOrigin::Eros),
+            2000511 => Ok(DynOrigin::Davida),
+            2000253 => Ok(DynOrigin::Mathilde),
+            2002867 => Ok(DynOrigin::Steins),
+            2009969 => Ok(DynOrigin::Braille),
+            2004015 => Ok(DynOrigin::WilsonHarrington),
+            2004179 => Ok(DynOrigin::Toutatis),
+            2025143 => Ok(DynOrigin::Itokawa),
+            2101955 => Ok(DynOrigin::Bennu),
+            _ => Err(UnknownOriginId(value)),
+        }
     }
 }
 
@@ -1075,7 +1264,7 @@ mod tests {
     #[case(DynOrigin::Itokawa)]
     #[case(DynOrigin::Bennu)]
     fn test_dyn_origin(#[case] exp: DynOrigin) {
-        let act = DynOrigin::try_from(exp.to_i32().unwrap()).unwrap();
+        let act = DynOrigin::try_from(exp as i32).unwrap();
         assert_eq!(act, exp);
         let act = DynOrigin::try_from(exp.id()).unwrap();
         assert_eq!(act, exp);
