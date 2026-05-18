@@ -30,7 +30,6 @@ thiserror = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
 divan.workspace = true
-rstest.workspace = true
 
 [[bench]]
 name = "parse"
