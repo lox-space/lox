@@ -11,13 +11,16 @@
     human-readable time of day.
 */
 
+use alloc::borrow::ToOwned;
+use alloc::format;
+use alloc::string::String;
 use core::cmp::Ordering;
 use core::fmt::Display;
 use core::str::FromStr;
 
 use crate::units::Angle;
 use nom::{Parser, combinator::all_consuming};
-use num::ToPrimitive;
+use num_traits::ToPrimitive;
 use thiserror::Error;
 
 use super::iso;

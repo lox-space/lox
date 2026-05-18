@@ -12,8 +12,6 @@ use core::{
 
 use glam::DMat3;
 use lox_test_utils::ApproxEq;
-#[cfg(not(feature = "std"))]
-use num_traits::Float;
 
 use crate::f64::consts::SECONDS_PER_DAY;
 

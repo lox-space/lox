@@ -70,9 +70,13 @@
 //! This implementation is highly optimized for performance. Single scalar comparisons
 //! (e.g., `f64`) complete in sub-nanosecond time.
 
-use std::iter::zip;
+use alloc::format;
+use alloc::vec::Vec;
+use core::iter::zip;
 
 use glam::{DMat3, DVec3};
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
 
 pub mod macros;
 pub mod results;
@@ -128,7 +132,7 @@ pub fn default_rtol(atol: f64) -> f64 {
 ///     }
 /// }
 /// ```
-pub trait ApproxEq<Rhs = Self>: std::fmt::Debug {
+pub trait ApproxEq<Rhs = Self>: core::fmt::Debug {
     /// Compares `self` with `rhs` for approximate equality.
     ///
     /// # Parameters

@@ -8,6 +8,8 @@
     human-readable dates.
 */
 
+use alloc::borrow::ToOwned;
+use alloc::string::String;
 use core::{
     cmp::Ordering,
     fmt::{Display, Formatter},
@@ -16,7 +18,7 @@ use core::{
 
 use crate::time::deltas::TimeDelta;
 use nom::{Parser, combinator::all_consuming};
-use num::ToPrimitive;
+use num_traits::ToPrimitive;
 use thiserror::Error;
 
 use super::iso;

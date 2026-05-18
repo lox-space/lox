@@ -20,7 +20,7 @@ fn add_trait_bounds(mut generics: Generics) -> Generics {
     for param in &mut generics.params {
         if let GenericParam::Type(ref mut type_param) = *param {
             // Add a trait bound to each type parameter
-            type_param.bounds.push(parse_quote!(::std::fmt::Debug));
+            type_param.bounds.push(parse_quote!(::core::fmt::Debug));
         }
     }
     generics
@@ -82,7 +82,7 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     .iter()
     .map(|f| {
         quote! {
-            results.merge(stringify!(#f).to_string(), self.#f.approx_eq(&rhs.#f, atol, rtol));
+            results.merge(stringify!(#f), self.#f.approx_eq(&rhs.#f, atol, rtol));
         }
     })
     .collect();

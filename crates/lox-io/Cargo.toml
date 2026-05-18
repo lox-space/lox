@@ -20,7 +20,7 @@ readme = "README.md"
 [dependencies]
 lox-core.workspace = true
 lox-time.workspace = true
-nom.workspace = true
+nom = { workspace = true, features = ["std"] }
 thiserror.workspace = true
 
 [dev-dependencies]
