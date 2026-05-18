@@ -22,8 +22,8 @@ lox-test-utils = { workspace = true, features = ["derive"] }
 chrono = { workspace = true, optional = true }
 fast_polynomial.workspace = true
 glam.workspace = true
+nom.workspace = true
 num.workspace = true
-regex.workspace = true
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 

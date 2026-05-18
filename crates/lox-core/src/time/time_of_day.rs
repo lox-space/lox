@@ -11,26 +11,20 @@
     human-readable time of day.
 */
 
+use std::cmp::Ordering;
 use std::fmt::Display;
 use std::str::FromStr;
-use std::{cmp::Ordering, sync::OnceLock};
 
 use crate::units::Angle;
+use nom::{Parser, combinator::all_consuming};
 use num::ToPrimitive;
-use regex::Regex;
 use thiserror::Error;
 
+use super::iso;
 use super::subsecond::Subsecond;
 use crate::i64::consts::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
-
-fn iso_regex() -> &'static Regex {
-    static ISO: OnceLock<Regex> = OnceLock::new();
-    ISO.get_or_init(|| {
-        Regex::new(r"(?<hour>\d{2}):(?<minute>\d{2}):(?<second>\d{2})(?<subsecond>\.\d+)?").unwrap()
-    })
-}
 
 /// Error type returned when attempting to construct a [TimeOfDay] with a greater number of
 /// floating-point seconds than are in a day.
@@ -184,25 +178,15 @@ impl TimeOfDay {
     /// - [TimeOfDayError::InvalidHour] if the hour component is not in the range `0..24`.
     /// - [TimeOfDayError::InvalidMinute] if the minute component is not in the range `0..60`.
     /// - [TimeOfDayError::InvalidSecond] if the second component is not in the range `0..61`.
-    pub fn from_iso(iso: &str) -> Result<Self, TimeOfDayError> {
-        let caps = iso_regex()
-            .captures(iso)
-            .ok_or(TimeOfDayError::InvalidIsoString(iso.to_owned()))?;
-        let hour: u8 = caps["hour"]
-            .parse()
-            .map_err(|_| TimeOfDayError::InvalidIsoString(iso.to_owned()))?;
-        let minute: u8 = caps["minute"]
-            .parse()
-            .map_err(|_| TimeOfDayError::InvalidIsoString(iso.to_owned()))?;
-        let second: u8 = caps["second"]
-            .parse()
-            .map_err(|_| TimeOfDayError::InvalidIsoString(iso.to_owned()))?;
+    pub fn from_iso(input: &str) -> Result<Self, TimeOfDayError> {
+        let (_, (hour, minute, second, fraction)) = all_consuming(iso::time)
+            .parse(input)
+            .map_err(|_| TimeOfDayError::InvalidIsoString(input.to_owned()))?;
         let mut time = TimeOfDay::new(hour, minute, second)?;
-        if let Some(subsecond) = caps.name("subsecond") {
-            let subsecond_str = subsecond.as_str().trim_start_matches('.');
+        if let Some(subsecond_str) = fraction {
             let subsecond: Subsecond = subsecond_str
                 .parse()
-                .map_err(|_| TimeOfDayError::InvalidIsoString(iso.to_owned()))?;
+                .map_err(|_| TimeOfDayError::InvalidIsoString(input.to_owned()))?;
             time.with_subsecond(subsecond);
         }
         Ok(time)

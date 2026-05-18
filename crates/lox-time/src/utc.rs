@@ -95,7 +95,7 @@ impl Utc {
         iso: &str,
         provider: &T,
     ) -> Result<Self, UtcError> {
-        let _ = iso.strip_suffix('Z');
+        let iso = iso.strip_suffix('Z').unwrap_or(iso);
 
         let Some((date, time_and_scale)) = iso.split_once('T') else {
             return Err(UtcError::InvalidIsoString(iso.to_owned()));
