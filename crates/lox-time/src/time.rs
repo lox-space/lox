@@ -17,7 +17,6 @@ use lox_core::i64;
 use lox_core::types::units::Days;
 use lox_test_utils::approx_eq::ApproxEq;
 use lox_test_utils::approx_eq::results::ApproxEqResults;
-use num::ToPrimitive;
 use thiserror::Error;
 
 use crate::calendar_dates::CalendarDate;
@@ -59,6 +58,12 @@ pub enum TimeError {
     /// The ISO 8601 string could not be parsed.
     #[error("invalid ISO string `{0}`")]
     InvalidIsoString(String),
+    /// The year is too far from J2000 to represent as seconds in an `i64`.
+    #[error("year {year} is outside the representable range relative to J2000")]
+    DateOutOfRange {
+        /// The year that overflowed.
+        year: i64,
+    },
 }
 
 /// An instant in time in a given [TimeScale], relative to J2000.
@@ -90,15 +95,11 @@ impl<T: TimeScale> Time<T> {
     /// * Returns `TimeError::LeapSecondsOutsideUtc` if `time` is a leap second, since leap seconds
     ///   cannot be unambiguously represented by a continuous time format.
     pub fn from_date_and_time(scale: T, date: Date, time: TimeOfDay) -> Result<Self, TimeError> {
-        let mut seconds = (date.days_since_j2000() * f64::consts::SECONDS_PER_DAY)
-            .to_i64()
-            .unwrap_or_else(|| {
-                unreachable!(
-                    "seconds since J2000 for date {} are not representable as i64: {}",
-                    date,
-                    date.days_since_j2000()
-                )
-            });
+        let secs_f = date.days_since_j2000() * f64::consts::SECONDS_PER_DAY;
+        if !secs_f.is_finite() || secs_f < i64::MIN as f64 || secs_f > i64::MAX as f64 {
+            return Err(TimeError::DateOutOfRange { year: date.year() });
+        }
+        let mut seconds = secs_f as i64;
         if time.second() == 60 {
             return Err(TimeError::LeapSecondOutsideUtc);
         }

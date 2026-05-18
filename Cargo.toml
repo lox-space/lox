@@ -50,9 +50,6 @@ itertools = "0.14.0"
 libm = "0.2.15"
 nalgebra = "0.34.1"
 nom = { version = "8.0.0", default-features = false }
-num = { version = "0.4.3", default-features = false }
-num-derive = "0.4.2"
-num-traits = { version = "0.2.19", default-features = false }
 numpy = "0.28.0"
 proptest = "1.9.0"
 pyo3 = "0.28.2"
