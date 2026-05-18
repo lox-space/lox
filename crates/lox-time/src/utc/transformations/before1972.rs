@@ -10,6 +10,7 @@
 //! Data sourced from ftp://maia.usno.navy.mil/ser7/tai-utc.dat.
 
 use lox_core::f64::consts::SECONDS_PER_DAY;
+use lox_core::math::float::floor;
 use lox_core::math::slices::Monotonic;
 
 use crate::deltas::{TimeDelta, ToDelta};
@@ -49,7 +50,7 @@ pub fn delta_utc_tai(utc: &Utc) -> TimeDelta {
     if mjd < EPOCHS[0] as f64 {
         return TimeDelta::ZERO;
     }
-    let threshold = mjd.floor() as u64;
+    let threshold = floor(mjd) as u64;
     let position = EPOCHS
         .iter()
         .rposition(|item| item <= &threshold)
@@ -70,7 +71,7 @@ pub fn delta_tai_utc(tai: &Time<Tai>) -> TimeDelta {
     if mjd < EPOCHS[0] as f64 {
         return TimeDelta::ZERO;
     }
-    let threshold = mjd.floor() as u64;
+    let threshold = floor(mjd) as u64;
     let position = EPOCHS
         .iter()
         .rposition(|item| item <= &threshold)

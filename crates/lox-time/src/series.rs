@@ -4,7 +4,8 @@
 
 //! Time-indexed interpolation series.
 
-use std::sync::Arc;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
 
 use lox_core::math::series::{InterpolationType, Series, SeriesError};
 
@@ -100,6 +101,8 @@ fn delta_to_f64(delta: TimeDelta) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
+
     use lox_core::math::series::{InterpolationType, SeriesError};
 
     use crate::time::Time;

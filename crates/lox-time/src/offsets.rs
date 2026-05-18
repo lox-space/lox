@@ -2,7 +2,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::convert::Infallible;
+use core::convert::Infallible;
+
+use lox_core::math::float::sin;
 
 use crate::Time;
 use crate::deltas::TimeDelta;
@@ -19,7 +21,7 @@ where
     Target: TimeScale,
 {
     /// The error type returned when the offset cannot be computed.
-    type Error: std::error::Error + Send + Sync + 'static;
+    type Error: core::error::Error + Send + Sync + 'static;
 
     /// Computes the offset from `origin` to `target` at the given `delta` since J2000.
     fn try_offset(
@@ -54,7 +56,7 @@ where
 /// Provides time scale offset computations for all supported scale pairs.
 pub trait OffsetProvider {
     /// The error type for fallible offset computations (e.g. UT1).
-    type Error: std::error::Error + Send + Sync + 'static;
+    type Error: core::error::Error + Send + Sync + 'static;
 
     /// Returns the TAI→UT1 offset at the given delta.
     fn tai_to_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error>;
@@ -213,7 +215,7 @@ const M_1: f64 = 1.99096871e-7;
 fn tt_to_tdb(delta: TimeDelta) -> TimeDelta {
     let tt = delta.to_seconds().to_f64();
     let g = M_0 + M_1 * tt;
-    TimeDelta::from_seconds_f64(K * (g + EB * g.sin()).sin())
+    TimeDelta::from_seconds_f64(K * sin(g + EB * sin(g)))
 }
 
 fn tdb_to_tt(delta: TimeDelta) -> TimeDelta {
@@ -221,7 +223,7 @@ fn tdb_to_tt(delta: TimeDelta) -> TimeDelta {
     let mut offset = 0.0;
     for _ in 1..3 {
         let g = M_0 + M_1 * (tdb + offset);
-        offset = -K * (g + EB * g.sin()).sin();
+        offset = -K * sin(g + EB * sin(g));
     }
     TimeDelta::from_seconds_f64(offset)
 }

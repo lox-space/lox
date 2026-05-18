@@ -13,8 +13,10 @@
     exclusively as an IO format.
 */
 
-use std::fmt::Display;
-use std::str::FromStr;
+use alloc::borrow::ToOwned;
+use alloc::string::String;
+use core::fmt::Display;
+use core::str::FromStr;
 
 use thiserror::Error;
 
@@ -42,7 +44,7 @@ impl TimeScale for Tai {
 }
 
 impl Display for Tai {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.abbreviation())
     }
 }
@@ -63,7 +65,7 @@ impl TimeScale for Tcb {
 }
 
 impl Display for Tcb {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.abbreviation())
     }
 }
@@ -84,7 +86,7 @@ impl TimeScale for Tcg {
 }
 
 impl Display for Tcg {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.abbreviation())
     }
 }
@@ -105,7 +107,7 @@ impl TimeScale for Tdb {
 }
 
 impl Display for Tdb {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.abbreviation())
     }
 }
@@ -127,7 +129,7 @@ impl TimeScale for Gps {
 }
 
 impl Display for Gps {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.abbreviation())
     }
 }
@@ -148,7 +150,7 @@ impl TimeScale for Tt {
 }
 
 impl Display for Tt {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.abbreviation())
     }
 }
@@ -169,7 +171,7 @@ impl TimeScale for Ut1 {
 }
 
 impl Display for Ut1 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.abbreviation())
     }
 }
@@ -319,13 +321,15 @@ impl FromStr for DynTimeScale {
 }
 
 impl Display for DynTimeScale {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.abbreviation())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
+
     use super::*;
     use rstest::rstest;
 

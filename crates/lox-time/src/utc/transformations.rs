@@ -3,18 +3,18 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::sync::OnceLock;
-
 use crate::deltas::TimeDelta;
 use crate::deltas::ToDelta;
 use crate::offsets::DefaultOffsetProvider;
 use crate::offsets::Offset;
 use crate::time::DynTime;
+use crate::time::Time;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_scales::TimeScale;
 use crate::time_scales::{DynTimeScale, Tai};
-use crate::{time::Time, utc};
+use lox_core::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+use lox_core::time::calendar_dates::Date;
 
 use super::LeapSecondsProvider;
 use super::Utc;
@@ -25,7 +25,7 @@ mod before1972;
 impl Utc {
     /// Returns the TAI−UTC offset at this UTC instant.
     pub fn offset_tai(&self, provider: &impl LeapSecondsProvider) -> TimeDelta {
-        if self < utc_1972_01_01() {
+        if self < &UTC_1972_01_01 {
             before1972::delta_utc_tai(self)
         } else {
             provider.delta_utc_tai(*self)
@@ -83,7 +83,7 @@ where
             tai.seconds().is_some(),
             "NaN TimeDelta cannot be converted to UTC"
         );
-        let delta = if &tai < tai_at_utc_1972_01_01() {
+        let delta = if tai < TAI_AT_UTC_1972_01_01 {
             before1972::delta_tai_utc(&tai)
         } else {
             provider.delta_tai_utc(tai)
@@ -99,27 +99,30 @@ where
     }
 }
 
-fn utc_1972_01_01() -> &'static Utc {
-    static UTC_1972: OnceLock<Utc> = OnceLock::new();
-    UTC_1972.get_or_init(|| utc!(1972, 1, 1).unwrap())
-}
+/// TAI−UTC at midnight on 1972-01-01.
+const LEAP_SECONDS_1972: i64 = 10;
 
-fn tai_at_utc_1972_01_01() -> &'static Time<Tai> {
-    const LEAP_SECONDS_1972: i64 = 10;
-    static TAI_AT_UTC_1972_01_01: OnceLock<Time<Tai>> = OnceLock::new();
-    TAI_AT_UTC_1972_01_01.get_or_init(|| {
-        let utc = utc_1972_01_01();
-        let base_time = utc.to_delta();
-        let leap_seconds = TimeDelta::from_seconds(LEAP_SECONDS_1972);
-        Time::from_delta(Tai, base_time + leap_seconds)
-    })
-}
+/// 1972-01-01T00:00:00 UTC, the start of the modern leap-second era.
+const UTC_1972_01_01: Utc =
+    Utc::new_unchecked(Date::new_unchecked(1972, 1, 1), TimeOfDay::MIDNIGHT);
+
+/// TAI at UTC 1972-01-01T00:00:00 = J2000 - 28 years - 10 leap seconds.
+/// Computed at compile time to avoid the OnceLock cache.
+const TAI_AT_UTC_1972_01_01: Time<Tai> = {
+    let seconds =
+        Date::new_unchecked(1972, 1, 1).j2000_day_number() * SECONDS_PER_DAY - SECONDS_PER_HALF_DAY;
+    let base = TimeDelta::from_seconds(seconds);
+    let leap = TimeDelta::from_seconds(LEAP_SECONDS_1972);
+    Time::from_delta(Tai, base.add_const(leap))
+};
 
 #[cfg(test)]
 mod test {
     use crate::subsecond::Subsecond;
     use crate::time;
+    use crate::time_of_day::TimeOfDay;
     use crate::time_scales::{Tcb, Tcg, Tdb, Tt};
+    use crate::utc;
     use rstest::rstest;
 
     use super::*;
@@ -132,23 +135,23 @@ mod test {
     }
 
     #[rstest]
-    #[case::before_1972(utc_1971_01_01(), tai_at_utc_1971_01_01())]
-    #[case::before_leap_second(utc_1s_before_2016_leap_second(), tai_1s_before_2016_leap_second())]
-    #[case::during_leap_second(utc_during_2016_leap_second(), tai_during_2016_leap_second())]
-    #[case::after_leap_second(utc_1s_after_2016_leap_second(), tai_1s_after_2016_leap_second())]
-    fn test_utc_to_tai(#[case] utc: &Utc, #[case] expected: &Time<Tai>) {
+    #[case::before_1972(UTC_1971_01_01, TAI_AT_UTC_1971_01_01)]
+    #[case::before_leap_second(UTC_1S_BEFORE_2016_LEAP_SECOND, TAI_1S_BEFORE_2016_LEAP_SECOND)]
+    #[case::during_leap_second(UTC_DURING_2016_LEAP_SECOND, TAI_DURING_2016_LEAP_SECOND)]
+    #[case::after_leap_second(UTC_1S_AFTER_2016_LEAP_SECOND, TAI_1S_AFTER_2016_LEAP_SECOND)]
+    fn test_utc_to_tai(#[case] utc: Utc, #[case] expected: Time<Tai>) {
         let actual = utc.to_time();
-        assert_eq!(*expected, actual);
+        assert_eq!(expected, actual);
     }
 
     #[rstest]
-    #[case::before_utc_1972(tai_at_utc_1971_01_01(), *utc_1971_01_01())]
-    #[case::utc_1972(tai_at_utc_1972_01_01(), *utc_1972_01_01())]
-    #[case::before_leap_second(tai_1s_before_2016_leap_second(), *utc_1s_before_2016_leap_second())]
-    #[case::during_leap_second(tai_during_2016_leap_second(), *utc_during_2016_leap_second())]
-    #[case::after_leap_second(tai_1s_after_2016_leap_second(), *utc_1s_after_2016_leap_second())]
-    #[case::before_1960(tai_before_1960(), *utc_before_1960())]
-    fn test_tai_to_utc(#[case] tai: &Time<Tai>, #[case] expected: Utc) {
+    #[case::before_utc_1972(TAI_AT_UTC_1971_01_01, UTC_1971_01_01)]
+    #[case::utc_1972(TAI_AT_UTC_1972_01_01, UTC_1972_01_01)]
+    #[case::before_leap_second(TAI_1S_BEFORE_2016_LEAP_SECOND, UTC_1S_BEFORE_2016_LEAP_SECOND)]
+    #[case::during_leap_second(TAI_DURING_2016_LEAP_SECOND, UTC_DURING_2016_LEAP_SECOND)]
+    #[case::after_leap_second(TAI_1S_AFTER_2016_LEAP_SECOND, UTC_1S_AFTER_2016_LEAP_SECOND)]
+    #[case::before_1960(TAI_BEFORE_1960, UTC_BEFORE_1960)]
+    fn test_tai_to_utc(#[case] tai: Time<Tai>, #[case] expected: Utc) {
         let actual = tai.to_utc();
         assert_eq!(expected, actual);
     }
@@ -180,74 +183,49 @@ mod test {
         observed outputs. The latter case is marked with a comment.
     */
 
-    fn utc_1971_01_01() -> &'static Utc {
-        static UTC_1971: OnceLock<Utc> = OnceLock::new();
-        UTC_1971.get_or_init(|| utc!(1971, 1, 1).unwrap())
-    }
+    const UTC_1971_01_01: Utc =
+        Utc::new_unchecked(Date::new_unchecked(1971, 1, 1), TimeOfDay::MIDNIGHT);
 
-    fn tai_at_utc_1971_01_01() -> &'static Time<Tai> {
-        // const DELTA: TimeDelta = TimeDelta::builder()
-        //     .seconds(8)
-        //     .milliseconds(946)
-        //     .microseconds(162)
-        //     .build();
+    const TAI_AT_UTC_1971_01_01: Time<Tai> = {
         const DELTA: TimeDelta = TimeDelta::from_seconds_and_subsecond_f64(8.0, 0.9461620000000011);
-
-        static TAI_AT_UTC_1971_01_01: OnceLock<Time<Tai>> = OnceLock::new();
-        TAI_AT_UTC_1971_01_01.get_or_init(|| {
-            let utc = utc_1971_01_01();
-            let base = utc.to_delta();
-            Time::from_delta(Tai, base + DELTA)
-        })
-    }
+        let seconds = Date::new_unchecked(1971, 1, 1).j2000_day_number() * SECONDS_PER_DAY
+            - SECONDS_PER_HALF_DAY;
+        let base = TimeDelta::from_seconds(seconds);
+        Time::from_delta(Tai, base.add_const(DELTA))
+    };
 
     // 2016-12-31T23:59:59.000 UTC
-    fn utc_1s_before_2016_leap_second() -> &'static Utc {
-        static BEFORE_LEAP_SECOND: OnceLock<Utc> = OnceLock::new();
-        BEFORE_LEAP_SECOND.get_or_init(|| utc!(2016, 12, 31, 23, 59, 59.0).unwrap())
-    }
+    const UTC_1S_BEFORE_2016_LEAP_SECOND: Utc = Utc::new_unchecked(
+        Date::new_unchecked(2016, 12, 31),
+        TimeOfDay::new_unchecked(23, 59, 59),
+    );
 
     // 2017-01-01T00:00:35.000 TAI
-    fn tai_1s_before_2016_leap_second() -> &'static Time<Tai> {
-        static BEFORE_LEAP_SECOND: OnceLock<Time<Tai>> = OnceLock::new();
-        BEFORE_LEAP_SECOND.get_or_init(|| Time::new(Tai, 536500835, Subsecond::default()))
-    }
+    const TAI_1S_BEFORE_2016_LEAP_SECOND: Time<Tai> = Time::new(Tai, 536500835, Subsecond::ZERO);
 
     // 2016-12-31T23:59:60.000 UTC
-    fn utc_during_2016_leap_second() -> &'static Utc {
-        static DURING_LEAP_SECOND: OnceLock<Utc> = OnceLock::new();
-        DURING_LEAP_SECOND.get_or_init(|| utc!(2016, 12, 31, 23, 59, 60.0).unwrap())
-    }
+    const UTC_DURING_2016_LEAP_SECOND: Utc = Utc::new_unchecked(
+        Date::new_unchecked(2016, 12, 31),
+        TimeOfDay::new_unchecked(23, 59, 60),
+    );
 
     // 2017-01-01T00:00:36.000 TAI
-    fn tai_during_2016_leap_second() -> &'static Time<Tai> {
-        static DURING_LEAP_SECOND: OnceLock<Time<Tai>> = OnceLock::new();
-        DURING_LEAP_SECOND.get_or_init(|| Time::new(Tai, 536500836, Subsecond::default()))
-    }
+    const TAI_DURING_2016_LEAP_SECOND: Time<Tai> = Time::new(Tai, 536500836, Subsecond::ZERO);
 
     // 2017-01-01T00:00:00.000 UTC
-    fn utc_1s_after_2016_leap_second() -> &'static Utc {
-        static AFTER_LEAP_SECOND: OnceLock<Utc> = OnceLock::new();
-        AFTER_LEAP_SECOND.get_or_init(|| utc!(2017, 1, 1).unwrap())
-    }
+    const UTC_1S_AFTER_2016_LEAP_SECOND: Utc =
+        Utc::new_unchecked(Date::new_unchecked(2017, 1, 1), TimeOfDay::MIDNIGHT);
 
     // 2017-01-01T00:00:37.000 TAI
-    fn tai_1s_after_2016_leap_second() -> &'static Time<Tai> {
-        static AFTER_LEAP_SECOND: OnceLock<Time<Tai>> = OnceLock::new();
-        AFTER_LEAP_SECOND.get_or_init(|| Time::new(Tai, 536500837, Subsecond::default()))
-    }
+    const TAI_1S_AFTER_2016_LEAP_SECOND: Time<Tai> = Time::new(Tai, 536500837, Subsecond::ZERO);
 
-    fn utc_before_1960() -> &'static Utc {
-        static UTC_BEFORE_1960: OnceLock<Utc> = OnceLock::new();
-        UTC_BEFORE_1960.get_or_init(|| utc!(1959, 12, 31).unwrap())
-    }
+    const UTC_BEFORE_1960: Utc =
+        Utc::new_unchecked(Date::new_unchecked(1959, 12, 31), TimeOfDay::MIDNIGHT);
 
     // 1959-12-31T00:00:00.000 TAI (same as UTC since offset is zero pre-1960)
-    fn tai_before_1960() -> &'static Time<Tai> {
-        static TAI_BEFORE_1960: OnceLock<Time<Tai>> = OnceLock::new();
-        TAI_BEFORE_1960.get_or_init(|| {
-            let utc = utc_before_1960();
-            utc.to_time()
-        })
-    }
+    const TAI_BEFORE_1960: Time<Tai> = {
+        let seconds = Date::new_unchecked(1959, 12, 31).j2000_day_number() * SECONDS_PER_DAY
+            - SECONDS_PER_HALF_DAY;
+        Time::from_delta(Tai, TimeDelta::from_seconds(seconds))
+    };
 }
