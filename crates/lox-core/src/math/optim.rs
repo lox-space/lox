@@ -161,7 +161,7 @@ mod tests {
 
     use super::*;
 
-    type BoxedError = Box<dyn std::error::Error + Send + Sync + 'static>;
+    type BoxedError = Box<dyn core::error::Error + Send + Sync + 'static>;
     type Result = std::result::Result<f64, BoxedError>;
 
     #[test]

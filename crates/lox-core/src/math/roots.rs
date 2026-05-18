@@ -22,7 +22,7 @@ pub enum RootFinderError {
 }
 
 /// A boxed error type for use in root-finding callbacks.
-pub type BoxedError = Box<dyn std::error::Error + Send + Sync + 'static>;
+pub type BoxedError = Box<dyn core::error::Error + Send + Sync + 'static>;
 
 /// An error returned by a root-finding callback function.
 #[derive(Debug, Error)]
