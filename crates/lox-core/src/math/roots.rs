@@ -4,9 +4,8 @@
 
 //! Root-finding algorithms: Steffensen, Newton, Brent, and Secant methods.
 
+use alloc::boxed::Box;
 use lox_test_utils::approx_eq;
-#[cfg(not(feature = "std"))]
-use num_traits::Float;
 use thiserror::Error;
 
 /// Error returned by root-finding algorithms.

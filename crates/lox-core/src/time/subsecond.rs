@@ -35,6 +35,9 @@
 //! assert_eq!(s.microseconds(), 456);
 //! ```
 
+use alloc::borrow::ToOwned;
+use alloc::format;
+use alloc::string::{String, ToString};
 use core::fmt::Display;
 use core::str::FromStr;
 

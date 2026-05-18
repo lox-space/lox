@@ -4,6 +4,7 @@
 
 //! Data types for representing orbital elements.
 
+use alloc::vec::Vec;
 use core::f64::consts::PI;
 use core::f64::consts::TAU;
 use core::fmt::Display;
@@ -11,8 +12,6 @@ use core::fmt::Display;
 use glam::DVec3;
 use lox_test_utils::ApproxEq;
 use lox_test_utils::approx_eq;
-#[cfg(not(feature = "std"))]
-use num_traits::Float;
 use thiserror::Error;
 
 use crate::anomalies::AnomalyError;

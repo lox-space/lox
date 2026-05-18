@@ -4,13 +4,14 @@
 
 //! Interpolated data series with linear and cubic spline support.
 
+use alloc::borrow::ToOwned;
+use alloc::string::String;
 use alloc::sync::Arc;
+use alloc::vec::Vec;
 use core::fmt;
 use core::str::FromStr;
 
 use fast_polynomial::poly_array;
-#[cfg(not(feature = "std"))]
-use num_traits::Float;
 use thiserror::Error;
 
 use crate::math::slices::Monotonic;

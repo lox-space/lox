@@ -23,7 +23,7 @@ lox-test-utils.workspace = true
 
 chrono = { workspace = true, optional = true }
 itertools.workspace = true
-num.workspace = true
+num = { workspace = true, features = ["std"] }
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 

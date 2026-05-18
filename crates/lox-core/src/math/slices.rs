@@ -5,6 +5,7 @@
 
 //! Utility traits for working with slices of numbers.
 
+use alloc::vec::Vec;
 use core::ops::Sub;
 
 /// Computes consecutive differences of a slice.

@@ -24,7 +24,7 @@ lox-time.workspace = true
 
 arrayvec.workspace = true
 itertools.workspace = true
-nom.workspace = true
+nom = { workspace = true, features = ["std"] }
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 

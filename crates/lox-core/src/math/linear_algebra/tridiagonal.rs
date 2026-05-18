@@ -4,6 +4,8 @@
 
 //! Tridiagonal matrix representation and solver.
 
+use alloc::vec;
+use alloc::vec::Vec;
 use core::ops::Index;
 
 use thiserror::Error;

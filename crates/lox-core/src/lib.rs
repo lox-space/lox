@@ -8,6 +8,7 @@
 //! physical units, coordinate types, orbital elements, time representation,
 //! mathematical utilities, and numerical constants.
 
+#![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
 
 extern crate alloc;
