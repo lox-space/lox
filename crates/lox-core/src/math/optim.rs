@@ -47,7 +47,7 @@ where
     fn find_minimum_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError> {
         let (mut a, mut b) = bracket;
         if a > b {
-            std::mem::swap(&mut a, &mut b);
+            core::mem::swap(&mut a, &mut b);
         }
 
         // x is the point with the least function value found so far.
@@ -156,13 +156,13 @@ where
 
 #[cfg(test)]
 mod tests {
+    use core::f64::consts::PI;
     use lox_test_utils::assert_approx_eq;
-    use std::f64::consts::PI;
 
     use super::*;
 
     type BoxedError = Box<dyn core::error::Error + Send + Sync + 'static>;
-    type Result = std::result::Result<f64, BoxedError>;
+    type Result = core::result::Result<f64, BoxedError>;
 
     #[test]
     fn test_brent_minimizer_quadratic() {

@@ -5,7 +5,7 @@
 
 //! Utility traits for working with slices of numbers.
 
-use std::ops::Sub;
+use core::ops::Sub;
 
 /// Computes consecutive differences of a slice.
 pub trait Diff<T> {

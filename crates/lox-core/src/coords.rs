@@ -4,11 +4,9 @@
 
 //! Coordinate types for representing positions, velocities, and trajectories.
 
+use alloc::sync::Arc;
 use core::f64::consts::{FRAC_PI_2, PI, TAU};
-use std::{
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
-    sync::Arc,
-};
+use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use glam::{DMat3, DVec3};
 use lox_test_utils::ApproxEq;

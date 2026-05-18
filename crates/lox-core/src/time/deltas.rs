@@ -13,8 +13,8 @@
     expose their underlying [TimeDelta].
 */
 
-use std::fmt::Display;
-use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
+use core::fmt::Display;
+use core::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use lox_test_utils::approx_eq::ApproxEq;
 
@@ -760,8 +760,8 @@ impl Default for TimeDelta {
 }
 
 impl Ord for TimeDelta {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        use std::cmp::Ordering;
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        use core::cmp::Ordering;
 
         match (self, other) {
             // NaN is incomparable, but we need total ordering for Ord
@@ -795,7 +795,7 @@ impl Ord for TimeDelta {
 }
 
 impl PartialOrd for TimeDelta {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -807,7 +807,7 @@ impl From<f64> for TimeDelta {
 }
 
 impl Display for TimeDelta {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{} s", self.to_seconds().to_f64())
     }
 }

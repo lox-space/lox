@@ -10,6 +10,8 @@
 
 #![warn(missing_docs)]
 
+extern crate alloc;
+
 pub mod anomalies;
 pub mod coords;
 pub mod elements;

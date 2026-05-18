@@ -4,7 +4,7 @@
 
 //! Tridiagonal matrix representation and solver.
 
-use std::ops::Index;
+use core::ops::Index;
 
 use thiserror::Error;
 
