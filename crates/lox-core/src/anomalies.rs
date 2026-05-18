@@ -24,8 +24,6 @@
 //! - For parabolic orbits: represents parabolic anomaly D (stored as radians)
 
 use lox_test_utils::approx_eq::{ApproxEq, ApproxEqResults};
-#[cfg(not(feature = "std"))]
-use num_traits::Float;
 use thiserror::Error;
 
 use crate::{

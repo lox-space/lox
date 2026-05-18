@@ -871,6 +871,7 @@ version = "0.30.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19fc433e8437a212d1b6f1e68c7824af3aed907da60afa994e7f542d18d12aa9"
 dependencies = [
+ "libm",
  "serde_core",
 ]
 
@@ -1248,7 +1249,6 @@ dependencies = [
  "glam 0.30.10",
  "lox-test-utils",
  "nom",
- "num",
  "num-traits",
  "proptest",
  "rstest",
@@ -1422,6 +1422,7 @@ dependencies = [
  "codspeed-divan-compat",
  "glam 0.30.10",
  "lox-derive",
+ "num-traits",
 ]
 
 [[package]]

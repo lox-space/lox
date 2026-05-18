@@ -8,7 +8,11 @@
 //! These types are typically not used directly but are returned by the [`ApproxEq`](crate::approx_eq::ApproxEq) trait
 //! implementations.
 
-use std::{borrow::Cow, fmt::Display};
+use alloc::borrow::Cow;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use alloc::{format, vec};
+use core::fmt::Display;
 
 /// The result of a single approximate equality comparison.
 ///
@@ -248,7 +252,7 @@ impl ApproxEqResults {
         match self {
             Self::Single(_) => {
                 // Should not happen in normal usage, but handle it gracefully
-                let old = std::mem::replace(self, Self::Multiple(Vec::new()));
+                let old = core::mem::replace(self, Self::Multiple(Vec::new()));
                 if let Self::Single(old_result) = old
                     && let Self::Multiple(vec) = self
                 {
@@ -316,9 +320,9 @@ impl ApproxEqResults {
 }
 
 impl Display for ApproxEqResults {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let results_iter: Box<dyn Iterator<Item = (&str, &ApproxEqResult)>> = match self {
-            Self::Single(result) => Box::new(std::iter::once(("", result))),
+            Self::Single(result) => Box::new(core::iter::once(("", result))),
             Self::Multiple(results) => Box::new(results.iter().map(|(s, r)| (s.as_ref(), r))),
         };
 

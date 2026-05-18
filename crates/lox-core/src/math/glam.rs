@@ -5,8 +5,6 @@
 //! Extension traits for `glam` vector types.
 
 use glam::DVec3;
-#[cfg(not(feature = "std"))]
-use num_traits::Float;
 
 use crate::types::units::Radians;
 

@@ -17,8 +17,6 @@ use crate::coords::Cartesian;
 use crate::elements::keplerian::{GravitationalParameter, Keplerian, KeplerianError};
 use crate::units::{Angle, AngleUnits, Distance};
 use glam::DVec3;
-#[cfg(not(feature = "std"))]
-use num_traits::Float;
 use thiserror::Error;
 
 /// Modified Equinoctial Elements (MEE).

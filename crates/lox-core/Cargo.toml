@@ -22,15 +22,28 @@ lox-test-utils = { workspace = true, features = ["derive"] }
 chrono = { workspace = true, optional = true }
 fast_polynomial.workspace = true
 glam.workspace = true
-nom.workspace = true
-num.workspace = true
+nom = { workspace = true, features = ["alloc"] }
 num-traits.workspace = true
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [features]
 default = ["std"]
-std = []
+std = [
+    "glam/std",
+    "nom/std",
+    "num-traits/std",
+    "fast_polynomial/std",
+    "lox-test-utils/std",
+    "chrono?/std",
+    "serde?/std",
+]
+libm = [
+    "glam/libm",
+    "num-traits/libm",
+    "fast_polynomial/libm",
+    "lox-test-utils/libm",
+]
 chrono = ["dep:chrono"]
 serde = ["dep:serde", "glam/serde"]
 

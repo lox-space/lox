@@ -19,11 +19,15 @@ readme = "README.md"
 [dependencies]
 lox-derive = { workspace = true, optional = true }
 glam.workspace = true
+num-traits.workspace = true
 
 [dev-dependencies]
 divan.workspace = true
 
 [features]
+default = ["std"]
+std = ["glam/std", "num-traits/std"]
+libm = ["glam/libm", "num-traits/libm"]
 derive = ["dep:lox-derive"]
 
 [[bench]]
