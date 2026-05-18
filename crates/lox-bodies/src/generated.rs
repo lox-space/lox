@@ -21,10 +21,12 @@ use crate::TryRotationalElements;
 use crate::TrySpheroid;
 use crate::TryTriaxialEllipsoid;
 use crate::UndefinedOriginPropertyError;
+use alloc::format;
+use alloc::string::{String, ToString};
+use core::fmt::Display;
+use core::fmt::Formatter;
 use lox_core::elements::GravitationalParameter;
 use lox_core::units::Distance;
-use std::fmt::Display;
-use std::fmt::Formatter;
 #[doc = "Sun (NAIF ID: 10)."]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -39,7 +41,7 @@ impl Origin for Sun {
     }
 }
 impl Display for Sun {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -135,7 +137,7 @@ impl Origin for Mercury {
     }
 }
 impl Display for Mercury {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -278,7 +280,7 @@ impl Origin for Venus {
     }
 }
 impl Display for Venus {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -379,7 +381,7 @@ impl Origin for Earth {
     }
 }
 impl Display for Earth {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -480,7 +482,7 @@ impl Origin for Mars {
     }
 }
 impl Display for Mars {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -773,7 +775,7 @@ impl Origin for Jupiter {
     }
 }
 impl Display for Jupiter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1004,7 +1006,7 @@ impl Origin for Saturn {
     }
 }
 impl Display for Saturn {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1105,7 +1107,7 @@ impl Origin for Uranus {
     }
 }
 impl Display for Uranus {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1206,7 +1208,7 @@ impl Origin for Neptune {
     }
 }
 impl Display for Neptune {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1388,7 +1390,7 @@ impl Origin for Pluto {
     }
 }
 impl Display for Pluto {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1489,7 +1491,7 @@ impl Origin for SolarSystemBarycenter {
     }
 }
 impl Display for SolarSystemBarycenter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1535,7 +1537,7 @@ impl Origin for MercuryBarycenter {
     }
 }
 impl Display for MercuryBarycenter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1581,7 +1583,7 @@ impl Origin for VenusBarycenter {
     }
 }
 impl Display for VenusBarycenter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1627,7 +1629,7 @@ impl Origin for EarthBarycenter {
     }
 }
 impl Display for EarthBarycenter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1673,7 +1675,7 @@ impl Origin for MarsBarycenter {
     }
 }
 impl Display for MarsBarycenter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1716,7 +1718,7 @@ impl Origin for JupiterBarycenter {
     }
 }
 impl Display for JupiterBarycenter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1762,7 +1764,7 @@ impl Origin for SaturnBarycenter {
     }
 }
 impl Display for SaturnBarycenter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1808,7 +1810,7 @@ impl Origin for UranusBarycenter {
     }
 }
 impl Display for UranusBarycenter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1854,7 +1856,7 @@ impl Origin for NeptuneBarycenter {
     }
 }
 impl Display for NeptuneBarycenter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1900,7 +1902,7 @@ impl Origin for PlutoBarycenter {
     }
 }
 impl Display for PlutoBarycenter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -1946,7 +1948,7 @@ impl Origin for Moon {
     }
 }
 impl Display for Moon {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -2173,7 +2175,7 @@ impl Origin for Phobos {
     }
 }
 impl Display for Phobos {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -2321,7 +2323,7 @@ impl Origin for Deimos {
     }
 }
 impl Display for Deimos {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -2520,7 +2522,7 @@ impl Origin for Io {
     }
 }
 impl Display for Io {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -2665,7 +2667,7 @@ impl Origin for Europa {
     }
 }
 impl Display for Europa {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -2837,7 +2839,7 @@ impl Origin for Ganymede {
     }
 }
 impl Display for Ganymede {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -3001,7 +3003,7 @@ impl Origin for Callisto {
     }
 }
 impl Display for Callisto {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -3183,7 +3185,7 @@ impl Origin for Amalthea {
     }
 }
 impl Display for Amalthea {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -3382,7 +3384,7 @@ impl Origin for Himalia {
     }
 }
 impl Display for Himalia {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -3440,7 +3442,7 @@ impl Origin for Elara {
     }
 }
 impl Display for Elara {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -3493,7 +3495,7 @@ impl Origin for Pasiphae {
     }
 }
 impl Display for Pasiphae {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -3546,7 +3548,7 @@ impl Origin for Sinope {
     }
 }
 impl Display for Sinope {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -3599,7 +3601,7 @@ impl Origin for Lysithea {
     }
 }
 impl Display for Lysithea {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -3652,7 +3654,7 @@ impl Origin for Carme {
     }
 }
 impl Display for Carme {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -3705,7 +3707,7 @@ impl Origin for Ananke {
     }
 }
 impl Display for Ananke {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -3758,7 +3760,7 @@ impl Origin for Leda {
     }
 }
 impl Display for Leda {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -3811,7 +3813,7 @@ impl Origin for Thebe {
     }
 }
 impl Display for Thebe {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4010,7 +4012,7 @@ impl Origin for Adrastea {
     }
 }
 impl Display for Adrastea {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4110,7 +4112,7 @@ impl Origin for Metis {
     }
 }
 impl Display for Metis {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4210,7 +4212,7 @@ impl Origin for Callirrhoe {
     }
 }
 impl Display for Callirrhoe {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4248,7 +4250,7 @@ impl Origin for Themisto {
     }
 }
 impl Display for Themisto {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4286,7 +4288,7 @@ impl Origin for Magaclite {
     }
 }
 impl Display for Magaclite {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4324,7 +4326,7 @@ impl Origin for Taygete {
     }
 }
 impl Display for Taygete {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4362,7 +4364,7 @@ impl Origin for Chaldene {
     }
 }
 impl Display for Chaldene {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4400,7 +4402,7 @@ impl Origin for Harpalyke {
     }
 }
 impl Display for Harpalyke {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4438,7 +4440,7 @@ impl Origin for Kalyke {
     }
 }
 impl Display for Kalyke {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4476,7 +4478,7 @@ impl Origin for Iocaste {
     }
 }
 impl Display for Iocaste {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4514,7 +4516,7 @@ impl Origin for Erinome {
     }
 }
 impl Display for Erinome {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4552,7 +4554,7 @@ impl Origin for Isonoe {
     }
 }
 impl Display for Isonoe {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4590,7 +4592,7 @@ impl Origin for Praxidike {
     }
 }
 impl Display for Praxidike {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4628,7 +4630,7 @@ impl Origin for Autonoe {
     }
 }
 impl Display for Autonoe {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4666,7 +4668,7 @@ impl Origin for Thyone {
     }
 }
 impl Display for Thyone {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4704,7 +4706,7 @@ impl Origin for Hermippe {
     }
 }
 impl Display for Hermippe {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4742,7 +4744,7 @@ impl Origin for Aitne {
     }
 }
 impl Display for Aitne {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4780,7 +4782,7 @@ impl Origin for Eurydome {
     }
 }
 impl Display for Eurydome {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4818,7 +4820,7 @@ impl Origin for Euanthe {
     }
 }
 impl Display for Euanthe {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4856,7 +4858,7 @@ impl Origin for Euporie {
     }
 }
 impl Display for Euporie {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4894,7 +4896,7 @@ impl Origin for Orthosie {
     }
 }
 impl Display for Orthosie {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4932,7 +4934,7 @@ impl Origin for Sponde {
     }
 }
 impl Display for Sponde {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -4970,7 +4972,7 @@ impl Origin for Kale {
     }
 }
 impl Display for Kale {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5008,7 +5010,7 @@ impl Origin for Pasithee {
     }
 }
 impl Display for Pasithee {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5046,7 +5048,7 @@ impl Origin for Hegemone {
     }
 }
 impl Display for Hegemone {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5084,7 +5086,7 @@ impl Origin for Mneme {
     }
 }
 impl Display for Mneme {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5122,7 +5124,7 @@ impl Origin for Aoede {
     }
 }
 impl Display for Aoede {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5160,7 +5162,7 @@ impl Origin for Thelxinoe {
     }
 }
 impl Display for Thelxinoe {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5198,7 +5200,7 @@ impl Origin for Arche {
     }
 }
 impl Display for Arche {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5236,7 +5238,7 @@ impl Origin for Kallichore {
     }
 }
 impl Display for Kallichore {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5274,7 +5276,7 @@ impl Origin for Helike {
     }
 }
 impl Display for Helike {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5312,7 +5314,7 @@ impl Origin for Carpo {
     }
 }
 impl Display for Carpo {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5350,7 +5352,7 @@ impl Origin for Eukelade {
     }
 }
 impl Display for Eukelade {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5388,7 +5390,7 @@ impl Origin for Cyllene {
     }
 }
 impl Display for Cyllene {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5426,7 +5428,7 @@ impl Origin for Kore {
     }
 }
 impl Display for Kore {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5464,7 +5466,7 @@ impl Origin for Herse {
     }
 }
 impl Display for Herse {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5502,7 +5504,7 @@ impl Origin for Dia {
     }
 }
 impl Display for Dia {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5540,7 +5542,7 @@ impl Origin for Mimas {
     }
 }
 impl Display for Mimas {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5721,7 +5723,7 @@ impl Origin for Enceladus {
     }
 }
 impl Display for Enceladus {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -5821,7 +5823,7 @@ impl Origin for Tethys {
     }
 }
 impl Display for Tethys {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -6002,7 +6004,7 @@ impl Origin for Dione {
     }
 }
 impl Display for Dione {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -6102,7 +6104,7 @@ impl Origin for Rhea {
     }
 }
 impl Display for Rhea {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -6283,7 +6285,7 @@ impl Origin for Titan {
     }
 }
 impl Display for Titan {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -6437,7 +6439,7 @@ impl Origin for Hyperion {
     }
 }
 impl Display for Hyperion {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -6494,7 +6496,7 @@ impl Origin for Iapetus {
     }
 }
 impl Display for Iapetus {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -6595,7 +6597,7 @@ impl Origin for Phoebe {
     }
 }
 impl Display for Phoebe {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -6695,7 +6697,7 @@ impl Origin for Janus {
     }
 }
 impl Display for Janus {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -6876,7 +6878,7 @@ impl Origin for Epimetheus {
     }
 }
 impl Display for Epimetheus {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7057,7 +7059,7 @@ impl Origin for Helene {
     }
 }
 impl Display for Helene {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7157,7 +7159,7 @@ impl Origin for Telesto {
     }
 }
 impl Display for Telesto {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7252,7 +7254,7 @@ impl Origin for Calypso {
     }
 }
 impl Display for Calypso {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7347,7 +7349,7 @@ impl Origin for Atlas {
     }
 }
 impl Display for Atlas {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7447,7 +7449,7 @@ impl Origin for Prometheus {
     }
 }
 impl Display for Prometheus {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7547,7 +7549,7 @@ impl Origin for Pandora {
     }
 }
 impl Display for Pandora {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7647,7 +7649,7 @@ impl Origin for Pan {
     }
 }
 impl Display for Pan {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7742,7 +7744,7 @@ impl Origin for Ymir {
     }
 }
 impl Display for Ymir {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7780,7 +7782,7 @@ impl Origin for Paaliaq {
     }
 }
 impl Display for Paaliaq {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7818,7 +7820,7 @@ impl Origin for Tarvos {
     }
 }
 impl Display for Tarvos {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7856,7 +7858,7 @@ impl Origin for Ijiraq {
     }
 }
 impl Display for Ijiraq {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7894,7 +7896,7 @@ impl Origin for Suttungr {
     }
 }
 impl Display for Suttungr {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7932,7 +7934,7 @@ impl Origin for Kiviuq {
     }
 }
 impl Display for Kiviuq {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -7970,7 +7972,7 @@ impl Origin for Mundilfari {
     }
 }
 impl Display for Mundilfari {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8008,7 +8010,7 @@ impl Origin for Albiorix {
     }
 }
 impl Display for Albiorix {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8046,7 +8048,7 @@ impl Origin for Skathi {
     }
 }
 impl Display for Skathi {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8084,7 +8086,7 @@ impl Origin for Erriapus {
     }
 }
 impl Display for Erriapus {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8122,7 +8124,7 @@ impl Origin for Siarnaq {
     }
 }
 impl Display for Siarnaq {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8160,7 +8162,7 @@ impl Origin for Thrymr {
     }
 }
 impl Display for Thrymr {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8198,7 +8200,7 @@ impl Origin for Narvi {
     }
 }
 impl Display for Narvi {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8236,7 +8238,7 @@ impl Origin for Methone {
     }
 }
 impl Display for Methone {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8288,7 +8290,7 @@ impl Origin for Pallene {
     }
 }
 impl Display for Pallene {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8340,7 +8342,7 @@ impl Origin for Polydeuces {
     }
 }
 impl Display for Polydeuces {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8392,7 +8394,7 @@ impl Origin for Daphnis {
     }
 }
 impl Display for Daphnis {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8444,7 +8446,7 @@ impl Origin for Aegir {
     }
 }
 impl Display for Aegir {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8482,7 +8484,7 @@ impl Origin for Bebhionn {
     }
 }
 impl Display for Bebhionn {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8520,7 +8522,7 @@ impl Origin for Bergelmir {
     }
 }
 impl Display for Bergelmir {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8558,7 +8560,7 @@ impl Origin for Bestla {
     }
 }
 impl Display for Bestla {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8596,7 +8598,7 @@ impl Origin for Farbauti {
     }
 }
 impl Display for Farbauti {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8634,7 +8636,7 @@ impl Origin for Fenrir {
     }
 }
 impl Display for Fenrir {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8672,7 +8674,7 @@ impl Origin for Fornjot {
     }
 }
 impl Display for Fornjot {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8710,7 +8712,7 @@ impl Origin for Hati {
     }
 }
 impl Display for Hati {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8748,7 +8750,7 @@ impl Origin for Hyrrokkin {
     }
 }
 impl Display for Hyrrokkin {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8786,7 +8788,7 @@ impl Origin for Kari {
     }
 }
 impl Display for Kari {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8824,7 +8826,7 @@ impl Origin for Loge {
     }
 }
 impl Display for Loge {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8862,7 +8864,7 @@ impl Origin for Skoll {
     }
 }
 impl Display for Skoll {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8900,7 +8902,7 @@ impl Origin for Surtur {
     }
 }
 impl Display for Surtur {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8938,7 +8940,7 @@ impl Origin for Anthe {
     }
 }
 impl Display for Anthe {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -8991,7 +8993,7 @@ impl Origin for Jarnsaxa {
     }
 }
 impl Display for Jarnsaxa {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -9029,7 +9031,7 @@ impl Origin for Greip {
     }
 }
 impl Display for Greip {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -9067,7 +9069,7 @@ impl Origin for Tarqeq {
     }
 }
 impl Display for Tarqeq {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -9105,7 +9107,7 @@ impl Origin for Aegaeon {
     }
 }
 impl Display for Aegaeon {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -9157,7 +9159,7 @@ impl Origin for Ariel {
     }
 }
 impl Display for Ariel {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -9383,7 +9385,7 @@ impl Origin for Umbriel {
     }
 }
 impl Display for Umbriel {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -9619,7 +9621,7 @@ impl Origin for Titania {
     }
 }
 impl Display for Titania {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -9864,7 +9866,7 @@ impl Origin for Oberon {
     }
 }
 impl Display for Oberon {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -10118,7 +10120,7 @@ impl Origin for Miranda {
     }
 }
 impl Display for Miranda {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -10389,7 +10391,7 @@ impl Origin for Cordelia {
     }
 }
 impl Display for Cordelia {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -10656,7 +10658,7 @@ impl Origin for Ophelia {
     }
 }
 impl Display for Ophelia {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -10923,7 +10925,7 @@ impl Origin for Bianca {
     }
 }
 impl Display for Bianca {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -11190,7 +11192,7 @@ impl Origin for Cressida {
     }
 }
 impl Display for Cressida {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -11457,7 +11459,7 @@ impl Origin for Desdemona {
     }
 }
 impl Display for Desdemona {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -11724,7 +11726,7 @@ impl Origin for Juliet {
     }
 }
 impl Display for Juliet {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -11991,7 +11993,7 @@ impl Origin for Portia {
     }
 }
 impl Display for Portia {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -12258,7 +12260,7 @@ impl Origin for Rosalind {
     }
 }
 impl Display for Rosalind {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -12525,7 +12527,7 @@ impl Origin for Belinda {
     }
 }
 impl Display for Belinda {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -12792,7 +12794,7 @@ impl Origin for Puck {
     }
 }
 impl Display for Puck {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13059,7 +13061,7 @@ impl Origin for Caliban {
     }
 }
 impl Display for Caliban {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13097,7 +13099,7 @@ impl Origin for Sycorax {
     }
 }
 impl Display for Sycorax {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13135,7 +13137,7 @@ impl Origin for Prospero {
     }
 }
 impl Display for Prospero {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13173,7 +13175,7 @@ impl Origin for Setebos {
     }
 }
 impl Display for Setebos {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13211,7 +13213,7 @@ impl Origin for Stephano {
     }
 }
 impl Display for Stephano {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13249,7 +13251,7 @@ impl Origin for Trinculo {
     }
 }
 impl Display for Trinculo {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13287,7 +13289,7 @@ impl Origin for Francisco {
     }
 }
 impl Display for Francisco {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13325,7 +13327,7 @@ impl Origin for Margaret {
     }
 }
 impl Display for Margaret {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13363,7 +13365,7 @@ impl Origin for Ferdinand {
     }
 }
 impl Display for Ferdinand {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13401,7 +13403,7 @@ impl Origin for Perdita {
     }
 }
 impl Display for Perdita {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13439,7 +13441,7 @@ impl Origin for Mab {
     }
 }
 impl Display for Mab {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13477,7 +13479,7 @@ impl Origin for Cupid {
     }
 }
 impl Display for Cupid {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13515,7 +13517,7 @@ impl Origin for Triton {
     }
 }
 impl Display for Triton {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13778,7 +13780,7 @@ impl Origin for Nereid {
     }
 }
 impl Display for Nereid {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -13831,7 +13833,7 @@ impl Origin for Naiad {
     }
 }
 impl Display for Naiad {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -14094,7 +14096,7 @@ impl Origin for Thalassa {
     }
 }
 impl Display for Thalassa {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -14357,7 +14359,7 @@ impl Origin for Despina {
     }
 }
 impl Display for Despina {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -14620,7 +14622,7 @@ impl Origin for Galatea {
     }
 }
 impl Display for Galatea {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -14883,7 +14885,7 @@ impl Origin for Larissa {
     }
 }
 impl Display for Larissa {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -15146,7 +15148,7 @@ impl Origin for Proteus {
     }
 }
 impl Display for Proteus {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -15408,7 +15410,7 @@ impl Origin for Halimede {
     }
 }
 impl Display for Halimede {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -15446,7 +15448,7 @@ impl Origin for Psamathe {
     }
 }
 impl Display for Psamathe {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -15484,7 +15486,7 @@ impl Origin for Sao {
     }
 }
 impl Display for Sao {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -15522,7 +15524,7 @@ impl Origin for Laomedeia {
     }
 }
 impl Display for Laomedeia {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -15560,7 +15562,7 @@ impl Origin for Neso {
     }
 }
 impl Display for Neso {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -15598,7 +15600,7 @@ impl Origin for Charon {
     }
 }
 impl Display for Charon {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -15699,7 +15701,7 @@ impl Origin for Nix {
     }
 }
 impl Display for Nix {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -15742,7 +15744,7 @@ impl Origin for Hydra {
     }
 }
 impl Display for Hydra {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -15785,7 +15787,7 @@ impl Origin for Kerberos {
     }
 }
 impl Display for Kerberos {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -15828,7 +15830,7 @@ impl Origin for Styx {
     }
 }
 impl Display for Styx {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -15871,7 +15873,7 @@ impl Origin for Gaspra {
     }
 }
 impl Display for Gaspra {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -15966,7 +15968,7 @@ impl Origin for Ida {
     }
 }
 impl Display for Ida {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16061,7 +16063,7 @@ impl Origin for Dactyl {
     }
 }
 impl Display for Dactyl {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16099,7 +16101,7 @@ impl Origin for Ceres {
     }
 }
 impl Display for Ceres {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16200,7 +16202,7 @@ impl Origin for Pallas {
     }
 }
 impl Display for Pallas {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16286,7 +16288,7 @@ impl Origin for Vesta {
     }
 }
 impl Display for Vesta {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16381,7 +16383,7 @@ impl Origin for Psyche {
     }
 }
 impl Display for Psyche {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16438,7 +16440,7 @@ impl Origin for Lutetia {
     }
 }
 impl Display for Lutetia {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16533,7 +16535,7 @@ impl Origin for Kleopatra {
     }
 }
 impl Display for Kleopatra {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16571,7 +16573,7 @@ impl Origin for Eros {
     }
 }
 impl Display for Eros {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16671,7 +16673,7 @@ impl Origin for Davida {
     }
 }
 impl Display for Davida {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16771,7 +16773,7 @@ impl Origin for Mathilde {
     }
 }
 impl Display for Mathilde {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16823,7 +16825,7 @@ impl Origin for Steins {
     }
 }
 impl Display for Steins {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16918,7 +16920,7 @@ impl Origin for Braille {
     }
 }
 impl Display for Braille {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16956,7 +16958,7 @@ impl Origin for WilsonHarrington {
     }
 }
 impl Display for WilsonHarrington {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -16997,7 +16999,7 @@ impl Origin for Toutatis {
     }
 }
 impl Display for Toutatis {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -17044,7 +17046,7 @@ impl Origin for Itokawa {
     }
 }
 impl Display for Itokawa {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -17134,7 +17136,7 @@ impl Origin for Bennu {
     }
 }
 impl Display for Bennu {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
@@ -18081,6 +18083,7 @@ impl TryRotationalElements for DynOrigin {
 #[allow(clippy::approx_constant)]
 mod tests {
     use crate::*;
+    use alloc::string::ToString;
     #[test]
     fn test_origin_10() {
         assert_eq!(Sun.id().0, 10i32);

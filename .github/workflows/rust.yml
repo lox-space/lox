@@ -67,7 +67,7 @@ jobs:
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
       - name: Run tests with no_std library
-        run: cargo nextest run -p lox-core -p lox-test-utils -p lox-math -p lox-units --no-default-features --features libm
+        run: cargo nextest run -p lox-core -p lox-test-utils -p lox-math -p lox-units -p lox-bodies --no-default-features --features libm
 
   no-std-check:
     name: Clippy (no_std, bare-metal)
@@ -82,7 +82,7 @@ jobs:
         with:
           shared-key: no-std-baremetal
       - name: Bare-metal lint
-        run: cargo clippy -p lox-core -p lox-test-utils -p lox-math -p lox-units --no-default-features --features libm --target thumbv7em-none-eabi -- -D warnings
+        run: cargo clippy -p lox-core -p lox-test-utils -p lox-math -p lox-units -p lox-bodies --no-default-features --features libm --target thumbv7em-none-eabi -- -D warnings
 
   reuse:
     name: REUSE Compliance

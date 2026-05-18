@@ -1018,10 +1018,12 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
         use crate::TrySpheroid;
         use crate::TryTriaxialEllipsoid;
         use crate::UndefinedOriginPropertyError;
+        use alloc::format;
+        use alloc::string::{String, ToString};
+        use core::fmt::Display;
+        use core::fmt::Formatter;
         use lox_core::elements::GravitationalParameter;
         use lox_core::units::Distance;
-        use std::fmt::Display;
-        use std::fmt::Formatter;
     };
 
     let mut point_mass_match_arms = quote! {};
@@ -1064,7 +1066,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             }
 
             impl Display for #ident {
-                fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
                     write!(f, "{}", self.name())
                 }
             }
@@ -1476,6 +1478,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
         #[cfg(test)]
         #[allow(clippy::approx_constant)] // at least one parsed constant is close to TAU
         mod tests {
+            use alloc::string::ToString;
             use crate::*;
 
             #tests
