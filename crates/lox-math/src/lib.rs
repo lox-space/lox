@@ -6,6 +6,7 @@
 
 //! Mathematical utilities re-exported from [`lox_core::math`].
 
+#![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
 
 #[doc(inline)]

@@ -17,9 +17,12 @@ categories.workspace = true
 readme = "README.md"
 
 [dependencies]
-lox-core.workspace = true
+lox-core = { workspace = true, default-features = false }
 
 [features]
+default = ["std"]
+std = ["lox-core/std"]
+libm = ["lox-core/libm"]
 serde = ["lox-core/serde"]
 
 [lib]

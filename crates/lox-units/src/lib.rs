@@ -4,6 +4,7 @@
 
 //! Physical unit types re-exported from [`lox_core::units`].
 
+#![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
 
 #[doc(inline)]
