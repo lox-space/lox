@@ -4,9 +4,9 @@
 
 //! Interpolated data series with linear and cubic spline support.
 
-use std::fmt;
-use std::str::FromStr;
-use std::sync::Arc;
+use alloc::sync::Arc;
+use core::fmt;
+use core::str::FromStr;
 
 use fast_polynomial::poly_array;
 use thiserror::Error;

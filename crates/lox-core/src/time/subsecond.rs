@@ -35,8 +35,8 @@
 //! assert_eq!(s.microseconds(), 456);
 //! ```
 
-use std::fmt::Display;
-use std::str::FromStr;
+use core::fmt::Display;
+use core::str::FromStr;
 
 use crate::f64::consts::SECONDS_PER_ATTOSECOND;
 use crate::i64::consts::{
@@ -281,13 +281,13 @@ impl Subsecond {
 }
 
 impl Ord for Subsecond {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.as_attoseconds().cmp(&other.as_attoseconds())
     }
 }
 
 impl PartialOrd for Subsecond {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -303,7 +303,7 @@ impl Eq for Subsecond {}
 const DIGITS: usize = 18;
 
 impl Display for Subsecond {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         "0.".fmt(f)?;
         let mut s = self.as_attoseconds().to_string();
         if s.len() < DIGITS {

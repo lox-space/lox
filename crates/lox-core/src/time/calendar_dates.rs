@@ -8,7 +8,7 @@
     human-readable dates.
 */
 
-use std::{
+use core::{
     cmp::Ordering,
     fmt::{Display, Formatter},
     str::FromStr,
@@ -60,7 +60,7 @@ pub struct Date {
 }
 
 impl Display for Date {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}-{:02}-{:02}", self.year, self.month, self.day)
     }
 }

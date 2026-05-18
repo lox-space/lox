@@ -303,8 +303,8 @@ where
         let mut q0 = f.call(p0).map_err(RootFinderError::Callback)?;
         let mut q1 = f.call(p1).map_err(RootFinderError::Callback)?;
         if q1.abs() < q0.abs() {
-            std::mem::swap(&mut p0, &mut p1);
-            std::mem::swap(&mut q0, &mut q1);
+            core::mem::swap(&mut p0, &mut p1);
+            core::mem::swap(&mut q0, &mut q1);
         }
         for i in 0..self.max_iter {
             if q1 == q0 {
@@ -345,16 +345,16 @@ where
 
 #[cfg(test)]
 mod tests {
+    use core::f64::consts::PI;
     use lox_test_utils::assert_approx_eq;
-    use std::f64::consts::PI;
 
     use super::*;
 
-    type Result = std::result::Result<f64, BoxedError>;
+    type Result = core::result::Result<f64, BoxedError>;
 
     #[test]
     fn test_newton_kepler() {
-        fn mean_to_ecc(mean: f64, eccentricity: f64) -> std::result::Result<f64, RootFinderError> {
+        fn mean_to_ecc(mean: f64, eccentricity: f64) -> core::result::Result<f64, RootFinderError> {
             let newton = Newton::default();
             newton.find_with_derivative(
                 |e: f64| -> Result { Ok(e - eccentricity * e.sin() - mean) },
