@@ -75,14 +75,23 @@ use alloc::vec::Vec;
 use core::iter::zip;
 
 use glam::{DMat3, DVec3};
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use num_traits::Float;
 
 pub mod macros;
 pub mod results;
 
 pub use results::{ApproxEqResult, ApproxEqResults};
+
+#[inline]
+fn sqrt(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.sqrt()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::sqrt(x)
+    }
+}
 
 /// Returns the default relative tolerance based on the absolute tolerance.
 ///
@@ -98,7 +107,7 @@ pub use results::{ApproxEqResult, ApproxEqResults};
 /// assert_eq!(default_rtol(0.01), 0.0);
 /// ```
 pub fn default_rtol(atol: f64) -> f64 {
-    if atol > 0.0 { 0.0 } else { f64::EPSILON.sqrt() }
+    if atol > 0.0 { 0.0 } else { sqrt(f64::EPSILON) }
 }
 
 /// Trait for types that can be compared for approximate equality.

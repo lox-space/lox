@@ -8,10 +8,6 @@
     representations as Julian dates relative to standard [Epoch]s and in a variety of [Unit]s.
 */
 
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use num_traits::Float;
-
 use crate::i64::consts::SECONDS_BETWEEN_JD_AND_J2000;
 
 use super::deltas::TimeDelta;
@@ -60,7 +56,7 @@ pub trait JulianDate {
     /// loss of precision should provide their own implementations.
     fn two_part_julian_date(&self) -> (f64, f64) {
         let jd = self.julian_date(Epoch::JulianDate, Unit::Days);
-        (jd.trunc(), jd.fract())
+        (crate::math::float::trunc(jd), crate::math::float::fract(jd))
     }
 
     /// Returns the number of seconds since the Julian epoch as an `f64`.

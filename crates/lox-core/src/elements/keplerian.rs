@@ -12,10 +12,9 @@ use core::fmt::Display;
 use glam::DVec3;
 use lox_test_utils::ApproxEq;
 use lox_test_utils::approx_eq;
-#[cfg(not(feature = "std"))]
-#[allow(unused_imports)]
-use num_traits::Float;
 use thiserror::Error;
+
+use crate::math::float::{ln, powf, powi, signum, sqrt};
 
 use crate::anomalies::AnomalyError;
 use crate::anomalies::MeanAnomaly;
@@ -332,7 +331,7 @@ impl Keplerian {
         if self.eccentricity.is_circular() {
             self.semi_major_axis
         } else {
-            Distance::new(self.semi_major_axis.as_f64() * (1.0 - self.eccentricity.0.powi(2)))
+            Distance::new(self.semi_major_axis.as_f64() * (1.0 - powi(self.eccentricity.0, 2)))
         }
     }
 
@@ -342,7 +341,7 @@ impl Keplerian {
         let mu = grav_param.as_f64();
         let semiparameter = self.semi_parameter().as_f64();
         let (sin_nu, cos_nu) = self.true_anomaly.as_angle().sin_cos();
-        let sqrt_mu_p = (mu / semiparameter).sqrt();
+        let sqrt_mu_p = sqrt(mu / semiparameter);
 
         let pos = DVec3::new(cos_nu, sin_nu, 0.0) * (semiparameter / (1.0 + ecc * cos_nu));
         let vel = DVec3::new(-sin_nu, ecc + cos_nu, 0.0) * sqrt_mu_p;
@@ -366,7 +365,7 @@ impl Keplerian {
         }
         let mu = grav_param.as_f64();
         let a = self.semi_major_axis.as_f64();
-        Some(TimeDelta::from_seconds_f64(TAU * (a.powf(3.0) / mu).sqrt()))
+        Some(TimeDelta::from_seconds_f64(TAU * sqrt(powf(a, 3.0) / mu)))
     }
 
     /// Returns an iterator over `n` Cartesian positions equally spaced around the orbit.
@@ -428,9 +427,9 @@ impl Cartesian {
         let circular = eccentricity.is_circular();
 
         let semi_major_axis = if circular {
-            hm.powi(2) / mu
+            powi(hm, 2) / mu
         } else {
-            -mu / (2.0 * (vm.powi(2) / 2.0 - mu / rm))
+            -mu / (2.0 * (powi(vm, 2) / 2.0 - mu / rm))
         };
 
         let (longitude_of_ascending_node, argument_of_periapsis, true_anomaly) =
@@ -450,13 +449,13 @@ impl Cartesian {
                 (Angle::ZERO, Angle::ZERO, TrueAnomaly::new(r.azimuth()))
             } else {
                 let true_anomaly = if semi_major_axis > 0.0 {
-                    let e_se = r.dot(v) / (mu * semi_major_axis).sqrt();
-                    let e_ce = (rm * vm.powi(2)) / mu - 1.0;
+                    let e_se = r.dot(v) / sqrt(mu * semi_major_axis);
+                    let e_ce = (rm * powi(vm, 2)) / mu - 1.0;
                     EccentricAnomaly::new(Angle::from_atan2(e_se, e_ce)).to_true(eccentricity)
                 } else {
-                    let e_sh = r.dot(v) / (-mu * semi_major_axis).sqrt();
-                    let e_ch = (rm * vm.powi(2)) / mu - 1.0;
-                    EccentricAnomaly::new((((e_ch + e_sh) / (e_ch - e_sh)).ln() / 2.0).rad())
+                    let e_sh = r.dot(v) / sqrt(-mu * semi_major_axis);
+                    let e_ch = (rm * powi(vm, 2)) / mu - 1.0;
+                    EccentricAnomaly::new((ln((e_ch + e_sh) / (e_ch - e_sh)) / 2.0).rad())
                         .to_true(eccentricity)
                 };
                 let px = r.dot(node);
@@ -490,7 +489,7 @@ pub enum KeplerianError {
     /// The semi-major axis sign is inconsistent with the eccentricity.
     #[error(
         "{} semi-major axis ({semi_major_axis}) for {} eccentricity ({eccentricity})",
-        if .semi_major_axis.as_f64().signum() == -1.0 {"negative"} else {"positive"},
+        if signum(.semi_major_axis.as_f64()) == -1.0 {"negative"} else {"positive"},
         .eccentricity.orbit_type()
     )]
     InvalidShape {
