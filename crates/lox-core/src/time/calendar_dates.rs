@@ -12,22 +12,16 @@ use std::{
     cmp::Ordering,
     fmt::{Display, Formatter},
     str::FromStr,
-    sync::OnceLock,
 };
 
 use crate::time::deltas::TimeDelta;
+use nom::{Parser, combinator::all_consuming};
 use num::ToPrimitive;
 use thiserror::Error;
 
-use regex::Regex;
-
+use super::iso;
 use super::julian_dates::{Epoch, JulianDate, Unit};
 use crate::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
-
-fn iso_regex() -> &'static Regex {
-    static ISO: OnceLock<Regex> = OnceLock::new();
-    ISO.get_or_init(|| Regex::new(r"(?<year>-?\d{4,})-(?<month>\d{2})-(?<day>\d{2})").unwrap())
-}
 
 /// Error type returned when attempting to construct a [Date] from invalid inputs.
 #[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
@@ -182,19 +176,10 @@ impl Date {
     ///
     /// - [DateError::InvalidIsoString] if the input string does not contain a valid ISO 8601 date.
     /// - [DateError::InvalidDate] if the date parsed from the ISO 8601 string is invalid.
-    pub fn from_iso(iso: &str) -> Result<Self, DateError> {
-        let caps = iso_regex()
-            .captures(iso)
-            .ok_or(DateError::InvalidIsoString(iso.to_owned()))?;
-        let year: i64 = caps["year"]
-            .parse()
-            .map_err(|_| DateError::InvalidIsoString(iso.to_owned()))?;
-        let month = caps["month"]
-            .parse()
-            .map_err(|_| DateError::InvalidIsoString(iso.to_owned()))?;
-        let day = caps["day"]
-            .parse()
-            .map_err(|_| DateError::InvalidIsoString(iso.to_owned()))?;
+    pub fn from_iso(input: &str) -> Result<Self, DateError> {
+        let (_, (year, month, day)) = all_consuming(iso::date)
+            .parse(input)
+            .map_err(|_| DateError::InvalidIsoString(input.to_owned()))?;
         Date::new(year, month, day)
     }
 
