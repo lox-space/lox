@@ -286,18 +286,14 @@ where
 
         let pos = state_bf.position();
 
-        let eq_radius = self
-            .origin
-            .try_equatorial_radius()
-            .map_err(EvalError::from)?;
-        let flattening = self.origin.try_flattening().map_err(EvalError::from)?;
+        let ellipsoid = self.origin.try_ellipsoid().map_err(EvalError::from)?;
         let mean_radius = self
             .origin
             .try_mean_radius()
             .map_err(EvalError::from)?
             .to_meters();
 
-        let lla = LonLatAlt::from_body_fixed(pos, eq_radius, flattening)
+        let lla = LonLatAlt::from_body_fixed(pos, &ellipsoid)
             .map_err(|e| EvalError::Rotation(Box::new(e)))?;
 
         let sub_sat_point = geo::Point::new(lla.lon().to_degrees(), lla.lat().to_degrees());

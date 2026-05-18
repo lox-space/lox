@@ -4,11 +4,12 @@
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
 use crate::propagators::Propagator;
-use lox_bodies::{DynOrigin, RotationalElements, Spheroid, TrySpheroid};
-use lox_core::coords::{Cartesian, LonLatAlt};
+use lox_bodies::{
+    DynOrigin, RotationalElements, Spheroid, TrySpheroid, UndefinedOriginPropertyError,
+};
+use lox_core::coords::{Cartesian, Ellipsoid, LonLatAlt};
 use lox_core::glam::{DMat3, DVec3};
 use lox_core::types::units::Radians;
-use lox_core::units::Distance;
 use lox_frames::{DynFrame, Iau, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
@@ -79,10 +80,10 @@ impl<B: Spheroid> GroundLocation<B> {
 /// Fallible constructor — for `DynOrigin` and other `TrySpheroid` types.
 impl<B: TrySpheroid> GroundLocation<B> {
     /// Creates a new ground location, returning an error if the body has no spheroid.
-    pub fn try_new(coordinates: LonLatAlt, body: B) -> Result<Self, &'static str> {
-        if body.try_equatorial_radius().is_err() {
-            return Err("no spheroid");
-        }
+    pub fn try_new(coordinates: LonLatAlt, body: B) -> Result<Self, UndefinedOriginPropertyError> {
+        // Validate the body has a valid ellipsoid at construction time.
+        // This is the invariant that `ellipsoid()` relies on.
+        body.try_ellipsoid()?;
         Ok(GroundLocation { coordinates, body })
     }
 }
@@ -126,22 +127,19 @@ impl<B: TrySpheroid> GroundLocation<B> {
         self.coordinates.alt().to_kilometers()
     }
 
-    fn equatorial_radius(&self) -> Distance {
+    /// Returns the ellipsoid for this location's body.
+    ///
+    /// Infallible: the body's spheroid validity is checked at construction
+    /// (in [`GroundLocation::new`] or [`GroundLocation::try_new`]).
+    pub fn ellipsoid(&self) -> Ellipsoid {
         self.body
-            .try_equatorial_radius()
-            .expect("equatorial radius should be available")
-    }
-
-    fn flattening(&self) -> f64 {
-        self.body
-            .try_flattening()
-            .expect("flattening should be available")
+            .try_ellipsoid()
+            .expect("validated at GroundLocation construction")
     }
 
     /// Returns the body-fixed Cartesian position in meters.
     pub fn body_fixed_position(&self) -> DVec3 {
-        self.coordinates
-            .to_body_fixed(self.equatorial_radius(), self.flattening())
+        self.coordinates.to_body_fixed(&self.ellipsoid())
     }
 
     /// Returns the rotation matrix from body-fixed to topocentric (SEZ) frame.
@@ -220,19 +218,20 @@ impl<B: Spheroid + RotationalElements> GroundPropagator<B, Iau<B>> {
     }
 }
 
-/// Fallible constructor for `DynOrigin`.
+/// Infallible constructor for `DynOrigin`.
+///
+/// Unlike `GroundLocation::try_new`, this constructor cannot fail: the location
+/// already holds a valid ellipsoid, and building the IAU frame from a `DynOrigin`
+/// is always possible.
 impl GroundPropagator<DynOrigin, DynFrame> {
-    /// Creates a new ground propagator, returning an error if the body has no spheroid.
-    pub fn try_new(location: GroundLocation<DynOrigin>) -> Result<Self, &'static str> {
-        if location.body.try_equatorial_radius().is_err() {
-            return Err("no spheroid");
-        }
+    /// Creates a new ground propagator for a dynamic-origin ground location.
+    pub fn new_dyn(location: GroundLocation<DynOrigin>) -> Self {
         let frame = DynFrame::Iau(location.body);
-        Ok(GroundPropagator {
+        GroundPropagator {
             location,
             frame,
             step: None,
-        })
+        }
     }
 }
 
@@ -430,7 +429,7 @@ mod tests {
     fn test_ground_propagator_try_new_with_dyn_origin() {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::try_new(coords, DynOrigin::Earth).unwrap();
-        let propagator = GroundPropagator::try_new(location).unwrap();
+        let propagator = GroundPropagator::new_dyn(location);
         let time = utc!(2022, 1, 31, 23).unwrap().to_time();
         let t1 = time + TimeDelta::from_minutes(5);
         let interval = Interval::new(time, t1);
