@@ -1429,7 +1429,10 @@ mod tests {
 
     fn contacts_tai() -> Vec<TimeInterval<Tai>> {
         let mut intervals = vec![];
-        let mut reader = csv::Reader::from_path(data_file("contacts.csv")).unwrap();
+        let mut reader = csv::ReaderBuilder::new()
+            .trim(csv::Trim::All)
+            .from_path(data_file("contacts.csv"))
+            .unwrap();
         for result in reader.records() {
             let record = result.unwrap();
             let start = record[0].parse::<Utc>().unwrap().to_time();
@@ -1441,7 +1444,10 @@ mod tests {
 
     fn contacts_combined() -> Vec<TimeInterval<DynTimeScale>> {
         let mut intervals = vec![];
-        let mut reader = csv::Reader::from_path(data_file("contacts_combined.csv")).unwrap();
+        let mut reader = csv::ReaderBuilder::new()
+            .trim(csv::Trim::All)
+            .from_path(data_file("contacts_combined.csv"))
+            .unwrap();
         for result in reader.records() {
             let record = result.unwrap();
             let start = record[0].parse::<Utc>().unwrap().to_dyn_time();
