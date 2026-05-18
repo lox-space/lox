@@ -9,6 +9,8 @@ use core::fmt;
 use core::str::FromStr;
 
 use fast_polynomial::poly_array;
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
 use thiserror::Error;
 
 use crate::math::slices::Monotonic;

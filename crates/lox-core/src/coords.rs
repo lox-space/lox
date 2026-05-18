@@ -10,6 +10,8 @@ use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAss
 
 use glam::{DMat3, DVec3};
 use lox_test_utils::ApproxEq;
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
 use thiserror::Error;
 
 use crate::{
