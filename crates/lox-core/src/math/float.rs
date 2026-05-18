@@ -9,6 +9,32 @@
 // Rounding helpers
 // ================
 
+/// Largest integer `<= x`.
+#[inline]
+pub fn floor(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.floor()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::floor(x)
+    }
+}
+
+/// Rounds to the nearest integer, ties away from zero.
+#[inline]
+pub fn round(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.round()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::round(x)
+    }
+}
+
 /// Truncates toward zero.
 #[inline]
 pub fn trunc(x: f64) -> f64 {

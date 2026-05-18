@@ -4,14 +4,15 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::fmt;
-use std::fmt::Display;
-use std::fmt::Formatter;
-use std::ops::Add;
-use std::ops::Sub;
-use std::str::FromStr;
+use alloc::borrow::ToOwned;
+use alloc::string::String;
+use core::fmt;
+use core::fmt::Display;
+use core::fmt::Formatter;
+use core::ops::Add;
+use core::ops::Sub;
+use core::str::FromStr;
 
-use itertools::Itertools;
 use lox_core::f64;
 use lox_core::i64;
 use lox_core::types::units::Days;
@@ -117,10 +118,11 @@ impl<T: TimeScale> Time<T> {
             return Err(TimeError::InvalidIsoString(iso.to_owned()));
         };
 
-        let (time, scale_abbrv) = time_and_scale
-            .split_whitespace()
-            .collect_tuple()
-            .unwrap_or((time_and_scale, ""));
+        let mut parts = time_and_scale.split_whitespace();
+        let (time, scale_abbrv) = match (parts.next(), parts.next(), parts.next()) {
+            (Some(a), Some(b), None) => (a, b),
+            _ => (time_and_scale, ""),
+        };
 
         if !scale_abbrv.is_empty() && scale_abbrv != scale.abbreviation() {
             return Err(TimeError::InvalidIsoString(iso.to_owned()));
@@ -270,13 +272,13 @@ impl<T: TimeScale + Into<DynTimeScale>> Time<T> {
 }
 
 impl<T: TimeScale + Eq> PartialOrd for Time<T> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl<T: TimeScale + Eq> Ord for Time<T> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         assert!(
             self.scale == other.scale,
             "cannot compare `Time` objects with different time scales"
@@ -295,7 +297,7 @@ pub struct TimeScaleMismatch {
 
 impl DynTime {
     /// Compares two [`DynTime`] objects, returning an error if they have different time scales.
-    pub fn checked_cmp(&self, other: &Self) -> Result<std::cmp::Ordering, TimeScaleMismatch> {
+    pub fn checked_cmp(&self, other: &Self) -> Result<core::cmp::Ordering, TimeScaleMismatch> {
         if self.scale != other.scale {
             return Err(TimeScaleMismatch {
                 lhs: self.scale,
@@ -306,7 +308,7 @@ impl DynTime {
     }
 }
 
-impl<T: TimeScale + std::fmt::Debug> ApproxEq for Time<T> {
+impl<T: TimeScale + core::fmt::Debug> ApproxEq for Time<T> {
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
         self.to_delta().approx_eq(&rhs.to_delta(), atol, rtol)
     }
@@ -532,12 +534,15 @@ macro_rules! time {
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
+    use alloc::string::ToString;
+    use core::cmp::Ordering;
     use lox_core::f64::consts::DAYS_PER_JULIAN_CENTURY;
     use lox_test_utils::assert_approx_eq;
     use rstest::rstest;
 
     use crate::Time;
-    use crate::time_scales::{Tai, Tdb, Tt};
+    use crate::time_scales::{DynTimeScale, Tai, Tdb, Tt};
     use lox_core::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 
     use super::*;
@@ -1121,8 +1126,6 @@ mod tests {
 
     #[test]
     fn test_time_into_dyn() {
-        use crate::time_scales::DynTimeScale;
-
         let time = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap();
         let dyn_time = time.into_dyn();
         assert_eq!(dyn_time.scale(), DynTimeScale::Tai);
@@ -1136,7 +1139,6 @@ mod tests {
 
     #[test]
     fn test_checked_cmp_same_scale() {
-        use std::cmp::Ordering;
         let t1 = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dyn();
         let t2 = time!(Tai, 2000, 1, 1, 13, 0, 0.0).unwrap().into_dyn();
         assert_eq!(t1.checked_cmp(&t2), Ok(Ordering::Less));

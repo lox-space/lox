@@ -18,11 +18,11 @@ categories.workspace = true
 readme = "README.md"
 
 [dependencies]
-lox-core = { workspace = true, features = ["std"] }
-lox-test-utils = { workspace = true, features = ["std"] }
+lox-core = { workspace = true, default-features = false }
+lox-test-utils = { workspace = true, default-features = false }
 
 chrono = { workspace = true, optional = true }
-itertools.workspace = true
+itertools = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 
@@ -30,5 +30,13 @@ thiserror.workspace = true
 rstest.workspace = true
 
 [features]
-chrono = ["dep:chrono", "lox-core/chrono"]
+default = ["std"]
+std = [
+    "dep:itertools",
+    "lox-core/std",
+    "lox-test-utils/std",
+    "serde?/std",
+]
+libm = ["lox-core/libm", "lox-test-utils/libm"]
+chrono = ["dep:chrono", "lox-core/chrono", "std"]
 serde = ["dep:serde", "lox-core/serde"]

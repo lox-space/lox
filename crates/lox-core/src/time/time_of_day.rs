@@ -172,6 +172,18 @@ impl TimeOfDay {
         })
     }
 
+    /// Creates a [TimeOfDay] without validation. Use when the caller has
+    /// already verified that the components are in range (and, for second=60,
+    /// that this is a leap-second instant).
+    pub const fn new_unchecked(hour: u8, minute: u8, second: u8) -> Self {
+        Self {
+            hour,
+            minute,
+            second,
+            subsecond: Subsecond::ZERO,
+        }
+    }
+
     /// Constructs a new `TimeOfDay` instance from an ISO 8601 time string.
     ///
     /// # Errors

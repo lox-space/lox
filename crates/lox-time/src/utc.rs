@@ -10,10 +10,11 @@
     from the continuous time formats, and is used exclusively as an input format to Lox.
 */
 
-use std::fmt::{self, Display, Formatter};
-use std::str::FromStr;
+use alloc::borrow::ToOwned;
+use alloc::string::String;
+use core::fmt::{self, Display, Formatter};
+use core::str::FromStr;
 
-use itertools::Itertools;
 use lox_core::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use lox_test_utils::approx_eq::{ApproxEq, ApproxEqResults};
 use thiserror::Error;
@@ -76,6 +77,14 @@ impl Utc {
         Ok(Self { date, time })
     }
 
+    /// Creates a [Utc] directly from a [Date] and [TimeOfDay] without
+    /// leap-second validation. Use when the caller has already verified the
+    /// inputs (e.g. for compile-time-known reference datetimes that aren't
+    /// leap seconds).
+    pub const fn new_unchecked(date: Date, time: TimeOfDay) -> Self {
+        Self { date, time }
+    }
+
     /// Returns a new [UtcBuilder].
     pub fn builder() -> UtcBuilder {
         UtcBuilder::default()
@@ -101,10 +110,11 @@ impl Utc {
             return Err(UtcError::InvalidIsoString(iso.to_owned()));
         };
 
-        let (time, scale_abbrv) = time_and_scale
-            .split_whitespace()
-            .collect_tuple()
-            .unwrap_or((time_and_scale, ""));
+        let mut parts = time_and_scale.split_whitespace();
+        let (time, scale_abbrv) = match (parts.next(), parts.next(), parts.next()) {
+            (Some(a), Some(b), None) => (a, b),
+            _ => (time_and_scale, ""),
+        };
 
         if !scale_abbrv.is_empty() && scale_abbrv != "UTC" {
             return Err(UtcError::InvalidIsoString(iso.to_owned()));
@@ -272,6 +282,9 @@ macro_rules! utc {
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
+    use alloc::string::ToString;
+
     use super::*;
     use rstest::rstest;
 
