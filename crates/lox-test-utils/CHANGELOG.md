@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.8](https://github.com/lox-space/lox/compare/lox-test-utils-v0.1.0-alpha.7...lox-test-utils-v0.1.0-alpha.8) - 2026-05-18
+
+### Added
+
+- *(lox-core)* make lox-core no_std compatible
+
+### Other
+
+- *(lox-core)* remove num-traits dependency
+- *(lox-core)* add no_std tests and clippy
+
 ## [0.1.0-alpha.7](https://github.com/lox-space/lox/compare/lox-test-utils-v0.1.0-alpha.6...lox-test-utils-v0.1.0-alpha.7) - 2026-05-16
 
 ### Other

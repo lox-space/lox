@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.23](https://github.com/lox-space/lox/compare/lox-io-v0.1.0-alpha.22...lox-io-v0.1.0-alpha.23) - 2026-05-18
+
+### Added
+
+- *(lox-math/lox-units)* add no_std compat
+- *(lox-core)* make lox-core no_std compatible
+
+### Other
+
+- remove unused deps and files
+- *(lox-core)* add no_std tests and clippy
+
 ## [0.1.0-alpha.22](https://github.com/lox-space/lox/compare/lox-io-v0.1.0-alpha.21...lox-io-v0.1.0-alpha.22) - 2026-05-16
 
 ### Other

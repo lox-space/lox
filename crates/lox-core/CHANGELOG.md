@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.12...lox-core-v0.1.0-alpha.13) - 2026-05-18
+
+### Added
+
+- *(lox-core)* [**breaking**] port ERFA spherical and geodetic helpers
+- *(lox-core)* [**breaking**] port ERFA angle and day-fraction helpers
+- *(lox-time)* add no_std compat
+- *(lox-bodies)* add no_std compat
+- *(lox-core)* make lox-core no_std compatible
+
+### Other
+
+- *(lox-core)* remove num-traits dependency
+- *(lox-core)* add no_std tests and clippy
+- *(lox-core)* use num_traits::Float for trig math
+- swap std to core
+- *(lox-core)* use core::error::Error
+- *(lox-core)* replace datetime regex with nom parser
+
 ## [0.1.0-alpha.12](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.11...lox-core-v0.1.0-alpha.12) - 2026-05-16
 
 ### Added
