@@ -14,9 +14,13 @@
 use alloc::borrow::ToOwned;
 use alloc::format;
 use alloc::string::String;
+
 use core::cmp::Ordering;
 use core::fmt::Display;
 use core::str::FromStr;
+#[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
+use num_traits::Float;
 
 use crate::units::Angle;
 use nom::{Parser, combinator::all_consuming};
@@ -326,6 +330,7 @@ impl FromStr for TimeOfDay {
 
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
     use rstest::rstest;
 
     use super::*;

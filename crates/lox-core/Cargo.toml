@@ -17,7 +17,7 @@ categories.workspace = true
 readme = "README.md"
 
 [dependencies]
-lox-test-utils = { workspace = true, features = ["derive"] }
+lox-test-utils = { workspace = true, default-features = false, features = ["derive"] }
 
 chrono = { workspace = true, optional = true }
 fast_polynomial.workspace = true

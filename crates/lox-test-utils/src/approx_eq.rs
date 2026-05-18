@@ -76,6 +76,7 @@ use core::iter::zip;
 
 use glam::{DMat3, DVec3};
 #[cfg(not(feature = "std"))]
+#[allow(unused_imports)]
 use num_traits::Float;
 
 pub mod macros;
@@ -218,6 +219,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
+    use alloc::vec;
+
     use crate::{approx_eq, approx_ne, assert_approx_eq, assert_approx_ne};
 
     use super::*;
