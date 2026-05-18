@@ -11,7 +11,7 @@ use std::iter::zip;
 use fast_polynomial::poly_array;
 use lox_core::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use lox_core::glam::DMat3;
-use lox_core::units::{Angle, AngleUnits};
+use lox_core::units::{Angle, AngleUnits, Sign};
 use lox_test_utils::ApproxEq;
 use lox_time::time_scales::{Tdb, Tt, Ut1};
 use lox_time::{Time, julian_dates::JulianDate};
@@ -129,7 +129,7 @@ impl GreenwichMeanSiderealTime {
     pub fn iau1982(time: Time<Ut1>) -> Self {
         let t = time.centuries_since_j2000();
         let f = time.days_since_j2000().rem_euclid(1.0) * SECONDS_PER_DAY;
-        Self(Angle::from_hms(0, 0, poly_array(t, &[A, B, C, D]) + f).mod_two_pi())
+        Self(Angle::from_hms(Sign::Positive, 0, 0, poly_array(t, &[A, B, C, D]) + f).mod_two_pi())
     }
 
     /// Computes GMST using the IAU 2000 model.

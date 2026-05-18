@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2024 Angus Morrison <github@angus-morrison.com>
 // SPDX-FileCopyrightText: 2024 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2013-2021 NumFOCUS Foundation
 //
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0 AND LicenseRef-ERFA
 
 /*!
     Module `time_of_day` exposes the concrete representation of a time of day with leap second
@@ -20,6 +21,7 @@ use core::fmt::Display;
 use core::str::FromStr;
 
 use crate::units::Angle;
+use crate::units::Sign;
 use nom::{Parser, combinator::all_consuming};
 use thiserror::Error;
 
@@ -236,6 +238,33 @@ impl TimeOfDay {
         Ok(Self::new(hour, minute, second)?.with_subsecond(subsecond))
     }
 
+    /// Constructs a `TimeOfDay` from a fractional day in `[0.0, 1.0)`.
+    ///
+    /// Unlike ERFA `d2tf`, this function does not accept negative inputs
+    /// or fractions ≥ 1.0 — they don't represent a valid `TimeOfDay`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TimeOfDayError::InvalidSeconds`] for non-finite inputs and
+    /// inputs outside `[0.0, 1.0)`.
+    ///
+    /// # References
+    ///
+    /// - ERFA [`d2tf`](https://github.com/liberfa/erfa/blob/master/src/d2tf.c)
+    pub fn from_day_fraction(days: f64) -> Result<Self, TimeOfDayError> {
+        if !days.is_finite() || !(0.0..1.0).contains(&days) {
+            return Err(TimeOfDayError::InvalidSeconds(InvalidSeconds(
+                days * SECONDS_PER_DAY as f64,
+            )));
+        }
+        let total_seconds = days * SECONDS_PER_DAY as f64;
+        let hour = (total_seconds / SECONDS_PER_HOUR as f64) as u8;
+        let rem = total_seconds - (hour as f64) * SECONDS_PER_HOUR as f64;
+        let minute = (rem / SECONDS_PER_MINUTE as f64) as u8;
+        let seconds = rem - (minute as f64) * SECONDS_PER_MINUTE as f64;
+        Self::from_hms(hour, minute, seconds)
+    }
+
     /// Constructs a new `TimeOfDay` instance from the given second of a day.
     ///
     /// # Errors
@@ -297,6 +326,20 @@ impl TimeOfDay {
         self.subsecond.as_seconds_f64() + self.second as f64
     }
 
+    /// Returns the time of day as a fraction of a day in `[0.0, 1.0)`.
+    ///
+    /// Inverse of [`TimeOfDay::from_day_fraction`].
+    ///
+    /// # References
+    ///
+    /// - ERFA [`tf2d`](https://github.com/liberfa/erfa/blob/master/src/tf2d.c)
+    pub fn to_day_fraction(&self) -> f64 {
+        let total_seconds = self.hour as f64 * SECONDS_PER_HOUR as f64
+            + self.minute as f64 * SECONDS_PER_MINUTE as f64
+            + self.seconds_f64();
+        total_seconds / SECONDS_PER_DAY as f64
+    }
+
     /// Returns the number of integral seconds since the start of the day.
     pub fn second_of_day(&self) -> i64 {
         self.hour as i64 * SECONDS_PER_HOUR
@@ -306,7 +349,13 @@ impl TimeOfDay {
 
     /// Converts the time of day to an [`Angle`] (hour angle representation).
     pub fn to_angle(&self) -> Angle {
-        Angle::from_hms(self.hour as i64, self.minute, self.seconds_f64())
+        // `TimeOfDay` hours are always non-negative.
+        Angle::from_hms(
+            Sign::Positive,
+            self.hour as u32,
+            self.minute,
+            self.seconds_f64(),
+        )
     }
 }
 
@@ -335,6 +384,7 @@ impl FromStr for TimeOfDay {
 #[cfg(test)]
 mod tests {
     use alloc::string::ToString;
+    use lox_test_utils::assert_approx_eq;
     use rstest::rstest;
 
     use super::*;
@@ -399,5 +449,56 @@ mod tests {
         let c = InvalidSeconds(f64::NAN);
         let d = InvalidSeconds(f64::NAN);
         assert_eq!(c, d);
+    }
+
+    #[test]
+    fn test_time_of_day_from_day_fraction_erfa_d2tf() {
+        // ERFA t_erfa_c.c::t_d2tf: |d2tf(4, -0.987654321)| = 23h 42m 13.3333s
+        let tod = TimeOfDay::from_day_fraction(0.987654321).unwrap();
+        assert_eq!(tod.hour(), 23);
+        assert_eq!(tod.minute(), 42);
+        assert_approx_eq!(tod.seconds_f64(), 13.3333, atol <= 1e-4);
+    }
+
+    #[test]
+    fn test_time_of_day_from_day_fraction_zero() {
+        let tod = TimeOfDay::from_day_fraction(0.0).unwrap();
+        assert_eq!(tod.hour(), 0);
+        assert_eq!(tod.minute(), 0);
+        assert_eq!(tod.second(), 0);
+    }
+
+    #[test]
+    fn test_time_of_day_from_day_fraction_negative_errors() {
+        // Negative day fractions don't represent a valid TimeOfDay.
+        let result = TimeOfDay::from_day_fraction(-0.5);
+        assert!(matches!(result, Err(TimeOfDayError::InvalidSeconds(_))));
+    }
+
+    #[test]
+    fn test_time_of_day_from_day_fraction_one_or_above_errors() {
+        let result = TimeOfDay::from_day_fraction(1.5);
+        assert!(matches!(result, Err(TimeOfDayError::InvalidSeconds(_))));
+    }
+
+    #[test]
+    fn test_time_of_day_to_day_fraction_erfa_tf2d() {
+        // ERFA t_erfa_c.c::t_tf2d: tf2d(' ', 23, 55, 10.9) = 0.9966539351851851852
+        let d = TimeOfDay::from_hms(23, 55, 10.9).unwrap().to_day_fraction();
+        assert_approx_eq!(d, 0.996_653_935_185_185_2, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_time_of_day_to_day_fraction_roundtrip() {
+        let original = TimeOfDay::from_hms(12, 34, 56.789).unwrap();
+        let d = original.to_day_fraction();
+        let recovered = TimeOfDay::from_day_fraction(d).unwrap();
+        assert_eq!(recovered.hour(), original.hour());
+        assert_eq!(recovered.minute(), original.minute());
+        assert_approx_eq!(
+            recovered.seconds_f64(),
+            original.seconds_f64(),
+            atol <= 1e-10
+        );
     }
 }

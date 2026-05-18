@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2025 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2013-2021 NumFOCUS Foundation
 //
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0 AND LicenseRef-ERFA
 
 //! Newtype wrappers for unitful [`f64`] double precision values
 
@@ -15,8 +16,8 @@ use lox_test_utils::ApproxEq;
 
 use crate::f64::consts::SECONDS_PER_DAY;
 use crate::math::float::{
-    abs, acos, acosh, asin, asinh, atan, atan2, atanh, cos, cosh, log10, powf, sin, sin_cos, sinh,
-    tan, tanh, to_degrees, to_radians,
+    abs, acos, acosh, asin, asinh, atan, atan2, atanh, cos, cosh, log10, powf, round, sin, sin_cos,
+    sinh, tan, tanh, to_degrees, to_radians,
 };
 
 /// Degrees in full circle
@@ -28,7 +29,97 @@ pub const ARCSECONDS_IN_CIRCLE: f64 = DEGREES_IN_CIRCLE * 60.0 * 60.0;
 /// Radians per arcsecond
 pub const RADIANS_IN_ARCSECOND: f64 = TAU / ARCSECONDS_IN_CIRCLE;
 
+/// Rounding granularity (arcseconds) used by the HMS/DMS decomposition
+/// methods to suppress floating-point undershoot at integer boundaries.
+/// See [`Angle::to_dms`] / [`Angle::to_hms`].
+const HMS_DMS_ROUNDING_ARCSEC: f64 = 1e-9;
+
+/// Sign of a signed component. Used for HMS/DMS decomposition.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum Sign {
+    /// Positive sign (`+`).
+    Positive,
+    /// Negative sign (`-`).
+    Negative,
+}
+
+impl Sign {
+    /// Returns +1.0 for `Positive` and -1.0 for `Negative`.
+    ///
+    /// `const` so it can be called from `const fn` composition methods.
+    pub const fn as_f64(&self) -> f64 {
+        match self {
+            Sign::Positive => 1.0,
+            Sign::Negative => -1.0,
+        }
+    }
+}
+
+impl Display for Sign {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Sign::Positive => "+",
+                Sign::Negative => "-",
+            }
+        )
+    }
+}
+
+impl From<f64> for Sign {
+    fn from(x: f64) -> Self {
+        // `is_sign_negative()` reads the IEEE sign bit and correctly
+        // classifies -0.0 as `Negative`.
+        if x.is_sign_negative() {
+            Sign::Negative
+        } else {
+            Sign::Positive
+        }
+    }
+}
+
+impl From<Sign> for f64 {
+    fn from(s: Sign) -> f64 {
+        s.as_f64()
+    }
+}
+
+macro_rules! impl_sign_from_signed_int {
+    ($($t:ty),+ $(,)?) => {
+        $(
+            impl From<$t> for Sign {
+                fn from(x: $t) -> Self {
+                    if x < 0 { Sign::Negative } else { Sign::Positive }
+                }
+            }
+        )+
+    };
+}
+impl_sign_from_signed_int!(i8, i16, i32, i64, isize);
+
 type Radians = f64;
+
+/// Decomposes a signed arcsecond total into `(Sign, hours-or-degrees,
+/// minutes, seconds)`. Used by [`Angle::to_dms`] and [`Angle::to_hms`].
+///
+/// `unit_arcsec` is the number of arcseconds per major unit
+/// (3600.0 for degrees, 3600.0 × 15.0 = 54000.0 for hours).
+fn decompose_signed_arcseconds(total_arcsec: f64, unit_arcsec: f64) -> (Sign, u32, u8, f64) {
+    let sign = Sign::from(total_arcsec);
+    let abs_arcsec = abs(total_arcsec);
+    // Round to the nearest HMS_DMS_ROUNDING_ARCSEC to suppress floating-point
+    // undershoot at integer boundaries (e.g. 1799.999…98 → 1800.0).
+    let abs_arcsec = round(abs_arcsec / HMS_DMS_ROUNDING_ARCSEC) * HMS_DMS_ROUNDING_ARCSEC;
+    let major = (abs_arcsec / unit_arcsec) as u32;
+    let rem = abs_arcsec - (major as f64) * unit_arcsec;
+    // 60 arcseconds in an arcminute, 60 seconds in a minute.
+    let minutes = (rem / 60.0) as u8;
+    let seconds = rem - (minutes as f64) * 60.0;
+    (sign, major, minutes, seconds)
+}
 
 /// Angle in radians.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
@@ -75,9 +166,33 @@ impl Angle {
         Self(to_radians(deg))
     }
 
-    /// Creates a new angle from hours, minutes, and seconds (HMS notation).
-    pub const fn from_hms(hours: i64, minutes: u8, seconds: f64) -> Self {
-        Self::degrees(15.0 * (hours as f64 + minutes as f64 / 60.0 + seconds / 3600.0))
+    /// Creates a new angle from sign, hours, minutes, and seconds (HMS notation).
+    ///
+    /// All magnitude components are non-negative; the sign is carried by the
+    /// `Sign` argument. This shape lets the function represent angles in
+    /// `(−1h, 0h)` (e.g. `−0h 30m 0s`) that an `i64 hours` argument cannot.
+    ///
+    /// Inverse of [`Angle::to_hms`]; round-trip is perfect.
+    ///
+    /// # References
+    ///
+    /// - ERFA [`tf2a`](https://github.com/liberfa/erfa/blob/master/src/tf2a.c)
+    pub const fn from_hms(sign: Sign, hours: u32, minutes: u8, seconds: f64) -> Self {
+        let mag = 15.0 * (hours as f64 + minutes as f64 / 60.0 + seconds / 3600.0);
+        Self::degrees(sign.as_f64() * mag)
+    }
+
+    /// Creates a new angle from sign, degrees, arcminutes, and arcseconds.
+    ///
+    /// All magnitude components are non-negative; the sign is carried by the
+    /// `Sign` argument. Inverse of [`Angle::to_dms`].
+    ///
+    /// # References
+    ///
+    /// - ERFA [`af2a`](https://github.com/liberfa/erfa/blob/master/src/af2a.c)
+    pub const fn from_dms(sign: Sign, degrees: u32, minutes: u8, seconds: f64) -> Self {
+        let mag = degrees as f64 + minutes as f64 / 60.0 + seconds / 3600.0;
+        Self::degrees(sign.as_f64() * mag)
     }
 
     /// Creates a new angle from an `f64` value in degrees and normalize the angle
@@ -247,6 +362,39 @@ impl Angle {
     /// Returns the 3×3 rotation matrix for a rotation about the Z axis.
     pub fn rotation_z(&self) -> DMat3 {
         DMat3::from_rotation_z(-self.to_radians())
+    }
+
+    /// Decomposes the angle into (sign, hours, minutes, seconds).
+    ///
+    /// Treats the angle as a clock-time hour angle (15° per hour). The
+    /// returned `hours` and `minutes` are non-negative; `seconds` is in
+    /// `[0.0, 60.0)`.
+    ///
+    /// Inverse of [`Angle::from_hms`]; round-trip is perfect.
+    ///
+    /// # References
+    ///
+    /// - ERFA [`a2tf`](https://github.com/liberfa/erfa/blob/master/src/a2tf.c)
+    pub fn to_hms(&self) -> (Sign, u32, u8, f64) {
+        // 1 hour-of-angle = 15° = 15 × 3600 arcseconds.
+        // Divide arcseconds by 15 so `decompose_signed_arcseconds` treats
+        // 3600 units-per-major as 3600 time-seconds-per-hour.
+        decompose_signed_arcseconds(self.to_arcseconds() / 15.0, 3600.0)
+    }
+
+    /// Decomposes the angle into (sign, degrees, arcminutes, arcseconds).
+    ///
+    /// The returned `degrees` and `arcminutes` are non-negative; `arcseconds`
+    /// is in `[0.0, 60.0)`. Arcseconds are rounded to the nearest 1e-9
+    /// arcsecond to suppress floating-point undershoot at integer boundaries.
+    ///
+    /// Inverse of [`Angle::from_dms`]; round-trip is perfect.
+    ///
+    /// # References
+    ///
+    /// - ERFA [`a2af`](https://github.com/liberfa/erfa/blob/master/src/a2af.c)
+    pub fn to_dms(&self) -> (Sign, u32, u8, f64) {
+        decompose_signed_arcseconds(self.to_arcseconds(), 3600.0)
     }
 }
 
@@ -1843,10 +1991,18 @@ mod tests {
     // -----------------------------------------------------------------------
 
     #[test]
-    fn test_angle_from_hms() {
-        // 6h 0m 0s → 90°
-        let a = Angle::from_hms(6, 0, 0.0);
-        assert_approx_eq!(a.to_degrees(), 90.0, rtol <= 1e-10);
+    fn test_angle_from_hms_erfa_tf2a() {
+        // ERFA t_erfa_c.c::t_tf2a: tf2a('+', 4, 58, 20.2) = 1.301739278189537429 rad
+        let a = Angle::from_hms(Sign::Positive, 4, 58, 20.2);
+        assert_approx_eq!(a.to_radians(), 1.301_739_278_189_537_4, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_angle_from_hms_negative_within_one_hour() {
+        // -0h 30m 0s must be representable as a negative angle.
+        let a = Angle::from_hms(Sign::Negative, 0, 30, 0.0);
+        assert!(a.to_radians() < 0.0);
+        assert_approx_eq!(a.to_degrees(), -7.5, atol <= 1e-12);
     }
 
     #[test]
@@ -2410,5 +2566,156 @@ mod tests {
         assert_approx_eq!(scaled.as_f64(), 10.0, rtol <= 1e-10);
         let f: f64 = d.into();
         assert_eq!(f, 5.0);
+    }
+
+    // -----------------------------------------------------------------------
+    // Sign
+    // -----------------------------------------------------------------------
+
+    #[rstest]
+    #[case(1.0_f64, Sign::Positive)]
+    #[case(-1.0_f64, Sign::Negative)]
+    #[case(0.0_f64, Sign::Positive)]
+    #[case(-0.0_f64, Sign::Negative)] // IEEE sign bit
+    #[case(f64::INFINITY, Sign::Positive)]
+    #[case(f64::NEG_INFINITY, Sign::Negative)]
+    fn test_sign_from_f64(#[case] input: f64, #[case] expected: Sign) {
+        assert_eq!(Sign::from(input), expected);
+    }
+
+    #[rstest]
+    #[case(1_i32, Sign::Positive)]
+    #[case(-1_i32, Sign::Negative)]
+    #[case(0_i32, Sign::Positive)]
+    fn test_sign_from_i32(#[case] input: i32, #[case] expected: Sign) {
+        assert_eq!(Sign::from(input), expected);
+    }
+
+    #[test]
+    fn test_sign_from_signed_integer_widths() {
+        assert_eq!(Sign::from(-1_i8), Sign::Negative);
+        assert_eq!(Sign::from(-1_i16), Sign::Negative);
+        assert_eq!(Sign::from(-1_i64), Sign::Negative);
+        assert_eq!(Sign::from(-1_isize), Sign::Negative);
+    }
+
+    #[test]
+    fn test_sign_to_f64() {
+        assert_eq!(f64::from(Sign::Positive), 1.0);
+        assert_eq!(f64::from(Sign::Negative), -1.0);
+        assert_eq!(Sign::Positive.as_f64(), 1.0);
+        assert_eq!(Sign::Negative.as_f64(), -1.0);
+    }
+
+    #[test]
+    fn test_sign_display() {
+        assert_eq!(format!("{}", Sign::Positive), "+");
+        assert_eq!(format!("{}", Sign::Negative), "-");
+    }
+
+    // -----------------------------------------------------------------------
+    // Angle::from_dms (ERFA af2a)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_angle_from_dms_erfa_af2a() {
+        // ERFA t_erfa_c.c::t_af2a: af2a('-', 45, 13, 27.2) = -0.7893115794313644842 rad
+        let a = Angle::from_dms(Sign::Negative, 45, 13, 27.2);
+        assert_approx_eq!(a.to_radians(), -0.789_311_579_431_364_4, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_angle_from_dms_negative_within_one_degree() {
+        // -0° 30' 0" must be representable.
+        let a = Angle::from_dms(Sign::Negative, 0, 30, 0.0);
+        assert!(a.to_radians() < 0.0);
+        assert_approx_eq!(a.to_degrees(), -0.5, atol <= 1e-12);
+    }
+
+    // -----------------------------------------------------------------------
+    // Angle::to_hms (ERFA a2tf)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_angle_to_hms_erfa_a2tf() {
+        // ERFA t_erfa_c.c::t_a2tf: a2tf(4, -3.01234) -> -11h 30m 22.6484s
+        let (sign, hours, min, sec) = Angle::radians(-3.01234).to_hms();
+        assert_eq!(sign, Sign::Negative);
+        assert_eq!(hours, 11);
+        assert_eq!(min, 30);
+        assert_approx_eq!(sec, 22.6484, atol <= 1e-4);
+    }
+
+    #[test]
+    fn test_angle_to_hms_negative_within_one_hour() {
+        // -7.5° = -0h 30m 0s. Tests that the `-0h` case is representable.
+        let (sign, hours, min, sec) = Angle::degrees(-7.5).to_hms();
+        assert_eq!(sign, Sign::Negative);
+        assert_eq!(hours, 0);
+        assert_eq!(min, 30);
+        assert_approx_eq!(sec, 0.0, atol <= 1e-10);
+    }
+
+    // -----------------------------------------------------------------------
+    // Angle::to_dms (ERFA a2af)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_angle_to_dms_erfa_a2af() {
+        // ERFA t_erfa_c.c::t_a2af: a2af(4, 2.345) -> +134° 21' 30.9706"
+        let (sign, deg, min, sec) = Angle::radians(2.345).to_dms();
+        assert_eq!(sign, Sign::Positive);
+        assert_eq!(deg, 134);
+        assert_eq!(min, 21);
+        assert_approx_eq!(sec, 30.9706, atol <= 1e-4);
+    }
+
+    #[test]
+    fn test_angle_to_dms_negative() {
+        // -0.5° should round-trip via to_dms exactly.
+        let (sign, deg, min, sec) = Angle::degrees(-0.5).to_dms();
+        assert_eq!(sign, Sign::Negative);
+        assert_eq!(deg, 0);
+        assert_eq!(min, 30);
+        assert_approx_eq!(sec, 0.0, atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_angle_to_dms_zero() {
+        let (sign, deg, min, sec) = Angle::ZERO.to_dms();
+        assert_eq!(sign, Sign::Positive);
+        assert_eq!(deg, 0);
+        assert_eq!(min, 0);
+        assert_eq!(sec, 0.0);
+    }
+
+    #[rstest]
+    #[case(0.0)]
+    #[case(0.5)]
+    #[case(-0.5)]
+    #[case(2.345)]
+    #[case(-3.01234)]
+    #[case(core::f64::consts::PI)]
+    #[case(-core::f64::consts::PI)]
+    fn test_angle_dms_roundtrip(#[case] radians: f64) {
+        let a = Angle::radians(radians);
+        let (sign, deg, min, sec) = a.to_dms();
+        let b = Angle::from_dms(sign, deg, min, sec);
+        assert_approx_eq!(a.to_radians(), b.to_radians(), atol <= 1e-12);
+    }
+
+    #[rstest]
+    #[case(0.0)]
+    #[case(0.5)]
+    #[case(-0.5)]
+    #[case(2.345)]
+    #[case(-3.01234)]
+    #[case(core::f64::consts::PI)]
+    #[case(-core::f64::consts::PI)]
+    fn test_angle_hms_roundtrip(#[case] radians: f64) {
+        let a = Angle::radians(radians);
+        let (sign, hours, min, sec) = a.to_hms();
+        let b = Angle::from_hms(sign, hours, min, sec);
+        assert_approx_eq!(a.to_radians(), b.to_radians(), atol <= 1e-12);
     }
 }
