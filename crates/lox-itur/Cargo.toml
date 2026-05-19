@@ -22,7 +22,7 @@ lox-core = { workspace = true, features = ["std"] }
 
 libm = { workspace = true }
 serde = { workspace = true, optional = true }
-thiserror = { workspace = true }
+thiserror = { workspace = true, features = ["std"] }
 zstd = { workspace = true }
 
 [dev-dependencies]
