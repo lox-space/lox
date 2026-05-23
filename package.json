@@ -5,7 +5,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --no-cache --parallel --continue",
-    "lint": "eslint packages/lox-space-r3f/src packages/lox-space-react/src",
+    "lint": "turbo run lint",
     "test": "turbo run test",
     "clean": "turbo run clean && rm -rf node_modules",
     "changeset": "changeset",

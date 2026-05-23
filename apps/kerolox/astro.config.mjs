@@ -10,11 +10,9 @@ import tailwindcss from "@tailwindcss/vite";
 
 import wasm from "vite-plugin-wasm";
 
-import react from "@astrojs/react";
-
 // https://astro.build/config
 export default defineConfig({
-  integrations: [svelte(), react()],
+  integrations: [svelte()],
 
   vite: {
     plugins: [tailwindcss(), wasm()],

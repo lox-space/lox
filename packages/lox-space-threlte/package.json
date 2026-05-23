@@ -22,6 +22,7 @@
   "license": "MPL-2.0",
   "scripts": {
     "build": "svelte-package --input src",
+    "lint": "eslint src",
     "clean": "rm -rf dist"
   },
   "dependencies": {
