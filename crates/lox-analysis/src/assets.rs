@@ -187,7 +187,7 @@ pub struct Spacecraft {
     max_slew_rate: Option<AngularRate>,
     constellation: Option<ConstellationId>,
     #[cfg(feature = "imaging")]
-    imaging_payload: Option<OpticalPayload>,
+    optical_payload: Option<OpticalPayload>,
     #[cfg(feature = "comms")]
     communication_systems: Vec<CommunicationSystem>,
 }
@@ -201,7 +201,7 @@ impl Spacecraft {
             max_slew_rate: None,
             constellation: None,
             #[cfg(feature = "imaging")]
-            imaging_payload: None,
+            optical_payload: None,
             #[cfg(feature = "comms")]
             communication_systems: Vec::new(),
         }
@@ -219,10 +219,10 @@ impl Spacecraft {
         self
     }
 
-    /// Sets the imaging payload for this spacecraft.
+    /// Sets the optical payload for this spacecraft.
     #[cfg(feature = "imaging")]
-    pub fn with_imaging_payload(mut self, payload: OpticalPayload) -> Self {
-        self.imaging_payload = Some(payload);
+    pub fn with_optical_payload(mut self, payload: OpticalPayload) -> Self {
+        self.optical_payload = Some(payload);
         self
     }
 
@@ -253,10 +253,10 @@ impl Spacecraft {
         self.max_slew_rate
     }
 
-    /// Returns the imaging payload, if set.
+    /// Returns the optical payload, if set.
     #[cfg(feature = "imaging")]
-    pub fn imaging_payload(&self) -> Option<OpticalPayload> {
-        self.imaging_payload
+    pub fn optical_payload(&self) -> Option<OpticalPayload> {
+        self.optical_payload
     }
 
     /// Returns the communication systems attached to this spacecraft.
@@ -519,7 +519,7 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
 #[cfg(feature = "imaging")]
 impl crate::imaging::analysis::PayloadAccessor<crate::imaging::OpticalPayload> for Spacecraft {
     fn extract(&self) -> Option<crate::imaging::OpticalPayload> {
-        self.imaging_payload
+        self.optical_payload
     }
 }
 
