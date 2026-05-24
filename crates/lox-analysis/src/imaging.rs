@@ -4,10 +4,12 @@
 
 //! AOI access analysis: sensor payloads, AOI geometry, and per-(spacecraft, AOI) access windows.
 
+pub mod analysis;
 pub mod aoi;
 /// Imaging analysis result types.
 pub mod results;
 
+pub use analysis::{AccessPayload, PayloadAccessor};
 pub use aoi::{Aoi, AoiId};
 pub use results::ImagingResults;
 
