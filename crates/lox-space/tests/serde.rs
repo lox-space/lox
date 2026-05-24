@@ -680,10 +680,10 @@ fn test_elevation_mask_variable() {
 }
 
 #[test]
-fn test_imaging_payload() {
-    use lox_space::analysis::imaging::ImagingPayload;
-    round_trip_no_eq(&ImagingPayload::nadir_only(Distance::kilometers(50.0)));
-    round_trip_no_eq(&ImagingPayload::off_nadir(
+fn test_optical_payload() {
+    use lox_space::analysis::imaging::OpticalPayload;
+    round_trip_no_eq(&OpticalPayload::nadir_only(Distance::kilometers(50.0)));
+    round_trip_no_eq(&OpticalPayload::off_nadir(
         Distance::kilometers(50.0),
         Angle::degrees(30.0),
     ));

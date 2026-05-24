@@ -12,6 +12,8 @@ use lox_core::units::AngularRate;
 use crate::imaging::OpticalPayload;
 #[cfg(feature = "imaging")]
 use crate::imaging::SarPayload;
+#[cfg(feature = "imaging")]
+use crate::imaging::analysis::PayloadAccessor;
 use lox_frames::rotations::TryRotation;
 use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::Time;
@@ -536,15 +538,15 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
 }
 
 #[cfg(feature = "imaging")]
-impl crate::imaging::analysis::PayloadAccessor<crate::imaging::OpticalPayload> for Spacecraft {
-    fn extract(&self) -> Option<crate::imaging::OpticalPayload> {
+impl PayloadAccessor<OpticalPayload> for Spacecraft {
+    fn extract(&self) -> Option<OpticalPayload> {
         self.optical_payload
     }
 }
 
 #[cfg(feature = "imaging")]
-impl crate::imaging::analysis::PayloadAccessor<crate::imaging::SarPayload> for Spacecraft {
-    fn extract(&self) -> Option<crate::imaging::SarPayload> {
+impl PayloadAccessor<SarPayload> for Spacecraft {
+    fn extract(&self) -> Option<SarPayload> {
         self.sar_payload
     }
 }

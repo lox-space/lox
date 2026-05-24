@@ -1636,9 +1636,11 @@ impl From<LookSide> for PyLookSide {
 ///
 /// Assign to a spacecraft via the ``sar_payload`` parameter.
 ///
-///     >>> import lox_space as lox
-///     >>> payload = lox.SarPayload.with_incidence_angles(29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right)
-///     >>> sc = lox.Spacecraft("sat1", orbit, sar_payload=payload)
+/// ```python
+/// import lox_space as lox
+/// payload = lox.SarPayload.with_incidence_angles(29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right)
+/// sc = lox.Spacecraft("sat1", orbit, sar_payload=payload)
+/// ```
 #[pyclass(name = "SarPayload", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Copy)]
 pub struct PySarPayload(pub SarPayload);
