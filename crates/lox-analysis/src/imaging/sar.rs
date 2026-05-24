@@ -4,9 +4,14 @@
 
 //! SAR (Synthetic Aperture Radar) payload: side-looking annular access geometry.
 
+use geo::Point;
 use thiserror::Error;
 
+use lox_core::coords::LonLatAlt;
 use lox_core::units::Angle;
+
+use crate::imaging::analysis::AccessPayload;
+use crate::imaging::aoi::Aoi;
 
 /// Which side of the ground track a SAR payload can image.
 ///
@@ -94,6 +99,95 @@ impl SarPayload {
     pub fn side(&self) -> LookSide {
         self.side
     }
+
+    /// Returns `(r_min, r_max)` — the ground-range bounds of the access annulus,
+    /// in metres, for the given altitude and mean radius.
+    fn ground_range_bounds(&self, altitude_m: f64, mean_radius_m: f64) -> (f64, f64) {
+        let (min_look_rad, max_look_rad) = match self.envelope {
+            AngleEnvelope::Look { min_rad, max_rad } => (min_rad, max_rad),
+            AngleEnvelope::Incidence { min_rad, max_rad } => (
+                incidence_to_look(min_rad, altitude_m, mean_radius_m),
+                incidence_to_look(max_rad, altitude_m, mean_radius_m),
+            ),
+        };
+        (
+            look_to_ground_range(min_look_rad, altitude_m, mean_radius_m),
+            look_to_ground_range(max_look_rad, altitude_m, mean_radius_m),
+        )
+    }
+}
+
+impl AccessPayload for SarPayload {
+    fn access_metric(
+        &self,
+        sub_sat: LonLatAlt,
+        ground_track_az: Angle,
+        aoi: &Aoi,
+        mean_radius_m: f64,
+    ) -> f64 {
+        let altitude_m = sub_sat.alt().to_meters();
+        let (r_min, r_max) = self.ground_range_bounds(altitude_m, mean_radius_m);
+
+        let sub_sat_lon = sub_sat.lon().to_degrees();
+        let sub_sat_lat = sub_sat.lat().to_degrees();
+        let sub_sat_point = Point::new(sub_sat_lon, sub_sat_lat);
+
+        let nearest = aoi.nearest_point(&sub_sat_point);
+        let r = aoi.distance_to(&sub_sat_point, mean_radius_m);
+
+        let annulus_marg = (r - r_min).min(r_max - r);
+
+        let side_marg = match self.side {
+            LookSide::Either => f64::INFINITY,
+            LookSide::Left | LookSide::Right => {
+                let bearing = bearing_from_to(sub_sat_lon, sub_sat_lat, nearest.x(), nearest.y());
+                let diff = bearing - ground_track_az.to_radians();
+                // sin(diff) > 0 → target on right of ground track; < 0 → on left.
+                // sin(diff) == 0 when the target lies on the ground track itself,
+                // giving sign = 0 → side_marg = 0 → the target is excluded from
+                // either Left- or Right-only payloads, which is correct.
+                let sign = diff.sin().signum();
+                let signed_r = r * sign;
+                match self.side {
+                    LookSide::Right => signed_r,
+                    LookSide::Left => -signed_r,
+                    LookSide::Either => unreachable!(),
+                }
+            }
+        };
+
+        annulus_marg.min(side_marg)
+    }
+}
+
+/// γ(θ) = arcsin(sin(θ) · (R + h) / R) − θ; ground_range = R · γ.
+/// Clamps to a hemisphere if the look ray geometrically misses the body.
+fn look_to_ground_range(look_rad: f64, altitude_m: f64, mean_radius_m: f64) -> f64 {
+    let s = look_rad.sin() * (mean_radius_m + altitude_m) / mean_radius_m;
+    if s >= 1.0 {
+        return core::f64::consts::FRAC_PI_2 * mean_radius_m;
+    }
+    let gamma = s.asin() - look_rad;
+    mean_radius_m * gamma
+}
+
+/// sin(i) = sin(θ) · (R + h) / R → θ = asin(sin(i) · R / (R + h)).
+fn incidence_to_look(incidence_rad: f64, altitude_m: f64, mean_radius_m: f64) -> f64 {
+    let s = incidence_rad.sin() * mean_radius_m / (mean_radius_m + altitude_m);
+    s.clamp(-1.0, 1.0).asin()
+}
+
+/// Great-circle initial bearing from `from` to `to`, both lon/lat degrees.
+/// Returns radians measured from north, clockwise, normalised to [0, 2π).
+fn bearing_from_to(from_lon_deg: f64, from_lat_deg: f64, to_lon_deg: f64, to_lat_deg: f64) -> f64 {
+    let lat1 = from_lat_deg.to_radians();
+    let lat2 = to_lat_deg.to_radians();
+    let dlon = (to_lon_deg - from_lon_deg).to_radians();
+    let y = dlon.sin() * lat2.cos();
+    let x = lat1.cos() * lat2.sin() - lat1.sin() * lat2.cos() * dlon.cos();
+    let raw = y.atan2(x);
+    let two_pi = core::f64::consts::TAU;
+    ((raw % two_pi) + two_pi) % two_pi
 }
 
 fn validate_range(min: Angle, max: Angle) -> Result<(f64, f64), SarPayloadError> {
@@ -181,5 +275,136 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(err, SarPayloadError::InvalidAngleRange { .. }));
+    }
+}
+
+#[cfg(test)]
+mod metric_tests {
+    use super::*;
+
+    use geo::{LineString, Polygon};
+
+    use crate::imaging::analysis::AccessPayload;
+    use crate::imaging::aoi::Aoi;
+
+    const EARTH_R_M: f64 = 6_371_000.0;
+
+    /// Tiny ~10-m polygon around (lon_deg, lat_deg) — treated as a point target.
+    fn point_aoi(lon_deg: f64, lat_deg: f64) -> Aoi {
+        let d = 1e-4;
+        Aoi::new(Polygon::new(
+            LineString::from(vec![
+                (lon_deg - d, lat_deg - d),
+                (lon_deg + d, lat_deg - d),
+                (lon_deg + d, lat_deg + d),
+                (lon_deg - d, lat_deg + d),
+                (lon_deg - d, lat_deg - d),
+            ]),
+            vec![],
+        ))
+    }
+
+    fn sub_sat() -> LonLatAlt {
+        LonLatAlt::from_degrees(0.0, 0.0, 500_000.0).unwrap()
+    }
+
+    #[test]
+    fn either_side_target_in_annulus_yields_positive_metric() {
+        // Heading east; target due east at ~400 km ground range (inside [≈200,≈700]).
+        let payload = SarPayload::with_look_angles(
+            Angle::degrees(20.0),
+            Angle::degrees(45.0),
+            LookSide::Either,
+        )
+        .unwrap();
+        let target = point_aoi(3.6, 0.0);
+        let m = payload.access_metric(sub_sat(), Angle::degrees(90.0), &target, EARTH_R_M);
+        assert!(m > 0.0, "expected positive metric (in annulus), got {m}");
+    }
+
+    #[test]
+    fn either_side_target_too_close_yields_negative_metric() {
+        // Target ~30 km east — inside the inner forbidden ring.
+        let payload = SarPayload::with_look_angles(
+            Angle::degrees(20.0),
+            Angle::degrees(45.0),
+            LookSide::Either,
+        )
+        .unwrap();
+        let target = point_aoi(0.27, 0.0);
+        let m = payload.access_metric(sub_sat(), Angle::degrees(90.0), &target, EARTH_R_M);
+        assert!(m < 0.0, "expected negative metric (too close), got {m}");
+    }
+
+    #[test]
+    fn either_side_target_too_far_yields_negative_metric() {
+        // Target ~1110 km east — outside the outer ring.
+        let payload = SarPayload::with_look_angles(
+            Angle::degrees(20.0),
+            Angle::degrees(45.0),
+            LookSide::Either,
+        )
+        .unwrap();
+        let target = point_aoi(10.0, 0.0);
+        let m = payload.access_metric(sub_sat(), Angle::degrees(90.0), &target, EARTH_R_M);
+        assert!(m < 0.0, "expected negative metric (too far), got {m}");
+    }
+
+    #[test]
+    fn right_side_target_on_wrong_side_yields_negative_metric() {
+        // Heading east → "right" is south; target due NORTH is on the wrong side.
+        let payload = SarPayload::with_look_angles(
+            Angle::degrees(20.0),
+            Angle::degrees(45.0),
+            LookSide::Right,
+        )
+        .unwrap();
+        let target = point_aoi(0.0, 3.6);
+        let m = payload.access_metric(sub_sat(), Angle::degrees(90.0), &target, EARTH_R_M);
+        assert!(m < 0.0, "expected negative metric (wrong side), got {m}");
+    }
+
+    #[test]
+    fn right_side_target_on_correct_side_yields_positive_metric() {
+        // Heading east → "right" is south; target due SOUTH, inside annulus.
+        let payload = SarPayload::with_look_angles(
+            Angle::degrees(20.0),
+            Angle::degrees(45.0),
+            LookSide::Right,
+        )
+        .unwrap();
+        let target = point_aoi(0.0, -3.6);
+        let m = payload.access_metric(sub_sat(), Angle::degrees(90.0), &target, EARTH_R_M);
+        assert!(
+            m > 0.0,
+            "expected positive metric (right side, in annulus), got {m}"
+        );
+    }
+
+    #[test]
+    fn incidence_envelope_agrees_with_equivalent_look_envelope() {
+        // h=500 km, R=6371 km: look=20° ≈ incidence 21.6°; look=45° ≈ incidence 50.4°.
+        let look_pl = SarPayload::with_look_angles(
+            Angle::degrees(20.0),
+            Angle::degrees(45.0),
+            LookSide::Either,
+        )
+        .unwrap();
+        let inc_pl = SarPayload::with_incidence_angles(
+            Angle::degrees(21.6),
+            Angle::degrees(50.4),
+            LookSide::Either,
+        )
+        .unwrap();
+        for target_lon_deg in [3.0, 4.0, 5.0, 6.0] {
+            let target = point_aoi(target_lon_deg, 0.0);
+            let m_look = look_pl.access_metric(sub_sat(), Angle::degrees(90.0), &target, EARTH_R_M);
+            let m_inc = inc_pl.access_metric(sub_sat(), Angle::degrees(90.0), &target, EARTH_R_M);
+            assert_eq!(
+                m_look.signum(),
+                m_inc.signum(),
+                "sign mismatch at lon={target_lon_deg}°: look={m_look}, inc={m_inc}",
+            );
+        }
     }
 }
