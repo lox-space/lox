@@ -9,6 +9,7 @@ pub mod aoi;
 pub mod optical;
 /// Access analysis result types.
 pub mod results;
+pub mod sar;
 
 pub use analysis::{
     AccessAnalysis, AccessError, AccessPayload, OpticalAccessAnalysis, PayloadAccessor,
@@ -18,6 +19,7 @@ pub use aoi::AoiError;
 pub use aoi::{Aoi, AoiId};
 pub use optical::OpticalPayload;
 pub use results::AccessResults;
+pub use sar::{LookSide, SarPayload, SarPayloadError};
 
 #[cfg(test)]
 mod tests {
