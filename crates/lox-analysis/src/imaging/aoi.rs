@@ -171,6 +171,20 @@ impl Aoi {
         }
     }
 
+    /// Returns the great-circle-nearest point of the polygon to `point`.
+    /// If `point` lies inside the polygon, returns `point` itself. The
+    /// returned point is in lon/lat degrees, matching the polygon's coordinate
+    /// convention.
+    pub fn nearest_point(&self, point: &geo::Point<f64>) -> geo::Point<f64> {
+        if self.polygon.contains(point) {
+            return *point;
+        }
+        match self.polygon.haversine_closest_point(point) {
+            geo::Closest::Intersection(p) | geo::Closest::SinglePoint(p) => p,
+            geo::Closest::Indeterminate => unreachable!("degenerate polygon geometry"),
+        }
+    }
+
     /// Returns a reference to the underlying polygon.
     pub fn polygon(&self) -> &geo::Polygon<f64> {
         &self.polygon
@@ -336,5 +350,41 @@ mod tests {
     fn test_aoi_from_geojson_invalid() {
         let result = Aoi::from_geojson("not json");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn nearest_point_inside_polygon_returns_query_point() {
+        let aoi = Aoi::new(Polygon::new(
+            LineString::from(vec![
+                (10.0, 45.0),
+                (11.0, 45.0),
+                (11.0, 46.0),
+                (10.0, 46.0),
+                (10.0, 45.0),
+            ]),
+            vec![],
+        ));
+        let inside = point!(x: 10.5, y: 45.5);
+        let np = aoi.nearest_point(&inside);
+        assert!((np.x() - 10.5).abs() < 1e-12 && (np.y() - 45.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn nearest_point_outside_polygon_lies_on_boundary() {
+        let aoi = Aoi::new(Polygon::new(
+            LineString::from(vec![
+                (10.0, 45.0),
+                (11.0, 45.0),
+                (11.0, 46.0),
+                (10.0, 46.0),
+                (10.0, 45.0),
+            ]),
+            vec![],
+        ));
+        let outside = point!(x: 12.0, y: 45.5);
+        let np = aoi.nearest_point(&outside);
+        // Closest boundary point sits on the lon=11 edge near lat≈45.5.
+        assert!((np.x() - 11.0).abs() < 0.01);
+        assert!((np.y() - 45.5).abs() < 0.05);
     }
 }
