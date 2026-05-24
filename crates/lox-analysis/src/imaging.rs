@@ -6,21 +6,22 @@
 
 pub mod analysis;
 pub mod aoi;
+pub mod optical;
 /// Imaging analysis result types.
 pub mod results;
 
 pub use analysis::{AccessPayload, PayloadAccessor};
-pub use aoi::{Aoi, AoiId};
-pub use results::ImagingResults;
-
 #[cfg(feature = "geojson")]
 pub use aoi::AoiError;
+pub use aoi::{Aoi, AoiId};
+pub use optical::OpticalPayload;
+pub use results::ImagingResults;
 
 use std::collections::HashMap;
 
 use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid};
 use lox_core::coords::LonLatAlt;
-use lox_core::units::{Angle, Distance};
+use lox_core::units::Angle;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_frames::{DynFrame, ReferenceFrame};
@@ -38,66 +39,6 @@ use crate::assets::{AssetId, Scenario, Spacecraft};
 use crate::visibility::EvalError;
 
 // ---------------------------------------------------------------------------
-// ImagingPayload — Imaging sensor payload
-// ---------------------------------------------------------------------------
-
-/// Imaging sensor payload describing a spacecraft's ground coverage capability.
-#[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ImagingPayload {
-    half_swath_ground_range: f64,
-    max_off_nadir: f64,
-}
-
-impl ImagingPayload {
-    /// Creates imaging parameters for a nadir-only sensor.
-    ///
-    /// `swath_width` is the full swath width; internally stored as half.
-    pub fn nadir_only(swath_width: Distance) -> Self {
-        Self {
-            half_swath_ground_range: swath_width.to_meters() / 2.0,
-            max_off_nadir: 0.0,
-        }
-    }
-
-    /// Creates imaging parameters for a sensor with off-nadir pointing.
-    ///
-    /// `swath_width` is the full swath width; `max_off_nadir` is the maximum
-    /// off-nadir angle.
-    pub fn off_nadir(swath_width: Distance, max_off_nadir: Angle) -> Self {
-        Self {
-            half_swath_ground_range: swath_width.to_meters() / 2.0,
-            max_off_nadir: max_off_nadir.to_radians(),
-        }
-    }
-
-    /// Computes the total accessible ground range in meters.
-    ///
-    /// Given altitude `h`, max off-nadir angle `θ`, Earth radius `R`:
-    ///   γ = arcsin(sin(θ)·(R+h)/R) - θ
-    ///   off-nadir ground range = R·γ
-    ///
-    /// Total range = off-nadir ground range + half_swath_ground_range.
-    pub fn max_accessible_ground_range(&self, altitude_m: f64, mean_radius_m: f64) -> f64 {
-        let off_nadir_range = if self.max_off_nadir > 0.0 {
-            let theta = self.max_off_nadir;
-            let sin_arg = theta.sin() * (mean_radius_m + altitude_m) / mean_radius_m;
-            // Clamp to valid asin domain — if sin_arg >= 1.0, the satellite
-            // can see the entire hemisphere.
-            if sin_arg >= 1.0 {
-                std::f64::consts::FRAC_PI_2 * mean_radius_m
-            } else {
-                let gamma = sin_arg.asin() - theta;
-                mean_radius_m * gamma
-            }
-        } else {
-            0.0
-        };
-        off_nadir_range + self.half_swath_ground_range
-    }
-}
-
-// ---------------------------------------------------------------------------
 // AoiImagingDetectFn — DetectFn implementation
 // ---------------------------------------------------------------------------
 
@@ -107,7 +48,7 @@ impl ImagingPayload {
 /// Positive means the AOI is within the sensor's accessible area.
 struct AoiImagingDetectFn<'a, O: Origin, R: ReferenceFrame> {
     aoi: &'a Aoi,
-    params: ImagingPayload,
+    params: OpticalPayload,
     trajectory: &'a Trajectory<Tai, O, R>,
     origin: O,
     body_fixed_frame: DynFrame,
@@ -141,15 +82,9 @@ where
         let lla = LonLatAlt::from_body_fixed(pos, &ellipsoid)
             .map_err(|e| EvalError::Rotation(Box::new(e)))?;
 
-        let sub_sat_point = geo::Point::new(lla.lon().to_degrees(), lla.lat().to_degrees());
-
-        let altitude_m = lla.alt().to_meters();
-        let max_range = self
+        Ok(self
             .params
-            .max_accessible_ground_range(altitude_m, mean_radius);
-        let distance = self.aoi.distance_to(&sub_sat_point, mean_radius);
-
-        Ok(max_range - distance)
+            .access_metric(lla, Angle::degrees(0.0), self.aoi, mean_radius))
     }
 }
 
@@ -171,7 +106,7 @@ pub enum ImagingError {
 
 /// AOI imaging analysis: computes imaging windows for spacecraft over AOIs.
 ///
-/// Only spacecraft that have an [`ImagingPayload`] assigned are considered.
+/// Only spacecraft that have an [`OpticalPayload`] assigned are considered.
 /// Generic over origin `O` and reference frame `R`.
 pub struct ImagingAnalysis<'a, O: Origin, R: ReferenceFrame> {
     scenario: &'a Scenario<O, R>,
@@ -219,7 +154,7 @@ where
 
     /// Compute imaging intervals for all (spacecraft, AOI) pairs.
     ///
-    /// Only spacecraft with an [`ImagingPayload`] are considered; spacecraft
+    /// Only spacecraft with an [`OpticalPayload`] are considered; spacecraft
     /// without a payload are silently skipped.
     pub fn compute(&self) -> Result<ImagingResults, ImagingError> {
         let interval = *self.scenario.interval();
@@ -238,7 +173,7 @@ where
             .collect();
 
         let compute_one =
-            |&(sc, payload, (aoi_id, aoi)): &(&Spacecraft, ImagingPayload, &(AoiId, Aoi))| {
+            |&(sc, payload, (aoi_id, aoi)): &(&Spacecraft, OpticalPayload, &(AoiId, Aoi))| {
                 let key = (sc.id().clone(), aoi_id.clone());
                 let traj = self.ensemble.get(sc.id()).expect(
                 "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
@@ -271,6 +206,7 @@ where
 mod tests {
     use super::*;
     use geo::{LineString, Polygon};
+    use lox_core::units::Distance;
     use lox_time::intervals::TimeInterval;
 
     // -----------------------------------------------------------------------
@@ -375,9 +311,7 @@ mod tests {
 
     #[test]
     fn test_imaging_params_nadir_only() {
-        let params = ImagingPayload::nadir_only(Distance::kilometers(20.0));
-        assert_eq!(params.half_swath_ground_range, 10_000.0);
-        assert_eq!(params.max_off_nadir, 0.0);
+        let params = OpticalPayload::nadir_only(Distance::kilometers(20.0));
         // Nadir-only: range is just half swath
         let range = params.max_accessible_ground_range(500_000.0, 6_371_000.0);
         assert!((range - 10_000.0).abs() < 1e-6);
@@ -385,7 +319,7 @@ mod tests {
 
     #[test]
     fn test_imaging_params_off_nadir() {
-        let params = ImagingPayload::off_nadir(Distance::kilometers(20.0), Angle::degrees(30.0));
+        let params = OpticalPayload::off_nadir(Distance::kilometers(20.0), Angle::degrees(30.0));
         let range = params.max_accessible_ground_range(500_000.0, 6_371_000.0);
         // Should be > half swath (10 km) due to off-nadir contribution
         assert!(range > 10_000.0);
@@ -399,7 +333,7 @@ mod tests {
         let interval = TimeInterval::new(traj.start_time(), traj.end_time());
 
         // Sentinel-2: 290 km swath, nadir-only
-        let payload = ImagingPayload::nadir_only(Distance::kilometers(290.0));
+        let payload = OpticalPayload::nadir_only(Distance::kilometers(290.0));
         let sc =
             Spacecraft::new("s2a", OrbitSource::Trajectory(traj)).with_imaging_payload(payload);
 
@@ -457,7 +391,7 @@ mod tests {
         let traj_b = sentinel2b_trajectory();
         let interval = TimeInterval::new(traj_a.start_time(), traj_a.end_time());
 
-        let payload = ImagingPayload::nadir_only(Distance::kilometers(290.0));
+        let payload = OpticalPayload::nadir_only(Distance::kilometers(290.0));
 
         let sc_a =
             Spacecraft::new("s2a", OrbitSource::Trajectory(traj_a)).with_imaging_payload(payload);
@@ -491,9 +425,9 @@ mod tests {
         let traj = sentinel2a_trajectory();
         let interval = TimeInterval::new(traj.start_time(), traj.end_time());
 
-        let nadir_payload = ImagingPayload::nadir_only(Distance::kilometers(290.0));
+        let nadir_payload = OpticalPayload::nadir_only(Distance::kilometers(290.0));
         let off_nadir_payload =
-            ImagingPayload::off_nadir(Distance::kilometers(290.0), Angle::degrees(30.0));
+            OpticalPayload::off_nadir(Distance::kilometers(290.0), Angle::degrees(30.0));
 
         // Same trajectory, different payloads
         let sc_nadir = Spacecraft::new("nadir", OrbitSource::Trajectory(traj.clone()))
