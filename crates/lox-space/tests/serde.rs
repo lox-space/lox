@@ -690,6 +690,21 @@ fn test_optical_payload() {
 }
 
 #[test]
+fn test_sar_payload() {
+    use lox_space::analysis::imaging::{LookSide, SarPayload};
+    for side in [LookSide::Left, LookSide::Right, LookSide::Either] {
+        round_trip_no_eq(
+            &SarPayload::with_look_angles(Angle::degrees(20.0), Angle::degrees(45.0), side)
+                .unwrap(),
+        );
+        round_trip_no_eq(
+            &SarPayload::with_incidence_angles(Angle::degrees(29.0), Angle::degrees(46.0), side)
+                .unwrap(),
+        );
+    }
+}
+
+#[test]
 fn test_ground_station() {
     use lox_space::analysis::assets::GroundStation;
     use lox_space::analysis::visibility::ElevationMask;
@@ -715,6 +730,32 @@ fn test_spacecraft() {
     )
     .unwrap();
     let sc = Spacecraft::new("sc-1", OrbitSource::Trajectory(traj)).with_constellation_id("test");
+    round_trip_no_eq(&sc);
+}
+
+#[test]
+fn test_spacecraft_with_payloads() {
+    use lox_space::analysis::assets::Spacecraft;
+    use lox_space::analysis::imaging::{LookSide, OpticalPayload, SarPayload};
+    use lox_space::orbits::DynTrajectory;
+    use lox_space::orbits::propagators::OrbitSource;
+
+    let traj = DynTrajectory::from_csv_dyn(
+        &lox_test_utils::read_data_file("trajectory_lunar.csv"),
+        DynOrigin::Earth,
+        DynFrame::Icrf,
+    )
+    .unwrap();
+    let optical = OpticalPayload::off_nadir(Distance::kilometers(50.0), Angle::degrees(30.0));
+    let sar = SarPayload::with_incidence_angles(
+        Angle::degrees(29.0),
+        Angle::degrees(46.0),
+        LookSide::Right,
+    )
+    .unwrap();
+    let sc = Spacecraft::new("sc-1", OrbitSource::Trajectory(traj))
+        .with_optical_payload(optical)
+        .with_sar_payload(sar);
     round_trip_no_eq(&sc);
 }
 
