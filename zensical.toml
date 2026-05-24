@@ -20,7 +20,11 @@ nav = [
         { "Propagators" = "propagators.md" },
         { "Ground Stations" = "ground.md" },
         { "Events & Visibility" = "events.md" },
-        { "Coverage" = "coverage.md" },
+        { "Imaging" = [
+            { "Overview" = "imaging.md" },
+            { "Optical" = "optical.md" },
+            { "SAR" = "sar.md" },
+        ]},
         { "Communications" = "comms.md" },
         { "Atmospheric Propagation" = "itur.md" },
         { "Constellations" = "constellations.md" },
