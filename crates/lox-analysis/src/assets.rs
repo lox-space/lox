@@ -516,6 +516,13 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
     }
 }
 
+#[cfg(feature = "imaging")]
+impl crate::imaging::analysis::PayloadAccessor<crate::imaging::OpticalPayload> for Spacecraft {
+    fn extract(&self) -> Option<crate::imaging::OpticalPayload> {
+        self.imaging_payload
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

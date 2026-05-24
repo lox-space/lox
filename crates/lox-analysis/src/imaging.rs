@@ -7,217 +7,36 @@
 pub mod analysis;
 pub mod aoi;
 pub mod optical;
-/// Imaging analysis result types.
+/// Access analysis result types.
 pub mod results;
 
-pub use analysis::{AccessPayload, PayloadAccessor};
+pub use analysis::{
+    AccessAnalysis, AccessError, AccessPayload, OpticalAccessAnalysis, PayloadAccessor,
+};
 #[cfg(feature = "geojson")]
 pub use aoi::AoiError;
 pub use aoi::{Aoi, AoiId};
 pub use optical::OpticalPayload;
-pub use results::ImagingResults;
-
-use std::collections::HashMap;
-
-use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid};
-use lox_core::coords::LonLatAlt;
-use lox_core::units::Angle;
-use lox_frames::providers::DefaultRotationProvider;
-use lox_frames::rotations::TryRotation;
-use lox_frames::{DynFrame, ReferenceFrame};
-use lox_orbits::events::{
-    DetectError, DetectFn, EventsToIntervals, IntervalDetector, RootFindingDetector,
-};
-use lox_orbits::orbits::{Ensemble, Trajectory};
-use lox_time::Time;
-use lox_time::deltas::TimeDelta;
-use lox_time::time_scales::Tai;
-use rayon::prelude::*;
-use thiserror::Error;
-
-use crate::assets::{AssetId, Scenario, Spacecraft};
-use crate::visibility::EvalError;
-
-// ---------------------------------------------------------------------------
-// AoiImagingDetectFn — DetectFn implementation
-// ---------------------------------------------------------------------------
-
-/// Detection function for AOI imaging events.
-///
-/// Returns `max_accessible_ground_range - geodesic_distance(sub_sat, AOI)`.
-/// Positive means the AOI is within the sensor's accessible area.
-struct AoiImagingDetectFn<'a, O: Origin, R: ReferenceFrame> {
-    aoi: &'a Aoi,
-    params: OpticalPayload,
-    trajectory: &'a Trajectory<Tai, O, R>,
-    origin: O,
-    body_fixed_frame: DynFrame,
-}
-
-impl<O, R> DetectFn<Tai> for AoiImagingDetectFn<'_, O, R>
-where
-    O: TrySpheroid + TryMeanRadius + Copy,
-    R: ReferenceFrame + Copy,
-    DefaultRotationProvider: TryRotation<R, DynFrame, Tai>,
-    <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
-        std::error::Error + Send + Sync + 'static,
-{
-    type Error = EvalError;
-
-    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
-        let state = self.trajectory.interpolate_at(time);
-        let state_bf = state
-            .try_to_frame(self.body_fixed_frame, &DefaultRotationProvider)
-            .map_err(|e| EvalError::Rotation(Box::new(e)))?;
-
-        let pos = state_bf.position();
-
-        let ellipsoid = self.origin.try_ellipsoid().map_err(EvalError::from)?;
-        let mean_radius = self
-            .origin
-            .try_mean_radius()
-            .map_err(EvalError::from)?
-            .to_meters();
-
-        let lla = LonLatAlt::from_body_fixed(pos, &ellipsoid)
-            .map_err(|e| EvalError::Rotation(Box::new(e)))?;
-
-        Ok(self
-            .params
-            .access_metric(lla, Angle::degrees(0.0), self.aoi, mean_radius))
-    }
-}
-
-// ---------------------------------------------------------------------------
-// ImagingError
-// ---------------------------------------------------------------------------
-
-/// Errors from imaging analysis computation.
-#[derive(Debug, Error)]
-pub enum ImagingError {
-    /// Event detection failed.
-    #[error(transparent)]
-    Detect(#[from] DetectError),
-}
-
-// ---------------------------------------------------------------------------
-// ImagingAnalysis — orchestration
-// ---------------------------------------------------------------------------
-
-/// AOI imaging analysis: computes imaging windows for spacecraft over AOIs.
-///
-/// Only spacecraft that have an [`OpticalPayload`] assigned are considered.
-/// Generic over origin `O` and reference frame `R`.
-pub struct ImagingAnalysis<'a, O: Origin, R: ReferenceFrame> {
-    scenario: &'a Scenario<O, R>,
-    ensemble: &'a Ensemble<AssetId, Tai, O, R>,
-    aois: Vec<(AoiId, Aoi)>,
-    step: TimeDelta,
-    body_fixed_frame: DynFrame,
-}
-
-impl<'a, O, R> ImagingAnalysis<'a, O, R>
-where
-    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<DynOrigin>,
-    R: ReferenceFrame + Copy + Send + Sync + Into<DynFrame>,
-    DefaultRotationProvider: TryRotation<R, DynFrame, Tai>,
-    <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
-        std::error::Error + Send + Sync + 'static,
-{
-    /// Creates a new imaging analysis.
-    pub fn new(
-        scenario: &'a Scenario<O, R>,
-        ensemble: &'a Ensemble<AssetId, Tai, O, R>,
-        aois: Vec<(AoiId, Aoi)>,
-    ) -> Self {
-        let body_fixed_frame = DynFrame::Iau(scenario.origin().into());
-        Self {
-            scenario,
-            ensemble,
-            aois,
-            step: TimeDelta::from_seconds(60),
-            body_fixed_frame,
-        }
-    }
-
-    /// Sets the time step for event detection.
-    pub fn with_step(mut self, step: TimeDelta) -> Self {
-        self.step = step;
-        self
-    }
-
-    /// Overrides the body-fixed frame (defaults to IAU frame of the origin).
-    pub fn with_body_fixed_frame(mut self, frame: DynFrame) -> Self {
-        self.body_fixed_frame = frame;
-        self
-    }
-
-    /// Compute imaging intervals for all (spacecraft, AOI) pairs.
-    ///
-    /// Only spacecraft with an [`OpticalPayload`] are considered; spacecraft
-    /// without a payload are silently skipped.
-    pub fn compute(&self) -> Result<ImagingResults, ImagingError> {
-        let interval = *self.scenario.interval();
-
-        // Only include spacecraft that carry an imaging payload.
-        let spacecraft_with_payload: Vec<_> = self
-            .scenario
-            .spacecraft()
-            .iter()
-            .filter_map(|sc| sc.imaging_payload().map(|p| (sc, p)))
-            .collect();
-
-        let pairs: Vec<_> = spacecraft_with_payload
-            .iter()
-            .flat_map(|&(sc, payload)| self.aois.iter().map(move |aoi| (sc, payload, aoi)))
-            .collect();
-
-        let compute_one =
-            |&(sc, payload, (aoi_id, aoi)): &(&Spacecraft, OpticalPayload, &(AoiId, Aoi))| {
-                let key = (sc.id().clone(), aoi_id.clone());
-                let traj = self.ensemble.get(sc.id()).expect(
-                "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
-            );
-
-                let detect_fn = AoiImagingDetectFn {
-                    aoi,
-                    params: payload,
-                    trajectory: traj,
-                    origin: self.scenario.origin(),
-                    body_fixed_frame: self.body_fixed_frame,
-                };
-                let detector = RootFindingDetector::new(detect_fn, self.step);
-                let windows = EventsToIntervals::new(detector).detect(interval)?;
-                Ok((key, windows))
-            };
-
-        let results: Result<Vec<_>, ImagingError> = if pairs.len() > 100 {
-            pairs.par_iter().map(compute_one).collect()
-        } else {
-            pairs.iter().map(compute_one).collect()
-        };
-
-        let intervals: HashMap<_, _> = results?.into_iter().collect();
-        Ok(ImagingResults::new(intervals))
-    }
-}
+pub use results::AccessResults;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use geo::{LineString, Polygon};
-    use lox_core::units::Distance;
-    use lox_time::intervals::TimeInterval;
-
-    // -----------------------------------------------------------------------
-    // Integration tests — full ImagingAnalysis pipeline with Sentinel-2 TLEs
-    // -----------------------------------------------------------------------
-
     use lox_bodies::DynOrigin;
+    use lox_core::units::{Angle, Distance};
     use lox_frames::DynFrame;
     use lox_orbits::orbits::{DynTrajectory, Ensemble};
     use lox_orbits::propagators::OrbitSource;
+    use lox_time::deltas::TimeDelta;
+    use lox_time::intervals::TimeInterval;
     use lox_time::time_scales::{DynTimeScale, Tai};
+
+    use crate::assets::{AssetId, Scenario};
+
+    // -----------------------------------------------------------------------
+    // Integration tests — full OpticalAccessAnalysis pipeline with Sentinel-2 TLEs
+    // -----------------------------------------------------------------------
 
     /// Propagate a Sentinel-2 TLE into a DynTrajectory over a 6-hour window.
     fn sentinel2_trajectory(name: &str, line1: &[u8], line2: &[u8]) -> DynTrajectory {
@@ -253,7 +72,7 @@ mod tests {
 
     /// Build a Scenario + Ensemble from spacecraft with pre-computed trajectories.
     fn make_imaging_scenario(
-        space_assets: &[Spacecraft],
+        space_assets: &[crate::assets::Spacecraft],
         interval: TimeInterval<DynTimeScale>,
     ) -> (
         Scenario<DynOrigin, DynFrame>,
@@ -334,23 +153,23 @@ mod tests {
 
         // Sentinel-2: 290 km swath, nadir-only
         let payload = OpticalPayload::nadir_only(Distance::kilometers(290.0));
-        let sc =
-            Spacecraft::new("s2a", OrbitSource::Trajectory(traj)).with_imaging_payload(payload);
+        let sc = crate::assets::Spacecraft::new("s2a", OrbitSource::Trajectory(traj))
+            .with_imaging_payload(payload);
 
         let (scenario, ensemble) = make_imaging_scenario(std::slice::from_ref(&sc), interval);
 
         let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
 
-        let analysis =
-            ImagingAnalysis::new(&scenario, &ensemble, aois).with_step(TimeDelta::from_seconds(30));
-        let results = analysis.compute().expect("imaging analysis failed");
+        let analysis = OpticalAccessAnalysis::new(&scenario, &ensemble, aois)
+            .with_step(TimeDelta::from_seconds(30));
+        let results = analysis.compute().expect("access analysis failed");
 
         let intervals = results.intervals(&AssetId::new("s2a"), &AoiId::new("europe"));
         // A sun-synchronous LEO satellite should overfly Western Europe
         // at least once in 6 hours.
         assert!(
             !intervals.is_empty(),
-            "expected at least one imaging window over Western Europe"
+            "expected at least one access window over Western Europe"
         );
 
         // Each window should be short (a few minutes at most for a LEO pass).
@@ -359,7 +178,7 @@ mod tests {
             assert!(duration_s > 0.0, "zero-length interval");
             assert!(
                 duration_s < 600.0,
-                "imaging window too long ({duration_s:.0}s) — expected < 600s for a LEO pass"
+                "access window too long ({duration_s:.0}s) — expected < 600s for a LEO pass"
             );
         }
     }
@@ -370,14 +189,14 @@ mod tests {
         let interval = TimeInterval::new(traj.start_time(), traj.end_time());
 
         // Spacecraft without an imaging payload
-        let sc = Spacecraft::new("s2a", OrbitSource::Trajectory(traj));
+        let sc = crate::assets::Spacecraft::new("s2a", OrbitSource::Trajectory(traj));
 
         let (scenario, ensemble) = make_imaging_scenario(&[sc], interval);
 
         let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
 
-        let analysis = ImagingAnalysis::new(&scenario, &ensemble, aois);
-        let results = analysis.compute().expect("imaging analysis failed");
+        let analysis = OpticalAccessAnalysis::new(&scenario, &ensemble, aois);
+        let results = analysis.compute().expect("access analysis failed");
 
         assert!(
             results.is_empty(),
@@ -393,10 +212,10 @@ mod tests {
 
         let payload = OpticalPayload::nadir_only(Distance::kilometers(290.0));
 
-        let sc_a =
-            Spacecraft::new("s2a", OrbitSource::Trajectory(traj_a)).with_imaging_payload(payload);
-        let sc_b =
-            Spacecraft::new("s2b", OrbitSource::Trajectory(traj_b)).with_imaging_payload(payload);
+        let sc_a = crate::assets::Spacecraft::new("s2a", OrbitSource::Trajectory(traj_a))
+            .with_imaging_payload(payload);
+        let sc_b = crate::assets::Spacecraft::new("s2b", OrbitSource::Trajectory(traj_b))
+            .with_imaging_payload(payload);
 
         let (scenario, ensemble) = make_imaging_scenario(&[sc_a.clone(), sc_b.clone()], interval);
 
@@ -405,9 +224,9 @@ mod tests {
             (AoiId::new("pacific"), pacific_aoi()),
         ];
 
-        let analysis =
-            ImagingAnalysis::new(&scenario, &ensemble, aois).with_step(TimeDelta::from_seconds(30));
-        let results = analysis.compute().expect("imaging analysis failed");
+        let analysis = OpticalAccessAnalysis::new(&scenario, &ensemble, aois)
+            .with_step(TimeDelta::from_seconds(30));
+        let results = analysis.compute().expect("access analysis failed");
 
         // Both spacecraft should have windows over the large European AOI.
         let s2a_europe = results.intervals(&AssetId::new("s2a"), &AoiId::new("europe"));
@@ -430,18 +249,20 @@ mod tests {
             OpticalPayload::off_nadir(Distance::kilometers(290.0), Angle::degrees(30.0));
 
         // Same trajectory, different payloads
-        let sc_nadir = Spacecraft::new("nadir", OrbitSource::Trajectory(traj.clone()))
-            .with_imaging_payload(nadir_payload);
-        let sc_off_nadir = Spacecraft::new("off_nadir", OrbitSource::Trajectory(traj))
-            .with_imaging_payload(off_nadir_payload);
+        let sc_nadir =
+            crate::assets::Spacecraft::new("nadir", OrbitSource::Trajectory(traj.clone()))
+                .with_imaging_payload(nadir_payload);
+        let sc_off_nadir =
+            crate::assets::Spacecraft::new("off_nadir", OrbitSource::Trajectory(traj))
+                .with_imaging_payload(off_nadir_payload);
 
         let (scenario, ensemble) = make_imaging_scenario(&[sc_nadir, sc_off_nadir], interval);
 
         let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
 
-        let analysis =
-            ImagingAnalysis::new(&scenario, &ensemble, aois).with_step(TimeDelta::from_seconds(30));
-        let results = analysis.compute().expect("imaging analysis failed");
+        let analysis = OpticalAccessAnalysis::new(&scenario, &ensemble, aois)
+            .with_step(TimeDelta::from_seconds(30));
+        let results = analysis.compute().expect("access analysis failed");
 
         let nadir_intervals = results.intervals(&AssetId::new("nadir"), &AoiId::new("europe"));
         let off_nadir_intervals =
