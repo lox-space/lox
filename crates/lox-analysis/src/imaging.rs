@@ -154,7 +154,7 @@ mod tests {
         // Sentinel-2: 290 km swath, nadir-only
         let payload = OpticalPayload::nadir_only(Distance::kilometers(290.0));
         let sc = crate::assets::Spacecraft::new("s2a", OrbitSource::Trajectory(traj))
-            .with_imaging_payload(payload);
+            .with_optical_payload(payload);
 
         let (scenario, ensemble) = make_imaging_scenario(std::slice::from_ref(&sc), interval);
 
@@ -213,9 +213,9 @@ mod tests {
         let payload = OpticalPayload::nadir_only(Distance::kilometers(290.0));
 
         let sc_a = crate::assets::Spacecraft::new("s2a", OrbitSource::Trajectory(traj_a))
-            .with_imaging_payload(payload);
+            .with_optical_payload(payload);
         let sc_b = crate::assets::Spacecraft::new("s2b", OrbitSource::Trajectory(traj_b))
-            .with_imaging_payload(payload);
+            .with_optical_payload(payload);
 
         let (scenario, ensemble) = make_imaging_scenario(&[sc_a.clone(), sc_b.clone()], interval);
 
@@ -251,10 +251,10 @@ mod tests {
         // Same trajectory, different payloads
         let sc_nadir =
             crate::assets::Spacecraft::new("nadir", OrbitSource::Trajectory(traj.clone()))
-                .with_imaging_payload(nadir_payload);
+                .with_optical_payload(nadir_payload);
         let sc_off_nadir =
             crate::assets::Spacecraft::new("off_nadir", OrbitSource::Trajectory(traj))
-                .with_imaging_payload(off_nadir_payload);
+                .with_optical_payload(off_nadir_payload);
 
         let (scenario, ensemble) = make_imaging_scenario(&[sc_nadir, sc_off_nadir], interval);
 
