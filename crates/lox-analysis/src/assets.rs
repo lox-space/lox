@@ -10,6 +10,8 @@ use lox_core::units::AngularRate;
 
 #[cfg(feature = "imaging")]
 use crate::imaging::OpticalPayload;
+#[cfg(feature = "imaging")]
+use crate::imaging::SarPayload;
 use lox_frames::rotations::TryRotation;
 use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::Time;
@@ -188,6 +190,8 @@ pub struct Spacecraft {
     constellation: Option<ConstellationId>,
     #[cfg(feature = "imaging")]
     optical_payload: Option<OpticalPayload>,
+    #[cfg(feature = "imaging")]
+    sar_payload: Option<SarPayload>,
     #[cfg(feature = "comms")]
     communication_systems: Vec<CommunicationSystem>,
 }
@@ -202,6 +206,8 @@ impl Spacecraft {
             constellation: None,
             #[cfg(feature = "imaging")]
             optical_payload: None,
+            #[cfg(feature = "imaging")]
+            sar_payload: None,
             #[cfg(feature = "comms")]
             communication_systems: Vec::new(),
         }
@@ -223,6 +229,13 @@ impl Spacecraft {
     #[cfg(feature = "imaging")]
     pub fn with_optical_payload(mut self, payload: OpticalPayload) -> Self {
         self.optical_payload = Some(payload);
+        self
+    }
+
+    /// Sets the SAR payload for this spacecraft.
+    #[cfg(feature = "imaging")]
+    pub fn with_sar_payload(mut self, payload: SarPayload) -> Self {
+        self.sar_payload = Some(payload);
         self
     }
 
@@ -257,6 +270,12 @@ impl Spacecraft {
     #[cfg(feature = "imaging")]
     pub fn optical_payload(&self) -> Option<OpticalPayload> {
         self.optical_payload
+    }
+
+    /// Returns the SAR payload, if set.
+    #[cfg(feature = "imaging")]
+    pub fn sar_payload(&self) -> Option<SarPayload> {
+        self.sar_payload
     }
 
     /// Returns the communication systems attached to this spacecraft.
@@ -520,6 +539,13 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
 impl crate::imaging::analysis::PayloadAccessor<crate::imaging::OpticalPayload> for Spacecraft {
     fn extract(&self) -> Option<crate::imaging::OpticalPayload> {
         self.optical_payload
+    }
+}
+
+#[cfg(feature = "imaging")]
+impl crate::imaging::analysis::PayloadAccessor<crate::imaging::SarPayload> for Spacecraft {
+    fn extract(&self) -> Option<crate::imaging::SarPayload> {
+        self.sar_payload
     }
 }
 

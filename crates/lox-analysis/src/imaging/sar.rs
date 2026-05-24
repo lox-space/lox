@@ -279,6 +279,173 @@ mod tests {
 }
 
 #[cfg(test)]
+mod integration_tests {
+    use super::*;
+
+    use std::collections::HashMap;
+
+    use geo::{LineString, Polygon};
+
+    use lox_bodies::DynOrigin;
+    use lox_frames::DynFrame;
+    use lox_orbits::orbits::{DynTrajectory, Ensemble};
+    use lox_orbits::propagators::OrbitSource;
+    use lox_orbits::propagators::Propagator;
+    use lox_orbits::propagators::sgp4::{Elements, Sgp4};
+    use lox_time::deltas::TimeDelta;
+    use lox_time::intervals::{Interval, TimeInterval};
+    use lox_time::time_scales::{DynTimeScale, Tai};
+
+    use crate::assets::{AssetId, DynScenario, Spacecraft};
+    use crate::imaging::analysis::SarAccessAnalysis;
+    use crate::imaging::aoi::{Aoi, AoiId};
+
+    // Sentinel-1A TLE — epoch 2026-079 (20 March 2026), consistent with the
+    // Sentinel-2 TLEs used in the optical integration tests.
+    const S1A_NAME: &str = "SENTINEL-1A";
+    const S1A_LINE1: &[u8] =
+        b"1 39634U 14016A   26079.20000000  .00000050  00000+0  37000-4 0  9991";
+    const S1A_LINE2: &[u8] =
+        b"2 39634  98.1817 105.0000 0001300  90.0000 270.0000 14.59197557600008";
+
+    fn s1a_trajectory() -> DynTrajectory {
+        let tle = Elements::from_tle(Some(S1A_NAME.to_string()), S1A_LINE1, S1A_LINE2).unwrap();
+        let sgp4 = Sgp4::new(tle).unwrap();
+        let t0 = sgp4.time();
+        let t1 = t0 + TimeDelta::from_hours(6);
+        sgp4.with_step(TimeDelta::from_seconds(10))
+            .propagate(Interval::new(t0, t1))
+            .unwrap()
+            .into_dyn()
+    }
+
+    fn western_europe_aoi() -> Aoi {
+        Aoi::new(Polygon::new(
+            LineString::from(vec![
+                (-10.0, 35.0),
+                (20.0, 35.0),
+                (20.0, 60.0),
+                (-10.0, 60.0),
+                (-10.0, 35.0),
+            ]),
+            vec![],
+        ))
+    }
+
+    fn make_scenario(
+        spacecraft: &[Spacecraft],
+        interval: TimeInterval<DynTimeScale>,
+    ) -> (DynScenario, Ensemble<AssetId, Tai, DynOrigin, DynFrame>) {
+        let tai_interval =
+            TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
+        let scenario = DynScenario::with_interval(tai_interval, DynOrigin::Earth, DynFrame::Icrf)
+            .with_spacecraft(spacecraft);
+        let mut map = HashMap::new();
+        for sc in spacecraft {
+            if let OrbitSource::Trajectory(traj) = sc.orbit() {
+                let (epoch, origin, frame, data) = traj.clone().into_parts();
+                let typed = lox_orbits::orbits::Trajectory::from_parts(
+                    epoch.with_scale(Tai),
+                    origin,
+                    frame,
+                    data,
+                );
+                map.insert(sc.id().clone(), typed);
+            }
+        }
+        (scenario, Ensemble::new(map))
+    }
+
+    #[test]
+    fn sentinel1_over_europe_produces_windows() {
+        let traj = s1a_trajectory();
+        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
+
+        // Sentinel-1 IW mode: incidence ~29°–46°, right-looking.
+        let payload = SarPayload::with_incidence_angles(
+            Angle::degrees(29.0),
+            Angle::degrees(46.0),
+            LookSide::Right,
+        )
+        .unwrap();
+
+        let sc = Spacecraft::new("s1a", OrbitSource::Trajectory(traj)).with_sar_payload(payload);
+
+        let (scenario, ensemble) = make_scenario(std::slice::from_ref(&sc), interval);
+        let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
+
+        let results = SarAccessAnalysis::new(&scenario, &ensemble, aois)
+            .with_step(TimeDelta::from_seconds(30))
+            .compute()
+            .expect("SAR access analysis failed");
+
+        let windows = results.intervals(&AssetId::new("s1a"), &AoiId::new("europe"));
+        assert!(
+            !windows.is_empty(),
+            "expected at least one access window over Western Europe in 6h",
+        );
+        for w in windows {
+            let dur = (w.end() - w.start()).to_seconds().to_f64();
+            assert!(dur > 0.0, "zero-length window");
+            assert!(
+                dur < 600.0,
+                "SAR access window {dur:.0}s exceeds plausible 600s LEO pass",
+            );
+        }
+    }
+
+    #[test]
+    fn left_vs_right_side_differ_over_asymmetric_aoi() {
+        let traj = s1a_trajectory();
+        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
+
+        let right = SarPayload::with_incidence_angles(
+            Angle::degrees(29.0),
+            Angle::degrees(46.0),
+            LookSide::Right,
+        )
+        .unwrap();
+        let left = SarPayload::with_incidence_angles(
+            Angle::degrees(29.0),
+            Angle::degrees(46.0),
+            LookSide::Left,
+        )
+        .unwrap();
+
+        let sc_r =
+            Spacecraft::new("s1a_r", OrbitSource::Trajectory(traj.clone())).with_sar_payload(right);
+        let sc_l = Spacecraft::new("s1a_l", OrbitSource::Trajectory(traj)).with_sar_payload(left);
+
+        let (scenario, ensemble) = make_scenario(&[sc_r, sc_l], interval);
+        let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
+
+        let results = SarAccessAnalysis::new(&scenario, &ensemble, aois)
+            .with_step(TimeDelta::from_seconds(30))
+            .compute()
+            .expect("SAR access analysis failed");
+
+        let r_windows = results.intervals(&AssetId::new("s1a_r"), &AoiId::new("europe"));
+        let l_windows = results.intervals(&AssetId::new("s1a_l"), &AoiId::new("europe"));
+
+        let total = |ws: &[TimeInterval<Tai>]| -> f64 {
+            ws.iter()
+                .map(|w| (w.end() - w.start()).to_seconds().to_f64())
+                .sum()
+        };
+        let tr = total(r_windows);
+        let tl = total(l_windows);
+        assert!(
+            tr > 0.0 && tl > 0.0,
+            "expected non-empty access on both sides over Europe",
+        );
+        assert!(
+            (tr - tl).abs() > 30.0,
+            "expected materially different totals (right={tr}, left={tl})",
+        );
+    }
+}
+
+#[cfg(test)]
 mod metric_tests {
     use super::*;
 
