@@ -371,7 +371,8 @@ class Spacecraft:
         orbit: SGP4 | Vallado | J2 | J4 | Numerical | Trajectory,
         max_slew_rate: AngularRate | None = None,
         constellation_id: str | None = None,
-        imaging_payload: "ImagingPayload | None" = None,
+        optical_payload: "OpticalPayload | None" = None,
+        sar_payload: "SarPayload | None" = None,
         communication_systems: list[CommunicationSystem] | None = None,
     ) -> Self: ...
     def id(self) -> str:
@@ -383,8 +384,11 @@ class Spacecraft:
     def max_slew_rate(self) -> AngularRate | None:
         """Return the maximum slew rate, if set."""
         ...
-    def imaging_payload(self) -> "ImagingPayload | None":
-        """Return the imaging payload, if set."""
+    def optical_payload(self) -> "OpticalPayload | None":
+        """Return the optical payload, if set."""
+        ...
+    def sar_payload(self) -> "SarPayload | None":
+        """Return the SAR payload, if set."""
         ...
     def communication_systems(self) -> list[CommunicationSystem]:
         """Return the communication systems."""
@@ -2873,16 +2877,16 @@ class Aoi:
         """
         ...
 
-class ImagingPayload:
-    """Imaging sensor payload describing a spacecraft's ground coverage capability.
+class OpticalPayload:
+    """Optical sensor payload describing a spacecraft's ground coverage capability.
 
     Defines the sensor's swath width and optional off-nadir pointing capability.
-    Assign to a spacecraft via the ``imaging_payload`` parameter.
+    Assign to a spacecraft via the ``optical_payload`` parameter.
 
     Examples:
-        >>> payload = lox.ImagingPayload.nadir_only(20.0 * lox.km)
-        >>> payload = lox.ImagingPayload.off_nadir(20.0 * lox.km, 30.0 * lox.deg)
-        >>> sc = lox.Spacecraft("sat1", orbit, imaging_payload=payload)
+        >>> payload = lox.OpticalPayload.nadir_only(20.0 * lox.km)
+        >>> payload = lox.OpticalPayload.off_nadir(20.0 * lox.km, 30.0 * lox.deg)
+        >>> sc = lox.Spacecraft("sat1", orbit, optical_payload=payload)
     """
     @classmethod
     def nadir_only(cls, swath_width: Distance) -> Self:
@@ -2902,26 +2906,26 @@ class ImagingPayload:
         """
         ...
 
-class ImagingAnalysis:
-    """AOI imaging analysis: computes imaging windows for spacecraft over AOIs.
+class OpticalAccessAnalysis:
+    """AOI optical access analysis: computes imaging windows for spacecraft over AOIs.
 
-    Imaging payloads are read from each spacecraft; spacecraft without a
+    Optical payloads are read from each spacecraft; spacecraft without a
     payload are silently skipped.
 
     Args:
-        scenario: Scenario containing spacecraft with ``imaging_payload``.
+        scenario: Scenario containing spacecraft with ``optical_payload``.
         aois: List of (id, Aoi) tuples defining the areas of interest.
         ensemble: Optional pre-computed Ensemble.
         step: Optional time step for event detection (default: 60s).
         body_fixed_frame: Optional body-fixed frame override.
 
     Examples:
-        >>> payload = lox.ImagingPayload.off_nadir(20.0 * lox.km, 30.0 * lox.deg)
-        >>> sc = lox.Spacecraft("sat1", orbit, imaging_payload=payload)
+        >>> payload = lox.OpticalPayload.off_nadir(20.0 * lox.km, 30.0 * lox.deg)
+        >>> sc = lox.Spacecraft("sat1", orbit, optical_payload=payload)
         >>> scenario = lox.Scenario(t0, t1, spacecraft=[sc])
         >>> aoi = lox.Aoi.from_geojson('{"type":"Polygon","coordinates":[[[10,45],[11,45],[11,46],[10,46],[10,45]]]}')
-        >>> imaging = lox.ImagingAnalysis(scenario, aois=[("rome", aoi)])
-        >>> results = imaging.compute()
+        >>> analysis = lox.OpticalAccessAnalysis(scenario, aois=[("rome", aoi)])
+        >>> results = analysis.compute()
     """
     def __new__(
         cls,
@@ -2931,21 +2935,21 @@ class ImagingAnalysis:
         step: TimeDelta | None = None,
         body_fixed_frame: Frame | None = None,
     ) -> Self: ...
-    def compute(self) -> "ImagingResults":
-        """Compute imaging intervals for all (spacecraft, AOI) pairs.
+    def compute(self) -> "AccessResults":
+        """Compute access intervals for all (spacecraft, AOI) pairs.
 
         If no ensemble was provided, the scenario is propagated automatically.
-        Spacecraft without an imaging payload are skipped.
+        Spacecraft without an optical payload are skipped.
         """
         ...
 
-class ImagingResults:
-    """Results of an imaging analysis.
+class AccessResults:
+    """Results of an access analysis.
 
-    Provides access to imaging intervals for each (spacecraft, AOI) pair.
+    Provides access to intervals for each (spacecraft, AOI) pair.
     """
     def intervals(self, spacecraft_id: str, aoi_id: str) -> list[Interval]:
-        """Return imaging intervals for a specific pair.
+        """Return access intervals for a specific pair.
 
         Args:
             spacecraft_id: Spacecraft identifier.
@@ -2957,6 +2961,78 @@ class ImagingResults:
         ...
     def all_intervals(self) -> dict[tuple[str, str], list[Interval]]:
         """Return all intervals for all (spacecraft, AOI) pairs."""
+        ...
+
+
+class LookSide:
+    """Which side of the ground track a SAR payload can image.
+
+    ``Left`` and ``Right`` are defined relative to the spacecraft's instantaneous
+    Earth-fixed velocity at the sub-satellite point.
+    """
+
+    Left: "LookSide"
+    Right: "LookSide"
+    Either: "LookSide"
+
+
+class SarPayload:
+    """SAR (Synthetic Aperture Radar) payload — side-looking annular access geometry.
+
+    Construct via :meth:`with_look_angles` (look angle at the satellite) or
+    :meth:`with_incidence_angles` (incidence angle at the ground point).
+
+    Assign to a spacecraft via the ``sar_payload`` parameter.
+
+    Examples:
+        >>> import lox_space as lox
+        >>> payload = lox.SarPayload.with_incidence_angles(29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right)
+        >>> sc = lox.Spacecraft("s1a", orbit, sar_payload=payload)
+    """
+
+    @classmethod
+    def with_look_angles(cls, min: "Angle", max: "Angle", side: LookSide) -> "SarPayload": ...
+    @classmethod
+    def with_incidence_angles(cls, min: "Angle", max: "Angle", side: LookSide) -> "SarPayload": ...
+    def side(self) -> LookSide: ...
+
+
+class SarAccessAnalysis:
+    """SAR access analysis: per-(spacecraft, AOI) access windows.
+
+    Only spacecraft carrying a ``sar_payload`` contribute.
+
+    Args:
+        scenario: Scenario containing spacecraft with ``sar_payload``.
+        aois: List of (id, Aoi) tuples defining the areas of interest.
+        ensemble: Optional pre-computed Ensemble.
+        step: Optional time step for event detection (default: 60s).
+        body_fixed_frame: Optional body-fixed frame override.
+
+    Examples:
+        >>> import lox_space as lox
+        >>> payload = lox.SarPayload.with_incidence_angles(29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right)
+        >>> sc = lox.Spacecraft("s1a", orbit, sar_payload=payload)
+        >>> scenario = lox.Scenario(t0, t1, spacecraft=[sc])
+        >>> aoi = lox.Aoi([(10, 45), (11, 45), (11, 46), (10, 46), (10, 45)])
+        >>> analysis = lox.SarAccessAnalysis(scenario, aois=[("rome", aoi)])
+        >>> results = analysis.compute()
+    """
+
+    def __new__(
+        cls,
+        scenario: Scenario,
+        aois: list[tuple[str, Aoi]],
+        ensemble: Ensemble | None = None,
+        step: TimeDelta | None = None,
+        body_fixed_frame: Frame | None = None,
+    ) -> Self: ...
+    def compute(self) -> "AccessResults":
+        """Compute access intervals for all (spacecraft, AOI) pairs.
+
+        If no ensemble was provided, the scenario is propagated automatically.
+        Spacecraft without a SAR payload are skipped.
+        """
         ...
 
 # ITU-R atmospheric propagation
