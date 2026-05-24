@@ -28,7 +28,7 @@ SENTINEL-2C
 2 60989  98.5671 155.2832 0000963 112.7762 247.3522 14.30817874 80264"""
 
 # Sentinel-2: 290 km swath, nadir-only imaging
-SENTINEL2_PAYLOAD = lox.ImagingPayload.nadir_only(290.0 * lox.km)
+SENTINEL2_PAYLOAD = lox.OpticalPayload.nadir_only(290.0 * lox.km)
 
 # Western Europe — large AOI that any SSO satellite will overfly within hours
 EUROPE_AOI = lox.Aoi(
@@ -85,16 +85,16 @@ def t1(t0):
 
 @pytest.fixture(scope="module")
 def scenario_single(t0, t1, s2a):
-    sc = lox.Spacecraft("S2A", s2a, imaging_payload=SENTINEL2_PAYLOAD)
+    sc = lox.Spacecraft("S2A", s2a, optical_payload=SENTINEL2_PAYLOAD)
     return lox.Scenario(t0, t1, spacecraft=[sc])
 
 
 @pytest.fixture(scope="module")
 def scenario_constellation(t0, t1, s2a, s2b, s2c):
     scs = [
-        lox.Spacecraft("S2A", s2a, imaging_payload=SENTINEL2_PAYLOAD),
-        lox.Spacecraft("S2B", s2b, imaging_payload=SENTINEL2_PAYLOAD),
-        lox.Spacecraft("S2C", s2c, imaging_payload=SENTINEL2_PAYLOAD),
+        lox.Spacecraft("S2A", s2a, optical_payload=SENTINEL2_PAYLOAD),
+        lox.Spacecraft("S2B", s2b, optical_payload=SENTINEL2_PAYLOAD),
+        lox.Spacecraft("S2C", s2c, optical_payload=SENTINEL2_PAYLOAD),
     ]
     return lox.Scenario(t0, t1, spacecraft=scs)
 
@@ -104,23 +104,23 @@ def scenario_constellation(t0, t1, s2a, s2b, s2c):
 # ---------------------------------------------------------------------------
 
 
-class TestImagingPayload:
+class TestOpticalPayload:
     def test_nadir_only(self):
-        p = lox.ImagingPayload.nadir_only(20.0 * lox.km)
-        assert repr(p) == "ImagingPayload(...)"
+        p = lox.OpticalPayload.nadir_only(20.0 * lox.km)
+        assert repr(p) == "OpticalPayload(...)"
 
     def test_off_nadir(self):
-        p = lox.ImagingPayload.off_nadir(20.0 * lox.km, 30.0 * lox.deg)
-        assert repr(p) == "ImagingPayload(...)"
+        p = lox.OpticalPayload.off_nadir(20.0 * lox.km, 30.0 * lox.deg)
+        assert repr(p) == "OpticalPayload(...)"
 
     def test_spacecraft_roundtrip(self, s2a):
-        payload = lox.ImagingPayload.nadir_only(290.0 * lox.km)
-        sc = lox.Spacecraft("test", s2a, imaging_payload=payload)
-        assert sc.imaging_payload() is not None
+        payload = lox.OpticalPayload.nadir_only(290.0 * lox.km)
+        sc = lox.Spacecraft("test", s2a, optical_payload=payload)
+        assert sc.optical_payload() is not None
 
     def test_spacecraft_no_payload(self, s2a):
         sc = lox.Spacecraft("test", s2a)
-        assert sc.imaging_payload() is None
+        assert sc.optical_payload() is None
 
 
 class TestAoi:
@@ -138,9 +138,9 @@ class TestAoi:
             lox.Aoi.from_geojson("not json")
 
 
-class TestImagingAnalysis:
+class TestOpticalAccessAnalysis:
     def test_single_spacecraft_over_europe(self, scenario_single):
-        analysis = lox.ImagingAnalysis(
+        analysis = lox.OpticalAccessAnalysis(
             scenario_single,
             aois=[("europe", EUROPE_AOI)],
             step=30 * lox.seconds,
@@ -150,7 +150,7 @@ class TestImagingAnalysis:
         assert len(intervals) > 0, "S2A should image Western Europe within 6 hours"
 
     def test_interval_durations(self, scenario_single):
-        analysis = lox.ImagingAnalysis(
+        analysis = lox.OpticalAccessAnalysis(
             scenario_single,
             aois=[("europe", EUROPE_AOI)],
             step=30 * lox.seconds,
@@ -162,7 +162,7 @@ class TestImagingAnalysis:
             assert dur < 600, f"imaging window too long ({dur:.0f}s)"
 
     def test_constellation_over_europe(self, scenario_constellation):
-        analysis = lox.ImagingAnalysis(
+        analysis = lox.OpticalAccessAnalysis(
             scenario_constellation,
             aois=[("europe", EUROPE_AOI)],
             step=30 * lox.seconds,
@@ -176,7 +176,7 @@ class TestImagingAnalysis:
         assert len(results.all_intervals()) == 3
 
     def test_multiple_aois(self, scenario_single):
-        analysis = lox.ImagingAnalysis(
+        analysis = lox.OpticalAccessAnalysis(
             scenario_single,
             aois=[("europe", EUROPE_AOI), ("pacific", PACIFIC_AOI)],
             step=30 * lox.seconds,
@@ -187,9 +187,9 @@ class TestImagingAnalysis:
         assert len(all_ivs) == 2
 
     def test_no_payload_skips_spacecraft(self, t0, t1, s2a):
-        sc = lox.Spacecraft("bare", s2a)  # no imaging_payload
+        sc = lox.Spacecraft("bare", s2a)  # no optical_payload
         scenario = lox.Scenario(t0, t1, spacecraft=[sc])
-        analysis = lox.ImagingAnalysis(
+        analysis = lox.OpticalAccessAnalysis(
             scenario,
             aois=[("europe", EUROPE_AOI)],
         )
@@ -197,19 +197,19 @@ class TestImagingAnalysis:
         assert len(results.all_intervals()) == 0
 
     def test_off_nadir_wider_than_nadir(self, t0, t1, s2a):
-        nadir = lox.ImagingPayload.nadir_only(290.0 * lox.km)
-        off_nadir = lox.ImagingPayload.off_nadir(290.0 * lox.km, 30.0 * lox.deg)
+        nadir = lox.OpticalPayload.nadir_only(290.0 * lox.km)
+        off_nadir = lox.OpticalPayload.off_nadir(290.0 * lox.km, 30.0 * lox.deg)
 
-        sc_nadir = lox.Spacecraft("nadir", s2a, imaging_payload=nadir)
-        sc_off_nadir = lox.Spacecraft("off_nadir", s2a, imaging_payload=off_nadir)
+        sc_nadir = lox.Spacecraft("nadir", s2a, optical_payload=nadir)
+        sc_off_nadir = lox.Spacecraft("off_nadir", s2a, optical_payload=off_nadir)
 
         scenario_n = lox.Scenario(t0, t1, spacecraft=[sc_nadir])
         scenario_a = lox.Scenario(t0, t1, spacecraft=[sc_off_nadir])
 
-        res_n = lox.ImagingAnalysis(
+        res_n = lox.OpticalAccessAnalysis(
             scenario_n, aois=[("europe", EUROPE_AOI)], step=30 * lox.seconds
         ).compute()
-        res_a = lox.ImagingAnalysis(
+        res_a = lox.OpticalAccessAnalysis(
             scenario_a, aois=[("europe", EUROPE_AOI)], step=30 * lox.seconds
         ).compute()
 
@@ -224,12 +224,12 @@ class TestImagingAnalysis:
         )
 
     def test_repr(self, scenario_single):
-        analysis = lox.ImagingAnalysis(scenario_single, aois=[("europe", EUROPE_AOI)])
+        analysis = lox.OpticalAccessAnalysis(scenario_single, aois=[("europe", EUROPE_AOI)])
         assert "1 spacecraft" in repr(analysis)
         assert "1 AOI)" in repr(analysis)
 
     def test_results_repr(self, scenario_single):
-        results = lox.ImagingAnalysis(
+        results = lox.OpticalAccessAnalysis(
             scenario_single, aois=[("europe", EUROPE_AOI)], step=30 * lox.seconds
         ).compute()
         assert "1 pair)" in repr(results)
