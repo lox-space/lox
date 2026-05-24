@@ -35,7 +35,7 @@ thiserror.workspace = true
 [features]
 comms = ["dep:lox-comms"]
 geojson = ["dep:geojson"]
-coverage = ["dep:geo"]
+imaging = ["dep:geo"]
 serde = [
   "dep:serde",
   "lox-bodies/serde",
