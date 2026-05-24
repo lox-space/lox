@@ -9,7 +9,7 @@ use lox_bodies::{DynOrigin, Origin};
 use lox_core::units::AngularRate;
 
 #[cfg(feature = "imaging")]
-use crate::imaging::ImagingPayload;
+use crate::imaging::OpticalPayload;
 use lox_frames::rotations::TryRotation;
 use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::Time;
@@ -187,7 +187,7 @@ pub struct Spacecraft {
     max_slew_rate: Option<AngularRate>,
     constellation: Option<ConstellationId>,
     #[cfg(feature = "imaging")]
-    imaging_payload: Option<ImagingPayload>,
+    imaging_payload: Option<OpticalPayload>,
     #[cfg(feature = "comms")]
     communication_systems: Vec<CommunicationSystem>,
 }
@@ -221,7 +221,7 @@ impl Spacecraft {
 
     /// Sets the imaging payload for this spacecraft.
     #[cfg(feature = "imaging")]
-    pub fn with_imaging_payload(mut self, payload: ImagingPayload) -> Self {
+    pub fn with_imaging_payload(mut self, payload: OpticalPayload) -> Self {
         self.imaging_payload = Some(payload);
         self
     }
@@ -255,7 +255,7 @@ impl Spacecraft {
 
     /// Returns the imaging payload, if set.
     #[cfg(feature = "imaging")]
-    pub fn imaging_payload(&self) -> Option<ImagingPayload> {
+    pub fn imaging_payload(&self) -> Option<OpticalPayload> {
         self.imaging_payload
     }
 
