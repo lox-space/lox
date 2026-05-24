@@ -5,7 +5,10 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::analysis::assets::{AssetId, ConstellationId, DynScenario, GroundStation, Spacecraft};
-use crate::analysis::imaging::{Aoi, AoiId, ImagingAnalysis, ImagingPayload};
+use crate::analysis::imaging::{
+    AccessError, Aoi, AoiId, LookSide, OpticalAccessAnalysis, OpticalPayload, SarAccessAnalysis,
+    SarPayload,
+};
 use crate::analysis::power::{
     PowerBudgetAnalysis, PowerBudgetResults, PowerError, SpacecraftFilter,
 };
@@ -187,14 +190,15 @@ pub struct PySpacecraft(pub Spacecraft);
 #[pymethods]
 impl PySpacecraft {
     #[new]
-    #[pyo3(signature = (id, orbit, max_slew_rate=None, constellation_id=None, imaging_payload=None, communication_systems=None))]
+    #[pyo3(signature = (id, orbit, max_slew_rate=None, constellation_id=None, optical_payload=None, sar_payload=None, communication_systems=None))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         id: String,
         orbit: &Bound<'_, PyAny>,
         max_slew_rate: Option<PyAngularRate>,
         constellation_id: Option<String>,
-        imaging_payload: Option<PyImagingPayload>,
+        optical_payload: Option<PyOpticalPayload>,
+        sar_payload: Option<PySarPayload>,
         communication_systems: Option<Vec<PyCommunicationSystem>>,
     ) -> PyResult<Self> {
         let orbit_source = extract_orbit_source(orbit)?;
@@ -205,8 +209,11 @@ impl PySpacecraft {
         if let Some(cid) = constellation_id {
             asset = asset.with_constellation_id(cid);
         }
-        if let Some(payload) = imaging_payload {
-            asset = asset.with_imaging_payload(payload.0);
+        if let Some(payload) = optical_payload {
+            asset = asset.with_optical_payload(payload.0);
+        }
+        if let Some(payload) = sar_payload {
+            asset = asset.with_sar_payload(payload.0);
         }
         if let Some(systems) = communication_systems {
             for system in systems {
@@ -231,9 +238,14 @@ impl PySpacecraft {
         self.0.max_slew_rate().map(PyAngularRate)
     }
 
-    /// Return the imaging payload, if set.
-    fn imaging_payload(&self) -> Option<PyImagingPayload> {
-        self.0.imaging_payload().map(PyImagingPayload)
+    /// Return the optical payload, if set.
+    fn optical_payload(&self) -> Option<PyOpticalPayload> {
+        self.0.optical_payload().map(PyOpticalPayload)
+    }
+
+    /// Return the SAR payload, if set.
+    fn sar_payload(&self) -> Option<PySarPayload> {
+        self.0.sar_payload().map(PySarPayload)
     }
 
     /// Return the communication systems.
@@ -1334,13 +1346,13 @@ impl PyPowerBudgetResults {
 }
 
 // ---------------------------------------------------------------------------
-// ImagingAnalysis Python bindings
+// Imaging Python bindings (optical + SAR)
 // ---------------------------------------------------------------------------
 
-struct PyImagingError(crate::analysis::imaging::ImagingError);
+struct PyAccessError(AccessError);
 
-impl From<PyImagingError> for PyErr {
-    fn from(err: PyImagingError) -> Self {
+impl From<PyAccessError> for PyErr {
+    fn from(err: PyAccessError) -> Self {
         PyValueError::new_err(err.0.to_string())
     }
 }
@@ -1387,26 +1399,26 @@ impl PyAoi {
     }
 }
 
-/// Imaging sensor payload describing a spacecraft's ground coverage capability.
+/// Optical imaging payload describing a spacecraft's ground coverage capability.
 ///
 /// Defines the sensor's swath width and optional off-nadir pointing capability.
-/// Assign to a spacecraft via the ``imaging_payload`` parameter.
-#[pyclass(name = "ImagingPayload", module = "lox_space", frozen, from_py_object)]
+/// Assign to a spacecraft via the ``optical_payload`` parameter.
+#[pyclass(name = "OpticalPayload", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
-pub struct PyImagingPayload(pub ImagingPayload);
+pub struct PyOpticalPayload(pub OpticalPayload);
 
 #[pymethods]
-impl PyImagingPayload {
+impl PyOpticalPayload {
     /// Create parameters for a nadir-only sensor.
     ///
     /// Args:
     ///     swath_width: Full swath width as Distance.
     ///
     /// Returns:
-    ///     ImagingPayload for nadir-only imaging.
+    ///     OpticalPayload for nadir-only imaging.
     #[classmethod]
     fn nadir_only(_cls: &Bound<'_, PyType>, swath_width: PyDistance) -> Self {
-        PyImagingPayload(ImagingPayload::nadir_only(swath_width.0))
+        PyOpticalPayload(OpticalPayload::nadir_only(swath_width.0))
     }
 
     /// Create parameters for a sensor with off-nadir pointing capability.
@@ -1416,37 +1428,37 @@ impl PyImagingPayload {
     ///     max_off_nadir: Maximum off-nadir angle as Angle.
     ///
     /// Returns:
-    ///     ImagingPayload for off-nadir imaging.
+    ///     OpticalPayload for off-nadir imaging.
     #[classmethod]
     fn off_nadir(
         _cls: &Bound<'_, PyType>,
         swath_width: PyDistance,
         max_off_nadir: PyAngle,
     ) -> Self {
-        PyImagingPayload(ImagingPayload::off_nadir(swath_width.0, max_off_nadir.0))
+        PyOpticalPayload(OpticalPayload::off_nadir(swath_width.0, max_off_nadir.0))
     }
 
     fn __repr__(&self) -> String {
-        "ImagingPayload(...)".to_string()
+        "OpticalPayload(...)".to_string()
     }
 }
 
-/// AOI imaging analysis: computes imaging windows for spacecraft over AOIs.
+/// AOI optical access analysis: computes imaging windows for spacecraft over AOIs.
 ///
-/// Imaging payloads are read from each spacecraft; spacecraft without a
-/// payload are skipped.
+/// Optical payloads are read from each spacecraft; spacecraft without an
+/// optical payload are skipped.
 ///
 /// Args:
 ///     scenario: Scenario containing spacecraft and time interval.
-///         Spacecraft must have an ``imaging_payload`` assigned.
+///         Spacecraft must have an ``optical_payload`` assigned.
 ///     aois: List of (id, Aoi) tuples defining the areas of interest.
 ///     ensemble: Optional pre-computed Ensemble. If not provided, the
 ///         scenario is propagated automatically.
 ///     step: Optional time step for event detection (default: 60s).
 ///     body_fixed_frame: Optional body-fixed frame override (e.g. "ITRF").
 ///         Defaults to IAU frame of the scenario's origin.
-#[pyclass(name = "ImagingAnalysis", module = "lox_space", frozen)]
-pub struct PyImagingAnalysis {
+#[pyclass(name = "OpticalAccessAnalysis", module = "lox_space", frozen)]
+pub struct PyOpticalAccessAnalysis {
     scenario: DynScenario,
     aois: Vec<(AoiId, Aoi)>,
     ensemble: Option<Ensemble<AssetId, Tai, DynOrigin, DynFrame>>,
@@ -1455,7 +1467,7 @@ pub struct PyImagingAnalysis {
 }
 
 #[pymethods]
-impl PyImagingAnalysis {
+impl PyOpticalAccessAnalysis {
     #[new]
     #[pyo3(signature = (scenario, aois, ensemble=None, step=None, body_fixed_frame=None))]
     fn new(
@@ -1480,14 +1492,14 @@ impl PyImagingAnalysis {
         }
     }
 
-    /// Compute imaging intervals for all (spacecraft, AOI) pairs.
+    /// Compute optical access intervals for all (spacecraft, AOI) pairs.
     ///
     /// If no ensemble was provided at construction, the scenario is
     /// propagated automatically (trajectories transformed to ICRF).
     ///
     /// Returns:
-    ///     ImagingResults containing intervals for all pairs.
-    fn compute(&self, py: Python<'_>) -> PyResult<PyImagingResults> {
+    ///     AccessResults containing intervals for all pairs.
+    fn compute(&self, py: Python<'_>) -> PyResult<PyAccessResults> {
         let scenario = &self.scenario;
         let step = self.step;
         let body_fixed_frame = self.body_fixed_frame;
@@ -1507,15 +1519,15 @@ impl PyImagingAnalysis {
         let aois = self.aois.clone();
 
         let results = py.detach(|| {
-            let mut analysis = ImagingAnalysis::new(scenario, ensemble, aois).with_step(step);
+            let mut analysis = OpticalAccessAnalysis::new(scenario, ensemble, aois).with_step(step);
             if let Some(frame) = body_fixed_frame {
                 analysis = analysis.with_body_fixed_frame(frame);
             }
             analysis.compute()
         });
 
-        Ok(PyImagingResults {
-            results: results.map_err(PyImagingError)?,
+        Ok(PyAccessResults {
+            results: results.map_err(PyAccessError)?,
         })
     }
 
@@ -1523,21 +1535,21 @@ impl PyImagingAnalysis {
         let sc_count = self.scenario.spacecraft().len();
         let aoi_count = self.aois.len();
         let aoi_label = if aoi_count == 1 { "AOI" } else { "AOIs" };
-        format!("ImagingAnalysis({sc_count} spacecraft, {aoi_count} {aoi_label})")
+        format!("OpticalAccessAnalysis({sc_count} spacecraft, {aoi_count} {aoi_label})")
     }
 }
 
-/// Results of an imaging analysis.
+/// Results of an imaging access analysis (optical or SAR).
 ///
-/// Provides access to imaging intervals for each (spacecraft, AOI) pair.
-#[pyclass(name = "ImagingResults", module = "lox_space", frozen)]
-pub struct PyImagingResults {
-    results: crate::analysis::imaging::ImagingResults,
+/// Provides access intervals for each (spacecraft, AOI) pair.
+#[pyclass(name = "AccessResults", module = "lox_space", frozen)]
+pub struct PyAccessResults {
+    results: crate::analysis::imaging::AccessResults,
 }
 
 #[pymethods]
-impl PyImagingResults {
-    /// Return imaging intervals for a specific (spacecraft, AOI) pair.
+impl PyAccessResults {
+    /// Return access intervals for a specific (spacecraft, AOI) pair.
     ///
     /// Args:
     ///     spacecraft_id: Spacecraft identifier.
@@ -1580,6 +1592,209 @@ impl PyImagingResults {
     fn __repr__(&self) -> String {
         let n = self.results.num_pairs();
         let label = if n == 1 { "pair" } else { "pairs" };
-        format!("ImagingResults({n} {label})")
+        format!("AccessResults({n} {label})")
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SAR Python bindings: LookSide, SarPayload, SarAccessAnalysis
+// ---------------------------------------------------------------------------
+
+/// Which side of the ground track a SAR payload can image.
+#[pyclass(name = "LookSide", module = "lox_space", eq, eq_int, from_py_object)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum PyLookSide {
+    Left,
+    Right,
+    Either,
+}
+
+impl From<PyLookSide> for LookSide {
+    fn from(s: PyLookSide) -> Self {
+        match s {
+            PyLookSide::Left => LookSide::Left,
+            PyLookSide::Right => LookSide::Right,
+            PyLookSide::Either => LookSide::Either,
+        }
+    }
+}
+
+impl From<LookSide> for PyLookSide {
+    fn from(s: LookSide) -> Self {
+        match s {
+            LookSide::Left => PyLookSide::Left,
+            LookSide::Right => PyLookSide::Right,
+            LookSide::Either => PyLookSide::Either,
+        }
+    }
+}
+
+/// SAR (Synthetic Aperture Radar) payload — side-looking annular access geometry.
+///
+/// Construct via :meth:`with_look_angles` (look angle at the satellite) or
+/// :meth:`with_incidence_angles` (incidence angle at the ground point).
+///
+/// Assign to a spacecraft via the ``sar_payload`` parameter.
+///
+///     >>> import lox_space as lox
+///     >>> payload = lox.SarPayload.with_incidence_angles(29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right)
+///     >>> sc = lox.Spacecraft("sat1", orbit, sar_payload=payload)
+#[pyclass(name = "SarPayload", module = "lox_space", frozen, from_py_object)]
+#[derive(Clone, Copy)]
+pub struct PySarPayload(pub SarPayload);
+
+#[pymethods]
+impl PySarPayload {
+    /// Constructs a SAR payload from a look-angle envelope.
+    ///
+    /// Args:
+    ///     min: Minimum look angle (off-nadir at the satellite).
+    ///     max: Maximum look angle (off-nadir at the satellite).
+    ///     side: Which side of the ground track the payload can image.
+    ///
+    /// Returns:
+    ///     SarPayload for the given envelope.
+    ///
+    /// Raises:
+    ///     ValueError: if min ≥ max or either angle is outside [0°, 90°).
+    #[classmethod]
+    fn with_look_angles(
+        _cls: &Bound<'_, PyType>,
+        min: PyAngle,
+        max: PyAngle,
+        side: PyLookSide,
+    ) -> PyResult<Self> {
+        SarPayload::with_look_angles(min.0, max.0, side.into())
+            .map(PySarPayload)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
+    /// Constructs a SAR payload from an incidence-angle envelope.
+    ///
+    /// Args:
+    ///     min: Minimum incidence angle (off-vertical at the ground point).
+    ///     max: Maximum incidence angle (off-vertical at the ground point).
+    ///     side: Which side of the ground track the payload can image.
+    ///
+    /// Returns:
+    ///     SarPayload for the given envelope.
+    ///
+    /// Raises:
+    ///     ValueError: if min ≥ max or either angle is outside [0°, 90°).
+    #[classmethod]
+    fn with_incidence_angles(
+        _cls: &Bound<'_, PyType>,
+        min: PyAngle,
+        max: PyAngle,
+        side: PyLookSide,
+    ) -> PyResult<Self> {
+        SarPayload::with_incidence_angles(min.0, max.0, side.into())
+            .map(PySarPayload)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
+    /// Returns the configured looking side.
+    fn side(&self) -> PyLookSide {
+        self.0.side().into()
+    }
+
+    fn __repr__(&self) -> String {
+        "SarPayload(...)".to_string()
+    }
+}
+
+/// AOI SAR access analysis: computes imaging windows for SAR spacecraft over AOIs.
+///
+/// SAR payloads are read from each spacecraft; spacecraft without a SAR
+/// payload are skipped.
+///
+/// Args:
+///     scenario: Scenario containing spacecraft and time interval.
+///         Spacecraft must have a ``sar_payload`` assigned.
+///     aois: List of (id, Aoi) tuples defining the areas of interest.
+///     ensemble: Optional pre-computed Ensemble. If not provided, the
+///         scenario is propagated automatically.
+///     step: Optional time step for event detection (default: 60s).
+///     body_fixed_frame: Optional body-fixed frame override (e.g. "ITRF").
+///         Defaults to IAU frame of the scenario's origin.
+#[pyclass(name = "SarAccessAnalysis", module = "lox_space", frozen)]
+pub struct PySarAccessAnalysis {
+    scenario: DynScenario,
+    aois: Vec<(AoiId, Aoi)>,
+    ensemble: Option<Ensemble<AssetId, Tai, DynOrigin, DynFrame>>,
+    step: TimeDelta,
+    body_fixed_frame: Option<DynFrame>,
+}
+
+#[pymethods]
+impl PySarAccessAnalysis {
+    #[new]
+    #[pyo3(signature = (scenario, aois, ensemble=None, step=None, body_fixed_frame=None))]
+    fn new(
+        scenario: PyScenario,
+        aois: Vec<(String, PyAoi)>,
+        ensemble: Option<PyEnsemble>,
+        step: Option<PyTimeDelta>,
+        body_fixed_frame: Option<PyFrame>,
+    ) -> Self {
+        let aois = aois
+            .into_iter()
+            .map(|(id, aoi)| (AoiId::new(id), aoi.0))
+            .collect();
+        Self {
+            scenario: scenario.0,
+            aois,
+            ensemble: ensemble.map(|e| e.0),
+            step: step
+                .map(|s| s.0)
+                .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
+            body_fixed_frame: body_fixed_frame.map(|f| f.0),
+        }
+    }
+
+    /// Compute SAR access intervals for all (spacecraft, AOI) pairs.
+    ///
+    /// If no ensemble was provided at construction, the scenario is
+    /// propagated automatically (trajectories transformed to ICRF).
+    ///
+    /// Returns:
+    ///     AccessResults containing intervals for all pairs.
+    fn compute(&self, py: Python<'_>) -> PyResult<PyAccessResults> {
+        let scenario = &self.scenario;
+        let step = self.step;
+        let body_fixed_frame = self.body_fixed_frame;
+
+        // Auto-propagate if no ensemble was provided.
+        let auto_ensemble;
+        let ensemble = match &self.ensemble {
+            Some(e) => e,
+            None => {
+                auto_ensemble = scenario
+                    .propagate(&DefaultRotationProvider)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
+                &auto_ensemble
+            }
+        };
+
+        let aois = self.aois.clone();
+
+        let results = py.detach(|| {
+            let mut analysis = SarAccessAnalysis::new(scenario, ensemble, aois).with_step(step);
+            if let Some(frame) = body_fixed_frame {
+                analysis = analysis.with_body_fixed_frame(frame);
+            }
+            analysis.compute()
+        });
+
+        Ok(PyAccessResults {
+            results: results.map_err(PyAccessError)?,
+        })
+    }
+
+    fn __repr__(&self) -> String {
+        let sc_count = self.scenario.spacecraft().len();
+        let aoi_count = self.aois.len();
+        let aoi_label = if aoi_count == 1 { "AOI" } else { "AOIs" };
+        format!("SarAccessAnalysis({sc_count} spacecraft, {aoi_count} {aoi_label})")
     }
 }

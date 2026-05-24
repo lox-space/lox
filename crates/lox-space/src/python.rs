@@ -5,9 +5,10 @@
 use std::f64::consts::PI;
 
 use crate::analysis::python::{
-    PyAoi, PyElevationMask, PyEnsemble, PyGroundStation, PyImagingAnalysis, PyImagingPayload,
-    PyImagingResults, PyObservables, PyPass, PyPowerBudgetAnalysis, PyPowerBudgetResults,
-    PyScenario, PySpacecraft, PyVisibilityAnalysis, PyVisibilityResults,
+    PyAccessResults, PyAoi, PyElevationMask, PyEnsemble, PyGroundStation, PyLookSide,
+    PyObservables, PyOpticalAccessAnalysis, PyOpticalPayload, PyPass, PyPowerBudgetAnalysis,
+    PyPowerBudgetResults, PySarAccessAnalysis, PySarPayload, PyScenario, PySpacecraft,
+    PyVisibilityAnalysis, PyVisibilityResults,
 };
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
@@ -106,9 +107,12 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPowerBudgetAnalysis>()?;
     m.add_class::<PyPowerBudgetResults>()?;
     m.add_class::<PyAoi>()?;
-    m.add_class::<PyImagingPayload>()?;
-    m.add_class::<PyImagingAnalysis>()?;
-    m.add_class::<PyImagingResults>()?;
+    m.add_class::<PyAccessResults>()?;
+    m.add_class::<PyOpticalPayload>()?;
+    m.add_class::<PyOpticalAccessAnalysis>()?;
+    m.add_class::<PyLookSide>()?;
+    m.add_class::<PySarPayload>()?;
+    m.add_class::<PySarAccessAnalysis>()?;
 
     // constellations
     m.add_class::<PyConstellation>()?;
