@@ -25,6 +25,17 @@ EUROPE_AOI = lox.Aoi(
     [(-10.0, 35.0), (20.0, 35.0), (20.0, 60.0), (-10.0, 60.0), (-10.0, 35.0)]
 )
 
+# Small spot in the Pacific — unlikely to be hit in a short window.
+PACIFIC_AOI = lox.Aoi(
+    [
+        (-175.0, -5.0),
+        (-174.0, -5.0),
+        (-174.0, -4.0),
+        (-175.0, -4.0),
+        (-175.0, -5.0),
+    ]
+)
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -42,44 +53,181 @@ def six_hour_window(s1a):
     return t0, t0 + 6 * lox.hours
 
 
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
-
-
-def test_sar_payload_constructor_look_angles():
-    p = lox.SarPayload.with_look_angles(20.0 * lox.deg, 45.0 * lox.deg, lox.LookSide.Either)
-    assert p.side() == lox.LookSide.Either
-
-
-def test_sar_payload_constructor_incidence_angles():
-    p = lox.SarPayload.with_incidence_angles(22.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right)
-    assert p.side() == lox.LookSide.Right
-
-
-def test_sar_payload_rejects_invalid_range():
-    with pytest.raises(ValueError):
-        lox.SarPayload.with_look_angles(45.0 * lox.deg, 20.0 * lox.deg, lox.LookSide.Right)
-
-
-def test_sar_payload_rejects_out_of_range_angle():
-    with pytest.raises(ValueError):
-        lox.SarPayload.with_incidence_angles(20.0 * lox.deg, 90.0 * lox.deg, lox.LookSide.Right)
-
-
-def test_sentinel1_over_europe(s1a, six_hour_window):
+@pytest.fixture(scope="module")
+def scenario_single(s1a, six_hour_window):
     t0, t1 = six_hour_window
     sc = lox.Spacecraft("s1a", s1a, sar_payload=SAR_PAYLOAD)
-    scenario = lox.Scenario(t0, t1, spacecraft=[sc])
-    analysis = lox.SarAccessAnalysis(
-        scenario,
-        aois=[("europe", EUROPE_AOI)],
-        step=30 * lox.seconds,
-    )
-    results = analysis.compute()
-    windows = results.intervals("s1a", "europe")
-    assert len(windows) > 0, "Sentinel-1A should image Western Europe within 6 hours"
-    for iv in windows:
-        dur = float(iv.duration())
-        assert dur > 0, "zero-length SAR window"
-        assert dur < 600, f"SAR window too long ({dur:.0f}s)"
+    return lox.Scenario(t0, t1, spacecraft=[sc])
+
+
+# ---------------------------------------------------------------------------
+# TestSarPayload
+# ---------------------------------------------------------------------------
+
+
+class TestSarPayload:
+    def test_with_look_angles(self):
+        p = lox.SarPayload.with_look_angles(20.0 * lox.deg, 45.0 * lox.deg, lox.LookSide.Either)
+        assert p.side() == lox.LookSide.Either
+
+    def test_with_incidence_angles(self):
+        p = lox.SarPayload.with_incidence_angles(22.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right)
+        assert p.side() == lox.LookSide.Right
+
+    def test_repr(self):
+        p = lox.SarPayload.with_incidence_angles(29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right)
+        assert repr(p) == "SarPayload(...)"
+
+    def test_side_accessor_roundtrip(self):
+        for side in (lox.LookSide.Left, lox.LookSide.Right, lox.LookSide.Either):
+            p = lox.SarPayload.with_look_angles(20.0 * lox.deg, 45.0 * lox.deg, side)
+            assert p.side() == side
+
+    def test_spacecraft_roundtrip(self, s1a):
+        payload = lox.SarPayload.with_incidence_angles(
+            29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right
+        )
+        sc = lox.Spacecraft("test", s1a, sar_payload=payload)
+        assert sc.sar_payload() is not None
+
+    def test_spacecraft_no_payload(self, s1a):
+        sc = lox.Spacecraft("test", s1a)
+        assert sc.sar_payload() is None
+
+    def test_spacecraft_carries_both_payloads(self, s1a):
+        optical = lox.OpticalPayload.nadir_only(290.0 * lox.km)
+        sar = lox.SarPayload.with_incidence_angles(
+            29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right
+        )
+        sc = lox.Spacecraft("dual", s1a, optical_payload=optical, sar_payload=sar)
+        assert sc.optical_payload() is not None
+        assert sc.sar_payload() is not None
+
+    def test_rejects_invalid_range(self):
+        with pytest.raises(ValueError):
+            lox.SarPayload.with_look_angles(45.0 * lox.deg, 20.0 * lox.deg, lox.LookSide.Right)
+
+    def test_rejects_out_of_range_angle(self):
+        with pytest.raises(ValueError):
+            lox.SarPayload.with_incidence_angles(20.0 * lox.deg, 90.0 * lox.deg, lox.LookSide.Right)
+
+
+# ---------------------------------------------------------------------------
+# TestLookSide
+# ---------------------------------------------------------------------------
+
+
+class TestLookSide:
+    def test_variants(self):
+        assert lox.LookSide.Left != lox.LookSide.Right
+        assert lox.LookSide.Left != lox.LookSide.Either
+        assert lox.LookSide.Right != lox.LookSide.Either
+
+    def test_equality(self):
+        assert lox.LookSide.Left == lox.LookSide.Left
+        assert lox.LookSide.Right == lox.LookSide.Right
+        assert lox.LookSide.Either == lox.LookSide.Either
+        assert lox.LookSide.Left != lox.LookSide.Right
+
+
+# ---------------------------------------------------------------------------
+# TestSarAccessAnalysis
+# ---------------------------------------------------------------------------
+
+
+class TestSarAccessAnalysis:
+    def test_single_spacecraft_over_europe(self, scenario_single):
+        analysis = lox.SarAccessAnalysis(
+            scenario_single,
+            aois=[("europe", EUROPE_AOI)],
+            step=30 * lox.seconds,
+        )
+        results = analysis.compute()
+        windows = results.intervals("s1a", "europe")
+        assert len(windows) > 0, "Sentinel-1A should image Western Europe within 6 hours"
+
+    def test_interval_durations(self, scenario_single):
+        analysis = lox.SarAccessAnalysis(
+            scenario_single,
+            aois=[("europe", EUROPE_AOI)],
+            step=30 * lox.seconds,
+        )
+        results = analysis.compute()
+        for iv in results.intervals("s1a", "europe"):
+            dur = float(iv.duration())
+            assert dur > 0, "zero-length SAR window"
+            assert dur < 600, f"SAR window too long ({dur:.0f}s)"
+
+    def test_multiple_aois(self, scenario_single):
+        analysis = lox.SarAccessAnalysis(
+            scenario_single,
+            aois=[("europe", EUROPE_AOI), ("pacific", PACIFIC_AOI)],
+            step=30 * lox.seconds,
+        )
+        results = analysis.compute()
+        all_ivs = results.all_intervals()
+        # Should have entries for both AOIs (even if pacific has zero windows)
+        assert len(all_ivs) == 2
+
+    def test_no_payload_skips_spacecraft(self, s1a, six_hour_window):
+        t0, t1 = six_hour_window
+        sc = lox.Spacecraft("bare", s1a)  # no sar_payload
+        scenario = lox.Scenario(t0, t1, spacecraft=[sc])
+        analysis = lox.SarAccessAnalysis(
+            scenario,
+            aois=[("europe", EUROPE_AOI)],
+        )
+        results = analysis.compute()
+        assert len(results.all_intervals()) == 0
+
+    def test_left_vs_right_side_differ(self, s1a, six_hour_window):
+        t0, t1 = six_hour_window
+        payload_left = lox.SarPayload.with_incidence_angles(
+            29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Left
+        )
+        payload_right = lox.SarPayload.with_incidence_angles(
+            29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right
+        )
+        sc_l = lox.Spacecraft("s1a_l", s1a, sar_payload=payload_left)
+        sc_r = lox.Spacecraft("s1a_r", s1a, sar_payload=payload_right)
+        scenario = lox.Scenario(t0, t1, spacecraft=[sc_l, sc_r])
+        analysis = lox.SarAccessAnalysis(
+            scenario,
+            aois=[("europe", EUROPE_AOI)],
+            step=30 * lox.seconds,
+        )
+        results = analysis.compute()
+        windows_l = results.intervals("s1a_l", "europe")
+        windows_r = results.intervals("s1a_r", "europe")
+        assert len(windows_l) > 0, "Left-looking should have access over Europe"
+        assert len(windows_r) > 0, "Right-looking should have access over Europe"
+        dur_l = sum(float(iv.duration()) for iv in windows_l)
+        dur_r = sum(float(iv.duration()) for iv in windows_r)
+        assert abs(dur_l - dur_r) > 30.0, (
+            f"Left ({dur_l:.0f}s) and Right ({dur_r:.0f}s) totals should differ by >30s"
+        )
+
+    def test_repr(self, scenario_single):
+        analysis = lox.SarAccessAnalysis(scenario_single, aois=[("europe", EUROPE_AOI)])
+        assert "spacecraft" in repr(analysis)
+        assert "AOI" in repr(analysis)
+
+    def test_results_repr(self, scenario_single):
+        results = lox.SarAccessAnalysis(
+            scenario_single, aois=[("europe", EUROPE_AOI)], step=30 * lox.seconds
+        ).compute()
+        assert "pair" in repr(results)
+
+    def test_multiple_spacecraft(self, s1a, six_hour_window):
+        t0, t1 = six_hour_window
+        sc_a = lox.Spacecraft("s1a_a", s1a, sar_payload=SAR_PAYLOAD)
+        sc_b = lox.Spacecraft("s1a_b", s1a, sar_payload=SAR_PAYLOAD)
+        scenario = lox.Scenario(t0, t1, spacecraft=[sc_a, sc_b])
+        analysis = lox.SarAccessAnalysis(
+            scenario,
+            aois=[("europe", EUROPE_AOI)],
+            step=30 * lox.seconds,
+        )
+        results = analysis.compute()
+        all_ivs = results.all_intervals()
+        assert len(all_ivs) == 2, "Both spacecraft-AOI pairs should be present in results"
