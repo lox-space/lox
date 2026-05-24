@@ -45,12 +45,12 @@ install-hooks:
 
 # Build Python documentation with zensical
 docs-build:
-    uv run zensical build
+    uv run --group docs zensical build
 
 # Serve Python documentation with live reload
 docs-serve:
-    uv run zensical serve
+    uv run --group docs zensical serve
 
 # Serve Python documentation and open in browser
 docs-open:
-    uv run zensical serve --open
+    uv run --group docs zensical serve --open
