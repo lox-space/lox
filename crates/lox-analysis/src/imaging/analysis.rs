@@ -29,6 +29,7 @@ use crate::assets::{AssetId, Scenario, Spacecraft};
 use crate::imaging::aoi::{Aoi, AoiId};
 use crate::imaging::optical::OpticalPayload;
 use crate::imaging::results::AccessResults;
+use crate::imaging::sar::SarPayload;
 use crate::visibility::EvalError;
 
 /// Returns the per-sample access metric for an AOI.
@@ -237,6 +238,9 @@ where
 
 /// Type alias for the optical access analysis (parameterised by [`OpticalPayload`]).
 pub type OpticalAccessAnalysis<'a, O, R> = AccessAnalysis<'a, OpticalPayload, O, R>;
+
+/// Type alias for the SAR access analysis (parameterised by [`SarPayload`]).
+pub type SarAccessAnalysis<'a, O, R> = AccessAnalysis<'a, SarPayload, O, R>;
 
 #[cfg(test)]
 mod tests {

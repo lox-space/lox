@@ -13,6 +13,7 @@ pub mod sar;
 
 pub use analysis::{
     AccessAnalysis, AccessError, AccessPayload, OpticalAccessAnalysis, PayloadAccessor,
+    SarAccessAnalysis,
 };
 #[cfg(feature = "geojson")]
 pub use aoi::AoiError;
