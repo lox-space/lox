@@ -28,7 +28,7 @@ use lox_time::time_scales::Tai;
 use crate::assets::{AssetId, Scenario, Spacecraft};
 use crate::imaging::aoi::{Aoi, AoiId};
 use crate::imaging::optical::OpticalPayload;
-use crate::imaging::results::{AccessResults, PassDirection};
+use crate::imaging::results::{AccessResults, AccessWindow, PassDirection};
 use crate::imaging::sar::SarPayload;
 use crate::visibility::EvalError;
 
@@ -298,7 +298,15 @@ where
                 body_fixed_frame: self.body_fixed_frame,
             };
             let detector = RootFindingDetector::new(detect_fn, self.step);
-            let windows = EventsToIntervals::new(detector).detect(interval)?;
+            let intervals = EventsToIntervals::new(detector).detect(interval)?;
+            let windows: Vec<AccessWindow> = intervals
+                .into_iter()
+                .map(|interval| AccessWindow {
+                    interval,
+                    // TODO(task-6): replace placeholder with pass_direction_of(...) sampled at midpoint
+                    direction: PassDirection::Ascending,
+                })
+                .collect();
             Ok::<_, AccessError>((key, windows))
         };
 
@@ -308,8 +316,8 @@ where
             pairs.iter().map(compute_one).collect()
         };
 
-        let intervals: HashMap<_, _> = results?.into_iter().collect();
-        Ok(AccessResults::new(intervals))
+        let windows_by_pair: HashMap<_, _> = results?.into_iter().collect();
+        Ok(AccessResults::new(windows_by_pair))
     }
 }
 
