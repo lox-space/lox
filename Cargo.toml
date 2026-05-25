@@ -30,23 +30,23 @@ lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.24" }
 lox-frames = { path = "crates/lox-frames", version = "0.1.0-alpha.20" }
 lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.24" }
 lox-itur = { path = "crates/lox-itur", version = "0.1.0-alpha.5" }
-lox-stream = { path = "crates/lox-stream", version = "0.1.0-alpha.1" }
 lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.23" }
 lox-odm = { path = "crates/lox-odm", version = "0.1.0-alpha.3" }
 lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.39" }
+lox-stream = { path = "crates/lox-stream", version = "0.1.0-alpha.1" }
 lox-test-utils = { path = "crates/lox-test-utils", version = "0.1.0-alpha.9", default-features = false }
 lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.26" }
 lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.15" }
 
-async-channel = "2.5"
 arrayvec = "0.7.6"
+async-channel = "2.5.0"
 chrono = "0.4.43"
 csv = "1.4.0"
 differential-equations = "0.6.1"
 divan = { package = "codspeed-divan-compat", version = "4.3.0" }
 fast_polynomial = { version = "0.3.0", default-features = false }
-futures = "0.3"
-futures-core = "0.3"
+futures = "0.3.32"
+futures-core = "0.3.32"
 geo = "0.33"
 geojson = "1.0"
 glam = { version = "0.33.1", default-features = false, features = ["f64"] }
