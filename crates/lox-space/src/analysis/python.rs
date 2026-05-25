@@ -1545,9 +1545,11 @@ impl PyOpticalAccessAnalysis {
     module = "lox_space",
     eq,
     eq_int,
+    hash,
+    frozen,
     from_py_object
 )]
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PyPassDirection {
     Ascending,
     Descending,
@@ -1596,7 +1598,11 @@ impl PyAccessWindow {
             crate::analysis::imaging::PassDirection::Ascending => "Ascending",
             crate::analysis::imaging::PassDirection::Descending => "Descending",
         };
-        format!("AccessWindow({dir})")
+        format!(
+            "AccessWindow({} → {}, {dir})",
+            self.0.interval.start(),
+            self.0.interval.end(),
+        )
     }
 }
 
@@ -1657,8 +1663,16 @@ impl PyAccessResults {
 // ---------------------------------------------------------------------------
 
 /// Which side of the ground track a SAR payload can image.
-#[pyclass(name = "LookSide", module = "lox_space", eq, eq_int, from_py_object)]
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[pyclass(
+    name = "LookSide",
+    module = "lox_space",
+    eq,
+    eq_int,
+    hash,
+    frozen,
+    from_py_object
+)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PyLookSide {
     Left,
     Right,
