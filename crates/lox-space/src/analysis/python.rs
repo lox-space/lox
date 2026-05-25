@@ -1574,7 +1574,7 @@ impl From<crate::analysis::imaging::PassDirection> for PyPassDirection {
 }
 
 /// A single access window: time interval + pass direction at the midpoint.
-#[pyclass(name = "AccessWindow", module = "lox_space", frozen)]
+#[pyclass(name = "AccessWindow", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Copy)]
 pub struct PyAccessWindow(pub crate::analysis::imaging::AccessWindow);
 
