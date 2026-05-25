@@ -4,43 +4,58 @@
 
 export type Status = "idle" | "computing" | "done" | "error" | "cancelled";
 
-interface StatusState {
+export interface StatusState {
   status: Status;
-  pairsReceived: number;
-  pairsExpected: number;
+  received: number;
+  expected: number;
   lastDurationMs: number | null;
   lastError: string | null;
 }
 
-export const status = $state<StatusState>({
-  status: "idle",
-  pairsReceived: 0,
-  pairsExpected: 0,
-  lastDurationMs: null,
-  lastError: null,
-});
-
-export function markStart(pairsExpected: number): void {
-  status.status = "computing";
-  status.pairsReceived = 0;
-  status.pairsExpected = pairsExpected;
-  status.lastError = null;
+export interface StatusController {
+  state: StatusState;
+  markStart(expected: number): void;
+  bump(): void;
+  markDone(elapsedMs: number): void;
+  markCancelled(): void;
+  markError(message: string): void;
 }
 
-export function bumpPair(): void {
-  status.pairsReceived += 1;
+export function createStatusController(): StatusController {
+  const state = $state<StatusState>({
+    status: "idle",
+    received: 0,
+    expected: 0,
+    lastDurationMs: null,
+    lastError: null,
+  });
+  return {
+    state,
+    markStart(expected: number): void {
+      state.status = "computing";
+      state.received = 0;
+      state.expected = expected;
+      state.lastError = null;
+    },
+    bump(): void {
+      state.received += 1;
+    },
+    markDone(elapsedMs: number): void {
+      state.status = "done";
+      state.lastDurationMs = elapsedMs;
+    },
+    markCancelled(): void {
+      state.status = "cancelled";
+    },
+    markError(message: string): void {
+      state.status = "error";
+      state.lastError = message;
+    },
+  };
 }
 
-export function markDone(elapsedMs: number): void {
-  status.status = "done";
-  status.lastDurationMs = elapsedMs;
-}
+/** Status of the streaming `ComputeAccess` RPC. */
+export const accessStatus = createStatusController();
 
-export function markCancelled(): void {
-  status.status = "cancelled";
-}
-
-export function markError(message: string): void {
-  status.status = "error";
-  status.lastError = message;
-}
+/** Status of the streaming `PropagateTrajectories` RPC. */
+export const propagationStatus = createStatusController();

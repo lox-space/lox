@@ -13,9 +13,7 @@
   import {
     ingestPair, resetAccess,
   } from "$lib/state/access.svelte";
-  import {
-    markStart, markDone, markCancelled, markError, bumpPair,
-  } from "$lib/state/status.svelte";
+  import { accessStatus, propagationStatus } from "$lib/state/status.svelte";
   import { runComputeAccess } from "$lib/rpc/client";
   import type { AccessRequest } from "@kerolox/proto-ts";
   import { ensureTrajectories } from "$lib/state/trajectories.svelte";
@@ -110,14 +108,14 @@
 
     const pairsExpected = satellites.length * 2; // 2 AOIs
     void runComputeAccess(req, {
-      onStart: () => markStart(pairsExpected),
+      onStart: () => accessStatus.markStart(pairsExpected),
       onPair: (p) => {
         ingestPair(p, scenarioStartMs, scenarioEndMs);
-        bumpPair();
+        accessStatus.bump();
       },
-      onDone: (ms) => markDone(ms),
-      onCancel: () => markCancelled(),
-      onError: (err) => markError(err.message),
+      onDone: (ms) => accessStatus.markDone(ms),
+      onCancel: () => accessStatus.markCancelled(),
+      onError: (err) => accessStatus.markError(err.message),
     }, ctl.signal);
 
     return () => {
@@ -129,7 +127,10 @@
 <div class="h-full flex flex-col">
   <header class="flex items-center justify-between px-4 py-2 bg-neutral-950 border-b border-neutral-800">
     <h1 class="text-sm font-semibold uppercase tracking-wide">Kerolox · SAR Constellation Sizing</h1>
-    <StatusPill />
+    <div class="flex items-center gap-2">
+      <StatusPill state={propagationStatus.state} label="prop" />
+      <StatusPill state={accessStatus.state} label="access" />
+    </div>
   </header>
   {#if ready}
     <main class="flex-1 flex min-h-0">

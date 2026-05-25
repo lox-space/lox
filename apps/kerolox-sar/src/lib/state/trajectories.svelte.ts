@@ -8,6 +8,7 @@ import type { Scenario } from "./scenario.svelte";
 import type { SatelliteElements } from "$lib/walker.svelte";
 import { runPropagateTrajectories } from "$lib/rpc/client";
 import type { PropagateRequest } from "@kerolox/proto-ts";
+import { propagationStatus } from "./status.svelte";
 
 export interface SampledTrajectoryView {
   /** Unix epoch ms per sample. */
@@ -97,25 +98,29 @@ export function ensureTrajectories(s: Scenario, sats: SatelliteElements[]): void
       pending.clear();
     };
 
+    const totalExpected = sats.length;
     void runPropagateTrajectories(req, {
-      onStart: () => {},
+      onStart: () => propagationStatus.markStart(totalExpected),
       onTrajectory: (msg) => {
         pending.set(msg.scId, {
           epochsMs: new Float64Array(msg.epochsMs),
           eciKm: new Float64Array(msg.eciThreejsBufferKm),
           groundDeg: new Float64Array(msg.groundLatLonDeg),
         });
+        propagationStatus.bump();
         if (!flushScheduled) {
           flushScheduled = true;
           requestAnimationFrame(flush);
         }
       },
-      onDone: () => {
+      onDone: (ms) => {
         // Final flush in case any messages arrived after the last rAF.
         flush();
+        propagationStatus.markDone(ms);
       },
-      onCancel: () => {},
+      onCancel: () => propagationStatus.markCancelled(),
       onError: (err) => {
+        propagationStatus.markError(err.message);
         console.error("trajectory propagation failed:", err);
       },
     }, ctl.signal);
