@@ -21,5 +21,9 @@ futures-core.workspace = true
 rayon.workspace = true
 
 [dev-dependencies]
+axum.workspace = true
 futures.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+tower.workspace = true
