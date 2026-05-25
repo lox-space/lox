@@ -23,6 +23,7 @@ use lox_orbits::events::{
 use lox_orbits::orbits::{Ensemble, Trajectory};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
+use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::Tai;
 
 use crate::assets::{AssetId, Scenario, Spacecraft};
@@ -297,30 +298,17 @@ where
 
         let compute_one = |&(sc, payload, (aoi_id, aoi)): &(&Spacecraft, P, &(AoiId, Aoi))| {
             let key = (sc.id().clone(), aoi_id.clone());
-            let traj = self.ensemble.get(sc.id()).expect(
-                "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
-            );
-            let detect_fn = AccessDetectFn {
-                payload,
+            let windows = access_one(
+                sc.id(),
+                aoi_id,
                 aoi,
-                trajectory: traj,
-                origin: self.scenario.origin(),
-                body_fixed_frame: self.body_fixed_frame,
-            };
-            let detector = RootFindingDetector::new(detect_fn, self.step);
-            let intervals = EventsToIntervals::new(detector).detect(interval)?;
-            let origin = self.scenario.origin();
-            let body_fixed_frame = self.body_fixed_frame;
-            let mut windows: Vec<AccessWindow> = Vec::with_capacity(intervals.len());
-            for iv in intervals {
-                let midpoint = iv.start() + 0.5 * (iv.end() - iv.start());
-                let sample = sub_sat_sample(traj, midpoint, origin, body_fixed_frame)?;
-                let direction = pass_direction_of(&sample);
-                windows.push(AccessWindow {
-                    interval: iv,
-                    direction,
-                });
-            }
+                payload,
+                self.ensemble,
+                self.scenario.origin(),
+                self.body_fixed_frame,
+                self.step,
+                interval,
+            )?;
             Ok::<_, AccessError>((key, windows))
         };
 
@@ -333,6 +321,50 @@ where
         let windows_by_pair: HashMap<_, _> = results?.into_iter().collect();
         Ok(AccessResults::new(windows_by_pair))
     }
+}
+
+fn access_one<P, O, R>(
+    sc_id: &AssetId,
+    _aoi_id: &AoiId,
+    aoi: &Aoi,
+    payload: P,
+    ensemble: &Ensemble<AssetId, Tai, O, R>,
+    origin: O,
+    body_fixed_frame: DynFrame,
+    step: TimeDelta,
+    interval: TimeInterval<Tai>,
+) -> Result<Vec<AccessWindow>, AccessError>
+where
+    P: AccessPayload + Copy + Send + Sync,
+    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<DynOrigin>,
+    R: ReferenceFrame + Copy + Send + Sync + Into<DynFrame>,
+    DefaultRotationProvider: TryRotation<R, DynFrame, Tai>,
+    <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
+        core::error::Error + Send + Sync + 'static,
+{
+    let traj = ensemble
+        .get(sc_id)
+        .expect("trajectory not found in ensemble; did you forget to propagate this spacecraft?");
+    let detect_fn = AccessDetectFn {
+        payload,
+        aoi,
+        trajectory: traj,
+        origin,
+        body_fixed_frame,
+    };
+    let detector = RootFindingDetector::new(detect_fn, step);
+    let intervals = EventsToIntervals::new(detector).detect(interval)?;
+    let mut windows: Vec<AccessWindow> = Vec::with_capacity(intervals.len());
+    for iv in intervals {
+        let midpoint = iv.start() + 0.5 * (iv.end() - iv.start());
+        let sample = sub_sat_sample(traj, midpoint, origin, body_fixed_frame)?;
+        let direction = pass_direction_of(&sample);
+        windows.push(AccessWindow {
+            interval: iv,
+            direction,
+        });
+    }
+    Ok(windows)
 }
 
 /// Type alias for the optical access analysis (parameterised by [`OpticalPayload`]).
