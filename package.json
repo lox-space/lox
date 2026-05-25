@@ -25,6 +25,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
+      "@bufbuild/buf",
       "@tailwindcss/oxide"
     ],
     "supportedArchitectures": {
