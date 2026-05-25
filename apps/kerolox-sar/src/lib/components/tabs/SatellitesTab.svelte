@@ -9,7 +9,8 @@
   // Re-runs whenever scenario changes thanks to the runes graph.
   const satellites = $derived<SatelliteElements[]>(runWalker(scenario));
 
-  function rad(x: number): string {
+  /** Format an angle in radians as a degree string with 2 decimal places. */
+  function formatDeg(x: number): string {
     return ((x * 180) / Math.PI).toFixed(2);
   }
 </script>
@@ -32,16 +33,17 @@
         </tr>
       </thead>
       <tbody class="text-neutral-200 font-mono">
+        <!-- Key assumes index_in_plane < 1000; holds for any realistic Walker config. -->
         {#each satellites as sat (sat.plane * 1000 + sat.indexInPlane)}
           <tr class="border-b border-neutral-900/40 hover:bg-neutral-900/50">
             <td class="px-3 py-1">{sat.plane}</td>
             <td class="px-3 py-1">{sat.indexInPlane}</td>
             <td class="px-3 py-1 text-right">{(sat.smaM / 1000).toFixed(1)}</td>
             <td class="px-3 py-1 text-right">{sat.ecc.toFixed(4)}</td>
-            <td class="px-3 py-1 text-right">{rad(sat.incRad)}</td>
-            <td class="px-3 py-1 text-right">{rad(sat.raanRad)}</td>
-            <td class="px-3 py-1 text-right">{rad(sat.aopRad)}</td>
-            <td class="px-3 py-1 text-right">{rad(sat.trueAnomalyRad)}</td>
+            <td class="px-3 py-1 text-right">{formatDeg(sat.incRad)}</td>
+            <td class="px-3 py-1 text-right">{formatDeg(sat.raanRad)}</td>
+            <td class="px-3 py-1 text-right">{formatDeg(sat.aopRad)}</td>
+            <td class="px-3 py-1 text-right">{formatDeg(sat.trueAnomalyRad)}</td>
           </tr>
         {/each}
       </tbody>
