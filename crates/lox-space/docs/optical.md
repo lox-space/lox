@@ -85,8 +85,10 @@ analysis = lox.OpticalAccessAnalysis(
 )
 results = analysis.compute()
 
-for iv in results.intervals("S2A", "europe"):
+for window in results.windows("S2A", "europe"):
+    iv = window.interval()
     print(f"{iv.start()} → {iv.end()}  ({float(iv.duration()):.0f}s)")
+    print(window.direction())
 ```
 
 ---
