@@ -24,6 +24,7 @@ lox-ephem.workspace = true
 lox-frames.workspace = true
 lox-math.workspace = true
 lox-orbits.workspace = true
+lox-stream.workspace = true
 lox-time = { workspace = true, features = ["chrono"] }
 
 geo = { workspace = true, optional = true }
@@ -48,6 +49,7 @@ serde = [
 
 [dev-dependencies]
 csv.workspace = true
+lox-orbits = { workspace = true, features = ["test-utils"] }
 lox-test-utils = { workspace = true, features = ["std"] }
 
 [lib]

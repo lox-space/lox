@@ -84,6 +84,20 @@ pub enum OrbitSource {
     J4(DynJ4Propagator),
     /// Pre-computed trajectory used as-is.
     Trajectory(DynTrajectory),
+    /// Test-only variant that panics when propagated.
+    ///
+    /// Only available with the `test-utils` feature; used to exercise
+    /// `catch_unwind` paths in streaming propagation.
+    #[cfg(feature = "test-utils")]
+    #[doc(hidden)]
+    TestPanic(String),
+    /// Test-only variant that returns a propagation error.
+    ///
+    /// Only available with the `test-utils` feature; used to exercise
+    /// error-policy paths in streaming propagation.
+    #[cfg(feature = "test-utils")]
+    #[doc(hidden)]
+    TestError(String),
 }
 
 /// Errors that can occur when propagating an [`OrbitSource`].
@@ -104,6 +118,11 @@ pub enum PropagateError {
     /// J4 propagation error.
     #[error(transparent)]
     J4(#[from] J4Error),
+    /// Test-only error variant.
+    #[cfg(feature = "test-utils")]
+    #[doc(hidden)]
+    #[error("test error: {0}")]
+    TestError(String),
 }
 
 impl OrbitSource {
@@ -127,6 +146,10 @@ impl OrbitSource {
             Self::J2(p) => Ok(Propagator::propagate(p, interval)?),
             Self::J4(p) => Ok(Propagator::propagate(p, interval)?),
             Self::Trajectory(t) => Ok(t.clone()),
+            #[cfg(feature = "test-utils")]
+            Self::TestPanic(msg) => panic!("{}", msg),
+            #[cfg(feature = "test-utils")]
+            Self::TestError(msg) => Err(PropagateError::TestError(msg.clone())),
         }
     }
 }
