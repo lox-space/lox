@@ -89,6 +89,16 @@ pub enum AccessError {
     /// Pass-direction sampling failed (state interpolation / frame rotation).
     #[error("pass-direction sampling failed: {0}")]
     PassDirection(#[from] EvalError),
+    /// A worker thread panicked while computing a (spacecraft, AOI) pair.
+    #[error("worker panicked while computing pair ({sc_id}, {aoi_id}): {message}")]
+    WorkerPanicked {
+        /// Spacecraft asset identifier.
+        sc_id: AssetId,
+        /// Area-of-interest identifier.
+        aoi_id: AoiId,
+        /// Panic message extracted from the panic payload.
+        message: String,
+    },
 }
 
 // ---------------------------------------------------------------------------
