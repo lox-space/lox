@@ -93,6 +93,25 @@ mod tests {
         assert_ne!(order[0], 0, "slow unit arrived first: {order:?}");
     }
 
+    #[test]
+    fn continue_yields_every_error_then_finishes() {
+        // Fail when i % 7 == 6. Inputs 0..100 → i ∈ {6,13,20,27,34,41,48,55,62,69,76,83,90,97}
+        // = 14 errors, 86 oks.
+        let s = par_stream(0..100, 16, OnError::Continue, |i, _| {
+            if i % 7 == 6 {
+                Err::<i32, i32>(i)
+            } else {
+                Ok::<i32, i32>(i)
+            }
+        });
+
+        let items: Vec<_> = s.collect_blocking();
+        let errs: Vec<_> = items.iter().filter_map(|r| r.as_ref().err()).collect();
+        let oks: Vec<_> = items.iter().filter_map(|r| r.as_ref().ok()).collect();
+        assert_eq!(errs.len(), 14);
+        assert_eq!(oks.len(), 86);
+    }
+
     // ----- helper -----
 
     trait CollectBlocking<T> {
