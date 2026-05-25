@@ -12,7 +12,7 @@ description = "Protobuf contract for the Kerolox compute engine"
 repository.workspace = true
 
 [dependencies]
-prost = "0.13"
+prost.workspace = true
 
 [build-dependencies]
-prost-build = "0.13"
+prost-build.workspace = true
