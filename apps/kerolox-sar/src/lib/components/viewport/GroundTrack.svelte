@@ -42,6 +42,18 @@
   });
 
   const material = $derived.by(() => new LineBasicMaterial({ color }));
+
+  $effect(() => {
+    // When `geometry` or `material` is replaced (because `traj` changed)
+    // or when the component unmounts, dispose the previous Three.js
+    // resources to avoid leaking GPU memory.
+    const g = geometry;
+    const m = material;
+    return () => {
+      g.dispose();
+      m.dispose();
+    };
+  });
 </script>
 
 <T.Line args={[geometry, material]} />

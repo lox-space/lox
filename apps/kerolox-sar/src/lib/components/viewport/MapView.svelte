@@ -105,6 +105,16 @@
   onMount(() => {
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
+
+    const ro = new ResizeObserver(() => {
+      if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+        draw();
+      }
+    });
+    ro.observe(canvas);
+
     const img = new Image();
     img.onload = () => {
       basemap = img;
@@ -113,7 +123,10 @@
     img.src = "/assets/Earth-color.jpg";
     lastFrame = performance.now();
     raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      ro.disconnect();
+      cancelAnimationFrame(raf);
+    };
   });
 </script>
 
