@@ -46,12 +46,11 @@ impl<T, E> futures_core::Stream for Stream<T, E> {
     }
 }
 
-// SAFETY: Stream never moves its Receiver after construction. The only place
-// the Receiver is touched mutably is inside `poll_next`, where we re-pin it
-// transiently via `Pin::new_unchecked`. Drop does not move rx. Treating rx
-// as a non-structural field is sound, so Stream itself is Unpin regardless
-// of whether Receiver is.
-unsafe impl<T, E> Unpin for Stream<T, E> {}
+// Stream treats `rx` as a non-structural field: we never move it after
+// construction, and `poll_next` only re-pins it transiently via
+// `Pin::new_unchecked`. Drop does not move `rx`. Therefore it is sound to
+// expose Stream as Unpin regardless of whether Receiver is.
+impl<T, E> Unpin for Stream<T, E> {}
 
 impl<T, E> Drop for Stream<T, E> {
     fn drop(&mut self) {
