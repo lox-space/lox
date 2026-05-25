@@ -661,6 +661,91 @@ impl WasmTime {
     }
 }
 
+/// A single Walker-designed satellite: orbital elements + plane and
+/// in-plane indices.
+#[wasm_bindgen]
+pub struct WasmSatellite {
+    plane: u32,
+    index_in_plane: u32,
+    sma_m: f64,
+    ecc: f64,
+    inc_rad: f64,
+    raan_rad: f64,
+    aop_rad: f64,
+    true_anomaly_rad: f64,
+}
+
+#[wasm_bindgen]
+impl WasmSatellite {
+    pub fn plane(&self) -> u32 { self.plane }
+    #[wasm_bindgen(js_name = indexInPlane)]
+    pub fn index_in_plane(&self) -> u32 { self.index_in_plane }
+    #[wasm_bindgen(js_name = smaMeters)]
+    pub fn sma_m(&self) -> f64 { self.sma_m }
+    pub fn ecc(&self) -> f64 { self.ecc }
+    #[wasm_bindgen(js_name = incRad)]
+    pub fn inc_rad(&self) -> f64 { self.inc_rad }
+    #[wasm_bindgen(js_name = raanRad)]
+    pub fn raan_rad(&self) -> f64 { self.raan_rad }
+    #[wasm_bindgen(js_name = aopRad)]
+    pub fn aop_rad(&self) -> f64 { self.aop_rad }
+    #[wasm_bindgen(js_name = trueAnomalyRad)]
+    pub fn true_anomaly_rad(&self) -> f64 { self.true_anomaly_rad }
+}
+
+/// A Walker delta constellation builder.
+///
+/// All inputs use the same units as the `Keplerian` types: meters and
+/// radians.
+#[wasm_bindgen]
+pub struct WalkerDelta;
+
+#[wasm_bindgen]
+impl WalkerDelta {
+    /// Build a Walker delta constellation.
+    ///
+    /// - `nsats`: total number of satellites (must be divisible by `nplanes`).
+    /// - `nplanes`: number of orbital planes.
+    /// - `phasing`: Walker phasing parameter `F` in [0, nplanes).
+    /// - `sma_m`: semi-major axis in meters.
+    /// - `ecc`: eccentricity.
+    /// - `inc_rad`: inclination in radians.
+    #[wasm_bindgen]
+    pub fn build(
+        nsats: u32,
+        nplanes: u32,
+        phasing: u32,
+        sma_m: f64,
+        ecc: f64,
+        inc_rad: f64,
+    ) -> Result<js_sys::Array, JsValue> {
+        let sats = lox_space::orbits::constellations::WalkerDeltaBuilder::new(
+            nsats as usize,
+            nplanes as usize,
+        )
+        .with_semi_major_axis(sma_m.m(), ecc)
+        .with_inclination(inc_rad.rad())
+        .with_phasing(phasing as usize)
+        .build()
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        let out = sats.into_iter().map(|s| {
+            JsValue::from(WasmSatellite {
+                plane: s.plane as u32,
+                index_in_plane: s.index_in_plane as u32,
+                sma_m: s.elements.semi_major_axis().to_meters(),
+                ecc: s.elements.eccentricity().as_f64(),
+                inc_rad: s.elements.inclination().as_f64(),
+                raan_rad: s.elements.longitude_of_ascending_node().as_f64(),
+                aop_rad: s.elements.argument_of_periapsis().as_f64(),
+                true_anomaly_rad: s.elements.true_anomaly().as_f64(),
+            })
+        });
+
+        Ok(out.collect())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1114,5 +1199,85 @@ mod tests {
         assert!((buf[3] - 4.0).abs() < 1e-10);
         assert!((buf[4] - 6.0).abs() < 1e-10);
         assert!((buf[5] - (-5.0)).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_walker_delta_24_3_1_at_600km_53deg() {
+        // Walker delta 24/3/1: 24 satellites, 3 planes, phasing 1, alt 600 km, inc 53°.
+        let earth = DynOrigin::from_str("Earth").unwrap();
+        let mean_r = TryMeanRadius::try_mean_radius(&earth).unwrap().to_meters();
+        let sma = (600_000.0_f64 + mean_r).m();
+        let inc = 53.0_f64.to_radians().rad();
+
+        let sats = lox_space::orbits::constellations::WalkerDeltaBuilder::new(24, 3)
+            .with_semi_major_axis(sma, 0.0)
+            .with_inclination(inc)
+            .with_phasing(1)
+            .build()
+            .unwrap();
+
+        assert_eq!(sats.len(), 24);
+        // 3 planes × 8 sats/plane.
+        let plane_counts: std::collections::BTreeMap<usize, usize> =
+            sats.iter().fold(std::collections::BTreeMap::new(), |mut m, s| {
+                *m.entry(s.plane).or_insert(0) += 1;
+                m
+            });
+        assert_eq!(plane_counts.len(), 3);
+        for (_p, count) in plane_counts.iter() {
+            assert_eq!(*count, 8, "each plane should have 8 satellites");
+        }
+        // RAANs of the three planes should be 0, 120°, 240° (modulo wrap).
+        let raans: std::collections::BTreeMap<usize, f64> =
+            sats.iter().fold(std::collections::BTreeMap::new(), |mut m, s| {
+                m.entry(s.plane).or_insert(s.elements.longitude_of_ascending_node().as_f64());
+                m
+            });
+        let mut raan_vec: Vec<f64> = raans.values().copied().collect();
+        raan_vec.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let expected: [f64; 3] = [0.0, 120.0_f64.to_radians(), 240.0_f64.to_radians()];
+        for (got, exp) in raan_vec.iter().zip(expected.iter()) {
+            assert!((got - exp).abs() < 1e-9, "raan {got} vs expected {exp}");
+        }
+    }
+
+    #[test]
+    fn test_wasm_constellation_satellite_struct_round_trip() {
+        // Confirms our WASM-friendly struct holds and returns the lox elements.
+        let earth = DynOrigin::from_str("Earth").unwrap();
+        let mean_r = TryMeanRadius::try_mean_radius(&earth).unwrap().to_meters();
+        let sma = (600_000.0_f64 + mean_r).m();
+        let inc = 53.0_f64.to_radians().rad();
+
+        let sats = lox_space::orbits::constellations::WalkerDeltaBuilder::new(24, 3)
+            .with_semi_major_axis(sma, 0.0)
+            .with_inclination(inc)
+            .with_phasing(1)
+            .build()
+            .unwrap();
+
+        // Project into the WASM-friendly tuple shape we'll expose.
+        let proj: Vec<(usize, usize, f64, f64, f64, f64, f64, f64)> = sats
+            .iter()
+            .map(|s| {
+                (
+                    s.plane,
+                    s.index_in_plane,
+                    s.elements.semi_major_axis().to_meters(),
+                    s.elements.eccentricity().as_f64(),
+                    s.elements.inclination().as_f64(),
+                    s.elements.longitude_of_ascending_node().as_f64(),
+                    s.elements.argument_of_periapsis().as_f64(),
+                    s.elements.true_anomaly().as_f64(),
+                )
+            })
+            .collect();
+        assert_eq!(proj.len(), 24);
+        // Sanity-check the first sat: in plane 0, index 0, the chosen sma and inc.
+        let (p0, i0, sma0, _, inc0, _, _, _) = proj[0];
+        assert_eq!(p0, 0);
+        assert_eq!(i0, 0);
+        assert!((sma0 - (600_000.0 + mean_r)).abs() < 1e-6);
+        assert!((inc0 - inc.as_f64()).abs() < 1e-9);
     }
 }
