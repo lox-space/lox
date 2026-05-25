@@ -5,7 +5,7 @@
 import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
 import wasm from "vite-plugin-wasm";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [tailwindcss(), wasm(), sveltekit()],
