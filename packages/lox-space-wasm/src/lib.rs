@@ -17,9 +17,13 @@ use lox_space::core::elements::{ArgumentOfPeriapsis, Eccentricity, LongitudeOfAs
 use lox_space::core::glam::DVec3;
 use lox_space::core::units::{Angle, AngleUnits, DistanceUnits};
 use lox_space::frames::dynamic::DynFrame;
+use lox_space::frames::providers::DefaultRotationProvider;
 use lox_space::frames::traits::ReferenceFrame;
+use lox_space::orbits::propagators::semi_analytical::DynVallado;
 use lox_space::orbits::sso::inclination_sso;
+use lox_space::orbits::KeplerianOrbit;
 use lox_space::time::calendar_dates::CalendarDate;
+use lox_space::time::deltas::TimeDelta;
 use lox_space::time::time_of_day::CivilTime;
 use lox_space::time::time_scales::{DynTimeScale, TimeScale};
 use lox_space::time::utc::transformations::ToUtc;
@@ -366,6 +370,92 @@ impl Keplerian {
         })
     }
 
+    /// Sample the orbit over the scenario window using the Vallado
+    /// Kepler propagator. Returns a `SampledTrajectory` with parallel
+    /// epoch / ECI / ground-track buffers.
+    ///
+    /// - `start_iso`: ISO-8601 UTC start of the window.
+    /// - `duration_s`: scenario duration in seconds (must be > 0).
+    /// - `step_s`: sampling step in seconds (must be > 0).
+    #[wasm_bindgen(js_name = propagateSampled)]
+    pub fn propagate_sampled(
+        &self,
+        start_iso: &str,
+        duration_s: f64,
+        step_s: f64,
+    ) -> Result<SampledTrajectory, JsValue> {
+        if !duration_s.is_finite() || duration_s <= 0.0 {
+            return Err(JsValue::from_str("duration_s must be positive and finite"));
+        }
+        if !step_s.is_finite() || step_s <= 0.0 {
+            return Err(JsValue::from_str("step_s must be positive and finite"));
+        }
+
+        // Parse the start time.
+        let utc_start = start_iso
+            .parse::<LoxUtc>()
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let start: DynTime = utc_start.to_dyn_time();
+
+        // Build a KeplerianOrbit and convert to DynCartesianOrbit.
+        let kep_orbit =
+            KeplerianOrbit::try_from_keplerian(self.elements, start, DynOrigin::Earth, DynFrame::Icrf)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let cartesian = kep_orbit
+            .try_to_cartesian()
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        // Build the Vallado propagator.
+        let vallado =
+            DynVallado::try_new(cartesian).map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        // IAU_EARTH body-fixed frame (purely polynomial, no IERS dependency).
+        let iau_earth = DynFrame::Iau(DynOrigin::Earth);
+        let provider = DefaultRotationProvider;
+
+        let step_secs_i64 = step_s as i64;
+        let n_steps = (duration_s / step_s) as usize;
+        let total_samples = n_steps + 1;
+
+        let mut epochs_ms = Vec::with_capacity(total_samples);
+        let mut eci_km = Vec::with_capacity(total_samples * 3);
+        let mut ground_deg = Vec::with_capacity(total_samples * 2);
+
+        for i in 0..=n_steps {
+            let dt = TimeDelta::from_seconds(step_secs_i64 * i as i64);
+            let t = start + dt;
+            let state = vallado
+                .state_at(t)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+            // ECI position → Three.js (Y-up): (x, z, -y), convert m → km.
+            let pos = state.position();
+            eci_km.push(pos.x / 1000.0);
+            eci_km.push(pos.z / 1000.0);
+            eci_km.push(-pos.y / 1000.0);
+
+            // Body-fixed transform for ground track.
+            let body_fixed = state
+                .try_to_frame(iau_earth, &provider)
+                .map_err(|e| JsValue::from_str(&format!("frame transform error: {e}")))?;
+            let ground = body_fixed
+                .try_to_ground_location()
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            ground_deg.push(ground.latitude().to_degrees());
+            ground_deg.push(ground.longitude().to_degrees());
+
+            // Unix epoch milliseconds from the UTC instant.
+            let utc = t.to_utc();
+            epochs_ms.push(unix_epoch_ms_from_utc(&utc));
+        }
+
+        Ok(SampledTrajectory {
+            epochs_ms,
+            eci_km,
+            ground_deg,
+        })
+    }
+
     /// Trace the orbit into `n` evenly-spaced Cartesian states over one full revolution.
     ///
     /// Returns an error for non-elliptic orbits or if the origin's GM is undefined.
@@ -555,6 +645,73 @@ impl Trajectory {
             })
             .collect()
     }
+}
+
+/// A satellite trajectory sampled at fixed time intervals, with
+/// parallel buffers ready for direct consumption by Three.js
+/// `BufferAttribute` and canvas-based map renderers.
+///
+/// Buffers are parallel — `epochs_ms[i]`, `eci_km[3*i..3*i+3]`, and
+/// `ground_deg[2*i..2*i+2]` all refer to the same sample.
+#[wasm_bindgen]
+pub struct SampledTrajectory {
+    pub(crate) epochs_ms: Vec<f64>,
+    pub(crate) eci_km: Vec<f64>,
+    pub(crate) ground_deg: Vec<f64>,
+}
+
+#[wasm_bindgen]
+impl SampledTrajectory {
+    /// Returns the number of samples.
+    pub fn len(&self) -> usize {
+        self.epochs_ms.len()
+    }
+
+    /// Returns `true` if there are no samples.
+    #[wasm_bindgen(js_name = isEmpty)]
+    pub fn is_empty(&self) -> bool {
+        self.epochs_ms.is_empty()
+    }
+
+    /// Returns the epoch buffer as Unix milliseconds since 1970-01-01T00:00:00Z.
+    #[wasm_bindgen(js_name = epochsMs)]
+    pub fn epochs_ms(&self) -> Vec<f64> {
+        self.epochs_ms.clone()
+    }
+
+    /// Returns the ECI position buffer in Three.js convention (Y-up), km.
+    /// Layout: `[x0, y0, z0, x1, y1, z1, ...]`
+    #[wasm_bindgen(js_name = eciThreejsBufferKm)]
+    pub fn eci_threejs_buffer_km(&self) -> Vec<f64> {
+        self.eci_km.clone()
+    }
+
+    /// Returns the ground-track buffer as interleaved `[lat0, lon0, lat1, lon1, ...]` in degrees.
+    #[wasm_bindgen(js_name = groundLatLonDeg)]
+    pub fn ground_lat_lon_deg(&self) -> Vec<f64> {
+        self.ground_deg.clone()
+    }
+}
+
+/// Converts a UTC instant to Unix epoch milliseconds.
+fn unix_epoch_ms_from_utc(utc: &LoxUtc) -> f64 {
+    use lox_space::time::calendar_dates::CalendarDate;
+    use lox_space::time::time_of_day::CivilTime;
+
+    let y = utc.year() as i64;
+    let m = utc.month() as i64;
+    let d = utc.day() as i64;
+    let y = y - (m <= 2) as i64;
+    let era = if y >= 0 { y } else { y - 399 } / 400;
+    let yoe = y - era * 400;
+    let doy = (153 * (m + (if m > 2 { -3 } else { 9 })) + 2) / 5 + (d - 1);
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let unix_days = era * 146_097 + doe - 719_468;
+    let secs = utc.hour() as f64 * 3600.0
+        + utc.minute() as f64 * 60.0
+        + utc.second() as f64
+        + utc.millisecond() as f64 / 1000.0;
+    unix_days as f64 * 86_400_000.0 + secs * 1000.0
 }
 
 fn parse_scale(scale: &str) -> Result<DynTimeScale, JsValue> {
@@ -1243,6 +1400,27 @@ mod tests {
         for (got, exp) in raan_vec.iter().zip(expected.iter()) {
             assert!((got - exp).abs() < 1e-9, "raan {got} vs expected {exp}");
         }
+    }
+
+    #[test]
+    fn test_sampled_trajectory_buffer_shape() {
+        // 6 hours @ 60 s step → 361 samples expected.
+        let n_steps_expected: usize = (6 * 3600) / 60 + 1;
+        assert_eq!(n_steps_expected, 361);
+    }
+
+    #[test]
+    fn test_propagate_sampled_returns_expected_buffer_sizes() {
+        // Verify the WASM-side struct directly (avoids JsValue).
+        let traj = SampledTrajectory {
+            epochs_ms: vec![0.0, 30_000.0, 60_000.0],
+            eci_km: vec![7000.0, 0.0, 0.0, 7000.0, 1.0, 0.0, 7000.0, 2.0, 0.0],
+            ground_deg: vec![0.0, 0.0, 0.1, 0.0, 0.2, 0.0],
+        };
+        assert_eq!(traj.len(), 3);
+        assert_eq!(traj.epochs_ms.len(), 3);
+        assert_eq!(traj.eci_km.len(), 9);
+        assert_eq!(traj.ground_deg.len(), 6);
     }
 
     #[test]
