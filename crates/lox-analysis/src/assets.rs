@@ -434,7 +434,7 @@ where
     Ok((sc.id.clone(), typed))
 }
 
-fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
+pub(crate) fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
     if let Some(s) = payload.downcast_ref::<&'static str>() {
         (*s).to_string()
     } else if let Some(s) = payload.downcast_ref::<String>() {
@@ -1044,17 +1044,17 @@ mod tests {
 
     #[test]
     fn by_id_lookups_return_the_right_assets() {
-        let start = Time::j2000(Tai);
+        let start = Time::j2000(TimeScale::Tai);
         let end = start + TimeDelta::from_seconds(86400);
         let gs = GroundStation::new("gs1", dummy_location(), dummy_mask());
-        let traj = lox_orbits::orbits::DynTrajectory::from_csv_dyn(
+        let traj = lox_orbits::orbits::Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
-            DynOrigin::Earth,
-            DynFrame::Icrf,
+            Origin::Earth,
+            Frame::Icrf,
         )
         .unwrap();
         let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(traj));
-        let scenario = DynScenario::new(start, end, DynOrigin::Earth, DynFrame::Icrf)
+        let scenario = Scenario::new(start, end, Origin::Earth, Frame::Icrf)
             .with_ground_stations(&[gs])
             .with_spacecraft(&[sc]);
         assert_eq!(
