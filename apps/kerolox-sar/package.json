@@ -13,6 +13,9 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@connectrpc/connect": "^2.0.1",
+    "@connectrpc/connect-web": "^2.0.1",
+    "@kerolox/proto-ts": "workspace:*",
     "@lox-space/wasm": "workspace:*"
   },
   "devDependencies": {
