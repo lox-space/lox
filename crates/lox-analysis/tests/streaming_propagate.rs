@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use lox_analysis::assets::{DynScenario, Spacecraft};
+use lox_analysis::assets::{DynScenario, ScenarioPropagateError, Spacecraft};
 use lox_frames::DynFrame;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_orbits::orbits::DynTrajectory;
@@ -31,6 +31,25 @@ fn make_scenario(n: usize) -> (DynScenario, DefaultRotationProvider) {
     let spacecraft: Vec<Spacecraft> = (0..n)
         .map(|i| Spacecraft::new(format!("sc{i}"), OrbitSource::Trajectory(traj.clone())))
         .collect();
+    let scenario =
+        DynScenario::new(start, end, DynOrigin::Earth, DynFrame::Icrf).with_spacecraft(&spacecraft);
+    (scenario, DefaultRotationProvider)
+}
+
+/// Build a scenario with `n_good` healthy spacecraft plus one spacecraft using
+/// `bad_orbit` as its orbit source. The bad spacecraft has id `"bad"`.
+fn make_mixed_scenario(
+    n_good: usize,
+    bad_orbit: OrbitSource,
+) -> (DynScenario, DefaultRotationProvider) {
+    use lox_bodies::DynOrigin;
+    let traj = make_trajectory();
+    let start = traj.start_time().to_scale(Tai);
+    let end = traj.end_time().to_scale(Tai);
+    let mut spacecraft: Vec<Spacecraft> = (0..n_good)
+        .map(|i| Spacecraft::new(format!("sc{i}"), OrbitSource::Trajectory(traj.clone())))
+        .collect();
+    spacecraft.push(Spacecraft::new("bad", bad_orbit));
     let scenario =
         DynScenario::new(start, end, DynOrigin::Earth, DynFrame::Icrf).with_spacecraft(&spacecraft);
     (scenario, DefaultRotationProvider)
@@ -83,4 +102,71 @@ fn drop_stops_workers() {
     // Give rayon a moment to observe cancellation.
     std::thread::sleep(Duration::from_millis(100));
     assert!(token.is_cancelled());
+}
+
+#[test]
+fn continue_yields_per_spacecraft_errors() {
+    // One spacecraft has a deliberately failing orbit source; N-1 are healthy.
+    // Under OnError::Continue, we expect exactly one Err and N-1 Ok results.
+    let n_good = 3;
+    let bad_orbit = OrbitSource::TestError("injected error".to_string());
+    let (scenario, provider) = make_mixed_scenario(n_good, bad_orbit);
+    let arc_scenario = Arc::new(scenario);
+    let arc_provider = Arc::new(provider);
+
+    let mut s = arc_scenario.propagate_stream(arc_provider, 8, OnError::Continue);
+    let mut oks = 0usize;
+    let mut errs = 0usize;
+    while let Some(item) = s.blocking_next() {
+        match item {
+            Ok(_) => oks += 1,
+            Err(_) => errs += 1,
+        }
+    }
+    assert_eq!(errs, 1);
+    assert_eq!(oks, n_good);
+}
+
+#[test]
+fn abort_terminates_after_first_error() {
+    // One spacecraft fails; rest are healthy. Under OnError::Abort the stream
+    // should terminate early — fewer than total OK results will be emitted.
+    let total_spacecraft = 10_000;
+    let n_good = total_spacecraft - 1;
+    let bad_orbit = OrbitSource::TestError("abort trigger".to_string());
+    let (scenario, provider) = make_mixed_scenario(n_good, bad_orbit);
+    let arc_scenario = Arc::new(scenario);
+    let arc_provider = Arc::new(provider);
+
+    let mut s = arc_scenario.propagate_stream(arc_provider, 8, OnError::Abort);
+    let mut errs = 0usize;
+    let mut oks = 0usize;
+    while let Some(item) = s.blocking_next() {
+        match item {
+            Ok(_) => oks += 1,
+            Err(_) => errs += 1,
+        }
+    }
+    assert!(errs >= 1);
+    assert!(oks < n_good);
+}
+
+#[test]
+fn panic_in_propagator_surfaces_as_worker_panicked() {
+    // One spacecraft's orbit source panics during propagation. Verify the
+    // panic is converted to ScenarioPropagateError::WorkerPanicked.
+    let panicking_orbit = OrbitSource::TestPanic("test panic".to_string());
+    let (scenario, provider) = make_mixed_scenario(2, panicking_orbit);
+    let arc_scenario = Arc::new(scenario);
+    let arc_provider = Arc::new(provider);
+
+    let mut s = arc_scenario.propagate_stream(arc_provider, 8, OnError::Continue);
+    let mut found_panic = false;
+    while let Some(item) = s.blocking_next() {
+        if let Err(ScenarioPropagateError::WorkerPanicked(id, _msg)) = item {
+            assert_eq!(id.as_str(), "bad");
+            found_panic = true;
+        }
+    }
+    assert!(found_panic, "expected one WorkerPanicked error");
 }
