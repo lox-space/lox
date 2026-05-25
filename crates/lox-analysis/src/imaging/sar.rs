@@ -314,6 +314,7 @@ mod integration_tests {
 
     use crate::assets::{AssetId, DynScenario, Spacecraft};
     use crate::imaging::AccessWindow;
+    use crate::imaging::PassDirection;
     use crate::imaging::analysis::SarAccessAnalysis;
     use crate::imaging::aoi::{Aoi, AoiId};
 
@@ -410,6 +411,13 @@ mod integration_tests {
                 dur < 600.0,
                 "SAR access window {dur:.0}s exceeds plausible 600s LEO pass",
             );
+            assert!(
+                matches!(
+                    w.direction,
+                    PassDirection::Ascending | PassDirection::Descending,
+                ),
+                "window direction should be populated",
+            );
         }
     }
 
@@ -466,6 +474,51 @@ mod integration_tests {
         assert!(
             left_has_unique || right_has_unique,
             "every Left window overlaps a Right window and vice versa — sides not differentiated",
+        );
+    }
+
+    fn s1a_trajectory_12h() -> DynTrajectory {
+        let tle = Elements::from_tle(Some(S1A_NAME.to_string()), S1A_LINE1, S1A_LINE2).unwrap();
+        let sgp4 = Sgp4::new(tle).unwrap();
+        let t0 = sgp4.time();
+        let t1 = t0 + TimeDelta::from_hours(12);
+        sgp4.with_step(TimeDelta::from_seconds(10))
+            .propagate(Interval::new(t0, t1))
+            .unwrap()
+            .into_dyn()
+    }
+
+    #[test]
+    fn sentinel1_observes_both_pass_directions() {
+        let traj = s1a_trajectory_12h();
+        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
+
+        let payload = SarPayload::with_incidence_angles(
+            Angle::degrees(29.0),
+            Angle::degrees(46.0),
+            LookSide::Either,
+        )
+        .unwrap();
+
+        let sc = Spacecraft::new("s1a", OrbitSource::Trajectory(traj)).with_sar_payload(payload);
+        let (scenario, ensemble) = make_scenario(std::slice::from_ref(&sc), interval);
+        let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
+
+        let results = SarAccessAnalysis::new(&scenario, &ensemble, aois)
+            .with_step(TimeDelta::from_seconds(30))
+            .compute()
+            .expect("SAR access analysis failed");
+
+        let windows = results.windows(&AssetId::new("s1a"), &AoiId::new("europe"));
+        let has_ascending = windows
+            .iter()
+            .any(|w| w.direction == PassDirection::Ascending);
+        let has_descending = windows
+            .iter()
+            .any(|w| w.direction == PassDirection::Descending);
+        assert!(
+            has_ascending && has_descending,
+            "expected both ascending and descending passes in a 6h SSO window over Europe (got asc={has_ascending}, desc={has_descending})",
         );
     }
 }
