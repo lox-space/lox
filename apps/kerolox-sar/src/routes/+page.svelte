@@ -71,17 +71,26 @@
     const satellites = runWalker(scenario);
     if (satellites.length === 0) return;
 
+    // Read remaining scenario fields synchronously so they register as effect
+    // dependencies. Reads inside the setTimeout callback are NOT tracked,
+    // because the callback runs after the effect body completes.
+    const startTimeIso = scenario.startTimeIso;
+    const durationHours = scenario.durationHours;
+    const sarLookSide = scenario.sar.lookSide;
+    const sarMinIncidenceDeg = scenario.sar.minIncidenceDeg;
+    const sarMaxIncidenceDeg = scenario.sar.maxIncidenceDeg;
+
     const ctl = new AbortController();
     let cancelled = false;
 
     const timer = setTimeout(async () => {
       if (cancelled) return;
       resetAccess();
-      const scenarioStartMs = Date.parse(scenario.startTimeIso);
-      const scenarioEndMs = scenarioStartMs + scenario.durationHours * 3600 * 1000;
+      const scenarioStartMs = Date.parse(startTimeIso);
+      const scenarioEndMs = scenarioStartMs + durationHours * 3600 * 1000;
       const req: AccessRequest = {
-        startTimeIso: scenario.startTimeIso,
-        durationSeconds: scenario.durationHours * 3600,
+        startTimeIso,
+        durationSeconds: durationHours * 3600,
         satellites: satellites.map((s) => ({
           id: `p${s.plane}-s${s.indexInPlane}`,
           smaM: s.smaM,
@@ -94,9 +103,9 @@
           indexInPlane: s.indexInPlane,
         })) as unknown as AccessRequest["satellites"],
         sar: {
-          lookSide: scenario.sar.lookSide === "LEFT" ? 1 : 2,
-          minIncidenceDeg: scenario.sar.minIncidenceDeg,
-          maxIncidenceDeg: scenario.sar.maxIncidenceDeg,
+          lookSide: sarLookSide === "LEFT" ? 1 : 2,
+          minIncidenceDeg: sarMinIncidenceDeg,
+          maxIncidenceDeg: sarMaxIncidenceDeg,
         } as unknown as AccessRequest["sar"],
         aoiIds: ["hormuz", "black_sea"],
         comparators: [],
