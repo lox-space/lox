@@ -27,7 +27,7 @@ use lox_comms::system::CommunicationSystem;
 use crate::visibility::ElevationMask;
 use lox_orbits::constellations::{ConstellationPropagator, DynConstellation};
 use lox_orbits::ground::DynGroundLocation;
-use lox_orbits::orbits::{Ensemble, KeplerianOrbit};
+use lox_orbits::orbits::{Ensemble, KeplerianOrbit, Trajectory};
 use lox_orbits::propagators::j2::DynJ2Propagator;
 use lox_orbits::propagators::j4::DynJ4Propagator;
 use lox_orbits::propagators::numerical::DynNumericalPropagator;
@@ -334,6 +334,31 @@ pub enum ScenarioPropagateError {
     WorkerPanicked(AssetId, String),
 }
 
+fn propagate_one<O, R, P>(
+    sc: &Spacecraft,
+    dyn_interval: TimeInterval<DynTimeScale>,
+    origin: O,
+    frame: R,
+    provider: &P,
+) -> Result<(AssetId, Trajectory<Tai, O, R>), ScenarioPropagateError>
+where
+    O: Origin + Copy,
+    R: ReferenceFrame + Copy + Into<DynFrame>,
+    P: TryRotation<DynFrame, R, DynTimeScale>,
+    P::Error: std::fmt::Display,
+{
+    let traj = sc
+        .orbit
+        .propagate(dyn_interval)
+        .map_err(|e| ScenarioPropagateError::Propagate(sc.id.clone(), e))?;
+    let rotated = traj
+        .into_frame(frame, provider)
+        .map_err(|e| ScenarioPropagateError::FrameTransformation(sc.id.clone(), e.to_string()))?;
+    let (epoch, _origin, frame, data) = rotated.into_parts();
+    let typed = Trajectory::from_parts(epoch.with_scale(Tai), origin, frame, data);
+    Ok((sc.id.clone(), typed))
+}
+
 impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Scenario<O, R> {
     /// Creates a new scenario from start/end times, origin, and frame.
     pub fn new(start_time: Time<Tai>, end_time: Time<Tai>, origin: O, frame: R) -> Self {
@@ -485,26 +510,7 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
         let entries: Result<HashMap<_, _>, _> = self
             .spacecraft
             .par_iter()
-            .map(|sc| {
-                let traj = sc
-                    .orbit
-                    .propagate(dyn_interval)
-                    .map_err(|e| ScenarioPropagateError::Propagate(sc.id.clone(), e))?;
-                // Rotate DynTrajectory directly into concrete frame R
-                // (uses mixed TryRotation<DynFrame, R, DynTimeScale>).
-                let rotated = traj.into_frame(frame, provider).map_err(|e| {
-                    ScenarioPropagateError::FrameTransformation(sc.id.clone(), e.to_string())
-                })?;
-                // Re-tag origin and time scale (data unchanged, just type markers).
-                let (epoch, _origin, frame, data) = rotated.into_parts();
-                let typed = lox_orbits::orbits::Trajectory::from_parts(
-                    epoch.with_scale(Tai),
-                    origin,
-                    frame,
-                    data,
-                );
-                Ok((sc.id.clone(), typed))
-            })
+            .map(|sc| propagate_one(sc, dyn_interval, origin, frame, provider))
             .collect();
         Ok(Ensemble::new(entries?))
     }
