@@ -23,6 +23,7 @@ lox-core = { workspace = true, features = ["std"] }
 lox-ephem.workspace = true
 lox-frames.workspace = true
 lox-orbits.workspace = true
+lox-stream.workspace = true
 lox-time = { workspace = true, features = ["chrono"] }
 
 geo = { workspace = true, optional = true }
@@ -50,6 +51,7 @@ serde = [
 csv.workspace = true
 divan.workspace = true
 lox-approx = { workspace = true, features = ["std", "glam"] }
+lox-orbits = { workspace = true, features = ["test-utils"] }
 lox-test-utils.workspace = true
 
 [lib]

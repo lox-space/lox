@@ -6,6 +6,8 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt;
+use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::sync::Arc;
 
 use lox_bodies::{CoordinateOrigin, Origin};
 use lox_core::units::AngularRate;
@@ -18,6 +20,7 @@ use crate::imaging::SarPayload;
 use crate::imaging::analysis::PayloadAccessor;
 use lox_frames::rotations::TryRotation;
 use lox_frames::{Frame, ReferenceFrame};
+use lox_stream::{OnError, Stream, par_stream};
 use lox_time::Time;
 use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::TimeScale;
@@ -431,6 +434,16 @@ where
     Ok((sc.id.clone(), typed))
 }
 
+fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
+    if let Some(s) = payload.downcast_ref::<&'static str>() {
+        (*s).to_string()
+    } else if let Some(s) = payload.downcast_ref::<String>() {
+        s.clone()
+    } else {
+        "panic with non-string payload".to_string()
+    }
+}
+
 impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync>
     Scenario<O, R>
 {
@@ -587,6 +600,54 @@ impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send +
             .map(|sc| propagate_one(sc, dynamic_interval, origin, frame, provider))
             .collect();
         Ok(Ensemble::new(entries?))
+    }
+
+    /// Propagate all spacecraft and stream completed trajectories as each one
+    /// finishes.
+    ///
+    /// Items are yielded in completion order (no ordering guarantee). Use the
+    /// returned `Stream` directly with async consumers or via `blocking_next`
+    /// for synchronous draining. Drop the stream (or call `cancel`) to stop
+    /// in-flight work cooperatively at unit boundaries.
+    pub fn propagate_stream<P>(
+        self: Arc<Self>,
+        provider: Arc<P>,
+        capacity: usize,
+        on_error: OnError,
+    ) -> Stream<(AssetId, Trajectory<O, R>), ScenarioPropagateError>
+    where
+        Self: Send + Sync + 'static,
+        R: Into<Frame>,
+        P: TryRotation<Frame, R, TimeScale> + Send + Sync + 'static,
+        P::Error: std::fmt::Display + Send,
+        O: Send + Sync + Copy + 'static,
+        R: Send + Sync + Copy + 'static,
+    {
+        let n = self.spacecraft.len();
+        let indices: Vec<usize> = (0..n).collect();
+
+        let scenario = self;
+        let prov = provider;
+        let dynamic_interval = TimeInterval::new(
+            scenario.interval.start().into_dynamic(),
+            scenario.interval.end().into_dynamic(),
+        );
+        let origin = scenario.origin;
+        let frame = scenario.frame;
+
+        par_stream(indices, capacity, on_error, move |idx, _token| {
+            let sc = &scenario.spacecraft[idx];
+            let sc_id_for_panic = sc.id.clone();
+            catch_unwind(AssertUnwindSafe(|| {
+                propagate_one(sc, dynamic_interval, origin, frame, &*prov)
+            }))
+            .unwrap_or_else(|payload| {
+                Err(ScenarioPropagateError::WorkerPanicked(
+                    sc_id_for_panic,
+                    panic_message(payload),
+                ))
+            })
+        })
     }
 
     /// Returns a new scenario containing only spacecraft belonging to the given constellations.

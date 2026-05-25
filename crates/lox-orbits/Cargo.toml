@@ -46,6 +46,7 @@ serde = [
   "lox-time/serde",
   "sgp4/serde",
 ]
+test-utils = []
 
 [dev-dependencies]
 lox-test-utils.workspace = true

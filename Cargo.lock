@@ -1034,6 +1034,7 @@ dependencies = [
  "lox-ephem",
  "lox-frames",
  "lox-orbits",
+ "lox-stream",
  "lox-test-utils",
  "lox-time",
  "rayon",
