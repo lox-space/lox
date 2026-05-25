@@ -1167,6 +1167,7 @@ dependencies = [
  "lox-frames",
  "lox-math",
  "lox-orbits",
+ "lox-stream",
  "lox-test-utils",
  "lox-time",
  "rayon",

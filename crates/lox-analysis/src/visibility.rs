@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use std::collections::HashMap;
+use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::sync::Arc;
 
 use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid, UndefinedOriginPropertyError};
 use lox_core::glam::DVec3;
@@ -21,8 +23,9 @@ use std::f64::consts::PI;
 use thiserror::Error;
 
 use lox_core::units::{AngularRate, Distance};
+use lox_stream::{OnError, Stream, par_stream};
 
-use crate::assets::{AssetId, GroundStation, Scenario, Spacecraft};
+use crate::assets::{AssetId, GroundStation, Scenario, Spacecraft, panic_message};
 use lox_orbits::events::{
     DetectError, DetectFn, EventsToIntervals, IntervalDetector, IntervalDetectorExt,
     RootFindingDetector,
@@ -899,6 +902,35 @@ impl VisibilityResults {
 }
 
 // ---------------------------------------------------------------------------
+// Streaming types
+// ---------------------------------------------------------------------------
+
+/// One pair's worth of visibility intervals, streamed as the pair completes.
+pub struct PairResult {
+    /// First asset id (ground station or first spacecraft).
+    pub id1: AssetId,
+    /// Second asset id (spacecraft or second spacecraft).
+    pub id2: AssetId,
+    /// Whether this is a ground-space or inter-satellite pair.
+    pub pair_type: PairType,
+    /// Visibility intervals for this pair.
+    pub intervals: Vec<TimeInterval<Tai>>,
+}
+
+enum PairJob {
+    GroundSpace { gs_id: AssetId, sc_id: AssetId },
+    InterSatellite { id1: AssetId, id2: AssetId },
+}
+
+struct StreamCfg {
+    occulting_bodies: Vec<DynOrigin>,
+    step: TimeDelta,
+    min_pass_duration: Option<TimeDelta>,
+    min_range: Option<Distance>,
+    max_range: Option<Distance>,
+}
+
+// ---------------------------------------------------------------------------
 // VisibilityAnalysis
 // ---------------------------------------------------------------------------
 
@@ -1542,6 +1574,154 @@ where
             intervals,
             pair_types,
         })
+    }
+
+    /// Stream visibility intervals as each (asset, asset) pair completes.
+    ///
+    /// Consumes the analysis. Filters are applied synchronously during pair
+    /// enumeration before any parallel work starts; the resulting pair list
+    /// and the `Arc`-shared scenario / ensemble / ephemeris are then moved
+    /// into a background rayon task.
+    ///
+    /// Ground-space and inter-satellite pairs (when enabled via
+    /// [`with_inter_satellite`](Self::with_inter_satellite)) are interleaved
+    /// in a single stream; consumers discriminate by `PairResult::pair_type`.
+    pub fn compute_stream(
+        self,
+        scenario: Arc<Scenario<O, R>>,
+        ensemble: Arc<Ensemble<AssetId, Tai, O, R>>,
+        ephemeris: Arc<E>,
+        capacity: usize,
+        on_error: OnError,
+    ) -> Stream<PairResult, VisibilityError>
+    where
+        O: 'static,
+        R: 'static,
+        E: 'static,
+    {
+        let interval = *scenario.interval();
+        let mut pairs: Vec<PairJob> = Vec::new();
+
+        if !scenario.ground_stations().is_empty() {
+            for gs in scenario.ground_stations() {
+                for sc in scenario.spacecraft() {
+                    if self.ground_space_filter.as_ref().is_none_or(|f| f(gs, sc)) {
+                        pairs.push(PairJob::GroundSpace {
+                            gs_id: gs.id().clone(),
+                            sc_id: sc.id().clone(),
+                        });
+                    }
+                }
+            }
+        }
+        if self.inter_satellite {
+            let sc = scenario.spacecraft();
+            for i in 0..sc.len() {
+                for j in (i + 1)..sc.len() {
+                    if self
+                        .inter_satellite_filter
+                        .as_ref()
+                        .is_none_or(|f| f(&sc[i], &sc[j]))
+                    {
+                        pairs.push(PairJob::InterSatellite {
+                            id1: sc[i].id().clone(),
+                            id2: sc[j].id().clone(),
+                        });
+                    }
+                }
+            }
+        }
+
+        let cfg = Arc::new(StreamCfg {
+            occulting_bodies: self.occulting_bodies.clone(),
+            step: self.step,
+            min_pass_duration: self.min_pass_duration,
+            min_range: self.min_range,
+            max_range: self.max_range,
+        });
+
+        par_stream(pairs, capacity, on_error, move |job, _token| {
+            let (id1_panic, id2_panic) = match &job {
+                PairJob::GroundSpace { gs_id, sc_id } => (gs_id.clone(), sc_id.clone()),
+                PairJob::InterSatellite { id1, id2 } => (id1.clone(), id2.clone()),
+            };
+            catch_unwind(AssertUnwindSafe(|| {
+                run_visibility_job(&job, &scenario, &ensemble, &*ephemeris, &cfg, interval)
+            }))
+            .unwrap_or_else(|payload| {
+                Err(VisibilityError::WorkerPanicked(
+                    id1_panic,
+                    id2_panic,
+                    panic_message(payload),
+                ))
+            })
+        })
+    }
+}
+
+fn run_visibility_job<O, R, E>(
+    job: &PairJob,
+    scenario: &Scenario<O, R>,
+    ensemble: &Ensemble<AssetId, Tai, O, R>,
+    ephemeris: &E,
+    cfg: &StreamCfg,
+    interval: TimeInterval<Tai>,
+) -> Result<PairResult, VisibilityError>
+where
+    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<DynOrigin>,
+    R: ReferenceFrame + Copy + Send + Sync + Into<DynFrame>,
+    E: Ephemeris + Send + Sync,
+    E::Error: 'static,
+    DefaultRotationProvider: TryRotation<R, DynFrame, Tai> + TryRotation<DynFrame, R, Tai>,
+    <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
+        std::error::Error + Send + Sync + 'static,
+    <DefaultRotationProvider as TryRotation<DynFrame, R, Tai>>::Error:
+        std::error::Error + Send + Sync + 'static,
+{
+    let params = ComputeParams {
+        scenario,
+        ensemble,
+        ephemeris,
+        occulting_bodies: &cfg.occulting_bodies,
+        step: cfg.step,
+        min_pass_duration: cfg.min_pass_duration,
+        min_range: cfg.min_range,
+        max_range: cfg.max_range,
+    };
+    match job {
+        PairJob::GroundSpace { gs_id, sc_id } => {
+            let gs = scenario
+                .ground_station_by_id(gs_id)
+                .expect("ground station not found in scenario");
+            let traj = ensemble.get(sc_id).expect(
+                "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
+            );
+            let intervals = params.compute_ground_space_pair(gs, traj, interval)?;
+            Ok(PairResult {
+                id1: gs_id.clone(),
+                id2: sc_id.clone(),
+                pair_type: PairType::GroundSpace,
+                intervals,
+            })
+        }
+        PairJob::InterSatellite { id1, id2 } => {
+            let sc1 = scenario
+                .spacecraft_by_id(id1)
+                .expect("spacecraft not found in scenario");
+            let sc2 = scenario
+                .spacecraft_by_id(id2)
+                .expect("spacecraft not found in scenario");
+            let traj1 = ensemble.get(id1).expect("trajectory not found");
+            let traj2 = ensemble.get(id2).expect("trajectory not found");
+            let intervals =
+                params.compute_inter_satellite_pair(sc1, sc2, traj1, traj2, interval)?;
+            Ok(PairResult {
+                id1: id1.clone(),
+                id2: id2.clone(),
+                pair_type: PairType::InterSatellite,
+                intervals,
+            })
+        }
     }
 }
 
