@@ -8,6 +8,8 @@ import type { AccessPairResult } from "@kerolox/proto-ts";
 export type PassDirection = "ascending" | "descending" | "unknown";
 
 export interface AccessWindowLite {
+  /** Spacecraft id, e.g. "p0-s0" (plane 0, in-plane index 0). */
+  scId: string;
   startMs: number;
   endMs: number;
   direction: PassDirection;
@@ -49,6 +51,7 @@ export function resetAccess(): void {
 export function ingestPair(p: AccessPairResult, scenarioStartMs: number, scenarioEndMs: number): void {
   const existing = accessByAoi.get(p.aoiId) ?? { windows: [], stats: emptyStats() };
   const newWindows: AccessWindowLite[] = p.windows.map((w) => ({
+    scId: p.scId,
     startMs: Date.parse(w.startIso),
     endMs: Date.parse(w.endIso),
     direction: mapDirection(w.direction as unknown as number),

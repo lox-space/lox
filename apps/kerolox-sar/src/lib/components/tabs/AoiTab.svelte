@@ -14,6 +14,13 @@
     return "—";
   }
 
+  /** Format a spacecraft id "p0-s0" as the 1-indexed "1-1" used elsewhere. */
+  function fmtSat(scId: string): string {
+    const m = scId.match(/^p(\d+)-s(\d+)$/);
+    if (!m) return scId;
+    return `${parseInt(m[1], 10) + 1}-${parseInt(m[2], 10) + 1}`;
+  }
+
   const state = $derived<AoiAccessState | undefined>(accessByAoi.get(aoiId));
 
   function fmtSeconds(s: number | null): string {
@@ -54,6 +61,7 @@
     <table class="w-full text-xs">
       <thead class="text-neutral-400 uppercase">
         <tr class="border-b border-neutral-800">
+          <th class="text-left px-3 py-2">Sat</th>
           <th class="text-left px-3 py-2">Start</th>
           <th class="text-left px-3 py-2">End</th>
           <th class="text-left px-3 py-2">Dir</th>
@@ -62,6 +70,7 @@
       <tbody class="text-neutral-200 font-mono">
         {#each state?.windows ?? [] as w, i (i)}
           <tr class="row-in border-b border-neutral-900/40">
+            <td class="px-3 py-1">{fmtSat(w.scId)}</td>
             <td class="px-3 py-1">{fmtIso(w.startMs)}</td>
             <td class="px-3 py-1">{fmtIso(w.endMs)}</td>
             <td class="px-3 py-1" title={w.direction}>{fmtDirection(w.direction)}</td>

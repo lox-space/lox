@@ -10,6 +10,7 @@ const scenarioEnd = scenarioStart + 24 * 3600 * 1000;
 
 function mkWindow(startOffsetSec: number, endOffsetSec: number): AccessWindowLite {
   return {
+    scId: "p0-s0",
     startMs: scenarioStart + startOffsetSec * 1000,
     endMs: scenarioStart + endOffsetSec * 1000,
     direction: "ascending",
