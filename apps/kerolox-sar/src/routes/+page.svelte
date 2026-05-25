@@ -3,7 +3,7 @@
   SPDX-License-Identifier: MPL-2.0
 -->
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import ScenarioForm from "$lib/components/ScenarioForm.svelte";
   import Viewport from "$lib/components/Viewport.svelte";
   import ResultsPanel from "$lib/components/ResultsPanel.svelte";
@@ -33,11 +33,8 @@
       setBounds(initialStart, initialEnd);
       seek(initialStart);
     }
-    console.log("[+page] onMount: bounds set", { initialStart, initialEnd });
-
     await ensureWalkerReady();
     ready = true;
-    console.log("[+page] onMount: WASM ready");
   });
 
   // Phase 3: populate the trajectory cache and reset the playback bounds
@@ -50,18 +47,19 @@
     const satellites = runWalker(scenario);
     if (satellites.length === 0) return;
 
-    console.log("[+page] phase 3 effect firing", {
-      ready,
-      startTimeIso: scenario.startTimeIso,
-      durationHours: scenario.durationHours,
-      satellitesCount: satellites.length,
-    });
-
     const scenarioStartMs = Date.parse(scenario.startTimeIso);
     const scenarioEndMs = scenarioStartMs + scenario.durationHours * 3600 * 1000;
-    setBounds(scenarioStartMs, scenarioEndMs);
-    seek(scenarioStartMs);
-    pause();
+
+    // Wrap the playback mutations in untrack so the reads inside
+    // setBounds/seek (for the bounds-snap and clamping logic) aren't
+    // tracked as dependencies of this effect — otherwise seek() writing
+    // playback.currentTime would re-trigger the effect via the read in
+    // setBounds, infinitely.
+    untrack(() => {
+      setBounds(scenarioStartMs, scenarioEndMs);
+      seek(scenarioStartMs);
+      pause();
+    });
 
     void ensureTrajectories(scenario, satellites);
   });
