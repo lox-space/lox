@@ -1,0 +1,126 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+  SPDX-License-Identifier: MPL-2.0
+-->
+<script lang="ts">
+  import { onMount } from "svelte";
+  import { trajectoryById } from "$lib/state/trajectories.svelte";
+  import { playback, tick } from "$lib/state/playback.svelte";
+  import type { AoiPolygon as AoiPolygonData } from "$lib/aois";
+
+  let { aois }: { aois: Map<string, AoiPolygonData> } = $props();
+
+  let canvas: HTMLCanvasElement;
+  let basemap: HTMLImageElement | null = null;
+  let lastFrame = performance.now();
+  let raf = 0;
+
+  function lonLatToXY(lon: number, lat: number, w: number, h: number): [number, number] {
+    return [((lon + 180) / 360) * w, ((90 - lat) / 180) * h];
+  }
+
+  function draw(): void {
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const { width, height } = canvas;
+
+    if (basemap) {
+      ctx.drawImage(basemap, 0, 0, width, height);
+    } else {
+      ctx.fillStyle = "#1a1a2e";
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    // AOI outlines.
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#ffaa44";
+    for (const aoi of aois.values()) {
+      ctx.beginPath();
+      for (let i = 0; i < aoi.exteriorLonLat.length; i++) {
+        const [lon, lat] = aoi.exteriorLonLat[i];
+        const [x, y] = lonLatToXY(lon, lat, width, height);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Ground tracks (split at ±180 longitude crossings).
+    ctx.strokeStyle = "#7c8aff";
+    ctx.lineWidth = 1;
+    for (const traj of trajectoryById.values()) {
+      ctx.beginPath();
+      let prevLon: number | null = null;
+      const n = traj.groundDeg.length / 2;
+      for (let i = 0; i < n; i++) {
+        const lat = traj.groundDeg[2 * i];
+        const lon = traj.groundDeg[2 * i + 1];
+        const [x, y] = lonLatToXY(lon, lat, width, height);
+        if (prevLon !== null && Math.abs(lon - prevLon) > 180) {
+          ctx.moveTo(x, y);
+        } else if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+        prevLon = lon;
+      }
+      ctx.stroke();
+    }
+
+    // Current satellite positions.
+    ctx.fillStyle = "#7c8aff";
+    const t = playback.currentTime;
+    for (const traj of trajectoryById.values()) {
+      const epochs = traj.epochsMs;
+      if (epochs.length === 0) continue;
+      let lo = 0;
+      let hi = epochs.length - 1;
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (epochs[mid] <= t) lo = mid;
+        else hi = mid;
+      }
+      const t0 = epochs[lo];
+      const t1 = epochs[hi];
+      const f = t1 === t0 ? 0 : Math.max(0, Math.min(1, (t - t0) / (t1 - t0)));
+      const lat = traj.groundDeg[2 * lo] + (traj.groundDeg[2 * hi] - traj.groundDeg[2 * lo]) * f;
+      const lon = traj.groundDeg[2 * lo + 1] + (traj.groundDeg[2 * hi + 1] - traj.groundDeg[2 * lo + 1]) * f;
+      const [x, y] = lonLatToXY(lon, lat, width, height);
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function frame(now: number): void {
+    const dt = (now - lastFrame) / 1000;
+    lastFrame = now;
+    tick(dt * 1000); // ms units to match playback bounds
+    draw();
+    raf = requestAnimationFrame(frame);
+  }
+
+  onMount(() => {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    const img = new Image();
+    img.onload = () => {
+      basemap = img;
+      draw();
+    };
+    img.src = "/assets/Earth-color.jpg";
+    lastFrame = performance.now();
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  });
+</script>
+
+<div class="flex-1 min-h-0 relative">
+  <canvas
+    bind:this={canvas}
+    class="w-full h-full block bg-neutral-950"
+    data-testid="map-canvas"
+  ></canvas>
+</div>
