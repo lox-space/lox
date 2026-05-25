@@ -36,6 +36,7 @@ mod tests {
     use lox_time::time_scales::{DynTimeScale, Tai};
 
     use crate::assets::{AssetId, Scenario};
+    use crate::imaging::PassDirection;
 
     // -----------------------------------------------------------------------
     // Integration tests — full OpticalAccessAnalysis pipeline with Sentinel-2 TLEs
@@ -185,6 +186,13 @@ mod tests {
                 duration_s < 600.0,
                 "access window too long ({duration_s:.0}s) — expected < 600s for a LEO pass"
             );
+            assert!(
+                matches!(
+                    w.direction,
+                    PassDirection::Ascending | PassDirection::Descending,
+                ),
+                "window direction should be populated",
+            );
         }
     }
 
@@ -242,6 +250,25 @@ mod tests {
         // The small Pacific AOI may or may not be hit. But the total result
         // count should cover all 4 pairs.
         assert_eq!(results.num_pairs(), 4);
+
+        for w in s2a_europe {
+            assert!(
+                matches!(
+                    w.direction,
+                    PassDirection::Ascending | PassDirection::Descending,
+                ),
+                "window direction should be populated",
+            );
+        }
+        for w in s2b_europe {
+            assert!(
+                matches!(
+                    w.direction,
+                    PassDirection::Ascending | PassDirection::Descending,
+                ),
+                "window direction should be populated",
+            );
+        }
     }
 
     #[test]
@@ -293,5 +320,24 @@ mod tests {
             off_nadir_total >= nadir_total - 1.0,
             "off-nadir ({off_nadir_total:.0}s) should have >= nadir ({nadir_total:.0}s) coverage"
         );
+
+        for w in nadir_windows {
+            assert!(
+                matches!(
+                    w.direction,
+                    PassDirection::Ascending | PassDirection::Descending,
+                ),
+                "window direction should be populated",
+            );
+        }
+        for w in off_nadir_windows {
+            assert!(
+                matches!(
+                    w.direction,
+                    PassDirection::Ascending | PassDirection::Descending,
+                ),
+                "window direction should be populated",
+            );
+        }
     }
 }
