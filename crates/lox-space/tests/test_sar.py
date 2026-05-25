@@ -273,6 +273,6 @@ class TestSarAccessAnalysis:
             step=30 * lox.seconds,
         )
         results = analysis.compute()
-        directions = [w.direction() for w in results.windows("s1a", "europe")]
+        directions = {w.direction() for w in results.windows("s1a", "europe")}
         assert lox.PassDirection.Ascending in directions, "missing ascending pass"
         assert lox.PassDirection.Descending in directions, "missing descending pass"
