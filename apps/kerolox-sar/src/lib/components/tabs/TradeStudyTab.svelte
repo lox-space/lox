@@ -15,6 +15,31 @@
 
   let ctl: AbortController | null = null;
 
+  /**
+   * Sensible default range/step for each sweep axis. Phasing is special: the
+   * Walker F parameter is only valid in [0, P), so its max tracks the current
+   * plane count.
+   */
+  function presetFor(p: SweepParam): { min: number; max: number; step: number } {
+    switch (p) {
+      case "satsPerPlane": return { min: 2, max: 10, step: 1 };
+      case "planes": return { min: 1, max: 8, step: 1 };
+      case "phasing": return { min: 0, max: Math.max(0, scenario.walker.p - 1), step: 1 };
+      case "altitudeKm": return { min: 400, max: 1200, step: 100 };
+      case "inclinationDeg": return { min: 30, max: 98, step: 8 };
+    }
+  }
+
+  // When the swept parameter changes, snap the range/step to its preset. Only
+  // `param` (and, for phasing, the plane count) is read here, so manual edits
+  // to min/max/step persist until the next parameter change.
+  $effect(() => {
+    const preset = presetFor(param);
+    min = preset.min;
+    max = preset.max;
+    step = preset.step;
+  });
+
   const paramLabels: Record<SweepParam, string> = {
     satsPerPlane: "Sats per plane",
     planes: "Planes",
