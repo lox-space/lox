@@ -43,7 +43,7 @@ export interface Scenario {
 export function defaultScenario(): Scenario {
   return {
     startTimeIso: "2026-06-01T00:00:00Z",
-    durationHours: 24,
+    durationHours: 6,
     walker: { t: 24, p: 3, f: 1, altitudeKm: 600, inclinationDeg: 53 },
     sar: { lookSide: "RIGHT", minIncidenceDeg: 20, maxIncidenceDeg: 45 },
   };
