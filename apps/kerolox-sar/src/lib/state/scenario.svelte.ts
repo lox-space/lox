@@ -4,6 +4,21 @@
 
 export type LookSide = "LEFT" | "RIGHT";
 
+/**
+ * Walker delta constellation configuration.
+ *
+ * Uses the standard Walker notation (T/P/F):
+ * - `t` — total number of satellites (must be divisible by `p`).
+ * - `p` — number of orbital planes (≥ 1).
+ * - `f` — phasing parameter, integer in `[0, p)`. Sets the relative
+ *   true-anomaly offset between satellites in adjacent planes.
+ * - `altitudeKm` — circular-orbit altitude above Earth's mean radius, km.
+ * - `inclinationDeg` — orbital inclination, degrees.
+ *
+ * All numeric fields must be JavaScript `number`s, not strings. Forms
+ * binding `<input type="number">` via Svelte's `bind:value` coerce
+ * automatically; other input paths must coerce before assignment.
+ */
 export interface WalkerConfig {
   t: number;
   p: number;
@@ -38,6 +53,13 @@ export function walkerProductMatchesT(w: WalkerConfig): boolean {
   return w.p > 0 && w.t > 0 && w.t % w.p === 0;
 }
 
+/**
+ * Returns `true` iff the Walker config is a valid input for
+ * `WalkerDeltaBuilder` in the engine and WASM binding.
+ *
+ * Precondition: all numeric fields are JS `number`s (callers responsible
+ * for coercion — see {@link WalkerConfig}).
+ */
 export function isWalkerValid(w: WalkerConfig): boolean {
   return (
     Number.isInteger(w.t) &&

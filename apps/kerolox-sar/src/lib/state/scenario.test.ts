@@ -20,6 +20,10 @@ describe("scenario defaults", () => {
     expect(s.walker.altitudeKm).toBeGreaterThan(0);
     expect(s.sar.lookSide).toMatch(/^(LEFT|RIGHT)$/);
   });
+
+  it("default scenario satisfies isWalkerValid", () => {
+    expect(isWalkerValid(defaultScenario().walker)).toBe(true);
+  });
 });
 
 describe("walker validation", () => {
