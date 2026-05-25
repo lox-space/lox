@@ -40,6 +40,7 @@ mod tests {
             true_anomaly_rad: 0.0,
             plane: 0,
             index_in_plane: 0,
+            // buffa injects this field on every generated message struct; required by Rust's exhaustive struct-literal check.
             __buffa_unknown_fields: Default::default(),
         };
         assert_eq!(s.id, "sat-1");

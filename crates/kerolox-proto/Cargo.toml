@@ -16,7 +16,6 @@ connectrpc.workspace = true
 buffa.workspace = true
 buffa-types.workspace = true
 serde = { workspace = true }
-serde_json.workspace = true
 http-body.workspace = true
 
 [build-dependencies]
