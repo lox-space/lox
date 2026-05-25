@@ -3,7 +3,7 @@
   SPDX-License-Identifier: MPL-2.0
 -->
 <script lang="ts">
-  import { T, Canvas, useTask } from "@threlte/core";
+  import { T, Canvas } from "@threlte/core";
   import { OrbitControls } from "@threlte/extras";
   import { WebGLRenderer } from "three";
   import { earthRotationAngleRad } from "@lox-space/wasm";
@@ -11,17 +11,12 @@
   import SatelliteMarker from "./SatelliteMarker.svelte";
   import GroundTrack from "./GroundTrack.svelte";
   import AoiPolygon from "./AoiPolygon.svelte";
+  import TickAdvancer from "./TickAdvancer.svelte";
   import { trajectoryById } from "$lib/state/trajectories.svelte";
-  import { playback, tick } from "$lib/state/playback.svelte";
+  import { playback } from "$lib/state/playback.svelte";
   import type { AoiPolygon as AoiPolygonData } from "$lib/aois";
 
   let { aois }: { aois: Map<string, AoiPolygonData> } = $props();
-
-  // Per-frame: advance playback. `delta` from useTask is seconds; multiply
-  // by 1000 to match the ms-typed playback bounds.
-  useTask((delta) => {
-    tick(delta * 1000);
-  });
 
   const earthRotation = $derived.by(() => {
     if (!Number.isFinite(playback.currentTime) || playback.currentTime === 0) return 0;
@@ -38,6 +33,8 @@
   <Canvas
     createRenderer={(canvas) => new WebGLRenderer({ canvas, logarithmicDepthBuffer: true })}
   >
+    <TickAdvancer />
+
     <T.PerspectiveCamera makeDefault position={[0, 0, 30000]} far={1e9}>
       <OrbitControls />
     </T.PerspectiveCamera>
