@@ -21,14 +21,7 @@ export interface StatusController {
   markError(message: string): void;
 }
 
-export function createStatusController(): StatusController {
-  const state = $state<StatusState>({
-    status: "idle",
-    received: 0,
-    expected: 0,
-    lastDurationMs: null,
-    lastError: null,
-  });
+function makeController(state: StatusState): StatusController {
   return {
     state,
     markStart(expected: number): void {
@@ -55,7 +48,21 @@ export function createStatusController(): StatusController {
 }
 
 /** Status of the streaming `ComputeAccess` RPC. */
-export const accessStatus = createStatusController();
+const accessState = $state<StatusState>({
+  status: "idle",
+  received: 0,
+  expected: 0,
+  lastDurationMs: null,
+  lastError: null,
+});
+export const accessStatus = makeController(accessState);
 
 /** Status of the streaming `PropagateTrajectories` RPC. */
-export const propagationStatus = createStatusController();
+const propagationState = $state<StatusState>({
+  status: "idle",
+  received: 0,
+  expected: 0,
+  lastDurationMs: null,
+  lastError: null,
+});
+export const propagationStatus = makeController(propagationState);
