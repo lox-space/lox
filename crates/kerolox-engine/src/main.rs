@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use axum::{Router, routing::get};
-use kerolox_engine::{aoi::AoiLibrary, cors::dev_cors, service::KeroloxImpl};
+use kerolox_engine::{aoi::AoiLibrary, comparators::ComparatorLibrary, cors::dev_cors, service::KeroloxImpl};
 use kerolox_proto::kerolox::v1::KeroloxExt;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -31,7 +31,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let aoi_library = Arc::new(AoiLibrary::load_from_dir(&aoi_dir)?);
     tracing::info!("loaded {} AOIs", aoi_library.len());
 
-    let service = Arc::new(KeroloxImpl::new(aoi_library));
+    let comparator_dir = aoi_dir
+        .parent()
+        .map(|p| p.join("comparators"))
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data").join("comparators"));
+    let comparator_library = Arc::new(ComparatorLibrary::load_from_dir(&comparator_dir)?);
+    tracing::info!(
+        "loaded comparators: iceye={}",
+        comparator_library.get("iceye").map(|c| c.satellites.len()).unwrap_or(0)
+    );
+
+    let service = Arc::new(KeroloxImpl::new(aoi_library, comparator_library));
     let connect = service.register(connectrpc::Router::new());
 
     let app = Router::new()

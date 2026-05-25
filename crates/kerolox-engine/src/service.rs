@@ -7,6 +7,7 @@
 
 use crate::aoi::AoiLibrary;
 use crate::bridge::bridge;
+use crate::comparators::ComparatorLibrary;
 use crate::mapping::{
 
     access_window_to_proto, parse_start_time, satellite_to_keplerian, sar_sensor_to_payload,
@@ -119,11 +120,12 @@ fn propagate_one(
 
 pub struct KeroloxImpl {
     aoi_library: Arc<AoiLibrary>,
+    comparator_library: Arc<ComparatorLibrary>,
 }
 
 impl KeroloxImpl {
-    pub fn new(aoi_library: Arc<AoiLibrary>) -> Self {
-        Self { aoi_library }
+    pub fn new(aoi_library: Arc<AoiLibrary>, comparator_library: Arc<ComparatorLibrary>) -> Self {
+        Self { aoi_library, comparator_library }
     }
 }
 
@@ -172,6 +174,22 @@ impl Kerolox for KeroloxImpl {
             spacecraft.push(sc);
         }
 
+        // Append comparator spacecraft (e.g. ICEYE) propagated via SGP4.
+        // Their ids are namespaced "<comparator>/<name>" so the result
+        // mapping can tag them as COMPARATOR.
+        for comparator_id in request.comparators.iter() {
+            let cid: &str = comparator_id.as_ref();
+            let comp = self.comparator_library.get(cid).ok_or_else(|| {
+                ConnectError::not_found(format!("unknown comparator: {cid}"))
+            })?;
+            for (name, sgp4) in &comp.satellites {
+                let sc_id = format!("{cid}/{name}");
+                let sc = Spacecraft::new(sc_id.as_str(), OrbitSource::Sgp4(sgp4.clone()))
+                    .with_sar_payload(sar);
+                spacecraft.push(sc);
+            }
+        }
+
         let mut aois = Vec::with_capacity(request.aoi_ids.len());
         for id in request.aoi_ids.iter() {
             let id_str: &str = id.as_ref();
@@ -213,11 +231,16 @@ impl Kerolox for KeroloxImpl {
         let futures_stream = bridge(lox_stream).map(|res| {
             let pair = res?;
             let windows = pair.windows.iter().map(access_window_to_proto).collect();
+            let sc_id_str = pair.sc_id.to_string();
+            let (source, comparator_id) = match sc_id_str.split_once('/') {
+                Some((cid, _)) => (ResultSource::RESULT_SOURCE_COMPARATOR, cid.to_string()),
+                None => (ResultSource::RESULT_SOURCE_USER, String::new()),
+            };
             Ok::<_, ConnectError>(AccessPairResult {
-                sc_id: pair.sc_id.to_string(),
+                sc_id: sc_id_str,
                 aoi_id: pair.aoi_id.to_string(),
-                source: ResultSource::RESULT_SOURCE_USER.into(),
-                comparator_id: String::new(),
+                source: source.into(),
+                comparator_id,
                 windows,
                 __buffa_unknown_fields: Default::default(),
             })
