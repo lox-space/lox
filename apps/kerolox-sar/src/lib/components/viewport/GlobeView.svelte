@@ -82,7 +82,7 @@
 
     <!-- Inertial atmosphere shell: sun-aware Fresnel limb glow, outside the
          rotating Earth group so its glow tracks the Sun, not the surface. -->
-    <Atmosphere radiusKm={earthRadiusKm} {sunDir} />
+    <Atmosphere radiusKm={earthRadiusKm} {sunDir} color="#9cc4f0" intensity={0.7} />
 
     <T.Group rotation={[0, earthRotation, 0]}>
       <Earth textureUrl="/assets/Earth-color.jpg" />
