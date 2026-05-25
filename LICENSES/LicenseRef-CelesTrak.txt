@@ -1,0 +1,4 @@
+CelesTrak data is provided free of charge for public use. Orbital element
+sets (TLEs) sourced from https://celestrak.org. CelesTrak requests
+attribution and that data not be represented as official. This snapshot is
+used for comparison/visualisation only.

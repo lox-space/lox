@@ -30,6 +30,7 @@ lox-orbits = { workspace = true }
 lox-space = { workspace = true }
 lox-stream = { workspace = true }
 lox-time = { workspace = true }
+sgp4.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tokio-stream.workspace = true

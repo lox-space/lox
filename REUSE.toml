@@ -25,6 +25,11 @@ SPDX-FileCopyrightText = "2026 Helge Eichhorn <git@helgeeichhorn.de>"
 SPDX-License-Identifier = "CC0-1.0"
 
 [[annotations]]
+path = "crates/kerolox-engine/data/comparators/**"
+SPDX-FileCopyrightText = "2026 CelesTrak (https://celestrak.org)"
+SPDX-License-Identifier = "LicenseRef-CelesTrak"
+
+[[annotations]]
 path = "pyrightconfig.json"
 SPDX-FileCopyrightText = "2023 Helge Eichhorn <git@helgeeichhorn.de>"
 SPDX-License-Identifier = "MPL-2.0"

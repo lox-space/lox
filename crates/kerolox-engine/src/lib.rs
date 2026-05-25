@@ -11,6 +11,7 @@
 
 pub mod aoi;
 pub mod bridge;
+pub mod comparators;
 pub mod cors;
 pub mod mapping;
 pub mod service;
