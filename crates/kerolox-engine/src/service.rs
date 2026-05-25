@@ -8,6 +8,7 @@
 use crate::aoi::AoiLibrary;
 use crate::bridge::bridge;
 use crate::mapping::{
+
     access_window_to_proto, parse_start_time, satellite_to_keplerian, sar_sensor_to_payload,
     unix_epoch_ms_from_utc,
 };
@@ -29,6 +30,7 @@ use lox_space::core::elements::Keplerian;
 use lox_space::time::time_scales::Tai;
 use lox_space::time::utc::transformations::ToUtc;
 use lox_stream::OnError;
+use tokio_stream::wrappers::ReceiverStream;
 use lox_time::deltas::TimeDelta;
 use std::sync::Arc;
 use thiserror::Error;
@@ -254,20 +256,29 @@ impl Kerolox for KeroloxImpl {
             })
             .collect::<Result<_, _>>()?;
 
-        let lox_stream = lox_stream::par_stream(
-            sats,
-            64,
-            OnError::Abort,
-            move |(sc_id, kep), _token| {
-                propagate_one(sc_id, kep, start, duration_s, step_s_final)
-            },
-        );
+        // Run propagation sequentially on the tokio blocking pool rather than
+        // the rayon pool. This keeps the rayon pool free for compute_access's
+        // parallel access analysis, so the two RPCs run concurrently instead
+        // of access queuing behind propagation.
+        let (tx, rx) =
+            tokio::sync::mpsc::channel::<Result<SampledTrajectoryMessage, ConnectError>>(64);
 
-        let futures_stream = bridge(lox_stream).map(|res| {
-            let msg = res.map_err(|e| ConnectError::internal(e.to_string()))?;
-            Ok::<_, ConnectError>(msg)
+        tokio::task::spawn_blocking(move || {
+            for (sc_id, kep) in sats {
+                let result = propagate_one(sc_id, kep, start, duration_s, step_s_final)
+                    .map_err(|e| ConnectError::internal(e.to_string()));
+                let is_err = result.is_err();
+                if tx.blocking_send(result).is_err() {
+                    // Receiver dropped (client disconnected / aborted).
+                    break;
+                }
+                if is_err {
+                    break;
+                }
+            }
         });
 
-        Response::stream_ok(futures_stream)
+        let stream = ReceiverStream::new(rx);
+        Response::stream_ok(stream)
     }
 }
