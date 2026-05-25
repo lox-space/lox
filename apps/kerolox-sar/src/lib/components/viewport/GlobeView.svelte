@@ -15,6 +15,7 @@
   import { trajectoryById } from "$lib/state/trajectories.svelte";
   import { playback } from "$lib/state/playback.svelte";
   import type { AoiPolygon as AoiPolygonData } from "$lib/aois";
+  import { colorForPlane, parsePlaneFromId } from "./colors";
 
   let { aois }: { aois: Map<string, AoiPolygonData> } = $props();
 
@@ -47,12 +48,12 @@
         <AoiPolygon aoi={a} />
       {/each}
       {#each Array.from(trajectoryById.entries()) as [id, traj] (id)}
-        <GroundTrack {traj} />
+        <GroundTrack {traj} color={colorForPlane(parsePlaneFromId(id))} />
       {/each}
     </T.Group>
 
     {#each Array.from(trajectoryById.entries()) as [id, traj] (id)}
-      <SatelliteMarker {traj} />
+      <SatelliteMarker {traj} color={colorForPlane(parsePlaneFromId(id))} />
     {/each}
   </Canvas>
 </div>

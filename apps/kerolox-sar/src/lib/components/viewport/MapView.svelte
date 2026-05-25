@@ -7,6 +7,7 @@
   import { trajectoryById } from "$lib/state/trajectories.svelte";
   import { playback, tick } from "$lib/state/playback.svelte";
   import type { AoiPolygon as AoiPolygonData } from "$lib/aois";
+  import { colorForPlane, parsePlaneFromId } from "./colors";
 
   let { aois }: { aois: Map<string, AoiPolygonData> } = $props();
 
@@ -46,10 +47,10 @@
       ctx.stroke();
     }
 
-    // Ground tracks (split at ±180 longitude crossings).
-    ctx.strokeStyle = "#7c8aff";
+    // Ground tracks (split at ±180 longitude crossings, color per plane).
     ctx.lineWidth = 1;
-    for (const traj of trajectoryById.values()) {
+    for (const [id, traj] of trajectoryById.entries()) {
+      ctx.strokeStyle = colorForPlane(parsePlaneFromId(id));
       ctx.beginPath();
       let prevLon: number | null = null;
       const n = traj.groundDeg.length / 2;
@@ -69,10 +70,9 @@
       ctx.stroke();
     }
 
-    // Current satellite positions.
-    ctx.fillStyle = "#7c8aff";
+    // Current satellite positions: interpolate from ground-track samples at currentTime.
     const t = playback.currentTime;
-    for (const traj of trajectoryById.values()) {
+    for (const [id, traj] of trajectoryById.entries()) {
       const epochs = traj.epochsMs;
       if (epochs.length === 0) continue;
       let lo = 0;
@@ -88,6 +88,7 @@
       const lat = traj.groundDeg[2 * lo] + (traj.groundDeg[2 * hi] - traj.groundDeg[2 * lo]) * f;
       const lon = traj.groundDeg[2 * lo + 1] + (traj.groundDeg[2 * hi + 1] - traj.groundDeg[2 * lo + 1]) * f;
       const [x, y] = lonLatToXY(lon, lat, width, height);
+      ctx.fillStyle = colorForPlane(parsePlaneFromId(id));
       ctx.beginPath();
       ctx.arc(x, y, 4, 0, Math.PI * 2);
       ctx.fill();
