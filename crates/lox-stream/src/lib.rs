@@ -19,4 +19,4 @@ mod stream;
 // pub use builder::par_stream;
 pub use cancellation::CancellationToken;
 pub use error::OnError;
-// pub use stream::Stream;
+pub use stream::Stream;
