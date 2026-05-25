@@ -71,6 +71,7 @@ message PropagateRequest {
   double duration_seconds = 2;
   repeated SatelliteOrbitalElements satellites = 3;
   double step_seconds = 4;
+  repeated string comparators = 5;
 }
 
 message SampledTrajectoryMessage {
@@ -81,6 +82,8 @@ message SampledTrajectoryMessage {
   repeated double eci_threejs_buffer_km = 3;
   // Ground-track lat/lon, degrees. Interleaved [lat, lon] pairs.
   repeated double ground_lat_lon_deg = 4;
+  // Empty for user satellites; the comparator id (e.g. "iceye") otherwise.
+  string comparator_id = 5;
 }
 
 service Kerolox {

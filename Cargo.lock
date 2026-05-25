@@ -1528,6 +1528,7 @@ dependencies = [
  "lox-stream",
  "lox-time",
  "proptest",
+ "sgp4",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -3236,6 +3237,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]

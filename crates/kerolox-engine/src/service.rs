@@ -9,8 +9,7 @@ use crate::aoi::AoiLibrary;
 use crate::bridge::bridge;
 use crate::comparators::ComparatorLibrary;
 use crate::mapping::{
-
-    access_window_to_proto, parse_start_time, satellite_to_keplerian, sar_sensor_to_payload,
+    access_window_to_proto, parse_start_time, sar_sensor_to_payload, satellite_to_keplerian,
     unix_epoch_ms_from_utc,
 };
 use buffa::view::{MessageView, OwnedView};
@@ -21,20 +20,21 @@ use kerolox_proto::kerolox::v1::{
     SampledTrajectoryMessage,
 };
 use lox_analysis::assets::{Scenario, Spacecraft};
-use lox_analysis::imaging::aoi::AoiId;
 use lox_analysis::imaging::analysis::SarAccessAnalysis;
+use lox_analysis::imaging::aoi::AoiId;
 use lox_bodies::{DynOrigin, Earth};
 use lox_frames::{DynFrame, frames::Icrf, providers::DefaultRotationProvider};
 use lox_orbits::orbits::KeplerianOrbit;
+use lox_orbits::propagators::sgp4::Sgp4;
 use lox_orbits::propagators::{OrbitSource, semi_analytical::DynVallado};
 use lox_space::core::elements::Keplerian;
 use lox_space::time::time_scales::Tai;
 use lox_space::time::utc::transformations::ToUtc;
 use lox_stream::OnError;
-use tokio_stream::wrappers::ReceiverStream;
 use lox_time::deltas::TimeDelta;
 use std::sync::Arc;
 use thiserror::Error;
+use tokio_stream::wrappers::ReceiverStream;
 
 /// Errors that can occur during single-satellite trajectory propagation.
 #[derive(Debug, Error)]
@@ -86,7 +86,10 @@ fn propagate_one(
 
         let state = vallado
             .state_at(t_dyn)
-            .map_err(|e| PropagateError::Propagation { step: i, msg: e.to_string() })?;
+            .map_err(|e| PropagateError::Propagation {
+                step: i,
+                msg: e.to_string(),
+            })?;
 
         // ECI → Three.js (Y-up): (x, z, -y), m → km.
         let pos = state.position();
@@ -95,12 +98,19 @@ fn propagate_one(
         eci_km.push(-pos.y / 1000.0);
 
         // Body-fixed frame for ground track.
-        let body_fixed = state
-            .try_to_frame(iau_earth, &provider)
-            .map_err(|e| PropagateError::FrameTransform { step: i, msg: e.to_string() })?;
-        let ground = body_fixed
-            .try_to_ground_location()
-            .map_err(|e| PropagateError::GroundLocation { step: i, msg: e.to_string() })?;
+        let body_fixed = state.try_to_frame(iau_earth, &provider).map_err(|e| {
+            PropagateError::FrameTransform {
+                step: i,
+                msg: e.to_string(),
+            }
+        })?;
+        let ground =
+            body_fixed
+                .try_to_ground_location()
+                .map_err(|e| PropagateError::GroundLocation {
+                    step: i,
+                    msg: e.to_string(),
+                })?;
         ground_deg.push(ground.latitude().to_degrees());
         ground_deg.push(ground.longitude().to_degrees());
 
@@ -114,6 +124,83 @@ fn propagate_one(
         epochs_ms,
         eci_threejs_buffer_km: eci_km,
         ground_lat_lon_deg: ground_deg,
+        comparator_id: String::new(),
+        __buffa_unknown_fields: Default::default(),
+    })
+}
+
+/// Propagate one comparator satellite (SGP4) over the scenario window.
+/// Mirrors `propagate_one` but sources state from an `Sgp4` propagator
+/// (TEME frame) and converts to ICRF for the ECI buffer.
+fn propagate_one_sgp4(
+    sc_id: String,
+    comparator_id: String,
+    sgp4: Sgp4,
+    start: lox_time::Time<Tai>,
+    duration_s: f64,
+    step_s: f64,
+) -> Result<SampledTrajectoryMessage, PropagateError> {
+    let iau_earth = DynFrame::Iau(DynOrigin::Earth);
+    let provider = DefaultRotationProvider;
+    let n_steps = (duration_s / step_s) as usize;
+    let total = n_steps + 1;
+
+    let mut epochs_ms = Vec::with_capacity(total);
+    let mut eci_km = Vec::with_capacity(total * 3);
+    let mut ground_deg = Vec::with_capacity(total * 2);
+
+    for i in 0..=n_steps {
+        let dt_s = step_s * i as f64;
+        let t_tai = start + TimeDelta::from_seconds_f64(dt_s);
+
+        // SGP4 yields a TEME state at a concrete TAI epoch.
+        let teme = sgp4
+            .state_at(t_tai)
+            .map_err(|e| PropagateError::Propagation {
+                step: i,
+                msg: e.to_string(),
+            })?;
+        let state = teme.into_dyn();
+
+        // ECI (Three.js Y-up) buffer: convert TEME -> ICRF to match the user path.
+        let icrf = state.try_to_frame(DynFrame::Icrf, &provider).map_err(|e| {
+            PropagateError::FrameTransform {
+                step: i,
+                msg: e.to_string(),
+            }
+        })?;
+        let pos = icrf.position();
+        eci_km.push(pos.x / 1000.0);
+        eci_km.push(pos.z / 1000.0);
+        eci_km.push(-pos.y / 1000.0);
+
+        // Ground track via body-fixed frame.
+        let body_fixed = state.try_to_frame(iau_earth, &provider).map_err(|e| {
+            PropagateError::FrameTransform {
+                step: i,
+                msg: e.to_string(),
+            }
+        })?;
+        let ground =
+            body_fixed
+                .try_to_ground_location()
+                .map_err(|e| PropagateError::GroundLocation {
+                    step: i,
+                    msg: e.to_string(),
+                })?;
+        ground_deg.push(ground.latitude().to_degrees());
+        ground_deg.push(ground.longitude().to_degrees());
+
+        let utc = t_tai.to_utc();
+        epochs_ms.push(unix_epoch_ms_from_utc(&utc));
+    }
+
+    Ok(SampledTrajectoryMessage {
+        sc_id,
+        epochs_ms,
+        eci_threejs_buffer_km: eci_km,
+        ground_lat_lon_deg: ground_deg,
+        comparator_id,
         __buffa_unknown_fields: Default::default(),
     })
 }
@@ -125,7 +212,10 @@ pub struct KeroloxImpl {
 
 impl KeroloxImpl {
     pub fn new(aoi_library: Arc<AoiLibrary>, comparator_library: Arc<ComparatorLibrary>) -> Self {
-        Self { aoi_library, comparator_library }
+        Self {
+            aoi_library,
+            comparator_library,
+        }
     }
 }
 
@@ -160,9 +250,8 @@ impl Kerolox for KeroloxImpl {
             let s_owned = s_view.to_owned_message();
             let keplerian = satellite_to_keplerian(&s_owned)
                 .map_err(|e| ConnectError::invalid_argument(e.to_string()))?;
-            let kep_orbit =
-                KeplerianOrbit::try_from_keplerian(keplerian, start, Earth, Icrf)
-                    .map_err(|e| ConnectError::invalid_argument(e.to_string()))?;
+            let kep_orbit = KeplerianOrbit::try_from_keplerian(keplerian, start, Earth, Icrf)
+                .map_err(|e| ConnectError::invalid_argument(e.to_string()))?;
             let cartesian = kep_orbit
                 .try_to_cartesian()
                 .map_err(|e| ConnectError::invalid_argument(e.to_string()))?;
@@ -179,9 +268,10 @@ impl Kerolox for KeroloxImpl {
         // mapping can tag them as COMPARATOR.
         for comparator_id in request.comparators.iter() {
             let cid: &str = comparator_id.as_ref();
-            let comp = self.comparator_library.get(cid).ok_or_else(|| {
-                ConnectError::not_found(format!("unknown comparator: {cid}"))
-            })?;
+            let comp = self
+                .comparator_library
+                .get(cid)
+                .ok_or_else(|| ConnectError::not_found(format!("unknown comparator: {cid}")))?;
             for (name, sgp4) in &comp.satellites {
                 let sc_id = format!("{cid}/{name}");
                 let sc = Spacecraft::new(sc_id.as_str(), OrbitSource::Sgp4(sgp4.clone()))
@@ -264,7 +354,11 @@ impl Kerolox for KeroloxImpl {
             )));
         }
         let step_s = request.step_seconds;
-        let step_s_final = if step_s.is_finite() && step_s > 0.0 { step_s } else { 30.0 };
+        let step_s_final = if step_s.is_finite() && step_s > 0.0 {
+            step_s
+        } else {
+            30.0
+        };
 
         // Eagerly validate and collect (sc_id, Keplerian) pairs so we own them
         // before spawning the parallel stream.
@@ -278,6 +372,20 @@ impl Kerolox for KeroloxImpl {
                 Ok::<_, ConnectError>((s_owned.id.to_string(), kep))
             })
             .collect::<Result<_, _>>()?;
+
+        // Resolve comparator satellites (SGP4) to stream alongside the user
+        // trajectories. Cloned into owned data before spawn_blocking.
+        let mut comp_sats: Vec<(String, String, Sgp4)> = Vec::new();
+        for comparator_id in request.comparators.iter() {
+            let cid: &str = comparator_id.as_ref();
+            let comp = self
+                .comparator_library
+                .get(cid)
+                .ok_or_else(|| ConnectError::not_found(format!("unknown comparator: {cid}")))?;
+            for (name, sgp4) in &comp.satellites {
+                comp_sats.push((format!("{cid}/{name}"), cid.to_string(), sgp4.clone()));
+            }
+        }
 
         // Run propagation sequentially on the tokio blocking pool rather than
         // the rayon pool. This keeps the rayon pool free for compute_access's
@@ -293,6 +401,18 @@ impl Kerolox for KeroloxImpl {
                 let is_err = result.is_err();
                 if tx.blocking_send(result).is_err() {
                     // Receiver dropped (client disconnected / aborted).
+                    break;
+                }
+                if is_err {
+                    break;
+                }
+            }
+            for (sc_id, comparator_id, sgp4) in comp_sats {
+                let result =
+                    propagate_one_sgp4(sc_id, comparator_id, sgp4, start, duration_s, step_s_final)
+                        .map_err(|e| ConnectError::internal(e.to_string()));
+                let is_err = result.is_err();
+                if tx.blocking_send(result).is_err() {
                     break;
                 }
                 if is_err {

@@ -84,7 +84,10 @@ async fn compute_access_streams_at_least_one_pair() {
         count += 1;
     }
     eprintln!("smoke: received {count} AccessPairResult(s)");
-    assert!(count >= 1, "expected at least one streamed pair, got {count}");
+    assert!(
+        count >= 1,
+        "expected at least one streamed pair, got {count}"
+    );
     server.abort();
 }
 
@@ -117,6 +120,7 @@ async fn propagate_trajectories_streams_at_least_one_message() {
             index_in_plane: 0,
             __buffa_unknown_fields: Default::default(),
         }],
+        comparators: vec![],
         __buffa_unknown_fields: Default::default(),
     };
 
@@ -127,11 +131,78 @@ async fn propagate_trajectories_streams_at_least_one_message() {
     let mut stream = client.propagate_trajectories(req).await.unwrap();
     let mut count = 0usize;
     while let Some(msg) = stream.message().await.unwrap() {
-        eprintln!("smoke: trajectory sc_id={}, {} samples", msg.sc_id, msg.epochs_ms.len());
+        eprintln!(
+            "smoke: trajectory sc_id={}, {} samples",
+            msg.sc_id,
+            msg.epochs_ms.len()
+        );
         count += 1;
     }
     eprintln!("smoke: received {count} SampledTrajectoryMessage(s)");
-    assert!(count >= 1, "expected at least one trajectory message, got {count}");
+    assert!(
+        count >= 1,
+        "expected at least one trajectory message, got {count}"
+    );
+    server.abort();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn propagate_trajectories_streams_comparator_messages() {
+    let service = make_service();
+    let connect_router = service.register(connectrpc::Router::new());
+    let app = axum::Router::new().fallback_service(connect_router.into_axum_service());
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move {
+        let _ = axum::serve(listener, app).await;
+    });
+
+    // User satellite + ICEYE comparator, 1 hour scenario, 60 s step.
+    let req = PropagateRequest {
+        start_time_iso: "2026-06-01T00:00:00.000".into(),
+        duration_seconds: 3600.0,
+        step_seconds: 60.0,
+        satellites: vec![SatelliteOrbitalElements {
+            id: "sat-0".into(),
+            sma_m: 6_978_137.0,
+            ecc: 0.0,
+            inc_rad: 53.0_f64.to_radians(),
+            raan_rad: 0.0,
+            aop_rad: 0.0,
+            true_anomaly_rad: 0.0,
+            plane: 0,
+            index_in_plane: 0,
+            __buffa_unknown_fields: Default::default(),
+        }],
+        comparators: vec!["iceye".into()],
+        __buffa_unknown_fields: Default::default(),
+    };
+
+    let http = HttpClient::plaintext();
+    let config = ClientConfig::new(format!("http://{addr}").parse().unwrap());
+    let client = KeroloxClient::new(http, config);
+
+    let mut stream = client.propagate_trajectories(req).await.unwrap();
+    let mut comparator_count = 0usize;
+    while let Some(msg) = stream.message().await.unwrap() {
+        if !msg.comparator_id.is_empty() {
+            comparator_count += 1;
+            assert_eq!(
+                msg.comparator_id, "iceye",
+                "comparator_id should be 'iceye'"
+            );
+            assert!(
+                !msg.eci_threejs_buffer_km.is_empty(),
+                "comparator trajectory has no samples"
+            );
+        }
+    }
+    eprintln!("smoke: received {comparator_count} comparator trajectory message(s)");
+    assert!(
+        comparator_count >= 1,
+        "expected at least one comparator trajectory, got {comparator_count}"
+    );
     server.abort();
 }
 
@@ -185,7 +256,10 @@ async fn compute_access_comparators_returns_comparator_tagged_pairs() {
     while let Some(msg) = stream.message().await.unwrap() {
         if msg.source == ResultSource::RESULT_SOURCE_COMPARATOR {
             comparator_count += 1;
-            assert_eq!(msg.comparator_id, "iceye", "comparator_id should be 'iceye'");
+            assert_eq!(
+                msg.comparator_id, "iceye",
+                "comparator_id should be 'iceye'"
+            );
         } else {
             user_count += 1;
         }
@@ -193,6 +267,9 @@ async fn compute_access_comparators_returns_comparator_tagged_pairs() {
     eprintln!(
         "smoke: received {user_count} USER pair(s) and {comparator_count} COMPARATOR pair(s)"
     );
-    assert!(comparator_count >= 1, "expected at least one COMPARATOR pair, got {comparator_count}");
+    assert!(
+        comparator_count >= 1,
+        "expected at least one COMPARATOR pair, got {comparator_count}"
+    );
     server.abort();
 }
