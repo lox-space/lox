@@ -47,14 +47,32 @@ analysis = lox.OpticalAccessAnalysis(
 ## Results
 
 Both `OpticalAccessAnalysis` and `SarAccessAnalysis` return an `AccessResults`
-object. Call `intervals(spacecraft_name, aoi_name)` to retrieve the list of
+object. Call `windows(spacecraft_name, aoi_name)` to retrieve the list of
 access windows for a given spacecraft–AOI pair:
 
 ```python
 results = analysis.compute()
-for iv in results.intervals("S2A", "rome"):
+for window in results.windows("S2A", "rome"):
+    iv = window.interval()
     print(f"{iv.start()} → {iv.end()}  ({float(iv.duration()):.0f}s)")
 ```
+
+### Pass direction
+
+Each access window carries the spacecraft's pass direction
+(`PassDirection.Ascending` or `PassDirection.Descending`) at the window
+midpoint. Useful for InSAR coherence, change-detection workflows, and
+disambiguating the two near-identical windows per orbit produced by
+`SarPayload` with `LookSide.Either`.
+
+```python
+for window in results.windows("s1a", "europe"):
+    print(window.interval(), window.direction())
+```
+
+For LEO orbits over non-polar AOIs the direction is essentially constant
+through any single window (a typical LEO pass is short relative to a pole
+crossing). The midpoint sample is representative.
 
 ---
 

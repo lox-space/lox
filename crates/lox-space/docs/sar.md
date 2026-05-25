@@ -43,8 +43,10 @@ analysis = lox.SarAccessAnalysis(
 )
 results = analysis.compute()
 
-for iv in results.intervals("s1a", "europe"):
+for window in results.windows("s1a", "europe"):
+    iv = window.interval()
     print(f"{iv.start()} → {iv.end()}  ({float(iv.duration()):.0f}s)")
+    print(window.direction())
 ```
 
 ## Looking side
