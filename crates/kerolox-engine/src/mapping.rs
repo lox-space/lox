@@ -60,7 +60,14 @@ pub fn satellite_to_keplerian(s: &SatelliteOrbitalElements) -> Result<Keplerian,
     Ok(Keplerian::new(sma, ecc, inc, raan, aop, ta))
 }
 
-/// Converts a [`SarSensor`] proto message into a lox [`SarPayload`].
+/// Convert a proto `SarSensor` to a lox `SarPayload`.
+///
+/// Uses the incidence-angle constructor; the proto fields are degrees.
+///
+/// When `look_side` is `LOOK_SIDE_UNSPECIFIED` (the proto3 default), the
+/// payload defaults to **right-looking**. Callers (e.g. the service
+/// handler in Task 7) should consider logging when this fallback fires,
+/// since it silently picks a side for ambiguous requests.
 pub fn sar_sensor_to_payload(s: &SarSensor) -> Result<SarPayload, MappingError> {
     let look = match s.look_side.as_known() {
         Some(ProtoLookSide::LOOK_SIDE_LEFT) => LoxLookSide::Left,
@@ -81,8 +88,8 @@ pub fn access_window_to_proto(w: &LoxAccessWindow) -> ProtoAccessWindow {
     let start_utc: Utc = w.interval.start().to_utc();
     let end_utc: Utc = w.interval.end().to_utc();
     // Format as ISO-8601 without the trailing " UTC" suffix that Utc::to_string appends.
-    let start_iso = format!("{}T{}", start_utc.date(), start_utc.time());
-    let end_iso = format!("{}T{}", end_utc.date(), end_utc.time());
+    let start_iso = format!("{}T{}Z", start_utc.date(), start_utc.time());
+    let end_iso = format!("{}T{}Z", end_utc.date(), end_utc.time());
     let direction = match w.direction {
         LoxPassDirection::Ascending => ProtoPassDirection::PASS_DIRECTION_ASCENDING.into(),
         LoxPassDirection::Descending => ProtoPassDirection::PASS_DIRECTION_DESCENDING.into(),
@@ -121,6 +128,7 @@ mod tests {
             true_anomaly_rad: 0.0,
             plane: 0,
             index_in_plane: 0,
+            // buffa injects this on every generated message struct; required by Rust's exhaustive struct-literal check.
             __buffa_unknown_fields: Default::default(),
         };
         let k = satellite_to_keplerian(&s).unwrap();
@@ -145,6 +153,26 @@ mod tests {
             __buffa_unknown_fields: Default::default(),
         };
         assert!(satellite_to_keplerian(&s).is_err());
+    }
+
+    #[test]
+    fn satellite_to_keplerian_rejects_negative_raan() {
+        let s = SatelliteOrbitalElements {
+            id: "bad-raan".into(),
+            sma_m: 7_000_000.0,
+            ecc: 0.001,
+            inc_rad: 0.9,
+            raan_rad: -1.0,
+            aop_rad: 0.0,
+            true_anomaly_rad: 0.0,
+            plane: 0,
+            index_in_plane: 0,
+            __buffa_unknown_fields: Default::default(),
+        };
+        assert!(matches!(
+            satellite_to_keplerian(&s),
+            Err(MappingError::Raan(_))
+        ));
     }
 
     #[test]
