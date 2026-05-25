@@ -1,0 +1,71 @@
+// SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+//
+// SPDX-License-Identifier: MPL-2.0
+
+syntax = "proto3";
+
+package kerolox.v1;
+
+enum LookSide {
+  LOOK_SIDE_UNSPECIFIED = 0;
+  LOOK_SIDE_LEFT = 1;
+  LOOK_SIDE_RIGHT = 2;
+}
+
+enum PassDirection {
+  PASS_DIRECTION_UNSPECIFIED = 0;
+  PASS_DIRECTION_ASCENDING = 1;
+  PASS_DIRECTION_DESCENDING = 2;
+}
+
+enum ResultSource {
+  RESULT_SOURCE_UNSPECIFIED = 0;
+  RESULT_SOURCE_USER = 1;
+  RESULT_SOURCE_COMPARATOR = 2;
+}
+
+message SatelliteOrbitalElements {
+  string id = 1;
+  double sma_m = 2;
+  double ecc = 3;
+  double inc_rad = 4;
+  double raan_rad = 5;
+  double aop_rad = 6;
+  double true_anomaly_rad = 7;
+  uint32 plane = 8;
+  uint32 index_in_plane = 9;
+}
+
+message SarSensor {
+  LookSide look_side = 1;
+  double min_incidence_deg = 2;
+  double max_incidence_deg = 3;
+}
+
+message AccessRequest {
+  string start_time_iso = 1;
+  double duration_seconds = 2;
+  repeated SatelliteOrbitalElements satellites = 3;
+  SarSensor sar = 4;
+  repeated string aoi_ids = 5;
+  repeated string comparators = 6;
+  double step_seconds = 7;
+}
+
+message AccessWindow {
+  string start_iso = 1;
+  string end_iso = 2;
+  PassDirection direction = 3;
+}
+
+message AccessPairResult {
+  string sc_id = 1;
+  string aoi_id = 2;
+  ResultSource source = 3;
+  string comparator_id = 4;
+  repeated AccessWindow windows = 5;
+}
+
+service Kerolox {
+  rpc ComputeAccess(AccessRequest) returns (stream AccessPairResult);
+}
