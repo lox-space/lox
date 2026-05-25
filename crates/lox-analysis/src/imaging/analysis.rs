@@ -6,8 +6,11 @@
 
 use core::marker::PhantomData;
 use std::collections::HashMap;
+use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::sync::Arc;
 
 use lox_core::glam::DVec3;
+use lox_stream::{OnError, Stream, par_stream};
 use rayon::prelude::*;
 use thiserror::Error;
 
@@ -26,7 +29,7 @@ use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::Tai;
 
-use crate::assets::{AssetId, Scenario, Spacecraft};
+use crate::assets::{AssetId, Scenario, Spacecraft, panic_message};
 use crate::imaging::aoi::{Aoi, AoiId};
 use crate::imaging::optical::OpticalPayload;
 use crate::imaging::results::{AccessResults, AccessWindow, PassDirection};
@@ -321,8 +324,80 @@ where
         let windows_by_pair: HashMap<_, _> = results?.into_iter().collect();
         Ok(AccessResults::new(windows_by_pair))
     }
+
+    /// Stream (spacecraft, AOI) access results as each pair completes.
+    ///
+    /// Consumes the analysis (moves the AOI list into the streaming task) and
+    /// requires `Arc`-shared scenario and ensemble so the work can outlive
+    /// the original borrow.
+    pub fn compute_stream(
+        self,
+        scenario: Arc<Scenario<O, R>>,
+        ensemble: Arc<Ensemble<AssetId, Tai, O, R>>,
+        capacity: usize,
+        on_error: OnError,
+    ) -> Stream<AccessPairResult, AccessError>
+    where
+        P: 'static,
+        O: 'static,
+        R: 'static,
+    {
+        let interval = *scenario.interval();
+        let step = self.step;
+        let body_fixed_frame = self.body_fixed_frame;
+        let origin = scenario.origin();
+        let aois = Arc::new(self.aois);
+
+        let mut jobs: Vec<AccessJob<P>> = Vec::new();
+        for sc in scenario.spacecraft() {
+            if let Some(payload) = <Spacecraft as PayloadAccessor<P>>::extract(sc) {
+                for (aoi_idx, (aoi_id, _)) in aois.iter().enumerate() {
+                    jobs.push(AccessJob {
+                        sc_id: sc.id().clone(),
+                        aoi_id: aoi_id.clone(),
+                        aoi_idx,
+                        payload,
+                    });
+                }
+            }
+        }
+
+        drop(scenario);
+
+        par_stream(jobs, capacity, on_error, move |job, _token| {
+            let sc_id_p = job.sc_id.clone();
+            let aoi_id_p = job.aoi_id.clone();
+            catch_unwind(AssertUnwindSafe(|| {
+                let (_, aoi) = &aois[job.aoi_idx];
+                let windows = access_one(
+                    &job.sc_id,
+                    &job.aoi_id,
+                    aoi,
+                    job.payload,
+                    &ensemble,
+                    origin,
+                    body_fixed_frame,
+                    step,
+                    interval,
+                )?;
+                Ok(AccessPairResult {
+                    sc_id: job.sc_id,
+                    aoi_id: job.aoi_id,
+                    windows,
+                })
+            }))
+            .unwrap_or_else(|payload| {
+                Err(AccessError::WorkerPanicked {
+                    sc_id: sc_id_p,
+                    aoi_id: aoi_id_p,
+                    message: panic_message(payload),
+                })
+            })
+        })
+    }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn access_one<P, O, R>(
     sc_id: &AssetId,
     _aoi_id: &AoiId,
@@ -365,6 +440,23 @@ where
         });
     }
     Ok(windows)
+}
+
+/// One (spacecraft, AOI) pair's access windows, streamed as the pair completes.
+pub struct AccessPairResult {
+    /// Spacecraft id.
+    pub sc_id: AssetId,
+    /// Area-of-interest id.
+    pub aoi_id: AoiId,
+    /// Access windows (interval + pass direction) for this pair.
+    pub windows: Vec<AccessWindow>,
+}
+
+struct AccessJob<P: Copy + Send + 'static> {
+    sc_id: AssetId,
+    aoi_id: AoiId,
+    aoi_idx: usize,
+    payload: P,
 }
 
 /// Type alias for the optical access analysis (parameterised by [`OpticalPayload`]).
