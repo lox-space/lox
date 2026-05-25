@@ -24,7 +24,7 @@ lox-ephem.workspace = true
 lox-frames.workspace = true
 lox-math.workspace = true
 lox-orbits.workspace = true
-lox-stream.workspace = true
+lox-stream = { workspace = true, optional = true }
 lox-time = { workspace = true, features = ["chrono"] }
 
 geo = { workspace = true, optional = true }
@@ -37,6 +37,7 @@ thiserror.workspace = true
 comms = ["dep:lox-comms"]
 geojson = ["dep:geojson"]
 imaging = ["dep:geo"]
+stream = ["dep:lox-stream"]
 serde = [
   "dep:serde",
   "lox-bodies/serde",
