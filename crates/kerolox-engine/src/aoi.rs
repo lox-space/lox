@@ -76,8 +76,8 @@ fn load_one(label: &str, body: &str) -> Result<(String, Aoi), AoiLibraryError> {
         .and_then(|v| v.as_str())
         .map(str::to_owned)
         .ok_or_else(|| AoiLibraryError::MissingId(label.to_string()))?;
-    let aoi = Aoi::from_geojson(body)
-        .map_err(|e| AoiLibraryError::Invalid(label.to_string(), e))?;
+    let aoi =
+        Aoi::from_geojson(body).map_err(|e| AoiLibraryError::Invalid(label.to_string(), e))?;
     Ok((id, aoi))
 }
 

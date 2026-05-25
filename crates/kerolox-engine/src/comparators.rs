@@ -14,9 +14,16 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum ComparatorError {
     #[error("comparator file {file:?} could not be read: {source}")]
-    Read { file: String, source: std::io::Error },
+    Read {
+        file: String,
+        source: std::io::Error,
+    },
     #[error("comparator file {file:?} has a malformed TLE near line {line}: {msg}")]
-    Tle { file: String, line: usize, msg: String },
+    Tle {
+        file: String,
+        line: usize,
+        msg: String,
+    },
 }
 
 /// A named comparator constellation: its satellites as SGP4 propagators.
@@ -45,37 +52,47 @@ impl ComparatorLibrary {
 }
 
 fn load_tle_file(id: &str, path: &Path) -> Result<Comparator, ComparatorError> {
-    let body = std::fs::read_to_string(path)
-        .map_err(|e| ComparatorError::Read { file: id.to_string(), source: e })?;
+    let body = std::fs::read_to_string(path).map_err(|e| ComparatorError::Read {
+        file: id.to_string(),
+        source: e,
+    })?;
     let lines: Vec<&str> = body.lines().collect();
     let mut satellites = Vec::new();
     let mut i = 0;
     while i < lines.len() {
         let line = lines[i].trim_end();
         if line.starts_with("1 ") && i + 1 < lines.len() && lines[i + 1].starts_with("2 ") {
-            let name = if i > 0
-                && !lines[i - 1].starts_with("1 ")
-                && !lines[i - 1].starts_with("2 ")
-            {
-                lines[i - 1].trim().to_string()
-            } else {
-                format!("{id}-{i}")
-            };
+            let name =
+                if i > 0 && !lines[i - 1].starts_with("1 ") && !lines[i - 1].starts_with("2 ") {
+                    lines[i - 1].trim().to_string()
+                } else {
+                    format!("{id}-{i}")
+                };
             let elements = Elements::from_tle(
                 Some(name.clone()),
                 lines[i].as_bytes(),
                 lines[i + 1].as_bytes(),
             )
-            .map_err(|e| ComparatorError::Tle { file: id.to_string(), line: i, msg: e.to_string() })?;
-            let sgp4 = Sgp4::new(elements)
-                .map_err(|e| ComparatorError::Tle { file: id.to_string(), line: i, msg: e.to_string() })?;
+            .map_err(|e| ComparatorError::Tle {
+                file: id.to_string(),
+                line: i,
+                msg: e.to_string(),
+            })?;
+            let sgp4 = Sgp4::new(elements).map_err(|e| ComparatorError::Tle {
+                file: id.to_string(),
+                line: i,
+                msg: e.to_string(),
+            })?;
             satellites.push((name, sgp4));
             i += 2;
         } else {
             i += 1;
         }
     }
-    Ok(Comparator { id: id.to_string(), satellites })
+    Ok(Comparator {
+        id: id.to_string(),
+        satellites,
+    })
 }
 
 #[cfg(test)]
@@ -83,14 +100,20 @@ mod tests {
     use super::*;
 
     fn data_dir() -> std::path::PathBuf {
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("data").join("comparators")
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("data")
+            .join("comparators")
     }
 
     #[test]
     fn loads_iceye_with_many_sats() {
         let lib = ComparatorLibrary::load_from_dir(&data_dir()).unwrap();
         let iceye = lib.get("iceye").expect("iceye present");
-        assert!(iceye.satellites.len() >= 20, "got {} sats", iceye.satellites.len());
+        assert!(
+            iceye.satellites.len() >= 20,
+            "got {} sats",
+            iceye.satellites.len()
+        );
     }
 
     #[test]

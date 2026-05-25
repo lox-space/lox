@@ -24,7 +24,5 @@ where
     T: Send + 'static,
     E: std::fmt::Display + Send + 'static,
 {
-    Box::pin(lox.map(|res| {
-        res.map_err(|e| ConnectError::internal(e.to_string()))
-    }))
+    Box::pin(lox.map(|res| res.map_err(|e| ConnectError::internal(e.to_string()))))
 }
