@@ -18,6 +18,7 @@
   const paramLabels: Record<SweepParam, string> = {
     satsPerPlane: "Sats per plane",
     planes: "Planes",
+    phasing: "Phasing (F)",
     altitudeKm: "Altitude (km)",
     inclinationDeg: "Inclination (°)",
   };

@@ -10,7 +10,7 @@ import { runComputeAccess } from "$lib/rpc/client";
 import { computeStats, type AccessWindowLite, type AoiStats } from "./access.svelte";
 import type { AccessRequest } from "@kerolox/proto-ts";
 
-export type SweepParam = "satsPerPlane" | "planes" | "altitudeKm" | "inclinationDeg";
+export type SweepParam = "satsPerPlane" | "planes" | "phasing" | "altitudeKm" | "inclinationDeg";
 export type SweepMetric = "meanGap" | "medianGap" | "maxGap" | "count" | "totalAccess";
 
 export interface SweepConfig {
@@ -51,6 +51,7 @@ function withParam(base: Scenario, param: SweepParam, value: number): Scenario {
   const s: Scenario = $state.snapshot(base) as Scenario;
   if (param === "satsPerPlane") s.walker.satsPerPlane = Math.round(value);
   else if (param === "planes") s.walker.p = Math.round(value);
+  else if (param === "phasing") s.walker.f = Math.round(value);
   else if (param === "altitudeKm") s.walker.altitudeKm = value;
   else if (param === "inclinationDeg") s.walker.inclinationDeg = value;
   return s;
