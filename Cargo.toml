@@ -41,6 +41,10 @@ lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.15" }
 arrayvec = "0.7.6"
 async-channel = "2.5.0"
 axum = "0.8.9"
+buffa = { version = "0.6", features = ["json"] }
+buffa-types = { version = "0.6", features = ["json"] }
+connectrpc = { version = "0.6", features = ["axum", "client", "server"] }
+connectrpc-build = "0.6"
 chrono = "0.4.43"
 csv = "1.4.0"
 differential-equations = "0.6.1"
@@ -51,14 +55,13 @@ futures-core = "0.3.32"
 geo = "0.33"
 geojson = "1.0"
 glam = { version = "0.33.1", default-features = false, features = ["f64"] }
+http-body = "1"
 itertools = "0.14.0"
 libm = "0.2.15"
 nalgebra = "0.35.0"
 nom = { version = "8.0.0", default-features = false }
 numpy = "0.29.0"
 proptest = "1.9.0"
-prost = "0.13"
-prost-build = "0.13"
 pyo3 = "0.29.0"
 reqwest = { version = "0.12", default-features = false, features = [
   "rustls-tls",

@@ -2,10 +2,12 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-fn main() -> std::io::Result<()> {
+fn main() {
     println!("cargo:rerun-if-changed=proto");
-    prost_build::compile_protos(
-        &["proto/kerolox/v1/kerolox.proto"],
-        &["proto"],
-    )
+    connectrpc_build::Config::new()
+        .files(&["proto/kerolox/v1/kerolox.proto"])
+        .includes(&["proto"])
+        .include_file("_connectrpc.rs")
+        .compile()
+        .expect("connectrpc-build codegen failed");
 }
