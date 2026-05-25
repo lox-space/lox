@@ -112,6 +112,34 @@ mod tests {
         assert_eq!(oks.len(), 86);
     }
 
+    #[test]
+    fn abort_terminates_after_bounded_concurrent_errors() {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        let invocations = Arc::new(AtomicUsize::new(0));
+        let c = invocations.clone();
+
+        // One bad input triggers Abort; over 10_000 inputs, no more than
+        // worker_count units should observably run.
+        let s = par_stream(0..10_000_usize, 16, OnError::Abort, move |i, _| {
+            c.fetch_add(1, Ordering::SeqCst);
+            if i == 0 { Err::<usize, ()>(()) } else { Ok(i) }
+        });
+
+        let items: Vec<_> = s.collect_blocking();
+        let errs = items.iter().filter(|r| r.is_err()).count();
+        assert!(errs >= 1);
+        // Upper bound: roughly the rayon worker count + a small slop. We
+        // assert << 10_000 to catch a missing cancel().
+        let total = invocations.load(Ordering::SeqCst);
+        let max_expected = rayon::current_num_threads() * 4;
+        assert!(
+            total <= max_expected,
+            "expected ≤ {max_expected} invocations after abort, got {total}"
+        );
+    }
+
     // ----- helper -----
 
     trait CollectBlocking<T> {
