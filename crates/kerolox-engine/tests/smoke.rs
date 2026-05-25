@@ -1,0 +1,76 @@
+// SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+//
+// SPDX-License-Identifier: MPL-2.0
+
+//! End-to-end smoke test: spawn the engine on a free port, send a tiny
+//! request via a Connect client, verify at least one AccessPairResult
+//! comes back.
+
+use connectrpc::client::{ClientConfig, HttpClient};
+use kerolox_engine::{aoi::AoiLibrary, service::KeroloxImpl};
+use kerolox_proto::kerolox::v1::{
+    AccessRequest, KeroloxClient, KeroloxExt, LookSide, SarSensor, SatelliteOrbitalElements,
+};
+use std::path::PathBuf;
+use std::sync::Arc;
+
+fn aoi_dir() -> PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("data")
+        .join("aois")
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn compute_access_streams_at_least_one_pair() {
+    let lib = Arc::new(AoiLibrary::load_from_dir(&aoi_dir()).unwrap());
+    let service = Arc::new(KeroloxImpl::new(lib));
+    let connect_router = service.register(connectrpc::Router::new());
+    let app = axum::Router::new().fallback_service(connect_router.into_axum_service());
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    // Single circular LEO satellite at 600 km altitude, 53° inclination.
+    // Over 24 hours, it will overfly both Hormuz and Black Sea.
+    let req = AccessRequest {
+        start_time_iso: "2026-06-01T00:00:00.000".into(),
+        duration_seconds: 24.0 * 3600.0,
+        satellites: vec![SatelliteOrbitalElements {
+            id: "sat-0".into(),
+            sma_m: 6_978_137.0, // 600 km altitude
+            ecc: 0.0,
+            inc_rad: 53.0_f64.to_radians(),
+            raan_rad: 0.0,
+            aop_rad: 0.0,
+            true_anomaly_rad: 0.0,
+            plane: 0,
+            index_in_plane: 0,
+            __buffa_unknown_fields: Default::default(),
+        }],
+        sar: buffa::MessageField::some(SarSensor {
+            look_side: LookSide::LOOK_SIDE_RIGHT.into(),
+            min_incidence_deg: 20.0,
+            max_incidence_deg: 45.0,
+            __buffa_unknown_fields: Default::default(),
+        }),
+        aoi_ids: vec!["hormuz".into(), "black_sea".into()],
+        comparators: vec![],
+        step_seconds: 30.0,
+        __buffa_unknown_fields: Default::default(),
+    };
+
+    let http = HttpClient::plaintext();
+    let config = ClientConfig::new(format!("http://{addr}").parse().unwrap());
+    let client = KeroloxClient::new(http, config);
+
+    let mut stream = client.compute_access(req).await.unwrap();
+    let mut count = 0usize;
+    while let Some(_msg) = stream.message().await.unwrap() {
+        count += 1;
+    }
+    eprintln!("smoke: received {count} AccessPairResult(s)");
+    assert!(count >= 1, "expected at least one streamed pair, got {count}");
+}

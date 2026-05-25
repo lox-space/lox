@@ -23,7 +23,13 @@ futures.workspace = true
 geo.workspace = true
 geojson.workspace = true
 kerolox-proto = { path = "../kerolox-proto" }
+lox-analysis = { workspace = true, features = ["imaging", "stream"] }
+lox-bodies = { workspace = true }
+lox-frames = { workspace = true }
+lox-orbits = { workspace = true }
 lox-space = { workspace = true }
+lox-stream = { workspace = true }
+lox-time = { workspace = true }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tokio-stream.workspace = true

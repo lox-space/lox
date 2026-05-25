@@ -3,8 +3,11 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use axum::{Router, routing::get};
-use kerolox_engine::cors::dev_cors;
+use kerolox_engine::{aoi::AoiLibrary, cors::dev_cors, service::KeroloxImpl};
+use kerolox_proto::kerolox::v1::KeroloxExt;
 use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -17,8 +20,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|_| "127.0.0.1:8080".into())
         .parse()?;
 
+    let aoi_dir: PathBuf = std::env::var("KEROLOX_AOI_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("data")
+                .join("aois")
+        });
+    let aoi_library = Arc::new(AoiLibrary::load_from_dir(&aoi_dir)?);
+    tracing::info!("loaded {} AOIs", aoi_library.len());
+
+    let service = Arc::new(KeroloxImpl::new(aoi_library));
+    let connect = service.register(connectrpc::Router::new());
+
     let app = Router::new()
         .route("/health", get(|| async { "OK" }))
+        .fallback_service(connect.into_axum_service())
         .layer(dev_cors()); // TODO(prod): replace with an origin-allowlist before deployment
 
     tracing::info!("kerolox-engine listening on {addr}");
