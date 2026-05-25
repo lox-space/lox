@@ -208,6 +208,37 @@ mod tests {
         let _drained: Vec<_> = (&mut s).collect_blocking_inplace();
     }
 
+    #[test]
+    fn capacity_one_holds_producer() {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::time::Duration;
+
+        let invocations = Arc::new(AtomicUsize::new(0));
+        let c = invocations.clone();
+
+        // capacity = 1, slow consumer (sleeps between recvs). After receiving
+        // one item, at most `1 + worker_count` units should have run.
+        let mut s = par_stream(0..1_000_usize, 1, OnError::Continue, move |i, _| {
+            c.fetch_add(1, Ordering::SeqCst);
+            Ok::<usize, ()>(i)
+        });
+
+        // Receive one item and then sleep, letting workers possibly fill the buffer.
+        let _ = s.blocking_next();
+        std::thread::sleep(Duration::from_millis(100));
+
+        let in_flight_bound = 1 + rayon::current_num_threads() + 2; // small slop
+        let observed = invocations.load(Ordering::SeqCst);
+        assert!(
+            observed <= in_flight_bound,
+            "expected backpressure to bound invocations to ≤ {in_flight_bound}, saw {observed}",
+        );
+
+        // Drop to clean up.
+        drop(s);
+    }
+
     // ----- helper -----
 
     trait CollectBlocking<T> {
