@@ -48,6 +48,7 @@ serde = [
   "lox-time/serde",
   "sgp4/serde",
 ]
+test-utils = []
 
 [lib]
 doctest = false
