@@ -413,6 +413,9 @@ pub enum ScenarioPropagateError {
     /// Frame transformation failed for the named spacecraft.
     #[error("frame transformation failed for spacecraft \"{0}\": {1}")]
     FrameTransformation(AssetId, String),
+    /// A worker thread panicked while propagating the named spacecraft.
+    #[error("worker panicked while propagating spacecraft \"{0}\": {1}")]
+    WorkerPanicked(AssetId, String),
 }
 
 impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Scenario<O, R> {
