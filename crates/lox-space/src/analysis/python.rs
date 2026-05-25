@@ -1539,9 +1539,70 @@ impl PyOpticalAccessAnalysis {
     }
 }
 
+/// Direction of orbital motion at the time of an access window.
+#[pyclass(
+    name = "PassDirection",
+    module = "lox_space",
+    eq,
+    eq_int,
+    from_py_object
+)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum PyPassDirection {
+    Ascending,
+    Descending,
+}
+
+impl From<PyPassDirection> for crate::analysis::imaging::PassDirection {
+    fn from(d: PyPassDirection) -> Self {
+        match d {
+            PyPassDirection::Ascending => Self::Ascending,
+            PyPassDirection::Descending => Self::Descending,
+        }
+    }
+}
+
+impl From<crate::analysis::imaging::PassDirection> for PyPassDirection {
+    fn from(d: crate::analysis::imaging::PassDirection) -> Self {
+        match d {
+            crate::analysis::imaging::PassDirection::Ascending => Self::Ascending,
+            crate::analysis::imaging::PassDirection::Descending => Self::Descending,
+        }
+    }
+}
+
+/// A single access window: time interval + pass direction at the midpoint.
+#[pyclass(name = "AccessWindow", module = "lox_space", frozen)]
+#[derive(Clone, Copy)]
+pub struct PyAccessWindow(pub crate::analysis::imaging::AccessWindow);
+
+#[pymethods]
+impl PyAccessWindow {
+    /// The access time interval.
+    fn interval(&self) -> PyInterval {
+        PyInterval(TimeInterval::new(
+            self.0.interval.start().into_dyn(),
+            self.0.interval.end().into_dyn(),
+        ))
+    }
+
+    /// The spacecraft pass direction at the interval midpoint.
+    fn direction(&self) -> PyPassDirection {
+        self.0.direction.into()
+    }
+
+    fn __repr__(&self) -> String {
+        let dir = match self.0.direction {
+            crate::analysis::imaging::PassDirection::Ascending => "Ascending",
+            crate::analysis::imaging::PassDirection::Descending => "Descending",
+        };
+        format!("AccessWindow({dir})")
+    }
+}
+
 /// Results of an imaging access analysis (optical or SAR).
 ///
-/// Provides access intervals for each (spacecraft, AOI) pair.
+/// Provides access windows for each (spacecraft, AOI) pair.
 #[pyclass(name = "AccessResults", module = "lox_space", frozen)]
 pub struct PyAccessResults {
     results: crate::analysis::imaging::AccessResults,
@@ -1549,41 +1610,36 @@ pub struct PyAccessResults {
 
 #[pymethods]
 impl PyAccessResults {
-    /// Return access intervals for a specific (spacecraft, AOI) pair.
+    /// Return access windows for a specific (spacecraft, AOI) pair.
     ///
     /// Args:
     ///     spacecraft_id: Spacecraft identifier.
     ///     aoi_id: AOI identifier.
     ///
     /// Returns:
-    ///     List of Interval objects, or empty list if pair not found.
-    fn intervals(&self, spacecraft_id: &str, aoi_id: &str) -> Vec<PyInterval> {
+    ///     List of AccessWindow objects, or empty list if pair not found.
+    fn windows(&self, spacecraft_id: &str, aoi_id: &str) -> Vec<PyAccessWindow> {
         let sc_id = AssetId::new(spacecraft_id);
         let aoi_id = AoiId::new(aoi_id);
         self.results
-            .intervals(&sc_id, &aoi_id)
+            .windows(&sc_id, &aoi_id)
             .iter()
-            .map(|i| PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn())))
+            .map(|w| PyAccessWindow(*w))
             .collect()
     }
 
-    /// Return all intervals for all (spacecraft, AOI) pairs.
+    /// Return all access windows for all (spacecraft, AOI) pairs.
     ///
     /// Returns:
-    ///     Dictionary mapping (spacecraft_id, aoi_id) to list of Interval objects.
-    fn all_intervals(&self) -> HashMap<(String, String), Vec<PyInterval>> {
+    ///     Dictionary mapping (spacecraft_id, aoi_id) to list of AccessWindow objects.
+    fn all_windows(&self) -> HashMap<(String, String), Vec<PyAccessWindow>> {
         self.results
-            .all_intervals()
+            .all_windows()
             .iter()
-            .map(|((sc_id, aoi_id), intervals)| {
+            .map(|((sc_id, aoi_id), windows)| {
                 (
                     (sc_id.as_str().to_string(), aoi_id.as_str().to_string()),
-                    intervals
-                        .iter()
-                        .map(|i| {
-                            PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn()))
-                        })
-                        .collect(),
+                    windows.iter().map(|w| PyAccessWindow(*w)).collect(),
                 )
             })
             .collect()
