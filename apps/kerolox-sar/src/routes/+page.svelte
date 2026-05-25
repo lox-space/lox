@@ -24,8 +24,20 @@
   let ready = $state(false);
 
   onMount(async () => {
+    // Set initial playback bounds eagerly from the current scenario so
+    // the Transport clock shows the scenario start time immediately,
+    // even before the trajectory cache populates.
+    const initialStart = Date.parse(scenario.startTimeIso);
+    const initialEnd = initialStart + scenario.durationHours * 3600 * 1000;
+    if (Number.isFinite(initialStart) && Number.isFinite(initialEnd)) {
+      setBounds(initialStart, initialEnd);
+      seek(initialStart);
+    }
+    console.log("[+page] onMount: bounds set", { initialStart, initialEnd });
+
     await ensureWalkerReady();
     ready = true;
+    console.log("[+page] onMount: WASM ready");
   });
 
   // Phase 3: populate the trajectory cache and reset the playback bounds
@@ -37,6 +49,13 @@
     if (!isWalkerValid(scenario.walker)) return;
     const satellites = runWalker(scenario);
     if (satellites.length === 0) return;
+
+    console.log("[+page] phase 3 effect firing", {
+      ready,
+      startTimeIso: scenario.startTimeIso,
+      durationHours: scenario.durationHours,
+      satellitesCount: satellites.length,
+    });
 
     const scenarioStartMs = Date.parse(scenario.startTimeIso);
     const scenarioEndMs = scenarioStartMs + scenario.durationHours * 3600 * 1000;
