@@ -12,6 +12,7 @@ function mkWindow(startOffsetSec: number, endOffsetSec: number): AccessWindowLit
   return {
     startMs: scenarioStart + startOffsetSec * 1000,
     endMs: scenarioStart + endOffsetSec * 1000,
+    direction: "ascending",
   };
 }
 

@@ -5,9 +5,23 @@
 import { SvelteMap } from "svelte/reactivity";
 import type { AccessPairResult } from "@kerolox/proto-ts";
 
+export type PassDirection = "ascending" | "descending" | "unknown";
+
 export interface AccessWindowLite {
   startMs: number;
   endMs: number;
+  direction: PassDirection;
+}
+
+/**
+ * Map the proto `PassDirection` enum (0=unspecified, 1=ascending,
+ * 2=descending) to a label. Accepts a raw number since buf-es renders the
+ * enum field as a numeric value.
+ */
+function mapDirection(d: number): PassDirection {
+  if (d === 1) return "ascending";
+  if (d === 2) return "descending";
+  return "unknown";
 }
 
 export interface AoiStats {
@@ -37,6 +51,7 @@ export function ingestPair(p: AccessPairResult, scenarioStartMs: number, scenari
   const newWindows: AccessWindowLite[] = p.windows.map((w) => ({
     startMs: Date.parse(w.startIso),
     endMs: Date.parse(w.endIso),
+    direction: mapDirection(w.direction as unknown as number),
   }));
   const merged = existing.windows.concat(newWindows);
   accessByAoi.set(p.aoiId, {

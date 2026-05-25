@@ -3,9 +3,16 @@
   SPDX-License-Identifier: MPL-2.0
 -->
 <script lang="ts">
-  import { accessByAoi, type AoiAccessState } from "$lib/state/access.svelte";
+  import { accessByAoi, type AoiAccessState, type PassDirection } from "$lib/state/access.svelte";
 
   let { aoiId, label }: { aoiId: string; label: string } = $props();
+
+  /** Compact glyph for the pass direction. ↑ ascending, ↓ descending. */
+  function fmtDirection(d: PassDirection): string {
+    if (d === "ascending") return "↑ Asc";
+    if (d === "descending") return "↓ Desc";
+    return "—";
+  }
 
   const state = $derived<AoiAccessState | undefined>(accessByAoi.get(aoiId));
 
@@ -49,6 +56,7 @@
         <tr class="border-b border-neutral-800">
           <th class="text-left px-3 py-2">Start</th>
           <th class="text-left px-3 py-2">End</th>
+          <th class="text-left px-3 py-2">Dir</th>
         </tr>
       </thead>
       <tbody class="text-neutral-200 font-mono">
@@ -56,6 +64,7 @@
           <tr class="row-in border-b border-neutral-900/40">
             <td class="px-3 py-1">{fmtIso(w.startMs)}</td>
             <td class="px-3 py-1">{fmtIso(w.endMs)}</td>
+            <td class="px-3 py-1" title={w.direction}>{fmtDirection(w.direction)}</td>
           </tr>
         {/each}
       </tbody>
