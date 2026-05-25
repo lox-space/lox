@@ -19,14 +19,14 @@ use lox_space::core::units::{Angle, AngleUnits, DistanceUnits};
 use lox_space::frames::dynamic::DynFrame;
 use lox_space::frames::traits::ReferenceFrame;
 use lox_space::orbits::sso::inclination_sso;
-use lox_space::time::DynTime;
 use lox_space::time::calendar_dates::CalendarDate;
 use lox_space::time::time_of_day::CivilTime;
 use lox_space::time::time_scales::{DynTimeScale, TimeScale};
-use lox_space::time::utc::Utc as LoxUtc;
 use lox_space::time::utc::transformations::ToUtc;
-use wasm_bindgen::JsValue;
+use lox_space::time::utc::Utc as LoxUtc;
+use lox_space::time::DynTime;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsValue;
 
 /// Initialize the WASM module with panic hook for better error messages.
 #[wasm_bindgen(start)]
