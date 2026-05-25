@@ -69,6 +69,30 @@ mod tests {
         assert_eq!(s.blocking_next(), None);
     }
 
+    #[test]
+    fn fast_units_arrive_before_slow_ones() {
+        use std::time::Duration;
+
+        // Index 0 sleeps 200ms; indices 1..=4 sleep 10ms each. We expect the
+        // four fast indices to arrive before index 0.
+        let s = par_stream(0..5, 8, OnError::Continue, |i, _| {
+            let dur = if i == 0 {
+                Duration::from_millis(200)
+            } else {
+                Duration::from_millis(10)
+            };
+            std::thread::sleep(dur);
+            Ok::<i32, ()>(i)
+        });
+
+        let mut order = Vec::new();
+        for item in s.collect_blocking() {
+            order.push(item.unwrap());
+        }
+        // index 0 must not be the first item to arrive
+        assert_ne!(order[0], 0, "slow unit arrived first: {order:?}");
+    }
+
     // ----- helper -----
 
     trait CollectBlocking<T> {
