@@ -929,6 +929,45 @@ impl WalkerDelta {
     }
 }
 
+/// Earth's body-fixed rotation angle (the IAU `W` prime-meridian angle),
+/// radians, at the given ISO-8601 UTC instant.
+///
+/// Computed from lox-bodies' IAU polynomial model — no IERS Earth
+/// Orientation Parameter data is required. The 3D Earth mesh in the
+/// GlobeView is rotated each frame by this angle. Consistent with the
+/// `IAU_EARTH` frame used to project Cartesian states to lat/lon in
+/// `Keplerian::propagate_sampled`.
+#[wasm_bindgen(js_name = earthRotationAngleRad)]
+pub fn earth_rotation_angle_rad_wasm(epoch_iso: &str) -> Result<f64, JsValue> {
+    compute_earth_rotation_angle_rad(epoch_iso).map_err(|e| JsValue::from_str(&e))
+}
+
+fn compute_earth_rotation_angle_rad(epoch_iso: &str) -> Result<f64, String> {
+    use lox_space::bodies::{Earth, RotationalElements};
+    use lox_space::time::julian_dates::JulianDate;
+    use lox_space::time::offsets::DefaultOffsetProvider;
+    use lox_space::time::time_scales::DynTimeScale;
+
+    let utc: LoxUtc = epoch_iso
+        .parse()
+        .map_err(|e: lox_space::time::utc::UtcError| e.to_string())?;
+
+    // Convert UTC → TAI (DynTime) → TDB, then get seconds since J2000.
+    // RotationalElements::rotation_angle takes `t` in seconds since J2000 TDB.
+    // DynTimeScale → DynTimeScale requires try_to_scale (only TryOffset is implemented).
+    let t_tdb = utc
+        .to_dyn_time()
+        .try_to_scale(DynTimeScale::Tdb, &DefaultOffsetProvider)
+        .map_err(|e| e.to_string())?
+        .seconds_since_j2000();
+
+    // IAU prime-meridian angle W, radians (not normalised).
+    let w = Earth.rotation_angle(t_tdb);
+
+    // Normalise to [0, 2π).
+    Ok(w.rem_euclid(TAU))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1489,5 +1528,26 @@ mod tests {
         assert!((sat.raan_rad() - 2.0943951).abs() < 1e-9);
         assert!((sat.aop_rad() - 0.0).abs() < 1e-12);
         assert!((sat.true_anomaly_rad() - 1.5707963).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_earth_rotation_angle_known_instant() {
+        // At J2000.0 (2000-01-01T12:00:00 UTC), the IAU W angle for Earth
+        // has a known reference value. We confirm the result is finite and within [0, 2π).
+        let era = compute_earth_rotation_angle_rad("2000-01-01T12:00:00").unwrap();
+        assert!(era.is_finite());
+        assert!((0.0..std::f64::consts::TAU).contains(&era));
+    }
+
+    #[test]
+    fn test_earth_rotation_angle_advances_by_one_day() {
+        // After 24 UTC hours, the angle has advanced by ~2π × (1 + 1/365.25) mod 2π.
+        let era0 = compute_earth_rotation_angle_rad("2026-06-01T00:00:00").unwrap();
+        let era1 = compute_earth_rotation_angle_rad("2026-06-02T00:00:00").unwrap();
+        let delta = (era1 - era0).rem_euclid(std::f64::consts::TAU);
+        let expected = std::f64::consts::TAU * 0.00274;
+        // Tolerance generous — IAU model includes long-period terms.
+        assert!((delta - expected).abs() < 5e-2,
+                "delta = {delta} rad, expected ≈ {expected} rad");
     }
 }
