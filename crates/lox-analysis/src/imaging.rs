@@ -19,7 +19,7 @@ pub use analysis::{
 pub use aoi::AoiError;
 pub use aoi::{Aoi, AoiId};
 pub use optical::OpticalPayload;
-pub use results::AccessResults;
+pub use results::{AccessResults, AccessWindow, PassDirection};
 pub use sar::{LookSide, SarPayload, SarPayloadError};
 
 #[cfg(test)]
@@ -167,17 +167,19 @@ mod tests {
             .with_step(TimeDelta::from_seconds(30));
         let results = analysis.compute().expect("access analysis failed");
 
-        let intervals = results.intervals(&AssetId::new("s2a"), &AoiId::new("europe"));
+        let windows = results.windows(&AssetId::new("s2a"), &AoiId::new("europe"));
         // A sun-synchronous LEO satellite should overfly Western Europe
         // at least once in 6 hours.
         assert!(
-            !intervals.is_empty(),
+            !windows.is_empty(),
             "expected at least one access window over Western Europe"
         );
 
         // Each window should be short (a few minutes at most for a LEO pass).
-        for iv in intervals {
-            let duration_s = (iv.end() - iv.start()).to_seconds().to_f64();
+        for w in windows {
+            let duration_s = (w.interval.end() - w.interval.start())
+                .to_seconds()
+                .to_f64();
             assert!(duration_s > 0.0, "zero-length interval");
             assert!(
                 duration_s < 600.0,
@@ -232,8 +234,8 @@ mod tests {
         let results = analysis.compute().expect("access analysis failed");
 
         // Both spacecraft should have windows over the large European AOI.
-        let s2a_europe = results.intervals(&AssetId::new("s2a"), &AoiId::new("europe"));
-        let s2b_europe = results.intervals(&AssetId::new("s2b"), &AoiId::new("europe"));
+        let s2a_europe = results.windows(&AssetId::new("s2a"), &AoiId::new("europe"));
+        let s2b_europe = results.windows(&AssetId::new("s2b"), &AoiId::new("europe"));
         assert!(!s2a_europe.is_empty(), "S2A should image Europe");
         assert!(!s2b_europe.is_empty(), "S2B should image Europe");
 
@@ -267,18 +269,25 @@ mod tests {
             .with_step(TimeDelta::from_seconds(30));
         let results = analysis.compute().expect("access analysis failed");
 
-        let nadir_intervals = results.intervals(&AssetId::new("nadir"), &AoiId::new("europe"));
-        let off_nadir_intervals =
-            results.intervals(&AssetId::new("off_nadir"), &AoiId::new("europe"));
+        let nadir_windows = results.windows(&AssetId::new("nadir"), &AoiId::new("europe"));
+        let off_nadir_windows = results.windows(&AssetId::new("off_nadir"), &AoiId::new("europe"));
 
         // Agile satellite should have at least as much total coverage time.
-        let nadir_total: f64 = nadir_intervals
+        let nadir_total: f64 = nadir_windows
             .iter()
-            .map(|iv| (iv.end() - iv.start()).to_seconds().to_f64())
+            .map(|w| {
+                (w.interval.end() - w.interval.start())
+                    .to_seconds()
+                    .to_f64()
+            })
             .sum();
-        let off_nadir_total: f64 = off_nadir_intervals
+        let off_nadir_total: f64 = off_nadir_windows
             .iter()
-            .map(|iv| (iv.end() - iv.start()).to_seconds().to_f64())
+            .map(|w| {
+                (w.interval.end() - w.interval.start())
+                    .to_seconds()
+                    .to_f64()
+            })
             .sum();
         assert!(
             off_nadir_total >= nadir_total - 1.0,
