@@ -665,14 +665,14 @@ impl WasmTime {
 /// in-plane indices.
 #[wasm_bindgen]
 pub struct WasmSatellite {
-    plane: u32,
-    index_in_plane: u32,
-    sma_m: f64,
-    ecc: f64,
-    inc_rad: f64,
-    raan_rad: f64,
-    aop_rad: f64,
-    true_anomaly_rad: f64,
+    pub(crate) plane: u32,
+    pub(crate) index_in_plane: u32,
+    pub(crate) sma_m: f64,
+    pub(crate) ecc: f64,
+    pub(crate) inc_rad: f64,
+    pub(crate) raan_rad: f64,
+    pub(crate) aop_rad: f64,
+    pub(crate) true_anomaly_rad: f64,
 }
 
 #[wasm_bindgen]
@@ -710,6 +710,11 @@ impl WalkerDelta {
     /// - `sma_m`: semi-major axis in meters.
     /// - `ecc`: eccentricity.
     /// - `inc_rad`: inclination in radians.
+    ///
+    /// Each satellite's in-plane phase is set as a mean anomaly internally
+    /// by `WalkerDeltaBuilder`; the returned `trueAnomalyRad` is the
+    /// corresponding true anomaly (identical when `ecc == 0`, but diverging
+    /// for eccentric orbits via the standard Kepler equation).
     #[wasm_bindgen]
     pub fn build(
         nsats: u32,
@@ -1243,41 +1248,26 @@ mod tests {
 
     #[test]
     fn test_wasm_constellation_satellite_struct_round_trip() {
-        // Confirms our WASM-friendly struct holds and returns the lox elements.
-        let earth = DynOrigin::from_str("Earth").unwrap();
-        let mean_r = TryMeanRadius::try_mean_radius(&earth).unwrap().to_meters();
-        let sma = (600_000.0_f64 + mean_r).m();
-        let inc = 53.0_f64.to_radians().rad();
-
-        let sats = lox_space::orbits::constellations::WalkerDeltaBuilder::new(24, 3)
-            .with_semi_major_axis(sma, 0.0)
-            .with_inclination(inc)
-            .with_phasing(1)
-            .build()
-            .unwrap();
-
-        // Project into the WASM-friendly tuple shape we'll expose.
-        let proj: Vec<(usize, usize, f64, f64, f64, f64, f64, f64)> = sats
-            .iter()
-            .map(|s| {
-                (
-                    s.plane,
-                    s.index_in_plane,
-                    s.elements.semi_major_axis().to_meters(),
-                    s.elements.eccentricity().as_f64(),
-                    s.elements.inclination().as_f64(),
-                    s.elements.longitude_of_ascending_node().as_f64(),
-                    s.elements.argument_of_periapsis().as_f64(),
-                    s.elements.true_anomaly().as_f64(),
-                )
-            })
-            .collect();
-        assert_eq!(proj.len(), 24);
-        // Sanity-check the first sat: in plane 0, index 0, the chosen sma and inc.
-        let (p0, i0, sma0, _, inc0, _, _, _) = proj[0];
-        assert_eq!(p0, 0);
-        assert_eq!(i0, 0);
-        assert!((sma0 - (600_000.0 + mean_r)).abs() < 1e-6);
-        assert!((inc0 - inc.as_f64()).abs() < 1e-9);
+        // Construct a WasmSatellite directly and verify each getter returns
+        // the value it was constructed with. Exercises the #[wasm_bindgen]
+        // getters used at the JS boundary without crossing it.
+        let sat = WasmSatellite {
+            plane: 2,
+            index_in_plane: 5,
+            sma_m: 6_978_137.0,
+            ecc: 0.0,
+            inc_rad: 0.9250245,
+            raan_rad: 2.0943951,
+            aop_rad: 0.0,
+            true_anomaly_rad: 1.5707963,
+        };
+        assert_eq!(sat.plane(), 2);
+        assert_eq!(sat.index_in_plane(), 5);
+        assert!((sat.sma_m() - 6_978_137.0).abs() < 1e-6);
+        assert!((sat.ecc() - 0.0).abs() < 1e-12);
+        assert!((sat.inc_rad() - 0.9250245).abs() < 1e-9);
+        assert!((sat.raan_rad() - 2.0943951).abs() < 1e-9);
+        assert!((sat.aop_rad() - 0.0).abs() < 1e-12);
+        assert!((sat.true_anomaly_rad() - 1.5707963).abs() < 1e-9);
     }
 }
