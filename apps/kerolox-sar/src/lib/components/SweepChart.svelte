@@ -28,6 +28,7 @@
   });
 
   const COLORS: Record<string, string> = { hormuz: "#7c8aff", black_sea: "#34d399" };
+  const LABELS: Record<string, string> = { hormuz: "Hormuz", black_sea: "Black Sea" };
 
   function sx(x: number): number {
     const { minX, maxX } = bounds;
@@ -41,6 +42,17 @@
     return pts.map((p, i) => `${i === 0 ? "M" : "L"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(" ");
   }
 </script>
+
+{#if series.length > 0}
+  <ul class="flex flex-wrap gap-x-4 gap-y-1 mb-1 text-xs text-neutral-300">
+    {#each series as [aoiId] (aoiId)}
+      <li class="flex items-center gap-1.5">
+        <span class="inline-block w-3 h-0.5" style="background-color: {COLORS[aoiId] ?? '#aaa'}"></span>
+        {LABELS[aoiId] ?? aoiId}
+      </li>
+    {/each}
+  </ul>
+{/if}
 
 <svg viewBox="0 0 {W} {H}" class="w-full h-auto text-neutral-400">
   <!-- axes -->
