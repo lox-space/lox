@@ -30,15 +30,16 @@ async function ensureWasm(): Promise<void> {
 void ensureWasm();
 
 /**
- * Synchronous Walker-delta evaluation. Returns [] if the config is invalid
- * (e.g. T not divisible by P). Throws if the WASM module hasn't initialised
- * yet — call `await ensureWalkerReady()` once at app startup.
+ * Synchronous Walker-delta evaluation. Returns [] if the config is invalid.
+ * Throws if the WASM module hasn't initialised yet — call
+ * `await ensureWalkerReady()` once at app startup.
  */
 export function runWalker(s: Scenario): SatelliteElements[] {
   if (!isWalkerValid(s.walker)) return [];
   const smaM = (s.walker.altitudeKm + EARTH_MEAN_RADIUS_KM) * 1000;
   const incRad = (s.walker.inclinationDeg * Math.PI) / 180;
-  const arr = WalkerDelta.build(s.walker.t, s.walker.p, s.walker.f, smaM, 0, incRad);
+  const t = s.walker.satsPerPlane * s.walker.p;
+  const arr = WalkerDelta.build(t, s.walker.p, s.walker.f, smaM, 0, incRad);
   const out: SatelliteElements[] = [];
   for (const obj of arr as unknown[]) {
     const sat = obj as {

@@ -7,8 +7,9 @@ export type LookSide = "LEFT" | "RIGHT";
 /**
  * Walker delta constellation configuration.
  *
- * Uses the standard Walker notation (T/P/F):
- * - `t` — total number of satellites (must be divisible by `p`).
+ * Uses the standard Walker notation (T/P/F), where T = satsPerPlane × p:
+ * - `satsPerPlane` — satellites per orbital plane (user-specified, ≥ 1).
+ *   Total satellites T is derived as `satsPerPlane * p` and is not stored.
  * - `p` — number of orbital planes (≥ 1).
  * - `f` — phasing parameter, integer in `[0, p)`. Sets the relative
  *   true-anomaly offset between satellites in adjacent planes.
@@ -20,7 +21,7 @@ export type LookSide = "LEFT" | "RIGHT";
  * automatically; other input paths must coerce before assignment.
  */
 export interface WalkerConfig {
-  t: number;
+  satsPerPlane: number;
   p: number;
   f: number;
   altitudeKm: number;
@@ -44,13 +45,14 @@ export function defaultScenario(): Scenario {
   return {
     startTimeIso: "2026-06-01T00:00:00Z",
     durationHours: 6,
-    walker: { t: 24, p: 3, f: 1, altitudeKm: 600, inclinationDeg: 53 },
+    walker: { satsPerPlane: 8, p: 3, f: 1, altitudeKm: 600, inclinationDeg: 53 },
     sar: { lookSide: "RIGHT", minIncidenceDeg: 20, maxIncidenceDeg: 45 },
   };
 }
 
-export function walkerProductMatchesT(w: WalkerConfig): boolean {
-  return w.p > 0 && w.t > 0 && w.t % w.p === 0;
+/** Total satellites in the Walker design (derived from satsPerPlane × p). */
+export function totalSats(w: WalkerConfig): number {
+  return w.satsPerPlane * w.p;
 }
 
 /**
@@ -62,10 +64,11 @@ export function walkerProductMatchesT(w: WalkerConfig): boolean {
  */
 export function isWalkerValid(w: WalkerConfig): boolean {
   return (
-    Number.isInteger(w.t) &&
+    Number.isInteger(w.satsPerPlane) &&
     Number.isInteger(w.p) &&
     Number.isInteger(w.f) &&
-    walkerProductMatchesT(w) &&
+    w.satsPerPlane > 0 &&
+    w.p > 0 &&
     w.f >= 0 &&
     w.f < w.p &&
     w.altitudeKm > 0 &&

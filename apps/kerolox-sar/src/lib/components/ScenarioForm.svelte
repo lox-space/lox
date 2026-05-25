@@ -30,13 +30,23 @@
     <h2 class="text-sm font-semibold uppercase text-neutral-300">Walker delta</h2>
 
     <label class={labelCls}>
-      T — total satellites
-      <input class={inputCls} type="number" min="1" step="1" bind:value={scenario.walker.t} />
+      Sats per plane
+      <input class={inputCls} type="number" min="1" step="1" bind:value={scenario.walker.satsPerPlane} />
     </label>
 
     <label class={labelCls}>
       P — planes
       <input class={inputCls} type="number" min="1" step="1" bind:value={scenario.walker.p} />
+    </label>
+
+    <label class={labelCls}>
+      T — total satellites (derived)
+      <input
+        class="{inputCls} text-neutral-400 cursor-not-allowed"
+        type="number"
+        disabled
+        value={scenario.walker.satsPerPlane * scenario.walker.p}
+      />
     </label>
 
     <label class={labelCls}>
@@ -55,7 +65,7 @@
     </label>
 
     {#if !isWalkerValid(scenario.walker)}
-      <p class="mt-2 text-xs text-amber-400">Walker config invalid (T must divide by P, F ∈ [0, P), positive altitude).</p>
+      <p class="mt-2 text-xs text-amber-400">Walker config invalid (F ∈ [0, P), positive sats per plane and altitude).</p>
     {/if}
   </section>
 

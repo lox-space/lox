@@ -43,7 +43,7 @@ describe("runWalker", () => {
     runWalker(s);
     const expectedSmaM = (s.walker.altitudeKm + 6378.137) * 1000;
     expect(wasm.WalkerDelta.build).toHaveBeenCalledWith(
-      s.walker.t,
+      s.walker.satsPerPlane * s.walker.p,
       s.walker.p,
       s.walker.f,
       expect.closeTo(expectedSmaM, 1),
@@ -55,11 +55,12 @@ describe("runWalker", () => {
   it("returns N=T satellites with correct plane/index counts", () => {
     const s = defaultScenario();
     const out = runWalker(s) as SatelliteElements[];
-    expect(out.length).toBe(s.walker.t);
+    const totalT = s.walker.satsPerPlane * s.walker.p;
+    expect(out.length).toBe(totalT);
     const byPlane = new Map<number, number>();
     for (const sat of out) byPlane.set(sat.plane, (byPlane.get(sat.plane) ?? 0) + 1);
     expect(byPlane.size).toBe(s.walker.p);
-    for (const [, count] of byPlane) expect(count).toBe(s.walker.t / s.walker.p);
+    for (const [, count] of byPlane) expect(count).toBe(s.walker.satsPerPlane);
   });
 
   it("returns SI units (meters and radians) in the projected elements", () => {
@@ -70,7 +71,7 @@ describe("runWalker", () => {
   });
 
   it("returns [] when the walker config is invalid", () => {
-    const s = { ...defaultScenario(), walker: { t: 23, p: 3, f: 1, altitudeKm: 600, inclinationDeg: 53 } };
+    const s = { ...defaultScenario(), walker: { satsPerPlane: 0, p: 3, f: 1, altitudeKm: 600, inclinationDeg: 53 } };
     const out = runWalker(s);
     expect(out).toEqual([]);
   });
