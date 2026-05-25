@@ -1,0 +1,19 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "id": "black_sea", "name": "Black Sea" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [28.00, 41.00],
+          [41.80, 41.00],
+          [41.80, 46.60],
+          [28.00, 46.60],
+          [28.00, 41.00]
+        ]]
+      }
+    }
+  ]
+}
