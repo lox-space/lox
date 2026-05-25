@@ -89,4 +89,24 @@ mod tests {
         drop(s);
         assert!(t.is_cancelled());
     }
+
+    #[tokio::test]
+    async fn async_stream_delivers_in_order() {
+        use futures::StreamExt;
+
+        let (tx, s) = make_stream::<i32, ()>();
+        tokio::spawn(async move {
+            tx.send(Ok(10)).await.unwrap();
+            tx.send(Ok(20)).await.unwrap();
+            tx.send(Ok(30)).await.unwrap();
+            drop(tx);
+        });
+
+        futures::pin_mut!(s);
+        let mut collected = Vec::new();
+        while let Some(item) = s.next().await {
+            collected.push(item.unwrap());
+        }
+        assert_eq!(collected, vec![10, 20, 30]);
+    }
 }
