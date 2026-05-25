@@ -106,6 +106,55 @@ fn ground_track_azimuth(sub_sat: LonLatAlt, vel_bf: DVec3) -> Angle {
 }
 
 // ---------------------------------------------------------------------------
+// SubSatSample helper
+// ---------------------------------------------------------------------------
+
+/// A single per-time sample of the spacecraft state in the body-fixed frame,
+/// pre-resolved into the quantities every per-sample computation needs.
+struct SubSatSample {
+    lla: LonLatAlt,
+    vel_bf: DVec3,
+    mean_radius_m: f64,
+}
+
+/// Computes a [`SubSatSample`] from a trajectory at a given time. Centralises
+/// the state-interpolation → body-fixed-rotation → LLA pipeline used by both
+/// [`AccessDetectFn::eval`] (per-sample detection) and pass-direction sampling
+/// (per-window post-detection).
+fn sub_sat_sample<O, R>(
+    trajectory: &Trajectory<Tai, O, R>,
+    time: Time<Tai>,
+    origin: O,
+    body_fixed_frame: DynFrame,
+) -> Result<SubSatSample, EvalError>
+where
+    O: TrySpheroid + TryMeanRadius + Copy,
+    R: ReferenceFrame + Copy,
+    DefaultRotationProvider: TryRotation<R, DynFrame, Tai>,
+    <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
+        core::error::Error + Send + Sync + 'static,
+{
+    let state = trajectory.interpolate_at(time);
+    let state_bf = state
+        .try_to_frame(body_fixed_frame, &DefaultRotationProvider)
+        .map_err(|e| EvalError::Rotation(Box::new(e)))?;
+    let pos = state_bf.position();
+    let vel_bf = state_bf.velocity();
+    let ellipsoid = origin.try_ellipsoid().map_err(EvalError::from)?;
+    let mean_radius_m = origin
+        .try_mean_radius()
+        .map_err(EvalError::from)?
+        .to_meters();
+    let lla = LonLatAlt::from_body_fixed(pos, &ellipsoid)
+        .map_err(|e| EvalError::Rotation(Box::new(e)))?;
+    Ok(SubSatSample {
+        lla,
+        vel_bf,
+        mean_radius_m,
+    })
+}
+
+// ---------------------------------------------------------------------------
 // AccessDetectFn
 // ---------------------------------------------------------------------------
 
@@ -129,29 +178,15 @@ where
     type Error = EvalError;
 
     fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
-        let state = self.trajectory.interpolate_at(time);
-        let state_bf = state
-            .try_to_frame(self.body_fixed_frame, &DefaultRotationProvider)
-            .map_err(|e| EvalError::Rotation(Box::new(e)))?;
-        let pos = state_bf.position();
-        let vel = state_bf.velocity();
-
-        let ellipsoid = self.origin.try_ellipsoid().map_err(EvalError::from)?;
-        let mean_radius = self
-            .origin
-            .try_mean_radius()
-            .map_err(EvalError::from)?
-            .to_meters();
-
-        let lla = LonLatAlt::from_body_fixed(pos, &ellipsoid)
-            .map_err(|e| EvalError::Rotation(Box::new(e)))?;
+        let sample = sub_sat_sample(self.trajectory, time, self.origin, self.body_fixed_frame)?;
         let az = if self.payload.needs_ground_track_azimuth() {
-            ground_track_azimuth(lla, vel)
+            ground_track_azimuth(sample.lla, sample.vel_bf)
         } else {
             Angle::default()
         };
-
-        Ok(self.payload.access_metric(lla, az, self.aoi, mean_radius))
+        Ok(self
+            .payload
+            .access_metric(sample.lla, az, self.aoi, sample.mean_radius_m))
     }
 }
 
