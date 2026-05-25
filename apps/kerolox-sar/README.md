@@ -64,7 +64,8 @@ pnpm --filter kerolox-sar test:e2e    # Playwright (needs engine running)
 - 3D globe (Threlte) and 2D equirectangular map, toggled in the
   viewport header.
 - Per-satellite current position and ground track on both views,
-  interpolated from a 30 s WASM-side sampled trajectory.
+  interpolated from a 30 s server-side sampled trajectory streamed over
+  the `Kerolox::PropagateTrajectories` RPC.
 - AOI polygons (Hormuz, Black Sea) rendered on both views.
 - Shared `currentTime` playback transport (play / pause / scrub / rate
   1× / 10× / 60× / 600×).
@@ -73,6 +74,23 @@ pnpm --filter kerolox-sar test:e2e    # Playwright (needs engine running)
 - Sampled trajectories cached client-side by a scenario hash; recomputed
   only when scenario inputs change.
 
-## Not yet shipped (later phases)
+## What Phase 4 adds
 
-- Trade-space sweep + ICEYE comparator (Phase 4).
+- **Trade-space sweep** — a "Trade study" tab fans out one `ComputeAccess`
+  per swept parameter value (sats-per-plane / planes / altitude /
+  inclination) with bounded concurrency, aggregates each completed
+  scenario into a chosen metric (mean/median/max gap, window count, total
+  access), and plots it live per AOI on a hand-rolled SVG chart. The sweep
+  is cancellable mid-flight.
+- **ICEYE comparison** — a "Compare vs ICEYE" toggle runs the real fielded
+  ICEYE constellation through the same SAR access analysis. The engine
+  resolves the bundled TLE snapshot to SGP4 propagators that join the same
+  `Ensemble`; results stream back tagged `source: COMPARATOR`. The AOI tabs
+  show user-vs-ICEYE revisit stats side by side, and the comparator
+  satellites render in amber on both viewports (distinct from the
+  per-plane user palette).
+
+The ICEYE TLE snapshot lives at
+`crates/kerolox-engine/data/comparators/iceye.tle` (CelesTrak, see the
+`.license` sidecar). Refresh it by re-fetching CelesTrak's
+`NAME=ICEYE` group query and replacing the file.
