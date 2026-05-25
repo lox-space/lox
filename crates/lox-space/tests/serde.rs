@@ -705,6 +705,25 @@ fn test_sar_payload() {
 }
 
 #[test]
+fn test_access_window() {
+    use lox_space::analysis::imaging::{AccessWindow, PassDirection};
+    use lox_space::time::deltas::TimeDelta;
+
+    let start = Time::j2000(Tai);
+    let end = start + TimeDelta::from_seconds(120);
+    let interval = TimeInterval::new(start, end);
+
+    round_trip_no_eq(&AccessWindow {
+        interval,
+        direction: PassDirection::Ascending,
+    });
+    round_trip_no_eq(&AccessWindow {
+        interval,
+        direction: PassDirection::Descending,
+    });
+}
+
+#[test]
 fn test_ground_station() {
     use lox_space::analysis::assets::GroundStation;
     use lox_space::analysis::visibility::ElevationMask;
