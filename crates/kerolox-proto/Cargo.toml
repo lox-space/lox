@@ -20,3 +20,4 @@ http-body.workspace = true
 
 [build-dependencies]
 connectrpc-build.workspace = true
+protoc-bin-vendored.workspace = true

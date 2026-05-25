@@ -63,6 +63,7 @@ nalgebra = "0.35.0"
 nom = { version = "8.0.0", default-features = false }
 numpy = "0.29.0"
 proptest = "1.9.0"
+protoc-bin-vendored = "3"
 pyo3 = "0.29.0"
 reqwest = { version = "0.12", default-features = false, features = [
   "rustls-tls",
