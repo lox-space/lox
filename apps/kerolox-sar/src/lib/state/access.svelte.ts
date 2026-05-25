@@ -7,12 +7,15 @@ import type { AccessPairResult } from "@kerolox/proto-ts";
 
 export type PassDirection = "ascending" | "descending" | "unknown";
 
+export type AccessSource = "user" | "comparator";
+
 export interface AccessWindowLite {
   /** Spacecraft id, e.g. "p0-s0" (plane 0, in-plane index 0). */
   scId: string;
   startMs: number;
   endMs: number;
   direction: PassDirection;
+  source: AccessSource;
 }
 
 /**
@@ -26,6 +29,14 @@ function mapDirection(d: number): PassDirection {
   return "unknown";
 }
 
+/**
+ * Map the proto `ResultSource` enum (1=USER, 2=COMPARATOR) to an
+ * `AccessSource` discriminator.
+ */
+function mapSource(s: number): AccessSource {
+  return s === 2 ? "comparator" : "user";
+}
+
 export interface AoiStats {
   count: number;
   totalAccessSeconds: number;
@@ -35,8 +46,10 @@ export interface AoiStats {
 }
 
 export interface AoiAccessState {
-  windows: AccessWindowLite[];
-  stats: AoiStats;
+  userWindows: AccessWindowLite[];
+  comparatorWindows: AccessWindowLite[];
+  userStats: AoiStats;
+  comparatorStats: AoiStats;
 }
 
 /** Singleton store keyed by AOI id. */
@@ -49,17 +62,27 @@ export function resetAccess(): void {
 
 /** Append a streamed pair into the store and recompute that AOI's stats. */
 export function ingestPair(p: AccessPairResult, scenarioStartMs: number, scenarioEndMs: number): void {
-  const existing = accessByAoi.get(p.aoiId) ?? { windows: [], stats: emptyStats() };
+  const existing = accessByAoi.get(p.aoiId) ?? {
+    userWindows: [],
+    comparatorWindows: [],
+    userStats: emptyStats(),
+    comparatorStats: emptyStats(),
+  };
+  const source = mapSource(p.source as unknown as number);
   const newWindows: AccessWindowLite[] = p.windows.map((w) => ({
     scId: p.scId,
     startMs: Date.parse(w.startIso),
     endMs: Date.parse(w.endIso),
     direction: mapDirection(w.direction as unknown as number),
+    source,
   }));
-  const merged = existing.windows.concat(newWindows);
+  const userWindows = source === "user" ? existing.userWindows.concat(newWindows) : existing.userWindows;
+  const comparatorWindows = source === "comparator" ? existing.comparatorWindows.concat(newWindows) : existing.comparatorWindows;
   accessByAoi.set(p.aoiId, {
-    windows: merged,
-    stats: computeStats(merged, scenarioStartMs, scenarioEndMs),
+    userWindows,
+    comparatorWindows,
+    userStats: computeStats(userWindows, scenarioStartMs, scenarioEndMs),
+    comparatorStats: computeStats(comparatorWindows, scenarioStartMs, scenarioEndMs),
   });
 }
 

@@ -22,6 +22,7 @@
   }
 
   const state = $derived<AoiAccessState | undefined>(accessByAoi.get(aoiId));
+  const hasComparator = $derived((state?.comparatorStats.count ?? 0) > 0);
 
   function fmtSeconds(s: number | null): string {
     if (s == null) return "—";
@@ -40,21 +41,32 @@
     {label}
   </header>
 
-  <section class="grid grid-cols-2 gap-2 p-3 text-xs">
+  <section class="grid {hasComparator ? 'grid-cols-3' : 'grid-cols-2'} gap-2 p-3 text-xs">
+    {#if hasComparator}
+      <div></div>
+      <div class="text-right text-neutral-400 uppercase">You</div>
+      <div class="text-right text-amber-400 uppercase">ICEYE</div>
+    {/if}
+
     <div class="text-neutral-400">Windows</div>
-    <div class="font-mono text-right">{state?.stats.count ?? 0}</div>
+    <div class="font-mono text-right">{state?.userStats.count ?? 0}</div>
+    {#if hasComparator}<div class="font-mono text-right text-amber-300">{state?.comparatorStats.count ?? 0}</div>{/if}
 
     <div class="text-neutral-400">Total access</div>
-    <div class="font-mono text-right">{fmtSeconds(state?.stats.totalAccessSeconds ?? 0)}</div>
+    <div class="font-mono text-right">{fmtSeconds(state?.userStats.totalAccessSeconds ?? 0)}</div>
+    {#if hasComparator}<div class="font-mono text-right text-amber-300">{fmtSeconds(state?.comparatorStats.totalAccessSeconds ?? 0)}</div>{/if}
 
     <div class="text-neutral-400">Mean gap</div>
-    <div class="font-mono text-right">{fmtSeconds(state?.stats.meanGapSeconds ?? null)}</div>
+    <div class="font-mono text-right">{fmtSeconds(state?.userStats.meanGapSeconds ?? null)}</div>
+    {#if hasComparator}<div class="font-mono text-right text-amber-300">{fmtSeconds(state?.comparatorStats.meanGapSeconds ?? null)}</div>{/if}
 
     <div class="text-neutral-400">Median gap</div>
-    <div class="font-mono text-right">{fmtSeconds(state?.stats.medianGapSeconds ?? null)}</div>
+    <div class="font-mono text-right">{fmtSeconds(state?.userStats.medianGapSeconds ?? null)}</div>
+    {#if hasComparator}<div class="font-mono text-right text-amber-300">{fmtSeconds(state?.comparatorStats.medianGapSeconds ?? null)}</div>{/if}
 
     <div class="text-neutral-400">Max gap</div>
-    <div class="font-mono text-right">{fmtSeconds(state?.stats.maxGapSeconds ?? null)}</div>
+    <div class="font-mono text-right">{fmtSeconds(state?.userStats.maxGapSeconds ?? null)}</div>
+    {#if hasComparator}<div class="font-mono text-right text-amber-300">{fmtSeconds(state?.comparatorStats.maxGapSeconds ?? null)}</div>{/if}
   </section>
 
   <section class="border-t border-neutral-800">
@@ -68,7 +80,7 @@
         </tr>
       </thead>
       <tbody class="text-neutral-200 font-mono">
-        {#each state?.windows ?? [] as w, i (i)}
+        {#each state?.userWindows ?? [] as w, i (i)}
           <tr class="row-in border-b border-neutral-900/40">
             <td class="px-3 py-1">{fmtSat(w.scId)}</td>
             <td class="px-3 py-1">{fmtIso(w.startMs)}</td>
