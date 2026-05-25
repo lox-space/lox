@@ -36,7 +36,13 @@
     void runSweep(scenario, cfg, ctl.signal);
   }
 
-  function stop(): void {
+  /** Stop the in-flight sweep but keep whatever points have landed so far. */
+  function cancel(): void {
+    ctl?.abort();
+  }
+
+  /** Abort (if running) and wipe the chart. */
+  function clear(): void {
     ctl?.abort();
     resetSweep();
   }
@@ -62,8 +68,11 @@
   </div>
 
   <div class="flex items-center gap-2">
-    <button type="button" class="px-3 py-1 rounded border border-neutral-700 bg-neutral-900 hover:bg-neutral-800" onclick={start}>Run sweep</button>
-    <button type="button" class="px-3 py-1 rounded border border-neutral-700 bg-neutral-900 hover:bg-neutral-800" onclick={stop}>Clear</button>
+    <button type="button" class="px-3 py-1 rounded border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed" onclick={start} disabled={sweepRunning.value}>Run sweep</button>
+    {#if sweepRunning.value}
+      <button type="button" class="px-3 py-1 rounded border border-neutral-700 bg-neutral-900 hover:bg-neutral-800" onclick={cancel}>Cancel</button>
+    {/if}
+    <button type="button" class="px-3 py-1 rounded border border-neutral-700 bg-neutral-900 hover:bg-neutral-800" onclick={clear}>Clear</button>
     {#if sweepRunning.value}<span class="text-cyan-400">running · {sweepRunning.done}/{sweepRunning.total}</span>{/if}
   </div>
 
