@@ -205,3 +205,105 @@ fn mixed_pair_types_interleave() {
     assert!(saw_gs);
     assert!(saw_is);
 }
+
+#[test]
+fn drop_stops_workers() {
+    use std::time::Duration;
+
+    // Use a scenario with 2 spacecraft and an inter-satellite check enabled so
+    // there is at least something to compute; we drop the stream immediately.
+    let traj = make_trajectory();
+    let gs = make_ground_station("cebreros");
+    let sc1 = make_spacecraft("sc1", traj.clone());
+    let sc2 = make_spacecraft("sc2", traj.clone());
+    let ground_assets = [gs];
+    let space_assets = [sc1, sc2];
+    let scenario = make_scenario(&ground_assets, &space_assets, &traj);
+    let ensemble = make_ensemble(&space_assets);
+    let spk = ephemeris();
+
+    let arc_scenario = Arc::new(scenario);
+    let arc_ensemble = Arc::new(ensemble);
+    let arc_ephemeris = Arc::new(spk);
+
+    let analysis = VisibilityAnalysis::new(
+        arc_scenario.as_ref(),
+        arc_ensemble.as_ref(),
+        arc_ephemeris.as_ref(),
+    )
+    .with_inter_satellite();
+
+    let s = analysis.compute_stream(
+        arc_scenario.clone(),
+        arc_ensemble.clone(),
+        arc_ephemeris.clone(),
+        4,
+        OnError::Continue,
+    );
+    let token = s.token();
+    drop(s);
+    std::thread::sleep(Duration::from_millis(100));
+    assert!(token.is_cancelled());
+}
+
+// A test-only ephemeris implementation that panics on every state lookup.
+struct PanickingEphemeris;
+
+impl lox_ephem::Ephemeris for PanickingEphemeris {
+    type Error = std::convert::Infallible;
+
+    fn state<O1: lox_bodies::Origin, O2: lox_bodies::Origin>(
+        &self,
+        _time: lox_time::Time<lox_time::time_scales::Tdb>,
+        _origin: O1,
+        _target: O2,
+    ) -> Result<lox_core::coords::Cartesian, Self::Error> {
+        panic!("injected ephemeris panic");
+    }
+}
+
+#[test]
+fn panic_in_detector_surfaces_as_worker_panicked() {
+    use lox_analysis::visibility::VisibilityError;
+
+    // Build a scenario with one gs + one spacecraft, using a PanickingEphemeris
+    // with an occulting body so the ephemeris is actually invoked during detection.
+    let traj = make_trajectory();
+    let gs = make_ground_station("cebreros");
+    let sc = make_spacecraft("lunar", traj.clone());
+    let ground_assets = [gs];
+    let space_assets = [sc];
+    let scenario = make_scenario(&ground_assets, &space_assets, &traj);
+    let ensemble = make_ensemble(&space_assets);
+
+    let arc_scenario = Arc::new(scenario);
+    let arc_ensemble = Arc::new(ensemble);
+    let arc_ephemeris = Arc::new(PanickingEphemeris);
+
+    let analysis = VisibilityAnalysis::new(
+        arc_scenario.as_ref(),
+        arc_ensemble.as_ref(),
+        arc_ephemeris.as_ref(),
+    )
+    // With Moon as occulting body, the ephemeris is queried during LOS detection.
+    .with_occulting_bodies(vec![DynOrigin::Moon]);
+
+    let mut s = analysis.compute_stream(
+        arc_scenario.clone(),
+        arc_ensemble.clone(),
+        arc_ephemeris.clone(),
+        8,
+        OnError::Continue,
+    );
+
+    let mut found_panic = false;
+    while let Some(item) = s.blocking_next() {
+        if let Err(VisibilityError::WorkerPanicked(_, _, _)) = item {
+            found_panic = true;
+        }
+    }
+    assert!(
+        found_panic,
+        "expected WorkerPanicked error from panicking ephemeris"
+    );
+}
