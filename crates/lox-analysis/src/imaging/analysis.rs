@@ -299,14 +299,18 @@ where
             };
             let detector = RootFindingDetector::new(detect_fn, self.step);
             let intervals = EventsToIntervals::new(detector).detect(interval)?;
-            let windows: Vec<AccessWindow> = intervals
-                .into_iter()
-                .map(|interval| AccessWindow {
-                    interval,
-                    // TODO(task-6): replace placeholder with pass_direction_of(...) sampled at midpoint
-                    direction: PassDirection::Ascending,
-                })
-                .collect();
+            let origin = self.scenario.origin();
+            let body_fixed_frame = self.body_fixed_frame;
+            let mut windows: Vec<AccessWindow> = Vec::with_capacity(intervals.len());
+            for iv in intervals {
+                let midpoint = iv.start() + 0.5 * (iv.end() - iv.start());
+                let sample = sub_sat_sample(traj, midpoint, origin, body_fixed_frame)?;
+                let direction = pass_direction_of(&sample);
+                windows.push(AccessWindow {
+                    interval: iv,
+                    direction,
+                });
+            }
             Ok::<_, AccessError>((key, windows))
         };
 
