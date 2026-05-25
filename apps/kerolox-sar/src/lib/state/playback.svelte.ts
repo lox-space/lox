@@ -15,7 +15,7 @@ export const playback = $state<PlaybackState>({
   endMs: 0,
   currentTime: 0,
   playing: false,
-  rate: 1,
+  rate: 60,
 });
 
 export function setBounds(startMs: number, endMs: number): void {
