@@ -6,7 +6,9 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt;
+#[cfg(feature = "stream")]
 use std::panic::{AssertUnwindSafe, catch_unwind};
+#[cfg(feature = "stream")]
 use std::sync::Arc;
 
 use lox_bodies::{DynOrigin, Origin};
@@ -20,6 +22,7 @@ use crate::imaging::SarPayload;
 use crate::imaging::analysis::PayloadAccessor;
 use lox_frames::rotations::TryRotation;
 use lox_frames::{DynFrame, ReferenceFrame};
+#[cfg(feature = "stream")]
 use lox_stream::{OnError, Stream, par_stream};
 use lox_time::Time;
 use lox_time::intervals::TimeInterval;
@@ -417,6 +420,7 @@ pub enum ScenarioPropagateError {
     #[error("frame transformation failed for spacecraft \"{0}\": {1}")]
     FrameTransformation(AssetId, String),
     /// A worker thread panicked while propagating the named spacecraft.
+    #[cfg(feature = "stream")]
     #[error("worker panicked while propagating spacecraft \"{id}\": {message}")]
     WorkerPanicked {
         /// Spacecraft whose propagation panicked.
@@ -451,6 +455,7 @@ where
     Ok((sc.id.clone(), typed))
 }
 
+#[cfg(feature = "stream")]
 pub(crate) fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
     if let Some(s) = payload.downcast_ref::<&'static str>() {
         (*s).to_string()
@@ -634,6 +639,7 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
     /// returned `Stream` directly with async consumers or via `blocking_next`
     /// for synchronous draining. Drop the stream (or call `cancel`) to stop
     /// in-flight work cooperatively at unit boundaries.
+    #[cfg(feature = "stream")]
     pub fn propagate_stream<P>(
         self: Arc<Self>,
         provider: Arc<P>,
