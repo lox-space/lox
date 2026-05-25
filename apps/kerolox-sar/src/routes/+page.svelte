@@ -18,12 +18,33 @@
   } from "$lib/state/status.svelte";
   import { runComputeAccess } from "$lib/rpc/client";
   import type { AccessRequest } from "@kerolox/proto-ts";
+  import { ensureTrajectories } from "$lib/state/trajectories.svelte";
+  import { setBounds, seek, pause } from "$lib/state/playback.svelte";
 
   let ready = $state(false);
 
   onMount(async () => {
     await ensureWalkerReady();
     ready = true;
+  });
+
+  // Phase 3: populate the trajectory cache and reset the playback bounds
+  // whenever the scenario or Walker output changes. Independent from the
+  // ComputeAccess effect below — the runes graph dedupes the actual
+  // Walker work since runWalker is pure.
+  $effect(() => {
+    if (!ready) return;
+    if (!isWalkerValid(scenario.walker)) return;
+    const satellites = runWalker(scenario);
+    if (satellites.length === 0) return;
+
+    const scenarioStartMs = Date.parse(scenario.startTimeIso);
+    const scenarioEndMs = scenarioStartMs + scenario.durationHours * 3600 * 1000;
+    setBounds(scenarioStartMs, scenarioEndMs);
+    seek(scenarioStartMs);
+    pause();
+
+    void ensureTrajectories(scenario, satellites);
   });
 
   // Debounced reactive runner: re-runs ComputeAccess whenever scenario changes.
