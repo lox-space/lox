@@ -53,7 +53,7 @@
     // for contrast.
     ctx.save();
     ctx.globalAlpha = 0.6;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
     for (const [id, traj] of trajectoryById.entries()) {
       ctx.strokeStyle = colorForPlane(parsePlaneFromId(id));
       ctx.beginPath();
