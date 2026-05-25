@@ -52,7 +52,7 @@
     // world map. Current-position dots are drawn at full opacity below
     // for contrast.
     ctx.save();
-    ctx.globalAlpha = 0.45;
+    ctx.globalAlpha = 0.6;
     ctx.lineWidth = 1;
     for (const [id, traj] of trajectoryById.entries()) {
       ctx.strokeStyle = colorForPlane(parsePlaneFromId(id));
