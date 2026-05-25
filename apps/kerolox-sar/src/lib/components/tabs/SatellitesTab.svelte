@@ -22,8 +22,7 @@
     <table class="w-full text-xs">
       <thead class="text-neutral-400 uppercase">
         <tr class="border-b border-neutral-800">
-          <th class="text-left px-3 py-2">Plane</th>
-          <th class="text-left px-3 py-2">Idx</th>
+          <th class="text-left px-3 py-2">Sat</th>
           <th class="text-right px-3 py-2">SMA (km)</th>
           <th class="text-right px-3 py-2">Ecc</th>
           <th class="text-right px-3 py-2">Inc (°)</th>
@@ -36,8 +35,7 @@
         <!-- Key assumes index_in_plane < 1000; holds for any realistic Walker config. -->
         {#each satellites as sat (sat.plane * 1000 + sat.indexInPlane)}
           <tr class="border-b border-neutral-900/40 hover:bg-neutral-900/50">
-            <td class="px-3 py-1">{sat.plane}</td>
-            <td class="px-3 py-1">{sat.indexInPlane}</td>
+            <td class="px-3 py-1">{sat.plane + 1}-{sat.indexInPlane + 1}</td>
             <td class="px-3 py-1 text-right">{(sat.smaM / 1000).toFixed(1)}</td>
             <td class="px-3 py-1 text-right">{sat.ecc.toFixed(4)}</td>
             <td class="px-3 py-1 text-right">{formatDeg(sat.incRad)}</td>
