@@ -59,7 +59,15 @@
       pause();
     });
 
-    void ensureTrajectories(scenario, satellites);
+    // Debounce the propagation RPC so rapid form edits (typing) don't
+    // thrash the engine with cancel/restart cycles. ensureTrajectories has
+    // its own AbortController, so a fired-then-superseded run is cancelled
+    // cleanly; the debounce keeps it from firing at all until typing stops.
+    const timer = setTimeout(() => {
+      ensureTrajectories(scenario, satellites);
+    }, 300);
+
+    return () => clearTimeout(timer);
   });
 
   // Reactive runner: re-runs ComputeAccess whenever scenario changes.
@@ -79,46 +87,53 @@
 
     const ctl = new AbortController();
 
-    resetAccess();
-    const scenarioStartMs = Date.parse(startTimeIso);
-    const scenarioEndMs = scenarioStartMs + durationHours * 3600 * 1000;
-    const req: AccessRequest = {
-      startTimeIso,
-      durationSeconds: durationHours * 3600,
-      satellites: satellites.map((s) => ({
-        id: `p${s.plane}-s${s.indexInPlane}`,
-        smaM: s.smaM,
-        ecc: s.ecc,
-        incRad: s.incRad,
-        raanRad: s.raanRad,
-        aopRad: s.aopRad,
-        trueAnomalyRad: s.trueAnomalyRad,
-        plane: s.plane,
-        indexInPlane: s.indexInPlane,
-      })) as unknown as AccessRequest["satellites"],
-      sar: {
-        lookSide: sarLookSide === "LEFT" ? 1 : 2,
-        minIncidenceDeg: sarMinIncidenceDeg,
-        maxIncidenceDeg: sarMaxIncidenceDeg,
-      } as unknown as AccessRequest["sar"],
-      aoiIds: ["hormuz", "black_sea"],
-      comparators: [],
-      stepSeconds: 30,
-    } as unknown as AccessRequest;
+    // Debounce the ComputeAccess RPC so typing into form fields doesn't
+    // fire-and-cancel a stream on every keystroke (which surfaced as a
+    // flashing "cancelled" pill). The timer resets on each scenario change;
+    // the RPC only fires once edits settle for 300 ms.
+    const timer = setTimeout(() => {
+      resetAccess();
+      const scenarioStartMs = Date.parse(startTimeIso);
+      const scenarioEndMs = scenarioStartMs + durationHours * 3600 * 1000;
+      const req: AccessRequest = {
+        startTimeIso,
+        durationSeconds: durationHours * 3600,
+        satellites: satellites.map((s) => ({
+          id: `p${s.plane}-s${s.indexInPlane}`,
+          smaM: s.smaM,
+          ecc: s.ecc,
+          incRad: s.incRad,
+          raanRad: s.raanRad,
+          aopRad: s.aopRad,
+          trueAnomalyRad: s.trueAnomalyRad,
+          plane: s.plane,
+          indexInPlane: s.indexInPlane,
+        })) as unknown as AccessRequest["satellites"],
+        sar: {
+          lookSide: sarLookSide === "LEFT" ? 1 : 2,
+          minIncidenceDeg: sarMinIncidenceDeg,
+          maxIncidenceDeg: sarMaxIncidenceDeg,
+        } as unknown as AccessRequest["sar"],
+        aoiIds: ["hormuz", "black_sea"],
+        comparators: [],
+        stepSeconds: 30,
+      } as unknown as AccessRequest;
 
-    const pairsExpected = satellites.length * 2; // 2 AOIs
-    void runComputeAccess(req, {
-      onStart: () => accessStatus.markStart(pairsExpected),
-      onPair: (p) => {
-        ingestPair(p, scenarioStartMs, scenarioEndMs);
-        accessStatus.bump();
-      },
-      onDone: (ms) => accessStatus.markDone(ms),
-      onCancel: () => accessStatus.markCancelled(),
-      onError: (err) => accessStatus.markError(err.message),
-    }, ctl.signal);
+      const pairsExpected = satellites.length * 2; // 2 AOIs
+      void runComputeAccess(req, {
+        onStart: () => accessStatus.markStart(pairsExpected),
+        onPair: (p) => {
+          ingestPair(p, scenarioStartMs, scenarioEndMs);
+          accessStatus.bump();
+        },
+        onDone: (ms) => accessStatus.markDone(ms),
+        onCancel: () => accessStatus.markCancelled(),
+        onError: (err) => accessStatus.markError(err.message),
+      }, ctl.signal);
+    }, 300);
 
     return () => {
+      clearTimeout(timer);
       ctl.abort();
     };
   });
