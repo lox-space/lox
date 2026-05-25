@@ -313,6 +313,7 @@ mod integration_tests {
     use lox_time::time_scales::{DynTimeScale, Tai};
 
     use crate::assets::{AssetId, DynScenario, Spacecraft};
+    use crate::imaging::AccessWindow;
     use crate::imaging::analysis::SarAccessAnalysis;
     use crate::imaging::aoi::{Aoi, AoiId};
 
@@ -395,13 +396,15 @@ mod integration_tests {
             .compute()
             .expect("SAR access analysis failed");
 
-        let windows = results.intervals(&AssetId::new("s1a"), &AoiId::new("europe"));
+        let windows = results.windows(&AssetId::new("s1a"), &AoiId::new("europe"));
         assert!(
             !windows.is_empty(),
             "expected at least one access window over Western Europe in 6h",
         );
         for w in windows {
-            let dur = (w.end() - w.start()).to_seconds().to_f64();
+            let dur = (w.interval.end() - w.interval.start())
+                .to_seconds()
+                .to_f64();
             assert!(dur > 0.0, "zero-length window");
             assert!(
                 dur < 600.0,
@@ -440,8 +443,8 @@ mod integration_tests {
             .compute()
             .expect("SAR access analysis failed");
 
-        let r_windows = results.intervals(&AssetId::new("s1a_r"), &AoiId::new("europe"));
-        let l_windows = results.intervals(&AssetId::new("s1a_l"), &AoiId::new("europe"));
+        let r_windows = results.windows(&AssetId::new("s1a_r"), &AoiId::new("europe"));
+        let l_windows = results.windows(&AssetId::new("s1a_l"), &AoiId::new("europe"));
 
         assert!(
             !r_windows.is_empty() && !l_windows.is_empty(),
@@ -451,8 +454,8 @@ mod integration_tests {
         // Sides should see different opportunities: at least one window on one
         // side must not overlap any window on the other. Robust to TLE refreshes
         // (unlike a sum-of-durations check, which can coincidentally match).
-        let overlaps = |a: &TimeInterval<Tai>, b: &TimeInterval<Tai>| -> bool {
-            a.start() < b.end() && b.start() < a.end()
+        let overlaps = |a: &AccessWindow, b: &AccessWindow| -> bool {
+            a.interval.start() < b.interval.end() && b.interval.start() < a.interval.end()
         };
         let left_has_unique = l_windows
             .iter()

@@ -33,39 +33,39 @@ pub struct AccessWindow {
     pub direction: PassDirection,
 }
 
-type IntervalMap = HashMap<(AssetId, AoiId), Vec<TimeInterval<Tai>>>;
+type WindowMap = HashMap<(AssetId, AoiId), Vec<AccessWindow>>;
 
 /// Results of an access analysis.
 pub struct AccessResults {
-    intervals: IntervalMap,
+    windows: WindowMap,
 }
 
 impl AccessResults {
-    pub(super) fn new(intervals: IntervalMap) -> Self {
-        Self { intervals }
+    pub(super) fn new(windows: WindowMap) -> Self {
+        Self { windows }
     }
 
-    /// Returns access intervals for a specific (spacecraft, AOI) pair.
-    pub fn intervals(&self, sc_id: &AssetId, aoi_id: &AoiId) -> &[TimeInterval<Tai>] {
-        self.intervals
+    /// Returns access windows for a specific (spacecraft, AOI) pair.
+    pub fn windows(&self, sc_id: &AssetId, aoi_id: &AoiId) -> &[AccessWindow] {
+        self.windows
             .get(&(sc_id.clone(), aoi_id.clone()))
             .map(|v| v.as_slice())
             .unwrap_or(&[])
     }
 
-    /// Returns an iterator over all (spacecraft, AOI) pairs and their intervals.
-    pub fn all_intervals(&self) -> &IntervalMap {
-        &self.intervals
+    /// Returns all (spacecraft, AOI) pairs and their access windows.
+    pub fn all_windows(&self) -> &WindowMap {
+        &self.windows
     }
 
-    /// Returns `true` if no access intervals were found.
+    /// Returns `true` if no access windows were found.
     pub fn is_empty(&self) -> bool {
-        self.intervals.is_empty()
+        self.windows.is_empty()
     }
 
     /// Returns the number of (spacecraft, AOI) pairs.
     pub fn num_pairs(&self) -> usize {
-        self.intervals.len()
+        self.windows.len()
     }
 }
 
