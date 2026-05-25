@@ -161,6 +161,9 @@ pub enum VisibilityError {
     /// Series interpolation failed.
     #[error(transparent)]
     Series(#[from] SeriesError),
+    /// A worker thread panicked while computing a pair.
+    #[error("worker panicked while computing pair ({0}, {1}): {2}")]
+    WorkerPanicked(AssetId, AssetId, String),
 }
 
 /// Error returned when computing passes for an invalid pair type.
