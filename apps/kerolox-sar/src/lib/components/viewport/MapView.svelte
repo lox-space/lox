@@ -48,6 +48,11 @@
     }
 
     // Ground tracks (split at ±180 longitude crossings, color per plane).
+    // Reduced opacity so dozens of overlapping tracks don't obscure the
+    // world map. Current-position dots are drawn at full opacity below
+    // for contrast.
+    ctx.save();
+    ctx.globalAlpha = 0.45;
     ctx.lineWidth = 1;
     for (const [id, traj] of trajectoryById.entries()) {
       ctx.strokeStyle = colorForPlane(parsePlaneFromId(id));
@@ -69,6 +74,7 @@
       }
       ctx.stroke();
     }
+    ctx.restore();
 
     // Current satellite positions: interpolate from ground-track samples at currentTime.
     const t = playback.currentTime;
@@ -90,7 +96,7 @@
       const [x, y] = lonLatToXY(lon, lat, width, height);
       ctx.fillStyle = colorForPlane(parsePlaneFromId(id));
       ctx.beginPath();
-      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
       ctx.fill();
     }
   }

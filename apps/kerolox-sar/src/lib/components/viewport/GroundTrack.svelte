@@ -41,7 +41,7 @@
     return g;
   });
 
-  const material = $derived.by(() => new LineBasicMaterial({ color }));
+  const material = $derived.by(() => new LineBasicMaterial({ color, transparent: true, opacity: 0.45 }));
 
   $effect(() => {
     // When `geometry` or `material` is replaced (because `traj` changed)
