@@ -333,8 +333,13 @@ pub enum ScenarioPropagateError {
     #[error("frame transformation failed for spacecraft \"{0}\": {1}")]
     FrameTransformation(AssetId, String),
     /// A worker thread panicked while propagating the named spacecraft.
-    #[error("worker panicked while propagating spacecraft \"{0}\": {1}")]
-    WorkerPanicked(AssetId, String),
+    #[error("worker panicked while propagating spacecraft \"{id}\": {message}")]
+    WorkerPanicked {
+        /// Spacecraft whose propagation panicked.
+        id: AssetId,
+        /// Message extracted from the panic payload.
+        message: String,
+    },
 }
 
 fn propagate_one<O, R, P>(
@@ -578,10 +583,10 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
                 propagate_one(sc, dyn_interval, origin, frame, &*prov)
             }))
             .unwrap_or_else(|payload| {
-                Err(ScenarioPropagateError::WorkerPanicked(
-                    sc_id_for_panic,
-                    panic_message(payload),
-                ))
+                Err(ScenarioPropagateError::WorkerPanicked {
+                    id: sc_id_for_panic,
+                    message: panic_message(payload),
+                })
             })
         })
     }

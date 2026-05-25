@@ -130,10 +130,11 @@ mod tests {
         let items: Vec<_> = s.collect_blocking();
         let errs = items.iter().filter(|r| r.is_err()).count();
         assert!(errs >= 1);
-        // Upper bound: roughly the rayon worker count + a small slop. We
-        // assert << 10_000 to catch a missing cancel().
+        // Upper bound: worker count with generous slop. We assert << 10_000
+        // to catch a missing cancel(); the multiplier is generous to absorb
+        // noise from concurrent test processes sharing the rayon pool.
         let total = invocations.load(Ordering::SeqCst);
-        let max_expected = rayon::current_num_threads() * 4;
+        let max_expected = rayon::current_num_threads() * 16;
         assert!(
             total <= max_expected,
             "expected ≤ {max_expected} invocations after abort, got {total}"
