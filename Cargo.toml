@@ -41,6 +41,7 @@ lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.15" }
 
 arrayvec = "0.7.6"
 async-channel = "2.5.0"
+axum = "0.8.9"
 chrono = "0.4.43"
 csv = "1.4.0"
 differential-equations = "0.6.1"
@@ -60,6 +61,10 @@ proptest = "1.9.0"
 pyo3 = "0.29.0"
 quick-xml = { version = "0.41.0", features = ["serde", "serialize"] }
 rayon = "1.11.0"
+reqwest = { version = "0.12", default-features = false, features = [
+  "rustls-tls",
+  "stream",
+] }
 rstest = "0.26.1"
 serde = { version = "1.0.228", features = ["derive", "rc"] }
 serde_json = "1.0.145"
@@ -68,6 +73,7 @@ sha2 = "0.11"
 tempfile = "3"
 thiserror = { version = "2.0.17", default-features = false }
 tokio = { version = "1", default-features = false }
+tower = "0.5.3"
 zip = { version = "8", default-features = false, features = ["deflate"] }
 
 [profile.release]
