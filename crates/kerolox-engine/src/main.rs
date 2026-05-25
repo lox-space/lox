@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = Router::new()
         .route("/health", get(|| async { "OK" }))
-        .layer(dev_cors());
+        .layer(dev_cors()); // TODO(prod): replace with an origin-allowlist before deployment
 
     tracing::info!("kerolox-engine listening on {addr}");
     let listener = tokio::net::TcpListener::bind(addr).await?;
