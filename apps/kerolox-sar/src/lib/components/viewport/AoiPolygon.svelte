@@ -21,7 +21,7 @@
   let {
     aoi,
     color = "#ff3366",
-    fillOpacity = 0.35,
+    fillOpacity = 0.5,
   }: { aoi: AoiPolygon; color?: string; fillOpacity?: number } = $props();
 
   const earth = new Origin("Earth");

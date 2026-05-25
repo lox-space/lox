@@ -68,7 +68,7 @@
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
-      ctx.fillStyle = "rgba(255, 51, 102, 0.3)";
+      ctx.fillStyle = "rgba(255, 51, 102, 0.5)";
       ctx.fill();
       // Dark casing under the bright outline so it reads on any background.
       ctx.lineWidth = 4;
