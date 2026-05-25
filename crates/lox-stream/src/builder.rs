@@ -140,6 +140,74 @@ mod tests {
         );
     }
 
+    #[test]
+    fn drop_cancels_in_flight_workers() {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::time::Duration;
+
+        let invocations = Arc::new(AtomicUsize::new(0));
+        let c = invocations.clone();
+
+        let mut s = par_stream(0..10_000_usize, 4, OnError::Continue, move |i, _| {
+            c.fetch_add(1, Ordering::SeqCst);
+            std::thread::sleep(Duration::from_millis(20));
+            Ok::<usize, ()>(i)
+        });
+
+        // Receive one item then drop.
+        let _ = s.blocking_next();
+        drop(s);
+
+        // Give workers time to observe the cancellation.
+        std::thread::sleep(Duration::from_millis(200));
+        let after_drop = invocations.load(Ordering::SeqCst);
+        std::thread::sleep(Duration::from_millis(500));
+        let later = invocations.load(Ordering::SeqCst);
+        // Bounded growth: at most one extra unit per worker.
+        let max_growth = rayon::current_num_threads();
+        assert!(
+            later - after_drop <= max_growth,
+            "growth {} > {} after drop",
+            later - after_drop,
+            max_growth,
+        );
+    }
+
+    #[test]
+    fn explicit_cancel_stops_workers() {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::time::Duration;
+
+        let invocations = Arc::new(AtomicUsize::new(0));
+        let c = invocations.clone();
+
+        let mut s = par_stream(0..10_000_usize, 4, OnError::Continue, move |i, _| {
+            c.fetch_add(1, Ordering::SeqCst);
+            std::thread::sleep(Duration::from_millis(20));
+            Ok::<usize, ()>(i)
+        });
+
+        let _ = s.blocking_next();
+        s.cancel();
+
+        std::thread::sleep(Duration::from_millis(200));
+        let after_cancel = invocations.load(Ordering::SeqCst);
+        std::thread::sleep(Duration::from_millis(500));
+        let later = invocations.load(Ordering::SeqCst);
+        let max_growth = rayon::current_num_threads();
+        assert!(
+            later - after_cancel <= max_growth,
+            "growth {} > {} after cancel",
+            later - after_cancel,
+            max_growth,
+        );
+
+        // Subsequent poll terminates cleanly.
+        let _drained: Vec<_> = (&mut s).collect_blocking_inplace();
+    }
+
     // ----- helper -----
 
     trait CollectBlocking<T> {
@@ -148,6 +216,20 @@ mod tests {
 
     impl<T, E> CollectBlocking<Result<T, E>> for Stream<T, E> {
         fn collect_blocking(mut self) -> Vec<Result<T, E>> {
+            let mut v = Vec::new();
+            while let Some(item) = self.blocking_next() {
+                v.push(item);
+            }
+            v
+        }
+    }
+
+    // ----- additional helper for in-place draining -----
+    trait CollectBlockingInplace<T> {
+        fn collect_blocking_inplace(self) -> Vec<T>;
+    }
+    impl<T, E> CollectBlockingInplace<Result<T, E>> for &mut Stream<T, E> {
+        fn collect_blocking_inplace(self) -> Vec<Result<T, E>> {
             let mut v = Vec::new();
             while let Some(item) = self.blocking_next() {
                 v.push(item);
