@@ -18,7 +18,7 @@
 {#if satellites.length === 0}
   <p class="p-4 text-sm text-neutral-400">No satellites — check the Walker configuration.</p>
 {:else}
-  <div class="overflow-auto" data-testid="satellites-table">
+  <div class="h-full overflow-auto" data-testid="satellites-table">
     <table class="w-full text-xs">
       <thead class="text-neutral-400 uppercase">
         <tr class="border-b border-neutral-800">
