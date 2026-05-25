@@ -16,7 +16,7 @@
   ];
 </script>
 
-<section class="w-[28rem] h-full flex flex-col bg-neutral-950 border-l border-neutral-800">
+<section class="w-[34rem] h-full flex flex-col bg-neutral-950 border-l border-neutral-800">
   <nav class="flex border-b border-neutral-800 text-xs">
     {#each tabs as t (t.id)}
       <button
