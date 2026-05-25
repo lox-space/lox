@@ -163,7 +163,7 @@ fn panic_in_propagator_surfaces_as_worker_panicked() {
     let mut s = arc_scenario.propagate_stream(arc_provider, 8, OnError::Continue);
     let mut found_panic = false;
     while let Some(item) = s.blocking_next() {
-        if let Err(ScenarioPropagateError::WorkerPanicked(id, _msg)) = item {
+        if let Err(ScenarioPropagateError::WorkerPanicked { id, message: _ }) = item {
             assert_eq!(id.as_str(), "bad");
             found_panic = true;
         }

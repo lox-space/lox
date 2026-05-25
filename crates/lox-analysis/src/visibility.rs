@@ -165,8 +165,15 @@ pub enum VisibilityError {
     #[error(transparent)]
     Series(#[from] SeriesError),
     /// A worker thread panicked while computing a pair.
-    #[error("worker panicked while computing pair ({0}, {1}): {2}")]
-    WorkerPanicked(AssetId, AssetId, String),
+    #[error("worker panicked while computing pair ({id1}, {id2}): {message}")]
+    WorkerPanicked {
+        /// First asset of the panicking pair.
+        id1: AssetId,
+        /// Second asset of the panicking pair.
+        id2: AssetId,
+        /// Message extracted from the panic payload.
+        message: String,
+    },
 }
 
 /// Error returned when computing passes for an invalid pair type.
@@ -1649,11 +1656,11 @@ where
                 run_visibility_job(&job, &scenario, &ensemble, &*ephemeris, &cfg, interval)
             }))
             .unwrap_or_else(|payload| {
-                Err(VisibilityError::WorkerPanicked(
-                    id1_panic,
-                    id2_panic,
-                    panic_message(payload),
-                ))
+                Err(VisibilityError::WorkerPanicked {
+                    id1: id1_panic,
+                    id2: id2_panic,
+                    message: panic_message(payload),
+                })
             })
         })
     }

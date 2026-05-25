@@ -298,7 +298,7 @@ fn panic_in_detector_surfaces_as_worker_panicked() {
 
     let mut found_panic = false;
     while let Some(item) = s.blocking_next() {
-        if let Err(VisibilityError::WorkerPanicked(_, _, _)) = item {
+        if let Err(VisibilityError::WorkerPanicked { .. }) = item {
             found_panic = true;
         }
     }
