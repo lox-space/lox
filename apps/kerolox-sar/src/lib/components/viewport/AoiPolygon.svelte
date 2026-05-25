@@ -14,13 +14,14 @@
   } from "three";
   import type { AoiPolygon } from "$lib/aois";
 
-  // Bright cyan reads clearly against both the sunlit and night sides of the
-  // globe; amber stays reserved for the ICEYE comparator fleet. The interior is
-  // a translucent fill so the AOI reads as an area, not a thin line.
+  // A warm pink-red contrasts strongly against the predominantly blue/green/tan
+  // day side AND the dark night side (cyan blended into the lit ocean); amber
+  // stays reserved for the ICEYE comparator fleet. The interior is a translucent
+  // fill so the AOI reads as an area, not a thin line.
   let {
     aoi,
-    color = "#33e1ff",
-    fillOpacity = 0.2,
+    color = "#ff3366",
+    fillOpacity = 0.35,
   }: { aoi: AoiPolygon; color?: string; fillOpacity?: number } = $props();
 
   const earth = new Origin("Earth");

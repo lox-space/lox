@@ -57,10 +57,8 @@
       ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
     }
 
-    // AOIs: translucent cyan fill + outline (amber is reserved for ICEYE).
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "#33e1ff";
-    ctx.fillStyle = "rgba(51, 225, 255, 0.2)";
+    // AOIs: translucent fill + dark-cased pink-red outline for contrast on the
+    // bright basemap (amber is reserved for ICEYE).
     for (const aoi of aois.values()) {
       ctx.beginPath();
       for (let i = 0; i < aoi.exteriorLonLat.length; i++) {
@@ -70,7 +68,14 @@
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
+      ctx.fillStyle = "rgba(255, 51, 102, 0.3)";
       ctx.fill();
+      // Dark casing under the bright outline so it reads on any background.
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.55)";
+      ctx.stroke();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#ff3366";
       ctx.stroke();
     }
 
