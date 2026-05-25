@@ -43,3 +43,4 @@ pkg/
 *.local
 .superpowers/
 docs/superpowers/
+packages/kerolox-proto-ts/src/gen/
