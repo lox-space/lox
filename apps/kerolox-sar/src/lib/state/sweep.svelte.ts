@@ -112,7 +112,7 @@ export async function runSweep(base: Scenario, cfg: SweepConfig, signal: AbortSi
         },
         onDone: () => {},
         onCancel: () => {},
-        onError: () => {},
+        onError: (err) => console.error(`sweep point ${cfg.param}=${value} failed:`, err),
       }, signal);
 
       // If the stream was aborted mid-flight, drop the partial scenario
@@ -123,8 +123,12 @@ export async function runSweep(base: Scenario, cfg: SweepConfig, signal: AbortSi
         for (const [aoiId, windows] of byAoi) {
           const stats = computeStats(windows, scenarioStartMs, scenarioEndMs);
           const y = metricOf(stats, cfg.metric);
-          const points = sweepPoints.get(aoiId) ?? [];
-          points.push({ x: value, y });
+          // Build a NEW array rather than mutating in place: SvelteMap.set with
+          // an identity-unchanged value does not notify subscribers, so an
+          // in-place push + re-set would never update the chart past the first
+          // point. A fresh array (matching the access store's concat pattern)
+          // makes each set a genuine change.
+          const points = [...(sweepPoints.get(aoiId) ?? []), { x: value, y }];
           points.sort((a, b) => a.x - b.x);
           sweepPoints.set(aoiId, points);
         }
