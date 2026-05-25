@@ -37,7 +37,8 @@ fn make_scenario(n: usize) -> (Scenario, DefaultRotationProvider) {
 }
 
 /// Build a scenario with `n_good` healthy spacecraft plus one spacecraft using
-/// `bad_orbit` as its orbit source. The bad spacecraft has id `"bad"`.
+/// `bad_orbit` as its orbit source. The bad spacecraft has id `"bad"` and is
+/// placed at index 0 so abort-policy tests can rely on it failing early.
 fn make_mixed_scenario(
     n_good: usize,
     bad_orbit: OrbitSource,
@@ -45,10 +46,12 @@ fn make_mixed_scenario(
     let traj = make_trajectory();
     let start = traj.start_time();
     let end = traj.end_time();
-    let mut spacecraft: Vec<Spacecraft> = (0..n_good)
-        .map(|i| Spacecraft::new(format!("sc{i}"), OrbitSource::Trajectory(traj.clone())))
-        .collect();
+    let mut spacecraft: Vec<Spacecraft> = Vec::with_capacity(n_good + 1);
     spacecraft.push(Spacecraft::new("bad", bad_orbit));
+    spacecraft.extend(
+        (0..n_good)
+            .map(|i| Spacecraft::new(format!("sc{i}"), OrbitSource::Trajectory(traj.clone()))),
+    );
     let scenario =
         Scenario::new(start, end, Origin::Earth, Frame::Icrf).with_spacecraft(&spacecraft);
     (scenario, DefaultRotationProvider)
