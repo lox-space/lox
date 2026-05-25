@@ -86,3 +86,12 @@ web-test:
 
 web-lint:
     pnpm turbo lint
+
+# Run the kerolox compute engine in dev mode.
+kerolox-engine-dev:
+    cargo run -p kerolox-engine
+
+# Sync AOI GeoJSON files from engine to SvelteKit static assets.
+sync-aois:
+    mkdir -p apps/kerolox-sar/static/aois
+    cp crates/kerolox-engine/data/aois/*.geojson apps/kerolox-sar/static/aois/
