@@ -57,9 +57,10 @@
       ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
     }
 
-    // AOI outlines (bright cyan; amber is reserved for the ICEYE fleet).
+    // AOIs: translucent cyan fill + outline (amber is reserved for ICEYE).
     ctx.lineWidth = 2;
     ctx.strokeStyle = "#33e1ff";
+    ctx.fillStyle = "rgba(51, 225, 255, 0.2)";
     for (const aoi of aois.values()) {
       ctx.beginPath();
       for (let i = 0; i < aoi.exteriorLonLat.length; i++) {
@@ -68,6 +69,8 @@
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
+      ctx.closePath();
+      ctx.fill();
       ctx.stroke();
     }
 
