@@ -201,10 +201,21 @@ class TestSarAccessAnalysis:
         windows_r = results.intervals("s1a_r", "europe")
         assert len(windows_l) > 0, "Left-looking should have access over Europe"
         assert len(windows_r) > 0, "Right-looking should have access over Europe"
-        dur_l = sum(float(iv.duration()) for iv in windows_l)
-        dur_r = sum(float(iv.duration()) for iv in windows_r)
-        assert abs(dur_l - dur_r) > 30.0, (
-            f"Left ({dur_l:.0f}s) and Right ({dur_r:.0f}s) totals should differ by >30s"
+
+        # Sides should see different opportunities: at least one window on one
+        # side must not overlap any window on the other. Robust to TLE refreshes
+        # (unlike a sum-of-durations check, which can coincidentally match).
+        def overlaps(a, b):
+            return a.start() < b.end() and b.start() < a.end()
+
+        left_has_unique = any(
+            not any(overlaps(l, r) for r in windows_r) for l in windows_l
+        )
+        right_has_unique = any(
+            not any(overlaps(r, l) for l in windows_l) for r in windows_r
+        )
+        assert left_has_unique or right_has_unique, (
+            "Every Left window overlaps a Right window and vice versa — sides not differentiated"
         )
 
     def test_repr(self, scenario_single):

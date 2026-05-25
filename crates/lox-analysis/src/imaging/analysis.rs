@@ -37,6 +37,15 @@ use crate::visibility::EvalError;
 /// Sign convention: positive when the AOI is accessible at this geometry,
 /// negative when not. Continuous across the access boundary so that a
 /// root finder can locate entry/exit times. Infallible.
+//
+// TODO(refactor): the current trait shape (driver eagerly computes everything
+// any sensor might need, then passes it through) is patchwork. The
+// `needs_ground_track_azimuth` opt-out and `Aoi::nearest_point_and_distance`
+// helper exist to keep per-sample cost down without changing this API. Replace
+// with a pull-based `&AccessContext` carrying memoised accessors for sub-sat,
+// altitude, mean radius, ground-track azimuth, AOI distance/nearest point,
+// etc. — each sensor pulls only what it needs and any future derived quantity
+// goes in one place. See the spec/plan for he/sar (deferred for prototype).
 pub trait AccessPayload {
     /// Returns the access metric for the given sub-satellite point and AOI.
     fn access_metric(
@@ -46,6 +55,15 @@ pub trait AccessPayload {
         aoi: &Aoi,
         mean_radius_m: f64,
     ) -> f64;
+
+    /// Returns `true` if [`Self::access_metric`] depends on the ground-track
+    /// azimuth. When `false`, the driver skips the per-sample azimuth
+    /// computation and passes a zero placeholder. Defaults to `true` for
+    /// safety; sensors that only depend on sub-satellite geometry (e.g. a
+    /// nadir-centred disk) should override to `false`.
+    fn needs_ground_track_azimuth(&self) -> bool {
+        true
+    }
 }
 
 /// Extension trait letting a generic access analysis fetch a payload of type
@@ -127,7 +145,11 @@ where
 
         let lla = LonLatAlt::from_body_fixed(pos, &ellipsoid)
             .map_err(|e| EvalError::Rotation(Box::new(e)))?;
-        let az = ground_track_azimuth(lla, vel);
+        let az = if self.payload.needs_ground_track_azimuth() {
+            ground_track_azimuth(lla, vel)
+        } else {
+            Angle::default()
+        };
 
         Ok(self.payload.access_metric(lla, az, self.aoi, mean_radius))
     }

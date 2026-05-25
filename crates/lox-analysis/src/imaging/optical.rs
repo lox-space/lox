@@ -73,6 +73,10 @@ impl AccessPayload for OpticalPayload {
         let distance = aoi.distance_to(&sub_sat_point, mean_radius_m);
         max_range - distance
     }
+
+    fn needs_ground_track_azimuth(&self) -> bool {
+        false
+    }
 }
 
 #[cfg(test)]
