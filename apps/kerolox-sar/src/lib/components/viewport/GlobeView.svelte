@@ -6,7 +6,7 @@
   import { T, Canvas } from "@threlte/core";
   import { OrbitControls } from "@threlte/extras";
   import { WebGLRenderer } from "three";
-  import { earthRotationAngleRad } from "@lox-space/wasm";
+  import { earthRotationAngleRad, sunDirectionEci } from "@lox-space/wasm";
   import { Earth } from "@lox-space/threlte";
   import SatelliteMarker from "./SatelliteMarker.svelte";
   import GroundTrack from "./GroundTrack.svelte";
@@ -32,6 +32,22 @@
       return 0;
     }
   });
+
+  // Unit Sun direction in the inertial ECI frame (Three.js Y-up), from the
+  // analytical lox-earth ephemeris. Drives the directional light so the globe
+  // shows a day/night terminator that the Earth rotates under. Placed far out
+  // along the Sun vector; for a directional light only the direction matters.
+  const SUN_DISTANCE_KM = 1.5e8;
+  const sunPosition = $derived.by((): [number, number, number] => {
+    const fallback: [number, number, number] = [SUN_DISTANCE_KM, 0, 0];
+    if (!Number.isFinite(playback.currentTime) || playback.currentTime === 0) return fallback;
+    try {
+      const d = sunDirectionEci(new Date(playback.currentTime).toISOString());
+      return [d[0] * SUN_DISTANCE_KM, d[1] * SUN_DISTANCE_KM, d[2] * SUN_DISTANCE_KM];
+    } catch {
+      return fallback;
+    }
+  });
 </script>
 
 <div class="flex-1 min-h-0 relative">
@@ -44,7 +60,11 @@
       <OrbitControls />
     </T.PerspectiveCamera>
 
-    <T.AmbientLight intensity={2} />
+    <!-- Low ambient keeps the night side dimly visible; the directional Sun
+         light (inertial, outside the rotating Earth group) carves the
+         terminator across the day side. -->
+    <T.AmbientLight intensity={0.2} />
+    <T.DirectionalLight position={sunPosition} intensity={3} />
 
     <T.Group rotation={[0, earthRotation, 0]}>
       <Earth textureUrl="/assets/Earth-color.jpg" />

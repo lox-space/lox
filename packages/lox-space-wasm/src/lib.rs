@@ -19,18 +19,18 @@ use lox_space::core::units::{Angle, AngleUnits, DistanceUnits};
 use lox_space::frames::dynamic::DynFrame;
 use lox_space::frames::providers::DefaultRotationProvider;
 use lox_space::frames::traits::ReferenceFrame;
+use lox_space::orbits::KeplerianOrbit;
 use lox_space::orbits::propagators::semi_analytical::DynVallado;
 use lox_space::orbits::sso::inclination_sso;
-use lox_space::orbits::KeplerianOrbit;
+use lox_space::time::DynTime;
 use lox_space::time::calendar_dates::CalendarDate;
 use lox_space::time::deltas::TimeDelta;
 use lox_space::time::time_of_day::CivilTime;
 use lox_space::time::time_scales::{DynTimeScale, TimeScale};
-use lox_space::time::utc::transformations::ToUtc;
 use lox_space::time::utc::Utc as LoxUtc;
-use lox_space::time::DynTime;
-use wasm_bindgen::prelude::*;
+use lox_space::time::utc::transformations::ToUtc;
 use wasm_bindgen::JsValue;
+use wasm_bindgen::prelude::*;
 
 /// Initialize the WASM module with panic hook for better error messages.
 #[wasm_bindgen(start)]
@@ -648,18 +648,14 @@ fn compute_sampled_trajectory(
     }
 
     // Parse the start time.
-    let utc_start = start_iso
-        .parse::<LoxUtc>()
-        .map_err(|e| e.to_string())?;
+    let utc_start = start_iso.parse::<LoxUtc>().map_err(|e| e.to_string())?;
     let start: DynTime = utc_start.to_dyn_time();
 
     // Build a KeplerianOrbit and convert to DynCartesianOrbit.
     let kep_orbit =
         KeplerianOrbit::try_from_keplerian(*elements, start, DynOrigin::Earth, DynFrame::Icrf)
             .map_err(|e| e.to_string())?;
-    let cartesian = kep_orbit
-        .try_to_cartesian()
-        .map_err(|e| e.to_string())?;
+    let cartesian = kep_orbit.try_to_cartesian().map_err(|e| e.to_string())?;
 
     // Build the Vallado propagator.
     let vallado = DynVallado::try_new(cartesian).map_err(|e| e.to_string())?;
@@ -681,9 +677,7 @@ fn compute_sampled_trajectory(
         let dt_s = step_s * i as f64;
         let t = start + TimeDelta::from_seconds_f64(dt_s);
 
-        let state = vallado
-            .state_at(t)
-            .map_err(|e| e.to_string())?;
+        let state = vallado.state_at(t).map_err(|e| e.to_string())?;
 
         // ECI position → Three.js (Y-up): (x, z, -y), convert m → km.
         let pos = state.position();
@@ -855,20 +849,36 @@ pub struct WasmSatellite {
 
 #[wasm_bindgen]
 impl WasmSatellite {
-    pub fn plane(&self) -> u32 { self.plane }
+    pub fn plane(&self) -> u32 {
+        self.plane
+    }
     #[wasm_bindgen(js_name = indexInPlane)]
-    pub fn index_in_plane(&self) -> u32 { self.index_in_plane }
+    pub fn index_in_plane(&self) -> u32 {
+        self.index_in_plane
+    }
     #[wasm_bindgen(js_name = smaMeters)]
-    pub fn sma_m(&self) -> f64 { self.sma_m }
-    pub fn ecc(&self) -> f64 { self.ecc }
+    pub fn sma_m(&self) -> f64 {
+        self.sma_m
+    }
+    pub fn ecc(&self) -> f64 {
+        self.ecc
+    }
     #[wasm_bindgen(js_name = incRad)]
-    pub fn inc_rad(&self) -> f64 { self.inc_rad }
+    pub fn inc_rad(&self) -> f64 {
+        self.inc_rad
+    }
     #[wasm_bindgen(js_name = raanRad)]
-    pub fn raan_rad(&self) -> f64 { self.raan_rad }
+    pub fn raan_rad(&self) -> f64 {
+        self.raan_rad
+    }
     #[wasm_bindgen(js_name = aopRad)]
-    pub fn aop_rad(&self) -> f64 { self.aop_rad }
+    pub fn aop_rad(&self) -> f64 {
+        self.aop_rad
+    }
     #[wasm_bindgen(js_name = trueAnomalyRad)]
-    pub fn true_anomaly_rad(&self) -> f64 { self.true_anomaly_rad }
+    pub fn true_anomaly_rad(&self) -> f64 {
+        self.true_anomaly_rad
+    }
 }
 
 /// A Walker delta constellation builder.
@@ -966,6 +976,42 @@ fn compute_earth_rotation_angle_rad(epoch_iso: &str) -> Result<f64, String> {
 
     // Normalise to [0, 2π).
     Ok(w.rem_euclid(TAU))
+}
+
+/// Unit vector from Earth toward the Sun, in the inertial ECI frame mapped to
+/// the Three.js Y-up convention `(x, z, -y)` — matching the trajectory ECI
+/// buffers. Used to light the 3D globe so the day/night terminator is visible.
+#[wasm_bindgen(js_name = sunDirectionEci)]
+pub fn sun_direction_eci_wasm(epoch_iso: &str) -> Result<Vec<f64>, JsValue> {
+    compute_sun_direction_eci(epoch_iso).map_err(|e| JsValue::from_str(&e))
+}
+
+fn compute_sun_direction_eci(epoch_iso: &str) -> Result<Vec<f64>, String> {
+    use lox_space::earth::ephemeris::apparent_sun_position;
+    use lox_space::time::Time;
+    use lox_space::time::offsets::DefaultOffsetProvider;
+    use lox_space::time::time_scales::Tdb;
+
+    let utc: LoxUtc = epoch_iso
+        .parse()
+        .map_err(|e: lox_space::time::utc::UtcError| e.to_string())?;
+
+    // UTC → DynTime(TDB) → static Time<Tdb> (the conversion happens in
+    // try_to_scale; with_scale only relabels the now-TDB instant).
+    let tdb: Time<Tdb> = utc
+        .to_dyn_time()
+        .try_to_scale(DynTimeScale::Tdb, &DefaultOffsetProvider)
+        .map_err(|e| e.to_string())?
+        .with_scale(Tdb);
+
+    // ICRF position of the Sun relative to Earth (metres); only direction used.
+    let sun = apparent_sun_position(tdb);
+    if sun.length() == 0.0 {
+        return Err("degenerate sun position".to_string());
+    }
+    // ICRF (x, y, z) → Three.js Y-up (x, z, -y), normalised.
+    let dir = DVec3::new(sun.x, sun.z, -sun.y).normalize();
+    Ok(vec![dir.x, dir.y, dir.z])
 }
 
 #[cfg(test)]
@@ -1441,20 +1487,23 @@ mod tests {
         assert_eq!(sats.len(), 24);
         // 3 planes × 8 sats/plane.
         let plane_counts: std::collections::BTreeMap<usize, usize> =
-            sats.iter().fold(std::collections::BTreeMap::new(), |mut m, s| {
-                *m.entry(s.plane).or_insert(0) += 1;
-                m
-            });
+            sats.iter()
+                .fold(std::collections::BTreeMap::new(), |mut m, s| {
+                    *m.entry(s.plane).or_insert(0) += 1;
+                    m
+                });
         assert_eq!(plane_counts.len(), 3);
         for (_p, count) in plane_counts.iter() {
             assert_eq!(*count, 8, "each plane should have 8 satellites");
         }
         // RAANs of the three planes should be 0, 120°, 240° (modulo wrap).
         let raans: std::collections::BTreeMap<usize, f64> =
-            sats.iter().fold(std::collections::BTreeMap::new(), |mut m, s| {
-                m.entry(s.plane).or_insert(s.elements.longitude_of_ascending_node().as_f64());
-                m
-            });
+            sats.iter()
+                .fold(std::collections::BTreeMap::new(), |mut m, s| {
+                    m.entry(s.plane)
+                        .or_insert(s.elements.longitude_of_ascending_node().as_f64());
+                    m
+                });
         let mut raan_vec: Vec<f64> = raans.values().copied().collect();
         raan_vec.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let expected: [f64; 3] = [0.0, 120.0_f64.to_radians(), 240.0_f64.to_radians()];
@@ -1547,7 +1596,26 @@ mod tests {
         let delta = (era1 - era0).rem_euclid(std::f64::consts::TAU);
         let expected = std::f64::consts::TAU * 0.00274;
         // Tolerance generous — IAU model includes long-period terms.
-        assert!((delta - expected).abs() < 5e-2,
-                "delta = {delta} rad, expected ≈ {expected} rad");
+        assert!(
+            (delta - expected).abs() < 5e-2,
+            "delta = {delta} rad, expected ≈ {expected} rad"
+        );
+    }
+
+    #[test]
+    fn test_sun_direction_is_unit_vector() {
+        let d = compute_sun_direction_eci("2026-06-01T00:00:00").unwrap();
+        assert_eq!(d.len(), 3);
+        let len = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
+        assert!((len - 1.0).abs() < 1e-9, "len = {len}");
+    }
+
+    #[test]
+    fn test_sun_direction_moves_over_half_year() {
+        // Roughly opposite sides of the orbit → directions should be far apart.
+        let jun = compute_sun_direction_eci("2026-06-01T00:00:00").unwrap();
+        let dec = compute_sun_direction_eci("2026-12-01T00:00:00").unwrap();
+        let dot = jun[0] * dec[0] + jun[1] * dec[1] + jun[2] * dec[2];
+        assert!(dot < -0.5, "dot = {dot} (expected near-antiparallel)");
     }
 }
