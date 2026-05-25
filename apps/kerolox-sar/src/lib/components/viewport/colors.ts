@@ -4,8 +4,8 @@
 
 /**
  * Per-plane palette for satellite markers and ground tracks. Chosen to be
- * visually distinct from each other and from the AOI amber so satellites
- * never blend into an AOI polygon.
+ * visually distinct from each other, from the white AOI outlines, and from
+ * the amber ICEYE comparator fleet.
  */
 const PLANE_COLORS = [
   "#7c8aff", // indigo

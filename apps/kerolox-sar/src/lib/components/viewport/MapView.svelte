@@ -36,9 +36,9 @@
       ctx.fillRect(0, 0, width, height);
     }
 
-    // AOI outlines.
+    // AOI outlines (neutral white; amber is reserved for the ICEYE fleet).
     ctx.lineWidth = 2;
-    ctx.strokeStyle = "#ffaa44";
+    ctx.strokeStyle = "#ffffff";
     for (const aoi of aois.values()) {
       ctx.beginPath();
       for (let i = 0; i < aoi.exteriorLonLat.length; i++) {

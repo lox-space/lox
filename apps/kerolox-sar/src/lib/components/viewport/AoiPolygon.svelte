@@ -8,7 +8,9 @@
   import { BufferGeometry, Float32BufferAttribute, LineBasicMaterial } from "three";
   import type { AoiPolygon } from "$lib/aois";
 
-  let { aoi, color = "#ffaa44" }: { aoi: AoiPolygon; color?: string } = $props();
+  // AOI outlines are neutral white so amber can consistently denote the
+  // ICEYE comparator fleet (matching the amber ICEYE column in the AOI tabs).
+  let { aoi, color = "#ffffff" }: { aoi: AoiPolygon; color?: string } = $props();
 
   const earth = new Origin("Earth");
   const earthRadiusKm = earth.mean_radius() / 1000;
