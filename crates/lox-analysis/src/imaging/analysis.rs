@@ -86,6 +86,9 @@ pub enum AccessError {
     /// Event detection failed.
     #[error(transparent)]
     Detect(#[from] DetectError),
+    /// Pass-direction sampling failed (state interpolation / frame rotation).
+    #[error("pass-direction sampling failed: {0}")]
+    PassDirection(#[from] EvalError),
 }
 
 // ---------------------------------------------------------------------------
