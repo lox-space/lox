@@ -28,7 +28,7 @@ use lox_time::time_scales::Tai;
 use crate::assets::{AssetId, Scenario, Spacecraft};
 use crate::imaging::aoi::{Aoi, AoiId};
 use crate::imaging::optical::OpticalPayload;
-use crate::imaging::results::AccessResults;
+use crate::imaging::results::{AccessResults, PassDirection};
 use crate::imaging::sar::SarPayload;
 use crate::visibility::EvalError;
 
@@ -152,6 +152,23 @@ where
         vel_bf,
         mean_radius_m,
     })
+}
+
+/// Classifies the orbital motion at the given sub-satellite sample as
+/// [`PassDirection::Ascending`] (moving northward) or
+/// [`PassDirection::Descending`] (moving southward).
+///
+/// Uses the sign of the SEZ-north component of the body-fixed velocity. Ties
+/// (zero north-component — measure-zero in practice) resolve to `Ascending`.
+fn pass_direction_of(sample: &SubSatSample) -> PassDirection {
+    let r_to_sez = sample.lla.rotation_to_topocentric();
+    let v_sez = r_to_sez * sample.vel_bf;
+    // SEZ.x is south; north component = -SEZ.x. Strict positive → Ascending.
+    if -v_sez.x >= 0.0 {
+        PassDirection::Ascending
+    } else {
+        PassDirection::Descending
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -375,5 +392,35 @@ mod tests {
             (az.to_radians() - expected).abs() < 1e-9,
             "expected π, got {az}",
         );
+    }
+
+    #[test]
+    fn pass_direction_ascending_for_northward_velocity() {
+        let sample = SubSatSample {
+            lla: LonLatAlt::from_degrees(0.0, 0.0, 500_000.0).unwrap(),
+            vel_bf: DVec3::new(0.0, 0.0, 1.0), // ECEF +Z is north at the equator
+            mean_radius_m: 6_371_000.0,
+        };
+        assert_eq!(pass_direction_of(&sample), PassDirection::Ascending);
+    }
+
+    #[test]
+    fn pass_direction_descending_for_southward_velocity() {
+        let sample = SubSatSample {
+            lla: LonLatAlt::from_degrees(0.0, 0.0, 500_000.0).unwrap(),
+            vel_bf: DVec3::new(0.0, 0.0, -1.0),
+            mean_radius_m: 6_371_000.0,
+        };
+        assert_eq!(pass_direction_of(&sample), PassDirection::Descending);
+    }
+
+    #[test]
+    fn pass_direction_pure_eastward_is_ascending_by_tiebreak() {
+        let sample = SubSatSample {
+            lla: LonLatAlt::from_degrees(0.0, 0.0, 500_000.0).unwrap(),
+            vel_bf: DVec3::new(0.0, 1.0, 0.0), // pure east, zero north
+            mean_radius_m: 6_371_000.0,
+        };
+        assert_eq!(pass_direction_of(&sample), PassDirection::Ascending);
     }
 }
