@@ -5,18 +5,22 @@
 <script lang="ts">
   import SatellitesTab from "./tabs/SatellitesTab.svelte";
   import AoiTab from "./tabs/AoiTab.svelte";
+  import TradeStudyTab from "./tabs/TradeStudyTab.svelte";
 
-  type Tab = "satellites" | "hormuz" | "black_sea";
+  type Tab = "satellites" | "hormuz" | "black_sea" | "trade";
   let active: Tab = $state("satellites");
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "satellites", label: "Satellites" },
     { id: "hormuz", label: "Hormuz" },
     { id: "black_sea", label: "Black Sea" },
+    { id: "trade", label: "Trade study" },
   ];
 </script>
 
-<section class="w-[34rem] h-full flex flex-col bg-neutral-950 border-l border-neutral-800">
+<section
+  class="w-xl h-full flex flex-col bg-neutral-950 border-l border-neutral-800"
+>
   <nav class="flex border-b border-neutral-800 text-xs">
     {#each tabs as t (t.id)}
       <button
@@ -37,6 +41,8 @@
       <AoiTab aoiId="hormuz" label="Strait of Hormuz" />
     {:else if active === "black_sea"}
       <AoiTab aoiId="black_sea" label="Black Sea" />
+    {:else if active === "trade"}
+      <TradeStudyTab />
     {/if}
   </div>
 </section>
