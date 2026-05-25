@@ -9,7 +9,8 @@
 use connectrpc::client::{ClientConfig, HttpClient};
 use kerolox_engine::{aoi::AoiLibrary, service::KeroloxImpl};
 use kerolox_proto::kerolox::v1::{
-    AccessRequest, KeroloxClient, KeroloxExt, LookSide, SarSensor, SatelliteOrbitalElements,
+    AccessRequest, KeroloxClient, KeroloxExt, LookSide, PropagateRequest, SarSensor,
+    SatelliteOrbitalElements,
 };
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -73,5 +74,53 @@ async fn compute_access_streams_at_least_one_pair() {
     }
     eprintln!("smoke: received {count} AccessPairResult(s)");
     assert!(count >= 1, "expected at least one streamed pair, got {count}");
+    server.abort();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn propagate_trajectories_streams_at_least_one_message() {
+    let lib = Arc::new(AoiLibrary::load_from_dir(&aoi_dir()).unwrap());
+    let service = Arc::new(KeroloxImpl::new(lib));
+    let connect_router = service.register(connectrpc::Router::new());
+    let app = axum::Router::new().fallback_service(connect_router.into_axum_service());
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move {
+        let _ = axum::serve(listener, app).await;
+    });
+
+    // Single circular LEO satellite at 600 km, 1 hour scenario, 30 s step.
+    let req = PropagateRequest {
+        start_time_iso: "2026-06-01T00:00:00.000".into(),
+        duration_seconds: 3600.0,
+        step_seconds: 30.0,
+        satellites: vec![SatelliteOrbitalElements {
+            id: "sat-0".into(),
+            sma_m: 6_978_137.0,
+            ecc: 0.0,
+            inc_rad: 53.0_f64.to_radians(),
+            raan_rad: 0.0,
+            aop_rad: 0.0,
+            true_anomaly_rad: 0.0,
+            plane: 0,
+            index_in_plane: 0,
+            __buffa_unknown_fields: Default::default(),
+        }],
+        __buffa_unknown_fields: Default::default(),
+    };
+
+    let http = HttpClient::plaintext();
+    let config = ClientConfig::new(format!("http://{addr}").parse().unwrap());
+    let client = KeroloxClient::new(http, config);
+
+    let mut stream = client.propagate_trajectories(req).await.unwrap();
+    let mut count = 0usize;
+    while let Some(msg) = stream.message().await.unwrap() {
+        eprintln!("smoke: trajectory sc_id={}, {} samples", msg.sc_id, msg.epochs_ms.len());
+        count += 1;
+    }
+    eprintln!("smoke: received {count} SampledTrajectoryMessage(s)");
+    assert!(count >= 1, "expected at least one trajectory message, got {count}");
     server.abort();
 }

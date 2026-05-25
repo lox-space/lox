@@ -2,16 +2,21 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Kerolox service implementation: server-streaming ComputeAccess.
+//! Kerolox service implementation: server-streaming ComputeAccess and
+//! PropagateTrajectories.
 
 use crate::aoi::AoiLibrary;
 use crate::bridge::bridge;
-use crate::mapping::{access_window_to_proto, parse_start_time, sar_sensor_to_payload, satellite_to_keplerian};
+use crate::mapping::{
+    access_window_to_proto, parse_start_time, satellite_to_keplerian, sar_sensor_to_payload,
+    unix_epoch_ms_from_utc,
+};
 use buffa::view::{MessageView, OwnedView};
 use connectrpc::{ConnectError, RequestContext, Response, ServiceResult, ServiceStream};
 use futures::StreamExt;
 use kerolox_proto::kerolox::v1::{
-    AccessPairResult, AccessRequestView, Kerolox, ResultSource,
+    AccessPairResult, AccessRequestView, Kerolox, PropagateRequestView, ResultSource,
+    SampledTrajectoryMessage,
 };
 use lox_analysis::assets::{Scenario, Spacecraft};
 use lox_analysis::imaging::aoi::AoiId;
@@ -20,9 +25,95 @@ use lox_bodies::{DynOrigin, Earth};
 use lox_frames::{DynFrame, frames::Icrf, providers::DefaultRotationProvider};
 use lox_orbits::orbits::KeplerianOrbit;
 use lox_orbits::propagators::{OrbitSource, semi_analytical::DynVallado};
+use lox_space::core::elements::Keplerian;
+use lox_space::time::time_scales::Tai;
+use lox_space::time::utc::transformations::ToUtc;
 use lox_stream::OnError;
 use lox_time::deltas::TimeDelta;
 use std::sync::Arc;
+use thiserror::Error;
+
+/// Errors that can occur during single-satellite trajectory propagation.
+#[derive(Debug, Error)]
+pub enum PropagateError {
+    #[error("invalid start time: {0}")]
+    InvalidTime(String),
+    #[error("propagator init error: {0}")]
+    PropagatorInit(String),
+    #[error("propagation error at step {step}: {msg}")]
+    Propagation { step: usize, msg: String },
+    #[error("frame transform error at step {step}: {msg}")]
+    FrameTransform { step: usize, msg: String },
+    #[error("ground location error at step {step}: {msg}")]
+    GroundLocation { step: usize, msg: String },
+}
+
+/// Propagate one satellite over the scenario window and return a
+/// [`SampledTrajectoryMessage`] with parallel ECI / ground-track / epoch buffers.
+fn propagate_one(
+    sc_id: String,
+    kep: Keplerian,
+    start: lox_time::Time<Tai>,
+    duration_s: f64,
+    step_s: f64,
+) -> Result<SampledTrajectoryMessage, PropagateError> {
+    // Build Keplerian orbit → Cartesian → DynVallado.
+    let kep_orbit = KeplerianOrbit::try_from_keplerian(kep, start, Earth, Icrf)
+        .map_err(|e| PropagateError::PropagatorInit(e.to_string()))?;
+    let cartesian = kep_orbit
+        .try_to_cartesian()
+        .map_err(|e| PropagateError::PropagatorInit(e.to_string()))?;
+    let vallado = DynVallado::try_new(cartesian.into_dyn())
+        .map_err(|e| PropagateError::PropagatorInit(e.to_string()))?;
+
+    let iau_earth = DynFrame::Iau(DynOrigin::Earth);
+    let provider = DefaultRotationProvider;
+    let n_steps = (duration_s / step_s) as usize;
+    let total = n_steps + 1;
+
+    let mut epochs_ms = Vec::with_capacity(total);
+    let mut eci_km = Vec::with_capacity(total * 3);
+    let mut ground_deg = Vec::with_capacity(total * 2);
+
+    for i in 0..=n_steps {
+        let dt_s = step_s * i as f64;
+        // Compute DynTime for this sample by adding a float delta to the TAI start.
+        let t_tai = start + TimeDelta::from_seconds_f64(dt_s);
+        let t_dyn = t_tai.into_dyn();
+
+        let state = vallado
+            .state_at(t_dyn)
+            .map_err(|e| PropagateError::Propagation { step: i, msg: e.to_string() })?;
+
+        // ECI → Three.js (Y-up): (x, z, -y), m → km.
+        let pos = state.position();
+        eci_km.push(pos.x / 1000.0);
+        eci_km.push(pos.z / 1000.0);
+        eci_km.push(-pos.y / 1000.0);
+
+        // Body-fixed frame for ground track.
+        let body_fixed = state
+            .try_to_frame(iau_earth, &provider)
+            .map_err(|e| PropagateError::FrameTransform { step: i, msg: e.to_string() })?;
+        let ground = body_fixed
+            .try_to_ground_location()
+            .map_err(|e| PropagateError::GroundLocation { step: i, msg: e.to_string() })?;
+        ground_deg.push(ground.latitude().to_degrees());
+        ground_deg.push(ground.longitude().to_degrees());
+
+        // Unix epoch ms from TAI → UTC.
+        let utc = t_tai.to_utc();
+        epochs_ms.push(unix_epoch_ms_from_utc(&utc));
+    }
+
+    Ok(SampledTrajectoryMessage {
+        sc_id,
+        epochs_ms,
+        eci_threejs_buffer_km: eci_km,
+        ground_lat_lon_deg: ground_deg,
+        __buffa_unknown_fields: Default::default(),
+    })
+}
 
 pub struct KeroloxImpl {
     aoi_library: Arc<AoiLibrary>,
@@ -128,6 +219,53 @@ impl Kerolox for KeroloxImpl {
                 windows,
                 __buffa_unknown_fields: Default::default(),
             })
+        });
+
+        Response::stream_ok(futures_stream)
+    }
+
+    #[allow(refining_impl_trait)]
+    async fn propagate_trajectories(
+        &self,
+        _ctx: RequestContext,
+        request: OwnedView<PropagateRequestView<'static>>,
+    ) -> ServiceResult<ServiceStream<SampledTrajectoryMessage>> {
+        let start = parse_start_time(&request.start_time_iso)
+            .map_err(|e| ConnectError::invalid_argument(e.to_string()))?;
+        let duration_s = request.duration_seconds;
+        if !duration_s.is_finite() || duration_s <= 0.0 {
+            return Err(ConnectError::invalid_argument(format!(
+                "duration_seconds must be positive and finite (got {duration_s})"
+            )));
+        }
+        let step_s = request.step_seconds;
+        let step_s_final = if step_s.is_finite() && step_s > 0.0 { step_s } else { 30.0 };
+
+        // Eagerly validate and collect (sc_id, Keplerian) pairs so we own them
+        // before spawning the parallel stream.
+        let sats: Vec<(String, Keplerian)> = request
+            .satellites
+            .iter()
+            .map(|s_view| {
+                let s_owned = s_view.to_owned_message();
+                let kep = satellite_to_keplerian(&s_owned)
+                    .map_err(|e| ConnectError::invalid_argument(e.to_string()))?;
+                Ok::<_, ConnectError>((s_owned.id.to_string(), kep))
+            })
+            .collect::<Result<_, _>>()?;
+
+        let lox_stream = lox_stream::par_stream(
+            sats,
+            64,
+            OnError::Abort,
+            move |(sc_id, kep), _token| {
+                propagate_one(sc_id, kep, start, duration_s, step_s_final)
+            },
+        );
+
+        let futures_stream = bridge(lox_stream).map(|res| {
+            let msg = res.map_err(|e| ConnectError::internal(e.to_string()))?;
+            Ok::<_, ConnectError>(msg)
         });
 
         Response::stream_ok(futures_stream)

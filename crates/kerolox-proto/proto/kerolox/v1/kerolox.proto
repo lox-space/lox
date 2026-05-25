@@ -66,6 +66,24 @@ message AccessPairResult {
   repeated AccessWindow windows = 5;
 }
 
+message PropagateRequest {
+  string start_time_iso = 1;
+  double duration_seconds = 2;
+  repeated SatelliteOrbitalElements satellites = 3;
+  double step_seconds = 4;
+}
+
+message SampledTrajectoryMessage {
+  string sc_id = 1;
+  // Unix epoch ms per sample.
+  repeated double epochs_ms = 2;
+  // Three.js ECI positions (Y-up), km. Interleaved [x, y, z] triplets.
+  repeated double eci_threejs_buffer_km = 3;
+  // Ground-track lat/lon, degrees. Interleaved [lat, lon] pairs.
+  repeated double ground_lat_lon_deg = 4;
+}
+
 service Kerolox {
   rpc ComputeAccess(AccessRequest) returns (stream AccessPairResult);
+  rpc PropagateTrajectories(PropagateRequest) returns (stream SampledTrajectoryMessage);
 }

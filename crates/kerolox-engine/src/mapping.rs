@@ -112,6 +112,29 @@ pub fn parse_start_time(iso: &str) -> Result<Time<Tai>, MappingError> {
         })
 }
 
+/// Converts a [`Utc`] instant to Unix epoch milliseconds (milliseconds since
+/// 1970-01-01T00:00:00Z). Sub-millisecond components are intentionally dropped —
+/// trajectory visualisation needs ms precision at most.
+///
+/// Uses Howard Hinnant's proleptic-Gregorian civil-time algorithm, consistent
+/// with the WASM-side `unix_epoch_ms_from_utc` in `lox-space-wasm`.
+pub fn unix_epoch_ms_from_utc(utc: &Utc) -> f64 {
+    let y = utc.year();
+    let m = utc.month() as i64;
+    let d = utc.day() as i64;
+    let y = y - (m <= 2) as i64;
+    let era = if y >= 0 { y } else { y - 399 } / 400;
+    let yoe = y - era * 400;
+    let doy = (153 * (m + (if m > 2 { -3 } else { 9 })) + 2) / 5 + (d - 1);
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let unix_days = era * 146_097 + doe - 719_468;
+    let secs = utc.hour() as f64 * 3600.0
+        + utc.minute() as f64 * 60.0
+        + utc.second() as f64
+        + utc.millisecond() as f64 / 1000.0;
+    unix_days as f64 * 86_400_000.0 + secs * 1000.0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
