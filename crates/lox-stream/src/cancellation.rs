@@ -5,9 +5,11 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-/// A cooperative cancellation flag shared between a producer and consumer.
+/// A cooperative cancellation flag.
 ///
-/// Cloning a token yields another handle referring to the same flag.
+/// Cloning a token produces a handle that shares the same cancellation state:
+/// cancelling any clone causes every other clone's
+/// [`is_cancelled`](Self::is_cancelled) to return `true`.
 #[derive(Clone, Default)]
 pub struct CancellationToken(Arc<AtomicBool>);
 
@@ -17,14 +19,15 @@ impl CancellationToken {
         Self::default()
     }
 
-    /// Flips the flag.
+    /// Signals cancellation. After this call, [`is_cancelled`](Self::is_cancelled)
+    /// returns `true` on every clone of this token.
     pub fn cancel(&self) {
-        self.0.store(true, Ordering::Release);
+        self.0.store(true, Ordering::Relaxed);
     }
 
-    /// Returns whether the flag has been flipped.
+    /// Returns `true` if this token has been cancelled.
     pub fn is_cancelled(&self) -> bool {
-        self.0.load(Ordering::Acquire)
+        self.0.load(Ordering::Relaxed)
     }
 }
 
