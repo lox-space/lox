@@ -2965,9 +2965,9 @@ class AccessResults:
 
 
 class PassDirection:
-    """Direction of orbital motion at the time of an access window.
-
-    Determined from the sign of the geodetic-latitude rate at the window midpoint.
+    """Direction of orbital motion at the time of an access window: moving
+    northward (``Ascending``) or southward (``Descending``), sampled at the
+    window midpoint.
     """
 
     Ascending: "PassDirection"
