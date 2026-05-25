@@ -63,8 +63,8 @@
     <!-- Low ambient keeps the night side dimly visible; the directional Sun
          light (inertial, outside the rotating Earth group) carves the
          terminator across the day side. -->
-    <T.AmbientLight intensity={0.2} />
-    <T.DirectionalLight position={sunPosition} intensity={3} />
+    <T.AmbientLight intensity={0.05} />
+    <T.DirectionalLight position={sunPosition} intensity={6} />
 
     <T.Group rotation={[0, earthRotation, 0]}>
       <Earth textureUrl="/assets/Earth-color.jpg" />
