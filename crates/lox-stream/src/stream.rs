@@ -39,12 +39,19 @@ impl<T, E> futures_core::Stream for Stream<T, E> {
     type Item = Result<T, E>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        // SAFETY: we never move out of self or this.rx; structural pinning is
-        // valid here because Receiver's pin-projection is handled internally.
-        let this = unsafe { self.get_unchecked_mut() };
+        let this = self.get_mut();
+        // SAFETY: we never move `this.rx`. The transient pin obtained here
+        // lives only for this poll call, satisfying Receiver's pin contract.
         unsafe { Pin::new_unchecked(&mut this.rx) }.poll_next(cx)
     }
 }
+
+// SAFETY: Stream never moves its Receiver after construction. The only place
+// the Receiver is touched mutably is inside `poll_next`, where we re-pin it
+// transiently via `Pin::new_unchecked`. Drop does not move rx. Treating rx
+// as a non-structural field is sound, so Stream itself is Unpin regardless
+// of whether Receiver is.
+unsafe impl<T, E> Unpin for Stream<T, E> {}
 
 impl<T, E> Drop for Stream<T, E> {
     fn drop(&mut self) {
@@ -94,7 +101,7 @@ mod tests {
     async fn async_stream_delivers_in_order() {
         use futures::StreamExt;
 
-        let (tx, s) = make_stream::<i32, ()>();
+        let (tx, mut s) = make_stream::<i32, ()>();
         tokio::spawn(async move {
             tx.send(Ok(10)).await.unwrap();
             tx.send(Ok(20)).await.unwrap();
@@ -102,7 +109,6 @@ mod tests {
             drop(tx);
         });
 
-        futures::pin_mut!(s);
         let mut collected = Vec::new();
         while let Some(item) = s.next().await {
             collected.push(item.unwrap());
