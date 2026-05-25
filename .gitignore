@@ -41,6 +41,9 @@ pkg/
 .astro/
 .svelte-kit/
 *.local
+# Playwright E2E artifacts
+test-results/
+playwright-report/
 .superpowers/
 docs/superpowers/
 packages/kerolox-proto-ts/src/gen/
