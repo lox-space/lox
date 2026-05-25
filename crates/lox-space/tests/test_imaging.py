@@ -146,7 +146,7 @@ class TestOpticalAccessAnalysis:
             step=30 * lox.seconds,
         )
         results = analysis.compute()
-        intervals = results.intervals("S2A", "europe")
+        intervals = results.windows("S2A", "europe")
         assert len(intervals) > 0, "S2A should image Western Europe within 6 hours"
 
     def test_interval_durations(self, scenario_single):
@@ -156,8 +156,8 @@ class TestOpticalAccessAnalysis:
             step=30 * lox.seconds,
         )
         results = analysis.compute()
-        for iv in results.intervals("S2A", "europe"):
-            dur = float(iv.duration())
+        for iv in results.windows("S2A", "europe"):
+            dur = float(iv.interval().duration())
             assert dur > 0, "zero-length interval"
             assert dur < 600, f"imaging window too long ({dur:.0f}s)"
 
@@ -169,11 +169,11 @@ class TestOpticalAccessAnalysis:
         )
         results = analysis.compute()
         total = sum(
-            len(results.intervals(sc_id, "europe")) for sc_id in ("S2A", "S2B", "S2C")
+            len(results.windows(sc_id, "europe")) for sc_id in ("S2A", "S2B", "S2C")
         )
         assert total > 0, "at least one Sentinel-2 should image Europe within 6 hours"
         # All three pairs should exist in results
-        assert len(results.all_intervals()) == 3
+        assert len(results.all_windows()) == 3
 
     def test_multiple_aois(self, scenario_single):
         analysis = lox.OpticalAccessAnalysis(
@@ -182,7 +182,7 @@ class TestOpticalAccessAnalysis:
             step=30 * lox.seconds,
         )
         results = analysis.compute()
-        all_ivs = results.all_intervals()
+        all_ivs = results.all_windows()
         # Should have entries for both AOIs
         assert len(all_ivs) == 2
 
@@ -194,7 +194,7 @@ class TestOpticalAccessAnalysis:
             aois=[("europe", EUROPE_AOI)],
         )
         results = analysis.compute()
-        assert len(results.all_intervals()) == 0
+        assert len(results.all_windows()) == 0
 
     def test_off_nadir_wider_than_nadir(self, t0, t1, s2a):
         nadir = lox.OpticalPayload.nadir_only(290.0 * lox.km)
@@ -214,14 +214,27 @@ class TestOpticalAccessAnalysis:
         ).compute()
 
         dur_nadir = sum(
-            float(iv.duration()) for iv in res_n.intervals("nadir", "europe")
+            float(iv.interval().duration()) for iv in res_n.windows("nadir", "europe")
         )
         dur_off_nadir = sum(
-            float(iv.duration()) for iv in res_a.intervals("off_nadir", "europe")
+            float(iv.interval().duration()) for iv in res_a.windows("off_nadir", "europe")
         )
         assert dur_off_nadir >= dur_nadir - 1.0, (
             f"off-nadir ({dur_off_nadir:.0f}s) should have >= nadir ({dur_nadir:.0f}s) coverage"
         )
+
+    def test_pass_direction_populated(self, scenario_single):
+        analysis = lox.OpticalAccessAnalysis(
+            scenario_single,
+            aois=[("europe", EUROPE_AOI)],
+            step=30 * lox.seconds,
+        )
+        results = analysis.compute()
+        for window in results.windows("S2A", "europe"):
+            d = window.direction()
+            assert d in (lox.PassDirection.Ascending, lox.PassDirection.Descending), (
+                f"unexpected direction: {d}"
+            )
 
     def test_repr(self, scenario_single):
         analysis = lox.OpticalAccessAnalysis(scenario_single, aois=[("europe", EUROPE_AOI)])

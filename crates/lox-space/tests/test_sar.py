@@ -143,7 +143,7 @@ class TestSarAccessAnalysis:
             step=30 * lox.seconds,
         )
         results = analysis.compute()
-        windows = results.intervals("s1a", "europe")
+        windows = results.windows("s1a", "europe")
         assert len(windows) > 0, "Sentinel-1A should image Western Europe within 6 hours"
 
     def test_interval_durations(self, scenario_single):
@@ -153,8 +153,8 @@ class TestSarAccessAnalysis:
             step=30 * lox.seconds,
         )
         results = analysis.compute()
-        for iv in results.intervals("s1a", "europe"):
-            dur = float(iv.duration())
+        for iv in results.windows("s1a", "europe"):
+            dur = float(iv.interval().duration())
             assert dur > 0, "zero-length SAR window"
             assert dur < 600, f"SAR window too long ({dur:.0f}s)"
 
@@ -165,7 +165,7 @@ class TestSarAccessAnalysis:
             step=30 * lox.seconds,
         )
         results = analysis.compute()
-        all_ivs = results.all_intervals()
+        all_ivs = results.all_windows()
         # Should have entries for both AOIs (even if pacific has zero windows)
         assert len(all_ivs) == 2
 
@@ -178,7 +178,7 @@ class TestSarAccessAnalysis:
             aois=[("europe", EUROPE_AOI)],
         )
         results = analysis.compute()
-        assert len(results.all_intervals()) == 0
+        assert len(results.all_windows()) == 0
 
     def test_left_vs_right_side_differ(self, s1a, six_hour_window):
         t0, t1 = six_hour_window
@@ -197,8 +197,8 @@ class TestSarAccessAnalysis:
             step=30 * lox.seconds,
         )
         results = analysis.compute()
-        windows_l = results.intervals("s1a_l", "europe")
-        windows_r = results.intervals("s1a_r", "europe")
+        windows_l = results.windows("s1a_l", "europe")
+        windows_r = results.windows("s1a_r", "europe")
         assert len(windows_l) > 0, "Left-looking should have access over Europe"
         assert len(windows_r) > 0, "Right-looking should have access over Europe"
 
@@ -206,7 +206,7 @@ class TestSarAccessAnalysis:
         # side must not overlap any window on the other. Robust to TLE refreshes
         # (unlike a sum-of-durations check, which can coincidentally match).
         def overlaps(a, b):
-            return a.start() < b.end() and b.start() < a.end()
+            return a.interval().start() < b.interval().end() and b.interval().start() < a.interval().end()
 
         left_has_unique = any(
             not any(overlaps(l, r) for r in windows_r) for l in windows_l
@@ -240,5 +240,39 @@ class TestSarAccessAnalysis:
             step=30 * lox.seconds,
         )
         results = analysis.compute()
-        all_ivs = results.all_intervals()
+        all_ivs = results.all_windows()
         assert len(all_ivs) == 2, "Both spacecraft-AOI pairs should be present in results"
+
+    def test_pass_direction_populated(self, scenario_single):
+        analysis = lox.SarAccessAnalysis(
+            scenario_single,
+            aois=[("europe", EUROPE_AOI)],
+            step=30 * lox.seconds,
+        )
+        results = analysis.compute()
+        for window in results.windows("s1a", "europe"):
+            d = window.direction()
+            assert d in (lox.PassDirection.Ascending, lox.PassDirection.Descending), (
+                f"unexpected direction: {d}"
+            )
+
+    def test_both_directions_observed(self, s1a):
+        # LookSide.Either: a single spacecraft sees both sides → both directions
+        # over Europe in a long-enough window. 6h was insufficient at the test
+        # TLE's RAAN; 12h reliably catches both ascending and descending overflights.
+        t0 = s1a.time()
+        t1 = t0 + 12 * lox.hours
+        payload = lox.SarPayload.with_incidence_angles(
+            29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Either
+        )
+        sc = lox.Spacecraft("s1a", s1a, sar_payload=payload)
+        scenario = lox.Scenario(t0, t1, spacecraft=[sc])
+        analysis = lox.SarAccessAnalysis(
+            scenario,
+            aois=[("europe", EUROPE_AOI)],
+            step=30 * lox.seconds,
+        )
+        results = analysis.compute()
+        directions = [w.direction() for w in results.windows("s1a", "europe")]
+        assert lox.PassDirection.Ascending in directions, "missing ascending pass"
+        assert lox.PassDirection.Descending in directions, "missing descending pass"
