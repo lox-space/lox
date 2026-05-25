@@ -518,7 +518,7 @@ mod integration_tests {
             .any(|w| w.direction == PassDirection::Descending);
         assert!(
             has_ascending && has_descending,
-            "expected both ascending and descending passes in a 6h SSO window over Europe (got asc={has_ascending}, desc={has_descending})",
+            "expected both ascending and descending passes in a 12h SSO window over Europe (got asc={has_ascending}, desc={has_descending})",
         );
     }
 }

@@ -10,9 +10,9 @@ use lox_time::time_scales::Tai;
 use crate::assets::AssetId;
 use crate::imaging::aoi::AoiId;
 
-/// Direction of the spacecraft's orbital motion at the time of an access window.
-///
-/// Determined from the sign of the geodetic-latitude rate at the window midpoint.
+/// Direction of the spacecraft's orbital motion at the time of an access window:
+/// moving northward ([`PassDirection::Ascending`]) or southward
+/// ([`PassDirection::Descending`]), sampled at the window midpoint.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum PassDirection {
