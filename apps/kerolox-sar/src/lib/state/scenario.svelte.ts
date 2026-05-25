@@ -39,6 +39,9 @@ export interface Scenario {
   durationHours: number;
   walker: WalkerConfig;
   sar: SarConfig;
+  /** When true, the fielded ICEYE constellation is run through the same
+   *  access analysis for side-by-side comparison. */
+  compareIceye: boolean;
 }
 
 export function defaultScenario(): Scenario {
@@ -47,6 +50,7 @@ export function defaultScenario(): Scenario {
     durationHours: 6,
     walker: { satsPerPlane: 8, p: 3, f: 1, altitudeKm: 600, inclinationDeg: 53 },
     sar: { lookSide: "RIGHT", minIncidenceDeg: 20, maxIncidenceDeg: 45 },
+    compareIceye: false,
   };
 }
 

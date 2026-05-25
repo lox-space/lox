@@ -90,4 +90,16 @@
       <input class={inputCls} type="number" step="0.1" bind:value={scenario.sar.maxIncidenceDeg} />
     </label>
   </section>
+
+  <section class={sectionCls}>
+    <h2 class="text-sm font-semibold uppercase text-neutral-300">Comparison</h2>
+
+    <label class="flex items-center gap-2 mt-3 text-sm text-neutral-200">
+      <input type="checkbox" bind:checked={scenario.compareIceye} />
+      Compare vs ICEYE
+    </label>
+    <p class="mt-1 text-xs text-neutral-500">
+      Runs the fielded ICEYE fleet (real TLEs, SGP4) through the same access analysis.
+    </p>
+  </section>
 </aside>

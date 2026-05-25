@@ -84,6 +84,7 @@
     const sarLookSide = scenario.sar.lookSide;
     const sarMinIncidenceDeg = scenario.sar.minIncidenceDeg;
     const sarMaxIncidenceDeg = scenario.sar.maxIncidenceDeg;
+    const compareIceye = scenario.compareIceye;
 
     const ctl = new AbortController();
 
@@ -115,10 +116,14 @@
           maxIncidenceDeg: sarMaxIncidenceDeg,
         } as unknown as AccessRequest["sar"],
         aoiIds: ["hormuz", "black_sea"],
-        comparators: [],
+        comparators: compareIceye ? ["iceye"] : [],
         stepSeconds: 30,
       } as unknown as AccessRequest;
 
+      // Expected pair count covers only the user design's sats × 2 AOIs.
+      // When ICEYE is on, the server also streams ~52 comparator sats × 2
+      // AOIs, so the pill undercounts during the comparator phase — acceptable
+      // for the demo (the client doesn't know the comparator fleet size).
       const pairsExpected = satellites.length * 2; // 2 AOIs
       void runComputeAccess(req, {
         onStart: () => accessStatus.markStart(pairsExpected),
