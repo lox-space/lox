@@ -61,6 +61,22 @@ pub enum SarPayloadError {
 /// or [`SarPayload::with_incidence_angles`] (incidence angle at the ground point).
 /// The chosen convention is preserved internally and converted at evaluation
 /// time using the actual instantaneous altitude.
+///
+/// # Limitations
+///
+/// - **Spherical Earth.** Both look↔incidence conversion and ground-range
+///   geometry use the body's mean radius. The error is negligible below ~30°
+///   incidence and grows slowly at higher angles.
+/// - **Large AOIs straddling the ground track.** The access metric evaluates
+///   distance to the *nearest* AOI point. For an AOI wider than the inner
+///   annulus radius that straddles the ground track, the nearest point sits
+///   inside the inner forbidden ring → metric goes negative → no access is
+///   reported, even though the far edge of the AOI may genuinely lie in the
+///   annulus on one or both sides. Split such AOIs into smaller polygons or
+///   use point targets.
+/// - **No squint, modes, or acquisition-quality outputs.** A single envelope
+///   per payload; no per-mode swath, NESZ, or resolution. See the project
+///   docs for the planned future scope.
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SarPayload {
@@ -132,8 +148,7 @@ impl AccessPayload for SarPayload {
         let sub_sat_lat = sub_sat.lat().to_degrees();
         let sub_sat_point = Point::new(sub_sat_lon, sub_sat_lat);
 
-        let nearest = aoi.nearest_point(&sub_sat_point);
-        let r = aoi.distance_to(&sub_sat_point, mean_radius_m);
+        let (nearest, r) = aoi.nearest_point_and_distance(&sub_sat_point, mean_radius_m);
 
         let annulus_marg = (r - r_min).min(r_max - r);
 
@@ -143,9 +158,10 @@ impl AccessPayload for SarPayload {
                 let bearing = bearing_from_to(sub_sat_lon, sub_sat_lat, nearest.x(), nearest.y());
                 let diff = bearing - ground_track_az.to_radians();
                 // sin(diff) > 0 → target on right of ground track; < 0 → on left.
-                // sin(diff) == 0 when the target lies on the ground track itself,
-                // giving sign = 0 → side_marg = 0 → the target is excluded from
-                // either Left- or Right-only payloads, which is correct.
+                // sin(diff) == 0 in two cases, both correctly handled by sign = 0
+                // → side_marg = 0 → target excluded from Left- or Right-only payloads:
+                //   * diff = 0:   target directly ahead on the ground track.
+                //   * diff = ±π:  target directly behind on the ground track.
                 let sign = diff.sin().signum();
                 let signed_r = r * sign;
                 match self.side {
@@ -427,20 +443,26 @@ mod integration_tests {
         let r_windows = results.intervals(&AssetId::new("s1a_r"), &AoiId::new("europe"));
         let l_windows = results.intervals(&AssetId::new("s1a_l"), &AoiId::new("europe"));
 
-        let total = |ws: &[TimeInterval<Tai>]| -> f64 {
-            ws.iter()
-                .map(|w| (w.end() - w.start()).to_seconds().to_f64())
-                .sum()
-        };
-        let tr = total(r_windows);
-        let tl = total(l_windows);
         assert!(
-            tr > 0.0 && tl > 0.0,
+            !r_windows.is_empty() && !l_windows.is_empty(),
             "expected non-empty access on both sides over Europe",
         );
+
+        // Sides should see different opportunities: at least one window on one
+        // side must not overlap any window on the other. Robust to TLE refreshes
+        // (unlike a sum-of-durations check, which can coincidentally match).
+        let overlaps = |a: &TimeInterval<Tai>, b: &TimeInterval<Tai>| -> bool {
+            a.start() < b.end() && b.start() < a.end()
+        };
+        let left_has_unique = l_windows
+            .iter()
+            .any(|l| !r_windows.iter().any(|r| overlaps(l, r)));
+        let right_has_unique = r_windows
+            .iter()
+            .any(|r| !l_windows.iter().any(|l| overlaps(r, l)));
         assert!(
-            (tr - tl).abs() > 30.0,
-            "expected materially different totals (right={tr}, left={tl})",
+            left_has_unique || right_has_unique,
+            "every Left window overlaps a Right window and vice versa — sides not differentiated",
         );
     }
 }

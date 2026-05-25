@@ -158,7 +158,10 @@ impl Aoi {
     ///
     /// Uses the haversine formula with the given `mean_radius_m` so that the
     /// computation is valid for any spherical body, not just Earth.
-    /// Returns 0.0 if the point is inside the polygon.
+    /// Returns 0.0 if the point is inside the polygon. For a degenerate polygon
+    /// (NaN coords or zero-length edges) returns [`f64::INFINITY`] so that
+    /// callers in the access-analysis pipeline get a "never accessible" metric
+    /// rather than a panic — preserving the infallible `AccessPayload` contract.
     pub fn distance_to(&self, point: &geo::Point<f64>, mean_radius_m: f64) -> f64 {
         if self.polygon.contains(point) {
             0.0
@@ -166,22 +169,45 @@ impl Aoi {
             match self.polygon.haversine_closest_point(point) {
                 Closest::Intersection(_) => 0.0,
                 Closest::SinglePoint(closest) => haversine_distance(*point, closest, mean_radius_m),
-                Closest::Indeterminate => unreachable!("degenerate polygon geometry"),
+                Closest::Indeterminate => f64::INFINITY,
             }
         }
     }
 
     /// Returns the great-circle-nearest point of the polygon to `point`.
-    /// If `point` lies inside the polygon, returns `point` itself. The
-    /// returned point is in lon/lat degrees, matching the polygon's coordinate
-    /// convention.
+    /// If `point` lies inside the polygon, returns `point` itself. For a
+    /// degenerate polygon returns `point` itself as a benign sentinel (paired
+    /// with the [`f64::INFINITY`] distance from [`Aoi::nearest_point_and_distance`]).
+    /// The returned point is in lon/lat degrees, matching the polygon's
+    /// coordinate convention.
     pub fn nearest_point(&self, point: &geo::Point<f64>) -> geo::Point<f64> {
         if self.polygon.contains(point) {
             return *point;
         }
         match self.polygon.haversine_closest_point(point) {
             geo::Closest::Intersection(p) | geo::Closest::SinglePoint(p) => p,
-            geo::Closest::Indeterminate => unreachable!("degenerate polygon geometry"),
+            geo::Closest::Indeterminate => *point,
+        }
+    }
+
+    /// Returns both the nearest polygon point and its great-circle distance in
+    /// metres from `point`. If `point` lies inside the polygon, returns
+    /// `(*point, 0.0)`. For a degenerate polygon returns `(*point, f64::INFINITY)`
+    /// so the access-analysis pipeline degrades to "never accessible" rather
+    /// than panicking. Folds the work of [`Aoi::nearest_point`] and
+    /// [`Aoi::distance_to`] into a single polygon traversal.
+    pub fn nearest_point_and_distance(
+        &self,
+        point: &geo::Point<f64>,
+        mean_radius_m: f64,
+    ) -> (geo::Point<f64>, f64) {
+        if self.polygon.contains(point) {
+            return (*point, 0.0);
+        }
+        match self.polygon.haversine_closest_point(point) {
+            Closest::Intersection(p) => (p, 0.0),
+            Closest::SinglePoint(p) => (p, haversine_distance(*point, p, mean_radius_m)),
+            Closest::Indeterminate => (*point, f64::INFINITY),
         }
     }
 
