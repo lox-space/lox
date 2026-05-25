@@ -65,6 +65,11 @@ export function runWalker(s: Scenario): SatelliteElements[] {
   return out;
 }
 
+/**
+ * Awaits the one-shot WASM module initialisation. Call this once at app
+ * startup (e.g. from `+page.svelte`'s `onMount`) before any `runWalker`
+ * call to ensure the WASM module has loaded. Subsequent calls are no-ops.
+ */
 export async function ensureWalkerReady(): Promise<void> {
   await ensureWasm();
 }

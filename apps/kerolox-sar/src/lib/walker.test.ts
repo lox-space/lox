@@ -48,7 +48,7 @@ describe("runWalker", () => {
       s.walker.f,
       expect.closeTo(expectedSmaM, 1),
       0,
-      expect.closeTo((s.walker.inclinationDeg * Math.PI) / 180, 1e-12),
+      expect.closeTo((s.walker.inclinationDeg * Math.PI) / 180, 10),
     );
   });
 
