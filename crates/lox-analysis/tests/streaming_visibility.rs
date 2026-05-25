@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+#![cfg(feature = "stream")]
+
 use std::collections::HashMap;
 use std::sync::Arc;
 

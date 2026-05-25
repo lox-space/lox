@@ -3,7 +3,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use std::collections::HashMap;
+#[cfg(feature = "stream")]
 use std::panic::{AssertUnwindSafe, catch_unwind};
+#[cfg(feature = "stream")]
 use std::sync::Arc;
 
 use lox_bodies::{
@@ -27,9 +29,12 @@ use thiserror::Error;
 use lox_core::units::{Angle, AngularRate, Distance, Velocity};
 
 use lox_core::error::LoxError;
+#[cfg(feature = "stream")]
 use lox_stream::{OnError, Stream, par_stream};
 
-use crate::assets::{AssetId, GroundStation, Scenario, Spacecraft, panic_message};
+#[cfg(feature = "stream")]
+use crate::assets::panic_message;
+use crate::assets::{AssetId, GroundStation, Scenario, Spacecraft};
 use crate::events::{
     AdaptiveSampler, DetectError, DetectFn, DetectFnExt as _, Differentiable, IntervalIterExt as _,
     RateBounded, UniformSampler,
@@ -175,6 +180,7 @@ pub enum VisibilityError {
     #[error(transparent)]
     Series(#[from] SeriesError),
     /// A worker thread panicked while computing a pair.
+    #[cfg(feature = "stream")]
     #[error("worker panicked while computing pair ({id1}, {id2}): {message}")]
     WorkerPanicked {
         /// First asset of the panicking pair.
@@ -996,6 +1002,7 @@ impl VisibilityResults {
 // ---------------------------------------------------------------------------
 
 /// One pair's worth of visibility intervals, streamed as the pair completes.
+#[cfg(feature = "stream")]
 pub struct PairResult {
     /// First asset id (ground station or first spacecraft).
     pub id1: AssetId,
@@ -1007,11 +1014,13 @@ pub struct PairResult {
     pub intervals: Vec<TimeInterval>,
 }
 
+#[cfg(feature = "stream")]
 enum PairJob {
     GroundSpace { gs_id: AssetId, sc_id: AssetId },
     InterSatellite { id1: AssetId, id2: AssetId },
 }
 
+#[cfg(feature = "stream")]
 struct StreamCfg {
     occulting_bodies: Vec<Origin>,
     step: TimeDelta,
@@ -1655,6 +1664,7 @@ where
     /// Ground-space and inter-satellite pairs (when enabled via
     /// [`with_inter_satellite`](Self::with_inter_satellite)) are interleaved
     /// in a single stream; consumers discriminate by `PairResult::pair_type`.
+    #[cfg(feature = "stream")]
     pub fn compute_stream(
         self,
         scenario: Arc<Scenario<O, R>>,
@@ -1729,6 +1739,7 @@ where
     }
 }
 
+#[cfg(feature = "stream")]
 fn run_visibility_job<O, R, E>(
     job: &PairJob,
     scenario: &Scenario<O, R>,

@@ -2,26 +2,28 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+#![cfg(all(feature = "stream", feature = "imaging"))]
+
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use geo::{LineString, Polygon};
-use lox_analysis::assets::{AssetId, DynScenario, Spacecraft};
+use lox_analysis::assets::{AssetId, Scenario, Spacecraft};
 use lox_analysis::imaging::analysis::{AccessAnalysis, AccessPairResult};
 use lox_analysis::imaging::aoi::{Aoi, AoiId};
 use lox_analysis::imaging::optical::OpticalPayload;
 use lox_analysis::imaging::sar::{LookSide, SarPayload};
-use lox_bodies::DynOrigin;
+use lox_bodies::Origin;
 use lox_core::units::{Angle, Distance};
-use lox_frames::DynFrame;
-use lox_orbits::orbits::{DynTrajectory, Ensemble, Trajectory};
+use lox_frames::Frame;
+use lox_orbits::orbits::{Ensemble, Trajectory};
 use lox_orbits::propagators::OrbitSource;
 use lox_orbits::propagators::Propagator;
 use lox_orbits::propagators::sgp4::{Elements, Sgp4};
 use lox_stream::OnError;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::{Interval, TimeInterval};
-use lox_time::time_scales::{DynTimeScale, Tai};
+use lox_time::time_scales::TimeScale;
 
 // Sentinel-1A TLE — epoch 2026-079 (20 March 2026), consistent with the
 // SAR integration tests. Reused for optical tests too (any LEO orbit works
@@ -30,15 +32,15 @@ const S1A_NAME: &str = "SENTINEL-1A";
 const S1A_LINE1: &[u8] = b"1 39634U 14016A   26079.20000000  .00000050  00000+0  37000-4 0  9991";
 const S1A_LINE2: &[u8] = b"2 39634  98.1817 105.0000 0001300  90.0000 270.0000 14.59197557600008";
 
-fn s1a_trajectory() -> DynTrajectory {
+fn s1a_trajectory() -> Trajectory {
     let tle = Elements::from_tle(Some(S1A_NAME.to_string()), S1A_LINE1, S1A_LINE2).unwrap();
     let sgp4 = Sgp4::new(tle).unwrap();
     let t0 = sgp4.time();
     let t1 = t0 + TimeDelta::from_hours(6);
     sgp4.with_step(TimeDelta::from_seconds(10))
-        .propagate(Interval::new(t0, t1))
+        .propagate(Interval::new(t0, t1).into_dynamic())
         .unwrap()
-        .into_dyn()
+        .into_dynamic()
 }
 
 fn western_europe_aoi() -> Aoi {
@@ -56,17 +58,20 @@ fn western_europe_aoi() -> Aoi {
 
 fn make_scenario(
     spacecraft: &[Spacecraft],
-    interval: TimeInterval<DynTimeScale>,
-) -> (DynScenario, Ensemble<AssetId, Tai, DynOrigin, DynFrame>) {
-    let tai_interval =
-        TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
-    let scenario = DynScenario::with_interval(tai_interval, DynOrigin::Earth, DynFrame::Icrf)
+    interval: TimeInterval,
+) -> (Scenario, Ensemble<AssetId, Origin, Frame>) {
+    let tai_interval = TimeInterval::new(
+        interval.start().to_scale(TimeScale::Tai),
+        interval.end().to_scale(TimeScale::Tai),
+    );
+    let scenario = Scenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
         .with_spacecraft(spacecraft);
     let mut map = HashMap::new();
     for sc in spacecraft {
         if let OrbitSource::Trajectory(traj) = sc.orbit() {
             let (epoch, origin, frame, data) = traj.clone().into_parts();
-            let typed = Trajectory::from_parts(epoch.with_scale(Tai), origin, frame, data);
+            let typed =
+                Trajectory::from_parts(epoch.with_scale(TimeScale::Tai), origin, frame, data);
             map.insert(sc.id().clone(), typed);
         }
     }

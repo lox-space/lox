@@ -6,10 +6,13 @@
 
 use core::marker::PhantomData;
 use std::collections::HashMap;
+#[cfg(feature = "stream")]
 use std::panic::{AssertUnwindSafe, catch_unwind};
+#[cfg(feature = "stream")]
 use std::sync::Arc;
 
 use lox_core::glam::DVec3;
+#[cfg(feature = "stream")]
 use lox_stream::{OnError, Stream, par_stream};
 use rayon::prelude::*;
 use thiserror::Error;
@@ -27,7 +30,9 @@ use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::TimeScale;
 
-use crate::assets::{AssetId, Scenario, Spacecraft, panic_message};
+#[cfg(feature = "stream")]
+use crate::assets::panic_message;
+use crate::assets::{AssetId, Scenario, Spacecraft};
 use crate::imaging::aoi::{Aoi, AoiId};
 use crate::imaging::optical::OpticalPayload;
 use crate::imaging::results::{AccessResults, AccessWindow, PassDirection};
@@ -92,6 +97,7 @@ pub enum AccessError {
     #[error("pass-direction sampling failed: {0}")]
     PassDirection(#[from] EvalError),
     /// A worker thread panicked while computing a (spacecraft, AOI) pair.
+    #[cfg(feature = "stream")]
     #[error("worker panicked while computing pair ({sc_id}, {aoi_id}): {message}")]
     WorkerPanicked {
         /// Spacecraft asset identifier.
@@ -328,10 +334,11 @@ where
     /// Consumes the analysis (moves the AOI list into the streaming task) and
     /// requires `Arc`-shared scenario and ensemble so the work can outlive
     /// the original borrow.
+    #[cfg(feature = "stream")]
     pub fn compute_stream(
         self,
         scenario: Arc<Scenario<O, R>>,
-        ensemble: Arc<Ensemble<AssetId, Tai, O, R>>,
+        ensemble: Arc<Ensemble<AssetId, O, R>>,
         capacity: usize,
         on_error: OnError,
     ) -> Stream<AccessPairResult, AccessError>
@@ -440,6 +447,7 @@ where
 }
 
 /// One (spacecraft, AOI) pair's access windows, streamed as the pair completes.
+#[cfg(feature = "stream")]
 pub struct AccessPairResult {
     /// Spacecraft id.
     pub sc_id: AssetId,
@@ -449,6 +457,7 @@ pub struct AccessPairResult {
     pub windows: Vec<AccessWindow>,
 }
 
+#[cfg(feature = "stream")]
 struct AccessJob<P: Copy + Send + 'static> {
     sc_id: AssetId,
     aoi_id: AoiId,
