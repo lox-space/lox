@@ -1,0 +1,12 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+ *
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+@import "tailwindcss";
+
+/* Dark theme tokens; mirror apps/kerolox where applicable. */
+:root {
+  color-scheme: dark;
+}
