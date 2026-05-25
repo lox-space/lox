@@ -59,8 +59,20 @@ pnpm --filter kerolox-sar test:e2e    # Playwright (needs engine running)
 - Streaming-append row animation, `N/M pairs` counter, visible
   cancellation transition.
 
+## What Phase 3 adds
+
+- 3D globe (Threlte) and 2D equirectangular map, toggled in the
+  viewport header.
+- Per-satellite current position and ground track on both views,
+  interpolated from a 30 s WASM-side sampled trajectory.
+- AOI polygons (Hormuz, Black Sea) rendered on both views.
+- Shared `currentTime` playback transport (play / pause / scrub / rate
+  1× / 10× / 60× / 600×).
+- Earth rotation animated each frame via the IAU polynomial model
+  (no IERS data dependency).
+- Sampled trajectories cached client-side by a scenario hash; recomputed
+  only when scenario inputs change.
+
 ## Not yet shipped (later phases)
 
-- 3D globe and 2D map viewports, ground tracks, play/pause animation
-  (Phase 3).
 - Trade-space sweep + ICEYE comparator (Phase 4).
