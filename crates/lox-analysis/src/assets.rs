@@ -497,6 +497,16 @@ impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Sce
         &self.spacecraft
     }
 
+    /// Returns the ground station with the given id, if present.
+    pub fn ground_station_by_id(&self, id: &AssetId) -> Option<&GroundStation> {
+        self.ground_stations.iter().find(|gs| gs.id() == id)
+    }
+
+    /// Returns the spacecraft with the given id, if present.
+    pub fn spacecraft_by_id(&self, id: &AssetId) -> Option<&Spacecraft> {
+        self.spacecraft.iter().find(|sc| sc.id() == id)
+    }
+
     /// Propagate all spacecraft over the scenario interval, transforming
     /// trajectories to the scenario's frame using the provided rotation
     /// `provider`.
@@ -886,5 +896,48 @@ mod tests {
             .unwrap();
         assert_eq!(ensemble.len(), 1);
         assert!(ensemble.get(&AssetId::new("sc1")).is_some());
+    }
+
+    #[test]
+    fn by_id_lookups_return_the_right_assets() {
+        let start = Time::j2000(Tai);
+        let end = start + TimeDelta::from_seconds(86400);
+        let gs = GroundStation::new("gs1", dummy_location(), dummy_mask());
+        let traj = lox_orbits::orbits::DynTrajectory::from_csv_dyn(
+            &lox_test_utils::read_data_file("trajectory_lunar.csv"),
+            DynOrigin::Earth,
+            DynFrame::Icrf,
+        )
+        .unwrap();
+        let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(traj));
+        let scenario = DynScenario::new(start, end, DynOrigin::Earth, DynFrame::Icrf)
+            .with_ground_stations(&[gs])
+            .with_spacecraft(&[sc]);
+        assert_eq!(
+            scenario
+                .ground_station_by_id(&AssetId::new("gs1"))
+                .unwrap()
+                .id()
+                .as_str(),
+            "gs1",
+        );
+        assert_eq!(
+            scenario
+                .spacecraft_by_id(&AssetId::new("sc1"))
+                .unwrap()
+                .id()
+                .as_str(),
+            "sc1",
+        );
+        assert!(
+            scenario
+                .ground_station_by_id(&AssetId::new("missing"))
+                .is_none()
+        );
+        assert!(
+            scenario
+                .spacecraft_by_id(&AssetId::new("missing"))
+                .is_none()
+        );
     }
 }
