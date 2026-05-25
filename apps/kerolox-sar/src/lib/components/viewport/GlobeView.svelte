@@ -6,11 +6,12 @@
   import { T, Canvas } from "@threlte/core";
   import { OrbitControls } from "@threlte/extras";
   import { WebGLRenderer } from "three";
-  import { earthRotationAngleRad, sunDirectionEci } from "@lox-space/wasm";
+  import { earthRotationAngleRad, sunDirectionEci, Origin } from "@lox-space/wasm";
   import { Earth } from "@lox-space/threlte";
   import SatelliteMarker from "./SatelliteMarker.svelte";
   import GroundTrack from "./GroundTrack.svelte";
   import AoiPolygon from "./AoiPolygon.svelte";
+  import Atmosphere from "./Atmosphere.svelte";
   import TickAdvancer from "./TickAdvancer.svelte";
   import { trajectoryById, comparatorTrajectoryById } from "$lib/state/trajectories.svelte";
   import { playback } from "$lib/state/playback.svelte";
@@ -23,6 +24,11 @@
 
   let { aois }: { aois: Map<string, AoiPolygonData> } = $props();
 
+  // Solid Earth radius (km) for sizing the atmosphere shell. WASM returns m.
+  const earth = new Origin("Earth");
+  const earthRadiusKm = earth.mean_radius() / 1000;
+  $effect(() => () => { earth.free(); });
+
   const earthRotation = $derived.by(() => {
     if (!Number.isFinite(playback.currentTime) || playback.currentTime === 0) return 0;
     const iso = new Date(playback.currentTime).toISOString();
@@ -34,20 +40,28 @@
   });
 
   // Unit Sun direction in the inertial ECI frame (Three.js Y-up), from the
-  // analytical lox-earth ephemeris. Drives the directional light so the globe
-  // shows a day/night terminator that the Earth rotates under. Placed far out
-  // along the Sun vector; for a directional light only the direction matters.
-  const SUN_DISTANCE_KM = 1.5e8;
-  const sunPosition = $derived.by((): [number, number, number] => {
-    const fallback: [number, number, number] = [SUN_DISTANCE_KM, 0, 0];
+  // analytical lox-earth ephemeris. Drives both the directional light (so the
+  // globe shows a day/night terminator the Earth rotates under) and the
+  // atmosphere glow (which concentrates on the lit limb).
+  const sunDir = $derived.by((): [number, number, number] => {
+    const fallback: [number, number, number] = [1, 0, 0];
     if (!Number.isFinite(playback.currentTime) || playback.currentTime === 0) return fallback;
     try {
       const d = sunDirectionEci(new Date(playback.currentTime).toISOString());
-      return [d[0] * SUN_DISTANCE_KM, d[1] * SUN_DISTANCE_KM, d[2] * SUN_DISTANCE_KM];
+      return [d[0], d[1], d[2]];
     } catch {
       return fallback;
     }
   });
+
+  // Directional lights only care about direction; place it far along the Sun
+  // vector at the inertial scene root.
+  const SUN_DISTANCE_KM = 1.5e8;
+  const sunPosition = $derived<[number, number, number]>([
+    sunDir[0] * SUN_DISTANCE_KM,
+    sunDir[1] * SUN_DISTANCE_KM,
+    sunDir[2] * SUN_DISTANCE_KM,
+  ]);
 </script>
 
 <div class="flex-1 min-h-0 relative">
@@ -65,6 +79,10 @@
          terminator across the day side. -->
     <T.AmbientLight intensity={0.05} />
     <T.DirectionalLight position={sunPosition} intensity={6} />
+
+    <!-- Inertial atmosphere shell: sun-aware Fresnel limb glow, outside the
+         rotating Earth group so its glow tracks the Sun, not the surface. -->
+    <Atmosphere radiusKm={earthRadiusKm} {sunDir} />
 
     <T.Group rotation={[0, earthRotation, 0]}>
       <Earth textureUrl="/assets/Earth-color.jpg" />
