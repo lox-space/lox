@@ -46,7 +46,9 @@ function sweepValues(cfg: SweepConfig): number[] {
 
 /** Apply a sweep value to a scenario copy, returning a fresh scenario. */
 function withParam(base: Scenario, param: SweepParam, value: number): Scenario {
-  const s: Scenario = structuredClone(base);
+  // `base` may be the reactive `$state` scenario proxy, which structuredClone
+  // cannot handle. $state.snapshot yields a plain, deeply-cloned object.
+  const s: Scenario = $state.snapshot(base) as Scenario;
   if (param === "satsPerPlane") s.walker.satsPerPlane = Math.round(value);
   else if (param === "planes") s.walker.p = Math.round(value);
   else if (param === "altitudeKm") s.walker.altitudeKm = value;
@@ -112,6 +114,10 @@ export async function runSweep(base: Scenario, cfg: SweepConfig, signal: AbortSi
         onCancel: () => {},
         onError: () => {},
       }, signal);
+
+      // If the stream was aborted mid-flight, drop the partial scenario
+      // rather than charting an incomplete point.
+      if (signal.aborted) break;
 
       untrack(() => {
         for (const [aoiId, windows] of byAoi) {
