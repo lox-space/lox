@@ -51,7 +51,7 @@
 
     <label class={labelCls}>
       Inclination (°)
-      <input class={inputCls} type="number" min="-90" max="90" step="0.1" bind:value={scenario.walker.inclinationDeg} />
+      <input class={inputCls} type="number" min="0" max="180" step="0.1" bind:value={scenario.walker.inclinationDeg} />
     </label>
 
     {#if !isWalkerValid(scenario.walker)}

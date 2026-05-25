@@ -44,7 +44,6 @@ impl Origin {
     /// Construct an Origin from a body name (string) or NAIF ID (number).
     #[wasm_bindgen(constructor)]
     pub fn new(value: JsValue) -> Result<Origin, JsValue> {
-        dbg!(&value);
         if let Some(name) = value.as_string() {
             let origin =
                 DynOrigin::from_str(&name).map_err(|e| JsValue::from_str(&e.to_string()))?;
