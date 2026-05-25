@@ -216,12 +216,9 @@ fn drop_stops_workers() {
     let arc_ensemble = Arc::new(ensemble);
     let arc_ephemeris = Arc::new(spk);
 
-    let analysis = VisibilityAnalysis::new(
-        arc_scenario.as_ref(),
-        arc_ensemble.as_ref(),
-        arc_ephemeris.as_ref(),
-    )
-    .with_inter_satellite();
+    let analysis = VisibilityAnalysis::new(arc_scenario.as_ref(), arc_ensemble.as_ref())
+        .with_occulting_bodies(arc_ephemeris.as_ref(), vec![])
+        .with_inter_satellite();
 
     let s = analysis.compute_stream(
         arc_scenario.clone(),
@@ -242,7 +239,7 @@ struct PanickingEphemeris;
 impl lox_ephem::Ephemeris for PanickingEphemeris {
     type Error = std::convert::Infallible;
 
-    fn state<O1: lox_bodies::Origin, O2: lox_bodies::Origin>(
+    fn state<O1: lox_bodies::CoordinateOrigin, O2: lox_bodies::CoordinateOrigin>(
         &self,
         _time: lox_time::Time<lox_time::time_scales::Tdb>,
         _origin: O1,
@@ -270,13 +267,9 @@ fn panic_in_detector_surfaces_as_worker_panicked() {
     let arc_ensemble = Arc::new(ensemble);
     let arc_ephemeris = Arc::new(PanickingEphemeris);
 
-    let analysis = VisibilityAnalysis::new(
-        arc_scenario.as_ref(),
-        arc_ensemble.as_ref(),
-        arc_ephemeris.as_ref(),
-    )
     // With Moon as occulting body, the ephemeris is queried during LOS detection.
-    .with_occulting_bodies(vec![DynOrigin::Moon]);
+    let analysis = VisibilityAnalysis::new(arc_scenario.as_ref(), arc_ensemble.as_ref())
+        .with_occulting_bodies(arc_ephemeris.as_ref(), vec![Origin::Moon]);
 
     let mut s = analysis.compute_stream(
         arc_scenario.clone(),
