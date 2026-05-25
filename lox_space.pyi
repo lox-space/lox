@@ -2946,22 +2946,51 @@ class OpticalAccessAnalysis:
 class AccessResults:
     """Results of an access analysis.
 
-    Provides access to intervals for each (spacecraft, AOI) pair.
+    Provides access windows for each (spacecraft, AOI) pair.
     """
-    def intervals(self, spacecraft_id: str, aoi_id: str) -> list[Interval]:
-        """Return access intervals for a specific pair.
+    def windows(self, spacecraft_id: str, aoi_id: str) -> list[AccessWindow]:
+        """Return access windows for a specific (spacecraft, AOI) pair.
 
         Args:
             spacecraft_id: Spacecraft identifier.
             aoi_id: AOI identifier.
 
         Returns:
-            List of Interval objects, or empty list if pair not found.
+            List of AccessWindow objects, or empty list if pair not found.
         """
         ...
-    def all_intervals(self) -> dict[tuple[str, str], list[Interval]]:
-        """Return all intervals for all (spacecraft, AOI) pairs."""
+    def all_windows(self) -> dict[tuple[str, str], list[AccessWindow]]:
+        """Return all access windows for all (spacecraft, AOI) pairs."""
         ...
+
+
+class PassDirection:
+    """Direction of orbital motion at the time of an access window.
+
+    Determined from the sign of the geodetic-latitude rate at the window midpoint.
+    """
+
+    Ascending: "PassDirection"
+    Descending: "PassDirection"
+
+
+class AccessWindow:
+    """A single access window: time interval plus pass direction at the midpoint.
+
+    Examples:
+        >>> import lox_space as lox
+        >>> results = analysis.compute()
+        >>> for window in results.windows("s1a", "europe"):
+        ...     print(window.interval(), window.direction())
+    """
+
+    def interval(self) -> Interval:
+        """Return the access time interval."""
+        ...
+    def direction(self) -> PassDirection:
+        """Return the spacecraft pass direction at the interval midpoint."""
+        ...
+    def __repr__(self) -> str: ...
 
 
 class LookSide:
