@@ -384,76 +384,8 @@ impl Keplerian {
         duration_s: f64,
         step_s: f64,
     ) -> Result<SampledTrajectory, JsValue> {
-        if !duration_s.is_finite() || duration_s <= 0.0 {
-            return Err(JsValue::from_str("duration_s must be positive and finite"));
-        }
-        if !step_s.is_finite() || step_s <= 0.0 {
-            return Err(JsValue::from_str("step_s must be positive and finite"));
-        }
-
-        // Parse the start time.
-        let utc_start = start_iso
-            .parse::<LoxUtc>()
-            .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        let start: DynTime = utc_start.to_dyn_time();
-
-        // Build a KeplerianOrbit and convert to DynCartesianOrbit.
-        let kep_orbit =
-            KeplerianOrbit::try_from_keplerian(self.elements, start, DynOrigin::Earth, DynFrame::Icrf)
-                .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        let cartesian = kep_orbit
-            .try_to_cartesian()
-            .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-        // Build the Vallado propagator.
-        let vallado =
-            DynVallado::try_new(cartesian).map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-        // IAU_EARTH body-fixed frame (purely polynomial, no IERS dependency).
-        let iau_earth = DynFrame::Iau(DynOrigin::Earth);
-        let provider = DefaultRotationProvider;
-
-        let step_secs_i64 = step_s as i64;
-        let n_steps = (duration_s / step_s) as usize;
-        let total_samples = n_steps + 1;
-
-        let mut epochs_ms = Vec::with_capacity(total_samples);
-        let mut eci_km = Vec::with_capacity(total_samples * 3);
-        let mut ground_deg = Vec::with_capacity(total_samples * 2);
-
-        for i in 0..=n_steps {
-            let dt = TimeDelta::from_seconds(step_secs_i64 * i as i64);
-            let t = start + dt;
-            let state = vallado
-                .state_at(t)
-                .map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-            // ECI position → Three.js (Y-up): (x, z, -y), convert m → km.
-            let pos = state.position();
-            eci_km.push(pos.x / 1000.0);
-            eci_km.push(pos.z / 1000.0);
-            eci_km.push(-pos.y / 1000.0);
-
-            // Body-fixed transform for ground track.
-            let body_fixed = state
-                .try_to_frame(iau_earth, &provider)
-                .map_err(|e| JsValue::from_str(&format!("frame transform error: {e}")))?;
-            let ground = body_fixed
-                .try_to_ground_location()
-                .map_err(|e| JsValue::from_str(&e.to_string()))?;
-            ground_deg.push(ground.latitude().to_degrees());
-            ground_deg.push(ground.longitude().to_degrees());
-
-            // Unix epoch milliseconds from the UTC instant.
-            let utc = t.to_utc();
-            epochs_ms.push(unix_epoch_ms_from_utc(&utc));
-        }
-
-        Ok(SampledTrajectory {
-            epochs_ms,
-            eci_km,
-            ground_deg,
-        })
+        compute_sampled_trajectory(&self.elements, self.origin, start_iso, duration_s, step_s)
+            .map_err(|e| JsValue::from_str(&e))
     }
 
     /// Trace the orbit into `n` evenly-spaced Cartesian states over one full revolution.
@@ -693,8 +625,98 @@ impl SampledTrajectory {
     }
 }
 
+/// Core propagation logic for [`Keplerian::propagate_sampled`].
+///
+/// Separated from the `#[wasm_bindgen]` shim so that unit tests can call it
+/// without triggering `JsValue::from_str`, which panics outside of wasm32.
+///
+/// Per-sample time offsets are computed from the float `step_s` via
+/// `TimeDelta::from_seconds_f64` to avoid silent truncation of sub-second
+/// steps (e.g. `30.5 s` must not silently become `30 s`).
+fn compute_sampled_trajectory(
+    elements: &LoxKeplerian,
+    origin: DynOrigin,
+    start_iso: &str,
+    duration_s: f64,
+    step_s: f64,
+) -> Result<SampledTrajectory, String> {
+    if !duration_s.is_finite() || duration_s <= 0.0 {
+        return Err("duration_s must be positive and finite".to_string());
+    }
+    if !step_s.is_finite() || step_s <= 0.0 {
+        return Err("step_s must be positive and finite".to_string());
+    }
+
+    // Parse the start time.
+    let utc_start = start_iso
+        .parse::<LoxUtc>()
+        .map_err(|e| e.to_string())?;
+    let start: DynTime = utc_start.to_dyn_time();
+
+    // Build a KeplerianOrbit and convert to DynCartesianOrbit.
+    let kep_orbit =
+        KeplerianOrbit::try_from_keplerian(*elements, start, DynOrigin::Earth, DynFrame::Icrf)
+            .map_err(|e| e.to_string())?;
+    let cartesian = kep_orbit
+        .try_to_cartesian()
+        .map_err(|e| e.to_string())?;
+
+    // Build the Vallado propagator.
+    let vallado = DynVallado::try_new(cartesian).map_err(|e| e.to_string())?;
+
+    // IAU_EARTH body-fixed frame (purely polynomial, no IERS dependency).
+    let iau_earth = DynFrame::Iau(origin);
+    let provider = DefaultRotationProvider;
+
+    let n_steps = (duration_s / step_s) as usize;
+    let total_samples = n_steps + 1;
+
+    let mut epochs_ms = Vec::with_capacity(total_samples);
+    let mut eci_km = Vec::with_capacity(total_samples * 3);
+    let mut ground_deg = Vec::with_capacity(total_samples * 2);
+
+    for i in 0..=n_steps {
+        // Per-sample time offset computed from the float step to avoid silent
+        // truncation: `TimeDelta::from_seconds_f64` handles sub-second steps.
+        let dt_s = step_s * i as f64;
+        let t = start + TimeDelta::from_seconds_f64(dt_s);
+
+        let state = vallado
+            .state_at(t)
+            .map_err(|e| e.to_string())?;
+
+        // ECI position → Three.js (Y-up): (x, z, -y), convert m → km.
+        let pos = state.position();
+        eci_km.push(pos.x / 1000.0);
+        eci_km.push(pos.z / 1000.0);
+        eci_km.push(-pos.y / 1000.0);
+
+        // Body-fixed transform for ground track.
+        let body_fixed = state
+            .try_to_frame(iau_earth, &provider)
+            .map_err(|e| format!("frame transform error: {e}"))?;
+        let ground = body_fixed
+            .try_to_ground_location()
+            .map_err(|e| e.to_string())?;
+        ground_deg.push(ground.latitude().to_degrees());
+        ground_deg.push(ground.longitude().to_degrees());
+
+        // Unix epoch milliseconds from the UTC instant.
+        let utc = t.to_utc();
+        epochs_ms.push(unix_epoch_ms_from_utc(&utc));
+    }
+
+    Ok(SampledTrajectory {
+        epochs_ms,
+        eci_km,
+        ground_deg,
+    })
+}
+
 /// Converts a UTC instant to Unix epoch milliseconds.
 fn unix_epoch_ms_from_utc(utc: &LoxUtc) -> f64 {
+    // Sub-millisecond components (µs, ps) are intentionally dropped —
+    // trajectory visualisation needs ms precision at most.
     use lox_space::time::calendar_dates::CalendarDate;
     use lox_space::time::time_of_day::CivilTime;
 
@@ -1403,10 +1425,31 @@ mod tests {
     }
 
     #[test]
-    fn test_sampled_trajectory_buffer_shape() {
-        // 6 hours @ 60 s step → 361 samples expected.
-        let n_steps_expected: usize = (6 * 3600) / 60 + 1;
-        assert_eq!(n_steps_expected, 361);
+    fn test_compute_sampled_trajectory_buffer_sizes_match_step() {
+        // 6 hours @ 60 s step → n_steps = (6*3600/60) = 360, total = 361 samples.
+        // Exercises compute_sampled_trajectory (the JsValue-free helper) end-to-end,
+        // including the n_steps formula and buffer layout.
+        let elements = LoxKeplerianTest::builder()
+            .with_semi_major_axis(7_000_000.0_f64.m(), 0.0)
+            .with_inclination(53.0_f64.to_radians().rad())
+            .with_longitude_of_ascending_node(0.0_f64.rad())
+            .with_argument_of_periapsis(0.0_f64.rad())
+            .with_true_anomaly(0.0_f64.rad())
+            .build()
+            .unwrap();
+
+        let traj = compute_sampled_trajectory(
+            &elements,
+            DynOrigin::from_str("Earth").unwrap(),
+            "2026-06-01T00:00:00",
+            6.0 * 3600.0,
+            60.0,
+        )
+        .expect("propagation should succeed");
+
+        assert_eq!(traj.len(), 361);
+        assert_eq!(traj.eci_km.len(), 361 * 3);
+        assert_eq!(traj.ground_deg.len(), 361 * 2);
     }
 
     #[test]
