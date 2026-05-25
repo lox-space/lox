@@ -83,16 +83,37 @@ export function ensureTrajectories(s: Scenario, sats: SatelliteElements[]): void
       })) as unknown as PropagateRequest["satellites"],
     } as unknown as PropagateRequest;
 
+    const pending = new Map<string, SampledTrajectoryView>();
+    let flushScheduled = false;
+
+    const flush = (): void => {
+      flushScheduled = false;
+      if (ctl.signal.aborted || pending.size === 0) return;
+      untrack(() => {
+        for (const [id, view] of pending) {
+          trajectoryById.set(id, view);
+        }
+      });
+      pending.clear();
+    };
+
     void runPropagateTrajectories(req, {
       onStart: () => {},
       onTrajectory: (msg) => {
-        trajectoryById.set(msg.scId, {
+        pending.set(msg.scId, {
           epochsMs: new Float64Array(msg.epochsMs),
           eciKm: new Float64Array(msg.eciThreejsBufferKm),
           groundDeg: new Float64Array(msg.groundLatLonDeg),
         });
+        if (!flushScheduled) {
+          flushScheduled = true;
+          requestAnimationFrame(flush);
+        }
       },
-      onDone: () => {},
+      onDone: () => {
+        // Final flush in case any messages arrived after the last rAF.
+        flush();
+      },
       onCancel: () => {},
       onError: (err) => {
         console.error("trajectory propagation failed:", err);
