@@ -29,8 +29,8 @@ async fn compute_access_streams_at_least_one_pair() {
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
-    tokio::spawn(async move {
-        axum::serve(listener, app).await.unwrap();
+    let server = tokio::spawn(async move {
+        let _ = axum::serve(listener, app).await;
     });
 
     // Single circular LEO satellite at 600 km altitude, 53° inclination.
@@ -73,4 +73,5 @@ async fn compute_access_streams_at_least_one_pair() {
     }
     eprintln!("smoke: received {count} AccessPairResult(s)");
     assert!(count >= 1, "expected at least one streamed pair, got {count}");
+    server.abort();
 }

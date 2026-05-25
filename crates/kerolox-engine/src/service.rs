@@ -43,7 +43,13 @@ impl Kerolox for KeroloxImpl {
     ) -> ServiceResult<ServiceStream<AccessPairResult>> {
         let start = parse_start_time(&request.start_time_iso)
             .map_err(|e| ConnectError::invalid_argument(e.to_string()))?;
-        let duration = TimeDelta::from_seconds(request.duration_seconds as i64);
+        let duration_s = request.duration_seconds;
+        if !duration_s.is_finite() || duration_s <= 0.0 {
+            return Err(ConnectError::invalid_argument(format!(
+                "duration_seconds must be positive and finite (got {duration_s})"
+            )));
+        }
+        let duration = TimeDelta::from_seconds(duration_s as i64);
         let end = start + duration;
 
         let sar_view = request
@@ -84,8 +90,9 @@ impl Kerolox for KeroloxImpl {
             aois.push((AoiId::new(id_str), aoi));
         }
 
-        let step_secs = if request.step_seconds > 0.0 {
-            request.step_seconds as i64
+        let step_s = request.step_seconds;
+        let step_secs = if step_s.is_finite() && step_s > 0.0 {
+            step_s as i64
         } else {
             30
         };

@@ -16,9 +16,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
 
-    let addr: SocketAddr = std::env::var("KEROLOX_ADDR")
-        .unwrap_or_else(|_| "127.0.0.1:8080".into())
-        .parse()?;
+    let addr_str = std::env::var("KEROLOX_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".into());
+    let addr: SocketAddr = addr_str
+        .parse()
+        .map_err(|e| format!("KEROLOX_ADDR={addr_str:?} is not a valid socket address: {e}"))?;
 
     let aoi_dir: PathBuf = std::env::var("KEROLOX_AOI_DIR")
         .map(PathBuf::from)
