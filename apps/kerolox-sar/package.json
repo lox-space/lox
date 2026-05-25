@@ -16,7 +16,11 @@
     "@connectrpc/connect": "^2.0.1",
     "@connectrpc/connect-web": "^2.0.1",
     "@kerolox/proto-ts": "workspace:*",
-    "@lox-space/wasm": "workspace:*"
+    "@lox-space/threlte": "workspace:^",
+    "@lox-space/wasm": "workspace:*",
+    "@threlte/core": "^8.5.4",
+    "@threlte/extras": "^9.13.3",
+    "three": "^0.183.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
@@ -25,6 +29,7 @@
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/vite": "^4.2.2",
     "@testing-library/svelte": "^5.2.4",
+    "@types/three": "^0.183.1",
     "jsdom": "^25.0.1",
     "svelte": "^5.55.0",
     "svelte-check": "^4.1.1",
