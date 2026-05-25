@@ -4,10 +4,13 @@
 -->
 <script lang="ts">
   import { onMount } from "svelte";
-  import { trajectoryById } from "$lib/state/trajectories.svelte";
+  import { trajectoryById, comparatorTrajectoryById, type SampledTrajectoryView } from "$lib/state/trajectories.svelte";
   import { playback, tick } from "$lib/state/playback.svelte";
   import type { AoiPolygon as AoiPolygonData } from "$lib/aois";
   import { colorForPlane, parsePlaneFromId } from "./colors";
+
+  /** Fixed amber for the fielded ICEYE comparator fleet. */
+  const COMPARATOR_COLOR = "#ffaa44";
 
   let { aois }: { aois: Map<string, AoiPolygonData> } = $props();
 
@@ -47,15 +50,32 @@
       ctx.stroke();
     }
 
-    // Ground tracks (split at ±180 longitude crossings, color per plane).
-    // Reduced opacity so dozens of overlapping tracks don't obscure the
-    // world map. Current-position dots are drawn at full opacity below
-    // for contrast.
+    // Ground tracks (split at ±180 longitude crossings). Reduced opacity so
+    // dozens of overlapping tracks don't obscure the world map. Current-
+    // position dots are drawn at full opacity below for contrast. User tracks
+    // are colored per plane; comparator (ICEYE) tracks are a fixed amber.
     ctx.save();
     ctx.globalAlpha = 0.6;
     ctx.lineWidth = 2;
-    for (const [id, traj] of trajectoryById.entries()) {
-      ctx.strokeStyle = colorForPlane(parsePlaneFromId(id));
+    drawTracks(ctx, trajectoryById, (id) => colorForPlane(parsePlaneFromId(id)), width, height);
+    drawTracks(ctx, comparatorTrajectoryById, () => COMPARATOR_COLOR, width, height);
+    ctx.restore();
+
+    // Current satellite positions: interpolate from ground-track samples at currentTime.
+    const t = playback.currentTime;
+    drawDots(ctx, trajectoryById, (id) => colorForPlane(parsePlaneFromId(id)), t, width, height);
+    drawDots(ctx, comparatorTrajectoryById, () => COMPARATOR_COLOR, t, width, height);
+  }
+
+  function drawTracks(
+    ctx: CanvasRenderingContext2D,
+    trajectories: Map<string, SampledTrajectoryView>,
+    colorOf: (id: string) => string,
+    width: number,
+    height: number,
+  ): void {
+    for (const [id, traj] of trajectories.entries()) {
+      ctx.strokeStyle = colorOf(id);
       ctx.beginPath();
       let prevLon: number | null = null;
       const n = traj.groundDeg.length / 2;
@@ -74,11 +94,17 @@
       }
       ctx.stroke();
     }
-    ctx.restore();
+  }
 
-    // Current satellite positions: interpolate from ground-track samples at currentTime.
-    const t = playback.currentTime;
-    for (const [id, traj] of trajectoryById.entries()) {
+  function drawDots(
+    ctx: CanvasRenderingContext2D,
+    trajectories: Map<string, SampledTrajectoryView>,
+    colorOf: (id: string) => string,
+    t: number,
+    width: number,
+    height: number,
+  ): void {
+    for (const [id, traj] of trajectories.entries()) {
       const epochs = traj.epochsMs;
       if (epochs.length === 0) continue;
       let lo = 0;
@@ -94,7 +120,7 @@
       const lat = traj.groundDeg[2 * lo] + (traj.groundDeg[2 * hi] - traj.groundDeg[2 * lo]) * f;
       const lon = traj.groundDeg[2 * lo + 1] + (traj.groundDeg[2 * hi + 1] - traj.groundDeg[2 * lo + 1]) * f;
       const [x, y] = lonLatToXY(lon, lat, width, height);
-      ctx.fillStyle = colorForPlane(parsePlaneFromId(id));
+      ctx.fillStyle = colorOf(id);
       ctx.beginPath();
       ctx.arc(x, y, 5, 0, Math.PI * 2);
       ctx.fill();

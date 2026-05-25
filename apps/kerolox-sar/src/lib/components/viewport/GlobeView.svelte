@@ -12,10 +12,14 @@
   import GroundTrack from "./GroundTrack.svelte";
   import AoiPolygon from "./AoiPolygon.svelte";
   import TickAdvancer from "./TickAdvancer.svelte";
-  import { trajectoryById } from "$lib/state/trajectories.svelte";
+  import { trajectoryById, comparatorTrajectoryById } from "$lib/state/trajectories.svelte";
   import { playback } from "$lib/state/playback.svelte";
   import type { AoiPolygon as AoiPolygonData } from "$lib/aois";
   import { colorForPlane, parsePlaneFromId } from "./colors";
+
+  /** Fixed amber for the fielded ICEYE comparator fleet, distinct from the
+   *  per-plane palette used for the user's design. */
+  const COMPARATOR_COLOR = "#ffaa44";
 
   let { aois }: { aois: Map<string, AoiPolygonData> } = $props();
 
@@ -50,10 +54,16 @@
       {#each Array.from(trajectoryById.entries()) as [id, traj] (id)}
         <GroundTrack {traj} color={colorForPlane(parsePlaneFromId(id))} />
       {/each}
+      {#each Array.from(comparatorTrajectoryById.entries()) as [id, traj] (id)}
+        <GroundTrack {traj} color={COMPARATOR_COLOR} />
+      {/each}
     </T.Group>
 
     {#each Array.from(trajectoryById.entries()) as [id, traj] (id)}
       <SatelliteMarker {traj} color={colorForPlane(parsePlaneFromId(id))} />
+    {/each}
+    {#each Array.from(comparatorTrajectoryById.entries()) as [id, traj] (id)}
+      <SatelliteMarker {traj} color={COMPARATOR_COLOR} />
     {/each}
   </Canvas>
 </div>

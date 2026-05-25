@@ -45,6 +45,9 @@
     const satellites = runWalker(scenario);
     if (satellites.length === 0) return;
 
+    // Read synchronously so toggling ICEYE re-triggers propagation.
+    const compareIceye = scenario.compareIceye;
+
     const scenarioStartMs = Date.parse(scenario.startTimeIso);
     const scenarioEndMs = scenarioStartMs + scenario.durationHours * 3600 * 1000;
 
@@ -64,7 +67,7 @@
     // its own AbortController, so a fired-then-superseded run is cancelled
     // cleanly; the debounce keeps it from firing at all until typing stops.
     const timer = setTimeout(() => {
-      ensureTrajectories(scenario, satellites);
+      ensureTrajectories(scenario, satellites, compareIceye);
     }, 300);
 
     return () => clearTimeout(timer);
