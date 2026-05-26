@@ -23,6 +23,16 @@ use crate::npz::{self, NpyError};
 
 const MANIFEST_ENTRY: &str = "manifest.json";
 
+const PROB_LEVELS_18: [f64; 18] = [
+    0.1, 0.2, 0.3, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0, 20.0, 30.0, 50.0, 60.0, 70.0, 80.0, 90.0, 95.0,
+    99.0,
+];
+
+const PROB_KEYS_18: [&str; 18] = [
+    "01", "02", "03", "05", "1", "2", "3", "5", "10", "20", "30", "50", "60", "70", "80", "90",
+    "95", "99",
+];
+
 #[derive(Debug, Error)]
 pub enum ItuProviderError {
     #[error("opening bundle at {path}: {source}")]
@@ -170,6 +180,79 @@ impl ItuProvider {
         Ok(lox_core::units::Temperature::kelvin(
             g.bilinear(lat.to_degrees(), lon.to_degrees()),
         ))
+    }
+
+    /// Log-probability interpolation across the 18 standard probability levels.
+    ///
+    /// `prefix` is the grid-key prefix (e.g. `"836/v6_rho"`); the level suffix
+    /// and `.npy` extension are appended. Mirrors the legacy `interpolate_probability`.
+    fn interpolate_prob_18(
+        &self,
+        prefix: &str,
+        lat_key: &str,
+        lon_key: &str,
+        lat_deg: f64,
+        lon_deg: f64,
+        p: f64,
+    ) -> Result<f64, ItuProviderError> {
+        let idx = PROB_LEVELS_18
+            .iter()
+            .position(|&pl| pl >= p)
+            .unwrap_or(PROB_LEVELS_18.len() - 1);
+        let key_at = |i: usize| format!("{prefix}_{}.npy", PROB_KEYS_18[i]);
+
+        if (PROB_LEVELS_18[idx] - p).abs() < 1e-10 {
+            let g = self.grid_xyz(lat_key, lon_key, &key_at(idx))?;
+            return Ok(g.bilinear(lat_deg, lon_deg));
+        }
+        if idx == 0 {
+            let g = self.grid_xyz(lat_key, lon_key, &key_at(0))?;
+            return Ok(g.bilinear(lat_deg, lon_deg));
+        }
+        let p_below = PROB_LEVELS_18[idx - 1];
+        let p_above = PROB_LEVELS_18[idx];
+        let v_below = self
+            .grid_xyz(lat_key, lon_key, &key_at(idx - 1))?
+            .bilinear(lat_deg, lon_deg);
+        let v_above = self
+            .grid_xyz(lat_key, lon_key, &key_at(idx))?
+            .bilinear(lat_deg, lon_deg);
+        let t = (p.ln() - p_below.ln()) / (p_above.ln() - p_below.ln());
+        Ok(v_below + (v_above - v_below) * t)
+    }
+
+    /// Surface water vapour density [g/m³] exceeded for `p`% of the average year (P.836-6).
+    pub fn surface_water_vapour_density(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+        p: f64,
+    ) -> Result<f64, ItuProviderError> {
+        self.interpolate_prob_18(
+            "836/v6_rho",
+            "836/v6_lat.npy",
+            "836/v6_lon.npy",
+            lat.to_degrees(),
+            lon.to_degrees(),
+            p,
+        )
+    }
+
+    /// Total columnar water vapour content [kg/m²] exceeded for `p`% (P.836-6).
+    pub fn total_water_vapour_content(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+        p: f64,
+    ) -> Result<f64, ItuProviderError> {
+        self.interpolate_prob_18(
+            "836/v6_v",
+            "836/v6_lat.npy",
+            "836/v6_lon.npy",
+            lat.to_degrees(),
+            lon.to_degrees(),
+            p,
+        )
     }
 }
 
