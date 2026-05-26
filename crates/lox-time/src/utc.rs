@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 /*!
-    Module `utc` exposes [Utc], a leap-second aware representation for UTC datetimes.
+    Module `utc` exposes [Utc](crate::utc::Utc), a leap-second aware representation for UTC datetimes.
 
     Due to the complexity inherent in working with leap seconds, it is intentionally segregated
     from the continuous time formats, and is used exclusively as an input format to Lox.
@@ -127,7 +127,7 @@ impl Utc {
     }
 
     /// Constructs a new [Utc] instance from the given ISO 8601 string, with leap second validation
-    /// provided by [BuiltinLeapSeconds].
+    /// provided by [DefaultLeapSecondsProvider].
     pub fn from_iso(iso: &str) -> Result<Self, UtcError> {
         Self::from_iso_with_provider(iso, &DefaultLeapSecondsProvider)
     }
@@ -234,7 +234,7 @@ impl UtcBuilder {
         Utc::new(date, time, provider)
     }
 
-    /// Constructs the [Utc] instance with leap second validation provided by [BuiltinLeapSeconds].
+    /// Constructs the [Utc] instance with leap second validation provided by [DefaultLeapSecondsProvider].
     pub fn build(self) -> Result<Utc, UtcError> {
         self.build_with_provider(&DefaultLeapSecondsProvider)
     }
