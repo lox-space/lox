@@ -320,7 +320,7 @@ impl ItuProvider {
         )
     }
 
-    /// Cloud attenuation [dB] on a slant path (P.840-9).
+    /// Cloud attenuation in dB on a slant path (P.840-9).
     pub fn cloud_attenuation(
         &self,
         lat: lox_core::units::Angle,
@@ -415,7 +415,7 @@ impl ItuProvider {
         Ok(crate::p837::bisect_rainfall_rate(&r, &p0, p))
     }
 
-    /// Rain attenuation [dB] exceeded for `p`% of the average year (P.618).
+    /// Rain attenuation in dB exceeded for `p`% of the average year (P.618).
     #[allow(clippy::too_many_arguments)]
     pub fn rain_attenuation(
         &self,
@@ -443,7 +443,7 @@ impl ItuProvider {
         Ok(lox_core::units::Decibel::new(a))
     }
 
-    /// Tropospheric scintillation attenuation [dB] exceeded for `p`% (P.618).
+    /// Tropospheric scintillation attenuation in dB exceeded for `p`% (P.618).
     ///
     /// Parameter order mirrors the legacy `p618::scintillation_attenuation` free fn.
     #[allow(clippy::too_many_arguments)]

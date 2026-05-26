@@ -4,7 +4,7 @@
 
 //! Minimal NPY v1 parser for the .npy entries inside lox-itur-data.npz.
 //!
-//! Spec: https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html
+//! Spec: <https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html>
 //! Supports only what the ITU-R bundle uses: little-endian f64, C order,
 //! 1-D or 2-D shape, NPY format version 1.x.
 
