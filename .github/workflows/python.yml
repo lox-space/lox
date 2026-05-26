@@ -70,6 +70,10 @@ jobs:
         shell: bash
         run: |
           set -e
+          # maturin-action exports RUSTC_WRAPPER=sccache and installs sccache
+          # inside the manylinux build container; this step runs on the host,
+          # where sccache is absent, so unset the wrapper for the bundle build.
+          unset RUSTC_WRAPPER
           python -m pip download --no-deps itur==0.4.0 -d itur-wheel
           cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
           uv venv
@@ -112,6 +116,10 @@ jobs:
         shell: bash
         run: |
           set -e
+          # maturin-action exports RUSTC_WRAPPER=sccache and installs sccache
+          # inside the manylinux build container; this step runs on the host,
+          # where sccache is absent, so unset the wrapper for the bundle build.
+          unset RUSTC_WRAPPER
           python -m pip download --no-deps itur==0.4.0 -d itur-wheel
           cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
           uv venv
@@ -151,6 +159,10 @@ jobs:
       - name: pytest
         run: |
           set -e
+          # maturin-action exports RUSTC_WRAPPER=sccache and installs sccache
+          # inside the manylinux build container; this step runs on the host,
+          # where sccache is absent, so unset the wrapper for the bundle build.
+          unset RUSTC_WRAPPER
           python -m pip download --no-deps itur==0.4.0 -d itur-wheel
           cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
           uv venv
