@@ -10,15 +10,30 @@ ITU-R P-series atmospheric propagation models for computing attenuation on
 Earth-to-space radio paths. Based on the
 [ITU-Rpy](https://github.com/iportillo/ITU-Rpy) library.
 
+## Prerequisites
+
+Grid-based models read reference data from a bundled `lox-itur-data.npz`
+archive. Build it once from the upstream [`itur`](https://pypi.org/project/itur/)
+Python wheel (see the [`lox-itur` README](https://github.com/lox-space/lox/tree/main/crates/lox-itur)
+for the packaging workflow), then open it with `lox.ItuProvider`:
+
+```python
+import lox_space as lox
+
+provider = lox.ItuProvider("lox-itur-data.npz")
+```
+
+A single provider can be reused for all lookups; grids are loaded lazily and
+cached on first access.
+
 ## Quick Start
 
 Compute the total atmospheric attenuation for a ground station in Madrid
 receiving at 14.25 GHz from a satellite at 30° elevation:
 
 ```python
-import lox_space as lox
-
 losses = lox.EnvironmentalLosses(
+    provider,
     lat=40.4 * lox.deg,
     lon=-3.7 * lox.deg,
     frequency=14.25 * lox.GHz,
@@ -34,10 +49,10 @@ print(f"Scintillation: {losses.scintillation}")
 print(f"Total:         {losses.atmospheric}")
 ```
 
-The same computation is also available as a free-standing function:
+The same computation is also available as a provider method:
 
 ```python
-losses = lox.atmospheric_attenuation_slant_path(
+losses = provider.atmospheric_attenuation_slant_path(
     lat=40.4 * lox.deg, lon=-3.7 * lox.deg,
     frequency=14.25 * lox.GHz, elevation=30.0 * lox.deg,
     probability=0.01, diameter=1.2 * lox.m,
@@ -61,7 +76,7 @@ Each ITU-R recommendation is also available as a standalone function.
 ### Rain Attenuation (P.618)
 
 ```python
-a_rain = lox.rain_attenuation(
+a_rain = provider.rain_attenuation(
     lat=40.4 * lox.deg,
     lon=-3.7 * lox.deg,
     frequency=14.25 * lox.GHz,
@@ -85,7 +100,7 @@ a_oxygen, a_water = lox.gaseous_attenuation_slant_path(
 ### Cloud Attenuation (P.840)
 
 ```python
-a_cloud = lox.cloud_attenuation(
+a_cloud = provider.cloud_attenuation(
     lat=40.4 * lox.deg,
     lon=-3.7 * lox.deg,
     elevation=30.0 * lox.deg,
@@ -97,7 +112,7 @@ a_cloud = lox.cloud_attenuation(
 ### Scintillation (P.618)
 
 ```python
-a_scint = lox.scintillation_attenuation(
+a_scint = provider.scintillation_attenuation(
     frequency=14.25 * lox.GHz,
     elevation=30.0 * lox.deg,
     probability=0.01,
@@ -122,28 +137,28 @@ gamma_r = lox.rain_specific_attenuation(
 ### Topographic Altitude (P.1511)
 
 ```python
-alt = lox.topographic_altitude(lat=27.99 * lox.deg, lon=86.93 * lox.deg)
+alt = provider.topographic_altitude(lat=27.99 * lox.deg, lon=86.93 * lox.deg)
 print(f"Altitude: {alt.to_kilometers():.1f} km")
 ```
 
 ### Surface Temperature (P.1510)
 
 ```python
-t = lox.surface_mean_temperature(lat=0.0 * lox.deg, lon=0.0 * lox.deg)
+t = provider.surface_mean_temperature(lat=0.0 * lox.deg, lon=0.0 * lox.deg)
 print(f"Temperature: {t.to_kelvin():.1f} K")
 ```
 
 ### Rainfall Rate (P.837)
 
 ```python
-r = lox.rainfall_rate(lat=40.4 * lox.deg, lon=-3.7 * lox.deg, probability=0.01)
+r = provider.rainfall_rate(lat=40.4 * lox.deg, lon=-3.7 * lox.deg, probability=0.01)
 print(f"Rainfall rate: {r:.1f} mm/h")
 ```
 
 ### Rain Height (P.839)
 
 ```python
-h = lox.rain_height(lat=40.4 * lox.deg, lon=-3.7 * lox.deg)
+h = provider.rain_height(lat=40.4 * lox.deg, lon=-3.7 * lox.deg)
 print(f"Rain height: {h.to_kilometers():.1f} km")
 ```
 
@@ -153,6 +168,7 @@ print(f"Rain height: {h.to_kilometers():.1f} km")
 
 ```python
 losses = lox.EnvironmentalLosses(
+    provider,
     lat=40.4 * lox.deg,
     lon=-3.7 * lox.deg,
     frequency=29.0 * lox.GHz,
@@ -174,9 +190,12 @@ stats = lox.LinkStats.calculate(
 
 ## Data Files
 
-Grid-based models (P.1511, P.1510, P.836, P.837, P.839, P.840, P.453)
-require reference data from the ITU. This data is automatically downloaded
-from PyPI and converted during the build process. No manual setup is needed.
+Grid-based models (P.453, P.618, P.836, P.837, P.839, P.840, P.1510, P.1511)
+require reference data from the ITU, distributed via the upstream `itur`
+Python package. Build a `lox-itur-data.npz` bundle once and open it with
+`lox.ItuProvider`. See the
+[`lox-itur` README](https://github.com/lox-space/lox/tree/main/crates/lox-itur)
+for the packaging workflow.
 
 ## Implemented Recommendations
 
@@ -196,13 +215,13 @@ from PyPI and converted during the build process. No manual setup is needed.
 
 ---
 
-::: lox_space.atmospheric_attenuation_slant_path
+::: lox_space.ItuProvider
     options:
       show_source: false
 
 ---
 
-::: lox_space.rain_attenuation
+::: lox_space.EnvironmentalLosses
     options:
       show_source: false
 
@@ -214,42 +233,6 @@ from PyPI and converted during the build process. No manual setup is needed.
 
 ---
 
-::: lox_space.cloud_attenuation
-    options:
-      show_source: false
-
----
-
-::: lox_space.scintillation_attenuation
-    options:
-      show_source: false
-
----
-
 ::: lox_space.rain_specific_attenuation
-    options:
-      show_source: false
-
----
-
-::: lox_space.topographic_altitude
-    options:
-      show_source: false
-
----
-
-::: lox_space.surface_mean_temperature
-    options:
-      show_source: false
-
----
-
-::: lox_space.rainfall_rate
-    options:
-      show_source: false
-
----
-
-::: lox_space.rain_height
     options:
       show_source: false
