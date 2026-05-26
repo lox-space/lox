@@ -34,9 +34,12 @@ standards published by the ITU Radiocommunication Sector.
 
 ```rust
 use lox_core::units::{Angle, Distance, Frequency};
-use lox_itur::EnvironmentalLosses;
+use lox_itur::{EnvironmentalLosses, ItuProvider};
+
+let provider = ItuProvider::open("lox-itur-data.npz")?;
 
 let losses = EnvironmentalLosses::new(
+    &provider,
     Angle::degrees(40.4),       // latitude (Madrid)
     Angle::degrees(-3.7),       // longitude
     Frequency::gigahertz(14.25), // Ku-band
@@ -44,22 +47,32 @@ let losses = EnvironmentalLosses::new(
     0.01,                        // exceeded 0.01% of the year
     Distance::meters(1.2),      // antenna diameter
     Angle::degrees(45.0),       // circular polarisation
-);
+)?;
 ```
 
 The returned `EnvironmentalLosses` struct contains individual contributions
 (rain, gaseous, cloud, scintillation, depolarization) and the combined total,
 ready to plug into `lox-comms` link budget calculations.
 
-## Data
+## Data files
 
-Grid-based models require reference data from the ITU. The build script
-automatically downloads the [itur](https://pypi.org/project/itur/) Python
-package from PyPI and converts the data during `cargo build`. No manual
-setup is needed.
+Grid-based models (P.453, P.618, P.836, P.837, P.839, P.840, P.1510, P.1511) need
+reference data from the upstream [`itur`](https://pypi.org/project/itur/) Python
+package. Build a bundled `.npz` once:
 
-The data directory can be overridden with the `LOX_ITUR_DATA` environment
-variable.
+    pip download --no-deps itur==0.4.0
+    cargo run -p lox-itur --bin pack -- itur-0.4.0-py2.py3-none-any.whl lox-itur-data.npz
+
+Then open it from your code:
+
+```rust
+let provider = lox_itur::ItuProvider::open("lox-itur-data.npz")?;
+let alt = provider.topographic_altitude(lat, lon)?;
+```
+
+The packager is offline-only; you fetch the upstream wheel yourself. The bundle
+is roughly 490 MB (uncompressed) and contains the 140 grids the original build
+script converted, minus the unused `P.1511 v2 egm2008` layer.
 
 ## License
 
