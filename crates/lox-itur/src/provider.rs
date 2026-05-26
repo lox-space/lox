@@ -254,6 +254,23 @@ impl ItuProvider {
             p,
         )
     }
+
+    /// Wet-term radio refractivity (Nwet) exceeded for `p`% (P.453, grid).
+    pub fn map_wet_term_radio_refractivity(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+        p: f64,
+    ) -> Result<f64, ItuProviderError> {
+        self.interpolate_prob_18(
+            "453/v13_nwet_annual",
+            "453/v13_lat_n.npy",
+            "453/v13_lon_n.npy",
+            lat.to_degrees(),
+            lon.to_degrees(),
+            p,
+        )
+    }
 }
 
 fn read_entry_bytes(
