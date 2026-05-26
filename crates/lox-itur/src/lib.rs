@@ -29,6 +29,7 @@
 
 pub(crate) mod data;
 pub(crate) mod grid;
+pub(crate) mod manifest;
 pub(crate) mod npz;
 pub mod p1510;
 pub mod p1511;
