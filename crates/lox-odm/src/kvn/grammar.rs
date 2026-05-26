@@ -6,8 +6,8 @@
 //!
 //! Each parser in this module recognises one kind of meaningful line:
 //! comments, section start/stop markers, fields, version headers, and
-//! ephemeris rows. The line-by-line composition into a [`KvnDocument`]
-//! lives in [`super::parser`].
+//! ephemeris rows. The line-by-line composition into a
+//! [`KvnDocument`](crate::kvn::KvnDocument) lives in [`super::parser`].
 
 use nom::{
     IResult, Parser,
@@ -24,19 +24,30 @@ pub enum LineClass<'a> {
     /// `CCSDS_<KIND>_VERS = <version>` line — the file header.
     /// `kind_token` is the `<KIND>` portion (e.g. `"OPM"`, `"OEM"`).
     VersionHeader {
+        /// The `<KIND>` token from the header (e.g. `"OPM"`, `"OEM"`).
         kind_token: &'a str,
+        /// The declared version string.
         version: &'a str,
     },
     /// `COMMENT <free text>` line.
     Comment(&'a str),
     /// `<KEYWORD>_START` line.
-    SectionStart { keyword: &'a str },
+    SectionStart {
+        /// The section keyword preceding `_START`.
+        keyword: &'a str,
+    },
     /// `<KEYWORD>_STOP` line.
-    SectionStop { keyword: &'a str },
+    SectionStop {
+        /// The section keyword preceding `_STOP`.
+        keyword: &'a str,
+    },
     /// `<KEY> = <VALUE>` or `<KEY> = <VALUE> [<unit>]` line.
     Field {
+        /// The key on the left of the `=`.
         key: &'a str,
+        /// The value on the right of the `=`.
         value: &'a str,
+        /// The optional unit annotation in square brackets, if present.
         unit: Option<&'a str>,
     },
     /// A positional row of whitespace-separated tokens. Used for OEM
