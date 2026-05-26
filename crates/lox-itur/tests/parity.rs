@@ -9,6 +9,7 @@
 mod common;
 
 use lox_core::units::Angle;
+use lox_itur::p836;
 use lox_itur::p1510;
 use lox_itur::p1511;
 
@@ -45,5 +46,25 @@ fn surface_month_mean_temperature_madrid_july() {
         .unwrap()
         .to_kelvin();
     let b = p1510::surface_month_mean_temperature(lat, lon, 7).to_kelvin();
+    assert!((a - b).abs() < 1e-9);
+}
+
+#[test]
+fn surface_water_vapour_density_madrid() {
+    let p = common::provider();
+    let lat = Angle::degrees(40.4);
+    let lon = Angle::degrees(-3.7);
+    let a = p.surface_water_vapour_density(lat, lon, 1.0).unwrap();
+    let b = p836::surface_water_vapour_density(lat, lon, 1.0);
+    assert!((a - b).abs() < 1e-9);
+}
+
+#[test]
+fn total_water_vapour_content_madrid() {
+    let p = common::provider();
+    let lat = Angle::degrees(40.4);
+    let lon = Angle::degrees(-3.7);
+    let a = p.total_water_vapour_content(lat, lon, 50.0).unwrap();
+    let b = p836::total_water_vapour_content(lat, lon, 50.0);
     assert!((a - b).abs() < 1e-9);
 }
