@@ -8,8 +8,9 @@
 
 mod common;
 
-use lox_core::units::{Angle, Frequency};
+use lox_core::units::{Angle, Distance, Frequency};
 use lox_itur::p453;
+use lox_itur::p618;
 use lox_itur::p836;
 use lox_itur::p837;
 use lox_itur::p839;
@@ -153,4 +154,36 @@ fn rainfall_rate_madrid() {
     let a = p.rainfall_rate(lat, lon, 1.0).unwrap();
     let b = p837::rainfall_rate(lat, lon, 1.0);
     assert!((a - b).abs() < 1e-9);
+}
+
+#[test]
+fn rain_attenuation_madrid() {
+    let p = common::provider();
+    let lat = Angle::degrees(40.4);
+    let lon = Angle::degrees(-3.7);
+    let f = Frequency::gigahertz(20.0);
+    let el = Angle::degrees(30.0);
+    let tau = Angle::degrees(45.0);
+    let a = p
+        .rain_attenuation(lat, lon, f, el, 1.0, tau, None)
+        .unwrap()
+        .as_f64();
+    let b = p618::rain_attenuation(lat, lon, f, el, 1.0, tau, None).as_f64();
+    assert!((a - b).abs() < 1e-9, "provider={a} free={b}");
+}
+
+#[test]
+fn scintillation_attenuation_madrid() {
+    let p = common::provider();
+    let lat = Angle::degrees(40.4);
+    let lon = Angle::degrees(-3.7);
+    let f = Frequency::gigahertz(20.0);
+    let el = Angle::degrees(30.0);
+    let d = Distance::meters(1.2);
+    let a = p
+        .scintillation_attenuation(f, el, 1.0, d, 0.5, None, lat, lon)
+        .unwrap()
+        .as_f64();
+    let b = p618::scintillation_attenuation(f, el, 1.0, d, 0.5, None, lat, lon).as_f64();
+    assert!((a - b).abs() < 1e-9, "provider={a} free={b}");
 }

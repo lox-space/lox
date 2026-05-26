@@ -43,23 +43,24 @@ pub fn rain_attenuation(
     ))
 }
 
-pub(crate) fn rain_attenuation_raw(
+/// Grid-free core of P.618 rain attenuation. Pure math.
+///
+/// Takes pre-fetched grid values (`hs_km`, `hr_km`, `r001`) so the same code
+/// is shared between the legacy free-fn entry point and the ItuProvider method.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn rain_attenuation_core(
     lat_deg: f64,
-    lon_deg: f64,
     f_ghz: f64,
     el_deg: f64,
     p: f64,
     tau_deg: f64,
-    hs_km: Option<f64>,
+    hs_km: f64,
+    hr_km: f64,
+    r001: f64,
 ) -> f64 {
     let re = 8500.0; // Effective Earth radius (km)
-
-    let lat = Angle::degrees(lat_deg);
-    let lon = Angle::degrees(lon_deg);
-    let hs = hs_km.unwrap_or_else(|| p1511::topographic_altitude(lat, lon).to_kilometers());
-
-    // Step 1: Rain height
-    let hr = p839::rain_height(lat, lon).to_kilometers();
+    let hs = hs_km;
+    let hr = hr_km;
 
     // If station is above rain height, no rain attenuation
     if hr <= hs {
@@ -79,7 +80,7 @@ pub(crate) fn rain_attenuation_raw(
     let lg = ls * el_rad.cos();
 
     // Step 4–5: Rainfall rate and specific attenuation
-    let r001 = p837::rainfall_rate_r001(lat, lon).max(1e-10);
+    let r001 = r001.max(1e-10);
     let gamma_r = p838::rain_specific_attenuation_raw(r001, f_ghz, el_deg, tau_deg);
 
     // Step 6: Horizontal reduction factor r_0.01
@@ -129,6 +130,23 @@ pub(crate) fn rain_attenuation_raw(
     let exponent =
         -(0.655 + 0.033 * p.ln() - 0.045 * a001.max(1e-10).ln() - beta * (1.0 - p) * sin_el);
     a001 * (p / 0.01_f64).powf(exponent)
+}
+
+pub(crate) fn rain_attenuation_raw(
+    lat_deg: f64,
+    lon_deg: f64,
+    f_ghz: f64,
+    el_deg: f64,
+    p: f64,
+    tau_deg: f64,
+    hs_km: Option<f64>,
+) -> f64 {
+    let lat = Angle::degrees(lat_deg);
+    let lon = Angle::degrees(lon_deg);
+    let hs = hs_km.unwrap_or_else(|| p1511::topographic_altitude(lat, lon).to_kilometers());
+    let hr = p839::rain_height(lat, lon).to_kilometers();
+    let r001 = p837::rainfall_rate_r001(lat, lon);
+    rain_attenuation_core(lat_deg, f_ghz, el_deg, p, tau_deg, hs, hr, r001)
 }
 
 /// Computes the standard deviation of tropospheric scintillation (dB).

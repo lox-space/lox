@@ -414,6 +414,63 @@ impl ItuProvider {
         let (r, p0) = self.monthly_rain_params(lat, lon)?;
         Ok(crate::p837::bisect_rainfall_rate(&r, &p0, p))
     }
+
+    /// Rain attenuation [dB] exceeded for `p`% of the average year (P.618).
+    #[allow(clippy::too_many_arguments)]
+    pub fn rain_attenuation(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+        frequency: lox_core::units::Frequency,
+        elevation: lox_core::units::Angle,
+        p: f64,
+        polarisation_tilt: lox_core::units::Angle,
+        station_altitude: Option<lox_core::units::Distance>,
+    ) -> Result<lox_core::units::Decibel, ItuProviderError> {
+        let lat_deg = lat.to_degrees();
+        let f_ghz = frequency.to_gigahertz();
+        let el_deg = elevation.to_degrees().max(5.0);
+        let tau_deg = polarisation_tilt.to_degrees();
+        let hs_km = match station_altitude {
+            Some(d) => d.to_kilometers(),
+            None => self.topographic_altitude(lat, lon)?.to_kilometers(),
+        };
+        let hr_km = self.rain_height(lat, lon)?.to_kilometers();
+        let r001 = self.rainfall_rate_r001(lat, lon)?;
+        let a = crate::p618::rain_attenuation_core(
+            lat_deg, f_ghz, el_deg, p, tau_deg, hs_km, hr_km, r001,
+        );
+        Ok(lox_core::units::Decibel::new(a))
+    }
+
+    /// Tropospheric scintillation attenuation [dB] exceeded for `p`% (P.618).
+    ///
+    /// Parameter order mirrors the legacy `p618::scintillation_attenuation` free fn.
+    #[allow(clippy::too_many_arguments)]
+    pub fn scintillation_attenuation(
+        &self,
+        frequency: lox_core::units::Frequency,
+        elevation: lox_core::units::Angle,
+        p: f64,
+        diameter: lox_core::units::Distance,
+        eta: f64,
+        n_wet: Option<f64>,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+    ) -> Result<lox_core::units::Decibel, ItuProviderError> {
+        let f_ghz = frequency.to_gigahertz();
+        let el_deg = elevation.to_degrees().max(5.0);
+        let d_m = diameter.to_meters();
+        let n_wet = match n_wet {
+            Some(n) => n,
+            None => self.map_wet_term_radio_refractivity(lat, lon, 50.0)?,
+        };
+        let sigma =
+            crate::p618::scintillation_attenuation_sigma_raw(f_ghz, el_deg, d_m, eta, n_wet);
+        let log_p = p.log10();
+        let a_p = -0.061 * log_p.powi(3) + 0.072 * log_p.powi(2) - 1.71 * log_p + 3.0;
+        Ok(lox_core::units::Decibel::new(a_p * sigma))
+    }
 }
 
 fn read_entry_bytes(
