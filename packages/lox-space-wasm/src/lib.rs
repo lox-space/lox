@@ -939,43 +939,47 @@ impl WalkerDelta {
     }
 }
 
-/// Earth's body-fixed rotation angle (the IAU `W` prime-meridian angle),
-/// radians, at the given ISO-8601 UTC instant.
+/// Earth's body-fixed orientation about the polar axis, radians, at the given
+/// ISO-8601 UTC instant — the angle the 3D globe spins the Earth mesh.
 ///
-/// Computed from lox-bodies' IAU polynomial model — no IERS Earth
-/// Orientation Parameter data is required. The 3D Earth mesh in the
-/// GlobeView is rotated each frame by this angle. Consistent with the
-/// `IAU_EARTH` frame used to project Cartesian states to lat/lon in
-/// `Keplerian::propagate_sampled`.
+/// This is the azimuth of the IAU_EARTH prime meridian in ICRF, i.e. the FULL
+/// IAU rotation (right ascension α0, declination δ0, and spin W), not W alone.
+/// Computed from lox's IAU model with no IERS data required, and consistent
+/// with the `IAU_EARTH` frame the engine uses to project states to lat/lon.
 #[wasm_bindgen(js_name = earthRotationAngleRad)]
 pub fn earth_rotation_angle_rad_wasm(epoch_iso: &str) -> Result<f64, JsValue> {
     compute_earth_rotation_angle_rad(epoch_iso).map_err(|e| JsValue::from_str(&e))
 }
 
 fn compute_earth_rotation_angle_rad(epoch_iso: &str) -> Result<f64, String> {
-    use lox_space::bodies::{Earth, RotationalElements};
-    use lox_space::time::julian_dates::JulianDate;
-    use lox_space::time::offsets::DefaultOffsetProvider;
-    use lox_space::time::time_scales::DynTimeScale;
+    use lox_space::bodies::DynOrigin;
+    use lox_space::frames::providers::DefaultRotationProvider;
+    use lox_space::frames::rotations::TryRotation;
+    use lox_space::time::Time;
+    use lox_space::time::time_scales::Tai;
 
     let utc: LoxUtc = epoch_iso
         .parse()
         .map_err(|e: lox_space::time::utc::UtcError| e.to_string())?;
 
-    // Convert UTC → TAI (DynTime) → TDB, then get seconds since J2000.
-    // RotationalElements::rotation_angle takes `t` in seconds since J2000 TDB.
-    // DynTimeScale → DynTimeScale requires try_to_scale (only TryOffset is implemented).
-    let t_tdb = utc
+    let tai: Time<Tai> = utc
         .to_dyn_time()
-        .try_to_scale(DynTimeScale::Tdb, &DefaultOffsetProvider)
+        .try_to_scale(DynTimeScale::Tai, &DefaultRotationProvider)
         .map_err(|e| e.to_string())?
-        .seconds_since_j2000();
+        .with_scale(Tai);
 
-    // IAU prime-meridian angle W, radians (not normalised).
-    let w = Earth.rotation_angle(t_tdb);
-
-    // Normalise to [0, 2π).
-    Ok(w.rem_euclid(TAU))
+    // The FULL IAU body→ICRF orientation, not the spin angle W alone: the
+    // body-fixed frame is R_z(W)·R_x(90°−δ0)·R_z(90°+α0) from ICRF, so the prime
+    // meridian sits ~90° (the node term) plus the small pole tilt away from W.
+    // Rotate the prime-meridian/equator point (1,0,0)_IAU_EARTH into ICRF and
+    // take its azimuth — the angle the globe must spin the mesh about the polar
+    // axis. This matches the IAU_EARTH frame the engine uses for ground tracks,
+    // so the ICRF Sun then lights the correct (geographic) hemisphere.
+    let rot = DefaultRotationProvider
+        .try_rotation(DynFrame::Iau(DynOrigin::Earth), DynFrame::Icrf, tai)
+        .map_err(|e| e.to_string())?;
+    let g = rot.m * DVec3::new(1.0, 0.0, 0.0);
+    Ok(g.y.atan2(g.x).rem_euclid(TAU))
 }
 
 /// Unit vector from Earth toward the Sun, in the inertial ECI frame mapped to
@@ -987,13 +991,10 @@ pub fn sun_direction_eci_wasm(epoch_iso: &str) -> Result<Vec<f64>, JsValue> {
 }
 
 fn compute_sun_direction_eci(epoch_iso: &str) -> Result<Vec<f64>, String> {
-    use lox_space::bodies::{Earth, RotationalElements};
     use lox_space::earth::ephemeris::apparent_sun_position;
-    use lox_space::frames::iers::earth_rotation::GreenwichMeanSiderealTime;
     use lox_space::time::Time;
-    use lox_space::time::julian_dates::JulianDate;
     use lox_space::time::offsets::DefaultOffsetProvider;
-    use lox_space::time::time_scales::{Tdb, Ut1};
+    use lox_space::time::time_scales::Tdb;
 
     let utc: LoxUtc = epoch_iso
         .parse()
@@ -1008,31 +1009,15 @@ fn compute_sun_direction_eci(epoch_iso: &str) -> Result<Vec<f64>, String> {
         .with_scale(Tdb);
 
     // ICRF position of the Sun relative to Earth (metres); only direction used.
+    // No azimuthal correction is needed: the globe now orients the Earth with
+    // the full IAU rotation (see compute_earth_rotation_angle_rad), so the raw
+    // ICRF Sun direction lights the correct hemisphere.
     let sun = apparent_sun_position(tdb);
     if sun.length() == 0.0 {
         return Err("degenerate sun position".to_string());
     }
     // ICRF (x, y, z) → Three.js Y-up (x, z, -y), normalised.
-    let mut dir = DVec3::new(sun.x, sun.z, -sun.y).normalize();
-
-    // The globe orients the Earth mesh with the IAU planetary rotation angle W
-    // (lox `rotation_angle`), whose prime-meridian zero differs from the
-    // geographic/sidereal one by a near-constant ~90° offset. Left uncorrected
-    // the ICRF Sun lands ~90° off, lighting the wrong hemisphere. Rotate the
-    // Sun about the polar (world Y) axis by -(GMST - W) so the lit side matches
-    // the geographic texture, leaving the Earth/satellite/ground-track frame
-    // untouched. GMST uses UT1, approximated by UTC (no IERS tables here).
-    let ut1: Time<Ut1> = utc
-        .to_dyn_time()
-        .try_to_scale(DynTimeScale::Ut1, &DefaultOffsetProvider)
-        .map_err(|e| e.to_string())?
-        .with_scale(Ut1);
-    let gmst = GreenwichMeanSiderealTime::iau1982(ut1).0.as_f64();
-    let w = Earth.rotation_angle(tdb.seconds_since_j2000());
-    let delta = gmst - w;
-    let (s, c) = (-delta).sin_cos();
-    dir = DVec3::new(dir.x * c + dir.z * s, dir.y, -dir.x * s + dir.z * c);
-
+    let dir = DVec3::new(sun.x, sun.z, -sun.y).normalize();
     Ok(vec![dir.x, dir.y, dir.z])
 }
 
