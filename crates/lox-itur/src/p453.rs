@@ -6,39 +6,10 @@
 //! ITU-R P.453-13: The radio refractive index.
 //!
 //! Provides formulas for computing water vapour pressure, saturation vapour pressure,
-//! and radio refractivity (dry, wet, and total), plus globally-gridded wet-term
-//! refractivity maps.
+//! and radio refractivity (dry, wet, and total). The globally-gridded wet-term
+//! refractivity map is served by [`crate::ItuProvider::map_wet_term_radio_refractivity`].
 
-use lox_core::units::{Angle, Pressure, Temperature};
-
-use crate::data::LazyGrid;
-
-/// Available probability levels for P.453-13 N_wet data.
-const PROB_LEVELS: [f64; 18] = [
-    0.1, 0.2, 0.3, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0, 20.0, 30.0, 50.0, 60.0, 70.0, 80.0, 90.0, 95.0,
-    99.0,
-];
-
-static NWET_GRIDS: [LazyGrid; 18] = [
-    LazyGrid::new("453/v13_nwet_annual_01.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_02.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_03.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_05.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_1.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_2.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_3.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_5.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_10.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_20.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_30.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_50.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_60.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_70.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_80.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_90.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_95.bin.zst"),
-    LazyGrid::new("453/v13_nwet_annual_99.bin.zst"),
-];
+use lox_core::units::{Pressure, Temperature};
 
 // ── Pure formulas ───────────────────────────────────────────────────────────
 
@@ -147,41 +118,6 @@ pub(crate) fn radio_refractive_index_raw(p_hpa: f64, e_hpa: f64, t_k: f64) -> f6
     1.0 + n_units * 1e-6
 }
 
-// ── Grid-based N_wet map ────────────────────────────────────────────────────
-
-/// Returns the wet term of radio refractivity (N-units) exceeded for `p` %
-/// of the average year from globally-gridded maps.
-///
-/// # Arguments
-///
-/// * `lat` — Latitude
-/// * `lon` — Longitude
-/// * `p` — Exceedance probability (% of average year), range [0.1, 99]
-pub fn map_wet_term_radio_refractivity(lat: Angle, lon: Angle, p: f64) -> f64 {
-    let lat_deg = lat.to_degrees();
-    let lon_deg = lon.to_degrees();
-    let idx = PROB_LEVELS
-        .iter()
-        .position(|&pl| pl >= p)
-        .unwrap_or(PROB_LEVELS.len() - 1);
-
-    if (PROB_LEVELS[idx] - p).abs() < 1e-10 {
-        return NWET_GRIDS[idx].get().bilinear(lat_deg, lon_deg);
-    }
-
-    if idx == 0 {
-        return NWET_GRIDS[0].get().bilinear(lat_deg, lon_deg);
-    }
-
-    let p_below = PROB_LEVELS[idx - 1];
-    let p_above = PROB_LEVELS[idx];
-    let val_below = NWET_GRIDS[idx - 1].get().bilinear(lat_deg, lon_deg);
-    let val_above = NWET_GRIDS[idx].get().bilinear(lat_deg, lon_deg);
-
-    let t = (p.ln() - p_below.ln()) / (p_above.ln() - p_below.ln());
-    val_below + (val_above - val_below) * t
-}
-
 #[cfg(test)]
 mod tests {
     use lox_test_utils::assert_approx_eq;
@@ -237,20 +173,33 @@ mod tests {
 
     #[test]
     fn test_map_wet_term_radio_refractivity() {
-        let nw = map_wet_term_radio_refractivity(Angle::degrees(40.4), Angle::degrees(-3.7), 50.0);
+        use crate::provider::test_fixture::provider;
+        use lox_core::units::Angle;
+        let p = provider();
+        let nw = p
+            .map_wet_term_radio_refractivity(Angle::degrees(40.4), Angle::degrees(-3.7), 50.0)
+            .unwrap();
         assert!(nw > 20.0 && nw < 200.0, "N_wet(Madrid, 50%) = {nw}");
     }
 
     #[test]
     fn test_map_wet_term_radio_refractivity_interpolated() {
-        let nw = map_wet_term_radio_refractivity(
-            Angle::degrees(40.4),
-            Angle::degrees(-3.7),
-            7.5, // between 5 and 10
-        );
-        let nw_5 = map_wet_term_radio_refractivity(Angle::degrees(40.4), Angle::degrees(-3.7), 5.0);
-        let nw_10 =
-            map_wet_term_radio_refractivity(Angle::degrees(40.4), Angle::degrees(-3.7), 10.0);
+        use crate::provider::test_fixture::provider;
+        use lox_core::units::Angle;
+        let p = provider();
+        let nw = p
+            .map_wet_term_radio_refractivity(
+                Angle::degrees(40.4),
+                Angle::degrees(-3.7),
+                7.5, // between 5 and 10
+            )
+            .unwrap();
+        let nw_5 = p
+            .map_wet_term_radio_refractivity(Angle::degrees(40.4), Angle::degrees(-3.7), 5.0)
+            .unwrap();
+        let nw_10 = p
+            .map_wet_term_radio_refractivity(Angle::degrees(40.4), Angle::degrees(-3.7), 10.0)
+            .unwrap();
         assert!(nw >= nw_5.min(nw_10) && nw <= nw_5.max(nw_10));
     }
 

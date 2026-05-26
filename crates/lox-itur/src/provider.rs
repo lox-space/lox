@@ -524,7 +524,7 @@ mod tests {
     #[test]
     fn open_rejects_missing_manifest() {
         let f = NamedTempFile::new().unwrap();
-        let mut writer = zip::ZipWriter::new(f.reopen().unwrap());
+        let writer = zip::ZipWriter::new(f.reopen().unwrap());
         writer.finish().unwrap();
         let err = ItuProvider::open(f.path()).unwrap_err();
         assert!(matches!(err, ItuProviderError::MissingEntry(s) if s == "manifest.json"));
@@ -600,5 +600,35 @@ mod tests {
             .grid_xyz("t/lat.npy", "t/lon.npy", "t/nope.npy")
             .unwrap_err();
         assert!(matches!(err, ItuProviderError::MissingEntry(s) if s == "t/nope.npy"));
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod test_fixture {
+    use std::path::PathBuf;
+    use std::sync::OnceLock;
+
+    use super::ItuProvider;
+
+    /// Shared provider for in-module unit tests. Bundle resolution:
+    /// `LOX_ITUR_BUNDLE` env var, else `<workspace>/target/lox-itur-data.npz`.
+    pub fn provider() -> &'static ItuProvider {
+        static P: OnceLock<ItuProvider> = OnceLock::new();
+        P.get_or_init(|| {
+            let path = std::env::var("LOX_ITUR_BUNDLE")
+                .ok()
+                .map(PathBuf::from)
+                .or_else(|| {
+                    let m = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+                    let ws = m.parent()?.parent()?;
+                    Some(ws.join("target").join("lox-itur-data.npz"))
+                })
+                .filter(|p| p.exists())
+                .expect(
+                    "tests need target/lox-itur-data.npz; \
+                     run `just lox-itur-pack <wheel>` or set LOX_ITUR_BUNDLE.",
+                );
+            ItuProvider::open(path).expect("open bundle")
+        })
     }
 }
