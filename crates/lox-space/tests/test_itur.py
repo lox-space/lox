@@ -4,12 +4,27 @@
 
 """Tests for ITU-R atmospheric propagation models."""
 
+import os
+import pathlib
+
+import pytest
+
 import lox_space as lox
 
 
-def test_environmental_losses_constructor():
+@pytest.fixture(scope="session")
+def itur_provider() -> lox.ItuProvider:
+    path = os.environ.get(
+        "LOX_ITUR_BUNDLE",
+        str(pathlib.Path(__file__).parents[3].joinpath("target", "lox-itur-data.npz")),
+    )
+    return lox.ItuProvider(path)
+
+
+def test_environmental_losses_constructor(itur_provider):
     """Test EnvironmentalLosses constructor."""
     losses = lox.EnvironmentalLosses(
+        itur_provider,
         lat=40.4 * lox.deg,
         lon=-3.7 * lox.deg,
         frequency=14.25 * lox.GHz,
@@ -21,9 +36,9 @@ def test_environmental_losses_constructor():
     assert 0.0 < float(losses.atmospheric) < 30.0
 
 
-def test_atmospheric_attenuation_slant_path():
-    """End-to-end test for the free-standing function."""
-    losses = lox.atmospheric_attenuation_slant_path(
+def test_atmospheric_attenuation_slant_path(itur_provider):
+    """End-to-end test for the provider method."""
+    losses = itur_provider.atmospheric_attenuation_slant_path(
         lat=40.4 * lox.deg,
         lon=-3.7 * lox.deg,
         frequency=14.25 * lox.GHz,
@@ -40,9 +55,9 @@ def test_atmospheric_attenuation_slant_path():
     assert 0.0 < float(losses.atmospheric) < 30.0
 
 
-def test_atmospheric_attenuation_with_custom_tilt():
+def test_atmospheric_attenuation_with_custom_tilt(itur_provider):
     """Test with explicit polarisation tilt angle."""
-    losses = lox.atmospheric_attenuation_slant_path(
+    losses = itur_provider.atmospheric_attenuation_slant_path(
         lat=51.5 * lox.deg,
         lon=-0.1 * lox.deg,
         frequency=29.0 * lox.GHz,
@@ -54,9 +69,9 @@ def test_atmospheric_attenuation_with_custom_tilt():
     assert float(losses.atmospheric) > 0.0
 
 
-def test_rain_attenuation():
+def test_rain_attenuation(itur_provider):
     """Test rain attenuation for Madrid at Ku-band."""
-    a = lox.rain_attenuation(
+    a = itur_provider.rain_attenuation(
         lat=40.4 * lox.deg,
         lon=-3.7 * lox.deg,
         frequency=14.25 * lox.GHz,
@@ -81,9 +96,9 @@ def test_gaseous_attenuation():
     assert float(a_o) + float(a_w) < 1.0
 
 
-def test_cloud_attenuation():
+def test_cloud_attenuation(itur_provider):
     """Test cloud attenuation."""
-    a = lox.cloud_attenuation(
+    a = itur_provider.cloud_attenuation(
         lat=40.4 * lox.deg,
         lon=-3.7 * lox.deg,
         elevation=30.0 * lox.deg,
@@ -93,9 +108,9 @@ def test_cloud_attenuation():
     assert float(a) >= 0.0
 
 
-def test_scintillation_attenuation():
+def test_scintillation_attenuation(itur_provider):
     """Test scintillation attenuation."""
-    a = lox.scintillation_attenuation(
+    a = itur_provider.scintillation_attenuation(
         frequency=14.25 * lox.GHz,
         elevation=30.0 * lox.deg,
         probability=0.01,
@@ -116,16 +131,16 @@ def test_rain_specific_attenuation():
     assert gamma > 0.0
 
 
-def test_topographic_altitude():
+def test_topographic_altitude(itur_provider):
     """Test topographic altitude lookup for known locations."""
-    alt = lox.topographic_altitude(
+    alt = itur_provider.topographic_altitude(
         lat=27.99 * lox.deg,
         lon=86.93 * lox.deg,
     )
     # Everest region should be > 5 km
     assert alt.to_kilometers() > 5.0
 
-    alt_sea = lox.topographic_altitude(
+    alt_sea = itur_provider.topographic_altitude(
         lat=0.0 * lox.deg,
         lon=0.0 * lox.deg,
     )
@@ -133,9 +148,9 @@ def test_topographic_altitude():
     assert alt_sea.to_kilometers() < 1.0
 
 
-def test_surface_mean_temperature():
+def test_surface_mean_temperature(itur_provider):
     """Test surface temperature lookup."""
-    t = lox.surface_mean_temperature(
+    t = itur_provider.surface_mean_temperature(
         lat=0.0 * lox.deg,
         lon=0.0 * lox.deg,
     )
@@ -143,9 +158,9 @@ def test_surface_mean_temperature():
     assert t.to_kelvin() > 290.0
 
 
-def test_rainfall_rate():
+def test_rainfall_rate(itur_provider):
     """Test rainfall rate at 0.01% exceedance."""
-    r = lox.rainfall_rate(
+    r = itur_provider.rainfall_rate(
         lat=40.4 * lox.deg,
         lon=-3.7 * lox.deg,
         probability=0.01,
@@ -154,9 +169,9 @@ def test_rainfall_rate():
     assert 5.0 < r < 100.0
 
 
-def test_rain_height():
+def test_rain_height(itur_provider):
     """Test rain height lookup."""
-    h = lox.rain_height(
+    h = itur_provider.rain_height(
         lat=40.4 * lox.deg,
         lon=-3.7 * lox.deg,
     )
@@ -164,9 +179,9 @@ def test_rain_height():
     assert 1.0 < h.to_kilometers() < 6.0
 
 
-def test_environmental_losses_properties():
+def test_environmental_losses_properties(itur_provider):
     """Test that EnvironmentalLosses fields are accessible."""
-    losses = lox.atmospheric_attenuation_slant_path(
+    losses = itur_provider.atmospheric_attenuation_slant_path(
         lat=40.4 * lox.deg,
         lon=-3.7 * lox.deg,
         frequency=14.25 * lox.GHz,
@@ -185,9 +200,9 @@ def test_environmental_losses_properties():
     assert float(losses.atmospheric) > 0.0
 
 
-def test_high_frequency_ka_band():
+def test_high_frequency_ka_band(itur_provider):
     """Test at Ka-band (30 GHz) which exercises different code paths."""
-    losses = lox.atmospheric_attenuation_slant_path(
+    losses = itur_provider.atmospheric_attenuation_slant_path(
         lat=51.5 * lox.deg,
         lon=-0.1 * lox.deg,
         frequency=30.0 * lox.GHz,
@@ -197,7 +212,7 @@ def test_high_frequency_ka_band():
     )
     assert float(losses.atmospheric) > 0.0
     # Ka-band should have higher attenuation than Ku-band
-    losses_ku = lox.atmospheric_attenuation_slant_path(
+    losses_ku = itur_provider.atmospheric_attenuation_slant_path(
         lat=51.5 * lox.deg,
         lon=-0.1 * lox.deg,
         frequency=14.25 * lox.GHz,
@@ -208,9 +223,9 @@ def test_high_frequency_ka_band():
     assert float(losses.atmospheric) > float(losses_ku.atmospheric)
 
 
-def test_equatorial_location():
+def test_equatorial_location(itur_provider):
     """Test at equatorial location (different climate profile)."""
-    losses = lox.atmospheric_attenuation_slant_path(
+    losses = itur_provider.atmospheric_attenuation_slant_path(
         lat=0.0 * lox.deg,
         lon=30.0 * lox.deg,
         frequency=14.25 * lox.GHz,

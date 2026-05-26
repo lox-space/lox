@@ -2604,6 +2604,7 @@ class EnvironmentalLosses:
     attenuation for a slant path.
 
     Args:
+        provider: Open ItuProvider supplying the gridded reference data.
         lat: Latitude.
         lon: Longitude.
         frequency: Frequency.
@@ -2614,6 +2615,7 @@ class EnvironmentalLosses:
     """
     def __new__(
         cls,
+        provider: ItuProvider,
         lat: Angle,
         lon: Angle,
         frequency: Frequency,
@@ -3066,41 +3068,80 @@ class SarAccessAnalysis:
 
 # ITU-R atmospheric propagation
 
-def atmospheric_attenuation_slant_path(
-    lat: Angle,
-    lon: Angle,
-    frequency: Frequency,
-    elevation: Angle,
-    probability: float,
-    diameter: Distance,
-    polarisation_tilt: Angle | None = None,
-) -> EnvironmentalLosses:
-    """Compute atmospheric attenuation on a slant path.
+class ItuProvider:
+    """An open ITU-R data bundle (``lox-itur-data.npz``).
 
-    Combines rain (P.618), gaseous (P.676), cloud (P.840), and
-    scintillation (P.618) attenuation per ITU-R recommendations.
+    Grid-based recommendations (rain, cloud, scintillation, topography, ...)
+    are served as methods on this object. Build a bundle once with::
 
-    Args:
-        lat: Latitude.
-        lon: Longitude.
-        frequency: Frequency.
-        elevation: Elevation angle.
-        probability: Exceedance probability (% of average year).
-        diameter: Physical antenna diameter.
-        polarisation_tilt: Polarisation tilt angle (default 45° for circular).
+        cargo run -p lox-itur --bin pack -- <itur-wheel.whl> lox-itur-data.npz
     """
-    ...
+    def __init__(self, path: str) -> None: ...
+    def upstream_version(self) -> str:
+        """The upstream ``itur`` package version this bundle was built from."""
+        ...
+    def topographic_altitude(self, lat: Angle, lon: Angle) -> Distance:
+        """Return topographic altitude at the given location (P.1511-2)."""
+        ...
+    def surface_mean_temperature(self, lat: Angle, lon: Angle) -> Temperature:
+        """Return annual mean surface temperature at the given location (P.1510-1)."""
+        ...
+    def rain_height(self, lat: Angle, lon: Angle) -> Distance:
+        """Return mean annual rain height at the given location (P.839-4)."""
+        ...
+    def rainfall_rate(self, lat: Angle, lon: Angle, probability: float) -> float:
+        """Return rainfall rate in mm/h exceeded for a given probability (P.837-7)."""
+        ...
+    def rain_attenuation(
+        self,
+        lat: Angle,
+        lon: Angle,
+        frequency: Frequency,
+        elevation: Angle,
+        probability: float,
+        polarisation_tilt: Angle | None = None,
+        station_altitude: Distance | None = None,
+    ) -> Decibel:
+        """Compute rain attenuation exceeded for a given probability (P.618-13)."""
+        ...
+    def cloud_attenuation(
+        self,
+        lat: Angle,
+        lon: Angle,
+        elevation: Angle,
+        frequency: Frequency,
+        probability: float,
+    ) -> Decibel:
+        """Compute cloud attenuation on a slant path (P.840-9)."""
+        ...
+    def scintillation_attenuation(
+        self,
+        frequency: Frequency,
+        elevation: Angle,
+        probability: float,
+        diameter: Distance,
+        eta: float = 0.5,
+        lat: Angle | None = None,
+        lon: Angle | None = None,
+    ) -> Decibel:
+        """Compute tropospheric scintillation fade depth (P.618-13)."""
+        ...
+    def atmospheric_attenuation_slant_path(
+        self,
+        lat: Angle,
+        lon: Angle,
+        frequency: Frequency,
+        elevation: Angle,
+        probability: float,
+        diameter: Distance,
+        polarisation_tilt: Angle | None = None,
+    ) -> EnvironmentalLosses:
+        """Compute atmospheric attenuation on a slant path.
 
-def rain_attenuation(
-    lat: Angle,
-    lon: Angle,
-    frequency: Frequency,
-    elevation: Angle,
-    probability: float,
-    polarisation_tilt: Angle | None = None,
-) -> Decibel:
-    """Compute rain attenuation exceeded for a given probability (P.618-13)."""
-    ...
+        Combines rain (P.618), gaseous (P.676), cloud (P.840), and
+        scintillation (P.618) attenuation per ITU-R recommendations.
+        """
+        ...
 
 def gaseous_attenuation_slant_path(
     frequency: Frequency,
@@ -3116,28 +3157,6 @@ def gaseous_attenuation_slant_path(
     """
     ...
 
-def cloud_attenuation(
-    lat: Angle,
-    lon: Angle,
-    elevation: Angle,
-    frequency: Frequency,
-    probability: float,
-) -> Decibel:
-    """Compute cloud attenuation on a slant path (P.840-8)."""
-    ...
-
-def scintillation_attenuation(
-    frequency: Frequency,
-    elevation: Angle,
-    probability: float,
-    diameter: Distance,
-    eta: float = 0.5,
-    lat: Angle | None = None,
-    lon: Angle | None = None,
-) -> Decibel:
-    """Compute tropospheric scintillation fade depth (P.618-13)."""
-    ...
-
 def rain_specific_attenuation(
     rain_rate: float,
     frequency: Frequency,
@@ -3145,20 +3164,4 @@ def rain_specific_attenuation(
     polarisation_tilt: Angle | None = None,
 ) -> float:
     """Compute specific attenuation from rain in dB/km (P.838-3)."""
-    ...
-
-def topographic_altitude(lat: Angle, lon: Angle) -> Distance:
-    """Return topographic altitude at the given location (P.1511-2)."""
-    ...
-
-def surface_mean_temperature(lat: Angle, lon: Angle) -> Temperature:
-    """Return annual mean surface temperature at the given location (P.1510-1)."""
-    ...
-
-def rainfall_rate(lat: Angle, lon: Angle, probability: float) -> float:
-    """Return rainfall rate in mm/h exceeded for a given probability (P.837-7)."""
-    ...
-
-def rain_height(lat: Angle, lon: Angle) -> Distance:
-    """Return mean annual rain height at the given location (P.839-4)."""
     ...
