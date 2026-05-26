@@ -26,6 +26,7 @@ thiserror = { workspace = true, features = ["std"] }
 zstd = { workspace = true }
 
 [dev-dependencies]
+divan.workspace = true
 lox-test-utils = { workspace = true, features = ["derive"] }
 
 [build-dependencies]
@@ -38,3 +39,7 @@ serde = ["dep:serde", "lox-core/serde"]
 
 [lib]
 doctest = false
+
+[[bench]]
+name = "itur"
+harness = false
