@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.12](https://github.com/lox-space/lox/compare/lox-derive-v0.1.0-alpha.11...lox-derive-v0.1.0-alpha.12) - 2026-05-26
+
+### Other
+
+- *(lox-derive)* fix broken intra-doc link
+
 ## [0.1.0-alpha.11](https://github.com/lox-space/lox/compare/lox-derive-v0.1.0-alpha.10...lox-derive-v0.1.0-alpha.11) - 2026-05-18
 
 ### Added

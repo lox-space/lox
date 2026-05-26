@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.3](https://github.com/lox-space/lox/compare/lox-odm-v0.1.0-alpha.2...lox-odm-v0.1.0-alpha.3) - 2026-05-26
+
+### Other
+
+- *(lox-odm)* enable missing_docs lint and fix doc links
+
 ## [0.1.0-alpha.2](https://github.com/lox-space/lox/compare/lox-odm-v0.1.0-alpha.1...lox-odm-v0.1.0-alpha.2) - 2026-05-18
 
 ### Added

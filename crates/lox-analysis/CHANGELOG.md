@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.12...lox-analysis-v0.1.0-alpha.13) - 2026-05-26
+
+### Added
+
+- *(lox-analysis)* wire pass_direction_of into AccessAnalysis::compute
+- *(lox-analysis)* add AccessError::PassDirection variant
+- *(lox-analysis)* add pass_direction_of classifier
+- *(lox-analysis)* add PassDirection and AccessWindow types
+- *(lox-analysis)* add SarAccessAnalysis and Sentinel-1 test
+- *(lox-analysis)* implement AccessPayload for SarPayload
+- *(lox-analysis)* add SarPayload
+- *(lox-analysis)* add AccessPayload and PayloadAccessor traits
+
+### Other
+
+- *(lox-analysis)* clarify PassDirection contract; fix stale 6h test message
+- *(lox-analysis)* assert PassDirection; pin both-directions over Europe
+- *(lox-analysis)* [**breaking**] AccessResults stores AccessWindow
+- *(lox-analysis)* extract sub_sat_sample helper
+- address review comments
+- cleanups
+- *(lox-analysis)* [**breaking**] rename imaging_payload to optical_payload
+- *(lox-analysis)* [**breaking**] replace ImagingAnalysis with generic analysis
+- *(lox-analysis)* [**breaking**] port ImagingPayload to OpticalPayload, impl AccessPayload
+- *(lox-analysis)* split imaging module into submodules
+- *(lox-analysis)* [**breaking**] rename "coverage" feature to "imaging"
+
 ## [0.1.0-alpha.12](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.11...lox-analysis-v0.1.0-alpha.12) - 2026-05-18
 
 ### Added

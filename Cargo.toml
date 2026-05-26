@@ -20,22 +20,22 @@ homepage = "https://github.com/lox-space/lox"
 categories = ["aerospace", "science"]
 
 [workspace.dependencies]
-lox-analysis = { path = "crates/lox-analysis", version = "0.1.0-alpha.12" }
-lox-bodies = { path = "crates/lox-bodies", version = "0.1.0-alpha.25" }
-lox-comms = { path = "crates/lox-comms", version = "0.1.0-alpha.13" }
-lox-core = { path = "crates/lox-core", version = "0.1.0-alpha.13", default-features = false }
-lox-derive = { path = "crates/lox-derive", version = "0.1.0-alpha.11" }
-lox-earth = { path = "crates/lox-earth", version = "0.1.0-alpha.28" }
-lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.23" }
-lox-frames = { path = "crates/lox-frames", version = "0.1.0-alpha.19" }
-lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.23" }
-lox-itur = { path = "crates/lox-itur", version = "0.1.0-alpha.4" }
-lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.22" }
-lox-odm = { path = "crates/lox-odm", version = "0.1.0-alpha.2" }
-lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.38" }
-lox-test-utils = { path = "crates/lox-test-utils", version = "0.1.0-alpha.8", default-features = false }
-lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.25" }
-lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.14" }
+lox-analysis = { path = "crates/lox-analysis", version = "0.1.0-alpha.13" }
+lox-bodies = { path = "crates/lox-bodies", version = "0.1.0-alpha.26" }
+lox-comms = { path = "crates/lox-comms", version = "0.1.0-alpha.14" }
+lox-core = { path = "crates/lox-core", version = "0.1.0-alpha.14", default-features = false }
+lox-derive = { path = "crates/lox-derive", version = "0.1.0-alpha.12" }
+lox-earth = { path = "crates/lox-earth", version = "0.1.0-alpha.29" }
+lox-ephem = { path = "crates/lox-ephem", version = "0.1.0-alpha.24" }
+lox-frames = { path = "crates/lox-frames", version = "0.1.0-alpha.20" }
+lox-io = { path = "crates/lox-io", version = "0.1.0-alpha.24" }
+lox-itur = { path = "crates/lox-itur", version = "0.1.0-alpha.5" }
+lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.23" }
+lox-odm = { path = "crates/lox-odm", version = "0.1.0-alpha.3" }
+lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.39" }
+lox-test-utils = { path = "crates/lox-test-utils", version = "0.1.0-alpha.9", default-features = false }
+lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.26" }
+lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.15" }
 
 arrayvec = "0.7.6"
 chrono = "0.4.43"
