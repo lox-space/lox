@@ -9,8 +9,8 @@
 
     # Utc
 
-    As a discontinuous time scale, [Utc] does not implement [TimeScale] and is treated by Lox
-    exclusively as an IO format.
+    As a discontinuous time scale, [Utc](crate::utc::Utc) does not implement
+    [TimeScale](crate::time_scales::TimeScale) and is treated by Lox exclusively as an IO format.
 */
 
 use alloc::borrow::ToOwned;

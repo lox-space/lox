@@ -5,10 +5,10 @@
 
 /*!
     Module `leap_seconds` exposes the [LeapSecondsProvider] trait for defining sources of leap
-    second data. Lox's standard implementation, [BuiltinLeapSeconds], is suitable for most
+    second data. Lox's standard implementation, [DefaultLeapSecondsProvider], is suitable for most
     applications.
 
-    `leap_seconds` additionally exposes the lower-level [LeapSecondsKernel] for working directly
+    The `lox-io` crate additionally exposes a lower-level `LeapSecondsKernel` for working directly
     with [NAIF Leap Seconds Kernel][LSK] data.
 
     [LSK]: https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/time.html#The%20Leapseconds%20Kernel%20LSK
