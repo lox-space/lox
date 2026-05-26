@@ -48,6 +48,20 @@ pub use provider::{ItuProvider, ItuProviderError};
 
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
+/// Builds a serialized manifest for the packager.
+///
+/// Kept on the library side (not in `bin/pack.rs`) so the schema stays in
+/// one place and changes flow through `Manifest`'s serde impl.
+#[doc(hidden)]
+pub fn manifest_for_packager(upstream: &str, grids: Vec<String>) -> Vec<u8> {
+    crate::manifest::Manifest {
+        version: crate::manifest::FORMAT_VERSION.to_owned(),
+        upstream: upstream.to_owned(),
+        grids,
+    }
+    .to_json_bytes()
+}
+
 /// Environmental losses (rain, atmospheric, etc.) computed from ITU-R models.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
