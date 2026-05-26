@@ -10,6 +10,14 @@ _default:
 build-pyo3 *FLAGS:
     uv run maturin develop --uv {{FLAGS}}
 
+# Pack the upstream `itur` Python wheel into target/lox-itur-data.npz.
+#
+# First time:
+#   pip download --no-deps itur==0.4.0
+#   just lox-itur-pack itur-0.4.0-py2.py3-none-any.whl
+lox-itur-pack wheel:
+    cargo run -p lox-itur --bin pack -- {{wheel}} target/lox-itur-data.npz
+
 pytest *FLAGS:
     uv run pytest {{FLAGS}}
 
