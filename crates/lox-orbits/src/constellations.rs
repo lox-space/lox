@@ -6,10 +6,10 @@
 //!
 //! This module provides builders for generating satellite constellations:
 //!
-//! - [`WalkerDeltaBuilder`] — Walker Delta (RAAN spread = 360°)
-//! - [`WalkerStarBuilder`] — Walker Star (RAAN spread = 180°)
-//! - [`StreetOfCoverageBuilder`] — Street-of-Coverage optimized constellations
-//! - [`FlowerBuilder`] — Flower constellations (repeating ground tracks)
+//! - [`WalkerDeltaBuilder`](crate::constellations::WalkerDeltaBuilder) — Walker Delta (RAAN spread = 360°)
+//! - [`WalkerStarBuilder`](crate::constellations::WalkerStarBuilder) — Walker Star (RAAN spread = 180°)
+//! - [`StreetOfCoverageBuilder`](crate::constellations::StreetOfCoverageBuilder) — Street-of-Coverage optimized constellations
+//! - [`FlowerBuilder`](crate::constellations::FlowerBuilder) — Flower constellations (repeating ground tracks)
 
 mod flower;
 mod street_of_coverage;

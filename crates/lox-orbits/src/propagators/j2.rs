@@ -10,7 +10,7 @@
 //!
 //! Optionally applies Kwok short-period corrections (Vallado pp. 708–710)
 //! to produce osculating elements. Enable with
-//! [`with_osculating`](J2Propagator::with_osculating).
+//! [`with_osculating`](crate::propagators::j2::J2Propagator::with_osculating).
 //!
 //! Non-singular for circular (e = 0) and equatorial (i = 0) orbits.
 //!

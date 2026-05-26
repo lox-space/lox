@@ -4,7 +4,7 @@
 
 //! Analytical J4 orbit propagator using Kozai secular perturbation theory.
 //!
-//! Extends [`super::j2::J2Propagator`] with J2², and J4 zonal harmonic terms
+//! Extends [`J2Propagator`](crate::propagators::j2::J2Propagator) with J2², and J4 zonal harmonic terms
 //! in the secular rates. Optionally applies Kwok J2 short-period corrections.
 //!
 //! Non-singular for circular (e = 0) and equatorial (i = 0) orbits.
@@ -61,7 +61,7 @@ impl From<std::convert::Infallible> for J4Error {
 /// Analytical J4 orbit propagator (Kozai secular with J2+J2²+J4,
 /// optionally osculating).
 ///
-/// Same interface as [`super::j2::J2Propagator`] but uses higher-order
+/// Same interface as [`J2Propagator`](crate::propagators::j2::J2Propagator) but uses higher-order
 /// secular rates. Short-period corrections (when enabled) are J2-only
 /// per the standard reference.
 #[derive(Debug, Clone, Copy)]
