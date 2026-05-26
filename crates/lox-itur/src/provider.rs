@@ -271,6 +271,37 @@ impl ItuProvider {
             p,
         )
     }
+
+    /// Mean annual 0°C isotherm height (P.839, grid). Data is in kilometres.
+    pub fn isotherm_0c_height(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+    ) -> Result<lox_core::units::Distance, ItuProviderError> {
+        let g = self.grid_xyz(
+            "839/v4_esalat.npy",
+            "839/v4_esalon.npy",
+            "839/v4_esa0height.npy",
+        )?;
+        Ok(lox_core::units::Distance::kilometers(
+            g.bilinear(lat.to_degrees(), lon.to_degrees()),
+        ))
+    }
+
+    /// Mean annual rain height = isotherm 0°C height + 0.36 km (P.839-4 Eq. 1).
+    pub fn rain_height(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+    ) -> Result<lox_core::units::Distance, ItuProviderError> {
+        let g = self.grid_xyz(
+            "839/v4_esalat.npy",
+            "839/v4_esalon.npy",
+            "839/v4_esa0height.npy",
+        )?;
+        let h0_km = g.bilinear(lat.to_degrees(), lon.to_degrees());
+        Ok(lox_core::units::Distance::kilometers(h0_km + 0.36))
+    }
 }
 
 fn read_entry_bytes(
