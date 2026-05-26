@@ -125,6 +125,18 @@ impl ItuProvider {
             .or_insert_with(|| arc.clone())
             .clone())
     }
+
+    /// Topographic altitude above mean sea level (ITU-R P.1511-2).
+    pub fn topographic_altitude(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+    ) -> Result<lox_core::units::Distance, ItuProviderError> {
+        let g = self.grid_xyz("1511/v2_lat.npy", "1511/v2_lon.npy", "1511/v2_topo.npy")?;
+        Ok(lox_core::units::Distance::meters(
+            g.bilinear(lat.to_degrees(), lon.to_degrees()),
+        ))
+    }
 }
 
 fn read_entry_bytes(
