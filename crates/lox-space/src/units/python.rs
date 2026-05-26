@@ -27,59 +27,73 @@ macro_rules! py_unit {
         $(
             #[pyclass(name = $name, module = "lox_space", frozen, from_py_object)]
             #[derive(Clone, Copy)]
+            /// Python wrapper for a typed unit quantity.
             pub struct $pyunit(pub $unit);
 
             #[pymethods]
             impl $pyunit {
                 #[new]
+                /// Constructs the unit quantity from a raw numeric value.
                 pub fn new(value: f64) -> Self {
                     Self($unit::new(value))
                 }
 
+                /// Adds two unit quantities.
                 pub fn __add__(&self, other: &$pyunit) -> Self {
                     Self(self.0 + other.0)
                 }
 
+                /// Subtracts another unit quantity.
                 pub fn __sub__(&self, other: &$pyunit) -> Self {
                     Self(self.0 - other.0)
                 }
 
+                /// Negates the unit quantity.
                 pub fn __neg__(&self) -> Self {
                     Self(-self.0)
                 }
 
+                /// Scales the unit quantity by a scalar.
                 pub fn __mul__(&self, other: f64) -> Self {
                     Self(other * self.0)
                 }
 
+                /// Scales the unit quantity by a scalar (right-hand side).
                 pub fn __rmul__(&self, other: f64) -> Self {
                     Self(other * self.0)
                 }
 
+                /// Returns true if both quantities are numerically equal.
                 pub fn __eq__(&self, other: &$pyunit) -> bool {
                     f64::from(self.0) == f64::from(other.0)
                 }
 
+                /// Returns the constructor arguments for pickling.
                 pub fn __getnewargs__(&self) -> (f64,) {
                     (f64::from(self.0),)
                 }
 
+                /// Returns the developer-readable representation.
                 pub fn __repr__(&self) -> String {
                     format!("{}({})", $name, repr_f64(f64::from(self.0)))
                 }
 
+                /// Returns the human-readable string representation.
                 pub fn __str__(&self) -> String {
                     self.0.to_string()
                 }
 
+                /// Returns the value as a Python complex number.
                 pub fn __complex__<'py>(&self, py: Python<'py>) -> Bound<'py, PyComplex> {
                     PyComplex::from_doubles(py, self.0.into(), 0.0)
                 }
 
+                /// Returns the raw numeric value as a Python float.
                 pub fn __float__(&self) -> f64 {
                     self.0.into()
                 }
 
+                /// Returns the value rounded to the nearest integer.
                 pub fn __int__(&self) -> i64 {
                    let val: f64 = self.0.into();
                     val.round_ties_even() as i64
@@ -227,6 +241,7 @@ pub struct PyGravitationalParameter(pub GravitationalParameter);
 #[pymethods]
 impl PyGravitationalParameter {
     #[new]
+    /// Constructs a gravitational parameter from a value in m³/s².
     pub fn new(value: f64) -> Self {
         Self(GravitationalParameter::m3_per_s2(value))
     }

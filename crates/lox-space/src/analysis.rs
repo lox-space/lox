@@ -8,4 +8,5 @@ pub use lox_analysis::*;
 pub mod sun;
 
 #[cfg(feature = "python")]
+/// Python bindings exposed via PyO3.
 pub mod python;

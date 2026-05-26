@@ -7,6 +7,7 @@ use lox_math::series::{InterpolationType, UnknownInterpolationType};
 use pyo3::exceptions::PyValueError;
 use pyo3::{PyErr, PyResult, pyclass, pymethods};
 
+/// Python error wrapper for [`SeriesError`].
 pub struct PySeriesError(pub SeriesError);
 
 impl From<PySeriesError> for PyErr {
@@ -15,6 +16,7 @@ impl From<PySeriesError> for PyErr {
     }
 }
 
+/// Python error wrapper for [`UnknownInterpolationType`].
 pub struct PyUnknownInterpolationType(pub UnknownInterpolationType);
 
 impl From<PyUnknownInterpolationType> for PyErr {

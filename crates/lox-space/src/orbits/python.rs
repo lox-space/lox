@@ -1213,6 +1213,7 @@ impl PyModifiedEquinoctial {
 #[derive(Debug, Clone)]
 pub struct PyTrajectory(pub DynTrajectory);
 
+/// Error wrapper converting `TrajectoryError` into a Python `ValueError`.
 pub struct PyTrajectoryError(pub TrajectoryError);
 
 impl From<PyTrajectoryError> for PyErr {
@@ -1418,6 +1419,7 @@ impl PyTrajectory {
         Ok(Self(DynTrajectory::new(states)))
     }
 
+    /// Return the developer-facing string representation of this trajectory.
     pub fn __repr__(&self) -> String {
         let n = self.0.states().len();
         format!(
@@ -1509,6 +1511,7 @@ impl PyInterval {
         PyInterval(TimeInterval::new(start.0, end.0))
     }
 
+    /// Return the developer-facing string representation of this interval.
     pub fn __repr__(&self) -> String {
         format!(
             "Interval({}, {})",
@@ -1605,6 +1608,7 @@ impl PyInterval {
 #[derive(Clone, Debug)]
 pub struct PyVallado(pub DynVallado);
 
+/// Error wrapper converting `ValladoError` into a Python `ValueError`.
 pub struct PyValladoError(pub ValladoError);
 
 impl From<PyValladoError> for PyErr {
@@ -1673,6 +1677,7 @@ impl PyVallado {
     }
 }
 
+/// Error wrapper converting `NumericalError` into a Python `ValueError`.
 pub struct PyNumericalError(pub NumericalError);
 
 impl From<PyNumericalError> for PyErr {
@@ -2005,6 +2010,7 @@ impl PyGroundLocation {
         PyOrigin(self.0.origin())
     }
 
+    /// Return the developer-facing string representation of this ground location.
     pub fn __repr__(&self) -> String {
         format!(
             "GroundLocation({}, {}, {}, {})",
@@ -2026,6 +2032,7 @@ impl PyGroundLocation {
 #[pyclass(name = "GroundPropagator", module = "lox_space", frozen)]
 pub struct PyGroundPropagator(DynGroundPropagator);
 
+/// Error wrapper converting `GroundPropagatorError` into a Python `ValueError`.
 pub struct PyGroundPropagatorError(pub GroundPropagatorError);
 
 impl From<PyGroundPropagatorError> for PyErr {
@@ -2243,6 +2250,7 @@ impl PyTle {
     }
 }
 
+/// Error wrapper converting `Sgp4Error` into a Python `ValueError`.
 pub struct PySgp4Error(pub Sgp4Error);
 
 impl From<PySgp4Error> for PyErr {
@@ -2262,6 +2270,7 @@ impl From<PySgp4Error> for PyErr {
 #[pyclass(name = "SGP4", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
 pub struct PySgp4 {
+    /// The underlying SGP4 propagator instance.
     pub inner: Sgp4,
     tle: PyTle,
 }
