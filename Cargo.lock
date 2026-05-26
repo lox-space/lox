@@ -1331,6 +1331,7 @@ dependencies = [
  "lox-core",
  "lox-test-utils",
  "serde",
+ "serde_json",
  "thiserror",
  "ureq",
  "zip",
