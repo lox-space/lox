@@ -1326,6 +1326,7 @@ dependencies = [
 name = "lox-itur"
 version = "0.1.0-alpha.4"
 dependencies = [
+ "codspeed-divan-compat",
  "libm",
  "lox-core",
  "lox-test-utils",
