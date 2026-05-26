@@ -19,7 +19,7 @@ use zip::ZipArchive;
 
 use crate::grid::RegularGrid2D;
 use crate::manifest::{Manifest, ManifestError};
-use crate::npz::NpyError;
+use crate::npz::{self, NpyError};
 
 const MANIFEST_ENTRY: &str = "manifest.json";
 
@@ -90,6 +90,41 @@ impl ItuProvider {
     pub fn upstream_version(&self) -> &str {
         &self.upstream
     }
+
+    /// Returns the grid for the data entry `val_key`, built from companion
+    /// lat/lon entries `lat_key` / `lon_key`. Cached after first load by `val_key`.
+    pub(crate) fn grid_xyz(
+        &self,
+        lat_key: &str,
+        lon_key: &str,
+        val_key: &str,
+    ) -> Result<Arc<RegularGrid2D>, ItuProviderError> {
+        if let Some(g) = self.grids.read().unwrap().get(val_key) {
+            return Ok(g.clone());
+        }
+        let (lat_bytes, lon_bytes, val_bytes) = {
+            let mut archive = self.archive.lock().unwrap();
+            (
+                read_entry_bytes(&mut archive, lat_key)?,
+                read_entry_bytes(&mut archive, lon_key)?,
+                read_entry_bytes(&mut archive, val_key)?,
+            )
+        };
+        let parsed = npz::grid_from_npy(&lat_bytes, &lon_bytes, &val_bytes).map_err(|source| {
+            ItuProviderError::Npy {
+                entry: val_key.to_owned(),
+                source,
+            }
+        })?;
+        let arc = Arc::new(parsed);
+        Ok(self
+            .grids
+            .write()
+            .unwrap()
+            .entry(val_key.to_owned())
+            .or_insert_with(|| arc.clone())
+            .clone())
+    }
 }
 
 fn read_entry_bytes(
@@ -153,5 +188,71 @@ mod tests {
     fn open_rejects_nonexistent_file() {
         let err = ItuProvider::open("/nonexistent/path/lox-itur-data.npz").unwrap_err();
         assert!(matches!(err, ItuProviderError::Open { .. }));
+    }
+
+    fn synth_3x4_bundle() -> NamedTempFile {
+        // matches grid_from_npy_no_flip test from npz module
+        let lat = npz::tests_synth_npy_2d(
+            3,
+            4,
+            &[
+                -10.0, -10.0, -10.0, -10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 10.0, 10.0, 10.0,
+            ],
+        );
+        let lon = npz::tests_synth_npy_2d(
+            3,
+            4,
+            &[
+                0.0, 10.0, 20.0, 30.0, 0.0, 10.0, 20.0, 30.0, 0.0, 10.0, 20.0, 30.0,
+            ],
+        );
+        let val = npz::tests_synth_npy_2d(
+            3,
+            4,
+            &[
+                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
+            ],
+        );
+        let f = NamedTempFile::new().unwrap();
+        let mut writer = zip::ZipWriter::new(f.reopen().unwrap());
+        let opts = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
+        writer.start_file(MANIFEST_ENTRY, opts).unwrap();
+        writer
+            .write_all(
+                br#"{"version":"1","upstream":"itur-0.4.0","grids":["t/lat.npy","t/lon.npy","t/val.npy"]}"#,
+            )
+            .unwrap();
+        for (name, bytes) in [
+            ("t/lat.npy", &lat),
+            ("t/lon.npy", &lon),
+            ("t/val.npy", &val),
+        ] {
+            writer.start_file(name, opts).unwrap();
+            writer.write_all(bytes).unwrap();
+        }
+        writer.finish().unwrap();
+        f
+    }
+
+    #[test]
+    fn grid_xyz_loads_and_caches() {
+        let f = synth_3x4_bundle();
+        let p = ItuProvider::open(f.path()).unwrap();
+        let g1 = p.grid_xyz("t/lat.npy", "t/lon.npy", "t/val.npy").unwrap();
+        assert!((g1.bilinear(0.0, 10.0) - 6.0).abs() < 1e-12);
+        // cache hit returns same Arc
+        let g2 = p.grid_xyz("t/lat.npy", "t/lon.npy", "t/val.npy").unwrap();
+        assert!(Arc::ptr_eq(&g1, &g2));
+    }
+
+    #[test]
+    fn grid_xyz_missing_entry() {
+        let f = synth_3x4_bundle();
+        let p = ItuProvider::open(f.path()).unwrap();
+        let err = p
+            .grid_xyz("t/lat.npy", "t/lon.npy", "t/nope.npy")
+            .unwrap_err();
+        assert!(matches!(err, ItuProviderError::MissingEntry(s) if s == "t/nope.npy"));
     }
 }
