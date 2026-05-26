@@ -63,7 +63,7 @@ sha2 = "0.10"
 tempfile = "3"
 thiserror = { version = "2.0.17", default-features = false }
 ureq = "3"
-zip = "2"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 zstd = "0.13"
 
 [profile.release]
