@@ -9,6 +9,7 @@
 mod common;
 
 use lox_core::units::Angle;
+use lox_itur::p453;
 use lox_itur::p836;
 use lox_itur::p1510;
 use lox_itur::p1511;
@@ -66,5 +67,15 @@ fn total_water_vapour_content_madrid() {
     let lon = Angle::degrees(-3.7);
     let a = p.total_water_vapour_content(lat, lon, 50.0).unwrap();
     let b = p836::total_water_vapour_content(lat, lon, 50.0);
+    assert!((a - b).abs() < 1e-9);
+}
+
+#[test]
+fn map_wet_term_radio_refractivity_madrid() {
+    let p = common::provider();
+    let lat = Angle::degrees(40.4);
+    let lon = Angle::degrees(-3.7);
+    let a = p.map_wet_term_radio_refractivity(lat, lon, 50.0).unwrap();
+    let b = p453::map_wet_term_radio_refractivity(lat, lon, 50.0);
     assert!((a - b).abs() < 1e-9);
 }
