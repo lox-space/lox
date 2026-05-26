@@ -175,36 +175,37 @@ fn pick_str(header: &str, key: &str) -> Option<String> {
     Some(after[..q2].to_owned())
 }
 
+/// Build a v1 NPY blob for a 2-D f64 array. Layout: magic + version + u16 header_len + header + data.
+#[cfg(test)]
+pub(crate) fn tests_synth_npy_2d(rows: usize, cols: usize, data: &[f64]) -> Vec<u8> {
+    assert_eq!(data.len(), rows * cols);
+    let header_str =
+        format!("{{'descr': '<f8', 'fortran_order': False, 'shape': ({rows}, {cols}), }}");
+    // pad with spaces + newline so (10 + header_len) is a multiple of 64
+    let unpadded = 10 + header_str.len() + 1;
+    let pad = (64 - unpadded % 64) % 64;
+    let mut header = header_str.into_bytes();
+    header.extend(std::iter::repeat_n(b' ', pad));
+    header.push(b'\n');
+    let mut out = Vec::with_capacity(10 + header.len() + data.len() * 8);
+    out.extend_from_slice(b"\x93NUMPY");
+    out.push(1);
+    out.push(0);
+    out.extend_from_slice(&(header.len() as u16).to_le_bytes());
+    out.extend_from_slice(&header);
+    for v in data {
+        out.extend_from_slice(&v.to_le_bytes());
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Build a v1 NPY blob for a 2-D f64 array. Layout: magic + version + u16 header_len + header + data.
-    fn synth_npy_2d(rows: usize, cols: usize, data: &[f64]) -> Vec<u8> {
-        assert_eq!(data.len(), rows * cols);
-        let header_str =
-            format!("{{'descr': '<f8', 'fortran_order': False, 'shape': ({rows}, {cols}), }}");
-        // pad with spaces + newline so (10 + header_len) is a multiple of 64
-        let unpadded = 10 + header_str.len() + 1;
-        let pad = (64 - unpadded % 64) % 64;
-        let mut header = header_str.into_bytes();
-        header.extend(std::iter::repeat_n(b' ', pad));
-        header.push(b'\n');
-        let mut out = Vec::with_capacity(10 + header.len() + data.len() * 8);
-        out.extend_from_slice(b"\x93NUMPY");
-        out.push(1);
-        out.push(0);
-        out.extend_from_slice(&(header.len() as u16).to_le_bytes());
-        out.extend_from_slice(&header);
-        for v in data {
-            out.extend_from_slice(&v.to_le_bytes());
-        }
-        out
-    }
-
     #[test]
     fn parses_minimal_2d() {
-        let blob = synth_npy_2d(2, 3, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        let blob = tests_synth_npy_2d(2, 3, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
         let arr = parse_npy(&blob).unwrap();
         assert_eq!(arr.shape, vec![2, 3]);
         assert_eq!(arr.data, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
@@ -217,21 +218,21 @@ mod tests {
 
     #[test]
     fn grid_from_npy_no_flip() {
-        let lat = synth_npy_2d(
+        let lat = tests_synth_npy_2d(
             3,
             4,
             &[
                 -10.0, -10.0, -10.0, -10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 10.0, 10.0, 10.0,
             ],
         );
-        let lon = synth_npy_2d(
+        let lon = tests_synth_npy_2d(
             3,
             4,
             &[
                 0.0, 10.0, 20.0, 30.0, 0.0, 10.0, 20.0, 30.0, 0.0, 10.0, 20.0, 30.0,
             ],
         );
-        let val = synth_npy_2d(
+        let val = tests_synth_npy_2d(
             3,
             4,
             &[
@@ -246,14 +247,14 @@ mod tests {
     #[test]
     fn grid_from_npy_with_flip() {
         // lat axis runs N→S (decreasing); parser should flip rows so lookup is consistent
-        let lat = synth_npy_2d(
+        let lat = tests_synth_npy_2d(
             3,
             4,
             &[
                 10.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, -10.0, -10.0, -10.0, -10.0,
             ],
         );
-        let lon = synth_npy_2d(
+        let lon = tests_synth_npy_2d(
             3,
             4,
             &[
@@ -261,7 +262,7 @@ mod tests {
             ],
         );
         // values in N→S order
-        let val = synth_npy_2d(
+        let val = tests_synth_npy_2d(
             3,
             4,
             &[
