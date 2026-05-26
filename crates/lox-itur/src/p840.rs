@@ -5,44 +5,11 @@
 
 //! ITU-R P.840-9: Attenuation due to clouds and fog.
 //!
-//! Computes cloud attenuation on Earth-space paths using a double-Debye model
-//! for the dielectric permittivity of water and globally-gridded reduced cloud
-//! liquid water content data.
-
-use lox_core::units::{Angle, Frequency};
-
-use crate::data::LazyGrid;
-
-/// Available probability levels for P.840-7/8 Lred data.
-const PROB_LEVELS: [f64; 18] = [
-    0.1, 0.2, 0.3, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0, 20.0, 30.0, 50.0, 60.0, 70.0, 80.0, 90.0, 95.0,
-    99.0,
-];
-
-static LRED_GRIDS: [LazyGrid; 18] = [
-    LazyGrid::new("840/v7_lred_01.bin.zst"),
-    LazyGrid::new("840/v7_lred_02.bin.zst"),
-    LazyGrid::new("840/v7_lred_03.bin.zst"),
-    LazyGrid::new("840/v7_lred_05.bin.zst"),
-    LazyGrid::new("840/v7_lred_1.bin.zst"),
-    LazyGrid::new("840/v7_lred_2.bin.zst"),
-    LazyGrid::new("840/v7_lred_3.bin.zst"),
-    LazyGrid::new("840/v7_lred_5.bin.zst"),
-    LazyGrid::new("840/v7_lred_10.bin.zst"),
-    LazyGrid::new("840/v7_lred_20.bin.zst"),
-    LazyGrid::new("840/v7_lred_30.bin.zst"),
-    LazyGrid::new("840/v7_lred_50.bin.zst"),
-    LazyGrid::new("840/v7_lred_60.bin.zst"),
-    LazyGrid::new("840/v7_lred_70.bin.zst"),
-    LazyGrid::new("840/v7_lred_80.bin.zst"),
-    LazyGrid::new("840/v7_lred_90.bin.zst"),
-    LazyGrid::new("840/v7_lred_95.bin.zst"),
-    LazyGrid::new("840/v7_lred_99.bin.zst"),
-];
-
-static M_GRID: LazyGrid = LazyGrid::new("840/v7_m.bin.zst");
-static SIGMA_GRID: LazyGrid = LazyGrid::new("840/v7_sigma.bin.zst");
-static PCLW_GRID: LazyGrid = LazyGrid::new("840/v7_pclw.bin.zst");
+//! The dielectric model below is pure formula; the gridded reduced cloud liquid
+//! water content, cloud attenuation, and log-normal coefficients are served by
+//! [`crate::ItuProvider::columnar_content_reduced_liquid`],
+//! [`crate::ItuProvider::cloud_attenuation`], and
+//! [`crate::ItuProvider::lognormal_approximation_coefficient`].
 
 /// Computes the specific cloud attenuation coefficient K_l ((dB/km)/(g/m³))
 /// using the double-Debye dielectric model (P.840-8 Eq. 2–11).
@@ -102,49 +69,6 @@ pub fn cloud_liquid_mass_absorption_coefficient(f_ghz: f64) -> f64 {
     kl * correction
 }
 
-/// Returns the total columnar content of reduced cloud liquid water (kg/m²)
-/// exceeded for `p` % of the average year.
-///
-/// Uses logarithmic interpolation between available probability levels.
-pub fn columnar_content_reduced_liquid(lat: Angle, lon: Angle, p: f64) -> f64 {
-    let lat_deg = lat.to_degrees();
-    let lon_deg = lon.to_degrees();
-    let idx = PROB_LEVELS
-        .iter()
-        .position(|&pl| pl >= p)
-        .unwrap_or(PROB_LEVELS.len() - 1);
-
-    if (PROB_LEVELS[idx] - p).abs() < 1e-10 {
-        return LRED_GRIDS[idx].get().bilinear(lat_deg, lon_deg);
-    }
-
-    if idx == 0 {
-        return LRED_GRIDS[0].get().bilinear(lat_deg, lon_deg);
-    }
-
-    let p_below = PROB_LEVELS[idx - 1];
-    let p_above = PROB_LEVELS[idx];
-    let val_below = LRED_GRIDS[idx - 1].get().bilinear(lat_deg, lon_deg);
-    let val_above = LRED_GRIDS[idx].get().bilinear(lat_deg, lon_deg);
-
-    let t = (p.ln() - p_below.ln()) / (p_above.ln() - p_below.ln());
-    val_below + (val_above - val_below) * t
-}
-
-/// Computes the cloud attenuation (dB) on a slant path (P.840-9).
-pub fn cloud_attenuation(
-    lat: Angle,
-    lon: Angle,
-    elevation: Angle,
-    frequency: Frequency,
-    p: f64,
-) -> f64 {
-    let lred = columnar_content_reduced_liquid(lat, lon, p);
-    let kl = cloud_liquid_mass_absorption_coefficient(frequency.to_gigahertz());
-    let sin_el = elevation.to_degrees().max(5.0).to_radians().sin();
-    lred * kl / sin_el
-}
-
 /// Coefficients for the log-normal approximation of cloud liquid water content.
 #[derive(Debug, Clone, Copy)]
 pub struct LognormalCoefficients {
@@ -154,23 +78,6 @@ pub struct LognormalCoefficients {
     pub sigma: f64,
     /// Probability of non-zero cloud liquid water content.
     pub pclw: f64,
-}
-
-/// Returns the log-normal approximation coefficients for the total columnar
-/// content of reduced cloud liquid water (P.840-8).
-///
-/// # Arguments
-///
-/// * `lat_deg` — Latitude in degrees
-/// * `lon_deg` — Longitude in degrees
-pub fn lognormal_approximation_coefficient(lat: Angle, lon: Angle) -> LognormalCoefficients {
-    let lat_deg = lat.to_degrees();
-    let lon_deg = lon.to_degrees();
-    LognormalCoefficients {
-        m: M_GRID.get().bilinear(lat_deg, lon_deg),
-        sigma: SIGMA_GRID.get().bilinear(lat_deg, lon_deg),
-        pclw: PCLW_GRID.get().bilinear(lat_deg, lon_deg),
-    }
 }
 
 #[cfg(test)]
@@ -194,25 +101,40 @@ mod tests {
 
     #[test]
     fn test_columnar_content_reduced_liquid() {
-        let lred = columnar_content_reduced_liquid(Angle::degrees(40.4), Angle::degrees(-3.7), 1.0);
+        use crate::provider::test_fixture::provider;
+        use lox_core::units::Angle;
+        let p = provider();
+        let lred = p
+            .columnar_content_reduced_liquid(Angle::degrees(40.4), Angle::degrees(-3.7), 1.0)
+            .unwrap();
         assert!(lred >= 0.0, "Lred = {lred}");
     }
 
     #[test]
     fn test_cloud_attenuation_positive() {
-        let a = cloud_attenuation(
-            Angle::degrees(40.4),
-            Angle::degrees(-3.7),
-            Angle::degrees(30.0),
-            Frequency::gigahertz(14.25),
-            1.0,
-        );
+        use crate::provider::test_fixture::provider;
+        use lox_core::units::{Angle, Frequency};
+        let p = provider();
+        let a = p
+            .cloud_attenuation(
+                Angle::degrees(40.4),
+                Angle::degrees(-3.7),
+                Angle::degrees(30.0),
+                Frequency::gigahertz(14.25),
+                1.0,
+            )
+            .unwrap();
         assert!(a >= 0.0, "cloud attenuation = {a}");
     }
 
     #[test]
     fn test_lognormal_coefficients() {
-        let c = lognormal_approximation_coefficient(Angle::degrees(40.4), Angle::degrees(-3.7));
+        use crate::provider::test_fixture::provider;
+        use lox_core::units::Angle;
+        let p = provider();
+        let c = p
+            .lognormal_approximation_coefficient(Angle::degrees(40.4), Angle::degrees(-3.7))
+            .unwrap();
         assert!(c.pclw >= 0.0 && c.pclw <= 100.0, "pclw = {}", c.pclw);
     }
 

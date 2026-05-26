@@ -10,38 +10,7 @@
 
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
-use crate::{p453, p837, p838, p839, p1511};
-
-/// Computes rain attenuation exceeded for `p` % of the average year (P.618-13).
-///
-/// # Arguments
-///
-/// * `lat` — Latitude
-/// * `lon` — Longitude
-/// * `frequency` — Frequency
-/// * `elevation` — Elevation angle (must be > 0)
-/// * `p` — Exceedance probability (% of average year), range [0.001, 5]
-/// * `polarisation_tilt` — Polarisation tilt angle (45° for circular)
-/// * `station_altitude` — Station altitude (None to look up from P.1511)
-pub fn rain_attenuation(
-    lat: Angle,
-    lon: Angle,
-    frequency: Frequency,
-    elevation: Angle,
-    p: f64,
-    polarisation_tilt: Angle,
-    station_altitude: Option<Distance>,
-) -> Decibel {
-    Decibel::new(rain_attenuation_raw(
-        lat.to_degrees(),
-        lon.to_degrees(),
-        frequency.to_gigahertz(),
-        elevation.to_degrees().max(5.0),
-        p,
-        polarisation_tilt.to_degrees(),
-        station_altitude.map(|d| d.to_kilometers()),
-    ))
-}
+use crate::p838;
 
 /// Grid-free core of P.618 rain attenuation. Pure math.
 ///
@@ -132,23 +101,6 @@ pub(crate) fn rain_attenuation_core(
     a001 * (p / 0.01_f64).powf(exponent)
 }
 
-pub(crate) fn rain_attenuation_raw(
-    lat_deg: f64,
-    lon_deg: f64,
-    f_ghz: f64,
-    el_deg: f64,
-    p: f64,
-    tau_deg: f64,
-    hs_km: Option<f64>,
-) -> f64 {
-    let lat = Angle::degrees(lat_deg);
-    let lon = Angle::degrees(lon_deg);
-    let hs = hs_km.unwrap_or_else(|| p1511::topographic_altitude(lat, lon).to_kilometers());
-    let hr = p839::rain_height(lat, lon).to_kilometers();
-    let r001 = p837::rainfall_rate_r001(lat, lon);
-    rain_attenuation_core(lat_deg, f_ghz, el_deg, p, tau_deg, hs, hr, r001)
-}
-
 /// Computes the standard deviation of tropospheric scintillation (dB).
 ///
 /// This is steps 1–7 of the scintillation method (P.618-13 §2.4.1).
@@ -207,71 +159,6 @@ pub(crate) fn scintillation_attenuation_sigma_raw(
 
     // Step 7: Signal standard deviation
     sigma_ref * f_ghz.powf(7.0 / 12.0) * g / sin_el.powf(1.2)
-}
-
-/// Computes the tropospheric scintillation fade depth exceeded for `p` %
-/// of the average year (P.618-13).
-///
-/// # Arguments
-///
-/// * `frequency` — Frequency
-/// * `elevation` — Elevation angle
-/// * `p` — Exceedance probability (% of average year)
-/// * `diameter` — Physical antenna diameter
-/// * `eta` — Antenna efficiency (typically 0.5)
-/// * `n_wet` — Wet term of radio refractivity (if None, uses P.453 map at 50th percentile)
-/// * `lat` — Latitude (used when `n_wet` is None)
-/// * `lon` — Longitude (used when `n_wet` is None)
-#[allow(clippy::too_many_arguments)]
-pub fn scintillation_attenuation(
-    frequency: Frequency,
-    elevation: Angle,
-    p: f64,
-    diameter: Distance,
-    eta: f64,
-    n_wet: Option<f64>,
-    lat: Angle,
-    lon: Angle,
-) -> Decibel {
-    Decibel::new(scintillation_attenuation_raw(
-        frequency.to_gigahertz(),
-        elevation.to_degrees().max(5.0),
-        p,
-        diameter.to_meters(),
-        eta,
-        n_wet,
-        lat.to_degrees(),
-        lon.to_degrees(),
-    ))
-}
-
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn scintillation_attenuation_raw(
-    f_ghz: f64,
-    el_deg: f64,
-    p: f64,
-    d_m: f64,
-    eta: f64,
-    n_wet: Option<f64>,
-    lat_deg: f64,
-    lon_deg: f64,
-) -> f64 {
-    let n_wet = n_wet.unwrap_or_else(|| {
-        p453::map_wet_term_radio_refractivity(
-            Angle::degrees(lat_deg),
-            Angle::degrees(lon_deg),
-            50.0,
-        )
-    });
-
-    let sigma = scintillation_attenuation_sigma_raw(f_ghz, el_deg, d_m, eta, n_wet);
-
-    // Step 8: Time percentage factor
-    let log_p = p.log10();
-    let a_p = -0.061 * log_p.powi(3) + 0.072 * log_p.powi(2) - 1.71 * log_p + 3.0;
-
-    // Step 9: Fade depth
-    a_p * sigma
 }
 
 /// Computes the rain cross-polarization discrimination XPD (dB) not exceeded
@@ -375,42 +262,73 @@ pub(crate) fn rain_cross_polarization_discrimination_raw(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::provider::test_fixture::provider;
+
+    // n_wet supplied explicitly, so latitude/longitude are unused by the model.
+    const ZERO: Angle = Angle::ZERO;
+
+    fn scint(f_ghz: f64, el_deg: f64, d_m: f64, n_wet: Option<f64>, lat: Angle, lon: Angle) -> f64 {
+        provider()
+            .scintillation_attenuation(
+                Frequency::gigahertz(f_ghz),
+                Angle::degrees(el_deg),
+                0.01,
+                Distance::meters(d_m),
+                0.5,
+                n_wet,
+                lat,
+                lon,
+            )
+            .unwrap()
+            .as_f64()
+    }
+
+    fn rain(lat: f64, lon: f64, f_ghz: f64, el_deg: f64, p: f64, hs_km: Option<f64>) -> f64 {
+        provider()
+            .rain_attenuation(
+                Angle::degrees(lat),
+                Angle::degrees(lon),
+                Frequency::gigahertz(f_ghz),
+                Angle::degrees(el_deg),
+                p,
+                Angle::degrees(45.0),
+                hs_km.map(Distance::kilometers),
+            )
+            .unwrap()
+            .as_f64()
+    }
 
     #[test]
     fn test_scintillation_increases_with_frequency() {
-        let s1 = scintillation_attenuation_raw(10.0, 30.0, 0.01, 1.2, 0.5, Some(50.0), 0.0, 0.0);
-        let s2 = scintillation_attenuation_raw(30.0, 30.0, 0.01, 1.2, 0.5, Some(50.0), 0.0, 0.0);
+        let s1 = scint(10.0, 30.0, 1.2, Some(50.0), ZERO, ZERO);
+        let s2 = scint(30.0, 30.0, 1.2, Some(50.0), ZERO, ZERO);
         assert!(
             s2 > s1,
-            "Scintillation should increase with frequency: {} vs {}",
-            s1,
-            s2
+            "Scintillation should increase with frequency: {s1} vs {s2}"
         );
     }
 
     #[test]
     fn test_scintillation_decreases_with_elevation() {
-        let s1 = scintillation_attenuation_raw(14.25, 10.0, 0.01, 1.2, 0.5, Some(50.0), 0.0, 0.0);
-        let s2 = scintillation_attenuation_raw(14.25, 45.0, 0.01, 1.2, 0.5, Some(50.0), 0.0, 0.0);
+        let s1 = scint(14.25, 10.0, 1.2, Some(50.0), ZERO, ZERO);
+        let s2 = scint(14.25, 45.0, 1.2, Some(50.0), ZERO, ZERO);
         assert!(
             s2 < s1,
-            "Scintillation should decrease with elevation: {} vs {}",
-            s1,
-            s2
+            "Scintillation should decrease with elevation: {s1} vs {s2}"
         );
     }
 
     #[test]
     fn test_scintillation_reasonable_values() {
-        let s = scintillation_attenuation_raw(14.25, 30.0, 0.01, 1.2, 0.5, Some(50.0), 0.0, 0.0);
-        assert!(s > 0.0 && s < 2.0, "scintillation = {} dB", s);
+        let s = scint(14.25, 30.0, 1.2, Some(50.0), ZERO, ZERO);
+        assert!(s > 0.0 && s < 2.0, "scintillation = {s} dB");
     }
 
     #[test]
     fn test_xpd_reasonable_values() {
         // At 14 GHz, 2 dB rain attenuation, XPD should be >20 dB
         let xpd = rain_cross_polarization_discrimination_raw(2.0, 14.0, 30.0, 0.01, 45.0);
-        assert!(xpd > 15.0 && xpd < 50.0, "XPD = {} dB", xpd);
+        assert!(xpd > 15.0 && xpd < 50.0, "XPD = {xpd} dB");
     }
 
     #[test]
@@ -419,9 +337,7 @@ mod tests {
         let xpd2 = rain_cross_polarization_discrimination_raw(2.0, 30.0, 30.0, 0.01, 45.0);
         assert!(
             xpd2 > xpd1,
-            "XPD should increase with freq: {} vs {}",
-            xpd1,
-            xpd2
+            "XPD should increase with freq: {xpd1} vs {xpd2}"
         );
     }
 
@@ -429,22 +345,22 @@ mod tests {
 
     #[test]
     fn test_rain_attenuation_madrid() {
-        let a = rain_attenuation_raw(40.4, -3.7, 14.25, 30.0, 0.01, 45.0, None);
+        let a = rain(40.4, -3.7, 14.25, 30.0, 0.01, None);
         assert!(a > 0.0 && a < 20.0, "rain attenuation = {a}");
     }
 
     #[test]
     fn test_rain_attenuation_low_elevation() {
-        // el < 5° uses the extended formula
-        let a = rain_attenuation_raw(40.4, -3.7, 14.25, 3.0, 0.01, 45.0, None);
+        // el < 5° is clamped to 5° by the provider method
+        let a = rain(40.4, -3.7, 14.25, 3.0, 0.01, None);
         assert!(a > 0.0, "low elevation rain atten = {a}");
     }
 
     #[test]
     fn test_rain_attenuation_different_probabilities() {
-        let a001 = rain_attenuation_raw(40.4, -3.7, 14.25, 30.0, 0.01, 45.0, None);
-        let a1 = rain_attenuation_raw(40.4, -3.7, 14.25, 30.0, 1.0, 45.0, None);
-        let a5 = rain_attenuation_raw(40.4, -3.7, 14.25, 30.0, 5.0, 45.0, None);
+        let a001 = rain(40.4, -3.7, 14.25, 30.0, 0.01, None);
+        let a1 = rain(40.4, -3.7, 14.25, 30.0, 1.0, None);
+        let a5 = rain(40.4, -3.7, 14.25, 30.0, 5.0, None);
         // Higher probability → lower attenuation
         assert!(a1 < a001, "a1={a1} should be < a001={a001}");
         assert!(a5 < a1, "a5={a5} should be < a1={a1}");
@@ -453,14 +369,14 @@ mod tests {
     #[test]
     fn test_rain_attenuation_high_latitude() {
         // |lat| > 36°, beta = 0
-        let a = rain_attenuation_raw(60.0, 10.0, 14.25, 30.0, 0.1, 45.0, None);
+        let a = rain(60.0, 10.0, 14.25, 30.0, 0.1, None);
         assert!(a >= 0.0);
     }
 
     #[test]
     fn test_rain_attenuation_station_above_rain_height() {
         // Very high station, should be 0
-        let a = rain_attenuation_raw(40.4, -3.7, 14.25, 30.0, 0.01, 45.0, Some(10.0));
+        let a = rain(40.4, -3.7, 14.25, 30.0, 0.01, Some(10.0));
         assert_eq!(a, 0.0);
     }
 
@@ -498,13 +414,20 @@ mod tests {
     #[test]
     fn test_scintillation_large_antenna() {
         // x >= 7.0 branch (g = 0) — need very large antenna
-        let s = scintillation_attenuation_raw(14.25, 30.0, 0.01, 100.0, 0.5, Some(50.0), 0.0, 0.0);
+        let s = scint(14.25, 30.0, 100.0, Some(50.0), ZERO, ZERO);
         assert_eq!(s, 0.0, "large antenna should have zero scintillation");
     }
 
     #[test]
     fn test_scintillation_with_n_wet_lookup() {
-        let s = scintillation_attenuation_raw(14.25, 30.0, 0.01, 1.2, 0.5, None, 40.4, -3.7);
+        let s = scint(
+            14.25,
+            30.0,
+            1.2,
+            None,
+            Angle::degrees(40.4),
+            Angle::degrees(-3.7),
+        );
         assert!(s > 0.0, "scintillation with N_wet lookup = {s}");
     }
 
@@ -512,17 +435,8 @@ mod tests {
 
     #[test]
     fn test_unitful_rain_attenuation() {
-        use lox_core::units::Decibel;
-        let a: Decibel = rain_attenuation(
-            Angle::degrees(40.4),
-            Angle::degrees(-3.7),
-            Frequency::gigahertz(14.25),
-            Angle::degrees(30.0),
-            0.01,
-            Angle::degrees(45.0),
-            None,
-        );
-        assert!(a.as_f64() > 0.0);
+        let a = rain(40.4, -3.7, 14.25, 30.0, 0.01, None);
+        assert!(a > 0.0);
     }
 
     #[test]
@@ -539,18 +453,15 @@ mod tests {
 
     #[test]
     fn test_unitful_scintillation() {
-        use lox_core::units::Decibel;
-        let s: Decibel = scintillation_attenuation(
-            Frequency::gigahertz(14.25),
-            Angle::degrees(30.0),
-            0.01,
-            Distance::meters(1.2),
-            0.5,
+        let s = scint(
+            14.25,
+            30.0,
+            1.2,
             None,
             Angle::degrees(40.4),
             Angle::degrees(-3.7),
         );
-        assert!(s.as_f64() > 0.0);
+        assert!(s > 0.0);
     }
 
     #[test]
