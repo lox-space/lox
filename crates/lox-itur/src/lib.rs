@@ -42,6 +42,9 @@ pub mod p837;
 pub mod p838;
 pub mod p839;
 pub mod p840;
+pub mod provider;
+
+pub use provider::{ItuProvider, ItuProviderError};
 
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
