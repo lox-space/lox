@@ -6,7 +6,7 @@
 //! Procedural derive macros for the Lox ecosystem.
 //!
 //! Provides `#[derive(ApproxEq)]` for automatic approximate-equality
-//! implementations against [`lox_test_utils::approx_eq::ApproxEq`].
+//! implementations against `lox_test_utils::approx_eq::ApproxEq`.
 
 #![warn(missing_docs)]
 
