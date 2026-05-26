@@ -21,11 +21,26 @@
 //! - **P.1510** — Annual mean surface temperature
 //! - **P.1511** — Topography for Earth-to-space propagation modelling
 //!
-//! # Data Files
+//! # Bundled Data
 //!
-//! Grid-based models require reference data from the ITU. The build script
-//! automatically downloads and converts this data. Set `LOX_ITUR_DATA` to
-//! override the data directory.
+//! Grid-based models require reference data from the ITU, distributed via the
+//! upstream `itur` Python package. Build a `lox-itur-data.npz` bundle once:
+//!
+//! ```text
+//! pip download --no-deps itur==0.4.0
+//! cargo run -p lox-itur --bin pack -- itur-0.4.0-py2.py3-none-any.whl lox-itur-data.npz
+//! ```
+//!
+//! Then open it via [`ItuProvider`]:
+//!
+//! ```ignore
+//! let provider = lox_itur::ItuProvider::open("lox-itur-data.npz")?;
+//! let alt = provider.topographic_altitude(lat, lon)?;
+//! ```
+//!
+//! Grid-bearing recommendations expose their data as methods on [`ItuProvider`].
+//! Pure formulae (P.835, P.676 line tables, P.838 rain-specific attenuation, etc.)
+//! remain free functions in the `pXXX` modules.
 
 pub(crate) mod grid;
 pub(crate) mod manifest;
