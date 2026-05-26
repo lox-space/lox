@@ -5,41 +5,17 @@
 
 //! ITU-R P.837-7: Characteristics of precipitation for propagation modelling.
 //!
-//! Provides the rainfall rate (mm/h) and rainfall probability exceeded for a
-//! given percentage of the average year at any location on Earth.
+//! Rainfall rate (mm/h) and rainfall probability are grid-based; they are served
+//! by [`crate::ItuProvider::rainfall_rate_r001`],
+//! [`crate::ItuProvider::rainfall_probability`], and
+//! [`crate::ItuProvider::rainfall_rate`]. The grid-free cores below are shared
+//! between the provider methods and the unit tests.
 
 use std::f64::consts::FRAC_1_SQRT_2;
-
-use lox_core::units::Angle;
-
-use crate::data::LazyGrid;
-use crate::p1510;
-
-static R001: LazyGrid = LazyGrid::new("837/v7_r001.bin.zst");
-
-static MT_MONTHS: [LazyGrid; 12] = [
-    LazyGrid::new("837/v7_mt_month01.bin.zst"),
-    LazyGrid::new("837/v7_mt_month02.bin.zst"),
-    LazyGrid::new("837/v7_mt_month03.bin.zst"),
-    LazyGrid::new("837/v7_mt_month04.bin.zst"),
-    LazyGrid::new("837/v7_mt_month05.bin.zst"),
-    LazyGrid::new("837/v7_mt_month06.bin.zst"),
-    LazyGrid::new("837/v7_mt_month07.bin.zst"),
-    LazyGrid::new("837/v7_mt_month08.bin.zst"),
-    LazyGrid::new("837/v7_mt_month09.bin.zst"),
-    LazyGrid::new("837/v7_mt_month10.bin.zst"),
-    LazyGrid::new("837/v7_mt_month11.bin.zst"),
-    LazyGrid::new("837/v7_mt_month12.bin.zst"),
-];
 
 const DAYS_PER_MONTH: [f64; 12] = [
     31.0, 28.25, 31.0, 30.0, 31.0, 30.0, 31.0, 31.0, 30.0, 31.0, 30.0, 31.0,
 ];
-
-/// Returns the rainfall rate (mm/h) exceeded for 0.01% of the average year.
-pub fn rainfall_rate_r001(lat: Angle, lon: Angle) -> f64 {
-    R001.get().bilinear(lat.to_degrees(), lon.to_degrees())
-}
 
 /// Per-month rain rate `r_i` (mm/h) and probability-of-rain `p0_i` (%).
 ///
@@ -85,34 +61,6 @@ pub(crate) fn rainfall_probability_from(p0: &[f64; 12]) -> f64 {
         total += DAYS_PER_MONTH[month] * p0[month];
     }
     total / 365.25
-}
-
-fn monthly_rain_params(lat: Angle, lon: Angle) -> ([f64; 12], [f64; 12]) {
-    let lat_deg = lat.to_degrees();
-    let lon_deg = lon.to_degrees();
-    let mut mt = [0.0_f64; 12];
-    let mut t_k = [0.0_f64; 12];
-    for month in 0..12 {
-        mt[month] = MT_MONTHS[month].get().bilinear(lat_deg, lon_deg);
-        t_k[month] = p1510::surface_month_mean_temperature(lat, lon, (month + 1) as u8).to_kelvin();
-    }
-    monthly_rain_params_from(&mt, &t_k)
-}
-
-/// Returns the annual probability of rain (%) at the given location.
-pub fn rainfall_probability(lat: Angle, lon: Angle) -> f64 {
-    let (_r, p0) = monthly_rain_params(lat, lon);
-    rainfall_probability_from(&p0)
-}
-
-/// Returns the rainfall rate (mm/h) exceeded for `p` % of the average year.
-pub fn rainfall_rate(lat: Angle, lon: Angle, p: f64) -> f64 {
-    if (p - 0.01).abs() < 1e-10 {
-        return rainfall_rate_r001(lat, lon);
-    }
-
-    let (r, p0) = monthly_rain_params(lat, lon);
-    bisect_rainfall_rate(&r, &p0, p)
 }
 
 fn q_function(x: f64) -> f64 {
@@ -161,32 +109,44 @@ fn annual_exceedance(r: &[f64; 12], p0: &[f64; 12], r_ref: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::provider::test_fixture::provider;
+    use lox_core::units::Angle;
 
     #[test]
     fn test_rainfall_rate_r001_madrid() {
-        let r = rainfall_rate_r001(Angle::degrees(40.4), Angle::degrees(-3.7));
+        let p = provider();
+        let r = p
+            .rainfall_rate_r001(Angle::degrees(40.4), Angle::degrees(-3.7))
+            .unwrap();
         assert!(r > 5.0 && r < 80.0, "R001 Madrid = {r}");
     }
 
     #[test]
     fn test_rainfall_rate_at_001_equals_r001() {
+        let p = provider();
         let lat = Angle::degrees(40.4);
         let lon = Angle::degrees(-3.7);
-        let r001 = rainfall_rate_r001(lat, lon);
-        let r = rainfall_rate(lat, lon, 0.01);
+        let r001 = p.rainfall_rate_r001(lat, lon).unwrap();
+        let r = p.rainfall_rate(lat, lon, 0.01).unwrap();
         assert!((r - r001).abs() < 1e-6, "r001={r001}, rate(0.01)={r}");
     }
 
     #[test]
     fn test_rainfall_rate_other_probability() {
-        let r = rainfall_rate(Angle::degrees(40.4), Angle::degrees(-3.7), 0.1);
+        let p = provider();
+        let r = p
+            .rainfall_rate(Angle::degrees(40.4), Angle::degrees(-3.7), 0.1)
+            .unwrap();
         assert!(r > 0.0, "rainfall rate at 0.1% should be > 0");
     }
 
     #[test]
     fn test_rainfall_probability() {
-        let p = rainfall_probability(Angle::degrees(40.4), Angle::degrees(-3.7));
-        assert!(p > 0.0 && p < 100.0, "P0 = {p}%");
+        let p = provider();
+        let prob = p
+            .rainfall_probability(Angle::degrees(40.4), Angle::degrees(-3.7))
+            .unwrap();
+        assert!(prob > 0.0 && prob < 100.0, "P0 = {prob}%");
     }
 
     #[test]
