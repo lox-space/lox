@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-/// High-level ephemeris API for [`super::parser::Spk`] files.
+/// High-level ephemeris API for [`Spk`](crate::spk::parser::Spk) files.
 pub mod api;
 /// Low-level DAF/SPK binary file parser.
 pub mod parser;
