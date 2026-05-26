@@ -9,7 +9,12 @@ use pyo3::{Bound, PyResult, create_exception, pyclass, pymethods};
 use crate::time::deltas::TimeDelta;
 use crate::time::intervals::TimeDeltaInterval;
 
-create_exception!(lox_space, NonFiniteTimeDeltaError, PyException);
+create_exception!(
+    lox_space,
+    NonFiniteTimeDeltaError,
+    PyException,
+    "Python exception raised when a non-finite `TimeDelta` is accessed."
+);
 
 /// Represents a duration or time difference.
 ///
@@ -29,42 +34,52 @@ pub struct PyTimeDelta(pub TimeDelta);
 #[pymethods]
 impl PyTimeDelta {
     #[new]
+    /// Constructs a `TimeDelta` from a duration in seconds.
     pub fn new(seconds: f64) -> Self {
         Self(TimeDelta::from_seconds_f64(seconds))
     }
 
+    /// Returns the developer representation of the `TimeDelta`.
     pub fn __repr__(&self) -> String {
         format!("TimeDelta({})", self.to_decimal_seconds())
     }
 
+    /// Returns the human-readable string representation of the `TimeDelta`.
     pub fn __str__(&self) -> String {
         format!("{} seconds", self.to_decimal_seconds())
     }
 
+    /// Returns the duration as a `float` in decimal seconds.
     pub fn __float__(&self) -> f64 {
         self.to_decimal_seconds()
     }
 
+    /// Returns the negation of the `TimeDelta`.
     pub fn __neg__(&self) -> Self {
         Self(-self.0)
     }
 
+    /// Returns the sum of two `TimeDelta` values.
     pub fn __add__(&self, other: PyTimeDelta) -> Self {
         Self(self.0 + other.0)
     }
 
+    /// Returns the difference of two `TimeDelta` values.
     pub fn __sub__(&self, other: PyTimeDelta) -> Self {
         Self(self.0 - other.0)
     }
 
+    /// Returns the `TimeDelta` scaled by a floating-point factor.
     pub fn __mul__(&self, other: f64) -> Self {
         Self(other * self.0)
     }
 
+    /// Returns the `TimeDelta` scaled by a floating-point factor (right-hand side).
     pub fn __rmul__(&self, other: f64) -> Self {
         Self(other * self.0)
     }
 
+    /// Returns `true` if two `TimeDelta` values are equal.
     pub fn __eq__(&self, other: PyTimeDelta) -> bool {
         self.0 == other.0
     }

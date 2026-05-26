@@ -5,7 +5,7 @@
 //! Analytical Sun ephemeris adapter.
 //!
 //! Wraps [`lox_earth::ephemeris::apparent_sun_position`] behind the
-//! [`Ephemeris`] trait so that Earth-centred analyses can run without an
+//! [`Ephemeris`](lox_ephem::Ephemeris) trait so that Earth-centred analyses can run without an
 //! SPK file.
 
 use std::error::Error;

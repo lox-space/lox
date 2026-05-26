@@ -8,6 +8,7 @@ use pyo3::{
     types::PyAnyMethods,
 };
 
+/// Wrapper converting [`UnknownTimeScaleError`] into a Python `ValueError`.
 pub struct PyUnknownTimeScaleError(pub UnknownTimeScaleError);
 
 impl From<PyUnknownTimeScaleError> for PyErr {
@@ -39,6 +40,7 @@ pub struct PyTimeScale(pub DynTimeScale);
 #[pymethods]
 impl PyTimeScale {
     #[new]
+    /// Constructs a `TimeScale` from its abbreviation string (e.g., `"TAI"`).
     pub fn new(abbreviation: &str) -> PyResult<Self> {
         Ok(PyTimeScale(
             abbreviation.parse().map_err(PyUnknownTimeScaleError)?,
@@ -48,10 +50,12 @@ impl PyTimeScale {
         (self.abbreviation(),)
     }
 
+    /// Returns the developer representation of the `TimeScale`.
     pub fn __repr__(&self) -> String {
         format!("TimeScale(\"{}\")", self.0)
     }
 
+    /// Returns the abbreviation string of the `TimeScale`.
     pub fn __str__(&self) -> String {
         format!("{}", self.0)
     }

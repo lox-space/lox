@@ -5,4 +5,5 @@
 pub use lox_orbits::constellations::*;
 
 #[cfg(feature = "python")]
+/// Python bindings exposed via PyO3.
 pub mod python;

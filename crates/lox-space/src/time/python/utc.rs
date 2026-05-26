@@ -13,6 +13,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
 use pyo3::{Bound, PyAny, PyErr, PyResult, pyclass, pymethods};
 
+/// Wrapper converting [`UtcError`] into a Python `ValueError`.
 pub struct PyUtcError(pub UtcError);
 
 impl From<PyUtcError> for PyErr {
@@ -47,6 +48,7 @@ pub struct PyUtc(pub Utc);
 #[pymethods]
 impl PyUtc {
     #[new]
+    /// Constructs a `UTC` from calendar date and time components.
     #[pyo3(signature = (year, month, day, hour = 0, minute = 0, seconds = 0.0))]
     pub fn new(
         year: i64,
@@ -79,10 +81,12 @@ impl PyUtc {
         Ok(PyUtc(iso.parse().map_err(PyUtcError)?))
     }
 
+    /// Returns the human-readable string representation of the `UTC`.
     pub fn __str__(&self) -> String {
         self.0.to_string()
     }
 
+    /// Returns the developer representation of the `UTC`.
     pub fn __repr__(&self) -> String {
         format!(
             "UTC({}, {}, {}, {}, {}, {})",
@@ -95,6 +99,7 @@ impl PyUtc {
         )
     }
 
+    /// Returns `true` if two `UTC` timestamps are equal.
     pub fn __eq__(&self, other: PyUtc) -> bool {
         self.0 == other.0
     }

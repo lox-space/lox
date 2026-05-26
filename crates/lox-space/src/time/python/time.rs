@@ -28,8 +28,14 @@ use crate::time::{DynTime, Time, TimeError, TimeScaleMismatch};
 use super::time_scales::PyTimeScale;
 use super::utc::PyUtc;
 
-create_exception!(lox_space, NonFiniteTimeError, PyException);
+create_exception!(
+    lox_space,
+    NonFiniteTimeError,
+    PyException,
+    "Python exception raised when a non-finite `Time` is accessed."
+);
 
+/// Wrapper converting [`TimeError`] into a Python `ValueError`.
 pub struct PyTimeError(pub TimeError);
 
 impl From<PyTimeError> for PyErr {
@@ -46,6 +52,7 @@ impl From<PyTimeScaleMismatch> for PyErr {
     }
 }
 
+/// Wrapper parsing a Julian date epoch string into a [`lox_time::julian_dates::Epoch`].
 pub struct PyEpoch(pub Epoch);
 
 impl FromStr for PyEpoch {
@@ -63,6 +70,7 @@ impl FromStr for PyEpoch {
     }
 }
 
+/// Wrapper parsing a Julian date unit string into a [`lox_time::julian_dates::Unit`].
 pub struct PyUnit(pub Unit);
 
 impl FromStr for PyUnit {
@@ -107,6 +115,7 @@ pub struct PyTime(pub DynTime);
 #[pymethods]
 impl PyTime {
     #[new]
+    /// Constructs a `Time` from a time scale and calendar date/time components.
     #[pyo3(signature=(scale, year, month, day, hour = 0, minute = 0, seconds = 0.0))]
     pub fn new(
         scale: &Bound<'_, PyAny>,
@@ -313,10 +322,12 @@ impl PyTime {
     #[classattr]
     const __hash__: Option<Py<PyAny>> = None;
 
+    /// Returns the human-readable string representation of the `Time`.
     pub fn __str__(&self) -> String {
         self.0.to_string()
     }
 
+    /// Returns the developer representation of the `Time`.
     pub fn __repr__(&self) -> String {
         format!(
             "Time(\"{}\", {}, {}, {}, {}, {}, {})",
@@ -330,10 +341,12 @@ impl PyTime {
         )
     }
 
+    /// Returns the `Time` advanced by a `TimeDelta`.
     pub fn __add__(&self, delta: PyTimeDelta) -> Self {
         PyTime(self.0 + delta.0)
     }
 
+    /// Returns the `Time` or `TimeDelta` resulting from subtracting a `Time` or `TimeDelta`.
     pub fn __sub__<'py>(
         &self,
         py: Python<'py>,

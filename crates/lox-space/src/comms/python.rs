@@ -60,6 +60,7 @@ pub struct PyDecibel(pub Decibel);
 #[pymethods]
 impl PyDecibel {
     #[new]
+    /// Constructs a Decibel value from a raw dB number.
     pub fn new(value: f64) -> Self {
         Self(Decibel::new(value))
     }
@@ -108,6 +109,7 @@ impl PyDecibel {
         (self.0.as_f64(),)
     }
 
+    /// Returns the developer-readable representation.
     pub fn __repr__(&self) -> String {
         format!("Decibel({})", repr_f64(self.0.as_f64()))
     }
@@ -336,6 +338,7 @@ impl PyDipolePattern {
 #[pyclass(name = "SimpleAntenna", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PySimpleAntenna {
+    /// The wrapped [`SimpleAntenna`] value.
     pub inner: SimpleAntenna,
 }
 

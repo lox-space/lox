@@ -11,6 +11,7 @@ use pyo3::{
 
 use crate::ephem::spk::parser::{DafSpkError, Spk};
 
+/// PyO3 error wrapper for [`lox_ephem::spk::parser::DafSpkError`].
 pub struct PyDafSpkError(pub DafSpkError);
 
 impl From<PyDafSpkError> for PyErr {
@@ -27,8 +28,8 @@ impl From<PyDafSpkError> for PyErr {
 ///
 /// SPK files can be obtained from:
 ///
-/// - NASA NAIF: https://naif.jpl.nasa.gov/naif/data.html
-/// - ESA SPICE Service: https://spice.esac.esa.int/
+/// - NASA NAIF: <https://naif.jpl.nasa.gov/naif/data.html>
+/// - ESA SPICE Service: <https://spice.esac.esa.int/>
 ///
 /// Args:
 ///     path: Path to the SPK file (.bsp).

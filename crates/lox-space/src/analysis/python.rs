@@ -54,6 +54,7 @@ impl From<PyVisibilityError> for PyErr {
     }
 }
 
+/// Error wrapper converting `ElevationMaskError` into a Python `ValueError`.
 pub struct PyElevationMaskError(pub ElevationMaskError);
 
 impl From<PyElevationMaskError> for PyErr {
@@ -1551,7 +1552,9 @@ impl PyOpticalAccessAnalysis {
 )]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PyPassDirection {
+    /// Spacecraft is moving from south to north at the access midpoint.
     Ascending,
+    /// Spacecraft is moving from north to south at the access midpoint.
     Descending,
 }
 
@@ -1674,8 +1677,11 @@ impl PyAccessResults {
 )]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PyLookSide {
+    /// SAR payload images to the left of the ground track.
     Left,
+    /// SAR payload images to the right of the ground track.
     Right,
+    /// SAR payload can image on either side of the ground track.
     Either,
 }
 
