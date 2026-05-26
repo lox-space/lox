@@ -70,6 +70,8 @@ jobs:
         shell: bash
         run: |
           set -e
+          python -m pip download --no-deps itur==0.4.0 -d itur-wheel
+          cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
           uv venv
           uv pip install --group dev
           uv pip install lox-space --offline --find-links dist --force-reinstall
@@ -110,6 +112,8 @@ jobs:
         shell: bash
         run: |
           set -e
+          python -m pip download --no-deps itur==0.4.0 -d itur-wheel
+          cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
           uv venv
           uv pip install --group dev
           uv pip install lox-space --offline --find-links dist --force-reinstall
@@ -147,6 +151,8 @@ jobs:
       - name: pytest
         run: |
           set -e
+          python -m pip download --no-deps itur==0.4.0 -d itur-wheel
+          cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
           uv venv
           uv pip install --group dev
           uv pip install lox-space --offline --find-links dist --force-reinstall
