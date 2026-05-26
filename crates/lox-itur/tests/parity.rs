@@ -8,10 +8,11 @@
 
 mod common;
 
-use lox_core::units::Angle;
+use lox_core::units::{Angle, Frequency};
 use lox_itur::p453;
 use lox_itur::p836;
 use lox_itur::p839;
+use lox_itur::p840;
 use lox_itur::p1510;
 use lox_itur::p1511;
 
@@ -98,5 +99,27 @@ fn rain_height_madrid() {
     let lon = Angle::degrees(-3.7);
     let a = p.rain_height(lat, lon).unwrap().to_kilometers();
     let b = p839::rain_height(lat, lon).to_kilometers();
+    assert!((a - b).abs() < 1e-9);
+}
+
+#[test]
+fn columnar_content_reduced_liquid_madrid() {
+    let pv = common::provider();
+    let lat = Angle::degrees(40.4);
+    let lon = Angle::degrees(-3.7);
+    let a = pv.columnar_content_reduced_liquid(lat, lon, 1.0).unwrap();
+    let b = p840::columnar_content_reduced_liquid(lat, lon, 1.0);
+    assert!((a - b).abs() < 1e-9);
+}
+
+#[test]
+fn cloud_attenuation_madrid() {
+    let pv = common::provider();
+    let lat = Angle::degrees(40.4);
+    let lon = Angle::degrees(-3.7);
+    let el = Angle::degrees(30.0);
+    let f = Frequency::gigahertz(20.0);
+    let a = pv.cloud_attenuation(lat, lon, el, f, 1.0).unwrap();
+    let b = p840::cloud_attenuation(lat, lon, el, f, 1.0);
     assert!((a - b).abs() < 1e-9);
 }
