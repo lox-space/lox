@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 //! `f64` math dispatched per build mode: inherent methods under `std`,
-//! [`libm`] under no_std. Free-function form (`sqrt(x)` not `x.sqrt()`) so
+//! [`libm`](https://docs.rs/libm) under no_std. Free-function form (`sqrt(x)` not `x.sqrt()`) so
 //! call sites don't need `cfg`-gated trait imports.
 
 // Rounding helpers

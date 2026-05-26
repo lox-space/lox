@@ -12,16 +12,16 @@
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MeanElements {
-    /// Semi-major axis [m].
+    /// Semi-major axis \[m\].
     pub a: f64,
     /// Eccentricity.
     pub e: f64,
-    /// Inclination [rad].
+    /// Inclination \[rad\].
     pub i: f64,
-    /// RAAN [rad].
+    /// RAAN \[rad\].
     pub raan: f64,
-    /// Argument of periapsis [rad].
+    /// Argument of periapsis \[rad\].
     pub aop: f64,
-    /// Mean anomaly [rad].
+    /// Mean anomaly \[rad\].
     pub m: f64,
 }

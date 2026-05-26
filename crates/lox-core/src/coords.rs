@@ -971,8 +971,8 @@ impl CartesianTrajectory {
     ///
     /// Position components (x, y, z) are interpolated with Hermite cubic splines
     /// using velocity (vx, vy, vz) as the known derivatives. Velocity components
-    /// are stored as cubic splines for raw data access but the [`velocity`] and
-    /// [`at`] methods derive velocity from the position spline derivative.
+    /// are stored as cubic splines for raw data access but the [`velocity`](Self::velocity) and
+    /// [`at`](Self::at) methods derive velocity from the position spline derivative.
     ///
     /// # Panics
     ///
