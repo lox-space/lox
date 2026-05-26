@@ -26,17 +26,11 @@ serde_json = { workspace = true }
 sha2 = { workspace = true }
 thiserror = { workspace = true, features = ["std"] }
 zip = { workspace = true }
-zstd = { workspace = true }
 
 [dev-dependencies]
 divan.workspace = true
 lox-test-utils = { workspace = true, features = ["derive"] }
 tempfile = { workspace = true }
-
-[build-dependencies]
-ureq = { workspace = true }
-zip = { workspace = true }
-zstd = { workspace = true }
 
 [features]
 serde = ["lox-core/serde"]
