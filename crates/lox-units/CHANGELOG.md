@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.15](https://github.com/lox-space/lox/compare/lox-units-v0.1.0-alpha.14...lox-units-v0.1.0-alpha.15) - 2026-05-26
+
+### Other
+
+- updated the following local packages: lox-core
+
 ## [0.1.0-alpha.14](https://github.com/lox-space/lox/compare/lox-units-v0.1.0-alpha.13...lox-units-v0.1.0-alpha.14) - 2026-05-18
 
 ### Added

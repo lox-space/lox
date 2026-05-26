@@ -6,6 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.48](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.47...lox-space-v0.1.0-alpha.48) - 2026-05-26
+
+### Added
+
+- *(lox-space)* expose ItuProvider; grid-using itur fns become methods
+- *(lox-space)* hashable PassDirection/LookSide; richer AccessWindow repr
+- *(lox-space)* add PyPassDirection + PyAccessWindow
+- *(lox-space)* [**breaking**] rename optical Python types, add SAR Python bindings
+
+### Fixed
+
+- *(lox-space)* opt PyAccessWindow into FromPyObject (pyo3 0.28 deprecation)
+
+### Other
+
+- *(lox-space)* enable missing_docs and document crate and Python bindings
+- *(lox-space)* update Python itur docs for provider pattern
+- *(lox-space)* Python tests + stubs route through ItuProvider
+- *(lox-space)* document pass direction; update examples to windows() API
+- *(lox-space)* AccessWindow serde round-trip
+- *(lox-space)* adapt Python tests to AccessWindow API
+- address review comments
+- *(lox-space)* add dual payload serde test
+- *(lox-space)* better Python test coverage
+- cleanups
+- *(lox-space)* update imaging docs
+- *(lox-space)* upsert imaging tests
+- *(lox-analysis)* [**breaking**] rename "coverage" feature to "imaging"
+
 ## [0.1.0-alpha.47](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.46...lox-space-v0.1.0-alpha.47) - 2026-05-18
 
 ### Added
