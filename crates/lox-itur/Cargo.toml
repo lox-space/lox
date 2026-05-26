@@ -23,6 +23,7 @@ lox-core = { workspace = true, features = ["std"] }
 libm = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
+sha2 = { workspace = true }
 thiserror = { workspace = true, features = ["std"] }
 zip = { workspace = true }
 zstd = { workspace = true }
