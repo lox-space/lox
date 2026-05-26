@@ -137,6 +137,40 @@ impl ItuProvider {
             g.bilinear(lat.to_degrees(), lon.to_degrees()),
         ))
     }
+
+    /// Annual surface mean temperature (ITU-R P.1510).
+    pub fn surface_mean_temperature(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+    ) -> Result<lox_core::units::Temperature, ItuProviderError> {
+        let g = self.grid_xyz("1510/v1_lat.npy", "1510/v1_lon.npy", "1510/v1_t_annual.npy")?;
+        Ok(lox_core::units::Temperature::kelvin(
+            g.bilinear(lat.to_degrees(), lon.to_degrees()),
+        ))
+    }
+
+    /// Monthly surface mean temperature for `month` ∈ 1..=12 (ITU-R P.1510).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `month` is not in 1..=12.
+    pub fn surface_month_mean_temperature(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+        month: u8,
+    ) -> Result<lox_core::units::Temperature, ItuProviderError> {
+        assert!(
+            (1..=12).contains(&month),
+            "month must be 1..=12, got {month}"
+        );
+        let key = format!("1510/v1_t_month{month:02}.npy");
+        let g = self.grid_xyz("1510/v1_lat.npy", "1510/v1_lon.npy", &key)?;
+        Ok(lox_core::units::Temperature::kelvin(
+            g.bilinear(lat.to_degrees(), lon.to_degrees()),
+        ))
+    }
 }
 
 fn read_entry_bytes(

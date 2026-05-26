@@ -9,6 +9,7 @@
 mod common;
 
 use lox_core::units::Angle;
+use lox_itur::p1510;
 use lox_itur::p1511;
 
 #[test]
@@ -22,4 +23,27 @@ fn topographic_altitude_madrid() {
         (from_provider - from_free).abs() < 1e-9,
         "provider={from_provider} free={from_free}"
     );
+}
+
+#[test]
+fn surface_mean_temperature_madrid() {
+    let p = common::provider();
+    let lat = Angle::degrees(40.4);
+    let lon = Angle::degrees(-3.7);
+    let a = p.surface_mean_temperature(lat, lon).unwrap().to_kelvin();
+    let b = p1510::surface_mean_temperature(lat, lon).to_kelvin();
+    assert!((a - b).abs() < 1e-9);
+}
+
+#[test]
+fn surface_month_mean_temperature_madrid_july() {
+    let p = common::provider();
+    let lat = Angle::degrees(40.4);
+    let lon = Angle::degrees(-3.7);
+    let a = p
+        .surface_month_mean_temperature(lat, lon, 7)
+        .unwrap()
+        .to_kelvin();
+    let b = p1510::surface_month_mean_temperature(lat, lon, 7).to_kelvin();
+    assert!((a - b).abs() < 1e-9);
 }
