@@ -302,6 +302,58 @@ impl ItuProvider {
         let h0_km = g.bilinear(lat.to_degrees(), lon.to_degrees());
         Ok(lox_core::units::Distance::kilometers(h0_km + 0.36))
     }
+
+    /// Total columnar content of reduced cloud liquid water [kg/m²] exceeded for `p`% (P.840).
+    pub fn columnar_content_reduced_liquid(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+        p: f64,
+    ) -> Result<f64, ItuProviderError> {
+        self.interpolate_prob_18(
+            "840/v7_lred",
+            "840/v7_lat.npy",
+            "840/v7_lon.npy",
+            lat.to_degrees(),
+            lon.to_degrees(),
+            p,
+        )
+    }
+
+    /// Cloud attenuation [dB] on a slant path (P.840-9).
+    pub fn cloud_attenuation(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+        elevation: lox_core::units::Angle,
+        frequency: lox_core::units::Frequency,
+        p: f64,
+    ) -> Result<f64, ItuProviderError> {
+        let lred = self.columnar_content_reduced_liquid(lat, lon, p)?;
+        let kl = crate::p840::cloud_liquid_mass_absorption_coefficient(frequency.to_gigahertz());
+        let sin_el = elevation.to_degrees().max(5.0).to_radians().sin();
+        Ok(lred * kl / sin_el)
+    }
+
+    /// Log-normal approximation coefficients (m, σ, P_clw) for cloud attenuation (P.840).
+    pub fn lognormal_approximation_coefficient(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+    ) -> Result<crate::p840::LognormalCoefficients, ItuProviderError> {
+        let lat_deg = lat.to_degrees();
+        let lon_deg = lon.to_degrees();
+        let m = self
+            .grid_xyz("840/v7_lat.npy", "840/v7_lon.npy", "840/v7_m.npy")?
+            .bilinear(lat_deg, lon_deg);
+        let sigma = self
+            .grid_xyz("840/v7_lat.npy", "840/v7_lon.npy", "840/v7_sigma.npy")?
+            .bilinear(lat_deg, lon_deg);
+        let pclw = self
+            .grid_xyz("840/v7_lat.npy", "840/v7_lon.npy", "840/v7_pclw.npy")?
+            .bilinear(lat_deg, lon_deg);
+        Ok(crate::p840::LognormalCoefficients { m, sigma, pclw })
+    }
 }
 
 fn read_entry_bytes(
