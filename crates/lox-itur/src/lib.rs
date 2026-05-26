@@ -110,6 +110,7 @@ impl EnvironmentalLosses {
     ///
     /// # Arguments
     ///
+    /// * `provider` — Open [`ItuProvider`] supplying the gridded reference data
     /// * `lat` — Latitude
     /// * `lon` — Longitude
     /// * `frequency` — Frequency
@@ -118,6 +119,7 @@ impl EnvironmentalLosses {
     /// * `diameter` — Physical antenna diameter
     /// * `polarisation_tilt` — Polarisation tilt angle (45° for circular)
     pub fn new(
+        provider: &ItuProvider,
         lat: Angle,
         lon: Angle,
         frequency: Frequency,
@@ -125,42 +127,50 @@ impl EnvironmentalLosses {
         p: f64,
         diameter: Distance,
         polarisation_tilt: Angle,
-    ) -> EnvironmentalLosses {
-        let lat_deg = lat.to_degrees();
-        let lon_deg = lon.to_degrees();
+    ) -> Result<EnvironmentalLosses, ItuProviderError> {
         let f_ghz = frequency.to_gigahertz();
         // ITU-R P.618/P.676 approximate methods are only valid for el ≥ 5°.
         let el_deg = elevation.to_degrees().max(5.0);
-        let d_m = diameter.to_meters();
         let tau_deg = polarisation_tilt.to_degrees();
 
-        let hs_km = p1511::topographic_altitude(lat, lon).to_kilometers();
+        let hs_km = provider.topographic_altitude(lat, lon)?.to_kilometers();
 
         // Gaseous attenuation (P.676 approximate method)
         let p_hpa = p835::standard_pressure(Distance::kilometers(hs_km)).to_hpa();
-        let t_k = p1510::surface_mean_temperature(lat, lon).to_kelvin();
-        let rho = p836::surface_water_vapour_density(lat, lon, p.max(0.1));
+        let t_k = provider.surface_mean_temperature(lat, lon)?.to_kelvin();
+        let rho = provider.surface_water_vapour_density(lat, lon, p.max(0.1))?;
         let (a_o, a_w) = p676::gaseous_attenuation_slant_path_raw(f_ghz, el_deg, p_hpa, rho, t_k);
         let a_gas = a_o + a_w;
 
         // Rain attenuation (P.618)
-        let a_rain =
-            p618::rain_attenuation_raw(lat_deg, lon_deg, f_ghz, el_deg, p, tau_deg, Some(hs_km));
+        let a_rain = provider
+            .rain_attenuation(
+                lat,
+                lon,
+                frequency,
+                elevation,
+                p,
+                polarisation_tilt,
+                Some(Distance::kilometers(hs_km)),
+            )?
+            .as_f64();
 
         // Cloud attenuation (P.840)
-        let a_cloud = p840::cloud_attenuation(lat, lon, elevation, frequency, p.max(0.1));
+        let a_cloud = provider.cloud_attenuation(lat, lon, elevation, frequency, p.max(0.1))?;
 
         // Scintillation (P.618 + P.453 for N_wet)
-        let a_scint = p618::scintillation_attenuation_raw(
-            f_ghz,
-            el_deg,
-            p.max(0.01),
-            d_m,
-            0.5,
-            None,
-            lat_deg,
-            lon_deg,
-        );
+        let a_scint = provider
+            .scintillation_attenuation(
+                frequency,
+                elevation,
+                p.max(0.01),
+                diameter,
+                0.5,
+                None,
+                lat,
+                lon,
+            )?
+            .as_f64();
 
         // Cross-polarization discrimination (P.618)
         let a_depol = if a_rain > 0.0 && (4.0..=55.0).contains(&f_ghz) {
@@ -174,13 +184,13 @@ impl EnvironmentalLosses {
         // ITU-R combined total: A = Ag + sqrt((Ar + Ac)² + As²)
         let a_total = a_gas + ((a_rain + a_cloud).powi(2) + a_scint.powi(2)).sqrt();
 
-        EnvironmentalLosses {
+        Ok(EnvironmentalLosses {
             rain: Decibel::new(a_rain),
             gaseous: Decibel::new(a_gas),
             scintillation: Decibel::new(a_scint),
             atmospheric: Decibel::new(a_total),
             cloud: Decibel::new(a_cloud),
             depolarization: Decibel::new(a_depol),
-        }
+        })
     }
 }
