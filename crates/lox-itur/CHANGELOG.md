@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.5](https://github.com/lox-space/lox/compare/lox-itur-v0.1.0-alpha.4...lox-itur-v0.1.0-alpha.5) - 2026-05-26
+
+### Added
+
+- *(lox-itur)* provider methods for p618 rain + scintillation
+- *(lox-itur)* provider methods for p837
+- *(lox-itur)* provider methods for p840
+- *(lox-itur)* provider methods for p839
+- *(lox-itur)* provider method for p453 Nwet
+- *(lox-itur)* provider methods for p836
+- *(lox-itur)* provider methods for p1510
+- *(lox-itur)* add bundle packager (cargo run --bin pack)
+- *(lox-itur)* ItuProvider grid_xyz cache helper
+- *(lox-itur)* add ItuProvider skeleton (open + manifest)
+- *(lox-itur)* add bundle manifest type
+- *(lox-itur)* add NPY parser (npz module)
+
+### Other
+
+- *(lox-itur)* enable missing_docs lint and document public API
+- *(lox-itur)* index-slot grid cache (lock-free, no per-call hashing)
+- *(lox-itur)* fix rustdoc intra-doc link and bare URL warnings
+- *(lox-itur)* README documents bundle workflow
+- *(lox-itur)* rewrite crate-level rustdoc for provider pattern
+- *(lox-itur)* drop build.rs + data.rs + zstd dep
+- *(lox-itur)* delete LazyGrid free fns; tests use provider
+- *(lox-itur)* EnvironmentalLosses::new takes &ItuProvider
+- *(lox-itur)* provider topographic_altitude parity (p1511)
+- *(lox-itur)* baseline divan benches before provider refactor
+
 ## [0.1.0-alpha.4](https://github.com/lox-space/lox/compare/lox-itur-v0.1.0-alpha.3...lox-itur-v0.1.0-alpha.4) - 2026-05-18
 
 ### Added
