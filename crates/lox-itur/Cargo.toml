@@ -21,7 +21,8 @@ readme = "README.md"
 lox-core = { workspace = true, features = ["std"] }
 
 libm = { workspace = true }
-serde = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 thiserror = { workspace = true, features = ["std"] }
 zstd = { workspace = true }
 
@@ -35,7 +36,7 @@ zip = { workspace = true }
 zstd = { workspace = true }
 
 [features]
-serde = ["dep:serde", "lox-core/serde"]
+serde = ["lox-core/serde"]
 
 [lib]
 doctest = false
