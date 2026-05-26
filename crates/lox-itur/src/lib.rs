@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+#![warn(missing_docs)]
+
 //! ITU-R P-series atmospheric propagation models.
 //!
 //! This crate implements ITU-R recommendations for computing atmospheric attenuation

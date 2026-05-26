@@ -13,7 +13,9 @@ use lox_core::units::{Angle, Distance, Pressure, Temperature};
 /// Season selector for latitude-dependent atmosphere profiles.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Season {
+    /// Summer profile.
     Summer,
+    /// Winter profile.
     Winter,
 }
 
