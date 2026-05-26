@@ -27,7 +27,6 @@
 //! automatically downloads and converts this data. Set `LOX_ITUR_DATA` to
 //! override the data directory.
 
-pub(crate) mod data;
 pub(crate) mod grid;
 pub(crate) mod manifest;
 pub(crate) mod npz;
@@ -118,6 +117,7 @@ impl EnvironmentalLosses {
     /// * `p` — Exceedance probability (% of average year)
     /// * `diameter` — Physical antenna diameter
     /// * `polarisation_tilt` — Polarisation tilt angle (45° for circular)
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         provider: &ItuProvider,
         lat: Angle,
