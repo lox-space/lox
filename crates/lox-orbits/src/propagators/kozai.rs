@@ -5,8 +5,8 @@
 //! Shared math for Kozai-based analytical propagators.
 //!
 //! Provides secular rate formulas (J2 and J4) and Kwok short-period
-//! corrections used by the [`super::j2`] and [`super::j4`] propagator
-//! modules.
+//! corrections used by the [`j2`](crate::propagators::j2) and
+//! [`j4`](crate::propagators::j4) propagator modules.
 //!
 //! # References
 //!
@@ -28,7 +28,7 @@ pub struct BodyConstants {
     pub mu: f64,
     /// J2 zonal harmonic coefficient.
     pub j2: f64,
-    /// Equatorial radius [m].
+    /// Equatorial radius \[m\].
     pub r_eq: f64,
 }
 
