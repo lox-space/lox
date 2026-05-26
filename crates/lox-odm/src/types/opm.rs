@@ -71,7 +71,7 @@ pub struct Maneuver {
 /// The `gm` field captures the operator's chosen gravitational
 /// parameter exactly as written on the wire. It is preserved
 /// regardless of whether the message's center is `Known` (where a
-/// canonical GM is available via [`lox_bodies::Origin::gravitational_parameter`])
+/// canonical GM is available via [`lox_bodies::PointMass::gravitational_parameter`])
 /// or `Custom`. When `None`, the message did not include a `GM`
 /// field on the wire.
 #[derive(Clone, Debug, PartialEq)]

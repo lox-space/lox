@@ -457,7 +457,7 @@ pub enum OdmTimeError {
 /// not a continuous scale (it has leap seconds) and so cannot be represented
 /// by [`DynTimeScale`].
 ///
-/// Used as the target of [`OdmTime::in_scale`] and as the wire-format hint
+/// Used as the target of [`OdmTime::try_in_scale`] and as the wire-format hint
 /// passed to OPM/OEM builders to control the emitted `TIME_SYSTEM` keyword.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum OdmTimeScale {
