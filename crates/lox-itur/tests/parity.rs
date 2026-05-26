@@ -11,6 +11,7 @@ mod common;
 use lox_core::units::{Angle, Frequency};
 use lox_itur::p453;
 use lox_itur::p836;
+use lox_itur::p837;
 use lox_itur::p839;
 use lox_itur::p840;
 use lox_itur::p1510;
@@ -121,5 +122,35 @@ fn cloud_attenuation_madrid() {
     let f = Frequency::gigahertz(20.0);
     let a = pv.cloud_attenuation(lat, lon, el, f, 1.0).unwrap();
     let b = p840::cloud_attenuation(lat, lon, el, f, 1.0);
+    assert!((a - b).abs() < 1e-9);
+}
+
+#[test]
+fn rainfall_rate_r001_madrid() {
+    let p = common::provider();
+    let lat = Angle::degrees(40.4);
+    let lon = Angle::degrees(-3.7);
+    let a = p.rainfall_rate_r001(lat, lon).unwrap();
+    let b = p837::rainfall_rate_r001(lat, lon);
+    assert!((a - b).abs() < 1e-9);
+}
+
+#[test]
+fn rainfall_probability_madrid() {
+    let p = common::provider();
+    let lat = Angle::degrees(40.4);
+    let lon = Angle::degrees(-3.7);
+    let a = p.rainfall_probability(lat, lon).unwrap();
+    let b = p837::rainfall_probability(lat, lon);
+    assert!((a - b).abs() < 1e-9);
+}
+
+#[test]
+fn rainfall_rate_madrid() {
+    let p = common::provider();
+    let lat = Angle::degrees(40.4);
+    let lon = Angle::degrees(-3.7);
+    let a = p.rainfall_rate(lat, lon, 1.0).unwrap();
+    let b = p837::rainfall_rate(lat, lon, 1.0);
     assert!((a - b).abs() < 1e-9);
 }
