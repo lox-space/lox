@@ -22,6 +22,7 @@ use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider}
 use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
 use crate::itur::python::PyEnvironmentalLosses;
+use crate::itur::python::PyItuProvider;
 use crate::itur::python::register_itur_functions;
 use crate::math::python::PySeries;
 use crate::orbits::python::{
@@ -68,6 +69,7 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyComplexReceiver>()?;
     m.add_class::<PyNoiseStage>()?;
     m.add_class::<PyChannel>()?;
+    m.add_class::<PyItuProvider>()?;
     m.add_class::<PyEnvironmentalLosses>()?;
     m.add_class::<PyCommunicationSystem>()?;
     m.add_class::<PyLinkStats>()?;
