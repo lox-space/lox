@@ -987,10 +987,13 @@ pub fn sun_direction_eci_wasm(epoch_iso: &str) -> Result<Vec<f64>, JsValue> {
 }
 
 fn compute_sun_direction_eci(epoch_iso: &str) -> Result<Vec<f64>, String> {
+    use lox_space::bodies::{Earth, RotationalElements};
     use lox_space::earth::ephemeris::apparent_sun_position;
+    use lox_space::frames::iers::earth_rotation::GreenwichMeanSiderealTime;
     use lox_space::time::Time;
+    use lox_space::time::julian_dates::JulianDate;
     use lox_space::time::offsets::DefaultOffsetProvider;
-    use lox_space::time::time_scales::Tdb;
+    use lox_space::time::time_scales::{Tdb, Ut1};
 
     let utc: LoxUtc = epoch_iso
         .parse()
@@ -1010,7 +1013,26 @@ fn compute_sun_direction_eci(epoch_iso: &str) -> Result<Vec<f64>, String> {
         return Err("degenerate sun position".to_string());
     }
     // ICRF (x, y, z) → Three.js Y-up (x, z, -y), normalised.
-    let dir = DVec3::new(sun.x, sun.z, -sun.y).normalize();
+    let mut dir = DVec3::new(sun.x, sun.z, -sun.y).normalize();
+
+    // The globe orients the Earth mesh with the IAU planetary rotation angle W
+    // (lox `rotation_angle`), whose prime-meridian zero differs from the
+    // geographic/sidereal one by a near-constant ~90° offset. Left uncorrected
+    // the ICRF Sun lands ~90° off, lighting the wrong hemisphere. Rotate the
+    // Sun about the polar (world Y) axis by -(GMST - W) so the lit side matches
+    // the geographic texture, leaving the Earth/satellite/ground-track frame
+    // untouched. GMST uses UT1, approximated by UTC (no IERS tables here).
+    let ut1: Time<Ut1> = utc
+        .to_dyn_time()
+        .try_to_scale(DynTimeScale::Ut1, &DefaultOffsetProvider)
+        .map_err(|e| e.to_string())?
+        .with_scale(Ut1);
+    let gmst = GreenwichMeanSiderealTime::iau1982(ut1).0.as_f64();
+    let w = Earth.rotation_angle(tdb.seconds_since_j2000());
+    let delta = gmst - w;
+    let (s, c) = (-delta).sin_cos();
+    dir = DVec3::new(dir.x * c + dir.z * s, dir.y, -dir.x * s + dir.z * c);
+
     Ok(vec![dir.x, dir.y, dir.z])
 }
 
@@ -1617,5 +1639,37 @@ mod tests {
         let dec = compute_sun_direction_eci("2026-12-01T00:00:00").unwrap();
         let dot = jun[0] * dec[0] + jun[1] * dec[1] + jun[2] * dec[2];
         assert!(dot < -0.5, "dot = {dot} (expected near-antiparallel)");
+    }
+
+    // Replicates the globe view's geometry: a geographic point's world-space
+    // direction after the Earth-rotation `Ry(W)` the scene applies, using
+    // AoiPolygon's lonLatToVec3 convention (x, y, z) = (cosφcosλ, sinφ, -cosφsinλ).
+    fn world_point(lon_deg: f64, lat_deg: f64, w: f64) -> [f64; 3] {
+        let lon = lon_deg.to_radians();
+        let lat = lat_deg.to_radians();
+        let cl = lat.cos();
+        let (x, y, z) = (cl * lon.cos(), lat.sin(), -cl * lon.sin());
+        // Three.js Ry(W): x' = x cosW + z sinW ; z' = -x sinW + z cosW.
+        [x * w.cos() + z * w.sin(), y, -x * w.sin() + z * w.cos()]
+    }
+
+    fn solar_dot(iso: &str, lon: f64, lat: f64) -> f64 {
+        let w = compute_earth_rotation_angle_rad(iso).unwrap();
+        let s = compute_sun_direction_eci(iso).unwrap();
+        let g = world_point(lon, lat, w);
+        g[0] * s[0] + g[1] * s[1] + g[2] * s[2]
+    }
+
+    #[test]
+    fn test_subsolar_geometry_greenwich_day_night() {
+        // ~Greenwich apparent noon: the 0°/0° point faces the Sun (dot > 0).
+        let noon = solar_dot("2026-06-21T12:00:00", 0.0, 0.0);
+        // ~Greenwich midnight: the 0°/0° point faces away (dot < 0).
+        let midnight = solar_dot("2026-06-21T00:00:00", 0.0, 0.0);
+        assert!(noon > 0.3, "Greenwich noon should be sunlit, dot = {noon}");
+        assert!(
+            midnight < -0.3,
+            "Greenwich midnight should be dark, dot = {midnight}"
+        );
     }
 }
