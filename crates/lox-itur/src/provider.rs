@@ -354,6 +354,66 @@ impl ItuProvider {
             .bilinear(lat_deg, lon_deg);
         Ok(crate::p840::LognormalCoefficients { m, sigma, pclw })
     }
+
+    /// Rainfall rate exceeded 0.01% of the year [mm/h] (P.837).
+    pub fn rainfall_rate_r001(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+    ) -> Result<f64, ItuProviderError> {
+        let g = self.grid_xyz(
+            "837/v7_lat_r001.npy",
+            "837/v7_lon_r001.npy",
+            "837/v7_r001.npy",
+        )?;
+        Ok(g.bilinear(lat.to_degrees(), lon.to_degrees()))
+    }
+
+    /// Per-month (r, p0) parameters used by both rainfall_probability and rainfall_rate.
+    fn monthly_rain_params(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+    ) -> Result<([f64; 12], [f64; 12]), ItuProviderError> {
+        let lat_deg = lat.to_degrees();
+        let lon_deg = lon.to_degrees();
+        let mut mt = [0.0_f64; 12];
+        let mut t_k = [0.0_f64; 12];
+        for month in 0..12 {
+            let key = format!("837/v7_mt_month{:02}.npy", month + 1);
+            mt[month] = self
+                .grid_xyz("837/v7_lat_mt.npy", "837/v7_lon_mt.npy", &key)?
+                .bilinear(lat_deg, lon_deg);
+            t_k[month] = self
+                .surface_month_mean_temperature(lat, lon, (month + 1) as u8)?
+                .to_kelvin();
+        }
+        Ok(crate::p837::monthly_rain_params_from(&mt, &t_k))
+    }
+
+    /// Annual probability of rain [%] (P.837).
+    pub fn rainfall_probability(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+    ) -> Result<f64, ItuProviderError> {
+        let (_r, p0) = self.monthly_rain_params(lat, lon)?;
+        Ok(crate::p837::rainfall_probability_from(&p0))
+    }
+
+    /// Rainfall rate exceeded for `p`% [mm/h] (P.837).
+    pub fn rainfall_rate(
+        &self,
+        lat: lox_core::units::Angle,
+        lon: lox_core::units::Angle,
+        p: f64,
+    ) -> Result<f64, ItuProviderError> {
+        if (p - 0.01).abs() < 1e-10 {
+            return self.rainfall_rate_r001(lat, lon);
+        }
+        let (r, p0) = self.monthly_rain_params(lat, lon)?;
+        Ok(crate::p837::bisect_rainfall_rate(&r, &p0, p))
+    }
 }
 
 fn read_entry_bytes(

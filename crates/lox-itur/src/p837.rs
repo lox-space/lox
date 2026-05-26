@@ -41,16 +41,15 @@ pub fn rainfall_rate_r001(lat: Angle, lon: Angle) -> f64 {
     R001.get().bilinear(lat.to_degrees(), lon.to_degrees())
 }
 
-fn monthly_rain_params(lat: Angle, lon: Angle) -> ([f64; 12], [f64; 12]) {
-    let lat_deg = lat.to_degrees();
-    let lon_deg = lon.to_degrees();
+/// Per-month rain rate `r_i` (mm/h) and probability-of-rain `p0_i` (%).
+///
+/// Pure — takes pre-fetched monthly MT [mm/month] and surface temperature [K].
+pub(crate) fn monthly_rain_params_from(mt: &[f64; 12], t_k: &[f64; 12]) -> ([f64; 12], [f64; 12]) {
     let mut r = [0.0_f64; 12];
     let mut p0 = [0.0_f64; 12];
 
     for month in 0..12 {
-        let mt = MT_MONTHS[month].get().bilinear(lat_deg, lon_deg);
-        let t_k = p1510::surface_month_mean_temperature(lat, lon, (month + 1) as u8).to_kelvin();
-        let t_c = t_k - 273.15;
+        let t_c = t_k[month] - 273.15;
 
         let r_i = if t_c >= 0.0 {
             0.5874 * (0.0883 * t_c).exp()
@@ -60,14 +59,14 @@ fn monthly_rain_params(lat: Angle, lon: Angle) -> ([f64; 12], [f64; 12]) {
 
         let n = DAYS_PER_MONTH[month];
         let mut p0_i = if r_i > 0.0 {
-            100.0 * mt / (24.0 * n * r_i)
+            100.0 * mt[month] / (24.0 * n * r_i)
         } else {
             0.0
         };
 
         let r_i = if p0_i > 70.0 {
             p0_i = 70.0;
-            100.0 * mt / (24.0 * n * 70.0)
+            100.0 * mt[month] / (24.0 * n * 70.0)
         } else {
             r_i
         };
@@ -79,14 +78,31 @@ fn monthly_rain_params(lat: Angle, lon: Angle) -> ([f64; 12], [f64; 12]) {
     (r, p0)
 }
 
-/// Returns the annual probability of rain (%) at the given location.
-pub fn rainfall_probability(lat: Angle, lon: Angle) -> f64 {
-    let (_r, p0) = monthly_rain_params(lat, lon);
+/// Annual rainfall probability [%] from per-month p0 values. Pure.
+pub(crate) fn rainfall_probability_from(p0: &[f64; 12]) -> f64 {
     let mut total = 0.0;
     for month in 0..12 {
         total += DAYS_PER_MONTH[month] * p0[month];
     }
     total / 365.25
+}
+
+fn monthly_rain_params(lat: Angle, lon: Angle) -> ([f64; 12], [f64; 12]) {
+    let lat_deg = lat.to_degrees();
+    let lon_deg = lon.to_degrees();
+    let mut mt = [0.0_f64; 12];
+    let mut t_k = [0.0_f64; 12];
+    for month in 0..12 {
+        mt[month] = MT_MONTHS[month].get().bilinear(lat_deg, lon_deg);
+        t_k[month] = p1510::surface_month_mean_temperature(lat, lon, (month + 1) as u8).to_kelvin();
+    }
+    monthly_rain_params_from(&mt, &t_k)
+}
+
+/// Returns the annual probability of rain (%) at the given location.
+pub fn rainfall_probability(lat: Angle, lon: Angle) -> f64 {
+    let (_r, p0) = monthly_rain_params(lat, lon);
+    rainfall_probability_from(&p0)
 }
 
 /// Returns the rainfall rate (mm/h) exceeded for `p` % of the average year.
@@ -107,7 +123,7 @@ fn erfc(x: f64) -> f64 {
     libm::erfc(x)
 }
 
-fn bisect_rainfall_rate(r: &[f64; 12], p0: &[f64; 12], p_target: f64) -> f64 {
+pub(crate) fn bisect_rainfall_rate(r: &[f64; 12], p0: &[f64; 12], p_target: f64) -> f64 {
     let mut lo = 1e-10_f64;
     let mut hi = 1000.0_f64;
 
