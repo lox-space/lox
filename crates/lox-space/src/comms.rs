@@ -5,4 +5,5 @@
 pub use lox_comms::*;
 
 #[cfg(feature = "python")]
+/// Python bindings exposed via PyO3.
 pub mod python;

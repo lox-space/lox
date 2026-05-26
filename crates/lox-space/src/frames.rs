@@ -15,4 +15,5 @@ pub use lox_frames::traits;
 pub use lox_frames::traits::*;
 
 #[cfg(feature = "python")]
+/// Python bindings exposed via PyO3.
 pub mod python;

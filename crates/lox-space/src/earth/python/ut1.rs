@@ -9,8 +9,14 @@ use pyo3::exceptions::PyException;
 use pyo3::types::{PyAnyMethods, PyTuple};
 use pyo3::{Bound, PyErr, PyResult, create_exception, pyclass, pymethods};
 
-create_exception!(lox_space, EopParserError, PyException);
+create_exception!(
+    lox_space,
+    EopParserError,
+    PyException,
+    "Python exception raised when an EOP data file cannot be parsed."
+);
 
+/// PyO3 error wrapper for [`lox_earth::eop::EopParserError`].
 pub struct PyEopParserError(pub eop::EopParserError);
 
 impl From<PyEopParserError> for PyErr {
@@ -19,8 +25,14 @@ impl From<PyEopParserError> for PyErr {
     }
 }
 
-create_exception!(lox_space, EopProviderError, PyException);
+create_exception!(
+    lox_space,
+    EopProviderError,
+    PyException,
+    "Python exception raised when EOP data cannot be retrieved for a given time."
+);
 
+/// PyO3 error wrapper for [`lox_earth::eop::EopProviderError`].
 pub struct PyEopProviderError(pub lox_earth::eop::EopProviderError);
 
 impl From<PyEopProviderError> for PyErr {
@@ -37,8 +49,8 @@ impl From<PyEopProviderError> for PyErr {
 ///
 /// EOP data files can be obtained from:
 ///
-/// - IERS: https://www.iers.org/IERS/EN/DataProducts/EarthOrientationData/eop.html
-/// - Celestrak: https://celestrak.org/SpaceData/
+/// - IERS: <https://www.iers.org/IERS/EN/DataProducts/EarthOrientationData/eop.html>
+/// - Celestrak: <https://celestrak.org/SpaceData/>
 ///
 /// Args:
 ///     path: Path to the EOP data file (CSV format).
@@ -55,6 +67,7 @@ pub struct PyEopProvider(pub EopProvider);
 impl PyEopProvider {
     #[pyo3(signature = (*args))]
     #[new]
+    /// Construct an `EOPProvider` from one or two EOP data file paths.
     pub fn new(args: &Bound<'_, PyTuple>) -> PyResult<PyEopProvider> {
         let (path1, path2) = if let Ok((path1, path2)) = args.extract::<(PathBuf, PathBuf)>() {
             (path1, path2)

@@ -12,4 +12,5 @@ pub use lox_orbits::orbits::*;
 pub use lox_orbits::propagators;
 
 #[cfg(feature = "python")]
+/// Python bindings exposed via PyO3.
 pub mod python;

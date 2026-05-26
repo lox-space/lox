@@ -14,6 +14,7 @@ use pyo3::{
     pyclass, pymethods,
 };
 
+/// PyO3 error wrapper for [`lox_frames::dynamic::UnknownFrameError`].
 pub struct PyUnknownFrameError(pub UnknownFrameError);
 
 impl From<PyUnknownFrameError> for PyErr {
@@ -22,8 +23,14 @@ impl From<PyUnknownFrameError> for PyErr {
     }
 }
 
-create_exception!(lox_space, FrameTransformationError, PyException);
+create_exception!(
+    lox_space,
+    FrameTransformationError,
+    PyException,
+    "Python exception raised when a frame transformation cannot be performed."
+);
 
+/// PyO3 error wrapper for [`lox_frames::rotations::DynRotationError`].
 pub struct PyDynRotationError(pub DynRotationError);
 
 impl From<PyDynRotationError> for PyErr {
@@ -86,6 +93,7 @@ impl PyFrame {
         self.0.abbreviation()
     }
 
+    /// Return the string representation of this frame.
     pub fn __repr__(&self) -> String {
         format!("Frame(\"{}\")", self.0.abbreviation())
     }

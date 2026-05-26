@@ -2,4 +2,5 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+/// Python bindings exposed via PyO3.
 pub mod ut1;

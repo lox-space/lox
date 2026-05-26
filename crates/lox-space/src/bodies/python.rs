@@ -14,8 +14,14 @@ use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use std::str::FromStr;
 
-create_exception!(lox_space, UndefinedOriginPropertyError, PyException);
+create_exception!(
+    lox_space,
+    UndefinedOriginPropertyError,
+    PyException,
+    "Python exception raised when a body property is not defined for a given origin."
+);
 
+/// PyO3 error wrapper for [`lox_bodies::UndefinedOriginPropertyError`].
 pub struct PyUndefinedOriginPropertyError(pub crate::bodies::UndefinedOriginPropertyError);
 
 impl From<PyUndefinedOriginPropertyError> for PyErr {
@@ -24,6 +30,7 @@ impl From<PyUndefinedOriginPropertyError> for PyErr {
     }
 }
 
+/// PyO3 error wrapper for [`lox_bodies::dynamic::UnknownOriginId`].
 pub struct PyUnknownOriginId(pub UnknownOriginId);
 
 impl From<PyUnknownOriginId> for PyErr {
@@ -73,6 +80,7 @@ impl PyOrigin {
         ))
     }
 
+    /// Return the string representation of this origin.
     pub fn __repr__(&self) -> String {
         format!("Origin(\"{}\")", self.name())
     }
