@@ -164,34 +164,48 @@ fn grid_specs() -> Box<[GridSpec]> {
     v.into_boxed_slice()
 }
 
+/// Error returned when opening an ITU data bundle or loading a grid from it.
 #[derive(Debug, Error)]
 pub enum ItuProviderError {
+    /// The bundle file could not be opened.
     #[error("opening bundle at {path}: {source}")]
     Open {
+        /// The bundle path that failed to open.
         path: PathBuf,
+        /// The underlying I/O error.
         #[source]
         source: std::io::Error,
     },
+    /// The bundle's ZIP archive could not be read.
     #[error("bundle archive: {0}")]
     Zip(#[from] zip::result::ZipError),
+    /// The bundle is missing an expected entry.
     #[error("bundle missing entry {0:?}")]
     MissingEntry(String),
+    /// The bundle manifest could not be parsed.
     #[error("manifest: {0}")]
     Manifest(#[from] ManifestError),
+    /// An archive entry could not be read.
     #[error("reading entry {entry:?}: {source}")]
     Read {
+        /// The name of the entry being read.
         entry: String,
+        /// The underlying I/O error.
         #[source]
         source: std::io::Error,
     },
+    /// An NPY-encoded grid entry could not be parsed.
     #[error("parsing NPY entry {entry:?}: {source}")]
     Npy {
+        /// The name of the NPY entry being parsed.
         entry: String,
+        /// The underlying NPY parse error.
         #[source]
         source: NpyError,
     },
 }
 
+/// Lazily loads ITU-R atmospheric data grids from a packaged bundle file.
 pub struct ItuProvider {
     archive: Mutex<ZipArchive<File>>,
     specs: Box<[GridSpec]>,
@@ -229,6 +243,7 @@ impl ItuProvider {
         })
     }
 
+    /// Returns the upstream data version recorded in the bundle manifest.
     pub fn upstream_version(&self) -> &str {
         &self.upstream
     }
