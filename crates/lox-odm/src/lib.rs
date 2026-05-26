@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+#![warn(missing_docs)]
+
 //! Rust types and (de-)serialization for CCSDS Orbit Data Messages.
 
 pub mod error;
