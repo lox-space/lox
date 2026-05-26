@@ -3,6 +3,11 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Parser for NAIF Leap Seconds Kernels (LSK).
+//!
+//! [`LeapSecondsKernel`] reads the `DELTET/DELTA_AT` entries of an LSK and implements
+//! [`LeapSecondsProvider`], allowing it to drive UTC/TAI conversions.
+
 use std::{fs::read_to_string, num::ParseIntError, path::Path};
 
 use lox_core::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
@@ -28,25 +33,30 @@ const LEAP_SECONDS_KERNEL_KEY: &str = "DELTET/DELTA_AT";
 /// Error type related to parsing leap seconds data from a NAIF Leap Seconds Kernel.
 #[derive(Debug, Error)]
 pub enum LeapSecondsKernelError {
+    /// The kernel file could not be read from disk.
     #[error(transparent)]
     Io(#[from] std::io::Error),
+    /// The underlying SPICE text kernel could not be parsed.
     #[error(transparent)]
     Kernel(#[from] KernelError),
+    /// The kernel contains no leap second data under the expected key.
     #[error(
         "no leap seconds found in kernel under key `{}`",
         LEAP_SECONDS_KERNEL_KEY
     )]
     NoLeapSeconds,
+    /// A leap second count could not be parsed as an integer.
     #[error(transparent)]
     ParseInt(#[from] ParseIntError),
+    /// A date entry in the kernel is not a valid calendar date.
     #[error(transparent)]
     DateError(#[from] DateError),
 }
 
 /// In-memory representation of a NAIF Leap Seconds Kernel.
 ///
-/// Most users should prefer [BuiltinLeapSeconds] to implementing their own [LeapSecondsProvider]
-/// using the kernel.
+/// Most users should prefer [`DefaultLeapSecondsProvider`](lox_time::utc::leap_seconds::DefaultLeapSecondsProvider)
+/// to implementing their own [LeapSecondsProvider] using the kernel.
 #[derive(Debug, Clone)]
 pub struct LeapSecondsKernel {
     epochs_utc: Vec<i64>,

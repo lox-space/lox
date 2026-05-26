@@ -3,4 +3,10 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+#![warn(missing_docs)]
+
+//! Parsers for astrodynamics data file formats.
+//!
+//! Currently this crate provides readers for NAIF SPICE text kernels (see the [`spice`] module).
+
 pub mod spice;

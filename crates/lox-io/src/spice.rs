@@ -2,6 +2,12 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Reader for NAIF SPICE text kernels (`KPL/*` format).
+//!
+//! [`Kernel`] parses the `\begindata` blocks of a text kernel into a map of key-value pairs and
+//! exposes typed accessors for the values. The [`lsk`] submodule builds on this to parse Leap
+//! Seconds Kernels.
+
 use std::collections::HashMap;
 
 use nom::branch::alt;
@@ -17,6 +23,7 @@ use thiserror::Error;
 
 pub mod lsk;
 
+/// Error returned when a SPICE text kernel cannot be parsed.
 #[derive(Debug, Error, PartialEq)]
 #[error(transparent)]
 pub struct KernelError(#[from] Error<String>);
@@ -31,6 +38,7 @@ enum Value {
     TimestampArray(Vec<String>),
 }
 
+/// A parsed SPICE text kernel: its type identifier and the key-value pairs from its data blocks.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Kernel {
     type_id: String,
@@ -40,6 +48,11 @@ pub struct Kernel {
 type Entries = Vec<(String, Value)>;
 
 impl Kernel {
+    /// Parse a kernel from the textual contents of a `KPL/*` file.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`KernelError`] if the input is not a well-formed SPICE text kernel.
     pub fn from_string(input: &str) -> Result<Self, KernelError> {
         let result = kernel(input).map_err(|e| e.to_owned()).finish();
         match result {
@@ -51,10 +64,12 @@ impl Kernel {
         }
     }
 
+    /// The kernel's type identifier (the token following `KPL/` in the header).
     pub fn type_id(&self) -> &str {
         &self.type_id
     }
 
+    /// Return the value stored under `key` as a scalar double, or `None` if absent or not a double.
     pub fn get_double(&self, key: &str) -> Option<f64> {
         let value = self.items.get(key)?;
         if let Value::Double(v) = value {
@@ -64,6 +79,7 @@ impl Kernel {
         }
     }
 
+    /// Return the value stored under `key` as a double array, or `None` if absent or not one.
     pub fn get_double_array(&self, key: &str) -> Option<&Vec<f64>> {
         let value = self.items.get(key)?;
         if let Value::DoubleArray(v) = value {
@@ -73,6 +89,7 @@ impl Kernel {
         }
     }
 
+    /// Return the value stored under `key` as a timestamp array, or `None` if absent or not one.
     pub fn get_timestamp_array(&self, key: &str) -> Option<&Vec<String>> {
         let value = self.items.get(key)?;
         if let Value::TimestampArray(v) = value {
@@ -82,6 +99,7 @@ impl Kernel {
         }
     }
 
+    /// Return all keys present in the kernel's data blocks.
     pub fn keys(&self) -> Vec<&String> {
         self.items.keys().collect()
     }
