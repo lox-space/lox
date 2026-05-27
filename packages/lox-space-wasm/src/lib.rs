@@ -881,6 +881,26 @@ impl WasmSatellite {
     }
 }
 
+/// Maps built constellation satellites into a JS array of `WasmSatellite`.
+fn constellation_to_js(
+    sats: Vec<lox_space::orbits::constellations::ConstellationSatellite>,
+) -> js_sys::Array {
+    sats.into_iter()
+        .map(|s| {
+            JsValue::from(WasmSatellite {
+                plane: s.plane as u32,
+                index_in_plane: s.index_in_plane as u32,
+                sma_m: s.elements.semi_major_axis().to_meters(),
+                ecc: s.elements.eccentricity().as_f64(),
+                inc_rad: s.elements.inclination().as_f64(),
+                raan_rad: s.elements.longitude_of_ascending_node().as_f64(),
+                aop_rad: s.elements.argument_of_periapsis().as_f64(),
+                true_anomaly_rad: s.elements.true_anomaly().as_f64(),
+            })
+        })
+        .collect()
+}
+
 /// A Walker delta constellation builder.
 ///
 /// All inputs use the same units as the `Keplerian` types: meters and
@@ -890,7 +910,7 @@ pub struct WalkerDelta;
 
 #[wasm_bindgen]
 impl WalkerDelta {
-    /// Build a Walker delta constellation.
+    /// Build a Walker delta constellation (RAAN spread over 360°).
     ///
     /// - `nsats`: total number of satellites (must be divisible by `nplanes`).
     /// - `nplanes`: number of orbital planes.
@@ -922,20 +942,42 @@ impl WalkerDelta {
         .build()
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
-        let out = sats.into_iter().map(|s| {
-            JsValue::from(WasmSatellite {
-                plane: s.plane as u32,
-                index_in_plane: s.index_in_plane as u32,
-                sma_m: s.elements.semi_major_axis().to_meters(),
-                ecc: s.elements.eccentricity().as_f64(),
-                inc_rad: s.elements.inclination().as_f64(),
-                raan_rad: s.elements.longitude_of_ascending_node().as_f64(),
-                aop_rad: s.elements.argument_of_periapsis().as_f64(),
-                true_anomaly_rad: s.elements.true_anomaly().as_f64(),
-            })
-        });
+        Ok(constellation_to_js(sats))
+    }
+}
 
-        Ok(out.collect())
+/// A Walker star constellation builder.
+///
+/// Identical to [`WalkerDelta`] except the planes' ascending nodes are spread
+/// over 180° instead of 360° — the polar "star" pattern (e.g. Iridium) where
+/// all planes converge near the poles. Inputs are meters and radians.
+#[wasm_bindgen]
+pub struct WalkerStar;
+
+#[wasm_bindgen]
+impl WalkerStar {
+    /// Build a Walker star constellation (RAAN spread over 180°). Arguments
+    /// match [`WalkerDelta::build`].
+    #[wasm_bindgen]
+    pub fn build(
+        nsats: u32,
+        nplanes: u32,
+        phasing: u32,
+        sma_m: f64,
+        ecc: f64,
+        inc_rad: f64,
+    ) -> Result<js_sys::Array, JsValue> {
+        let sats = lox_space::orbits::constellations::WalkerStarBuilder::new(
+            nsats as usize,
+            nplanes as usize,
+        )
+        .with_semi_major_axis(sma_m.m(), ecc)
+        .with_inclination(inc_rad.rad())
+        .with_phasing(phasing as usize)
+        .build()
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        Ok(constellation_to_js(sats))
     }
 }
 

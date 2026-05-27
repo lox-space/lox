@@ -28,24 +28,24 @@ describe("scenario defaults", () => {
 
 describe("walker validation", () => {
   it("requires F in [0, P)", () => {
-    const s: Scenario = { ...defaultScenario(), walker: { satsPerPlane: 8, p: 3, f: 3, altitudeKm: 600, inclinationDeg: 53 } };
+    const s: Scenario = { ...defaultScenario(), walker: { pattern: "delta", satsPerPlane: 8, p: 3, f: 3, altitudeKm: 600, inclinationDeg: 53 } };
     expect(isWalkerValid(s.walker)).toBe(false);
   });
 
   it("requires positive altitude", () => {
-    const s: Scenario = { ...defaultScenario(), walker: { satsPerPlane: 8, p: 3, f: 1, altitudeKm: 0, inclinationDeg: 53 } };
+    const s: Scenario = { ...defaultScenario(), walker: { pattern: "delta", satsPerPlane: 8, p: 3, f: 1, altitudeKm: 0, inclinationDeg: 53 } };
     expect(isWalkerValid(s.walker)).toBe(false);
   });
 
   it("accepts a valid Walker config", () => {
-    const s: Scenario = { ...defaultScenario(), walker: { satsPerPlane: 8, p: 3, f: 1, altitudeKm: 600, inclinationDeg: 53 } };
+    const s: Scenario = { ...defaultScenario(), walker: { pattern: "delta", satsPerPlane: 8, p: 3, f: 1, altitudeKm: 600, inclinationDeg: 53 } };
     expect(isWalkerValid(s.walker)).toBe(true);
   });
 });
 
 describe("totalSats", () => {
   it("computes T as satsPerPlane * p", () => {
-    expect(totalSats({ satsPerPlane: 8, p: 3, f: 0, altitudeKm: 600, inclinationDeg: 53 })).toBe(24);
-    expect(totalSats({ satsPerPlane: 5, p: 4, f: 0, altitudeKm: 600, inclinationDeg: 53 })).toBe(20);
+    expect(totalSats({ pattern: "delta", satsPerPlane: 8, p: 3, f: 0, altitudeKm: 600, inclinationDeg: 53 })).toBe(24);
+    expect(totalSats({ pattern: "delta", satsPerPlane: 5, p: 4, f: 0, altitudeKm: 600, inclinationDeg: 53 })).toBe(20);
   });
 });

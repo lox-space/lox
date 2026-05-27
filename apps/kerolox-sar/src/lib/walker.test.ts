@@ -26,6 +26,9 @@ vi.mock("@lox-space/wasm", async () => {
     WalkerDelta: {
       build: vi.fn().mockReturnValue(buildArr),
     },
+    WalkerStar: {
+      build: vi.fn().mockReturnValue(buildArr),
+    },
   };
 });
 
@@ -71,8 +74,16 @@ describe("runWalker", () => {
   });
 
   it("returns [] when the walker config is invalid", () => {
-    const s = { ...defaultScenario(), walker: { satsPerPlane: 0, p: 3, f: 1, altitudeKm: 600, inclinationDeg: 53 } };
+    const s = { ...defaultScenario(), walker: { pattern: "delta" as const, satsPerPlane: 0, p: 3, f: 1, altitudeKm: 600, inclinationDeg: 53 } };
     const out = runWalker(s);
     expect(out).toEqual([]);
+  });
+
+  it("dispatches to WalkerStar.build when the pattern is star", async () => {
+    const wasm = await import("@lox-space/wasm");
+    const s: Scenario = { ...defaultScenario(), walker: { ...defaultScenario().walker, pattern: "star" } };
+    runWalker(s);
+    expect(wasm.WalkerStar.build).toHaveBeenCalledOnce();
+    expect(wasm.WalkerDelta.build).not.toHaveBeenCalled();
   });
 });

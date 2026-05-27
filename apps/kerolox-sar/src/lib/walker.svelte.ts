@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-import init, { WalkerDelta } from "@lox-space/wasm";
+import init, { WalkerDelta, WalkerStar } from "@lox-space/wasm";
 import { isWalkerValid, type Scenario } from "./state/scenario.svelte";
 
 // Earth mean equatorial radius, kilometres (matches lox-bodies value).
@@ -30,16 +30,17 @@ async function ensureWasm(): Promise<void> {
 void ensureWasm();
 
 /**
- * Synchronous Walker-delta evaluation. Returns [] if the config is invalid.
- * Throws if the WASM module hasn't initialised yet — call
- * `await ensureWalkerReady()` once at app startup.
+ * Synchronous Walker constellation evaluation (delta or star, per
+ * `s.walker.pattern`). Returns [] if the config is invalid. Throws if the WASM
+ * module hasn't initialised yet — call `await ensureWalkerReady()` at startup.
  */
 export function runWalker(s: Scenario): SatelliteElements[] {
   if (!isWalkerValid(s.walker)) return [];
   const smaM = (s.walker.altitudeKm + EARTH_MEAN_RADIUS_KM) * 1000;
   const incRad = (s.walker.inclinationDeg * Math.PI) / 180;
   const t = s.walker.satsPerPlane * s.walker.p;
-  const arr = WalkerDelta.build(t, s.walker.p, s.walker.f, smaM, 0, incRad);
+  const builder = s.walker.pattern === "star" ? WalkerStar : WalkerDelta;
+  const arr = builder.build(t, s.walker.p, s.walker.f, smaM, 0, incRad);
   const out: SatelliteElements[] = [];
   for (const obj of arr as unknown[]) {
     const sat = obj as {

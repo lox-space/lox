@@ -4,6 +4,10 @@
 
 export type LookSide = "LEFT" | "RIGHT";
 
+/** Walker constellation pattern: delta spreads RAAN over 360°, star over 180°
+ *  (the polar "star" pattern, e.g. Iridium). */
+export type WalkerPattern = "delta" | "star";
+
 /**
  * Walker delta constellation configuration.
  *
@@ -21,6 +25,7 @@ export type LookSide = "LEFT" | "RIGHT";
  * automatically; other input paths must coerce before assignment.
  */
 export interface WalkerConfig {
+  pattern: WalkerPattern;
   satsPerPlane: number;
   p: number;
   f: number;
@@ -48,7 +53,7 @@ export function defaultScenario(): Scenario {
   return {
     startTimeIso: "2026-06-01T00:00:00Z",
     durationHours: 6,
-    walker: { satsPerPlane: 8, p: 3, f: 1, altitudeKm: 600, inclinationDeg: 53 },
+    walker: { pattern: "delta", satsPerPlane: 8, p: 3, f: 1, altitudeKm: 600, inclinationDeg: 53 },
     sar: { lookSide: "RIGHT", minIncidenceDeg: 20, maxIncidenceDeg: 45 },
     compareIceye: false,
   };

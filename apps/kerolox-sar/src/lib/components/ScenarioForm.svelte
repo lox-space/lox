@@ -27,7 +27,15 @@
   </section>
 
   <section class={sectionCls}>
-    <h2 class="text-sm font-semibold uppercase text-neutral-300">Walker delta</h2>
+    <h2 class="text-sm font-semibold uppercase text-neutral-300">Walker constellation</h2>
+
+    <label class={labelCls}>
+      Pattern
+      <select class={inputCls} bind:value={scenario.walker.pattern}>
+        <option value="delta">Delta (RAAN over 360°)</option>
+        <option value="star">Star (RAAN over 180°)</option>
+      </select>
+    </label>
 
     <label class={labelCls}>
       Sats per plane
