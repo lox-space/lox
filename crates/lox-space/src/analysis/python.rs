@@ -21,6 +21,7 @@ use crate::bodies::DynOrigin;
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::PyCommunicationSystem;
 use crate::ephem::python::PySpk;
+use crate::ephem::spk::parser::Spk;
 use crate::frames::python::PyFrame;
 use crate::orbits::ground::Observables;
 use crate::orbits::python::{
@@ -465,16 +466,28 @@ impl PyVisibilityAnalysis {
     /// propagated automatically (trajectories transformed to ICRF).
     ///
     /// Args:
-    ///     ephemeris: SPK ephemeris data.
+    ///     ephemeris: SPK ephemeris data. Required when ``occulting_bodies``
+    ///         is non-empty; optional otherwise.
     ///
     /// Returns:
     ///     VisibilityResults containing intervals for all pairs.
+    ///
+    /// Raises:
+    ///     ValueError: if occulting bodies are configured but no
+    ///         ephemeris is provided.
+    #[pyo3(signature = (ephemeris=None))]
     fn compute(
         &self,
         py: Python<'_>,
-        ephemeris: &Bound<'_, PySpk>,
+        ephemeris: Option<&Bound<'_, PySpk>>,
     ) -> PyResult<PyVisibilityResults> {
-        let ephemeris = &ephemeris.get().0;
+        if !self.occulting_bodies.is_empty() && ephemeris.is_none() {
+            return Err(PyValueError::new_err(
+                "ephemeris is required when occulting_bodies is set",
+            ));
+        }
+
+        let ephemeris_ref: Option<&Spk> = ephemeris.map(|e| &e.get().0);
         let step = self.step;
         let scenario = &self.scenario;
 
@@ -539,32 +552,44 @@ impl PyVisibilityAnalysis {
                 None
             };
 
-        let results = py.detach(|| {
-            let mut analysis = VisibilityAnalysis::new(scenario, ensemble)
-                .with_occulting_bodies(ephemeris, occulting_bodies)
-                .with_step(step);
-            if let Some(mpd) = min_pass_duration {
-                analysis = analysis.with_min_pass_duration(mpd);
-            }
-            if let Some(ref accepted) = gs_accepted {
-                analysis = analysis.with_ground_space_filter(|gs, sc| {
+        let results = py.detach(|| -> Result<VisibilityResults, VisibilityError> {
+            let analysis = VisibilityAnalysis::new(scenario, ensemble).with_step(step);
+            let analysis = match min_pass_duration {
+                Some(d) => analysis.with_min_pass_duration(d),
+                None => analysis,
+            };
+            let analysis = if let Some(ref accepted) = gs_accepted {
+                analysis.with_ground_space_filter(move |gs, sc| {
                     accepted.contains(&(gs.id().clone(), sc.id().clone()))
-                });
-            }
-            if let Some(ref accepted) = isl_accepted {
-                analysis = analysis.with_inter_satellite_filter(|sc1, sc2| {
+                })
+            } else {
+                analysis
+            };
+            let analysis = if let Some(ref accepted) = isl_accepted {
+                analysis.with_inter_satellite_filter(move |sc1, sc2| {
                     accepted.contains(&(sc1.id().clone(), sc2.id().clone()))
-                });
+                })
             } else if inter_satellite {
-                analysis = analysis.with_inter_satellite();
+                analysis.with_inter_satellite()
+            } else {
+                analysis
+            };
+            let analysis = match min_range {
+                Some(r) => analysis.with_min_range(r),
+                None => analysis,
+            };
+            let analysis = match max_range {
+                Some(r) => analysis.with_max_range(r),
+                None => analysis,
+            };
+
+            if let Some(eph) = ephemeris_ref {
+                analysis
+                    .with_occulting_bodies(eph, occulting_bodies)
+                    .compute()
+            } else {
+                analysis.compute()
             }
-            if let Some(min_range) = min_range {
-                analysis = analysis.with_min_range(min_range);
-            }
-            if let Some(max_range) = max_range {
-                analysis = analysis.with_max_range(max_range);
-            }
-            analysis.compute()
         });
 
         Ok(PyVisibilityResults {
