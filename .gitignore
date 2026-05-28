@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: MPL-2.0
 
 # Rust
-/target
+/target/
+/target-*/
 /tools/*/target/
 
 # Python
