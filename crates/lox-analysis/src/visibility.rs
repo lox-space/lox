@@ -438,15 +438,16 @@ where
     }
 }
 
-/// Line-of-sight between two spacecraft, relative to an occulting body.
-struct InterSatelliteLosDetectFn<'a, O: Origin, R: ReferenceFrame, E> {
+/// Line-of-sight between two spacecraft, relative to a non-central occulting body. Uses the
+/// ephemeris to compute the body position.
+struct InterSatLosOccluderDetectFn<'a, O: Origin, R: ReferenceFrame, E> {
     sc1: &'a Trajectory<Tai, O, R>,
     sc2: &'a Trajectory<Tai, O, R>,
     body: DynOrigin,
     ephemeris: &'a E,
 }
 
-impl<O, R, E: Ephemeris> DetectFn<Tai> for InterSatelliteLosDetectFn<'_, O, R, E>
+impl<O, R, E: Ephemeris> DetectFn<Tai> for InterSatLosOccluderDetectFn<'_, O, R, E>
 where
     O: Origin + Copy,
     R: ReferenceFrame + Copy,
@@ -462,6 +463,29 @@ where
             .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
         let r_sc1 = self.sc1.interpolate_at(time).position() - r_body;
         let r_sc2 = self.sc2.interpolate_at(time).position() - r_body;
+        Ok(self.body.line_of_sight(r_sc1, r_sc2)?)
+    }
+}
+
+/// Line-of-sight between two spacecraft when the occluding body is the
+/// trajectories' origin. `r_body == 0` by construction, so no ephemeris
+/// lookup is required.
+struct InterSatLosCentralBodyDetectFn<'a, O: Origin, R: ReferenceFrame> {
+    sc1: &'a Trajectory<Tai, O, R>,
+    sc2: &'a Trajectory<Tai, O, R>,
+    body: DynOrigin,
+}
+
+impl<O, R> DetectFn<Tai> for InterSatLosCentralBodyDetectFn<'_, O, R>
+where
+    O: Origin + Copy,
+    R: ReferenceFrame + Copy,
+{
+    type Error = EvalError;
+
+    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
+        let r_sc1 = self.sc1.interpolate_at(time).position();
+        let r_sc2 = self.sc2.interpolate_at(time).position();
         Ok(self.body.line_of_sight(r_sc1, r_sc2)?)
     }
 }
@@ -678,9 +702,20 @@ where
             )))
         };
 
+        let make_los_central_body = || {
+            EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
+                InterSatLosCentralBodyDetectFn {
+                    sc1: traj1,
+                    sc2: traj2,
+                    body: self.scenario.origin().into(),
+                },
+                self.step,
+            )))
+        };
+
         let make_los = |body: DynOrigin| {
             EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
-                InterSatelliteLosDetectFn {
+                InterSatLosOccluderDetectFn {
                     sc1: traj1,
                     sc2: traj2,
                     body,
@@ -722,12 +757,13 @@ where
 
         // Chain LOS detectors onto previous windows (most expensive: requires ephemeris).
         // Always check the central body first, then any additional occulting bodies.
-        let central_body: DynOrigin = self.scenario.origin().into();
-        let los = make_los(central_body);
+        // Central body LOS — use ephemeris-free variant:
+        let los = make_los_central_body();
         detector = Some(match detector {
             Some(d) => Box::new(d.chain(los)),
             None => Box::new(los),
         });
+        // Additional occulting bodies — still uses ephemeris:
         for &body in self.occulting_bodies {
             let los = make_los(body);
             detector = Some(match detector {
@@ -1537,6 +1573,23 @@ mod tests {
         let val = detect.eval(time).unwrap();
         // ω = 0 for colocated → threshold - 0 = threshold
         assert_approx_eq!(val, threshold.to_radians_per_second(), rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_inter_sat_los_central_body_detect_fn() {
+        let sc_traj = spacecraft_trajectory_dyn();
+        let (epoch, origin, frame, data) = sc_traj.clone().into_parts();
+        let typed = Trajectory::from_parts(epoch.with_scale(Tai), origin, frame, data);
+        let detect = InterSatLosCentralBodyDetectFn {
+            sc1: &typed,
+            sc2: &typed,
+            body: DynOrigin::Earth,
+        };
+        let time = typed.start_time();
+        let val = detect.eval(time).unwrap();
+        // Colocated spacecraft -> dot(r1, r2) = |r|^2 -> theta = 0,
+        // theta1 == theta2 == acos(R/|r|) -> result = 2*acos(R/|r|) > 0.
+        assert!(val > 0.0);
     }
 
     #[test]
