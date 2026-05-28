@@ -103,22 +103,20 @@ fn setup_mono() -> (Scenario<Earth, Icrf>, Ensemble<AssetId, Tai, Earth, Icrf>) 
 
 #[divan::bench]
 fn visibility_single_pair(bencher: Bencher) {
-    let spk = ephemeris();
     let (scenario, ensemble) = setup_dyn();
 
     bencher.bench(|| {
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble);
         analysis.compute().unwrap()
     });
 }
 
 #[divan::bench]
 fn visibility_single_pair_min_pass_5m(bencher: Bencher) {
-    let spk = ephemeris();
     let (scenario, ensemble) = setup_dyn();
 
     bencher.bench(|| {
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_min_pass_duration(TimeDelta::from_seconds(300));
         analysis.compute().unwrap()
     });
@@ -130,8 +128,8 @@ fn visibility_single_pair_with_los(bencher: Bencher) {
     let (scenario, ensemble) = setup_dyn();
 
     bencher.bench(|| {
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
-            .with_occulting_bodies(vec![DynOrigin::Moon]);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble)
+            .with_occulting_bodies(spk, vec![DynOrigin::Moon]);
         analysis.compute().unwrap()
     });
 }
@@ -142,8 +140,8 @@ fn visibility_single_pair_with_los_min_pass_5m(bencher: Bencher) {
     let (scenario, ensemble) = setup_dyn();
 
     bencher.bench(|| {
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
-            .with_occulting_bodies(vec![DynOrigin::Moon])
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble)
+            .with_occulting_bodies(spk, vec![DynOrigin::Moon])
             .with_min_pass_duration(TimeDelta::from_seconds(300));
         analysis.compute().unwrap()
     });
@@ -155,22 +153,20 @@ fn visibility_single_pair_with_los_min_pass_5m(bencher: Bencher) {
 
 #[divan::bench]
 fn visibility_single_pair_mono(bencher: Bencher) {
-    let spk = ephemeris();
     let (scenario, ensemble) = setup_mono();
 
     bencher.bench(|| {
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble);
         analysis.compute().unwrap()
     });
 }
 
 #[divan::bench]
 fn visibility_single_pair_mono_min_pass_5m(bencher: Bencher) {
-    let spk = ephemeris();
     let (scenario, ensemble) = setup_mono();
 
     bencher.bench(|| {
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_min_pass_duration(TimeDelta::from_seconds(300));
         analysis.compute().unwrap()
     });
@@ -182,8 +178,8 @@ fn visibility_single_pair_mono_with_los(bencher: Bencher) {
     let (scenario, ensemble) = setup_mono();
 
     bencher.bench(|| {
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
-            .with_occulting_bodies(vec![DynOrigin::Moon]);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble)
+            .with_occulting_bodies(spk, vec![DynOrigin::Moon]);
         analysis.compute().unwrap()
     });
 }
@@ -194,8 +190,8 @@ fn visibility_single_pair_mono_with_los_min_pass_5m(bencher: Bencher) {
     let (scenario, ensemble) = setup_mono();
 
     bencher.bench(|| {
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
-            .with_occulting_bodies(vec![DynOrigin::Moon])
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble)
+            .with_occulting_bodies(spk, vec![DynOrigin::Moon])
             .with_min_pass_duration(TimeDelta::from_seconds(300));
         analysis.compute().unwrap()
     });
