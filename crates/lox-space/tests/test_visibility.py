@@ -68,6 +68,13 @@ def combined_results(scenario, ephemeris):
 
 
 @pytest.fixture(scope="module")
+def results_no_eph(scenario):
+    """Results with no occulters, computed without ephemeris."""
+    analysis = lox.VisibilityAnalysis(scenario)
+    return analysis.compute()
+
+
+@pytest.fixture(scope="module")
 def inter_satellite_results(t0, t1, space_assets, ephemeris):
     """Results with inter-satellite pairs only."""
     scenario = lox.Scenario(t0, t1, spacecraft=space_assets)
@@ -98,6 +105,21 @@ class TestVisibilityAnalysis:
 
     def test_with_occulting_bodies(self, results_with_los, ground_assets, space_assets):
         assert results_with_los.num_pairs() == len(ground_assets) * len(space_assets)
+
+    def test_compute_without_ephemeris(self, results_no_eph, results):
+        """Ground-to-space with no occulters: compute() with no ephemeris
+        produces the same number of pairs and intervals as compute(eph)."""
+        assert results_no_eph.num_pairs() == results.num_pairs()
+        assert results_no_eph.total_intervals() == results.total_intervals()
+
+    def test_compute_raises_when_ephemeris_missing_but_required(self, scenario):
+        analysis = lox.VisibilityAnalysis(
+            scenario, occulting_bodies=[lox.Origin("Moon")]
+        )
+        with pytest.raises(
+            ValueError, match="ephemeris is required when occulting_bodies"
+        ):
+            analysis.compute()
 
     def test_with_custom_step(self, scenario, ephemeris, ground_assets, space_assets):
         analysis = lox.VisibilityAnalysis(scenario, step=lox.TimeDelta(30))
