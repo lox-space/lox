@@ -899,6 +899,16 @@ impl VisibilityResults {
 // VisibilityAnalysis
 // ---------------------------------------------------------------------------
 
+/// Marker type for a [`VisibilityAnalysis`] that has not been bound to an
+/// [`Ephemeris`]. The default for the `E` type parameter.
+///
+/// Building an analysis without an ephemeris is the right choice when no
+/// extra occulting bodies are configured; in that case the ephemeris would
+/// never be consulted. Use [`VisibilityAnalysis::with_occulting_bodies`]
+/// to supply an ephemeris when needed.
+#[derive(Default, Clone, Copy, Debug)]
+pub struct NoEphemeris;
+
 /// Computes ground-station-to-spacecraft and inter-satellite visibility.
 ///
 /// Generic over origin `O`, reference frame `R`, and ephemeris `E`.
@@ -907,10 +917,10 @@ impl VisibilityResults {
 /// [`with_inter_satellite`](Self::with_inter_satellite).
 ///
 /// Trajectories are looked up from a pre-computed [`Ensemble`] by asset id.
-pub struct VisibilityAnalysis<'a, O: Origin, R: ReferenceFrame, E> {
+pub struct VisibilityAnalysis<'a, O: Origin, R: ReferenceFrame, E = NoEphemeris> {
     scenario: &'a Scenario<O, R>,
     ensemble: &'a Ensemble<AssetId, Tai, O, R>,
-    ephemeris: &'a E,
+    ephemeris: E,
     occulting_bodies: Vec<DynOrigin>,
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
@@ -921,39 +931,16 @@ pub struct VisibilityAnalysis<'a, O: Origin, R: ReferenceFrame, E> {
     max_range: Option<Distance>,
 }
 
+// ---------------------------------------------------------------------------
+// Block A — generic builder methods (no ephemeris bound, shared across both
+// variants). Also includes `to_passes` since it never consults the ephemeris.
+// ---------------------------------------------------------------------------
+
 impl<'a, O, R, E> VisibilityAnalysis<'a, O, R, E>
 where
-    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<DynOrigin>,
-    R: ReferenceFrame + Copy + Send + Sync + Into<DynFrame>,
-    E: Ephemeris + Send + Sync,
-    E::Error: 'static,
-    DefaultRotationProvider: TryRotation<R, DynFrame, Tai> + TryRotation<DynFrame, R, Tai>,
-    <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
-        std::error::Error + Send + Sync + 'static,
-    <DefaultRotationProvider as TryRotation<DynFrame, R, Tai>>::Error:
-        std::error::Error + Send + Sync + 'static,
+    O: Origin,
+    R: ReferenceFrame,
 {
-    /// Creates a new visibility analysis for the given scenario, ensemble, and ephemeris.
-    pub fn new(
-        scenario: &'a Scenario<O, R>,
-        ensemble: &'a Ensemble<AssetId, Tai, O, R>,
-        ephemeris: &'a E,
-    ) -> Self {
-        Self {
-            scenario,
-            ensemble,
-            ephemeris,
-            occulting_bodies: Vec::new(),
-            step: TimeDelta::from_seconds(60),
-            min_pass_duration: None,
-            inter_satellite: false,
-            ground_space_filter: None,
-            inter_satellite_filter: None,
-            min_range: None,
-            max_range: None,
-        }
-    }
-
     /// Enables inter-satellite visibility computation.
     pub fn with_inter_satellite(mut self) -> Self {
         self.inter_satellite = true;
@@ -987,16 +974,6 @@ where
         self
     }
 
-    /// Sets additional bodies that may occlude the line of sight.
-    ///
-    /// For inter-satellite visibility, the scenario's central body is always
-    /// checked for occultation automatically. Use this method to add extra
-    /// occulting bodies (e.g. the Moon for an Earth-centred scenario).
-    pub fn with_occulting_bodies(mut self, bodies: Vec<DynOrigin>) -> Self {
-        self.occulting_bodies = bodies;
-        self
-    }
-
     /// Sets the time step for event detection sampling.
     pub fn with_step(mut self, step: TimeDelta) -> Self {
         self.step = step;
@@ -1025,7 +1002,396 @@ where
     pub fn step(&self) -> TimeDelta {
         self.step
     }
+}
 
+impl<'a, O, R, E> VisibilityAnalysis<'a, O, R, E>
+where
+    O: Origin + Copy + Send + Sync + Into<DynOrigin>,
+    R: ReferenceFrame + Copy + Send + Sync + Into<DynFrame>,
+{
+    /// Convert all ground-space intervals in a [`VisibilityResults`] to passes.
+    ///
+    /// Inter-satellite pairs are skipped since passes with ground-station
+    /// observables are not meaningful for them.
+    pub fn to_passes(
+        &self,
+        results: &VisibilityResults,
+    ) -> HashMap<(AssetId, AssetId), Vec<DynPass>> {
+        let gs_map: HashMap<&AssetId, &GroundStation> = self
+            .scenario
+            .ground_stations()
+            .iter()
+            .map(|g| (g.id(), g))
+            .collect();
+
+        results
+            .ground_space_pair_ids()
+            .into_iter()
+            .filter_map(|(gs_id, sc_id)| {
+                let gs = gs_map.get(gs_id)?;
+                let sc_traj = self.ensemble.get(sc_id)?;
+                let intervals = results.intervals_for(gs_id, sc_id)?;
+                let passes: Vec<DynPass> = intervals
+                    .iter()
+                    .filter_map(|interval| {
+                        // Convert Tai interval to DynTimeScale for DynPass::from_interval
+                        let dyn_interval = TimeInterval::new(
+                            interval.start().into_dyn(),
+                            interval.end().into_dyn(),
+                        );
+                        // Convert typed trajectory to DynTrajectory for pass computation
+                        let dyn_traj = sc_traj.clone().into_dyn();
+                        DynPass::from_interval(
+                            dyn_interval,
+                            self.step,
+                            gs.location(),
+                            gs.mask(),
+                            &dyn_traj,
+                            gs.body_fixed_frame(),
+                        )
+                    })
+                    .collect();
+                Some(((gs_id.clone(), sc_id.clone()), passes))
+            })
+            .collect()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Block B — `NoEphemeris` constructor and transition to the ephemeris variant.
+// ---------------------------------------------------------------------------
+
+impl<'a, O, R> VisibilityAnalysis<'a, O, R, NoEphemeris>
+where
+    O: Origin,
+    R: ReferenceFrame,
+{
+    /// Creates a new visibility analysis without an ephemeris.
+    ///
+    /// Use [`with_occulting_bodies`](Self::with_occulting_bodies) to bind
+    /// an ephemeris when occulting-body checks are required.
+    pub fn new(scenario: &'a Scenario<O, R>, ensemble: &'a Ensemble<AssetId, Tai, O, R>) -> Self {
+        Self {
+            scenario,
+            ensemble,
+            ephemeris: NoEphemeris,
+            occulting_bodies: Vec::new(),
+            step: TimeDelta::from_seconds(60),
+            min_pass_duration: None,
+            inter_satellite: false,
+            ground_space_filter: None,
+            inter_satellite_filter: None,
+            min_range: None,
+            max_range: None,
+        }
+    }
+
+    /// Binds an ephemeris and configures additional occulting bodies.
+    ///
+    /// For inter-satellite visibility, the scenario's central body is
+    /// always checked for occultation automatically (using an
+    /// ephemeris-free path). Use this method to add extra occulting
+    /// bodies (e.g. the Moon for an Earth-centred scenario).
+    pub fn with_occulting_bodies<E>(
+        self,
+        ephemeris: &'a E,
+        bodies: Vec<DynOrigin>,
+    ) -> VisibilityAnalysis<'a, O, R, &'a E>
+    where
+        E: Ephemeris,
+    {
+        VisibilityAnalysis {
+            scenario: self.scenario,
+            ensemble: self.ensemble,
+            ephemeris,
+            occulting_bodies: bodies,
+            step: self.step,
+            min_pass_duration: self.min_pass_duration,
+            inter_satellite: self.inter_satellite,
+            ground_space_filter: self.ground_space_filter,
+            inter_satellite_filter: self.inter_satellite_filter,
+            min_range: self.min_range,
+            max_range: self.max_range,
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Block C — `compute()` on the `NoEphemeris` variant.
+// No ephemeris is consulted. The central body is checked via the
+// ephemeris-free `InterSatLosCentralBodyDetectFn`.
+// ---------------------------------------------------------------------------
+
+impl<'a, O, R> VisibilityAnalysis<'a, O, R, NoEphemeris>
+where
+    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<DynOrigin>,
+    R: ReferenceFrame + Copy + Send + Sync + Into<DynFrame>,
+    DefaultRotationProvider: TryRotation<R, DynFrame, Tai> + TryRotation<DynFrame, R, Tai>,
+    <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
+        std::error::Error + Send + Sync + 'static,
+    <DefaultRotationProvider as TryRotation<DynFrame, R, Tai>>::Error:
+        std::error::Error + Send + Sync + 'static,
+{
+    /// Compute visibility intervals for all pairs without an ephemeris.
+    pub fn compute(&self) -> Result<VisibilityResults, VisibilityError> {
+        debug_assert!(self.occulting_bodies.is_empty());
+        let interval = *self.scenario.interval();
+
+        let mut intervals = HashMap::new();
+        let mut pair_types = HashMap::new();
+
+        if !self.scenario.ground_stations().is_empty() {
+            let gs_results = self.compute_ground_space_no_eph(interval)?;
+            let (gs_intervals, gs_pair_types) = gs_results.into_parts();
+            intervals.extend(gs_intervals);
+            pair_types.extend(gs_pair_types);
+        }
+        if self.inter_satellite {
+            let is_results = self.compute_inter_satellite_no_eph(interval)?;
+            let (is_intervals, is_pair_types) = is_results.into_parts();
+            intervals.extend(is_intervals);
+            pair_types.extend(is_pair_types);
+        }
+        Ok(VisibilityResults {
+            intervals,
+            pair_types,
+        })
+    }
+
+    /// Compute ground-to-space visibility without occulting-body checks.
+    fn compute_ground_space_no_eph(
+        &self,
+        interval: TimeInterval<Tai>,
+    ) -> Result<VisibilityResults, VisibilityError> {
+        let ground_stations = self.scenario.ground_stations();
+        let spacecraft = self.scenario.spacecraft();
+        let step = self.step;
+        let min_pass_duration = self.min_pass_duration;
+
+        let pairs: Vec<_> = ground_stations
+            .iter()
+            .flat_map(|gs| spacecraft.iter().map(move |sc| (gs, sc)))
+            .filter(|(gs, sc)| self.ground_space_filter.as_ref().is_none_or(|f| f(gs, sc)))
+            .collect();
+
+        // Extract references needed in the parallel closure without borrowing self.
+        let ensemble = self.ensemble;
+
+        let compute_one = |(gs, sc): &(&GroundStation, &Spacecraft)| {
+            let key = (gs.id().clone(), sc.id().clone());
+            let sc_traj = ensemble.get(sc.id()).expect(
+                "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
+            );
+            let body_fixed_frame = gs.body_fixed_frame();
+            let det = RootFindingDetector::new(
+                ElevationDetectFn {
+                    gs: gs.location(),
+                    mask: gs.mask(),
+                    sc: sc_traj,
+                    body_fixed_frame,
+                },
+                step,
+            );
+            let det = match min_pass_duration {
+                Some(d) => {
+                    let coarse = TimeDelta::from_seconds_f64(d.to_seconds().to_f64() / 2.0);
+                    if coarse > step {
+                        det.with_coarse_step(coarse)
+                    } else {
+                        det
+                    }
+                }
+                None => det,
+            };
+            let windows = EventsToIntervals::new(det).detect(interval)?;
+            Ok((key, windows))
+        };
+
+        const PARALLEL_THRESHOLD: usize = 100;
+
+        let results: Result<Vec<_>, VisibilityError> = if pairs.len() > PARALLEL_THRESHOLD {
+            pairs.par_iter().map(compute_one).collect()
+        } else {
+            pairs.iter().map(compute_one).collect()
+        };
+
+        let intervals: HashMap<_, _> = results?.into_iter().collect();
+        let pair_types = intervals
+            .keys()
+            .map(|k| (k.clone(), PairType::GroundSpace))
+            .collect();
+        Ok(VisibilityResults {
+            intervals,
+            pair_types,
+        })
+    }
+
+    /// Compute inter-satellite visibility against the central body only.
+    fn compute_inter_satellite_no_eph(
+        &self,
+        interval: TimeInterval<Tai>,
+    ) -> Result<VisibilityResults, VisibilityError> {
+        let spacecraft = self.scenario.spacecraft();
+        let n = spacecraft.len();
+
+        let mut pairs: Vec<(usize, usize)> = Vec::with_capacity(n * (n - 1) / 2);
+        for i in 0..n {
+            for j in (i + 1)..n {
+                let accepted = self
+                    .inter_satellite_filter
+                    .as_ref()
+                    .is_none_or(|f| f(&spacecraft[i], &spacecraft[j]));
+                if accepted {
+                    pairs.push((i, j));
+                }
+            }
+        }
+
+        let step = self.step;
+        let min_pass_duration = self.min_pass_duration;
+        let central_body: DynOrigin = self.scenario.origin().into();
+        let min_range = self.min_range;
+        let max_range = self.max_range;
+        let ensemble = self.ensemble;
+
+        // Inline coarse-step helper: avoids closure type-inference lock-in
+        // when the same RootFindingDetector::new generic is called with
+        // different F types below.
+        macro_rules! apply_coarse {
+            ($det:expr) => {
+                match min_pass_duration {
+                    Some(d) => {
+                        let coarse = TimeDelta::from_seconds_f64(d.to_seconds().to_f64() / 2.0);
+                        if coarse > step {
+                            $det.with_coarse_step(coarse)
+                        } else {
+                            $det
+                        }
+                    }
+                    None => $det,
+                }
+            };
+        }
+
+        let results: Result<Vec<_>, VisibilityError> = pairs
+            .par_iter()
+            .map(|&(i, j)| {
+                let sc1 = &spacecraft[i];
+                let sc2 = &spacecraft[j];
+                let key = (sc1.id().clone(), sc2.id().clone());
+                let traj1 = ensemble
+                    .get(sc1.id())
+                    .expect("trajectory not found in ensemble");
+                let traj2 = ensemble
+                    .get(sc2.id())
+                    .expect("trajectory not found in ensemble");
+
+                let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
+                    (Some(a), Some(b)) => {
+                        Some(if a.to_radians_per_second() < b.to_radians_per_second() {
+                            a
+                        } else {
+                            b
+                        })
+                    }
+                    (Some(a), None) => Some(a),
+                    (None, Some(b)) => Some(b),
+                    (None, None) => None,
+                };
+
+                let mut detector: Option<Box<dyn IntervalDetector<Tai> + '_>> = None;
+
+                if let Some(max) = max_range {
+                    let det = apply_coarse!(RootFindingDetector::new(
+                        InterSatelliteRangeDetectFn {
+                            sc1: traj1,
+                            sc2: traj2,
+                            threshold: max,
+                            direction: RangeDirection::Max,
+                        },
+                        step,
+                    ));
+                    detector = Some(Box::new(EventsToIntervals::new(det)));
+                }
+                if let Some(min) = min_range {
+                    let det = apply_coarse!(RootFindingDetector::new(
+                        InterSatelliteRangeDetectFn {
+                            sc1: traj1,
+                            sc2: traj2,
+                            threshold: min,
+                            direction: RangeDirection::Min,
+                        },
+                        step,
+                    ));
+                    let min_det = EventsToIntervals::new(det);
+                    detector = Some(match detector {
+                        Some(d) => Box::new(d.intersect(min_det)),
+                        None => Box::new(min_det),
+                    });
+                }
+                if let Some(threshold) = effective_slew_rate {
+                    let det = apply_coarse!(RootFindingDetector::new(
+                        InterSatelliteSlewRateDetectFn {
+                            sc1: traj1,
+                            sc2: traj2,
+                            threshold,
+                        },
+                        step,
+                    ));
+                    let slew = EventsToIntervals::new(det);
+                    detector = Some(match detector {
+                        Some(d) => Box::new(d.chain(slew)),
+                        None => Box::new(slew),
+                    });
+                }
+
+                let los = EventsToIntervals::new(apply_coarse!(RootFindingDetector::new(
+                    InterSatLosCentralBodyDetectFn {
+                        sc1: traj1,
+                        sc2: traj2,
+                        body: central_body,
+                    },
+                    step,
+                )));
+                detector = Some(match detector {
+                    Some(d) => Box::new(d.chain(los)),
+                    None => Box::new(los),
+                });
+
+                let windows = detector.unwrap().detect(interval)?;
+                Ok((key, windows))
+            })
+            .collect();
+
+        let intervals: HashMap<_, _> = results?.into_iter().collect();
+        let pair_types = intervals
+            .keys()
+            .map(|k| (k.clone(), PairType::InterSatellite))
+            .collect();
+        Ok(VisibilityResults {
+            intervals,
+            pair_types,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Block D — `compute()` for the with-ephemeris variant.
+// Methods moved from the old big impl block unchanged.
+// ---------------------------------------------------------------------------
+
+impl<'a, O, R, E> VisibilityAnalysis<'a, O, R, &'a E>
+where
+    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<DynOrigin>,
+    R: ReferenceFrame + Copy + Send + Sync + Into<DynFrame>,
+    E: Ephemeris + Send + Sync,
+    E::Error: 'static,
+    DefaultRotationProvider: TryRotation<R, DynFrame, Tai> + TryRotation<DynFrame, R, Tai>,
+    <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
+        std::error::Error + Send + Sync + 'static,
+    <DefaultRotationProvider as TryRotation<DynFrame, R, Tai>>::Error:
+        std::error::Error + Send + Sync + 'static,
+{
     /// Compute visibility intervals for all pairs.
     pub fn compute(&self) -> Result<VisibilityResults, VisibilityError> {
         let interval = *self.scenario.interval();
@@ -1173,53 +1539,6 @@ where
             intervals,
             pair_types,
         })
-    }
-
-    /// Convert all ground-space intervals in a [`VisibilityResults`] to passes.
-    ///
-    /// Inter-satellite pairs are skipped since passes with ground-station
-    /// observables are not meaningful for them.
-    pub fn to_passes(
-        &self,
-        results: &VisibilityResults,
-    ) -> HashMap<(AssetId, AssetId), Vec<DynPass>> {
-        let gs_map: HashMap<&AssetId, &GroundStation> = self
-            .scenario
-            .ground_stations()
-            .iter()
-            .map(|g| (g.id(), g))
-            .collect();
-
-        results
-            .ground_space_pair_ids()
-            .into_iter()
-            .filter_map(|(gs_id, sc_id)| {
-                let gs = gs_map.get(gs_id)?;
-                let sc_traj = self.ensemble.get(sc_id)?;
-                let intervals = results.intervals_for(gs_id, sc_id)?;
-                let passes: Vec<DynPass> = intervals
-                    .iter()
-                    .filter_map(|interval| {
-                        // Convert Tai interval to DynTimeScale for DynPass::from_interval
-                        let dyn_interval = TimeInterval::new(
-                            interval.start().into_dyn(),
-                            interval.end().into_dyn(),
-                        );
-                        // Convert typed trajectory to DynTrajectory for pass computation
-                        let dyn_traj = sc_traj.clone().into_dyn();
-                        DynPass::from_interval(
-                            dyn_interval,
-                            self.step,
-                            gs.location(),
-                            gs.mask(),
-                            &dyn_traj,
-                            gs.body_fixed_frame(),
-                        )
-                    })
-                    .collect();
-                Some(((gs_id.clone(), sc_id.clone()), passes))
-            })
-            .collect()
     }
 }
 
@@ -1374,7 +1693,33 @@ mod tests {
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let (scenario, ensemble) =
             make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk);
+        let analysis =
+            VisibilityAnalysis::new(&scenario, &ensemble).with_occulting_bodies(spk, vec![]);
+        let results = analysis.compute().expect("visibility");
+        let intervals = results
+            .intervals_for(gs.id(), sc.id())
+            .expect("pair not found");
+        let expected = contacts_tai();
+        assert_eq!(intervals.len(), expected.len());
+        assert_approx_eq!(expected, intervals.to_vec(), rtol <= 1e-4);
+    }
+
+    #[test]
+    fn test_visibility_no_ephemeris() {
+        let gs_loc = location_dyn();
+        let mask = ElevationMask::with_fixed_elevation(0.0);
+        let sc_traj = spacecraft_trajectory_dyn();
+        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
+        let ground_assets = [gs.clone()];
+        let space_assets = [sc.clone()];
+        let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
+        let (scenario, ensemble) =
+            make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
+
+        // No ephemeris provided — must compile and produce the same intervals
+        // as test_visibility (which used the ephemeris but had no occulters).
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble);
         let results = analysis.compute().expect("visibility");
         let intervals = results
             .intervals_for(gs.id(), sc.id())
@@ -1397,8 +1742,8 @@ mod tests {
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let (scenario, ensemble) =
             make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
-            .with_occulting_bodies(vec![DynOrigin::Moon]);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble)
+            .with_occulting_bodies(spk, vec![DynOrigin::Moon]);
         let results = analysis.compute().unwrap();
         let passes = analysis.to_passes(&results);
         let key = (gs.id().clone(), sc.id().clone());
@@ -1418,13 +1763,12 @@ mod tests {
         let sc_traj = spacecraft_trajectory_dyn();
         let gs = GroundStation::new("cebreros", gs_loc, mask);
         let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
-        let spk = ephemeris();
         let ground_assets = [gs.clone()];
         let space_assets = [sc.clone()];
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let (scenario, ensemble) =
             make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk);
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble);
         let results = analysis.compute().unwrap();
         let passes = analysis.to_passes(&results);
         let key = (gs.id().clone(), sc.id().clone());
@@ -1499,10 +1843,9 @@ mod tests {
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
-        let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble).with_inter_satellite();
         let results = analysis.compute().unwrap();
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
@@ -1521,13 +1864,12 @@ mod tests {
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
-        let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
 
         // Colocated spacecraft have range = 0. A max_range filter with a large
         // threshold should still return the full interval.
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_inter_satellite()
             .with_max_range(Distance::kilometers(1000.0));
         let results = analysis.compute().unwrap();
@@ -1543,7 +1885,7 @@ mod tests {
         // A min_range filter with a positive threshold should exclude colocated
         // spacecraft entirely (range = 0 < threshold at all times).
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_inter_satellite()
             .with_min_range(Distance::kilometers(100.0));
         let results = analysis.compute().unwrap();
@@ -1603,10 +1945,9 @@ mod tests {
             .with_max_slew_rate(AngularRate::degrees_per_second(10.0));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj))
             .with_max_slew_rate(AngularRate::degrees_per_second(5.0));
-        let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble).with_inter_satellite();
         let results = analysis.compute().unwrap();
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
@@ -1683,15 +2024,13 @@ mod tests {
         let (traj1, traj2) = oneweb_trajectories();
         let interval = TimeInterval::new(traj1.start_time(), traj1.end_time());
 
-        let spk = ephemeris();
-
         // Without slew rate constraint: should have visibility (central body
         // LOS is always applied but these LEO sats have mutual visibility).
         let sc1_no_limit = Spacecraft::new("ow12", OrbitSource::Trajectory(traj1.clone()));
         let sc2_no_limit = Spacecraft::new("ow17", OrbitSource::Trajectory(traj2.clone()));
         let space_assets = [sc1_no_limit.clone(), sc2_no_limit.clone()];
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble).with_inter_satellite();
         let results_no_limit = analysis.compute().unwrap();
         let intervals_no_limit = results_no_limit
             .intervals_for(sc1_no_limit.id(), sc2_no_limit.id())
@@ -1705,7 +2044,7 @@ mod tests {
             .with_max_slew_rate(AngularRate::degrees_per_second(0.01));
         let space_assets = [sc1_limited.clone(), sc2_limited.clone()];
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble).with_inter_satellite();
         let results_limited = analysis.compute().unwrap();
         let intervals_limited = results_limited
             .intervals_for(sc1_limited.id(), sc2_limited.id())
@@ -1735,10 +2074,9 @@ mod tests {
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()))
             .with_max_slew_rate(AngularRate::degrees_per_second(10.0));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
-        let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble).with_inter_satellite();
         let results = analysis.compute().unwrap();
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
@@ -1756,10 +2094,9 @@ mod tests {
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj))
             .with_max_slew_rate(AngularRate::degrees_per_second(10.0));
-        let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk).with_inter_satellite();
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble).with_inter_satellite();
         let results = analysis.compute().unwrap();
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
@@ -1773,11 +2110,10 @@ mod tests {
         let interval = TimeInterval::new(traj1.start_time(), traj1.end_time());
         let sc1 = Spacecraft::new("ow12", OrbitSource::Trajectory(traj1));
         let sc2 = Spacecraft::new("ow17", OrbitSource::Trajectory(traj2));
-        let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
-        // Set both min and max range to exercise the intersection branch (line 835).
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        // Set both min and max range to exercise the intersection branch.
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_inter_satellite()
             .with_min_range(Distance::kilometers(100.0))
             .with_max_range(Distance::kilometers(5000.0));
@@ -1799,14 +2135,13 @@ mod tests {
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
-        let spk = ephemeris();
         let ground_assets = [gs1.clone(), gs2.clone()];
         let space_assets = [sc1.clone(), sc2.clone()];
         let (scenario, ensemble) =
             make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
 
         // Only keep pairs involving cebreros.
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_ground_space_filter(|gs, _sc| gs.id().as_str() == "cebreros");
         let results = analysis.compute().unwrap();
 
@@ -1824,15 +2159,15 @@ mod tests {
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj.clone()));
         let sc3 = Spacecraft::new("sc3", OrbitSource::Trajectory(sc_traj));
-        let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone(), sc3.clone()];
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
 
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
-            .with_inter_satellite_filter(|sc_a, sc_b| {
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble).with_inter_satellite_filter(
+            |sc_a, sc_b| {
                 let ids = [sc_a.id().as_str(), sc_b.id().as_str()];
                 ids.contains(&"sc1") && ids.contains(&"sc3")
-            });
+            },
+        );
         let results = analysis.compute().unwrap();
 
         assert_eq!(results.num_pairs(), 1);
@@ -1852,13 +2187,12 @@ mod tests {
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj.clone()));
         let sc3 = Spacecraft::new("sc3", OrbitSource::Trajectory(sc_traj));
-        let spk = ephemeris();
         let ground_assets = [gs1.clone(), gs2.clone()];
         let space_assets = [sc1.clone(), sc2.clone(), sc3.clone()];
         let (scenario, ensemble) =
             make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
 
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let analysis = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_ground_space_filter(|gs, _sc| gs.id().as_str() == "cebreros")
             .with_inter_satellite_filter(|sc_a, sc_b| {
                 let ids = [sc_a.id().as_str(), sc_b.id().as_str()];
@@ -1884,14 +2218,13 @@ mod tests {
         let sc_traj = spacecraft_trajectory_dyn();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj));
-        let spk = ephemeris();
         let ground_assets = [gs];
         let space_assets = [sc];
         let (scenario, ensemble) =
             make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
 
         // Without min_pass_duration.
-        let results_all = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let results_all = VisibilityAnalysis::new(&scenario, &ensemble)
             .compute()
             .unwrap();
         let all_count = results_all
@@ -1899,7 +2232,7 @@ mod tests {
             .map_or(0, |v| v.len());
 
         // With a large min_pass_duration (should filter short passes).
-        let results_filtered = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let results_filtered = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_min_pass_duration(TimeDelta::from_hours(2))
             .compute()
             .unwrap();
@@ -1909,7 +2242,7 @@ mod tests {
         assert!(filtered_count <= all_count);
 
         // With a very small min_pass_duration (coarse step <= step, so no effect).
-        let results_small = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let results_small = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_min_pass_duration(TimeDelta::from_seconds(1))
             .compute()
             .unwrap();
@@ -1925,11 +2258,10 @@ mod tests {
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
-        let spk = ephemeris();
         let space_assets = [sc1.clone(), sc2.clone()];
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, interval);
 
-        let results = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let results = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_inter_satellite()
             .compute()
             .unwrap();
@@ -1965,10 +2297,9 @@ mod tests {
         let sc_traj = spacecraft_trajectory_dyn();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj));
-        let spk = ephemeris();
         let (scenario, ensemble) = make_scenario_and_ensemble(&[gs], &[sc], interval);
 
-        let results = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let results = VisibilityAnalysis::new(&scenario, &ensemble)
             .compute()
             .unwrap();
 
@@ -2003,13 +2334,12 @@ mod tests {
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
-        let spk = ephemeris();
         let ground_assets = [gs.clone()];
         let space_assets = [sc1.clone(), sc2.clone()];
         let (scenario, ensemble) =
             make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
 
-        let results = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let results = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_inter_satellite()
             .compute()
             .unwrap();
@@ -2070,15 +2400,15 @@ mod tests {
         let (scenario, ensemble) = make_scenario_and_ensemble(&[], &space_assets, inter_interval);
 
         // Without additional occulting bodies (central body Earth is still checked).
-        let results_basic = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let results_basic = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_inter_satellite()
             .compute()
             .unwrap();
 
         // With the Moon as an additional occulting body.
-        let results_moon = VisibilityAnalysis::new(&scenario, &ensemble, spk)
+        let results_moon = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_inter_satellite()
-            .with_occulting_bodies(vec![DynOrigin::Moon])
+            .with_occulting_bodies(spk, vec![DynOrigin::Moon])
             .compute()
             .unwrap();
 

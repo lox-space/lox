@@ -540,8 +540,8 @@ impl PyVisibilityAnalysis {
             };
 
         let results = py.detach(|| {
-            let mut analysis = VisibilityAnalysis::new(scenario, ensemble, ephemeris)
-                .with_occulting_bodies(occulting_bodies)
+            let mut analysis = VisibilityAnalysis::new(scenario, ensemble)
+                .with_occulting_bodies(ephemeris, occulting_bodies)
                 .with_step(step);
             if let Some(mpd) = min_pass_duration {
                 analysis = analysis.with_min_pass_duration(mpd);
