@@ -22,6 +22,6 @@ pre-push:
     reuse:
       run: git ls-files -z | xargs -0 uvx reuse lint-file
     clippy:
-      run: cargo clippy --all-features
+      run: just lint-clippy
     rustfmt:
-      run: cargo fmt --check
+      run: just lint-rustfmt

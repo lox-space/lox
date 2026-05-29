@@ -63,8 +63,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: all-features
+      - uses: taiki-e/install-action@just
       - name: Linting
-        run: cargo clippy --all-features --all-targets -- -D warnings
+        run: just lint-clippy
 
   no-std-test:
     name: Test (no_std)
@@ -92,8 +93,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: no-std-baremetal
+      - uses: taiki-e/install-action@just
       - name: Bare-metal lint
-        run: cargo clippy -p lox-core -p lox-test-utils -p lox-math -p lox-units -p lox-bodies -p lox-time --no-default-features --features libm --target thumbv7em-none-eabi -- -D warnings
+        run: just lint-clippy-embedded
 
   reuse:
     name: REUSE Compliance
