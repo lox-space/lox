@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-export PYO3_PYTHON := `uv python find`
-
 _default:
     just -l
 
