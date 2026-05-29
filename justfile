@@ -29,6 +29,14 @@ doctest *FLAGS:
 
 test: rstest doctest pytest
 
+# Run Rust benchmarks
+bench *FLAGS:
+    cargo bench -p lox-space {{FLAGS}}
+
+# Run Python benchmarks (build the wheel with `just build-pyo3 --release` first)
+bench-py *FLAGS:
+    uv run pytest --codspeed crates/lox-space/tests/test_*benchmark* {{FLAGS}}
+
 # Run tests with coverage (includes Python integration tests)
 coverage *FLAGS:
     uv run --no-project tools/coverage.py {{FLAGS}}
