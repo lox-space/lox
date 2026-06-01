@@ -2691,17 +2691,15 @@ class CommunicationSystem:
     """A communication system combining an antenna with optional transmitter and receiver.
 
     Args:
-        antenna: A ConstantAntenna or PatternedAntenna.
-        receiver: A NoiseTempReceiver or CascadeReceiver (optional).
-            Use ``CommunicationSystem.gt_only(rx)`` for lumped G/T receivers.
-        transmitter: An AmplifierTransmitter (optional).
-            Use ``CommunicationSystem.eirp_only(tx)`` for lumped EIRP transmitters.
+        antenna: A ConstantAntenna or PatternedAntenna (optional; omit for lumped systems).
+        receiver: A NoiseTempReceiver, CascadeReceiver, or GtReceiver (optional).
+        transmitter: An AmplifierTransmitter or EirpTransmitter (optional).
     """
     def __new__(
         cls,
-        antenna: ConstantAntenna | PatternedAntenna,
-        receiver: NoiseTempReceiver | CascadeReceiver | None = None,
-        transmitter: AmplifierTransmitter | None = None,
+        antenna: ConstantAntenna | PatternedAntenna | None = None,
+        receiver: NoiseTempReceiver | CascadeReceiver | GtReceiver | None = None,
+        transmitter: AmplifierTransmitter | EirpTransmitter | None = None,
     ) -> Self: ...
     @classmethod
     def eirp_only(cls, tx: EirpTransmitter) -> CommunicationSystem:

@@ -1340,3 +1340,114 @@ def test_lumped_link_interference_requires_absolute_power():
 
     with pytest.raises(ValueError, match="absolute carrier and noise powers"):
         modulated.with_interference(1e-12)
+
+
+# --- Error mapping tests ---
+
+
+def test_missing_transmitter_raises_value_error():
+    antenna = lox.ConstantAntenna(0.0 * lox.dB, 1.0 * lox.deg)
+    rx_antenna = lox.ConstantAntenna(0.0 * lox.dB, 1.0 * lox.deg)
+    rx_receiver = lox.NoiseTempReceiver(29.0 * lox.GHz, 500.0 * lox.K)
+    tx = lox.CommunicationSystem(antenna=antenna)
+    rx = lox.CommunicationSystem(antenna=rx_antenna, receiver=rx_receiver)
+    with pytest.raises(ValueError, match="transmitter"):
+        tx.carrier_to_noise_density(
+            rx, 0.0 * lox.dB, 1000.0 * lox.km,
+            0.0 * lox.rad, 0.0 * lox.rad,
+        )
+
+
+def test_missing_receiver_raises_value_error():
+    tx_antenna = lox.ConstantAntenna(0.0 * lox.dB, 1.0 * lox.deg)
+    tx_transmitter = lox.AmplifierTransmitter(
+        frequency=29.0 * lox.GHz, power=10.0 * lox.W, line_loss=0.0 * lox.dB,
+    )
+    tx = lox.CommunicationSystem(antenna=tx_antenna, transmitter=tx_transmitter)
+    rx_antenna = lox.ConstantAntenna(0.0 * lox.dB, 1.0 * lox.deg)
+    rx = lox.CommunicationSystem(antenna=rx_antenna)
+    with pytest.raises(ValueError, match="receiver"):
+        tx.carrier_to_noise_density(
+            rx, 0.0 * lox.dB, 1000.0 * lox.km,
+            0.0 * lox.rad, 0.0 * lox.rad,
+        )
+
+
+def test_frequency_mismatch_raises_value_error():
+    tx = lox.CommunicationSystem.eirp_only(
+        lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
+    )
+    rx = lox.CommunicationSystem.gt_only(
+        lox.GtReceiver(30.0 * lox.GHz, 3.01 * lox.dB)
+    )
+    with pytest.raises(ValueError, match="frequency"):
+        tx.carrier_to_noise_density(
+            rx, 0.0 * lox.dB, 1000.0 * lox.km,
+            0.0 * lox.rad, 0.0 * lox.rad,
+        )
+
+
+def test_unexpected_antenna_raises_value_error():
+    antenna = lox.ConstantAntenna(46.0 * lox.dB, 0.7 * lox.deg)
+    tx_transmitter = lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
+    with pytest.raises(ValueError, match="EirpTransmitter must not be paired"):
+        lox.CommunicationSystem(antenna=antenna, transmitter=tx_transmitter)
+
+
+# --- Pickle round-trip tests for lumped CommunicationSystem ---
+
+
+def test_lumped_communication_system_pickle():
+    tx_system = lox.CommunicationSystem.eirp_only(
+        lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
+    )
+    rx_system = lox.CommunicationSystem.gt_only(
+        lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
+    )
+    assert pickle.loads(pickle.dumps(tx_system)) == tx_system
+    assert pickle.loads(pickle.dumps(rx_system)) == rx_system
+
+
+def test_lumped_communication_system_via_constructor_pickle():
+    tx_system = lox.CommunicationSystem(
+        transmitter=lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
+    )
+    rx_system = lox.CommunicationSystem(
+        receiver=lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
+    )
+    assert pickle.loads(pickle.dumps(tx_system)) == tx_system
+    assert pickle.loads(pickle.dumps(rx_system)) == rx_system
+
+
+# --- ModulatedLinkStats.with_interference happy path ---
+
+
+def test_modulated_with_interference_component_tier():
+    tx_antenna = lox.ConstantAntenna(46.0 * lox.dB, 0.7 * lox.deg)
+    tx_transmitter = lox.AmplifierTransmitter(
+        frequency=29.0 * lox.GHz, power=10.0 * lox.W, line_loss=1.0 * lox.dB,
+    )
+    tx = lox.CommunicationSystem(antenna=tx_antenna, transmitter=tx_transmitter)
+
+    rx_antenna = lox.ConstantAntenna(30.0 * lox.dB, 3.0 * lox.deg)
+    rx_receiver = lox.NoiseTempReceiver(29.0 * lox.GHz, 500.0 * lox.K)
+    rx = lox.CommunicationSystem(antenna=rx_antenna, receiver=rx_receiver)
+
+    channel = lox.Channel(
+        link_type="downlink",
+        symbol_rate=5.0 * lox.MHz,
+        required_eb_n0=10.0 * lox.dB,
+        margin=3.0 * lox.dB,
+        modulation=lox.Modulation("QPSK"),
+    )
+
+    link = lox.LinkStats.calculate(
+        tx, rx, 1000.0 * lox.km, channel.bandwidth(),
+        0.0 * lox.rad, 0.0 * lox.rad,
+    )
+    modulated = channel.apply(link)
+    interference = modulated.with_interference(1e-12)
+
+    assert float(interference.margin_with_interference) < float(modulated.margin)
+    assert float(interference.eb_n0i0) < float(modulated.eb_n0)
+    assert interference.interference_power_w == 1e-12
