@@ -300,4 +300,71 @@ mod tests {
         let factor = frequency_overlap_factor(10e9, 2e9, 10e9, 0.5e9);
         assert_approx_eq!(factor, 1.0, atol <= 1e-10);
     }
+
+    #[test]
+    fn test_channel_apply_produces_modulated_stats() {
+        let (tx_sys, rx_sys, channel) = test_link();
+        let link = LinkStats::calculate(
+            &tx_sys,
+            &rx_sys,
+            Distance::kilometers(1000.0),
+            channel.bandwidth(),
+            EnvironmentalLosses::none(),
+            Angle::radians(0.0),
+            Angle::radians(0.0),
+        )
+        .unwrap();
+        let m = channel.apply(link);
+        // Eb/N0 ≈ 37.91 (from existing test_link fixtures: QPSK, fec=0.5, C/N0≈104.9 dBHz)
+        assert_approx_eq!(m.eb_n0.as_f64(), 37.91, atol <= 0.2);
+        // required_eb_n0 = 10, margin field = 3 → link_margin ≈ 24.91
+        assert_approx_eq!(m.margin.as_f64(), 24.91, atol <= 0.2);
+    }
+
+    #[test]
+    fn test_modulated_with_interference_reduces_margin() {
+        let (tx_sys, rx_sys, channel) = test_link();
+        let link = LinkStats::calculate(
+            &tx_sys,
+            &rx_sys,
+            Distance::kilometers(1000.0),
+            channel.bandwidth(),
+            EnvironmentalLosses::none(),
+            Angle::radians(0.0),
+            Angle::radians(0.0),
+        )
+        .unwrap();
+        let m = channel.apply(link);
+        let interference = m.with_interference(1e-12);
+        assert!(interference.margin_with_interference.as_f64() <= m.margin.as_f64());
+        assert!(interference.eb_n0i0.as_f64() <= m.eb_n0.as_f64());
+    }
+
+    #[test]
+    fn test_lumped_link_stats_carrier_and_noise_are_none() {
+        use crate::receiver::GtReceiver;
+        use crate::transmitter::EirpTransmitter;
+
+        let tx = CommunicationSystem::eirp_only(EirpTransmitter {
+            frequency: 29.0.ghz(),
+            eirp: 55.0.db(),
+        });
+        let rx = CommunicationSystem::gt_only(GtReceiver {
+            frequency: 29.0.ghz(),
+            gt: 3.01.db(),
+        });
+        let stats = LinkStats::calculate(
+            &tx,
+            &rx,
+            Distance::kilometers(1000.0),
+            5.0.mhz(),
+            EnvironmentalLosses::none(),
+            Angle::radians(0.0),
+            Angle::radians(0.0),
+        )
+        .unwrap();
+        assert!(stats.carrier_rx_power.is_none());
+        assert!(stats.noise_power.is_none());
+        assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.2);
+    }
 }
