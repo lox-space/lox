@@ -2414,7 +2414,7 @@ class DipolePattern:
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
-class SimpleAntenna:
+class ConstantAntenna:
     """A simple antenna with constant gain and beamwidth.
 
     Args:
@@ -2425,7 +2425,7 @@ class SimpleAntenna:
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
-class ComplexAntenna:
+class PatternedAntenna:
     """An antenna with a physics-based gain pattern and boresight vector.
 
     Args:
@@ -2449,8 +2449,8 @@ class ComplexAntenna:
         ...
     def __repr__(self) -> str: ...
 
-class Transmitter:
-    """A radio transmitter.
+class AmplifierTransmitter:
+    """A radio transmitter with an RF power amplifier.
 
     Args:
         frequency: Transmit frequency.
@@ -2465,14 +2465,29 @@ class Transmitter:
         line_loss: Decibel,
         output_back_off: Decibel | None = None,
     ) -> Self: ...
-    def eirp(self, antenna: SimpleAntenna | ComplexAntenna, angle: Angle) -> Decibel:
+    def eirp(self, antenna: ConstantAntenna | PatternedAntenna, angle: Angle) -> Decibel:
         """Returns the EIRP in dBW for the given antenna and off-boresight angle."""
         ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
-class SimpleReceiver:
-    """A simple receiver with a known system noise temperature.
+class EirpTransmitter:
+    """A lumped transmitter defined by a frequency and aggregate EIRP.
+
+    Args:
+        frequency: Transmit frequency.
+        eirp: Effective isotropic radiated power in dBW.
+    """
+    def __new__(cls, frequency: Frequency, eirp: Decibel) -> Self: ...
+    @property
+    def frequency(self) -> Frequency: ...
+    @property
+    def eirp(self) -> Decibel: ...
+    def __repr__(self) -> str: ...
+    def __eq__(self, other: object) -> bool: ...
+
+class NoiseTempReceiver:
+    """A receiver with a known system noise temperature.
 
     Args:
         frequency: Receive frequency.
@@ -2484,6 +2499,21 @@ class SimpleReceiver:
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
+class GtReceiver:
+    """A lumped receiver defined by a frequency and aggregate G/T.
+
+    Args:
+        frequency: Receive frequency.
+        gt: Gain-to-noise-temperature ratio in dB/K.
+    """
+    def __new__(cls, frequency: Frequency, gt: Decibel) -> Self: ...
+    @property
+    def frequency(self) -> Frequency: ...
+    @property
+    def gt(self) -> Decibel: ...
+    def __repr__(self) -> str: ...
+    def __eq__(self, other: object) -> bool: ...
+
 class NoiseStage:
     """A single stage in an RF receiver chain.
 
@@ -2494,7 +2524,7 @@ class NoiseStage:
     def __new__(cls, gain: Decibel, noise_temperature: Temperature) -> Self: ...
     def __repr__(self) -> str: ...
 
-class ComplexReceiver:
+class CascadeReceiver:
     """An N-stage cascade receiver using the Friis noise formula.
 
     Args:
@@ -2521,7 +2551,7 @@ class ComplexReceiver:
         receiver_gain: Decibel,
         demodulator_loss: Decibel | None = None,
         implementation_loss: Decibel | None = None,
-    ) -> ComplexReceiver:
+    ) -> CascadeReceiver:
         """Creates a two-stage model: lossy feed line at room temperature followed by a receiver."""
         ...
     @staticmethod
@@ -2533,7 +2563,7 @@ class ComplexReceiver:
         receiver_noise_figure: Decibel,
         demodulator_loss: Decibel | None = None,
         implementation_loss: Decibel | None = None,
-    ) -> ComplexReceiver:
+    ) -> CascadeReceiver:
         """Creates a two-stage model: LNA followed by a receiver characterised by noise figure."""
         ...
     def system_noise_temperature(self) -> Temperature:
@@ -2594,6 +2624,9 @@ class Channel:
         ...
     def processing_gain(self) -> Decibel | None:
         """Returns the DSSS processing gain in dB, or None for narrowband."""
+        ...
+    def apply(self, link: LinkStats) -> ModulatedLinkStats:
+        """Layers modulation/FEC figures onto a modulation-agnostic link budget."""
         ...
     def __repr__(self) -> str: ...
 
@@ -2658,16 +2691,24 @@ class CommunicationSystem:
     """A communication system combining an antenna with optional transmitter and receiver.
 
     Args:
-        antenna: A SimpleAntenna or ComplexAntenna.
-        receiver: A SimpleReceiver or ComplexReceiver (optional).
-        transmitter: A Transmitter (optional).
+        antenna: A ConstantAntenna or PatternedAntenna.
+        receiver: A NoiseTempReceiver, CascadeReceiver, or GtReceiver (optional).
+        transmitter: An AmplifierTransmitter (optional).
     """
     def __new__(
         cls,
-        antenna: SimpleAntenna | ComplexAntenna,
-        receiver: SimpleReceiver | ComplexReceiver | None = None,
-        transmitter: Transmitter | None = None,
+        antenna: ConstantAntenna | PatternedAntenna,
+        receiver: NoiseTempReceiver | CascadeReceiver | GtReceiver | None = None,
+        transmitter: AmplifierTransmitter | None = None,
     ) -> Self: ...
+    @classmethod
+    def eirp_only(cls, tx: EirpTransmitter) -> CommunicationSystem:
+        """Creates a lumped transmit-only system from a known EIRP."""
+        ...
+    @classmethod
+    def gt_only(cls, rx: GtReceiver) -> CommunicationSystem:
+        """Creates a lumped receive-only system from a known G/T."""
+        ...
     def carrier_to_noise_density(
         self,
         rx_system: CommunicationSystem,
@@ -2693,33 +2734,33 @@ class CommunicationSystem:
         range: Distance,
         tx_angle: Angle,
         rx_angle: Angle,
-    ) -> Decibel:
-        """Computes the received carrier power in dBW."""
+    ) -> Decibel | None:
+        """Computes the received carrier power in dBW. Returns ``None`` for lumped G/T receivers."""
         ...
-    def noise_power(self, bandwidth: Frequency) -> Decibel:
-        """Computes the noise power in dBW for a given bandwidth."""
+    def noise_power(self, bandwidth: Frequency) -> Decibel | None:
+        """Computes the noise power in dBW for a given bandwidth. Returns ``None`` for lumped G/T receivers."""
         ...
     def __repr__(self) -> str: ...
 
 class LinkStats:
-    """Complete link budget statistics."""
+    """Modulation-agnostic link budget statistics."""
     @staticmethod
     def calculate(
         tx_system: CommunicationSystem,
         rx_system: CommunicationSystem,
-        channel: Channel,
         range: Distance,
+        bandwidth: Frequency,
         tx_angle: Angle,
         rx_angle: Angle,
         losses: EnvironmentalLosses | None = None,
     ) -> LinkStats:
-        """Computes a full link budget.
+        """Computes a modulation-agnostic link budget.
 
         Args:
             tx_system: The transmitting CommunicationSystem.
             rx_system: The receiving CommunicationSystem.
-            channel: The Channel.
             range: Slant range as Distance.
+            bandwidth: Noise bandwidth as Frequency.
             tx_angle: Off-boresight angle at transmitter as Angle.
             rx_angle: Off-boresight angle at receiver as Angle.
             losses: EnvironmentalLosses (optional, defaults to none).
@@ -2746,40 +2787,87 @@ class LinkStats:
         """Carrier-to-noise density ratio in dB·Hz."""
         ...
     @property
+    def c_n(self) -> Decibel:
+        """C/N in dB."""
+        ...
+    @property
+    def carrier_rx_power(self) -> Decibel | None:
+        """Received carrier power in dBW. ``None`` for lumped G/T receivers."""
+        ...
+    @property
+    def noise_power(self) -> Decibel | None:
+        """Noise power in dBW. ``None`` for lumped G/T receivers."""
+        ...
+    @property
+    def bandwidth(self) -> Frequency:
+        """Channel noise bandwidth."""
+        ...
+    @property
+    def frequency(self) -> Frequency:
+        """Link frequency."""
+        ...
+    @property
+    def tx_angle(self) -> Angle:
+        """Off-boresight angle at the transmitter."""
+        ...
+    @property
+    def rx_angle(self) -> Angle:
+        """Off-boresight angle at the receiver."""
+        ...
+    def __repr__(self) -> str: ...
+
+class InterferenceStats:
+    """Interference statistics for a link with a given interferer power."""
+    @property
+    def interference_power_w(self) -> float:
+        """Interference power in watts."""
+        ...
+    @property
+    def c_n0i0(self) -> Decibel:
+        """Carrier-to-noise-plus-interference density ratio in dB·Hz."""
+        ...
+    @property
+    def eb_n0i0(self) -> Decibel:
+        """Eb/(N0+I0) in dB."""
+        ...
+    @property
+    def margin_with_interference(self) -> Decibel:
+        """Link margin with interference in dB."""
+        ...
+    def __repr__(self) -> str: ...
+
+class ModulatedLinkStats:
+    """Link-budget output with modulation/coding figures applied."""
+    @property
+    def link(self) -> LinkStats:
+        """The underlying modulation-agnostic link budget."""
+        ...
+    @property
+    def channel(self) -> Channel:
+        """The channel (modulation, FEC, required Eb/N0, margin) applied."""
+        ...
+    @property
+    def symbol_rate(self) -> Frequency:
+        """Symbol rate from the channel."""
+        ...
+    @property
     def es_n0(self) -> Decibel:
-        """Es/N0 in dB."""
+        """Es/N0 (energy per symbol to noise spectral density) in dB."""
         ...
     @property
     def eb_n0(self) -> Decibel:
-        """Eb/N0 in dB."""
-        ...
-    @property
-    def c_n(self) -> Decibel:
-        """C/N in dB."""
+        """Eb/N0 (energy per information bit to noise spectral density) in dB."""
         ...
     @property
     def margin(self) -> Decibel:
         """Link margin in dB."""
         ...
     @property
-    def carrier_rx_power(self) -> Decibel:
-        """Received carrier power in dBW."""
+    def interference(self) -> InterferenceStats | None:
+        """Interference statistics, if computed."""
         ...
-    @property
-    def noise_power(self) -> Decibel:
-        """Noise power in dBW."""
-        ...
-    @property
-    def symbol_rate(self) -> Frequency:
-        """Symbol rate."""
-        ...
-    @property
-    def bandwidth(self) -> Frequency:
-        """Channel bandwidth."""
-        ...
-    @property
-    def frequency(self) -> Frequency:
-        """Link frequency."""
+    def with_interference(self, interference_power_w: float) -> InterferenceStats:
+        """Computes interference statistics for a given interferer power."""
         ...
     def __repr__(self) -> str: ...
 
