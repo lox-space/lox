@@ -19,7 +19,7 @@ pub trait AntennaGain {
     fn beamwidth(&self, frequency: Frequency) -> Option<Angle>;
 }
 
-/// A constant antenna with constant gain and beamwidth.
+/// Antenna with angle-independent gain and a nominal beamwidth.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ConstantAntenna {
