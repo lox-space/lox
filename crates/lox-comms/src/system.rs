@@ -7,6 +7,7 @@
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 use crate::BOLTZMANN_CONSTANT;
+use crate::LinkBudgetError;
 use crate::antenna::Antenna;
 use crate::receiver::Receiver;
 use crate::transmitter::Transmitter;
@@ -29,7 +30,7 @@ impl CommunicationSystem {
     ///
     /// C/N₀ = EIRP + G/T − FSPL − losses − 10·log₁₀(k_B)
     ///
-    /// `self` is the transmitting system, `rx` is the receiving system.
+    /// Returns an error if `self` has no transmitter or `rx` has no receiver.
     pub fn carrier_to_noise_density(
         &self,
         rx: &CommunicationSystem,
@@ -37,27 +38,29 @@ impl CommunicationSystem {
         range: Distance,
         tx_angle: Angle,
         rx_angle: Angle,
-    ) -> Decibel {
+    ) -> Result<Decibel, LinkBudgetError> {
         let tx = self
             .transmitter
             .as_ref()
-            .expect("transmitting system must have a transmitter");
+            .ok_or(LinkBudgetError::MissingTransmitter)?;
         let receiver = rx
             .receiver
             .as_ref()
-            .expect("receiving system must have a receiver");
+            .ok_or(LinkBudgetError::MissingReceiver)?;
 
         let eirp = tx.eirp(&self.antenna, tx_angle);
         let gt = receiver.gain_to_noise_temperature(&rx.antenna, rx_angle);
         let fspl = free_space_path_loss(range, tx.frequency);
         let k_db = Decibel::from_linear(BOLTZMANN_CONSTANT);
 
-        eirp + gt - fspl - losses - k_db
+        Ok(eirp + gt - fspl - losses - k_db)
     }
 
     /// Computes the received carrier power in dBW.
     ///
     /// P_rx = EIRP − FSPL − losses + G_rx_total
+    ///
+    /// Returns an error if `self` has no transmitter or `rx` has no receiver.
     pub fn carrier_power(
         &self,
         rx: &CommunicationSystem,
@@ -65,32 +68,37 @@ impl CommunicationSystem {
         range: Distance,
         tx_angle: Angle,
         rx_angle: Angle,
-    ) -> Decibel {
+    ) -> Result<Decibel, LinkBudgetError> {
         let tx = self
             .transmitter
             .as_ref()
-            .expect("transmitting system must have a transmitter");
+            .ok_or(LinkBudgetError::MissingTransmitter)?;
         let receiver = rx
             .receiver
             .as_ref()
-            .expect("receiving system must have a receiver");
+            .ok_or(LinkBudgetError::MissingReceiver)?;
 
         let eirp = tx.eirp(&self.antenna, tx_angle);
         let fspl = free_space_path_loss(range, tx.frequency);
         let g_rx = receiver.total_gain(&rx.antenna, rx_angle);
 
-        eirp - fspl - losses + g_rx
+        Ok(eirp - fspl - losses + g_rx)
     }
 
     /// Computes the noise power in dBW for a given bandwidth.
     ///
     /// P_noise = 10·log₁₀(T_sys · k_B · BW)
-    pub fn noise_power(&self, bandwidth_hz: f64) -> Decibel {
-        let receiver = self.receiver.as_ref().expect("system must have a receiver");
+    ///
+    /// Returns an error if `self` has no receiver.
+    pub fn noise_power(&self, bandwidth_hz: f64) -> Result<Decibel, LinkBudgetError> {
+        let receiver = self
+            .receiver
+            .as_ref()
+            .ok_or(LinkBudgetError::MissingReceiver)?;
 
         let t_sys = receiver.system_noise_temperature();
         let p_noise_w = t_sys * BOLTZMANN_CONSTANT * bandwidth_hz;
-        Decibel::from_linear(p_noise_w)
+        Ok(Decibel::from_linear(p_noise_w))
     }
 
     /// Returns the transmit frequency, if this system has a transmitter.
@@ -148,13 +156,15 @@ mod tests {
         // C/N0 = 55 + 3.01 - 181.696 - 0 - (-228.599) = 104.913 dB·Hz
         let tx = tx_system();
         let rx = rx_system();
-        let c_n0 = tx.carrier_to_noise_density(
-            &rx,
-            0.0.db(),
-            Distance::kilometers(1000.0),
-            Angle::radians(0.0),
-            Angle::radians(0.0),
-        );
+        let c_n0 = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap();
         // Verify within reasonable tolerance (some rounding in intermediate values)
         assert_approx_eq!(c_n0.as_f64(), 104.913, atol <= 0.1);
     }
@@ -165,13 +175,15 @@ mod tests {
         // = 55 - 181.696 - 0 + 30 = -96.696 dBW
         let tx = tx_system();
         let rx = rx_system();
-        let p_rx = tx.carrier_power(
-            &rx,
-            0.0.db(),
-            Distance::kilometers(1000.0),
-            Angle::radians(0.0),
-            Angle::radians(0.0),
-        );
+        let p_rx = tx
+            .carrier_power(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap();
         assert_approx_eq!(p_rx.as_f64(), -96.696, atol <= 0.1);
     }
 
@@ -181,7 +193,7 @@ mod tests {
         //         = 10*log10(500 * 1.380649e-23 * 1e6)
         //         = -141.61 dBW
         let rx = rx_system();
-        let p_noise = rx.noise_power(1e6);
+        let p_noise = rx.noise_power(1e6).unwrap();
         assert_approx_eq!(p_noise.as_f64(), -141.61, atol <= 0.01);
     }
 
@@ -193,21 +205,25 @@ mod tests {
         let range = Distance::kilometers(1000.0);
         let bw = 1e6;
 
-        let c_n0 = tx.carrier_to_noise_density(
-            &rx,
-            0.0.db(),
-            range,
-            Angle::radians(0.0),
-            Angle::radians(0.0),
-        );
-        let p_rx = tx.carrier_power(
-            &rx,
-            0.0.db(),
-            range,
-            Angle::radians(0.0),
-            Angle::radians(0.0),
-        );
-        let p_noise = rx.noise_power(bw);
+        let c_n0 = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                range,
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap();
+        let p_rx = tx
+            .carrier_power(
+                &rx,
+                0.0.db(),
+                range,
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap();
+        let p_noise = rx.noise_power(bw).unwrap();
 
         // C/N0 = P_rx - P_noise + 10*log10(BW) (converting from C/N to C/N0)
         let c_n0_from_power = p_rx - p_noise + Decibel::from_linear(bw);
