@@ -117,14 +117,14 @@ mod tests {
     use lox_core::units::{DecibelUnits, FrequencyUnits};
     use lox_test_utils::assert_approx_eq;
 
-    use crate::antenna::SimpleAntenna;
+    use crate::antenna::ConstantAntenna;
     use crate::receiver::SimpleReceiver;
 
     use super::*;
 
     fn tx_system() -> CommunicationSystem {
         CommunicationSystem {
-            antenna: Antenna::Simple(SimpleAntenna {
+            antenna: Antenna::Constant(ConstantAntenna {
                 gain: 46.0.db(),
                 beamwidth: Angle::degrees(0.7),
             }),
@@ -135,7 +135,7 @@ mod tests {
 
     fn rx_system() -> CommunicationSystem {
         CommunicationSystem {
-            antenna: Antenna::Simple(SimpleAntenna {
+            antenna: Antenna::Constant(ConstantAntenna {
                 gain: 30.0.db(),
                 beamwidth: Angle::degrees(3.0),
             }),

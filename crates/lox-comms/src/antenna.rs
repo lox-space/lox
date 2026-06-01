@@ -19,17 +19,17 @@ pub trait AntennaGain {
     fn beamwidth(&self, frequency: Frequency) -> Option<Angle>;
 }
 
-/// A simple antenna with constant gain and beamwidth.
+/// A constant antenna with constant gain and beamwidth.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct SimpleAntenna {
+pub struct ConstantAntenna {
     /// Peak gain in dBi.
     pub gain: Decibel,
     /// Half-power beamwidth.
     pub beamwidth: Angle,
 }
 
-impl AntennaGain for SimpleAntenna {
+impl AntennaGain for ConstantAntenna {
     fn gain(&self, _frequency: Frequency, _angle: Angle) -> Decibel {
         self.gain
     }
@@ -42,14 +42,14 @@ impl AntennaGain for SimpleAntenna {
 /// An antenna with a physics-based gain pattern and a boresight vector.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ComplexAntenna {
+pub struct PatternedAntenna {
     /// The gain pattern model.
     pub pattern: AntennaPattern,
     /// Boresight direction vector (unit vector in the antenna's local frame).
     pub boresight: DVec3,
 }
 
-impl AntennaGain for ComplexAntenna {
+impl AntennaGain for PatternedAntenna {
     fn gain(&self, frequency: Frequency, angle: Angle) -> Decibel {
         self.pattern.gain(frequency, angle)
     }
@@ -59,36 +59,37 @@ impl AntennaGain for ComplexAntenna {
     }
 }
 
-impl ComplexAntenna {
+impl PatternedAntenna {
     /// Returns the peak gain in dBi at the given frequency.
     pub fn peak_gain(&self, frequency: Frequency) -> Decibel {
         self.pattern.peak_gain(frequency)
     }
 }
 
-/// An antenna, either simple (constant gain) or complex (pattern-based).
+/// An antenna, either constant-gain or pattern-based.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
+#[non_exhaustive]
 pub enum Antenna {
     /// Constant-gain antenna.
-    Simple(SimpleAntenna),
+    Constant(ConstantAntenna),
     /// Pattern-based antenna with boresight direction.
-    Complex(ComplexAntenna),
+    Patterned(PatternedAntenna),
 }
 
 impl AntennaGain for Antenna {
     fn gain(&self, frequency: Frequency, angle: Angle) -> Decibel {
         match self {
-            Antenna::Simple(a) => a.gain(frequency, angle),
-            Antenna::Complex(a) => a.gain(frequency, angle),
+            Antenna::Constant(a) => a.gain(frequency, angle),
+            Antenna::Patterned(a) => a.gain(frequency, angle),
         }
     }
 
     fn beamwidth(&self, frequency: Frequency) -> Option<Angle> {
         match self {
-            Antenna::Simple(a) => a.beamwidth(frequency),
-            Antenna::Complex(a) => a.beamwidth(frequency),
+            Antenna::Constant(a) => a.beamwidth(frequency),
+            Antenna::Patterned(a) => a.beamwidth(frequency),
         }
     }
 }

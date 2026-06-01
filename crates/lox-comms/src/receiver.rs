@@ -199,7 +199,7 @@ mod tests {
     use lox_core::units::{DecibelUnits, FrequencyUnits};
     use lox_test_utils::assert_approx_eq;
 
-    use crate::antenna::SimpleAntenna;
+    use crate::antenna::ConstantAntenna;
 
     use super::*;
 
@@ -270,7 +270,7 @@ mod tests {
     fn test_simple_receiver_gt() {
         // SimpleReceiver with T_sys=500K, antenna gain=30dBi
         // G/T = 30 - 10*log10(500) = 30 - 26.9897 = 3.0103 dB/K
-        let antenna = SimpleAntenna {
+        let antenna = ConstantAntenna {
             gain: 30.0.db(),
             beamwidth: Angle::degrees(1.0),
         };
@@ -339,7 +339,7 @@ mod tests {
 
     #[test]
     fn test_complex_receiver_gt() {
-        let antenna = SimpleAntenna {
+        let antenna = ConstantAntenna {
             gain: 30.0.db(),
             beamwidth: Angle::degrees(1.0),
         };
@@ -361,7 +361,7 @@ mod tests {
 
     #[test]
     fn test_complex_receiver_total_gain() {
-        let antenna = SimpleAntenna {
+        let antenna = ConstantAntenna {
             gain: 30.0.db(),
             beamwidth: Angle::degrees(1.0),
         };
