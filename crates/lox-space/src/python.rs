@@ -13,9 +13,9 @@ use crate::analysis::python::{
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
     PyChannel, PyCommunicationSystem, PyComplexAntenna, PyComplexReceiver, PyDecibel,
-    PyDipolePattern, PyGaussianPattern, PyLinkStats, PyModulation, PyNoiseStage,
-    PyParabolicPattern, PySimpleAntenna, PySimpleReceiver, PyTransmitter, freq_overlap, fspl,
-    pfd_mask, power_flux_density, slant_range,
+    PyDipolePattern, PyGaussianPattern, PyInterferenceStats, PyLinkStats, PyModulatedLinkStats,
+    PyModulation, PyNoiseStage, PyParabolicPattern, PySimpleAntenna, PySimpleReceiver,
+    PyTransmitter, freq_overlap, fspl, pfd_mask, power_flux_density, slant_range,
 };
 use crate::constellations::python::{PyConstellation, PyConstellationSatellite};
 use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
@@ -73,6 +73,8 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyEnvironmentalLosses>()?;
     m.add_class::<PyCommunicationSystem>()?;
     m.add_class::<PyLinkStats>()?;
+    m.add_class::<PyInterferenceStats>()?;
+    m.add_class::<PyModulatedLinkStats>()?;
     m.add_function(wrap_pyfunction!(fspl, m)?)?;
     m.add_function(wrap_pyfunction!(freq_overlap, m)?)?;
     m.add_function(wrap_pyfunction!(power_flux_density, m)?)?;
