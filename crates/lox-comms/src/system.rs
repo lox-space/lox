@@ -93,6 +93,15 @@ impl CommunicationSystem {
             .as_ref()
             .ok_or(LinkBudgetError::MissingReceiver)?;
 
+        let tx_freq = tx.frequency();
+        let rx_freq = receiver.frequency();
+        if tx_freq != rx_freq {
+            return Err(LinkBudgetError::FrequencyMismatch {
+                tx: tx_freq,
+                rx: rx_freq,
+            });
+        }
+
         let eirp = tx_eirp(tx, &self.antenna, tx_angle)?;
         let gt = rx_gt(receiver, &rx.antenna, rx_angle)?;
         let fspl = free_space_path_loss(range, tx.frequency());
@@ -125,6 +134,15 @@ impl CommunicationSystem {
             .receiver
             .as_ref()
             .ok_or(LinkBudgetError::MissingReceiver)?;
+
+        let tx_freq = tx.frequency();
+        let rx_freq = receiver.frequency();
+        if tx_freq != rx_freq {
+            return Err(LinkBudgetError::FrequencyMismatch {
+                tx: tx_freq,
+                rx: rx_freq,
+            });
+        }
 
         if matches!(receiver, Receiver::Gt(_)) {
             return Ok(None);
@@ -469,5 +487,30 @@ mod tests {
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingAntenna);
+    }
+
+    #[test]
+    fn test_frequency_mismatch_is_error() {
+        use crate::receiver::GtReceiver;
+        use crate::transmitter::EirpTransmitter;
+
+        let tx = CommunicationSystem::eirp_only(EirpTransmitter {
+            frequency: 29.0.ghz(),
+            eirp: 55.0.db(),
+        });
+        let rx = CommunicationSystem::gt_only(GtReceiver {
+            frequency: 30.0.ghz(),
+            gt: 3.01.db(),
+        });
+        let err = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap_err();
+        assert!(matches!(err, LinkBudgetError::FrequencyMismatch { .. }));
     }
 }
