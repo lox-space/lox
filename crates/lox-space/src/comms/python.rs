@@ -1081,7 +1081,7 @@ impl PyCommunicationSystem {
         let rx = receiver.map(build_receiver).transpose()?;
         let tx = transmitter.map(build_transmitter);
         Ok(Self(CommunicationSystem {
-            antenna: ant,
+            antenna: Some(ant),
             receiver: rx,
             transmitter: tx,
         }))
@@ -1111,6 +1111,8 @@ impl PyCommunicationSystem {
     }
 
     /// Computes the received carrier power in dBW.
+    ///
+    /// Returns ``None`` for lumped G/T receivers.
     fn carrier_power(
         &self,
         rx_system: &PyCommunicationSystem,
@@ -1118,21 +1120,21 @@ impl PyCommunicationSystem {
         range: PyDistance,
         tx_angle: PyAngle,
         rx_angle: PyAngle,
-    ) -> PyResult<PyDecibel> {
-        Ok(PyDecibel(
-            self.0
-                .carrier_power(&rx_system.0, losses.0, range.0, tx_angle.0, rx_angle.0)
-                .map_err(|e| PyValueError::new_err(e.to_string()))?,
-        ))
+    ) -> PyResult<Option<PyDecibel>> {
+        self.0
+            .carrier_power(&rx_system.0, losses.0, range.0, tx_angle.0, rx_angle.0)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+            .map(|opt| opt.map(PyDecibel))
     }
 
     /// Computes the noise power in dBW for a given bandwidth.
-    fn noise_power(&self, bandwidth: PyFrequency) -> PyResult<PyDecibel> {
-        Ok(PyDecibel(
-            self.0
-                .noise_power(f64::from(bandwidth.0))
-                .map_err(|e| PyValueError::new_err(e.to_string()))?,
-        ))
+    ///
+    /// Returns ``None`` for lumped G/T receivers.
+    fn noise_power(&self, bandwidth: PyFrequency) -> PyResult<Option<PyDecibel>> {
+        self.0
+            .noise_power(f64::from(bandwidth.0))
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+            .map(|opt| opt.map(PyDecibel))
     }
 
     #[allow(clippy::type_complexity)]
@@ -1144,7 +1146,12 @@ impl PyCommunicationSystem {
         Option<Bound<'py, PyAny>>,
         Option<PyTransmitter>,
     ) {
-        let antenna = antenna_to_py(py, &self.0.antenna);
+        let antenna = self
+            .0
+            .antenna
+            .as_ref()
+            .map(|a| antenna_to_py(py, a))
+            .expect("component-tier CommunicationSystem must have an antenna");
         let receiver = self.0.receiver.as_ref().map(|r| receiver_to_py(py, r));
         let transmitter = self.0.transmitter.as_ref().map(|t| {
             PyTransmitter(match t {
@@ -1154,6 +1161,7 @@ impl PyCommunicationSystem {
                     a.line_loss,
                     a.output_back_off,
                 )),
+                Transmitter::Eirp(_) => unreachable!("Eirp transmitter not yet exposed in Python"),
                 _ => unreachable!("unknown transmitter variant"),
             })
         });
@@ -1161,13 +1169,13 @@ impl PyCommunicationSystem {
     }
 
     fn __repr__(&self) -> String {
-        let antenna_repr = match &self.0.antenna {
-            Antenna::Constant(a) => format!(
+        let antenna_repr = match self.0.antenna.as_ref() {
+            Some(Antenna::Constant(a)) => format!(
                 "SimpleAntenna(gain={}, beamwidth={})",
                 PyDecibel(a.gain).__repr__(),
                 PyAngle(a.beamwidth).__repr__(),
             ),
-            Antenna::Patterned(a) => {
+            Some(Antenna::Patterned(a)) => {
                 let pattern_repr = match &a.pattern {
                     AntennaPattern::Parabolic(p) => format!(
                         "ParabolicPattern(diameter={}, efficiency={})",
@@ -1192,7 +1200,8 @@ impl PyCommunicationSystem {
                     repr_f64(b.z),
                 )
             }
-            _ => unreachable!("unknown antenna variant"),
+            Some(_) => unreachable!("unknown antenna variant"),
+            None => String::from("None"),
         };
         let rx_repr = match &self.0.receiver {
             Some(Receiver::NoiseTemperature(r)) => format!(
@@ -1203,6 +1212,7 @@ impl PyCommunicationSystem {
             Some(Receiver::Cascade(r)) => {
                 format!(", receiver={}", PyComplexReceiver(r.clone()).__repr__())
             }
+            Some(Receiver::Gt(_)) => unreachable!("Gt receiver not yet exposed in Python"),
             Some(_) => unreachable!("unknown receiver variant"),
             None => String::new(),
         };
@@ -1215,6 +1225,7 @@ impl PyCommunicationSystem {
                     PyDecibel(a.line_loss).__repr__(),
                     PyDecibel(a.output_back_off).__repr__(),
                 ),
+                Transmitter::Eirp(_) => unreachable!("Eirp transmitter not yet exposed in Python"),
                 _ => unreachable!("unknown transmitter variant"),
             },
             None => String::new(),
