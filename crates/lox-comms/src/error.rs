@@ -5,22 +5,33 @@
 //! Errors produced by link-budget calculations.
 
 use lox_core::units::Frequency;
+use thiserror::Error;
 
 /// Errors that can arise when computing a link budget.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Error)]
 #[non_exhaustive]
 pub enum LinkBudgetError {
     /// The transmitting system has no transmitter configured.
+    #[error("transmitting system has no transmitter configured")]
     MissingTransmitter,
     /// The receiving system has no receiver configured.
+    #[error("receiving system has no receiver configured")]
     MissingReceiver,
     /// A component-tier transmitter/receiver requires an antenna but none was provided.
+    #[error("component-tier transmitter/receiver requires an antenna")]
     MissingAntenna,
     /// A lumped (`Eirp`/`Gt`) transmitter/receiver must not be paired with an antenna.
+    #[error("lumped (Eirp/Gt) transmitter/receiver must not be paired with an antenna")]
     UnexpectedAntenna,
     /// Absolute carrier and noise powers are required but are unavailable.
+    #[error("absolute carrier and noise powers are unavailable for this link")]
     AbsolutePowerUnavailable,
     /// Transmitter and receiver frequencies disagree.
+    #[error(
+        "transmitter frequency {} Hz differs from receiver frequency {} Hz",
+        tx.to_hertz(),
+        rx.to_hertz()
+    )]
     FrequencyMismatch {
         /// Transmitter frequency.
         tx: Frequency,
@@ -28,38 +39,6 @@ pub enum LinkBudgetError {
         rx: Frequency,
     },
 }
-
-impl std::fmt::Display for LinkBudgetError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LinkBudgetError::MissingTransmitter => {
-                write!(f, "transmitting system has no transmitter configured")
-            }
-            LinkBudgetError::MissingReceiver => {
-                write!(f, "receiving system has no receiver configured")
-            }
-            LinkBudgetError::MissingAntenna => {
-                write!(f, "component-tier transmitter/receiver requires an antenna")
-            }
-            LinkBudgetError::UnexpectedAntenna => write!(
-                f,
-                "lumped (Eirp/Gt) transmitter/receiver must not be paired with an antenna"
-            ),
-            LinkBudgetError::AbsolutePowerUnavailable => write!(
-                f,
-                "absolute carrier and noise powers are unavailable for this link"
-            ),
-            LinkBudgetError::FrequencyMismatch { tx, rx } => write!(
-                f,
-                "transmitter frequency {} Hz differs from receiver frequency {} Hz",
-                tx.to_hertz(),
-                rx.to_hertz()
-            ),
-        }
-    }
-}
-
-impl std::error::Error for LinkBudgetError {}
 
 #[cfg(test)]
 mod tests {
