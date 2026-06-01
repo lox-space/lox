@@ -50,7 +50,7 @@ impl CommunicationSystem {
 
         let eirp = tx.eirp(&self.antenna, tx_angle);
         let gt = receiver.gain_to_noise_temperature(&rx.antenna, rx_angle);
-        let fspl = free_space_path_loss(range, tx.frequency);
+        let fspl = free_space_path_loss(range, tx.frequency());
         let k_db = Decibel::from_linear(BOLTZMANN_CONSTANT);
 
         Ok(eirp + gt - fspl - losses - k_db)
@@ -79,7 +79,7 @@ impl CommunicationSystem {
             .ok_or(LinkBudgetError::MissingReceiver)?;
 
         let eirp = tx.eirp(&self.antenna, tx_angle);
-        let fspl = free_space_path_loss(range, tx.frequency);
+        let fspl = free_space_path_loss(range, tx.frequency());
         let g_rx = receiver.total_gain(&rx.antenna, rx_angle);
 
         Ok(eirp - fspl - losses + g_rx)
@@ -103,7 +103,7 @@ impl CommunicationSystem {
 
     /// Returns the transmit frequency, if this system has a transmitter.
     pub fn tx_frequency(&self) -> Option<Frequency> {
-        self.transmitter.as_ref().map(|tx| tx.frequency)
+        self.transmitter.as_ref().map(|tx| tx.frequency())
     }
 
     /// Returns the receive frequency, if this system has a receiver.
@@ -119,6 +119,7 @@ mod tests {
 
     use crate::antenna::ConstantAntenna;
     use crate::receiver::NoiseTempReceiver;
+    use crate::transmitter::AmplifierTransmitter;
 
     use super::*;
 
@@ -129,7 +130,12 @@ mod tests {
                 beamwidth: Angle::degrees(0.7),
             }),
             receiver: None,
-            transmitter: Some(Transmitter::new(29.0.ghz(), 10.0, 1.0.db(), 0.0.db())),
+            transmitter: Some(Transmitter::Amplifier(AmplifierTransmitter::new(
+                29.0.ghz(),
+                10.0,
+                1.0.db(),
+                0.0.db(),
+            ))),
         }
     }
 

@@ -2,16 +2,17 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Radio transmitter model.
+//! Radio transmitter models.
 
 use lox_core::units::{Angle, Decibel, Frequency};
 
 use crate::antenna::AntennaGain;
 
-/// A radio transmitter.
+/// Transmitter characterised by output power, line loss, and back-off; combined with
+/// an antenna on the [`CommunicationSystem`](crate::system::CommunicationSystem).
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Transmitter {
+pub struct AmplifierTransmitter {
     /// Transmit frequency.
     pub frequency: Frequency,
     /// Transmit power in watts.
@@ -22,8 +23,8 @@ pub struct Transmitter {
     pub output_back_off: Decibel,
 }
 
-impl Transmitter {
-    /// Creates a new transmitter with the given parameters.
+impl AmplifierTransmitter {
+    /// Creates a new amplifier transmitter.
     pub fn new(
         frequency: Frequency,
         power_w: f64,
@@ -39,12 +40,36 @@ impl Transmitter {
     }
 
     /// Returns the Effective Isotropic Radiated Power (EIRP) in dBW.
-    ///
-    /// EIRP = G_tx(f, θ) + 10·log₁₀(P_w) − L_line − OBO
     pub fn eirp(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
         antenna.gain(self.frequency, angle) + Decibel::from_linear(self.power_w)
             - self.line_loss
             - self.output_back_off
+    }
+}
+
+/// A transmitter.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "type"))]
+#[non_exhaustive]
+pub enum Transmitter {
+    /// Power-amplifier transmitter (combined with an external antenna).
+    Amplifier(AmplifierTransmitter),
+}
+
+impl Transmitter {
+    /// Returns the transmit frequency.
+    pub fn frequency(&self) -> Frequency {
+        match self {
+            Transmitter::Amplifier(t) => t.frequency,
+        }
+    }
+
+    /// Returns the EIRP in dBW for the given antenna at the given off-boresight angle.
+    pub fn eirp(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
+        match self {
+            Transmitter::Amplifier(t) => t.eirp(antenna, angle),
+        }
     }
 }
 
@@ -59,27 +84,40 @@ mod tests {
 
     #[test]
     fn test_eirp_simple() {
-        // 10 dBi antenna, 5 W power, 1 dB line loss, 0 dB OBO
-        // EIRP = 10 + 10*log10(5) - 1 - 0 = 10 + 6.9897 - 1 = 15.9897 dBW
         let antenna = ConstantAntenna {
             gain: 10.0.db(),
             beamwidth: Angle::degrees(10.0),
         };
-        let tx = Transmitter::new(29.0.ghz(), 5.0, 1.0.db(), 0.0.db());
+        let tx = AmplifierTransmitter::new(29.0.ghz(), 5.0, 1.0.db(), 0.0.db());
         let eirp = tx.eirp(&antenna, Angle::radians(0.0));
         assert_approx_eq!(eirp.as_f64(), 15.9897, atol <= 0.001);
     }
 
     #[test]
     fn test_eirp_with_obo() {
-        // 20 dBi antenna, 10 W power, 2 dB line loss, 3 dB OBO
-        // EIRP = 20 + 10*log10(10) - 2 - 3 = 20 + 10 - 2 - 3 = 25 dBW
         let antenna = ConstantAntenna {
             gain: 20.0.db(),
             beamwidth: Angle::degrees(5.0),
         };
-        let tx = Transmitter::new(29.0.ghz(), 10.0, 2.0.db(), 3.0.db());
+        let tx = AmplifierTransmitter::new(29.0.ghz(), 10.0, 2.0.db(), 3.0.db());
         let eirp = tx.eirp(&antenna, Angle::radians(0.0));
         assert_approx_eq!(eirp.as_f64(), 25.0, atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_enum_dispatch_amplifier() {
+        let antenna = ConstantAntenna {
+            gain: 10.0.db(),
+            beamwidth: Angle::degrees(10.0),
+        };
+        let tx = Transmitter::Amplifier(AmplifierTransmitter::new(
+            29.0.ghz(),
+            5.0,
+            1.0.db(),
+            0.0.db(),
+        ));
+        let eirp = tx.eirp(&antenna, Angle::radians(0.0));
+        assert_approx_eq!(eirp.as_f64(), 15.9897, atol <= 0.001);
+        assert_eq!(tx.frequency().to_hertz(), 29e9);
     }
 }

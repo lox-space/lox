@@ -97,7 +97,7 @@ impl LinkStats {
             .as_ref()
             .expect("RX system must have a receiver");
 
-        let frequency = tx.frequency;
+        let frequency = tx.frequency();
         let eirp = tx.eirp(&tx_system.antenna, tx_angle);
         let gt = receiver.gain_to_noise_temperature(&rx_system.antenna, rx_angle);
         let fspl = free_space_path_loss(range, frequency);
@@ -180,7 +180,7 @@ mod tests {
     use crate::antenna::{Antenna, ConstantAntenna};
     use crate::channel::{LinkDirection, Modulation};
     use crate::receiver::{NoiseTempReceiver, Receiver};
-    use crate::transmitter::Transmitter;
+    use crate::transmitter::{AmplifierTransmitter, Transmitter};
 
     use super::*;
 
@@ -191,7 +191,12 @@ mod tests {
                 beamwidth: Angle::degrees(0.7),
             }),
             receiver: None,
-            transmitter: Some(Transmitter::new(29.0.ghz(), 10.0, 1.0.db(), 0.0.db())),
+            transmitter: Some(Transmitter::Amplifier(AmplifierTransmitter::new(
+                29.0.ghz(),
+                10.0,
+                1.0.db(),
+                0.0.db(),
+            ))),
         };
         let rx_sys = CommunicationSystem {
             antenna: Antenna::Constant(ConstantAntenna {

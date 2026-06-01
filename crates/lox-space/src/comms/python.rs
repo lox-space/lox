@@ -18,7 +18,7 @@ use lox_comms::pattern::{AntennaPattern, DipolePattern, GaussianPattern, Parabol
 use lox_comms::pfd;
 use lox_comms::receiver::{CascadeReceiver, NoiseStage, NoiseTempReceiver, Receiver};
 use lox_comms::system::CommunicationSystem;
-use lox_comms::transmitter::Transmitter;
+use lox_comms::transmitter::{AmplifierTransmitter, Transmitter};
 use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
 use lox_core::units::Decibel;
 
@@ -578,6 +578,18 @@ fn build_receiver(obj: &Bound<'_, PyAny>) -> PyResult<Receiver> {
     }
 }
 
+fn build_transmitter(tx: &PyTransmitter) -> Transmitter {
+    match &tx.0 {
+        Transmitter::Amplifier(a) => Transmitter::Amplifier(AmplifierTransmitter::new(
+            a.frequency,
+            a.power_w,
+            a.line_loss,
+            a.output_back_off,
+        )),
+        _ => unreachable!("unknown transmitter variant"),
+    }
+}
+
 // --- Transmitter ---
 
 /// A radio transmitter.
@@ -601,12 +613,12 @@ impl PyTransmitter {
         line_loss: PyDecibel,
         output_back_off: Option<PyDecibel>,
     ) -> Self {
-        Self(Transmitter::new(
+        Self(Transmitter::Amplifier(AmplifierTransmitter::new(
             frequency.0,
             f64::from(power.0),
             line_loss.0,
             output_back_off.map_or(Decibel::new(0.0), |d| d.0),
-        ))
+        )))
     }
 
     /// Returns the EIRP in dBW for the given antenna and off-boresight angle.
@@ -616,29 +628,41 @@ impl PyTransmitter {
     }
 
     fn __eq__(&self, other: &PyTransmitter) -> bool {
-        f64::from(self.0.frequency) == f64::from(other.0.frequency)
-            && self.0.power_w == other.0.power_w
-            && self.0.line_loss.as_f64() == other.0.line_loss.as_f64()
-            && self.0.output_back_off.as_f64() == other.0.output_back_off.as_f64()
+        let freq_eq = f64::from(self.0.frequency()) == f64::from(other.0.frequency());
+        match (&self.0, &other.0) {
+            (Transmitter::Amplifier(a), Transmitter::Amplifier(b)) => {
+                freq_eq
+                    && a.power_w == b.power_w
+                    && a.line_loss.as_f64() == b.line_loss.as_f64()
+                    && a.output_back_off.as_f64() == b.output_back_off.as_f64()
+            }
+            _ => unreachable!("unknown transmitter variant"),
+        }
     }
 
     fn __getnewargs__(&self) -> (PyFrequency, PyPower, PyDecibel, Option<PyDecibel>) {
-        (
-            PyFrequency(self.0.frequency),
-            PyPower::new(self.0.power_w),
-            PyDecibel(self.0.line_loss),
-            Some(PyDecibel(self.0.output_back_off)),
-        )
+        match &self.0 {
+            Transmitter::Amplifier(tx) => (
+                PyFrequency(tx.frequency),
+                PyPower::new(tx.power_w),
+                PyDecibel(tx.line_loss),
+                Some(PyDecibel(tx.output_back_off)),
+            ),
+            _ => unreachable!("unknown transmitter variant"),
+        }
     }
 
     fn __repr__(&self) -> String {
-        format!(
-            "Transmitter(frequency={}, power={}, line_loss={}, output_back_off={})",
-            PyFrequency(self.0.frequency).__repr__(),
-            PyPower::new(self.0.power_w).__repr__(),
-            PyDecibel(self.0.line_loss).__repr__(),
-            PyDecibel(self.0.output_back_off).__repr__(),
-        )
+        match &self.0 {
+            Transmitter::Amplifier(tx) => format!(
+                "Transmitter(frequency={}, power={}, line_loss={}, output_back_off={})",
+                PyFrequency(tx.frequency).__repr__(),
+                PyPower::new(tx.power_w).__repr__(),
+                PyDecibel(tx.line_loss).__repr__(),
+                PyDecibel(tx.output_back_off).__repr__(),
+            ),
+            _ => unreachable!("unknown transmitter variant"),
+        }
     }
 }
 
@@ -1049,14 +1073,7 @@ impl PyCommunicationSystem {
     ) -> PyResult<Self> {
         let ant = build_antenna(antenna)?;
         let rx = receiver.map(build_receiver).transpose()?;
-        let tx = transmitter.map(|t| {
-            Transmitter::new(
-                t.0.frequency,
-                t.0.power_w,
-                t.0.line_loss,
-                t.0.output_back_off,
-            )
-        });
+        let tx = transmitter.map(build_transmitter);
         Ok(Self(CommunicationSystem {
             antenna: ant,
             receiver: rx,
@@ -1124,12 +1141,15 @@ impl PyCommunicationSystem {
         let antenna = antenna_to_py(py, &self.0.antenna);
         let receiver = self.0.receiver.as_ref().map(|r| receiver_to_py(py, r));
         let transmitter = self.0.transmitter.as_ref().map(|t| {
-            PyTransmitter(Transmitter::new(
-                t.frequency,
-                t.power_w,
-                t.line_loss,
-                t.output_back_off,
-            ))
+            PyTransmitter(match t {
+                Transmitter::Amplifier(a) => Transmitter::Amplifier(AmplifierTransmitter::new(
+                    a.frequency,
+                    a.power_w,
+                    a.line_loss,
+                    a.output_back_off,
+                )),
+                _ => unreachable!("unknown transmitter variant"),
+            })
         });
         (antenna, receiver, transmitter)
     }
@@ -1180,13 +1200,16 @@ impl PyCommunicationSystem {
             None => String::new(),
         };
         let tx_repr = match &self.0.transmitter {
-            Some(t) => format!(
-                ", transmitter=Transmitter(frequency={}, power={}, line_loss={}, output_back_off={})",
-                PyFrequency(t.frequency).__repr__(),
-                PyPower::new(t.power_w).__repr__(),
-                PyDecibel(t.line_loss).__repr__(),
-                PyDecibel(t.output_back_off).__repr__(),
-            ),
+            Some(t) => match t {
+                Transmitter::Amplifier(a) => format!(
+                    ", transmitter=Transmitter(frequency={}, power={}, line_loss={}, output_back_off={})",
+                    PyFrequency(a.frequency).__repr__(),
+                    PyPower::new(a.power_w).__repr__(),
+                    PyDecibel(a.line_loss).__repr__(),
+                    PyDecibel(a.output_back_off).__repr__(),
+                ),
+                _ => unreachable!("unknown transmitter variant"),
+            },
             None => String::new(),
         };
         format!("CommunicationSystem(antenna={antenna_repr}{rx_repr}{tx_repr})")
