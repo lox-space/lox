@@ -73,9 +73,28 @@ mod tests {
             tx: 29.0.ghz(),
             rx: 30.0.ghz(),
         };
-        let s = err.to_string();
-        assert!(s.contains("29000000000"));
-        assert!(s.contains("30000000000"));
+        assert_eq!(
+            err.to_string(),
+            "transmitter frequency 29000000000 Hz differs from receiver frequency 30000000000 Hz"
+        );
+    }
+
+    #[test]
+    fn test_display_missing_receiver() {
+        let s = LinkBudgetError::MissingReceiver.to_string();
+        assert!(s.contains("receiver"));
+    }
+
+    #[test]
+    fn test_display_missing_antenna() {
+        let s = LinkBudgetError::MissingAntenna.to_string();
+        assert!(s.contains("antenna"));
+    }
+
+    #[test]
+    fn test_display_unexpected_antenna() {
+        let s = LinkBudgetError::UnexpectedAntenna.to_string();
+        assert!(s.contains("antenna"));
     }
 
     #[test]
