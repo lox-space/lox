@@ -18,6 +18,8 @@ pub enum LinkBudgetError {
     MissingAntenna,
     /// A lumped (`Eirp`/`Gt`) transmitter/receiver must not be paired with an antenna.
     UnexpectedAntenna,
+    /// Absolute carrier and noise powers are required but are unavailable.
+    AbsolutePowerUnavailable,
     /// Transmitter and receiver frequencies disagree.
     FrequencyMismatch {
         /// Transmitter frequency.
@@ -42,6 +44,10 @@ impl std::fmt::Display for LinkBudgetError {
             LinkBudgetError::UnexpectedAntenna => write!(
                 f,
                 "lumped (Eirp/Gt) transmitter/receiver must not be paired with an antenna"
+            ),
+            LinkBudgetError::AbsolutePowerUnavailable => write!(
+                f,
+                "absolute carrier and noise powers are unavailable for this link"
             ),
             LinkBudgetError::FrequencyMismatch { tx, rx } => write!(
                 f,
@@ -95,6 +101,12 @@ mod tests {
     fn test_display_unexpected_antenna() {
         let s = LinkBudgetError::UnexpectedAntenna.to_string();
         assert!(s.contains("antenna"));
+    }
+
+    #[test]
+    fn test_display_absolute_power_unavailable() {
+        let s = LinkBudgetError::AbsolutePowerUnavailable.to_string();
+        assert!(s.contains("absolute carrier and noise powers"));
     }
 
     #[test]

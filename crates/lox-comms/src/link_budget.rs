@@ -134,17 +134,21 @@ pub struct ModulatedLinkStats {
 impl ModulatedLinkStats {
     /// Returns interference statistics for the given interferer power.
     ///
-    /// For lumped-`Gt` links, the underlying noise power is unknown, so interference
-    /// is treated as the dominant noise contribution (noise floor = 0). The resulting
-    /// figures are upper-bound estimates rather than exact values.
-    pub fn with_interference(&self, interference_power_w: f64) -> InterferenceStats {
-        let noise_linear = self.link.noise_power.map(|n| n.to_linear()).unwrap_or(0.0);
-        let carrier = self.link.carrier_rx_power.unwrap_or_else(|| {
-            // Synthesise a carrier power from C/N0 + bandwidth + noise so the
-            // interference arithmetic stays self-consistent. Only used for lumped
-            // links where noise is treated as zero in the absence of T_sys.
-            self.link.c_n0 + Decibel::from_linear(noise_linear.max(1e-30))
-        });
+    /// Returns an error when absolute carrier or noise power is unavailable
+    /// (for example for lumped-`Gt` links).
+    pub fn with_interference(
+        &self,
+        interference_power_w: f64,
+    ) -> Result<InterferenceStats, LinkBudgetError> {
+        let noise_linear = self
+            .link
+            .noise_power
+            .ok_or(LinkBudgetError::AbsolutePowerUnavailable)?
+            .to_linear();
+        let carrier = self
+            .link
+            .carrier_rx_power
+            .ok_or(LinkBudgetError::AbsolutePowerUnavailable)?;
 
         let total_ni = noise_linear + interference_power_w;
         let c_n0i0 = carrier - Decibel::from_linear(total_ni)
@@ -155,12 +159,12 @@ impl ModulatedLinkStats {
         let threshold = self.eb_n0 - self.margin;
         let margin_with_interference = eb_n0i0 - threshold;
 
-        InterferenceStats {
+        Ok(InterferenceStats {
             interference_power_w,
             c_n0i0,
             eb_n0i0,
             margin_with_interference,
-        }
+        })
     }
 }
 
@@ -335,7 +339,7 @@ mod tests {
         )
         .unwrap();
         let m = channel.apply(link);
-        let interference = m.with_interference(1e-12);
+        let interference = m.with_interference(1e-12).unwrap();
         assert!(interference.margin_with_interference.as_f64() <= m.margin.as_f64());
         assert!(interference.eb_n0i0.as_f64() <= m.eb_n0.as_f64());
     }
@@ -366,5 +370,42 @@ mod tests {
         assert!(stats.carrier_rx_power.is_none());
         assert!(stats.noise_power.is_none());
         assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.2);
+    }
+
+    #[test]
+    fn test_lumped_modulated_with_interference_is_error() {
+        use crate::receiver::GtReceiver;
+        use crate::transmitter::EirpTransmitter;
+
+        let tx = CommunicationSystem::eirp_only(EirpTransmitter {
+            frequency: 29.0.ghz(),
+            eirp: 55.0.db(),
+        });
+        let rx = CommunicationSystem::gt_only(GtReceiver {
+            frequency: 29.0.ghz(),
+            gt: 3.01.db(),
+        });
+        let channel = Channel {
+            link_type: LinkDirection::Downlink,
+            symbol_rate: 5.0.mhz(),
+            required_eb_n0: 10.0.db(),
+            margin: 3.0.db(),
+            modulation: Modulation::Qpsk,
+            roll_off: 0.0,
+            fec: 0.5,
+            chip_rate: None,
+        };
+        let link = LinkStats::calculate(
+            &tx,
+            &rx,
+            Distance::kilometers(1000.0),
+            channel.bandwidth(),
+            EnvironmentalLosses::none(),
+            Angle::radians(0.0),
+            Angle::radians(0.0),
+        )
+        .unwrap();
+        let err = channel.apply(link).with_interference(1e-12).unwrap_err();
+        assert_eq!(err, LinkBudgetError::AbsolutePowerUnavailable);
     }
 }
