@@ -139,12 +139,24 @@ impl CascadeReceiver {
     }
 }
 
+/// Lumped receiver specified by a single G/T figure.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct GtReceiver {
+    /// Receive frequency.
+    pub frequency: Frequency,
+    /// Gain-to-noise-temperature ratio in dB/K.
+    pub gt: Decibel,
+}
+
 /// A receiver, either characterised by a known T_sys or by an N-stage Friis cascade.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 #[non_exhaustive]
 pub enum Receiver {
+    /// Lumped receiver with aggregate G/T.
+    Gt(GtReceiver),
     /// Receiver with a known system noise temperature.
     NoiseTemperature(NoiseTempReceiver),
     /// Receiver with an N-stage cascade noise model.
@@ -153,8 +165,12 @@ pub enum Receiver {
 
 impl Receiver {
     /// Returns the system noise temperature in Kelvin.
+    ///
+    /// For lumped `Gt` receivers, returns `0.0` as a sentinel — the link-budget
+    /// path uses [`Receiver::gain_to_noise_temperature`] directly, not this method.
     pub fn system_noise_temperature(&self) -> Kelvin {
         match self {
+            Receiver::Gt(_) => 0.0,
             Receiver::NoiseTemperature(r) => r.system_noise_temperature,
             Receiver::Cascade(r) => r.system_noise_temperature(),
         }
@@ -165,11 +181,15 @@ impl Receiver {
     /// For a noise temperature receiver, this is just the antenna gain.
     /// For a cascade receiver: G_ant − demod_loss − impl_loss.
     ///
+    /// For lumped `Gt` receivers, returns `0 dB` as a sentinel — the link-budget
+    /// path uses [`Receiver::gain_to_noise_temperature`] directly, not this method.
+    ///
     /// Chain gain is excluded because `system_noise_temperature` uses the Friis
     /// formula, which refers noise to the antenna terminals. Including chain
     /// gain here would double-count it in the G/T ratio.
     pub fn total_gain(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
         match self {
+            Receiver::Gt(_) => Decibel::new(0.0),
             Receiver::NoiseTemperature(r) => antenna.gain(r.frequency, angle),
             Receiver::Cascade(r) => {
                 antenna.gain(r.frequency, angle) - r.demodulator_loss - r.implementation_loss
@@ -181,14 +201,20 @@ impl Receiver {
     ///
     /// G/T = G_total − 10·log₁₀(T_sys)
     pub fn gain_to_noise_temperature(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
-        let g_total = self.total_gain(antenna, angle);
-        let t_sys = self.system_noise_temperature();
-        g_total - Decibel::from_linear(t_sys)
+        match self {
+            Receiver::Gt(r) => r.gt,
+            Receiver::NoiseTemperature(_) | Receiver::Cascade(_) => {
+                let g_total = self.total_gain(antenna, angle);
+                let t_sys = self.system_noise_temperature();
+                g_total - Decibel::from_linear(t_sys)
+            }
+        }
     }
 
     /// Returns the receive frequency.
     pub fn frequency(&self) -> Frequency {
         match self {
+            Receiver::Gt(r) => r.frequency,
             Receiver::NoiseTemperature(r) => r.frequency,
             Receiver::Cascade(r) => r.frequency,
         }

@@ -47,12 +47,24 @@ impl AmplifierTransmitter {
     }
 }
 
+/// Lumped transmitter specified by a single EIRP figure.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct EirpTransmitter {
+    /// Transmit frequency.
+    pub frequency: Frequency,
+    /// Effective isotropic radiated power in dBW.
+    pub eirp: Decibel,
+}
+
 /// A transmitter.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 #[non_exhaustive]
 pub enum Transmitter {
+    /// Lumped transmitter with aggregate EIRP.
+    Eirp(EirpTransmitter),
     /// Power-amplifier transmitter (combined with an external antenna).
     Amplifier(AmplifierTransmitter),
 }
@@ -61,13 +73,17 @@ impl Transmitter {
     /// Returns the transmit frequency.
     pub fn frequency(&self) -> Frequency {
         match self {
+            Transmitter::Eirp(t) => t.frequency,
             Transmitter::Amplifier(t) => t.frequency,
         }
     }
 
     /// Returns the EIRP in dBW for the given antenna at the given off-boresight angle.
+    ///
+    /// For the lumped `Eirp` variant, `antenna` and `angle` are ignored.
     pub fn eirp(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
         match self {
+            Transmitter::Eirp(t) => t.eirp,
             Transmitter::Amplifier(t) => t.eirp(antenna, angle),
         }
     }
