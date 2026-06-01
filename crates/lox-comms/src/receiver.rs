@@ -16,10 +16,10 @@ pub fn noise_figure_to_temperature(nf: Decibel) -> Kelvin {
     ROOM_TEMPERATURE * (nf.to_linear() - 1.0)
 }
 
-/// A simple receiver with a known system noise temperature.
+/// A receiver with a known system noise temperature.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct SimpleReceiver {
+pub struct NoiseTempReceiver {
     /// Receive frequency.
     pub frequency: Frequency,
     /// System noise temperature in Kelvin.
@@ -44,7 +44,7 @@ pub struct NoiseStage {
 /// T_sys = T_ant + T_1 + T_2/G_1 + T_3/(G_1·G_2) + ...
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ComplexReceiver {
+pub struct CascadeReceiver {
     /// Receive frequency.
     pub frequency: Frequency,
     /// Antenna noise temperature in Kelvin.
@@ -57,7 +57,7 @@ pub struct ComplexReceiver {
     pub implementation_loss: Decibel,
 }
 
-impl ComplexReceiver {
+impl CascadeReceiver {
     /// Creates a two-stage receiver model: lossy feed line at room temperature → receiver.
     ///
     /// The feed line is modelled as a passive attenuator at 290 K, contributing
@@ -139,38 +139,39 @@ impl ComplexReceiver {
     }
 }
 
-/// A receiver, either simple (known T_sys) or complex (N-stage Friis cascade).
+/// A receiver, either characterised by a known T_sys or by an N-stage Friis cascade.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
+#[non_exhaustive]
 pub enum Receiver {
     /// Receiver with a known system noise temperature.
-    Simple(SimpleReceiver),
+    NoiseTemperature(NoiseTempReceiver),
     /// Receiver with an N-stage cascade noise model.
-    Complex(ComplexReceiver),
+    Cascade(CascadeReceiver),
 }
 
 impl Receiver {
     /// Returns the system noise temperature in Kelvin.
     pub fn system_noise_temperature(&self) -> Kelvin {
         match self {
-            Receiver::Simple(r) => r.system_noise_temperature,
-            Receiver::Complex(r) => r.system_noise_temperature(),
+            Receiver::NoiseTemperature(r) => r.system_noise_temperature,
+            Receiver::Cascade(r) => r.system_noise_temperature(),
         }
     }
 
     /// Returns the total receiver gain in dB.
     ///
-    /// For a simple receiver, this is just the antenna gain.
-    /// For a complex receiver: G_ant − demod_loss − impl_loss.
+    /// For a noise temperature receiver, this is just the antenna gain.
+    /// For a cascade receiver: G_ant − demod_loss − impl_loss.
     ///
     /// Chain gain is excluded because `system_noise_temperature` uses the Friis
     /// formula, which refers noise to the antenna terminals. Including chain
     /// gain here would double-count it in the G/T ratio.
     pub fn total_gain(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
         match self {
-            Receiver::Simple(r) => antenna.gain(r.frequency, angle),
-            Receiver::Complex(r) => {
+            Receiver::NoiseTemperature(r) => antenna.gain(r.frequency, angle),
+            Receiver::Cascade(r) => {
                 antenna.gain(r.frequency, angle) - r.demodulator_loss - r.implementation_loss
             }
         }
@@ -188,8 +189,8 @@ impl Receiver {
     /// Returns the receive frequency.
     pub fn frequency(&self) -> Frequency {
         match self {
-            Receiver::Simple(r) => r.frequency,
-            Receiver::Complex(r) => r.frequency,
+            Receiver::NoiseTemperature(r) => r.frequency,
+            Receiver::Cascade(r) => r.frequency,
         }
     }
 }
@@ -215,7 +216,7 @@ mod tests {
 
     #[test]
     fn test_from_feed_loss_and_noise_figure() {
-        // Reproduces old ComplexReceiver test:
+        // Reproduces old CascadeReceiver test:
         // NF=5dB, loss=3dB, T_ant=265K
         // Feed stage: gain=-3dB, T_feed = 290*(10^(3/10)-1) = 290*0.9953 = 288.63
         // Rx stage: gain=20dB (LNA), T_rx = 290*(10^(5/10)-1) = 627.06
@@ -226,7 +227,7 @@ mod tests {
         //
         // The Friis model gives a different reference point. Let's verify the
         // old test value is reproduced by the G/T being equivalent.
-        let rx = ComplexReceiver::from_feed_loss_and_noise_figure(
+        let rx = CascadeReceiver::from_feed_loss_and_noise_figure(
             29.0.ghz(),
             265.0,
             3.0.db(),
@@ -254,7 +255,7 @@ mod tests {
         // Gateway link: T_ant=290K, LNA(G=20dB, T=175K), Rx(NF=2dB)
         // T_rx = 290*(10^(2/10)-1) = 169.619 K
         // T_sys = 290 + 175 + 169.619/100 = 466.696 K
-        let rx = ComplexReceiver::from_lna_and_noise_figure(
+        let rx = CascadeReceiver::from_lna_and_noise_figure(
             26.5.ghz(),
             290.0,
             20.0.db(),
@@ -267,14 +268,14 @@ mod tests {
     }
 
     #[test]
-    fn test_simple_receiver_gt() {
-        // SimpleReceiver with T_sys=500K, antenna gain=30dBi
+    fn test_noise_temp_receiver_gt() {
+        // NoiseTempReceiver with T_sys=500K, antenna gain=30dBi
         // G/T = 30 - 10*log10(500) = 30 - 26.9897 = 3.0103 dB/K
         let antenna = ConstantAntenna {
             gain: 30.0.db(),
             beamwidth: Angle::degrees(1.0),
         };
-        let rx = Receiver::Simple(SimpleReceiver {
+        let rx = Receiver::NoiseTemperature(NoiseTempReceiver {
             frequency: 29.0.ghz(),
             system_noise_temperature: 500.0,
         });
@@ -283,9 +284,9 @@ mod tests {
     }
 
     #[test]
-    fn test_complex_receiver_three_stage() {
+    fn test_cascade_receiver_three_stage() {
         // T_ant=100K, stages: LNA(G=20dB,T=50K), Filter(G=-3dB,T=290K), Rx(G=30dB,T=500K)
-        let rx = ComplexReceiver {
+        let rx = CascadeReceiver {
             frequency: 8.0.ghz(),
             antenna_noise_temperature: 100.0,
             stages: vec![
@@ -312,8 +313,8 @@ mod tests {
     }
 
     #[test]
-    fn test_complex_receiver_chain_gain() {
-        let rx = ComplexReceiver {
+    fn test_cascade_receiver_chain_gain() {
+        let rx = CascadeReceiver {
             frequency: 8.0.ghz(),
             antenna_noise_temperature: 100.0,
             stages: vec![
@@ -338,12 +339,12 @@ mod tests {
     }
 
     #[test]
-    fn test_complex_receiver_gt() {
+    fn test_cascade_receiver_gt() {
         let antenna = ConstantAntenna {
             gain: 30.0.db(),
             beamwidth: Angle::degrees(1.0),
         };
-        let rx = Receiver::Complex(ComplexReceiver::from_lna_and_noise_figure(
+        let rx = Receiver::Cascade(CascadeReceiver::from_lna_and_noise_figure(
             29.0.ghz(),
             150.0,
             30.0.db(),
@@ -360,7 +361,7 @@ mod tests {
     }
 
     #[test]
-    fn test_complex_receiver_total_gain() {
+    fn test_cascade_receiver_total_gain() {
         let antenna = ConstantAntenna {
             gain: 30.0.db(),
             beamwidth: Angle::degrees(1.0),
@@ -368,7 +369,7 @@ mod tests {
         // Two stages: LNA(20dB) + Rx(10dB), demod=1dB, impl=0.5dB
         // Chain gain is excluded (Friis noise is input-referred).
         // total_gain = 30 (ant) - 1 - 0.5 = 28.5 dB
-        let rx = Receiver::Complex(ComplexReceiver {
+        let rx = Receiver::Cascade(CascadeReceiver {
             frequency: 29.0.ghz(),
             antenna_noise_temperature: 265.0,
             stages: vec![

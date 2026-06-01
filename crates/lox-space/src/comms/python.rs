@@ -16,7 +16,7 @@ use lox_itur::EnvironmentalLosses;
 use crate::itur::python::PyEnvironmentalLosses;
 use lox_comms::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
 use lox_comms::pfd;
-use lox_comms::receiver::{ComplexReceiver, NoiseStage, Receiver, SimpleReceiver};
+use lox_comms::receiver::{CascadeReceiver, NoiseStage, NoiseTempReceiver, Receiver};
 use lox_comms::system::CommunicationSystem;
 use lox_comms::transmitter::Transmitter;
 use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
@@ -520,18 +520,19 @@ fn antenna_to_py<'py>(py: Python<'py>, antenna: &Antenna) -> Bound<'py, PyAny> {
 
 fn receiver_to_py<'py>(py: Python<'py>, receiver: &Receiver) -> Bound<'py, PyAny> {
     match receiver {
-        Receiver::Simple(r) => Bound::new(
+        Receiver::NoiseTemperature(r) => Bound::new(
             py,
-            PySimpleReceiver(SimpleReceiver {
+            PySimpleReceiver(NoiseTempReceiver {
                 frequency: r.frequency,
                 system_noise_temperature: r.system_noise_temperature,
             }),
         )
         .unwrap()
         .into_any(),
-        Receiver::Complex(r) => Bound::new(py, PyComplexReceiver(r.clone()))
+        Receiver::Cascade(r) => Bound::new(py, PyComplexReceiver(r.clone()))
             .unwrap()
             .into_any(),
+        _ => unreachable!("unknown receiver variant"),
     }
 }
 
@@ -564,15 +565,15 @@ fn build_antenna(obj: &Bound<'_, PyAny>) -> PyResult<Antenna> {
 
 fn build_receiver(obj: &Bound<'_, PyAny>) -> PyResult<Receiver> {
     if let Ok(r) = obj.extract::<PyRef<'_, PySimpleReceiver>>() {
-        Ok(Receiver::Simple(SimpleReceiver {
+        Ok(Receiver::NoiseTemperature(NoiseTempReceiver {
             frequency: r.0.frequency,
             system_noise_temperature: r.0.system_noise_temperature,
         }))
     } else if let Ok(r) = obj.extract::<PyRef<'_, PyComplexReceiver>>() {
-        Ok(Receiver::Complex(r.0.clone()))
+        Ok(Receiver::Cascade(r.0.clone()))
     } else {
         Err(PyValueError::new_err(
-            "expected a SimpleReceiver or ComplexReceiver",
+            "expected SimpleReceiver or ComplexReceiver",
         ))
     }
 }
@@ -650,13 +651,13 @@ impl PyTransmitter {
 ///     system_noise_temperature: System noise temperature.
 #[pyclass(name = "SimpleReceiver", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
-pub struct PySimpleReceiver(pub SimpleReceiver);
+pub struct PySimpleReceiver(pub NoiseTempReceiver);
 
 #[pymethods]
 impl PySimpleReceiver {
     #[new]
     fn new(frequency: PyFrequency, system_noise_temperature: PyTemperature) -> Self {
-        Self(SimpleReceiver {
+        Self(NoiseTempReceiver {
             frequency: frequency.0,
             system_noise_temperature: f64::from(system_noise_temperature.0),
         })
@@ -732,7 +733,7 @@ impl PyNoiseStage {
 ///     implementation_loss: Other implementation losses as Decibel (default Decibel(0)).
 #[pyclass(name = "ComplexReceiver", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
-pub struct PyComplexReceiver(pub ComplexReceiver);
+pub struct PyComplexReceiver(pub CascadeReceiver);
 
 #[pymethods]
 impl PyComplexReceiver {
@@ -745,7 +746,7 @@ impl PyComplexReceiver {
         demodulator_loss: Option<PyDecibel>,
         implementation_loss: Option<PyDecibel>,
     ) -> Self {
-        Self(ComplexReceiver {
+        Self(CascadeReceiver {
             frequency: frequency.0,
             antenna_noise_temperature: f64::from(antenna_noise_temperature.0),
             stages: stages.into_iter().map(|s| s.0).collect(),
@@ -767,7 +768,7 @@ impl PyComplexReceiver {
         demodulator_loss: Option<PyDecibel>,
         implementation_loss: Option<PyDecibel>,
     ) -> Self {
-        Self(ComplexReceiver::from_feed_loss_and_noise_figure(
+        Self(CascadeReceiver::from_feed_loss_and_noise_figure(
             frequency.0,
             f64::from(antenna_noise_temperature.0),
             feed_loss.0,
@@ -791,7 +792,7 @@ impl PyComplexReceiver {
         demodulator_loss: Option<PyDecibel>,
         implementation_loss: Option<PyDecibel>,
     ) -> Self {
-        Self(ComplexReceiver::from_lna_and_noise_figure(
+        Self(CascadeReceiver::from_lna_and_noise_figure(
             frequency.0,
             f64::from(antenna_noise_temperature.0),
             lna_gain.0,
@@ -1167,14 +1168,15 @@ impl PyCommunicationSystem {
             _ => unreachable!("unknown antenna variant"),
         };
         let rx_repr = match &self.0.receiver {
-            Some(Receiver::Simple(r)) => format!(
+            Some(Receiver::NoiseTemperature(r)) => format!(
                 ", receiver=SimpleReceiver(frequency={}, system_noise_temperature={})",
                 PyFrequency(r.frequency).__repr__(),
                 PyTemperature::new(r.system_noise_temperature).__repr__(),
             ),
-            Some(Receiver::Complex(r)) => {
+            Some(Receiver::Cascade(r)) => {
                 format!(", receiver={}", PyComplexReceiver(r.clone()).__repr__())
             }
+            Some(_) => unreachable!("unknown receiver variant"),
             None => String::new(),
         };
         let tx_repr = match &self.0.transmitter {
