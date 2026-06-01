@@ -177,7 +177,7 @@ mod tests {
     use lox_core::units::{DecibelUnits, FrequencyUnits};
     use lox_test_utils::assert_approx_eq;
 
-    use crate::antenna::{Antenna, SimpleAntenna};
+    use crate::antenna::{Antenna, ConstantAntenna};
     use crate::channel::{LinkDirection, Modulation};
     use crate::receiver::{Receiver, SimpleReceiver};
     use crate::transmitter::Transmitter;
@@ -186,7 +186,7 @@ mod tests {
 
     fn test_link() -> (CommunicationSystem, CommunicationSystem, Channel) {
         let tx_sys = CommunicationSystem {
-            antenna: Antenna::Simple(SimpleAntenna {
+            antenna: Antenna::Constant(ConstantAntenna {
                 gain: 46.0.db(),
                 beamwidth: Angle::degrees(0.7),
             }),
@@ -194,7 +194,7 @@ mod tests {
             transmitter: Some(Transmitter::new(29.0.ghz(), 10.0, 1.0.db(), 0.0.db())),
         };
         let rx_sys = CommunicationSystem {
-            antenna: Antenna::Simple(SimpleAntenna {
+            antenna: Antenna::Constant(ConstantAntenna {
                 gain: 30.0.db(),
                 beamwidth: Angle::degrees(3.0),
             }),

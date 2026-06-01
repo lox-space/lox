@@ -8,7 +8,7 @@ use lox_core::glam::DVec3;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use lox_comms::antenna::{Antenna, AntennaGain, ComplexAntenna, SimpleAntenna};
+use lox_comms::antenna::{Antenna, AntennaGain, ConstantAntenna, PatternedAntenna};
 use lox_comms::channel::{Channel, LinkDirection, Modulation};
 use lox_comms::link_budget::{LinkStats, frequency_overlap_factor};
 use lox_itur::EnvironmentalLosses;
@@ -338,8 +338,8 @@ impl PyDipolePattern {
 #[pyclass(name = "SimpleAntenna", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PySimpleAntenna {
-    /// The wrapped [`SimpleAntenna`] value.
-    pub inner: SimpleAntenna,
+    /// The wrapped [`ConstantAntenna`] value.
+    pub inner: ConstantAntenna,
 }
 
 #[pymethods]
@@ -347,7 +347,7 @@ impl PySimpleAntenna {
     #[new]
     fn new(gain: PyDecibel, beamwidth: PyAngle) -> Self {
         Self {
-            inner: SimpleAntenna {
+            inner: ConstantAntenna {
                 gain: gain.0,
                 beamwidth: beamwidth.0,
             },
@@ -379,14 +379,14 @@ impl PySimpleAntenna {
 ///     boresight: Boresight direction as [x, y, z].
 #[pyclass(name = "ComplexAntenna", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
-pub struct PyComplexAntenna(pub ComplexAntenna);
+pub struct PyComplexAntenna(pub PatternedAntenna);
 
 #[pymethods]
 impl PyComplexAntenna {
     #[new]
     fn new(pattern: &Bound<'_, PyAny>, boresight: [f64; 3]) -> PyResult<Self> {
         let pattern = extract_antenna_pattern(pattern)?;
-        Ok(Self(ComplexAntenna {
+        Ok(Self(PatternedAntenna {
             pattern,
             boresight: DVec3::from_array(boresight),
         }))
@@ -483,10 +483,10 @@ fn pattern_to_py<'py>(py: Python<'py>, pattern: &AntennaPattern) -> Bound<'py, P
 
 fn antenna_to_py<'py>(py: Python<'py>, antenna: &Antenna) -> Bound<'py, PyAny> {
     match antenna {
-        Antenna::Simple(a) => Bound::new(
+        Antenna::Constant(a) => Bound::new(
             py,
             PySimpleAntenna {
-                inner: SimpleAntenna {
+                inner: ConstantAntenna {
                     gain: a.gain,
                     beamwidth: a.beamwidth,
                 },
@@ -494,7 +494,7 @@ fn antenna_to_py<'py>(py: Python<'py>, antenna: &Antenna) -> Bound<'py, PyAny> {
         )
         .unwrap()
         .into_any(),
-        Antenna::Complex(a) => {
+        Antenna::Patterned(a) => {
             let pattern = match &a.pattern {
                 AntennaPattern::Parabolic(p) => {
                     AntennaPattern::Parabolic(ParabolicPattern::new(p.diameter, p.efficiency))
@@ -506,7 +506,7 @@ fn antenna_to_py<'py>(py: Python<'py>, antenna: &Antenna) -> Bound<'py, PyAny> {
             };
             Bound::new(
                 py,
-                PyComplexAntenna(ComplexAntenna {
+                PyComplexAntenna(PatternedAntenna {
                     pattern,
                     boresight: a.boresight,
                 }),
@@ -514,6 +514,7 @@ fn antenna_to_py<'py>(py: Python<'py>, antenna: &Antenna) -> Bound<'py, PyAny> {
             .unwrap()
             .into_any()
         }
+        _ => unreachable!("unknown antenna variant"),
     }
 }
 
@@ -536,7 +537,7 @@ fn receiver_to_py<'py>(py: Python<'py>, receiver: &Receiver) -> Bound<'py, PyAny
 
 fn build_antenna(obj: &Bound<'_, PyAny>) -> PyResult<Antenna> {
     if let Ok(a) = obj.extract::<PyRef<'_, PySimpleAntenna>>() {
-        Ok(Antenna::Simple(SimpleAntenna {
+        Ok(Antenna::Constant(ConstantAntenna {
             gain: a.inner.gain,
             beamwidth: a.inner.beamwidth,
         }))
@@ -550,7 +551,7 @@ fn build_antenna(obj: &Bound<'_, PyAny>) -> PyResult<Antenna> {
             }
             AntennaPattern::Dipole(p) => AntennaPattern::Dipole(DipolePattern::new(p.length)),
         };
-        Ok(Antenna::Complex(ComplexAntenna {
+        Ok(Antenna::Patterned(PatternedAntenna {
             pattern,
             boresight: a.0.boresight,
         }))
@@ -1077,13 +1078,11 @@ impl PyCommunicationSystem {
         range: PyDistance,
         tx_angle: PyAngle,
         rx_angle: PyAngle,
-    ) -> PyDecibel {
-        PyDecibel(self.0.carrier_to_noise_density(
-            &rx_system.0,
-            losses.0,
-            range.0,
-            tx_angle.0,
-            rx_angle.0,
+    ) -> PyResult<PyDecibel> {
+        Ok(PyDecibel(
+            self.0
+                .carrier_to_noise_density(&rx_system.0, losses.0, range.0, tx_angle.0, rx_angle.0)
+                .map_err(|e| PyValueError::new_err(e.to_string()))?,
         ))
     }
 
@@ -1095,16 +1094,21 @@ impl PyCommunicationSystem {
         range: PyDistance,
         tx_angle: PyAngle,
         rx_angle: PyAngle,
-    ) -> PyDecibel {
-        PyDecibel(
+    ) -> PyResult<PyDecibel> {
+        Ok(PyDecibel(
             self.0
-                .carrier_power(&rx_system.0, losses.0, range.0, tx_angle.0, rx_angle.0),
-        )
+                .carrier_power(&rx_system.0, losses.0, range.0, tx_angle.0, rx_angle.0)
+                .map_err(|e| PyValueError::new_err(e.to_string()))?,
+        ))
     }
 
     /// Computes the noise power in dBW for a given bandwidth.
-    fn noise_power(&self, bandwidth: PyFrequency) -> PyDecibel {
-        PyDecibel(self.0.noise_power(f64::from(bandwidth.0)))
+    fn noise_power(&self, bandwidth: PyFrequency) -> PyResult<PyDecibel> {
+        Ok(PyDecibel(
+            self.0
+                .noise_power(f64::from(bandwidth.0))
+                .map_err(|e| PyValueError::new_err(e.to_string()))?,
+        ))
     }
 
     #[allow(clippy::type_complexity)]
@@ -1131,12 +1135,12 @@ impl PyCommunicationSystem {
 
     fn __repr__(&self) -> String {
         let antenna_repr = match &self.0.antenna {
-            Antenna::Simple(a) => format!(
+            Antenna::Constant(a) => format!(
                 "SimpleAntenna(gain={}, beamwidth={})",
                 PyDecibel(a.gain).__repr__(),
                 PyAngle(a.beamwidth).__repr__(),
             ),
-            Antenna::Complex(a) => {
+            Antenna::Patterned(a) => {
                 let pattern_repr = match &a.pattern {
                     AntennaPattern::Parabolic(p) => format!(
                         "ParabolicPattern(diameter={}, efficiency={})",
@@ -1160,6 +1164,7 @@ impl PyCommunicationSystem {
                     repr_f64(b.z),
                 )
             }
+            _ => unreachable!("unknown antenna variant"),
         };
         let rx_repr = match &self.0.receiver {
             Some(Receiver::Simple(r)) => format!(

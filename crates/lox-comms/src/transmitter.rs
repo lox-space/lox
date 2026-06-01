@@ -53,7 +53,7 @@ mod tests {
     use lox_core::units::{DecibelUnits, FrequencyUnits};
     use lox_test_utils::assert_approx_eq;
 
-    use crate::antenna::SimpleAntenna;
+    use crate::antenna::ConstantAntenna;
 
     use super::*;
 
@@ -61,7 +61,7 @@ mod tests {
     fn test_eirp_simple() {
         // 10 dBi antenna, 5 W power, 1 dB line loss, 0 dB OBO
         // EIRP = 10 + 10*log10(5) - 1 - 0 = 10 + 6.9897 - 1 = 15.9897 dBW
-        let antenna = SimpleAntenna {
+        let antenna = ConstantAntenna {
             gain: 10.0.db(),
             beamwidth: Angle::degrees(10.0),
         };
@@ -74,7 +74,7 @@ mod tests {
     fn test_eirp_with_obo() {
         // 20 dBi antenna, 10 W power, 2 dB line loss, 3 dB OBO
         // EIRP = 20 + 10*log10(10) - 2 - 3 = 20 + 10 - 2 - 3 = 25 dBW
-        let antenna = SimpleAntenna {
+        let antenna = ConstantAntenna {
             gain: 20.0.db(),
             beamwidth: Angle::degrees(5.0),
         };
