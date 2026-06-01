@@ -20,6 +20,7 @@ pub use parabolic::ParabolicPattern;
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
+#[non_exhaustive]
 pub enum AntennaPattern {
     /// Parabolic (uniform illuminated aperture) pattern.
     Parabolic(ParabolicPattern),
