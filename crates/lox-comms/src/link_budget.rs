@@ -81,10 +81,12 @@ impl LinkStats {
     ) -> Self {
         let env_loss = losses.total();
 
-        let c_n0 =
-            tx_system.carrier_to_noise_density(rx_system, env_loss, range, tx_angle, rx_angle);
-        let carrier_rx_power =
-            tx_system.carrier_power(rx_system, env_loss, range, tx_angle, rx_angle);
+        let c_n0 = tx_system
+            .carrier_to_noise_density(rx_system, env_loss, range, tx_angle, rx_angle)
+            .expect("link budget calculation: tx/rx must be configured");
+        let carrier_rx_power = tx_system
+            .carrier_power(rx_system, env_loss, range, tx_angle, rx_angle)
+            .expect("link budget calculation: tx/rx must be configured");
 
         let tx = tx_system
             .transmitter
@@ -100,7 +102,9 @@ impl LinkStats {
         let gt = receiver.gain_to_noise_temperature(&rx_system.antenna, rx_angle);
         let fspl = free_space_path_loss(range, frequency);
         let bandwidth = channel.bandwidth();
-        let noise_power = rx_system.noise_power(bandwidth.to_hertz());
+        let noise_power = rx_system
+            .noise_power(bandwidth.to_hertz())
+            .expect("link budget calculation: rx must be configured");
         let es_n0 = channel.es_n0(c_n0);
         let eb_n0 = channel.eb_n0(c_n0);
         let c_n = channel.c_n(c_n0);
