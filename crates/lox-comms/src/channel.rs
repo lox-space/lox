@@ -181,6 +181,28 @@ impl Channel {
         self.chip_rate
             .map(|cr| c_n0 - Decibel::from_linear(cr.to_hertz()))
     }
+
+    /// Layers modulation/FEC figures onto a modulation-agnostic [`crate::link_budget::LinkStats`].
+    ///
+    /// Computes `Es/N0`, `Eb/N0`, and link margin from the channel's modulation, FEC,
+    /// symbol rate, required `Eb/N0`, and required margin.
+    pub fn apply(
+        &self,
+        link: crate::link_budget::LinkStats,
+    ) -> crate::link_budget::ModulatedLinkStats {
+        let es_n0 = self.es_n0(link.c_n0);
+        let eb_n0 = self.eb_n0(link.c_n0);
+        let margin = self.link_margin(eb_n0);
+        crate::link_budget::ModulatedLinkStats {
+            link,
+            channel: self.clone(),
+            symbol_rate: self.symbol_rate,
+            es_n0,
+            eb_n0,
+            margin,
+            interference: None,
+        }
+    }
 }
 
 #[cfg(test)]

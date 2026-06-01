@@ -10,7 +10,9 @@ use pyo3::prelude::*;
 
 use lox_comms::antenna::{Antenna, AntennaGain, ConstantAntenna, PatternedAntenna};
 use lox_comms::channel::{Channel, LinkDirection, Modulation};
-use lox_comms::link_budget::{LinkStats, frequency_overlap_factor};
+use lox_comms::link_budget::{
+    InterferenceStats, LinkStats, ModulatedLinkStats, frequency_overlap_factor,
+};
 use lox_itur::EnvironmentalLosses;
 
 use crate::itur::python::PyEnvironmentalLosses;
@@ -998,6 +1000,11 @@ impl PyChannel {
         self.0.processing_gain().map(PyDecibel)
     }
 
+    /// Layers modulation/FEC figures onto a modulation-agnostic link budget.
+    fn apply(&self, link: PyLinkStats) -> PyModulatedLinkStats {
+        PyModulatedLinkStats(self.0.apply(link.0))
+    }
+
     #[allow(clippy::type_complexity)]
     fn __getnewargs__<'py>(
         &self,
@@ -1367,6 +1374,133 @@ impl PyLinkStats {
             self.0.c_n.as_f64(),
             self.0.eirp.as_f64(),
             self.0.gt.as_f64(),
+        )
+    }
+}
+
+// --- Interference Stats ---
+
+/// Interference statistics for a link with a given interferer power.
+#[pyclass(
+    name = "InterferenceStats",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
+#[derive(Debug, Clone)]
+pub struct PyInterferenceStats(pub InterferenceStats);
+
+#[pymethods]
+impl PyInterferenceStats {
+    /// Interference power in watts.
+    #[getter]
+    fn interference_power_w(&self) -> f64 {
+        self.0.interference_power_w
+    }
+
+    /// Carrier-to-noise-plus-interference density ratio in dB·Hz.
+    #[getter]
+    fn c_n0i0(&self) -> PyDecibel {
+        PyDecibel(self.0.c_n0i0)
+    }
+
+    /// Eb/(N0+I0) in dB.
+    #[getter]
+    fn eb_n0i0(&self) -> PyDecibel {
+        PyDecibel(self.0.eb_n0i0)
+    }
+
+    /// Link margin with interference in dB.
+    #[getter]
+    fn margin_with_interference(&self) -> PyDecibel {
+        PyDecibel(self.0.margin_with_interference)
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "InterferenceStats(interference_power_w={}, c_n0i0={:.2} dB·Hz, eb_n0i0={:.2} dB, margin_with_interference={:.2} dB)",
+            repr_f64(self.0.interference_power_w),
+            self.0.c_n0i0.as_f64(),
+            self.0.eb_n0i0.as_f64(),
+            self.0.margin_with_interference.as_f64(),
+        )
+    }
+}
+
+// --- Modulated Link Stats ---
+
+/// Link-budget output with modulation/coding figures applied.
+#[pyclass(
+    name = "ModulatedLinkStats",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
+#[derive(Debug, Clone)]
+pub struct PyModulatedLinkStats(pub ModulatedLinkStats);
+
+#[pymethods]
+impl PyModulatedLinkStats {
+    /// The underlying modulation-agnostic link budget.
+    #[getter]
+    fn link(&self) -> PyLinkStats {
+        PyLinkStats(self.0.link.clone())
+    }
+
+    /// The channel (modulation, FEC, required Eb/N0, margin) applied.
+    #[getter]
+    fn channel(&self) -> PyChannel {
+        PyChannel(self.0.channel.clone())
+    }
+
+    /// Symbol rate from the channel.
+    #[getter]
+    fn symbol_rate(&self) -> PyFrequency {
+        PyFrequency(self.0.symbol_rate)
+    }
+
+    /// Es/N0 (energy per symbol to noise spectral density) in dB.
+    #[getter]
+    fn es_n0(&self) -> PyDecibel {
+        PyDecibel(self.0.es_n0)
+    }
+
+    /// Eb/N0 (energy per information bit to noise spectral density) in dB.
+    #[getter]
+    fn eb_n0(&self) -> PyDecibel {
+        PyDecibel(self.0.eb_n0)
+    }
+
+    /// Link margin in dB.
+    #[getter]
+    fn margin(&self) -> PyDecibel {
+        PyDecibel(self.0.margin)
+    }
+
+    /// Interference statistics (if computed).
+    #[getter]
+    fn interference(&self) -> Option<PyInterferenceStats> {
+        self.0
+            .interference
+            .as_ref()
+            .map(|i| PyInterferenceStats(i.clone()))
+    }
+
+    /// Computes interference statistics for a given interferer power.
+    fn with_interference(&self, interference_power_w: f64) -> PyInterferenceStats {
+        PyInterferenceStats(self.0.with_interference(interference_power_w))
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "ModulatedLinkStats(eb_n0={:.2} dB, margin={:.2} dB, interference={})",
+            self.0.eb_n0.as_f64(),
+            self.0.margin.as_f64(),
+            if self.0.interference.is_some() {
+                "present"
+            } else {
+                "None"
+            },
         )
     }
 }
