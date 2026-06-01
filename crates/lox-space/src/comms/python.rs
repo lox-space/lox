@@ -18,9 +18,9 @@ use lox_itur::EnvironmentalLosses;
 use crate::itur::python::PyEnvironmentalLosses;
 use lox_comms::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
 use lox_comms::pfd;
-use lox_comms::receiver::{CascadeReceiver, NoiseStage, NoiseTempReceiver, Receiver};
+use lox_comms::receiver::{CascadeReceiver, GtReceiver, NoiseStage, NoiseTempReceiver, Receiver};
 use lox_comms::system::CommunicationSystem;
-use lox_comms::transmitter::{AmplifierTransmitter, Transmitter};
+use lox_comms::transmitter::{AmplifierTransmitter, EirpTransmitter, Transmitter};
 use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
 use lox_core::units::Decibel;
 
@@ -338,15 +338,15 @@ impl PyDipolePattern {
 /// Args:
 ///     gain: Peak gain as Decibel.
 ///     beamwidth: Half-power beamwidth as Angle.
-#[pyclass(name = "SimpleAntenna", module = "lox_space", frozen, from_py_object)]
+#[pyclass(name = "ConstantAntenna", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
-pub struct PySimpleAntenna {
+pub struct PyConstantAntenna {
     /// The wrapped [`ConstantAntenna`] value.
     pub inner: ConstantAntenna,
 }
 
 #[pymethods]
-impl PySimpleAntenna {
+impl PyConstantAntenna {
     #[new]
     fn new(gain: PyDecibel, beamwidth: PyAngle) -> Self {
         Self {
@@ -357,7 +357,7 @@ impl PySimpleAntenna {
         }
     }
 
-    fn __eq__(&self, other: &PySimpleAntenna) -> bool {
+    fn __eq__(&self, other: &PyConstantAntenna) -> bool {
         self.inner.gain.as_f64() == other.inner.gain.as_f64()
             && f64::from(self.inner.beamwidth) == f64::from(other.inner.beamwidth)
     }
@@ -368,7 +368,7 @@ impl PySimpleAntenna {
 
     fn __repr__(&self) -> String {
         format!(
-            "SimpleAntenna(gain={}, beamwidth={})",
+            "ConstantAntenna(gain={}, beamwidth={})",
             PyDecibel(self.inner.gain).__repr__(),
             PyAngle(self.inner.beamwidth).__repr__(),
         )
@@ -380,12 +380,17 @@ impl PySimpleAntenna {
 /// Args:
 ///     pattern: An antenna pattern (ParabolicPattern, GaussianPattern, or DipolePattern).
 ///     boresight: Boresight direction as [x, y, z].
-#[pyclass(name = "ComplexAntenna", module = "lox_space", frozen, from_py_object)]
+#[pyclass(
+    name = "PatternedAntenna",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
 #[derive(Debug, Clone)]
-pub struct PyComplexAntenna(pub PatternedAntenna);
+pub struct PyPatternedAntenna(pub PatternedAntenna);
 
 #[pymethods]
-impl PyComplexAntenna {
+impl PyPatternedAntenna {
     #[new]
     fn new(pattern: &Bound<'_, PyAny>, boresight: [f64; 3]) -> PyResult<Self> {
         let pattern = extract_antenna_pattern(pattern)?;
@@ -437,7 +442,7 @@ impl PyComplexAntenna {
         };
         let b = self.0.boresight;
         format!(
-            "ComplexAntenna(pattern={pattern_repr}, boresight=[{}, {}, {}])",
+            "PatternedAntenna(pattern={pattern_repr}, boresight=[{}, {}, {}])",
             repr_f64(b.x),
             repr_f64(b.y),
             repr_f64(b.z),
@@ -490,7 +495,7 @@ fn antenna_to_py<'py>(py: Python<'py>, antenna: &Antenna) -> Bound<'py, PyAny> {
     match antenna {
         Antenna::Constant(a) => Bound::new(
             py,
-            PySimpleAntenna {
+            PyConstantAntenna {
                 inner: ConstantAntenna {
                     gain: a.gain,
                     beamwidth: a.beamwidth,
@@ -512,7 +517,7 @@ fn antenna_to_py<'py>(py: Python<'py>, antenna: &Antenna) -> Bound<'py, PyAny> {
             };
             Bound::new(
                 py,
-                PyComplexAntenna(PatternedAntenna {
+                PyPatternedAntenna(PatternedAntenna {
                     pattern,
                     boresight: a.boresight,
                 }),
@@ -528,27 +533,36 @@ fn receiver_to_py<'py>(py: Python<'py>, receiver: &Receiver) -> Bound<'py, PyAny
     match receiver {
         Receiver::NoiseTemperature(r) => Bound::new(
             py,
-            PySimpleReceiver(NoiseTempReceiver {
+            PyNoiseTempReceiver(NoiseTempReceiver {
                 frequency: r.frequency,
                 system_noise_temperature: r.system_noise_temperature,
             }),
         )
         .unwrap()
         .into_any(),
-        Receiver::Cascade(r) => Bound::new(py, PyComplexReceiver(r.clone()))
+        Receiver::Cascade(r) => Bound::new(py, PyCascadeReceiver(r.clone()))
             .unwrap()
             .into_any(),
+        Receiver::Gt(r) => Bound::new(
+            py,
+            PyGtReceiver(GtReceiver {
+                frequency: r.frequency,
+                gt: r.gt,
+            }),
+        )
+        .unwrap()
+        .into_any(),
         _ => unreachable!("unknown receiver variant"),
     }
 }
 
 fn build_antenna(obj: &Bound<'_, PyAny>) -> PyResult<Antenna> {
-    if let Ok(a) = obj.extract::<PyRef<'_, PySimpleAntenna>>() {
+    if let Ok(a) = obj.extract::<PyRef<'_, PyConstantAntenna>>() {
         Ok(Antenna::Constant(ConstantAntenna {
             gain: a.inner.gain,
             beamwidth: a.inner.beamwidth,
         }))
-    } else if let Ok(a) = obj.extract::<PyRef<'_, PyComplexAntenna>>() {
+    } else if let Ok(a) = obj.extract::<PyRef<'_, PyPatternedAntenna>>() {
         let pattern = match &a.0.pattern {
             AntennaPattern::Parabolic(p) => {
                 AntennaPattern::Parabolic(ParabolicPattern::new(p.diameter, p.efficiency))
@@ -565,27 +579,32 @@ fn build_antenna(obj: &Bound<'_, PyAny>) -> PyResult<Antenna> {
         }))
     } else {
         Err(PyValueError::new_err(
-            "expected a SimpleAntenna or ComplexAntenna",
+            "expected a ConstantAntenna or PatternedAntenna",
         ))
     }
 }
 
 fn build_receiver(obj: &Bound<'_, PyAny>) -> PyResult<Receiver> {
-    if let Ok(r) = obj.extract::<PyRef<'_, PySimpleReceiver>>() {
+    if let Ok(r) = obj.extract::<PyRef<'_, PyNoiseTempReceiver>>() {
         Ok(Receiver::NoiseTemperature(NoiseTempReceiver {
             frequency: r.0.frequency,
             system_noise_temperature: r.0.system_noise_temperature,
         }))
-    } else if let Ok(r) = obj.extract::<PyRef<'_, PyComplexReceiver>>() {
+    } else if let Ok(r) = obj.extract::<PyRef<'_, PyCascadeReceiver>>() {
         Ok(Receiver::Cascade(r.0.clone()))
+    } else if let Ok(r) = obj.extract::<PyRef<'_, PyGtReceiver>>() {
+        Ok(Receiver::Gt(GtReceiver {
+            frequency: r.0.frequency,
+            gt: r.0.gt,
+        }))
     } else {
         Err(PyValueError::new_err(
-            "expected SimpleReceiver or ComplexReceiver",
+            "expected NoiseTempReceiver, CascadeReceiver, or GtReceiver",
         ))
     }
 }
 
-fn build_transmitter(tx: &PyTransmitter) -> Transmitter {
+fn build_transmitter_from_amplifier(tx: &PyAmplifierTransmitter) -> Transmitter {
     match &tx.0 {
         Transmitter::Amplifier(a) => Transmitter::Amplifier(AmplifierTransmitter::new(
             a.frequency,
@@ -597,21 +616,26 @@ fn build_transmitter(tx: &PyTransmitter) -> Transmitter {
     }
 }
 
-// --- Transmitter ---
+// --- AmplifierTransmitter ---
 
-/// A radio transmitter.
+/// A radio transmitter with an RF power amplifier.
 ///
 /// Args:
 ///     frequency: Transmit frequency.
 ///     power: Transmit power.
 ///     line_loss: Feed/line loss as Decibel.
 ///     output_back_off: Output back-off as Decibel (default Decibel(0)).
-#[pyclass(name = "Transmitter", module = "lox_space", frozen, from_py_object)]
+#[pyclass(
+    name = "AmplifierTransmitter",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
 #[derive(Debug, Clone)]
-pub struct PyTransmitter(pub Transmitter);
+pub struct PyAmplifierTransmitter(pub Transmitter);
 
 #[pymethods]
-impl PyTransmitter {
+impl PyAmplifierTransmitter {
     #[new]
     #[pyo3(signature = (frequency, power, line_loss, output_back_off=None))]
     fn new(
@@ -634,7 +658,7 @@ impl PyTransmitter {
         Ok(PyDecibel(self.0.eirp(&ant, angle.0)))
     }
 
-    fn __eq__(&self, other: &PyTransmitter) -> bool {
+    fn __eq__(&self, other: &PyAmplifierTransmitter) -> bool {
         let freq_eq = f64::from(self.0.frequency()) == f64::from(other.0.frequency());
         match (&self.0, &other.0) {
             (Transmitter::Amplifier(a), Transmitter::Amplifier(b)) => {
@@ -662,7 +686,7 @@ impl PyTransmitter {
     fn __repr__(&self) -> String {
         match &self.0 {
             Transmitter::Amplifier(tx) => format!(
-                "Transmitter(frequency={}, power={}, line_loss={}, output_back_off={})",
+                "AmplifierTransmitter(frequency={}, power={}, line_loss={}, output_back_off={})",
                 PyFrequency(tx.frequency).__repr__(),
                 PyPower::new(tx.power_w).__repr__(),
                 PyDecibel(tx.line_loss).__repr__(),
@@ -673,19 +697,112 @@ impl PyTransmitter {
     }
 }
 
+// --- EirpTransmitter ---
+
+/// A lumped transmitter defined by a frequency and aggregate EIRP.
+///
+/// Args:
+///     frequency: Transmit frequency.
+///     eirp: Effective isotropic radiated power in dBW.
+#[pyclass(name = "EirpTransmitter", module = "lox_space", frozen, from_py_object)]
+#[derive(Debug, Clone)]
+pub struct PyEirpTransmitter(pub EirpTransmitter);
+
+#[pymethods]
+impl PyEirpTransmitter {
+    #[new]
+    fn new(frequency: PyFrequency, eirp: PyDecibel) -> Self {
+        Self(EirpTransmitter {
+            frequency: frequency.0,
+            eirp: eirp.0,
+        })
+    }
+
+    #[getter]
+    fn frequency(&self) -> PyFrequency {
+        PyFrequency(self.0.frequency)
+    }
+
+    #[getter]
+    fn eirp(&self) -> PyDecibel {
+        PyDecibel(self.0.eirp)
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "EirpTransmitter(frequency={}, eirp={})",
+            repr_f64(self.0.frequency.to_hertz()),
+            repr_f64(self.0.eirp.as_f64())
+        )
+    }
+
+    fn __eq__(&self, other: &Self) -> bool {
+        self.0.frequency == other.0.frequency && self.0.eirp == other.0.eirp
+    }
+}
+
+// --- GtReceiver ---
+
+/// A lumped receiver defined by a frequency and aggregate G/T.
+///
+/// Args:
+///     frequency: Receive frequency.
+///     gt: Gain-to-noise-temperature ratio in dB/K.
+#[pyclass(name = "GtReceiver", module = "lox_space", frozen, from_py_object)]
+#[derive(Debug, Clone)]
+pub struct PyGtReceiver(pub GtReceiver);
+
+#[pymethods]
+impl PyGtReceiver {
+    #[new]
+    fn new(frequency: PyFrequency, gt: PyDecibel) -> Self {
+        Self(GtReceiver {
+            frequency: frequency.0,
+            gt: gt.0,
+        })
+    }
+
+    #[getter]
+    fn frequency(&self) -> PyFrequency {
+        PyFrequency(self.0.frequency)
+    }
+
+    #[getter]
+    fn gt(&self) -> PyDecibel {
+        PyDecibel(self.0.gt)
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "GtReceiver(frequency={}, gt={})",
+            repr_f64(self.0.frequency.to_hertz()),
+            repr_f64(self.0.gt.as_f64())
+        )
+    }
+
+    fn __eq__(&self, other: &Self) -> bool {
+        self.0.frequency == other.0.frequency && self.0.gt == other.0.gt
+    }
+}
+
 // --- Receivers ---
 
-/// A simple receiver with a known system noise temperature.
+/// A receiver with a known system noise temperature.
 ///
 /// Args:
 ///     frequency: Receive frequency.
 ///     system_noise_temperature: System noise temperature.
-#[pyclass(name = "SimpleReceiver", module = "lox_space", frozen, from_py_object)]
+#[pyclass(
+    name = "NoiseTempReceiver",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
 #[derive(Debug, Clone)]
-pub struct PySimpleReceiver(pub NoiseTempReceiver);
+pub struct PyNoiseTempReceiver(pub NoiseTempReceiver);
 
 #[pymethods]
-impl PySimpleReceiver {
+impl PyNoiseTempReceiver {
     #[new]
     fn new(frequency: PyFrequency, system_noise_temperature: PyTemperature) -> Self {
         Self(NoiseTempReceiver {
@@ -694,7 +811,7 @@ impl PySimpleReceiver {
         })
     }
 
-    fn __eq__(&self, other: &PySimpleReceiver) -> bool {
+    fn __eq__(&self, other: &PyNoiseTempReceiver) -> bool {
         f64::from(self.0.frequency) == f64::from(other.0.frequency)
             && self.0.system_noise_temperature == other.0.system_noise_temperature
     }
@@ -708,7 +825,7 @@ impl PySimpleReceiver {
 
     fn __repr__(&self) -> String {
         format!(
-            "SimpleReceiver(frequency={}, system_noise_temperature={})",
+            "NoiseTempReceiver(frequency={}, system_noise_temperature={})",
             PyFrequency(self.0.frequency).__repr__(),
             PyTemperature::new(self.0.system_noise_temperature).__repr__(),
         )
@@ -752,7 +869,7 @@ impl PyNoiseStage {
     }
 }
 
-// --- Complex Receiver ---
+// --- Cascade Receiver ---
 
 /// An N-stage cascade receiver using the Friis noise formula.
 ///
@@ -762,12 +879,12 @@ impl PyNoiseStage {
 ///     stages: List of NoiseStage (ordered: LNA first, then downstream).
 ///     demodulator_loss: Demodulator loss as Decibel (default Decibel(0)).
 ///     implementation_loss: Other implementation losses as Decibel (default Decibel(0)).
-#[pyclass(name = "ComplexReceiver", module = "lox_space", frozen, from_py_object)]
+#[pyclass(name = "CascadeReceiver", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
-pub struct PyComplexReceiver(pub CascadeReceiver);
+pub struct PyCascadeReceiver(pub CascadeReceiver);
 
 #[pymethods]
-impl PyComplexReceiver {
+impl PyCascadeReceiver {
     #[new]
     #[pyo3(signature = (frequency, antenna_noise_temperature, stages, demodulator_loss=None, implementation_loss=None))]
     fn new(
@@ -844,7 +961,7 @@ impl PyComplexReceiver {
         PyDecibel(self.0.chain_gain())
     }
 
-    fn __eq__(&self, other: &PyComplexReceiver) -> bool {
+    fn __eq__(&self, other: &PyCascadeReceiver) -> bool {
         f64::from(self.0.frequency) == f64::from(other.0.frequency)
             && self.0.antenna_noise_temperature == other.0.antenna_noise_temperature
             && self.0.stages.len() == other.0.stages.len()
@@ -896,7 +1013,7 @@ impl PyComplexReceiver {
             })
             .collect();
         format!(
-            "ComplexReceiver(frequency={}, antenna_noise_temperature={}, stages=[{}], demodulator_loss={}, implementation_loss={})",
+            "CascadeReceiver(frequency={}, antenna_noise_temperature={}, stages=[{}], demodulator_loss={}, implementation_loss={})",
             PyFrequency(self.0.frequency).__repr__(),
             PyTemperature::new(self.0.antenna_noise_temperature).__repr__(),
             stages_repr.join(", "),
@@ -1063,9 +1180,9 @@ impl PyChannel {
 /// A communication system combining an antenna with optional transmitter and receiver.
 ///
 /// Args:
-///     antenna: A SimpleAntenna or ComplexAntenna.
-///     receiver: A SimpleReceiver or ComplexReceiver (optional).
-///     transmitter: A Transmitter (optional).
+///     antenna: A ConstantAntenna or PatternedAntenna.
+///     receiver: A NoiseTempReceiver, CascadeReceiver, or GtReceiver (optional).
+///     transmitter: An AmplifierTransmitter or EirpTransmitter (optional).
 #[pyclass(
     name = "CommunicationSystem",
     module = "lox_space",
@@ -1082,16 +1199,28 @@ impl PyCommunicationSystem {
     fn new(
         antenna: &Bound<'_, PyAny>,
         receiver: Option<&Bound<'_, PyAny>>,
-        transmitter: Option<&PyTransmitter>,
+        transmitter: Option<&PyAmplifierTransmitter>,
     ) -> PyResult<Self> {
         let ant = build_antenna(antenna)?;
         let rx = receiver.map(build_receiver).transpose()?;
-        let tx = transmitter.map(build_transmitter);
+        let tx = transmitter.map(build_transmitter_from_amplifier);
         Ok(Self(CommunicationSystem {
             antenna: Some(ant),
             receiver: rx,
             transmitter: tx,
         }))
+    }
+
+    /// Creates a lumped transmit-only system from a known EIRP.
+    #[classmethod]
+    fn eirp_only(_cls: &Bound<'_, pyo3::types::PyType>, tx: PyEirpTransmitter) -> Self {
+        Self(CommunicationSystem::eirp_only(tx.0))
+    }
+
+    /// Creates a lumped receive-only system from a known G/T.
+    #[classmethod]
+    fn gt_only(_cls: &Bound<'_, pyo3::types::PyType>, rx: PyGtReceiver) -> Self {
+        Self(CommunicationSystem::gt_only(rx.0))
     }
 
     /// Computes the carrier-to-noise density ratio (C/N0).
@@ -1148,37 +1277,46 @@ impl PyCommunicationSystem {
     fn __getnewargs__<'py>(
         &self,
         py: Python<'py>,
-    ) -> (
+    ) -> PyResult<(
         Bound<'py, PyAny>,
         Option<Bound<'py, PyAny>>,
-        Option<PyTransmitter>,
-    ) {
-        let antenna = self
-            .0
-            .antenna
-            .as_ref()
-            .map(|a| antenna_to_py(py, a))
-            .expect("component-tier CommunicationSystem must have an antenna");
+        Option<PyAmplifierTransmitter>,
+    )> {
+        let antenna = match self.0.antenna.as_ref() {
+            Some(a) => antenna_to_py(py, a),
+            None => {
+                return Err(PyValueError::new_err(
+                    "pickling of lumped CommunicationSystem (Eirp/Gt) is not yet supported",
+                ));
+            }
+        };
         let receiver = self.0.receiver.as_ref().map(|r| receiver_to_py(py, r));
-        let transmitter = self.0.transmitter.as_ref().map(|t| {
-            PyTransmitter(match t {
-                Transmitter::Amplifier(a) => Transmitter::Amplifier(AmplifierTransmitter::new(
-                    a.frequency,
-                    a.power_w,
-                    a.line_loss,
-                    a.output_back_off,
+        let transmitter = self
+            .0
+            .transmitter
+            .as_ref()
+            .map(|t| match t {
+                Transmitter::Amplifier(a) => Ok(PyAmplifierTransmitter(Transmitter::Amplifier(
+                    AmplifierTransmitter::new(
+                        a.frequency,
+                        a.power_w,
+                        a.line_loss,
+                        a.output_back_off,
+                    ),
+                ))),
+                Transmitter::Eirp(_) => Err(PyValueError::new_err(
+                    "pickling of lumped CommunicationSystem (Eirp/Gt) is not yet supported",
                 )),
-                Transmitter::Eirp(_) => unreachable!("Eirp transmitter not yet exposed in Python"),
                 _ => unreachable!("unknown transmitter variant"),
             })
-        });
-        (antenna, receiver, transmitter)
+            .transpose()?;
+        Ok((antenna, receiver, transmitter))
     }
 
     fn __repr__(&self) -> String {
         let antenna_repr = match self.0.antenna.as_ref() {
             Some(Antenna::Constant(a)) => format!(
-                "SimpleAntenna(gain={}, beamwidth={})",
+                "ConstantAntenna(gain={}, beamwidth={})",
                 PyDecibel(a.gain).__repr__(),
                 PyAngle(a.beamwidth).__repr__(),
             ),
@@ -1201,7 +1339,7 @@ impl PyCommunicationSystem {
                 };
                 let b = a.boresight;
                 format!(
-                    "ComplexAntenna(pattern={pattern_repr}, boresight=[{}, {}, {}])",
+                    "PatternedAntenna(pattern={pattern_repr}, boresight=[{}, {}, {}])",
                     repr_f64(b.x),
                     repr_f64(b.y),
                     repr_f64(b.z),
@@ -1212,27 +1350,35 @@ impl PyCommunicationSystem {
         };
         let rx_repr = match &self.0.receiver {
             Some(Receiver::NoiseTemperature(r)) => format!(
-                ", receiver=SimpleReceiver(frequency={}, system_noise_temperature={})",
+                ", receiver=NoiseTempReceiver(frequency={}, system_noise_temperature={})",
                 PyFrequency(r.frequency).__repr__(),
                 PyTemperature::new(r.system_noise_temperature).__repr__(),
             ),
             Some(Receiver::Cascade(r)) => {
-                format!(", receiver={}", PyComplexReceiver(r.clone()).__repr__())
+                format!(", receiver={}", PyCascadeReceiver(r.clone()).__repr__())
             }
-            Some(Receiver::Gt(_)) => unreachable!("Gt receiver not yet exposed in Python"),
+            Some(Receiver::Gt(r)) => format!(
+                ", receiver=GtReceiver(frequency={}, gt={})",
+                repr_f64(r.frequency.to_hertz()),
+                repr_f64(r.gt.as_f64()),
+            ),
             Some(_) => unreachable!("unknown receiver variant"),
             None => String::new(),
         };
         let tx_repr = match &self.0.transmitter {
             Some(t) => match t {
                 Transmitter::Amplifier(a) => format!(
-                    ", transmitter=Transmitter(frequency={}, power={}, line_loss={}, output_back_off={})",
+                    ", transmitter=AmplifierTransmitter(frequency={}, power={}, line_loss={}, output_back_off={})",
                     PyFrequency(a.frequency).__repr__(),
                     PyPower::new(a.power_w).__repr__(),
                     PyDecibel(a.line_loss).__repr__(),
                     PyDecibel(a.output_back_off).__repr__(),
                 ),
-                Transmitter::Eirp(_) => unreachable!("Eirp transmitter not yet exposed in Python"),
+                Transmitter::Eirp(e) => format!(
+                    ", transmitter=EirpTransmitter(frequency={}, eirp={})",
+                    repr_f64(e.frequency.to_hertz()),
+                    repr_f64(e.eirp.as_f64()),
+                ),
                 _ => unreachable!("unknown transmitter variant"),
             },
             None => String::new(),
