@@ -177,8 +177,8 @@ mod tests {
 
     #[test]
     fn test_noise_power() {
-        // P_noise = 10*log10(500 * 1.38064852e-23 * 1e6)
-        //         = 10*log10(6.90324e-15)
+        // P_noise = 10*log10(500 * BOLTZMANN_CONSTANT * 1e6)
+        //         = 10*log10(500 * 1.380649e-23 * 1e6)
         //         = -141.61 dBW
         let rx = rx_system();
         let p_noise = rx.noise_power(1e6);

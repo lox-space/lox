@@ -24,7 +24,11 @@ pub use error::LinkBudgetError;
 
 use lox_core::units::Kelvin;
 
-/// Boltzmann constant in J/K (CODATA 2018 / SI 2019 exact value).
+/// Boltzmann constant in J/K.
+///
+/// # References
+///
+/// BIPM SI Brochure (2019), Table 1 of exact defining constants: k = 1.380 649 × 10⁻²³ J K⁻¹.
 pub const BOLTZMANN_CONSTANT: f64 = 1.380_649e-23;
 
 /// Reference room temperature in Kelvin (per ITU-R).
