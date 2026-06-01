@@ -19,12 +19,14 @@ readme = "README.md"
 [dependencies]
 lox-core = { workspace = true, features = ["std"] }
 lox-itur = { workspace = true }
-lox-test-utils = { workspace = true, features = ["derive"] }
 
 serde = { workspace = true, optional = true }
 
 [features]
 serde = ["dep:serde", "lox-core/serde", "lox-itur/serde"]
+
+[dev-dependencies]
+lox-test-utils = { workspace = true, features = ["derive"] }
 
 [lib]
 doctest = false
