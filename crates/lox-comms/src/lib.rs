@@ -11,6 +11,7 @@
 
 pub mod antenna;
 pub mod channel;
+pub mod error;
 pub mod link_budget;
 pub mod pattern;
 pub mod pfd;
@@ -19,10 +20,12 @@ pub mod system;
 pub mod transmitter;
 pub mod utils;
 
+pub use error::LinkBudgetError;
+
 use lox_core::units::Kelvin;
 
-/// Boltzmann constant in J/K.
-pub const BOLTZMANN_CONSTANT: f64 = 1.380_648_52e-23;
+/// Boltzmann constant in J/K (CODATA 2018 / SI 2019 exact value).
+pub const BOLTZMANN_CONSTANT: f64 = 1.380_649e-23;
 
 /// Reference room temperature in Kelvin (per ITU-R).
 pub const ROOM_TEMPERATURE: Kelvin = 290.0;
