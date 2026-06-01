@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+
+SPDX-License-Identifier: MPL-2.0
+-->
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -6,6 +12,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+
+- *(lox-comms)* Antenna variants renamed: `Simple`/`Complex` → `Constant`/`Patterned` (inner structs follow: `ConstantAntenna`/`PatternedAntenna`)
+- *(lox-comms)* Receiver variants renamed: `Simple`/`Complex` → `NoiseTemperature`/`Cascade` (inner structs: `NoiseTempReceiver`/`CascadeReceiver`)
+- *(lox-comms)* `Transmitter` lifted from struct into an enum; original struct becomes `AmplifierTransmitter`
+- *(lox-comms)* `CommunicationSystem.antenna` is now `Option<Antenna>`; lumped (`Eirp`/`Gt`) variants pair with `None`
+- *(lox-comms)* `LinkStats::calculate` returns `Result<_, LinkBudgetError>` and takes a `bandwidth: Frequency` parameter (no longer takes `Channel`)
+- *(lox-comms)* `LinkStats` split: modulation-derived fields move to a new `ModulatedLinkStats` produced via `Channel::apply(link)`
+- *(lox-comms)* `LinkStats.carrier_rx_power` and `LinkStats.noise_power` are now `Option<Decibel>` (`None` for lumped-G/T receivers)
+- *(lox-comms)* Boltzmann constant updated to the SI-2019 exact value `1.380_649e-23`
+- *(lox-comms)* `Antenna`, `Transmitter`, `Receiver`, `AntennaPattern`, `Modulation`, `LinkDirection`, and `LinkBudgetError` marked `#[non_exhaustive]`
+
+### Added
+
+- *(lox-comms)* `EirpTransmitter` and `Transmitter::Eirp` lumped variant
+- *(lox-comms)* `GtReceiver` and `Receiver::Gt` lumped variant
+- *(lox-comms)* `LinkBudgetError` enum for validation failures
+- *(lox-comms)* `CommunicationSystem::eirp_only`, `gt_only`, `amplifier_with`, `receiver_with` tier constructors
+- *(lox-comms)* `Channel::apply(LinkStats) -> ModulatedLinkStats`
+- *(lox-comms)* `CommunicationSystem::eirp_at(angle)` and `gt_at(angle)` accessors
 
 ## [0.1.0-alpha.14](https://github.com/lox-space/lox/compare/lox-comms-v0.1.0-alpha.13...lox-comms-v0.1.0-alpha.14) - 2026-05-26
 
