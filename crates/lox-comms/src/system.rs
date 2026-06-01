@@ -55,7 +55,15 @@ impl CommunicationSystem {
 
     /// Creates a system from an antenna plus a component-tier receiver
     /// (either `NoiseTemperature` or `Cascade`).
+    ///
+    /// # Panics (debug builds only)
+    ///
+    /// Panics if `rx` is [`Receiver::Gt`]; use [`Self::gt_only`] for lumped G/T receivers.
     pub fn receiver_with(antenna: Antenna, rx: Receiver) -> Self {
+        debug_assert!(
+            !matches!(rx, Receiver::Gt(_)),
+            "receiver_with: use gt_only for lumped G/T receivers"
+        );
         Self {
             antenna: Some(antenna),
             receiver: Some(rx),
@@ -357,7 +365,7 @@ mod tests {
             .unwrap();
         // EIRP=55, G/T=3.01, FSPL≈181.696, losses=0, k_dB≈-228.599
         // C/N0 ≈ 55 + 3.01 - 181.696 + 228.599 = 104.913
-        assert_approx_eq!(c_n0.as_f64(), 104.913, atol <= 0.2);
+        assert_approx_eq!(c_n0.as_f64(), 104.913, atol <= 0.1);
     }
 
     #[test]
@@ -412,5 +420,32 @@ mod tests {
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::UnexpectedAntenna);
+    }
+
+    #[test]
+    fn test_missing_antenna_is_error() {
+        use crate::transmitter::AmplifierTransmitter;
+
+        let tx = CommunicationSystem {
+            antenna: None,
+            receiver: None,
+            transmitter: Some(Transmitter::Amplifier(AmplifierTransmitter::new(
+                29.0.ghz(),
+                10.0,
+                1.0.db(),
+                0.0.db(),
+            ))),
+        };
+        let rx = rx_system();
+        let err = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap_err();
+        assert_eq!(err, LinkBudgetError::MissingAntenna);
     }
 }

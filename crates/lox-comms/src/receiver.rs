@@ -166,8 +166,10 @@ pub enum Receiver {
 impl Receiver {
     /// Returns the system noise temperature in Kelvin.
     ///
-    /// For lumped `Gt` receivers, returns `0.0` as a sentinel — the link-budget
-    /// path uses [`Receiver::gain_to_noise_temperature`] directly, not this method.
+    /// # Caveat
+    ///
+    /// The returned value is not physically meaningful for [`Receiver::Gt`]; callers
+    /// outside the link-budget path must match on the variant before calling.
     pub fn system_noise_temperature(&self) -> Kelvin {
         match self {
             Receiver::Gt(_) => 0.0,
@@ -176,17 +178,12 @@ impl Receiver {
         }
     }
 
-    /// Returns the total receiver gain in dB.
+    /// Returns the receiver gain in dB before noise referral.
     ///
-    /// For a noise temperature receiver, this is just the antenna gain.
-    /// For a cascade receiver: G_ant − demod_loss − impl_loss.
+    /// # Caveat
     ///
-    /// For lumped `Gt` receivers, returns `0 dB` as a sentinel — the link-budget
-    /// path uses [`Receiver::gain_to_noise_temperature`] directly, not this method.
-    ///
-    /// Chain gain is excluded because `system_noise_temperature` uses the Friis
-    /// formula, which refers noise to the antenna terminals. Including chain
-    /// gain here would double-count it in the G/T ratio.
+    /// The returned value is not physically meaningful for [`Receiver::Gt`]; callers
+    /// outside the link-budget path must match on the variant before calling.
     pub fn total_gain(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
         match self {
             Receiver::Gt(_) => Decibel::new(0.0),
