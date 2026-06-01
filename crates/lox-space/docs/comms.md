@@ -29,6 +29,61 @@ RF link budget analysis for space communication systems.
 | `GaussianPattern` | Gaussian roll-off approximation |
 | `DipolePattern` | Short and general dipole radiation patterns |
 
+## Lumped EIRP and G/T
+
+For early-phase mission studies — where manufacturer datasheets typically
+publish only aggregate figures — you can build a link budget directly from
+an `EirpTransmitter` and a `GtReceiver`, without configuring an antenna or
+amplifier separately. Use `CommunicationSystem.eirp_only` and
+`CommunicationSystem.gt_only`:
+
+```python
+import lox_space as lox
+
+tx = lox.CommunicationSystem.eirp_only(
+    lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
+)
+rx = lox.CommunicationSystem.gt_only(
+    lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
+)
+link = lox.LinkStats.calculate(
+    tx,
+    rx,
+    1000.0 * lox.km,
+    5.0 * lox.MHz,
+    0.0 * lox.rad,
+    0.0 * lox.rad,
+    lox.EnvironmentalLosses.none(),
+)
+print(f"C/N0 = {link.c_n0.as_float():.2f} dB·Hz")
+```
+
+For lumped links, `link.carrier_rx_power` and `link.noise_power` are `None` —
+the absolute carrier and noise power are not recoverable from EIRP and G/T
+alone. The carrier-to-noise density ratio (`c_n0`) and carrier-to-noise ratio
+(`c_n`) remain available.
+
+To compute modulation-aware figures (`Es/N0`, `Eb/N0`, link margin), apply a
+`Channel`:
+
+```python
+channel = lox.Channel(
+    link_type="downlink",
+    symbol_rate=5 * lox.MHz,
+    required_eb_n0=10.0 * lox.dB,
+    margin=3.0 * lox.dB,
+    modulation=lox.Modulation("QPSK"),
+    roll_off=0.35,
+    fec=0.5,
+)
+modulated = channel.apply(link)
+print(f"Margin = {modulated.margin.as_float():.2f} dB")
+```
+
+Use the component tier (configure antennas, amplifiers, receiver noise) when
+you need the full breakdown — for example for noise-budget allocation or
+detailed component trade studies.
+
 ## Quick Example
 
 ```python
@@ -39,13 +94,13 @@ frequency = 29 * lox.GHz
 
 # Transmitter: satellite with parabolic antenna
 tx_pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
-tx_antenna = lox.ComplexAntenna(pattern=tx_pattern, boresight=[0.0, 0.0, 1.0])
-tx = lox.Transmitter(frequency=frequency, power=10 * lox.W, line_loss=1.0 * lox.dB)
+tx_antenna = lox.PatternedAntenna(pattern=tx_pattern, boresight=[0.0, 0.0, 1.0])
+tx = lox.AmplifierTransmitter(frequency=frequency, power=10 * lox.W, line_loss=1.0 * lox.dB)
 tx_system = lox.CommunicationSystem(antenna=tx_antenna, transmitter=tx)
 
 # Receiver: ground station with known system noise temperature
-rx_antenna = lox.SimpleAntenna(gain=40.0 * lox.dB, beamwidth=0.5 * lox.deg)
-rx = lox.SimpleReceiver(frequency=frequency, system_noise_temperature=200 * lox.K)
+rx_antenna = lox.ConstantAntenna(gain=40.0 * lox.dB, beamwidth=0.5 * lox.deg)
+rx = lox.NoiseTempReceiver(frequency=frequency, system_noise_temperature=200 * lox.K)
 rx_system = lox.CommunicationSystem(antenna=rx_antenna, receiver=rx)
 
 # Define a QPSK channel at 5 Msps
@@ -60,21 +115,22 @@ channel = lox.Channel(
 )
 
 # Compute a full link budget at 1000 km slant range
-stats = lox.LinkStats.calculate(
+link = lox.LinkStats.calculate(
     tx_system=tx_system,
     rx_system=rx_system,
-    channel=channel,
     range=1000 * lox.km,
+    bandwidth=channel.bandwidth(),
     tx_angle=0.0 * lox.deg,
     rx_angle=0.0 * lox.deg,
 )
+modulated = channel.apply(link)
 
-print(f"EIRP:        {float(stats.eirp):.1f} dBW")
-print(f"FSPL:        {float(stats.fspl):.1f} dB")
-print(f"C/N0:        {float(stats.c_n0):.1f} dB·Hz")
-print(f"Es/N0:       {float(stats.es_n0):.1f} dB")
-print(f"Eb/N0:       {float(stats.eb_n0):.1f} dB")
-print(f"Link margin: {float(stats.margin):.1f} dB")
+print(f"EIRP:        {float(link.eirp):.1f} dBW")
+print(f"FSPL:        {float(link.fspl):.1f} dB")
+print(f"C/N0:        {float(link.c_n0):.1f} dB·Hz")
+print(f"Es/N0:       {float(modulated.es_n0):.1f} dB")
+print(f"Eb/N0:       {float(modulated.eb_n0):.1f} dB")
+print(f"Link margin: {float(modulated.margin):.1f} dB")
 ```
 
 ### Working with Decibels
@@ -117,11 +173,11 @@ losses = lox.EnvironmentalLosses(
 print(f"Total: {float(losses.total()):.1f} dB")
 
 # Pass to LinkStats.calculate via the losses parameter
-stats = lox.LinkStats.calculate(
+link = lox.LinkStats.calculate(
     tx_system=tx_system,
     rx_system=rx_system,
-    channel=channel,
     range=1000 * lox.km,
+    bandwidth=channel.bandwidth(),
     tx_angle=0.0 * lox.deg,
     rx_angle=0.0 * lox.deg,
     losses=losses,
@@ -160,31 +216,43 @@ stats = lox.LinkStats.calculate(
 
 ---
 
-::: lox_space.SimpleAntenna
+::: lox_space.ConstantAntenna
     options:
       show_source: false
 
 ---
 
-::: lox_space.ComplexAntenna
+::: lox_space.PatternedAntenna
     options:
       show_source: false
 
 ---
 
-::: lox_space.Transmitter
+::: lox_space.AmplifierTransmitter
     options:
       show_source: false
 
 ---
 
-::: lox_space.SimpleReceiver
+::: lox_space.EirpTransmitter
     options:
       show_source: false
 
 ---
 
-::: lox_space.ComplexReceiver
+::: lox_space.NoiseTempReceiver
+    options:
+      show_source: false
+
+---
+
+::: lox_space.CascadeReceiver
+    options:
+      show_source: false
+
+---
+
+::: lox_space.GtReceiver
     options:
       show_source: false
 
@@ -215,6 +283,12 @@ stats = lox.LinkStats.calculate(
 ---
 
 ::: lox_space.LinkStats
+    options:
+      show_source: false
+
+---
+
+::: lox_space.ModulatedLinkStats
     options:
       show_source: false
 
