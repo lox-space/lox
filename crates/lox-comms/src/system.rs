@@ -118,7 +118,7 @@ mod tests {
     use lox_test_utils::assert_approx_eq;
 
     use crate::antenna::ConstantAntenna;
-    use crate::receiver::SimpleReceiver;
+    use crate::receiver::NoiseTempReceiver;
 
     use super::*;
 
@@ -139,7 +139,7 @@ mod tests {
                 gain: 30.0.db(),
                 beamwidth: Angle::degrees(3.0),
             }),
-            receiver: Some(Receiver::Simple(SimpleReceiver {
+            receiver: Some(Receiver::NoiseTemperature(NoiseTempReceiver {
                 frequency: 29.0.ghz(),
                 system_noise_temperature: 500.0,
             })),

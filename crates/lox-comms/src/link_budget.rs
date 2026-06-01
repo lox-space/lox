@@ -179,7 +179,7 @@ mod tests {
 
     use crate::antenna::{Antenna, ConstantAntenna};
     use crate::channel::{LinkDirection, Modulation};
-    use crate::receiver::{Receiver, SimpleReceiver};
+    use crate::receiver::{NoiseTempReceiver, Receiver};
     use crate::transmitter::Transmitter;
 
     use super::*;
@@ -198,7 +198,7 @@ mod tests {
                 gain: 30.0.db(),
                 beamwidth: Angle::degrees(3.0),
             }),
-            receiver: Some(Receiver::Simple(SimpleReceiver {
+            receiver: Some(Receiver::NoiseTemperature(NoiseTempReceiver {
                 frequency: 29.0.ghz(),
                 system_noise_temperature: 500.0,
             })),
