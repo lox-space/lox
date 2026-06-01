@@ -604,14 +604,30 @@ fn build_receiver(obj: &Bound<'_, PyAny>) -> PyResult<Receiver> {
     }
 }
 
-fn build_transmitter_from_amplifier(tx: &PyAmplifierTransmitter) -> Transmitter {
-    match &tx.0 {
-        Transmitter::Amplifier(a) => Transmitter::Amplifier(AmplifierTransmitter::new(
-            a.frequency,
-            a.power_w,
-            a.line_loss,
-            a.output_back_off,
-        )),
+fn build_transmitter_any(obj: &Bound<'_, PyAny>) -> PyResult<Transmitter> {
+    if let Ok(eirp) = obj.extract::<PyRef<'_, PyEirpTransmitter>>() {
+        return Ok(Transmitter::Eirp(eirp.0.clone()));
+    }
+    if let Ok(amp) = obj.extract::<PyRef<'_, PyAmplifierTransmitter>>() {
+        return Ok(amp.0.clone());
+    }
+    Err(PyValueError::new_err(
+        "expected EirpTransmitter or AmplifierTransmitter",
+    ))
+}
+
+fn build_receiver_any(obj: &Bound<'_, PyAny>) -> PyResult<Receiver> {
+    build_receiver(obj)
+}
+
+fn transmitter_to_py<'py>(py: Python<'py>, tx: &Transmitter) -> Bound<'py, PyAny> {
+    match tx {
+        Transmitter::Eirp(t) => Bound::new(py, PyEirpTransmitter(t.clone()))
+            .unwrap()
+            .into_any(),
+        Transmitter::Amplifier(_) => Bound::new(py, PyAmplifierTransmitter(tx.clone()))
+            .unwrap()
+            .into_any(),
         _ => unreachable!("unknown transmitter variant"),
     }
 }
@@ -1203,25 +1219,53 @@ pub struct PyCommunicationSystem(pub CommunicationSystem);
 #[pymethods]
 impl PyCommunicationSystem {
     #[new]
-    #[pyo3(signature = (antenna, receiver=None, transmitter=None))]
+    #[pyo3(signature = (antenna=None, receiver=None, transmitter=None))]
     fn new(
-        antenna: &Bound<'_, PyAny>,
+        antenna: Option<&Bound<'_, PyAny>>,
         receiver: Option<&Bound<'_, PyAny>>,
-        transmitter: Option<&PyAmplifierTransmitter>,
+        transmitter: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<Self> {
-        if let Some(rx_obj) = receiver
-            && rx_obj.extract::<PyRef<'_, PyGtReceiver>>().is_ok()
+        let ant = antenna.map(build_antenna).transpose()?;
+        let rx = receiver.map(build_receiver_any).transpose()?;
+        let tx = transmitter.map(build_transmitter_any).transpose()?;
+
+        if let Some(Transmitter::Eirp(_)) = &tx
+            && ant.is_some()
         {
             return Err(PyValueError::new_err(
-                "GtReceiver is not accepted by the regular constructor; \
-                     use CommunicationSystem.gt_only(rx) instead",
+                "EirpTransmitter must not be paired with an antenna; \
+                     build the system via CommunicationSystem(transmitter=...) \
+                     with antenna=None, or use CommunicationSystem.eirp_only(...)",
             ));
         }
-        let ant = build_antenna(antenna)?;
-        let rx = receiver.map(build_receiver).transpose()?;
-        let tx = transmitter.map(build_transmitter_from_amplifier);
+        if let Some(Transmitter::Amplifier(_)) = &tx
+            && ant.is_none()
+        {
+            return Err(PyValueError::new_err(
+                "AmplifierTransmitter requires an antenna; provide one as the \
+                     antenna= argument or use CommunicationSystem.amplifier_with(...)",
+            ));
+        }
+        if let Some(Receiver::Gt(_)) = &rx
+            && ant.is_some()
+        {
+            return Err(PyValueError::new_err(
+                "GtReceiver must not be paired with an antenna; \
+                     build the system via CommunicationSystem(receiver=...) \
+                     with antenna=None, or use CommunicationSystem.gt_only(...)",
+            ));
+        }
+        if let Some(Receiver::NoiseTemperature(_)) | Some(Receiver::Cascade(_)) = &rx
+            && ant.is_none()
+        {
+            return Err(PyValueError::new_err(
+                "component-tier receiver requires an antenna; provide one as the \
+                     antenna= argument",
+            ));
+        }
+
         Ok(Self(CommunicationSystem {
-            antenna: Some(ant),
+            antenna: ant,
             receiver: rx,
             transmitter: tx,
         }))
@@ -1293,40 +1337,23 @@ impl PyCommunicationSystem {
     fn __getnewargs__<'py>(
         &self,
         py: Python<'py>,
-    ) -> PyResult<(
-        Bound<'py, PyAny>,
+    ) -> (
         Option<Bound<'py, PyAny>>,
-        Option<PyAmplifierTransmitter>,
-    )> {
-        let antenna = match self.0.antenna.as_ref() {
-            Some(a) => antenna_to_py(py, a),
-            None => {
-                return Err(PyValueError::new_err(
-                    "pickling of lumped CommunicationSystem (Eirp/Gt) is not yet supported",
-                ));
-            }
-        };
+        Option<Bound<'py, PyAny>>,
+        Option<Bound<'py, PyAny>>,
+    ) {
+        let antenna = self.0.antenna.as_ref().map(|a| antenna_to_py(py, a));
         let receiver = self.0.receiver.as_ref().map(|r| receiver_to_py(py, r));
         let transmitter = self
             .0
             .transmitter
             .as_ref()
-            .map(|t| match t {
-                Transmitter::Amplifier(a) => Ok(PyAmplifierTransmitter(Transmitter::Amplifier(
-                    AmplifierTransmitter::new(
-                        a.frequency,
-                        a.power_w,
-                        a.line_loss,
-                        a.output_back_off,
-                    ),
-                ))),
-                Transmitter::Eirp(_) => Err(PyValueError::new_err(
-                    "pickling of lumped CommunicationSystem (Eirp/Gt) is not yet supported",
-                )),
-                _ => unreachable!("unknown transmitter variant"),
-            })
-            .transpose()?;
-        Ok((antenna, receiver, transmitter))
+            .map(|t| transmitter_to_py(py, t));
+        (antenna, receiver, transmitter)
+    }
+
+    fn __eq__(&self, other: &PyCommunicationSystem) -> bool {
+        self.__repr__() == other.__repr__()
     }
 
     fn __repr__(&self) -> String {

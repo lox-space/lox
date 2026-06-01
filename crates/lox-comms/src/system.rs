@@ -513,4 +513,80 @@ mod tests {
             .unwrap_err();
         assert!(matches!(err, LinkBudgetError::FrequencyMismatch { .. }));
     }
+
+    #[test]
+    fn test_missing_transmitter_is_error() {
+        let tx = CommunicationSystem {
+            antenna: None,
+            receiver: None,
+            transmitter: None,
+        };
+        let rx = rx_system();
+        let err = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap_err();
+        assert_eq!(err, LinkBudgetError::MissingTransmitter);
+    }
+
+    #[test]
+    fn test_missing_receiver_is_error() {
+        let tx = tx_system();
+        let rx = CommunicationSystem {
+            antenna: None,
+            receiver: None,
+            transmitter: None,
+        };
+        let err = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap_err();
+        assert_eq!(err, LinkBudgetError::MissingReceiver);
+    }
+
+    #[test]
+    fn test_noise_power_missing_receiver_is_error() {
+        let sys = CommunicationSystem {
+            antenna: None,
+            receiver: None,
+            transmitter: None,
+        };
+        let err = sys.noise_power(1e6).unwrap_err();
+        assert_eq!(err, LinkBudgetError::MissingReceiver);
+    }
+
+    #[test]
+    fn test_frequency_mismatch_carrier_power_is_error() {
+        use crate::receiver::GtReceiver;
+        use crate::transmitter::EirpTransmitter;
+
+        let tx = CommunicationSystem::eirp_only(EirpTransmitter {
+            frequency: 29.0.ghz(),
+            eirp: 55.0.db(),
+        });
+        let rx = CommunicationSystem::gt_only(GtReceiver {
+            frequency: 30.0.ghz(),
+            gt: 3.01.db(),
+        });
+        let err = tx
+            .carrier_power(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap_err();
+        assert!(matches!(err, LinkBudgetError::FrequencyMismatch { .. }));
+    }
 }
