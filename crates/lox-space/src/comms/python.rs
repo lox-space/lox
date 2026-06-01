@@ -736,6 +736,10 @@ impl PyEirpTransmitter {
         )
     }
 
+    fn __getnewargs__(&self) -> (PyFrequency, PyDecibel) {
+        (PyFrequency(self.0.frequency), PyDecibel(self.0.eirp))
+    }
+
     fn __eq__(&self, other: &Self) -> bool {
         self.0.frequency == other.0.frequency && self.0.eirp == other.0.eirp
     }
@@ -778,6 +782,10 @@ impl PyGtReceiver {
             repr_f64(self.0.frequency.to_hertz()),
             repr_f64(self.0.gt.as_f64())
         )
+    }
+
+    fn __getnewargs__(&self) -> (PyFrequency, PyDecibel) {
+        (PyFrequency(self.0.frequency), PyDecibel(self.0.gt))
     }
 
     fn __eq__(&self, other: &Self) -> bool {
@@ -1201,13 +1209,13 @@ impl PyCommunicationSystem {
         receiver: Option<&Bound<'_, PyAny>>,
         transmitter: Option<&PyAmplifierTransmitter>,
     ) -> PyResult<Self> {
-        if let Some(rx_obj) = receiver {
-            if rx_obj.extract::<PyRef<'_, PyGtReceiver>>().is_ok() {
-                return Err(PyValueError::new_err(
-                    "GtReceiver is not accepted by the regular constructor; \
+        if let Some(rx_obj) = receiver
+            && rx_obj.extract::<PyRef<'_, PyGtReceiver>>().is_ok()
+        {
+            return Err(PyValueError::new_err(
+                "GtReceiver is not accepted by the regular constructor; \
                      use CommunicationSystem.gt_only(rx) instead",
-                ));
-            }
+            ));
         }
         let ant = build_antenna(antenna)?;
         let rx = receiver.map(build_receiver).transpose()?;
@@ -1641,8 +1649,11 @@ impl PyModulatedLinkStats {
     }
 
     /// Computes interference statistics for a given interferer power.
-    fn with_interference(&self, interference_power_w: f64) -> PyInterferenceStats {
-        PyInterferenceStats(self.0.with_interference(interference_power_w))
+    fn with_interference(&self, interference_power_w: f64) -> PyResult<PyInterferenceStats> {
+        self.0
+            .with_interference(interference_power_w)
+            .map(PyInterferenceStats)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
     fn __repr__(&self) -> String {

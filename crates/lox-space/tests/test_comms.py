@@ -1304,3 +1304,39 @@ def test_eirp_gt_lumped_link():
     assert link.carrier_rx_power is None
     assert link.noise_power is None
     assert abs(float(link.c_n0) - 104.913) < 0.2
+
+
+def test_lumped_transmitter_receiver_pickle():
+    tx = lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
+    rx = lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
+
+    assert pickle.loads(pickle.dumps(tx)) == tx
+    assert pickle.loads(pickle.dumps(rx)) == rx
+
+
+def test_lumped_link_interference_requires_absolute_power():
+    tx = lox.CommunicationSystem.eirp_only(
+        lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
+    )
+    rx = lox.CommunicationSystem.gt_only(
+        lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
+    )
+    channel = lox.Channel(
+        link_type="downlink",
+        symbol_rate=5.0 * lox.MHz,
+        required_eb_n0=10.0 * lox.dB,
+        margin=3.0 * lox.dB,
+        modulation=lox.Modulation("QPSK"),
+    )
+    link = lox.LinkStats.calculate(
+        tx,
+        rx,
+        1000.0 * lox.km,
+        channel.bandwidth(),
+        0.0 * lox.rad,
+        0.0 * lox.rad,
+    )
+    modulated = channel.apply(link)
+
+    with pytest.raises(ValueError, match="absolute carrier and noise powers"):
+        modulated.with_interference(1e-12)
