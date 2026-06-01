@@ -2692,13 +2692,15 @@ class CommunicationSystem:
 
     Args:
         antenna: A ConstantAntenna or PatternedAntenna.
-        receiver: A NoiseTempReceiver, CascadeReceiver, or GtReceiver (optional).
+        receiver: A NoiseTempReceiver or CascadeReceiver (optional).
+            Use ``CommunicationSystem.gt_only(rx)`` for lumped G/T receivers.
         transmitter: An AmplifierTransmitter (optional).
+            Use ``CommunicationSystem.eirp_only(tx)`` for lumped EIRP transmitters.
     """
     def __new__(
         cls,
         antenna: ConstantAntenna | PatternedAntenna,
-        receiver: NoiseTempReceiver | CascadeReceiver | GtReceiver | None = None,
+        receiver: NoiseTempReceiver | CascadeReceiver | None = None,
         transmitter: AmplifierTransmitter | None = None,
     ) -> Self: ...
     @classmethod

@@ -1201,6 +1201,14 @@ impl PyCommunicationSystem {
         receiver: Option<&Bound<'_, PyAny>>,
         transmitter: Option<&PyAmplifierTransmitter>,
     ) -> PyResult<Self> {
+        if let Some(rx_obj) = receiver {
+            if rx_obj.extract::<PyRef<'_, PyGtReceiver>>().is_ok() {
+                return Err(PyValueError::new_err(
+                    "GtReceiver is not accepted by the regular constructor; \
+                     use CommunicationSystem.gt_only(rx) instead",
+                ));
+            }
+        }
         let ant = build_antenna(antenna)?;
         let rx = receiver.map(build_receiver).transpose()?;
         let tx = transmitter.map(build_transmitter_from_amplifier);
