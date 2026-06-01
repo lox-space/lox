@@ -9,6 +9,7 @@ use lox_core::units::{Decibel, Frequency};
 /// Digital modulation scheme.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[non_exhaustive]
 pub enum Modulation {
     /// Binary Phase-Shift Keying (1 bit/symbol).
     Bpsk,
@@ -47,6 +48,7 @@ impl Modulation {
 /// Link direction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[non_exhaustive]
 pub enum LinkDirection {
     /// Ground-to-space link.
     Uplink,

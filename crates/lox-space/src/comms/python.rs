@@ -44,6 +44,7 @@ fn modulation_name(m: Modulation) -> &'static str {
         Modulation::Qam64 => "64QAM",
         Modulation::Qam128 => "128QAM",
         Modulation::Qam256 => "256QAM",
+        _ => unreachable!("unknown modulation variant"),
     }
 }
 
@@ -430,6 +431,7 @@ impl PyComplexAntenna {
             AntennaPattern::Dipole(p) => {
                 format!("DipolePattern(length={})", PyDistance(p.length).__repr__())
             }
+            &_ => unreachable!("unknown antenna variant"),
         };
         let b = self.0.boresight;
         format!(
@@ -478,6 +480,7 @@ fn pattern_to_py<'py>(py: Python<'py>, pattern: &AntennaPattern) -> Bound<'py, P
         AntennaPattern::Dipole(p) => Bound::new(py, PyDipolePattern(DipolePattern::new(p.length)))
             .unwrap()
             .into_any(),
+        _ => unreachable!("unknown antenna variant"),
     }
 }
 
@@ -503,6 +506,7 @@ fn antenna_to_py<'py>(py: Python<'py>, antenna: &Antenna) -> Bound<'py, PyAny> {
                     AntennaPattern::Gaussian(GaussianPattern::new(p.diameter, p.efficiency))
                 }
                 AntennaPattern::Dipole(p) => AntennaPattern::Dipole(DipolePattern::new(p.length)),
+                _ => unreachable!("unknown antenna variant"),
             };
             Bound::new(
                 py,
@@ -551,6 +555,7 @@ fn build_antenna(obj: &Bound<'_, PyAny>) -> PyResult<Antenna> {
                 AntennaPattern::Gaussian(GaussianPattern::new(p.diameter, p.efficiency))
             }
             AntennaPattern::Dipole(p) => AntennaPattern::Dipole(DipolePattern::new(p.length)),
+            _ => unreachable!("unknown antenna variant"),
         };
         Ok(Antenna::Patterned(PatternedAntenna {
             pattern,
@@ -1011,6 +1016,7 @@ impl PyChannel {
             LinkDirection::Uplink => "uplink",
             LinkDirection::Downlink => "downlink",
             LinkDirection::Crosslink => "crosslink",
+            _ => unreachable!("unknown link direction variant"),
         };
         let modulation = Bound::new(py, PyModulation(self.0.modulation))
             .unwrap()
@@ -1176,6 +1182,7 @@ impl PyCommunicationSystem {
                     AntennaPattern::Dipole(p) => {
                         format!("DipolePattern(length={})", PyDistance(p.length).__repr__())
                     }
+                    _ => unreachable!("unknown antenna variant"),
                 };
                 let b = a.boresight;
                 format!(
