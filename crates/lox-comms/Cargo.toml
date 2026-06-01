@@ -19,6 +19,7 @@ readme = "README.md"
 [dependencies]
 lox-core = { workspace = true, features = ["std"] }
 lox-itur = { workspace = true }
+thiserror = { workspace = true, features = ["std"] }
 
 serde = { workspace = true, optional = true }
 
