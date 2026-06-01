@@ -86,7 +86,8 @@ impl LinkStats {
             .expect("link budget calculation: tx/rx must be configured");
         let carrier_rx_power = tx_system
             .carrier_power(rx_system, env_loss, range, tx_angle, rx_angle)
-            .expect("link budget calculation: tx/rx must be configured");
+            .expect("link budget calculation: tx/rx must be configured")
+            .expect("component-tier link budget produces carrier_rx_power");
 
         let tx = tx_system
             .transmitter
@@ -98,13 +99,22 @@ impl LinkStats {
             .expect("RX system must have a receiver");
 
         let frequency = tx.frequency();
-        let eirp = tx.eirp(&tx_system.antenna, tx_angle);
-        let gt = receiver.gain_to_noise_temperature(&rx_system.antenna, rx_angle);
+        let tx_ant = tx_system
+            .antenna
+            .as_ref()
+            .expect("component-tier TX system must have an antenna");
+        let rx_ant = rx_system
+            .antenna
+            .as_ref()
+            .expect("component-tier RX system must have an antenna");
+        let eirp = tx.eirp(tx_ant, tx_angle);
+        let gt = receiver.gain_to_noise_temperature(rx_ant, rx_angle);
         let fspl = free_space_path_loss(range, frequency);
         let bandwidth = channel.bandwidth();
         let noise_power = rx_system
             .noise_power(bandwidth.to_hertz())
-            .expect("link budget calculation: rx must be configured");
+            .expect("link budget calculation: rx must be configured")
+            .expect("component-tier link budget produces noise_power");
         let es_n0 = channel.es_n0(c_n0);
         let eb_n0 = channel.eb_n0(c_n0);
         let c_n = channel.c_n(c_n0);
@@ -186,10 +196,10 @@ mod tests {
 
     fn test_link() -> (CommunicationSystem, CommunicationSystem, Channel) {
         let tx_sys = CommunicationSystem {
-            antenna: Antenna::Constant(ConstantAntenna {
+            antenna: Some(Antenna::Constant(ConstantAntenna {
                 gain: 46.0.db(),
                 beamwidth: Angle::degrees(0.7),
-            }),
+            })),
             receiver: None,
             transmitter: Some(Transmitter::Amplifier(AmplifierTransmitter::new(
                 29.0.ghz(),
@@ -199,10 +209,10 @@ mod tests {
             ))),
         };
         let rx_sys = CommunicationSystem {
-            antenna: Antenna::Constant(ConstantAntenna {
+            antenna: Some(Antenna::Constant(ConstantAntenna {
                 gain: 30.0.db(),
                 beamwidth: Angle::degrees(3.0),
-            }),
+            })),
             receiver: Some(Receiver::NoiseTemperature(NoiseTempReceiver {
                 frequency: 29.0.ghz(),
                 system_noise_temperature: 500.0,

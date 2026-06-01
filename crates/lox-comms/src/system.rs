@@ -13,12 +13,12 @@ use crate::receiver::Receiver;
 use crate::transmitter::Transmitter;
 use crate::utils::free_space_path_loss;
 
-/// A communication system combining an antenna with optional transmitter and receiver.
+/// A communication system combining an optional antenna with optional transmitter and receiver.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CommunicationSystem {
-    /// The antenna.
-    pub antenna: Antenna,
+    /// The antenna (required for component-tier TX/RX; must be absent for lumped `Eirp`/`Gt`).
+    pub antenna: Option<Antenna>,
     /// The receiver (if this system can receive).
     pub receiver: Option<Receiver>,
     /// The transmitter (if this system can transmit).
@@ -26,6 +26,43 @@ pub struct CommunicationSystem {
 }
 
 impl CommunicationSystem {
+    /// Creates a system whose transmitter is described by an aggregate EIRP figure.
+    pub fn eirp_only(tx: crate::transmitter::EirpTransmitter) -> Self {
+        Self {
+            antenna: None,
+            receiver: None,
+            transmitter: Some(Transmitter::Eirp(tx)),
+        }
+    }
+
+    /// Creates a system whose receiver is described by an aggregate G/T figure.
+    pub fn gt_only(rx: crate::receiver::GtReceiver) -> Self {
+        Self {
+            antenna: None,
+            receiver: Some(Receiver::Gt(rx)),
+            transmitter: None,
+        }
+    }
+
+    /// Creates a system from an antenna plus a component-tier amplifier transmitter.
+    pub fn amplifier_with(antenna: Antenna, tx: crate::transmitter::AmplifierTransmitter) -> Self {
+        Self {
+            antenna: Some(antenna),
+            receiver: None,
+            transmitter: Some(Transmitter::Amplifier(tx)),
+        }
+    }
+
+    /// Creates a system from an antenna plus a component-tier receiver
+    /// (either `NoiseTemperature` or `Cascade`).
+    pub fn receiver_with(antenna: Antenna, rx: Receiver) -> Self {
+        Self {
+            antenna: Some(antenna),
+            receiver: Some(rx),
+            transmitter: None,
+        }
+    }
+
     /// Computes the carrier-to-noise density ratio (C/N₀) in dB·Hz.
     ///
     /// C/N₀ = EIRP + G/T − FSPL − losses − 10·log₁₀(k_B)
@@ -48,8 +85,8 @@ impl CommunicationSystem {
             .as_ref()
             .ok_or(LinkBudgetError::MissingReceiver)?;
 
-        let eirp = tx.eirp(&self.antenna, tx_angle);
-        let gt = receiver.gain_to_noise_temperature(&rx.antenna, rx_angle);
+        let eirp = tx_eirp(tx, &self.antenna, tx_angle)?;
+        let gt = rx_gt(receiver, &rx.antenna, rx_angle)?;
         let fspl = free_space_path_loss(range, tx.frequency());
         let k_db = Decibel::from_linear(BOLTZMANN_CONSTANT);
 
@@ -60,6 +97,9 @@ impl CommunicationSystem {
     ///
     /// P_rx = EIRP − FSPL − losses + G_rx_total
     ///
+    /// Returns `Ok(None)` for lumped `Gt` receivers — the absolute receive gain
+    /// is not recoverable from a G/T figure.
+    ///
     /// Returns an error if `self` has no transmitter or `rx` has no receiver.
     pub fn carrier_power(
         &self,
@@ -68,7 +108,7 @@ impl CommunicationSystem {
         range: Distance,
         tx_angle: Angle,
         rx_angle: Angle,
-    ) -> Result<Decibel, LinkBudgetError> {
+    ) -> Result<Option<Decibel>, LinkBudgetError> {
         let tx = self
             .transmitter
             .as_ref()
@@ -78,27 +118,38 @@ impl CommunicationSystem {
             .as_ref()
             .ok_or(LinkBudgetError::MissingReceiver)?;
 
-        let eirp = tx.eirp(&self.antenna, tx_angle);
-        let fspl = free_space_path_loss(range, tx.frequency());
-        let g_rx = receiver.total_gain(&rx.antenna, rx_angle);
+        if matches!(receiver, Receiver::Gt(_)) {
+            return Ok(None);
+        }
 
-        Ok(eirp - fspl - losses + g_rx)
+        let antenna = rx.antenna.as_ref().ok_or(LinkBudgetError::MissingAntenna)?;
+        let eirp = tx_eirp(tx, &self.antenna, tx_angle)?;
+        let fspl = free_space_path_loss(range, tx.frequency());
+        let g_rx = receiver.total_gain(antenna, rx_angle);
+        Ok(Some(eirp - fspl - losses + g_rx))
     }
 
     /// Computes the noise power in dBW for a given bandwidth.
     ///
     /// P_noise = 10·log₁₀(T_sys · k_B · BW)
     ///
+    /// Returns `Ok(None)` for lumped `Gt` receivers — the system noise temperature
+    /// is not exposed separately by a G/T figure.
+    ///
     /// Returns an error if `self` has no receiver.
-    pub fn noise_power(&self, bandwidth_hz: f64) -> Result<Decibel, LinkBudgetError> {
+    pub fn noise_power(&self, bandwidth_hz: f64) -> Result<Option<Decibel>, LinkBudgetError> {
         let receiver = self
             .receiver
             .as_ref()
             .ok_or(LinkBudgetError::MissingReceiver)?;
 
+        if matches!(receiver, Receiver::Gt(_)) {
+            return Ok(None);
+        }
+
         let t_sys = receiver.system_noise_temperature();
         let p_noise_w = t_sys * BOLTZMANN_CONSTANT * bandwidth_hz;
-        Ok(Decibel::from_linear(p_noise_w))
+        Ok(Some(Decibel::from_linear(p_noise_w)))
     }
 
     /// Returns the transmit frequency, if this system has a transmitter.
@@ -109,6 +160,44 @@ impl CommunicationSystem {
     /// Returns the receive frequency, if this system has a receiver.
     pub fn rx_frequency(&self) -> Option<Frequency> {
         self.receiver.as_ref().map(|rx| rx.frequency())
+    }
+}
+
+fn tx_eirp(
+    tx: &Transmitter,
+    antenna: &Option<Antenna>,
+    angle: Angle,
+) -> Result<Decibel, LinkBudgetError> {
+    match tx {
+        Transmitter::Eirp(t) => {
+            if antenna.is_some() {
+                return Err(LinkBudgetError::UnexpectedAntenna);
+            }
+            Ok(t.eirp)
+        }
+        Transmitter::Amplifier(t) => {
+            let ant = antenna.as_ref().ok_or(LinkBudgetError::MissingAntenna)?;
+            Ok(t.eirp(ant, angle))
+        }
+    }
+}
+
+fn rx_gt(
+    rx: &Receiver,
+    antenna: &Option<Antenna>,
+    angle: Angle,
+) -> Result<Decibel, LinkBudgetError> {
+    match rx {
+        Receiver::Gt(r) => {
+            if antenna.is_some() {
+                return Err(LinkBudgetError::UnexpectedAntenna);
+            }
+            Ok(r.gt)
+        }
+        Receiver::NoiseTemperature(_) | Receiver::Cascade(_) => {
+            let ant = antenna.as_ref().ok_or(LinkBudgetError::MissingAntenna)?;
+            Ok(rx.gain_to_noise_temperature(ant, angle))
+        }
     }
 }
 
@@ -125,10 +214,10 @@ mod tests {
 
     fn tx_system() -> CommunicationSystem {
         CommunicationSystem {
-            antenna: Antenna::Constant(ConstantAntenna {
+            antenna: Some(Antenna::Constant(ConstantAntenna {
                 gain: 46.0.db(),
                 beamwidth: Angle::degrees(0.7),
-            }),
+            })),
             receiver: None,
             transmitter: Some(Transmitter::Amplifier(AmplifierTransmitter::new(
                 29.0.ghz(),
@@ -141,10 +230,10 @@ mod tests {
 
     fn rx_system() -> CommunicationSystem {
         CommunicationSystem {
-            antenna: Antenna::Constant(ConstantAntenna {
+            antenna: Some(Antenna::Constant(ConstantAntenna {
                 gain: 30.0.db(),
                 beamwidth: Angle::degrees(3.0),
-            }),
+            })),
             receiver: Some(Receiver::NoiseTemperature(NoiseTempReceiver {
                 frequency: 29.0.ghz(),
                 system_noise_temperature: 500.0,
@@ -189,7 +278,8 @@ mod tests {
                 Angle::radians(0.0),
                 Angle::radians(0.0),
             )
-            .unwrap();
+            .unwrap()
+            .expect("component receiver produces carrier_power");
         assert_approx_eq!(p_rx.as_f64(), -96.696, atol <= 0.1);
     }
 
@@ -199,7 +289,10 @@ mod tests {
         //         = 10*log10(500 * 1.380649e-23 * 1e6)
         //         = -141.61 dBW
         let rx = rx_system();
-        let p_noise = rx.noise_power(1e6).unwrap();
+        let p_noise = rx
+            .noise_power(1e6)
+            .unwrap()
+            .expect("component receiver produces noise_power");
         assert_approx_eq!(p_noise.as_f64(), -141.61, atol <= 0.01);
     }
 
@@ -228,11 +321,96 @@ mod tests {
                 Angle::radians(0.0),
                 Angle::radians(0.0),
             )
-            .unwrap();
-        let p_noise = rx.noise_power(bw).unwrap();
+            .unwrap()
+            .expect("component receiver produces carrier_power");
+        let p_noise = rx
+            .noise_power(bw)
+            .unwrap()
+            .expect("component receiver produces noise_power");
 
         // C/N0 = P_rx - P_noise + 10*log10(BW) (converting from C/N to C/N0)
         let c_n0_from_power = p_rx - p_noise + Decibel::from_linear(bw);
         assert_approx_eq!(c_n0.as_f64(), c_n0_from_power.as_f64(), atol <= 0.01);
+    }
+
+    #[test]
+    fn test_eirp_gt_c_n0_lumped() {
+        use crate::receiver::GtReceiver;
+        use crate::transmitter::EirpTransmitter;
+
+        let tx = CommunicationSystem::eirp_only(EirpTransmitter {
+            frequency: 29.0.ghz(),
+            eirp: 55.0.db(),
+        });
+        let rx = CommunicationSystem::gt_only(GtReceiver {
+            frequency: 29.0.ghz(),
+            gt: 3.01.db(),
+        });
+        let c_n0 = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap();
+        // EIRP=55, G/T=3.01, FSPL≈181.696, losses=0, k_dB≈-228.599
+        // C/N0 ≈ 55 + 3.01 - 181.696 + 228.599 = 104.913
+        assert_approx_eq!(c_n0.as_f64(), 104.913, atol <= 0.2);
+    }
+
+    #[test]
+    fn test_lumped_carrier_power_is_none() {
+        use crate::receiver::GtReceiver;
+        use crate::transmitter::EirpTransmitter;
+
+        let tx = CommunicationSystem::eirp_only(EirpTransmitter {
+            frequency: 29.0.ghz(),
+            eirp: 55.0.db(),
+        });
+        let rx = CommunicationSystem::gt_only(GtReceiver {
+            frequency: 29.0.ghz(),
+            gt: 3.01.db(),
+        });
+        let p = tx
+            .carrier_power(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap();
+        assert!(p.is_none());
+    }
+
+    #[test]
+    fn test_unexpected_antenna_is_error() {
+        use crate::antenna::ConstantAntenna;
+        use crate::transmitter::EirpTransmitter;
+
+        let tx = CommunicationSystem {
+            antenna: Some(Antenna::Constant(ConstantAntenna {
+                gain: 46.0.db(),
+                beamwidth: Angle::degrees(0.7),
+            })),
+            receiver: None,
+            transmitter: Some(Transmitter::Eirp(EirpTransmitter {
+                frequency: 29.0.ghz(),
+                eirp: 55.0.db(),
+            })),
+        };
+        let rx = rx_system();
+        let err = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap_err();
+        assert_eq!(err, LinkBudgetError::UnexpectedAntenna);
     }
 }
