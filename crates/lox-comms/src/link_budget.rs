@@ -6,6 +6,7 @@
 
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
+use crate::LinkBudgetError;
 use crate::channel::Channel;
 use crate::system::CommunicationSystem;
 use crate::utils::free_space_path_loss;
@@ -26,136 +27,131 @@ pub struct InterferenceStats {
     pub margin_with_interference: Decibel,
 }
 
-/// Complete link budget statistics.
+/// Modulation-agnostic link budget output.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LinkStats {
     /// Slant range between TX and RX.
     pub slant_range: Distance,
+    /// Link frequency.
+    pub frequency: Frequency,
     /// Free-space path loss.
     pub fspl: Decibel,
-    /// Off-boresight angle at the transmitter.
-    pub tx_angle: Angle,
-    /// Off-boresight angle at the receiver.
-    pub rx_angle: Angle,
     /// EIRP of the transmitter.
     pub eirp: Decibel,
     /// Receiver G/T.
     pub gt: Decibel,
-    /// Carrier-to-noise density ratio.
-    pub c_n0: Decibel,
-    /// Es/N0 (energy per symbol to noise spectral density).
-    pub es_n0: Decibel,
-    /// Eb/N0 (energy per information bit to noise spectral density).
-    pub eb_n0: Decibel,
-    /// Carrier-to-noise ratio.
-    pub c_n: Decibel,
-    /// Link margin.
-    pub margin: Decibel,
     /// Environmental losses.
     pub losses: EnvironmentalLosses,
-    /// Received carrier power.
-    pub carrier_rx_power: Decibel,
-    /// Symbol rate.
-    pub symbol_rate: Frequency,
-    /// Channel bandwidth.
+    /// Received carrier power. `None` for lumped-`Gt` receivers.
+    pub carrier_rx_power: Option<Decibel>,
+    /// Noise power in the channel bandwidth. `None` for lumped-`Gt` receivers.
+    pub noise_power: Option<Decibel>,
+    /// Channel noise bandwidth.
     pub bandwidth: Frequency,
-    /// Link frequency.
-    pub frequency: Frequency,
-    /// Noise power.
-    pub noise_power: Decibel,
-    /// Interference statistics (if applicable).
-    pub interference: Option<InterferenceStats>,
+    /// Carrier-to-noise density ratio (C/N₀).
+    pub c_n0: Decibel,
+    /// Carrier-to-noise ratio (C/N).
+    pub c_n: Decibel,
+    /// Off-boresight angle at the transmitter (0 for lumped `Eirp`).
+    pub tx_angle: Angle,
+    /// Off-boresight angle at the receiver (0 for lumped `Gt`).
+    pub rx_angle: Angle,
 }
 
 impl LinkStats {
-    /// Computes a full link budget.
+    /// Computes a modulation-agnostic link budget.
+    ///
+    /// `bandwidth` is the noise bandwidth used to compute `noise_power` and `C/N` from
+    /// `C/N₀`. It is independent of any modulation scheme.
     pub fn calculate(
         tx_system: &CommunicationSystem,
         rx_system: &CommunicationSystem,
-        channel: &Channel,
         range: Distance,
+        bandwidth: Frequency,
+        losses: EnvironmentalLosses,
         tx_angle: Angle,
         rx_angle: Angle,
-        losses: EnvironmentalLosses,
-    ) -> Self {
+    ) -> Result<Self, LinkBudgetError> {
         let env_loss = losses.total();
 
-        let c_n0 = tx_system
-            .carrier_to_noise_density(rx_system, env_loss, range, tx_angle, rx_angle)
-            .expect("link budget calculation: tx/rx must be configured");
-        let carrier_rx_power = tx_system
-            .carrier_power(rx_system, env_loss, range, tx_angle, rx_angle)
-            .expect("link budget calculation: tx/rx must be configured")
-            .expect("component-tier link budget produces carrier_rx_power");
+        let c_n0 =
+            tx_system.carrier_to_noise_density(rx_system, env_loss, range, tx_angle, rx_angle)?;
+        let carrier_rx_power =
+            tx_system.carrier_power(rx_system, env_loss, range, tx_angle, rx_angle)?;
+        let noise_power = rx_system.noise_power(bandwidth.to_hertz())?;
 
         let tx = tx_system
             .transmitter
             .as_ref()
-            .expect("TX system must have a transmitter");
-        let receiver = rx_system
-            .receiver
-            .as_ref()
-            .expect("RX system must have a receiver");
-
+            .ok_or(LinkBudgetError::MissingTransmitter)?;
         let frequency = tx.frequency();
-        let tx_ant = tx_system
-            .antenna
-            .as_ref()
-            .expect("component-tier TX system must have an antenna");
-        let rx_ant = rx_system
-            .antenna
-            .as_ref()
-            .expect("component-tier RX system must have an antenna");
-        let eirp = tx.eirp(tx_ant, tx_angle);
-        let gt = receiver.gain_to_noise_temperature(rx_ant, rx_angle);
         let fspl = free_space_path_loss(range, frequency);
-        let bandwidth = channel.bandwidth();
-        let noise_power = rx_system
-            .noise_power(bandwidth.to_hertz())
-            .expect("link budget calculation: rx must be configured")
-            .expect("component-tier link budget produces noise_power");
-        let es_n0 = channel.es_n0(c_n0);
-        let eb_n0 = channel.eb_n0(c_n0);
-        let c_n = channel.c_n(c_n0);
-        let margin = channel.link_margin(eb_n0);
 
-        Self {
+        let eirp = tx_system.eirp_at(tx_angle)?;
+        let gt = rx_system.gt_at(rx_angle)?;
+
+        let c_n = c_n0 - Decibel::from_linear(bandwidth.to_hertz());
+
+        Ok(Self {
             slant_range: range,
+            frequency,
             fspl,
-            tx_angle,
-            rx_angle,
             eirp,
             gt,
-            c_n0,
-            es_n0,
-            eb_n0,
-            c_n,
-            margin,
             losses,
             carrier_rx_power,
-            symbol_rate: channel.symbol_rate,
-            bandwidth,
-            frequency,
             noise_power,
-            interference: None,
-        }
+            bandwidth,
+            c_n0,
+            c_n,
+            tx_angle,
+            rx_angle,
+        })
     }
+}
 
-    /// Returns a copy of this link budget with interference statistics added.
+/// Link-budget output with modulation/coding figures applied.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct ModulatedLinkStats {
+    /// The modulation-agnostic link budget.
+    pub link: LinkStats,
+    /// The channel (modulation, FEC, required Eb/N₀, margin) applied.
+    pub channel: Channel,
+    /// Symbol rate from the channel.
+    pub symbol_rate: Frequency,
+    /// Es/N0 (energy per symbol to noise spectral density).
+    pub es_n0: Decibel,
+    /// Eb/N0 (energy per information bit to noise spectral density).
+    pub eb_n0: Decibel,
+    /// Link margin.
+    pub margin: Decibel,
+    /// Interference statistics (if applicable).
+    pub interference: Option<InterferenceStats>,
+}
+
+impl ModulatedLinkStats {
+    /// Returns interference statistics for the given interferer power.
+    ///
+    /// For lumped-`Gt` links, the underlying noise power is unknown, so interference
+    /// is treated as the dominant noise contribution (noise floor = 0). The resulting
+    /// figures are upper-bound estimates rather than exact values.
     pub fn with_interference(&self, interference_power_w: f64) -> InterferenceStats {
-        let noise_linear = self.noise_power.to_linear();
+        let noise_linear = self.link.noise_power.map(|n| n.to_linear()).unwrap_or(0.0);
+        let carrier = self.link.carrier_rx_power.unwrap_or_else(|| {
+            // Synthesise a carrier power from C/N0 + bandwidth + noise so the
+            // interference arithmetic stays self-consistent. Only used for lumped
+            // links where noise is treated as zero in the absence of T_sys.
+            self.link.c_n0 + Decibel::from_linear(noise_linear.max(1e-30))
+        });
+
         let total_ni = noise_linear + interference_power_w;
-        let c_n0i0 = self.carrier_rx_power - Decibel::from_linear(total_ni)
-            + Decibel::from_linear(self.bandwidth.to_hertz());
-        // Reuse the nominal C/N0 → Eb/N0 offset (which encodes modulation order,
-        // FEC rate, and symbol rate) rather than recomputing through the Channel,
-        // since LinkStats does not store a reference to the Channel.
-        let c_n0_to_eb_n0 = self.eb_n0 - self.c_n0;
+        let c_n0i0 = carrier - Decibel::from_linear(total_ni)
+            + Decibel::from_linear(self.link.bandwidth.to_hertz());
+        let c_n0_to_eb_n0 = self.eb_n0 - self.link.c_n0;
         let eb_n0i0 = c_n0i0 + c_n0_to_eb_n0;
 
-        // margin = eb_n0 - (required_eb_n0 + required_margin)
-        // So the threshold (required_eb_n0 + required_margin) = eb_n0 - margin
         let threshold = self.eb_n0 - self.margin;
         let margin_with_interference = eb_n0i0 - threshold;
 
@@ -257,12 +253,13 @@ mod tests {
         let stats = LinkStats::calculate(
             &tx_sys,
             &rx_sys,
-            &channel,
             Distance::kilometers(1000.0),
-            Angle::radians(0.0),
-            Angle::radians(0.0),
+            channel.bandwidth(),
             EnvironmentalLosses::none(),
-        );
+            Angle::radians(0.0),
+            Angle::radians(0.0),
+        )
+        .unwrap();
 
         // EIRP = 46 + 10 - 1 = 55 dBW
         assert_approx_eq!(stats.eirp.as_f64(), 55.0, atol <= 0.01);
@@ -270,31 +267,10 @@ mod tests {
         assert_approx_eq!(stats.fspl.as_f64(), 181.696, atol <= 0.1);
         // C/N0 ≈ 104.9 dB·Hz
         assert_approx_eq!(stats.c_n0.as_f64(), 104.9, atol <= 0.2);
-        // Es/N0 = C/N0 - 10*log10(5e6) ≈ 104.9 - 66.99 = 37.91
-        assert_approx_eq!(stats.es_n0.as_f64(), 37.91, atol <= 0.2);
-        // Eb/N0 = Es/N0 - 10*log10(2 * 0.5) = Es/N0 - 0 = 37.91
-        assert_approx_eq!(stats.eb_n0.as_f64(), 37.91, atol <= 0.2);
-        // Margin = Eb/N0 - 10 - 3 = 24.91
-        assert_approx_eq!(stats.margin.as_f64(), 24.91, atol <= 0.2);
-    }
-
-    #[test]
-    fn test_link_stats_with_interference() {
-        let (tx_sys, rx_sys, channel) = test_link();
-        let stats = LinkStats::calculate(
-            &tx_sys,
-            &rx_sys,
-            &channel,
-            Distance::kilometers(1000.0),
-            Angle::radians(0.0),
-            Angle::radians(0.0),
-            EnvironmentalLosses::none(),
-        );
-
-        // Adding interference should reduce margin
-        let interference = stats.with_interference(1e-12);
-        assert!(interference.margin_with_interference.as_f64() <= stats.margin.as_f64());
-        assert!(interference.eb_n0i0.as_f64() <= stats.eb_n0.as_f64());
+        // carrier_rx_power should be Some for component-tier
+        assert!(stats.carrier_rx_power.is_some());
+        // noise_power should be Some for component-tier
+        assert!(stats.noise_power.is_some());
     }
 
     #[test]

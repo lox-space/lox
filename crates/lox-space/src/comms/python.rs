@@ -1236,34 +1236,34 @@ impl PyCommunicationSystem {
 
 // --- Link Stats ---
 
-/// Complete link budget statistics.
+/// Modulation-agnostic link budget statistics.
 #[pyclass(name = "LinkStats", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyLinkStats(pub LinkStats);
 
 #[pymethods]
 impl PyLinkStats {
-    /// Computes a full link budget.
+    /// Computes a modulation-agnostic link budget.
     ///
     /// Args:
     ///     tx_system: The transmitting CommunicationSystem.
     ///     rx_system: The receiving CommunicationSystem.
-    ///     channel: The Channel.
     ///     range: Slant range as Distance.
+    ///     bandwidth: Noise bandwidth as Frequency.
     ///     tx_angle: Off-boresight angle at transmitter as Angle.
     ///     rx_angle: Off-boresight angle at receiver as Angle.
     ///     losses: EnvironmentalLosses (optional, defaults to none).
     #[staticmethod]
-    #[pyo3(signature = (tx_system, rx_system, channel, range, tx_angle, rx_angle, losses=None))]
+    #[pyo3(signature = (tx_system, rx_system, range, bandwidth, tx_angle, rx_angle, losses=None))]
     fn calculate(
         tx_system: &PyCommunicationSystem,
         rx_system: &PyCommunicationSystem,
-        channel: &PyChannel,
         range: PyDistance,
+        bandwidth: PyFrequency,
         tx_angle: PyAngle,
         rx_angle: PyAngle,
         losses: Option<&PyEnvironmentalLosses>,
-    ) -> Self {
+    ) -> PyResult<Self> {
         let env_losses = losses
             .map(|l| EnvironmentalLosses {
                 rain: l.0.rain,
@@ -1275,15 +1275,17 @@ impl PyLinkStats {
             })
             .unwrap_or_else(EnvironmentalLosses::none);
 
-        Self(LinkStats::calculate(
+        LinkStats::calculate(
             &tx_system.0,
             &rx_system.0,
-            &channel.0,
             range.0,
+            bandwidth.0,
+            env_losses,
             tx_angle.0,
             rx_angle.0,
-            env_losses,
-        ))
+        )
+        .map(Self)
+        .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
     /// Slant range.
@@ -1316,49 +1318,25 @@ impl PyLinkStats {
         PyDecibel(self.0.c_n0)
     }
 
-    /// Es/N0 in dB.
-    #[getter]
-    fn es_n0(&self) -> PyDecibel {
-        PyDecibel(self.0.es_n0)
-    }
-
-    /// Eb/N0 in dB.
-    #[getter]
-    fn eb_n0(&self) -> PyDecibel {
-        PyDecibel(self.0.eb_n0)
-    }
-
     /// C/N in dB.
     #[getter]
     fn c_n(&self) -> PyDecibel {
         PyDecibel(self.0.c_n)
     }
 
-    /// Link margin in dB.
+    /// Received carrier power in dBW. ``None`` for lumped G/T receivers.
     #[getter]
-    fn margin(&self) -> PyDecibel {
-        PyDecibel(self.0.margin)
+    fn carrier_rx_power(&self) -> Option<PyDecibel> {
+        self.0.carrier_rx_power.map(PyDecibel)
     }
 
-    /// Received carrier power in dBW.
+    /// Noise power in dBW. ``None`` for lumped G/T receivers.
     #[getter]
-    fn carrier_rx_power(&self) -> PyDecibel {
-        PyDecibel(self.0.carrier_rx_power)
+    fn noise_power(&self) -> Option<PyDecibel> {
+        self.0.noise_power.map(PyDecibel)
     }
 
-    /// Noise power in dBW.
-    #[getter]
-    fn noise_power(&self) -> PyDecibel {
-        PyDecibel(self.0.noise_power)
-    }
-
-    /// Symbol rate.
-    #[getter]
-    fn symbol_rate(&self) -> PyFrequency {
-        PyFrequency(self.0.symbol_rate)
-    }
-
-    /// Channel bandwidth.
+    /// Channel noise bandwidth.
     #[getter]
     fn bandwidth(&self) -> PyFrequency {
         PyFrequency(self.0.bandwidth)
@@ -1370,13 +1348,25 @@ impl PyLinkStats {
         PyFrequency(self.0.frequency)
     }
 
+    /// Off-boresight angle at the transmitter.
+    #[getter]
+    fn tx_angle(&self) -> PyAngle {
+        PyAngle(self.0.tx_angle)
+    }
+
+    /// Off-boresight angle at the receiver.
+    #[getter]
+    fn rx_angle(&self) -> PyAngle {
+        PyAngle(self.0.rx_angle)
+    }
+
     fn __repr__(&self) -> String {
         format!(
-            "LinkStats(c_n0={:.2} dB·Hz, es_n0={:.2} dB, eb_n0={:.2} dB, margin={:.2} dB)",
+            "LinkStats(c_n0={:.2} dB·Hz, c_n={:.2} dB, eirp={:.2} dBW, gt={:.2} dB/K)",
             self.0.c_n0.as_f64(),
-            self.0.es_n0.as_f64(),
-            self.0.eb_n0.as_f64(),
-            self.0.margin.as_f64(),
+            self.0.c_n.as_f64(),
+            self.0.eirp.as_f64(),
+            self.0.gt.as_f64(),
         )
     }
 }

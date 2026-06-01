@@ -160,6 +160,28 @@ impl CommunicationSystem {
         Ok(Some(Decibel::from_linear(p_noise_w)))
     }
 
+    /// Returns the EIRP at the given off-boresight angle.
+    ///
+    /// For lumped `Eirp` transmitters, returns the stored figure; the angle is ignored.
+    pub fn eirp_at(&self, angle: Angle) -> Result<Decibel, LinkBudgetError> {
+        let tx = self
+            .transmitter
+            .as_ref()
+            .ok_or(LinkBudgetError::MissingTransmitter)?;
+        tx_eirp(tx, &self.antenna, angle)
+    }
+
+    /// Returns the G/T at the given off-boresight angle.
+    ///
+    /// For lumped `Gt` receivers, returns the stored figure; the angle is ignored.
+    pub fn gt_at(&self, angle: Angle) -> Result<Decibel, LinkBudgetError> {
+        let rx = self
+            .receiver
+            .as_ref()
+            .ok_or(LinkBudgetError::MissingReceiver)?;
+        rx_gt(rx, &self.antenna, angle)
+    }
+
     /// Returns the transmit frequency, if this system has a transmitter.
     pub fn tx_frequency(&self) -> Option<Frequency> {
         self.transmitter.as_ref().map(|tx| tx.frequency())
