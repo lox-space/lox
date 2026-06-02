@@ -589,4 +589,194 @@ mod tests {
             .unwrap_err();
         assert!(matches!(err, LinkBudgetError::FrequencyMismatch { .. }));
     }
+
+    #[test]
+    fn test_amplifier_with_constructor() {
+        let antenna = Antenna::Constant(ConstantAntenna {
+            gain: 46.0.db(),
+            beamwidth: Angle::degrees(0.7),
+        });
+        let tx = AmplifierTransmitter::new(29.0.ghz(), 10.0, 1.0.db(), 0.0.db());
+        let sys = CommunicationSystem::amplifier_with(antenna, tx);
+        assert!(sys.antenna.is_some());
+        assert!(sys.transmitter.is_some());
+        assert!(sys.receiver.is_none());
+    }
+
+    #[test]
+    fn test_receiver_with_constructor() {
+        let antenna = Antenna::Constant(ConstantAntenna {
+            gain: 30.0.db(),
+            beamwidth: Angle::degrees(3.0),
+        });
+        let rx = Receiver::NoiseTemperature(NoiseTempReceiver {
+            frequency: 29.0.ghz(),
+            system_noise_temperature: 500.0,
+        });
+        let sys = CommunicationSystem::receiver_with(antenna, rx);
+        assert!(sys.antenna.is_some());
+        assert!(sys.receiver.is_some());
+        assert!(sys.transmitter.is_none());
+    }
+
+    #[test]
+    fn test_carrier_power_missing_transmitter() {
+        let tx = CommunicationSystem {
+            antenna: None,
+            receiver: None,
+            transmitter: None,
+        };
+        let rx = rx_system();
+        let err = tx
+            .carrier_power(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap_err();
+        assert_eq!(err, LinkBudgetError::MissingTransmitter);
+    }
+
+    #[test]
+    fn test_carrier_power_missing_receiver() {
+        let tx = tx_system();
+        let rx = CommunicationSystem {
+            antenna: None,
+            receiver: None,
+            transmitter: None,
+        };
+        let err = tx
+            .carrier_power(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap_err();
+        assert_eq!(err, LinkBudgetError::MissingReceiver);
+    }
+
+    #[test]
+    fn test_carrier_power_missing_antenna_on_rx() {
+        // Component-tier receiver (NoiseTemperature) with no antenna should fail.
+        let tx = tx_system();
+        let rx = CommunicationSystem {
+            antenna: None,
+            receiver: Some(Receiver::NoiseTemperature(NoiseTempReceiver {
+                frequency: 29.0.ghz(),
+                system_noise_temperature: 500.0,
+            })),
+            transmitter: None,
+        };
+        let err = tx
+            .carrier_power(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap_err();
+        assert_eq!(err, LinkBudgetError::MissingAntenna);
+    }
+
+    #[test]
+    fn test_eirp_at_missing_transmitter() {
+        let sys = CommunicationSystem {
+            antenna: None,
+            receiver: None,
+            transmitter: None,
+        };
+        let err = sys.eirp_at(Angle::radians(0.0)).unwrap_err();
+        assert_eq!(err, LinkBudgetError::MissingTransmitter);
+    }
+
+    #[test]
+    fn test_eirp_at_lumped_returns_stored() {
+        use crate::transmitter::EirpTransmitter;
+
+        let sys = CommunicationSystem::eirp_only(EirpTransmitter {
+            frequency: 29.0.ghz(),
+            eirp: 55.0.db(),
+        });
+        let e = sys.eirp_at(Angle::radians(0.0)).unwrap();
+        assert_approx_eq!(e.as_f64(), 55.0, atol <= 1e-10);
+        // Angle is ignored for the lumped Eirp variant
+        let e_off = sys.eirp_at(Angle::radians(1.0)).unwrap();
+        assert_approx_eq!(e_off.as_f64(), 55.0, atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_gt_at_missing_receiver() {
+        let sys = CommunicationSystem {
+            antenna: None,
+            receiver: None,
+            transmitter: None,
+        };
+        let err = sys.gt_at(Angle::radians(0.0)).unwrap_err();
+        assert_eq!(err, LinkBudgetError::MissingReceiver);
+    }
+
+    #[test]
+    fn test_gt_at_lumped_returns_stored() {
+        use crate::receiver::GtReceiver;
+
+        let sys = CommunicationSystem::gt_only(GtReceiver {
+            frequency: 29.0.ghz(),
+            gt: 3.01.db(),
+        });
+        let g = sys.gt_at(Angle::radians(0.0)).unwrap();
+        assert_approx_eq!(g.as_f64(), 3.01, atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_tx_rx_frequency_accessors() {
+        let tx = tx_system();
+        let rx = rx_system();
+        let empty = CommunicationSystem {
+            antenna: None,
+            receiver: None,
+            transmitter: None,
+        };
+        assert_eq!(tx.tx_frequency().unwrap().to_hertz(), 29e9);
+        assert!(tx.rx_frequency().is_none());
+        assert_eq!(rx.rx_frequency().unwrap().to_hertz(), 29e9);
+        assert!(rx.tx_frequency().is_none());
+        assert!(empty.tx_frequency().is_none());
+        assert!(empty.rx_frequency().is_none());
+    }
+
+    #[test]
+    fn test_rx_gt_missing_antenna_for_component_receiver() {
+        use crate::transmitter::EirpTransmitter;
+
+        // Component-tier receiver (NoiseTemperature) with no antenna against
+        // a lumped TX. The carrier_to_noise_density path goes through rx_gt
+        // and should report MissingAntenna.
+        let tx = CommunicationSystem::eirp_only(EirpTransmitter {
+            frequency: 29.0.ghz(),
+            eirp: 55.0.db(),
+        });
+        let rx = CommunicationSystem {
+            antenna: None,
+            receiver: Some(Receiver::NoiseTemperature(NoiseTempReceiver {
+                frequency: 29.0.ghz(),
+                system_noise_temperature: 500.0,
+            })),
+            transmitter: None,
+        };
+        let err = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Angle::radians(0.0),
+                Angle::radians(0.0),
+            )
+            .unwrap_err();
+        assert_eq!(err, LinkBudgetError::MissingAntenna);
+    }
 }

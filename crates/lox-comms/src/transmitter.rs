@@ -136,4 +136,23 @@ mod tests {
         assert_approx_eq!(eirp.as_f64(), 15.9897, atol <= 0.001);
         assert_eq!(tx.frequency().to_hertz(), 29e9);
     }
+
+    #[test]
+    fn test_enum_dispatch_eirp_ignores_antenna_and_angle() {
+        let antenna = ConstantAntenna {
+            gain: 1000.0.db(), // Deliberately absurd value
+            beamwidth: Angle::degrees(10.0),
+        };
+        let tx = Transmitter::Eirp(EirpTransmitter {
+            frequency: 29.0.ghz(),
+            eirp: 55.0.db(),
+        });
+        // For Eirp, antenna gain and angle are ignored — the stored figure is returned verbatim.
+        let eirp = tx.eirp(&antenna, Angle::radians(0.0));
+        assert_approx_eq!(eirp.as_f64(), 55.0, atol <= 1e-10);
+        // Same at any off-boresight angle
+        let eirp_off = tx.eirp(&antenna, Angle::radians(1.0));
+        assert_approx_eq!(eirp_off.as_f64(), 55.0, atol <= 1e-10);
+        assert_eq!(tx.frequency().to_hertz(), 29e9);
+    }
 }

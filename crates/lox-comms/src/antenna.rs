@@ -93,3 +93,72 @@ impl AntennaGain for Antenna {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use lox_core::glam::DVec3;
+    use lox_core::units::{Angle, Decibel, DecibelUnits, Distance, FrequencyUnits};
+    use lox_test_utils::assert_approx_eq;
+
+    use crate::pattern::{AntennaPattern, ParabolicPattern};
+
+    use super::*;
+
+    fn parabolic() -> PatternedAntenna {
+        PatternedAntenna {
+            pattern: AntennaPattern::Parabolic(ParabolicPattern::new(Distance::meters(0.98), 0.45)),
+            boresight: DVec3::Z,
+        }
+    }
+
+    #[test]
+    fn test_constant_antenna_gain_dispatch() {
+        let a = ConstantAntenna {
+            gain: 10.0.db(),
+            beamwidth: Angle::degrees(5.0),
+        };
+        let g = a.gain(29.0.ghz(), Angle::radians(0.0));
+        assert_approx_eq!(g.as_f64(), 10.0, atol <= 1e-10);
+        assert_approx_eq!(
+            a.beamwidth(29.0.ghz()).unwrap().to_degrees(),
+            5.0,
+            atol <= 1e-10
+        );
+    }
+
+    #[test]
+    fn test_patterned_antenna_gain_and_beamwidth() {
+        let a = parabolic();
+        let f = 29.0.ghz();
+        let peak = a.peak_gain(f);
+        let on_axis = a.gain(f, Angle::radians(0.0));
+        // On-axis gain equals peak gain
+        assert_approx_eq!(on_axis.as_f64(), peak.as_f64(), atol <= 1e-10);
+        // Beamwidth is defined for the parabolic pattern
+        assert!(a.beamwidth(f).is_some());
+    }
+
+    #[test]
+    fn test_antenna_enum_constant_dispatch() {
+        let a = Antenna::Constant(ConstantAntenna {
+            gain: Decibel::new(20.0),
+            beamwidth: Angle::degrees(2.0),
+        });
+        let g = a.gain(29.0.ghz(), Angle::radians(0.0));
+        assert_approx_eq!(g.as_f64(), 20.0, atol <= 1e-10);
+        assert_approx_eq!(
+            a.beamwidth(29.0.ghz()).unwrap().to_degrees(),
+            2.0,
+            atol <= 1e-10
+        );
+    }
+
+    #[test]
+    fn test_antenna_enum_patterned_dispatch() {
+        let a = Antenna::Patterned(parabolic());
+        let f = 29.0.ghz();
+        let on_axis = a.gain(f, Angle::radians(0.0));
+        assert!(on_axis.as_f64() > 40.0);
+        assert!(a.beamwidth(f).is_some());
+    }
+}
