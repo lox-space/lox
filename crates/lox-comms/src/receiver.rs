@@ -411,4 +411,27 @@ mod tests {
         let g_total = rx.total_gain(&antenna, Angle::radians(0.0));
         assert_approx_eq!(g_total.as_f64(), 28.5, atol <= 1e-10);
     }
+
+    #[test]
+    fn test_gt_receiver_methods() {
+        use crate::antenna::ConstantAntenna;
+
+        let rx = Receiver::Gt(GtReceiver {
+            frequency: 29.0.ghz(),
+            gt: 3.01.db(),
+        });
+        // Sentinel values for the component-tier paths
+        assert_eq!(rx.system_noise_temperature(), 0.0);
+        let antenna = ConstantAntenna {
+            gain: 30.0.db(),
+            beamwidth: Angle::degrees(1.0),
+        };
+        let total = rx.total_gain(&antenna, Angle::radians(0.0));
+        assert_eq!(total.as_f64(), 0.0);
+        // Frequency accessor returns the stored frequency
+        assert_eq!(rx.frequency().to_hertz(), 29e9);
+        // gain_to_noise_temperature returns the stored G/T figure directly
+        let gt = rx.gain_to_noise_temperature(&antenna, Angle::radians(0.0));
+        assert_approx_eq!(gt.as_f64(), 3.01, atol <= 1e-10);
+    }
 }
