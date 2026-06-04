@@ -18,5 +18,4 @@ publish = false
 [dependencies]
 chrono.workspace = true
 lox-time = { workspace = true, features = ["chrono"] }
-
 bevy = "0.18"
