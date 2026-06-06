@@ -3741,6 +3741,8 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "chrono",
+ "lox-bodies",
+ "lox-ephem",
  "lox-time",
 ]
 

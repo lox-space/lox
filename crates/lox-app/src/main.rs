@@ -4,14 +4,17 @@
 
 use bevy::prelude::*;
 
+mod ephemeris;
 mod time;
 mod ui;
 
 use time::TimePlugin;
 use ui::UiPlugin;
 
+use crate::ephemeris::EphemerisPlugin;
+
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, TimePlugin, UiPlugin))
+        .add_plugins((DefaultPlugins, EphemerisPlugin, TimePlugin, UiPlugin))
         .run();
 }
