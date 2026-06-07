@@ -28,6 +28,7 @@ const BODIES: [(DynOrigin, &str); 10] = [
 struct Origin(DynOrigin);
 
 #[derive(Debug, Component)]
+#[expect(unused)]
 struct BodyName(String);
 
 #[derive(Debug, Component)]
