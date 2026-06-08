@@ -84,18 +84,12 @@ fn streamed_results_equal_batch() {
     let arc_ensemble = Arc::new(ensemble);
     let arc_ephemeris = Arc::new(spk);
 
-    let analysis_batch = VisibilityAnalysis::new(
-        arc_scenario.as_ref(),
-        arc_ensemble.as_ref(),
-        arc_ephemeris.as_ref(),
-    );
+    let analysis_batch = VisibilityAnalysis::new(arc_scenario.as_ref(), arc_ensemble.as_ref())
+        .with_occulting_bodies(arc_ephemeris.as_ref(), vec![]);
     let batch = analysis_batch.compute().unwrap();
 
-    let analysis_stream = VisibilityAnalysis::new(
-        arc_scenario.as_ref(),
-        arc_ensemble.as_ref(),
-        arc_ephemeris.as_ref(),
-    );
+    let analysis_stream = VisibilityAnalysis::new(arc_scenario.as_ref(), arc_ensemble.as_ref())
+        .with_occulting_bodies(arc_ephemeris.as_ref(), vec![]);
     let mut s = analysis_stream.compute_stream(
         arc_scenario.clone(),
         arc_ensemble.clone(),
@@ -141,12 +135,9 @@ fn filter_excludes_unwanted_pairs() {
     let arc_ensemble = Arc::new(ensemble);
     let arc_ephemeris = Arc::new(spk);
 
-    let analysis = VisibilityAnalysis::new(
-        arc_scenario.as_ref(),
-        arc_ensemble.as_ref(),
-        arc_ephemeris.as_ref(),
-    )
-    .with_ground_space_filter(|_gs, sc| matches!(sc.id().as_str(), "sc1" | "sc2"));
+    let analysis = VisibilityAnalysis::new(arc_scenario.as_ref(), arc_ensemble.as_ref())
+        .with_occulting_bodies(arc_ephemeris.as_ref(), vec![])
+        .with_ground_space_filter(|_gs, sc| matches!(sc.id().as_str(), "sc1" | "sc2"));
 
     let mut s = analysis.compute_stream(
         arc_scenario.clone(),
@@ -180,12 +171,9 @@ fn mixed_pair_types_interleave() {
     let arc_ensemble = Arc::new(ensemble);
     let arc_ephemeris = Arc::new(spk);
 
-    let analysis = VisibilityAnalysis::new(
-        arc_scenario.as_ref(),
-        arc_ensemble.as_ref(),
-        arc_ephemeris.as_ref(),
-    )
-    .with_inter_satellite();
+    let analysis = VisibilityAnalysis::new(arc_scenario.as_ref(), arc_ensemble.as_ref())
+        .with_occulting_bodies(arc_ephemeris.as_ref(), vec![])
+        .with_inter_satellite();
 
     let mut s = analysis.compute_stream(
         arc_scenario.clone(),
@@ -228,12 +216,9 @@ fn drop_stops_workers() {
     let arc_ensemble = Arc::new(ensemble);
     let arc_ephemeris = Arc::new(spk);
 
-    let analysis = VisibilityAnalysis::new(
-        arc_scenario.as_ref(),
-        arc_ensemble.as_ref(),
-        arc_ephemeris.as_ref(),
-    )
-    .with_inter_satellite();
+    let analysis = VisibilityAnalysis::new(arc_scenario.as_ref(), arc_ensemble.as_ref())
+        .with_occulting_bodies(arc_ephemeris.as_ref(), vec![])
+        .with_inter_satellite();
 
     let s = analysis.compute_stream(
         arc_scenario.clone(),
@@ -282,13 +267,9 @@ fn panic_in_detector_surfaces_as_worker_panicked() {
     let arc_ensemble = Arc::new(ensemble);
     let arc_ephemeris = Arc::new(PanickingEphemeris);
 
-    let analysis = VisibilityAnalysis::new(
-        arc_scenario.as_ref(),
-        arc_ensemble.as_ref(),
-        arc_ephemeris.as_ref(),
-    )
     // With Moon as occulting body, the ephemeris is queried during LOS detection.
-    .with_occulting_bodies(vec![DynOrigin::Moon]);
+    let analysis = VisibilityAnalysis::new(arc_scenario.as_ref(), arc_ensemble.as_ref())
+        .with_occulting_bodies(arc_ephemeris.as_ref(), vec![DynOrigin::Moon]);
 
     let mut s = analysis.compute_stream(
         arc_scenario.clone(),
