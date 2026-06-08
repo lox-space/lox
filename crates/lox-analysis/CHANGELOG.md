@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.14](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.13...lox-analysis-v0.1.0-alpha.14) - 2026-06-08
+
+### Added
+
+- *(lox-analysis)* make ephemeris optional via NoEphemeris type-state
+
+### Other
+
+- *(lox-analysis)* split inter-sat LOS detect fn
+
 ## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.12...lox-analysis-v0.1.0-alpha.13) - 2026-05-26
 
 ### Added

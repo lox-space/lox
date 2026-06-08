@@ -1,9 +1,3 @@
-<!--
-SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
-
-SPDX-License-Identifier: MPL-2.0
--->
-
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -12,6 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.1.0-alpha.15](https://github.com/lox-space/lox/compare/lox-comms-v0.1.0-alpha.14...lox-comms-v0.1.0-alpha.15) - 2026-06-08
+
+### Added
+
+- *(lox-space)* proper pickle for lumped CommunicationSystem; close test gaps
+- *(lox-comms)* add Channel::apply for modulation-aware link stats
+- *(lox-comms)* add Eirp/Gt lumped variants and Option<Antenna> on CommunicationSystem
+- *(lox-comms)* add LinkBudgetError; SI-2019 Boltzmann constant
+
+### Fixed
+
+- *(lox-comms)* return Result from with_interference; pickle lumped TX/RX
+- *(lox-comms)* wire up FrequencyMismatch error; tighten Python stub union
+- *(lox-comms)* tighten Gt sentinel docs, receiver_with guard, lumped test rigor
+- *(lox-comms)* expand error test coverage; refresh Boltzmann references
+
+### Other
+
+- *(lox-comms)* close coverage gaps for enum dispatch and error paths
+- *(lox-comms)* derive LinkBudgetError via thiserror
+- *(lox-comms)* changelog for link-budget API redesign
+- *(lox-comms)* move lox-test-utils to dev-dependencies
+- *(lox-comms)* split LinkStats; introduce ModulatedLinkStats
+- *(lox-comms)* mark AntennaPattern/Modulation/LinkDirection non_exhaustive
+- *(lox-comms)* lift Transmitter into enum over AmplifierTransmitter
+- *(lox-comms)* rename Receiver Simple/Complex to NoiseTemperature/Cascade
+- *(lox-comms)* fix tautological ConstantAntenna doc comment
+- *(lox-comms)* rename Antenna Simple/Complex to Constant/Patterned
+- *(lox-comms)* return Result from CommunicationSystem accessors
+<!--
+SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+
+SPDX-License-Identifier: MPL-2.0
+-->
+
 
 ### Changed
 
