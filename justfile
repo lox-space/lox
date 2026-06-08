@@ -40,7 +40,7 @@ coverage *FLAGS:
     uv run --no-project tools/coverage.py {{FLAGS}}
 
 lint-reuse *ARGS:
-    uvx reuse lint {{ARGS}}
+    git ls-files -z | xargs -0 uvx --from 'reuse[charset-normalizer]' reuse lint-file {{ARGS}}
 
 lint-clippy *ARGS:
     cargo clippy --all-features --all-targets {{ARGS}} -- -D warnings

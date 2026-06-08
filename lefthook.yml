@@ -20,7 +20,7 @@ pre-push:
   parallel: true
   commands:
     reuse:
-      run: git ls-files -z | xargs -0 uvx reuse lint-file
+      run: just lint-reuse
     clippy:
       run: just lint-clippy
     rustfmt:

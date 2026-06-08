@@ -15,7 +15,9 @@ LICENSE = "MPL-2.0"
 
 def files_without_header():
     try:
-        result = subprocess.check_output(["uvx", "reuse", "lint", "-j"])
+        result = subprocess.check_output(
+            ["uvx", "--from", "reuse[charset-normalizer]", "reuse", "lint", "-j"]
+        )
     except subprocess.CalledProcessError as exc:
         result = exc.output
 
@@ -50,7 +52,20 @@ def add_header(file, copyright):
     """Add SPDX header with current year to the file."""
     year = str(date.today().year)
     subprocess.call(
-        ["uvx", "reuse", "annotate", "-c", copyright, "-y", year, "-l", LICENSE, file]
+        [
+            "uvx",
+            "--from",
+            "reuse[charset-normalizer]",
+            "reuse",
+            "annotate",
+            "-c",
+            copyright,
+            "-y",
+            year,
+            "-l",
+            LICENSE,
+            file,
+        ]
     )
 
 
