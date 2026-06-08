@@ -6,6 +6,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.49](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.48...lox-space-v0.1.0-alpha.49) - 2026-06-08
+
+### Added
+
+- *(lox-space)* proper pickle for lumped CommunicationSystem; close test gaps
+- *(lox-space)* rename comms wrappers; add Eirp/Gt; ModulatedLinkStats
+- *(lox-comms)* add Channel::apply for modulation-aware link stats
+- *(lox-comms)* add Eirp/Gt lumped variants and Option<Antenna> on CommunicationSystem
+- *(python)* make VisibilityAnalysis.compute ephemeris optional
+- *(lox-analysis)* make ephemeris optional via NoEphemeris type-state
+
+### Fixed
+
+- *(lox-comms)* return Result from with_interference; pickle lumped TX/RX
+- *(lox-comms)* wire up FrequencyMismatch error; tighten Python stub union
+
+### Other
+
+- *(lox-space)* close Python binding coverage gaps
+- *(lox-space)* document lumped Eirp/Gt tier and ModulatedLinkStats split
+- *(lox-space)* update comms tests for renames and ModulatedLinkStats
+- *(lox-comms)* split LinkStats; introduce ModulatedLinkStats
+- *(lox-comms)* mark AntennaPattern/Modulation/LinkDirection non_exhaustive
+- *(lox-comms)* lift Transmitter into enum over AmplifierTransmitter
+- *(lox-comms)* rename Receiver Simple/Complex to NoiseTemperature/Cascade
+- *(lox-comms)* rename Antenna Simple/Complex to Constant/Patterned
+- *(lox-analysis)* add comprehensive benchmarks
+- *(lox-space)* add sentinel_visibility example
+- *(python)* cover optional ephemeris in VisibilityAnalysis
+- *(lox-space)* migrate visibility benches to new API
+
 ## [0.1.0-alpha.48](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.47...lox-space-v0.1.0-alpha.48) - 2026-05-26
 
 ### Added
