@@ -99,11 +99,6 @@ impl AntennaGain for DipolePattern {
             Decibel::from_linear(gain_linear)
         }
     }
-
-    fn beamwidth(&self, _frequency: Frequency) -> Option<Angle> {
-        // Beamwidth is not well-defined for a dipole.
-        None
-    }
 }
 
 /// Composite Simpson's rule for numerical integration over [a, b] with n intervals.

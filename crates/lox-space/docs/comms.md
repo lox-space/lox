@@ -99,7 +99,7 @@ tx = lox.AmplifierTransmitter(frequency=frequency, power=10 * lox.W, line_loss=1
 tx_system = lox.CommunicationSystem(antenna=tx_antenna, transmitter=tx)
 
 # Receiver: ground station with known system noise temperature
-rx_antenna = lox.ConstantAntenna(gain=40.0 * lox.dB, beamwidth=0.5 * lox.deg)
+rx_antenna = lox.ConstantAntenna(gain=40.0 * lox.dB)
 rx = lox.NoiseTempReceiver(frequency=frequency, system_noise_temperature=200 * lox.K)
 rx_system = lox.CommunicationSystem(antenna=rx_antenna, receiver=rx)
 
