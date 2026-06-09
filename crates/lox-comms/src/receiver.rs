@@ -294,10 +294,7 @@ mod tests {
     fn test_noise_temp_receiver_gt() {
         // NoiseTempReceiver with T_sys=500K, antenna gain=30dBi
         // G/T = 30 - 10*log10(500) = 30 - 26.9897 = 3.0103 dB/K
-        let antenna = ConstantAntenna {
-            gain: 30.0.db(),
-            beamwidth: Angle::degrees(1.0),
-        };
+        let antenna = ConstantAntenna { gain: 30.0.db() };
         let rx = Receiver::NoiseTemperature(NoiseTempReceiver {
             frequency: 29.0.ghz(),
             system_noise_temperature: 500.0,
@@ -363,10 +360,7 @@ mod tests {
 
     #[test]
     fn test_cascade_receiver_gt() {
-        let antenna = ConstantAntenna {
-            gain: 30.0.db(),
-            beamwidth: Angle::degrees(1.0),
-        };
+        let antenna = ConstantAntenna { gain: 30.0.db() };
         let rx = Receiver::Cascade(CascadeReceiver::from_lna_and_noise_figure(
             29.0.ghz(),
             150.0,
@@ -385,10 +379,7 @@ mod tests {
 
     #[test]
     fn test_cascade_receiver_total_gain() {
-        let antenna = ConstantAntenna {
-            gain: 30.0.db(),
-            beamwidth: Angle::degrees(1.0),
-        };
+        let antenna = ConstantAntenna { gain: 30.0.db() };
         // Two stages: LNA(20dB) + Rx(10dB), demod=1dB, impl=0.5dB
         // Chain gain is excluded (Friis noise is input-referred).
         // total_gain = 30 (ant) - 1 - 0.5 = 28.5 dB
@@ -422,10 +413,7 @@ mod tests {
         });
         // Sentinel values for the component-tier paths
         assert_eq!(rx.system_noise_temperature(), 0.0);
-        let antenna = ConstantAntenna {
-            gain: 30.0.db(),
-            beamwidth: Angle::degrees(1.0),
-        };
+        let antenna = ConstantAntenna { gain: 30.0.db() };
         let total = rx.total_gain(&antenna, Angle::radians(0.0));
         assert_eq!(total.as_f64(), 0.0);
         // Frequency accessor returns the stored frequency

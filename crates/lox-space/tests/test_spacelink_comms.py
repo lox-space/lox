@@ -259,7 +259,7 @@ NOISE_POWER_CASES = [
 def test_noise_power(t_sys_k, bandwidth_hz):
     """CommunicationSystem.noise_power() should agree with spacelink to 0.001 dBW."""
     rx_sys = lox.CommunicationSystem(
-        lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=5.0 * lox.deg),
+        lox.ConstantAntenna(gain=30.0 * lox.dB),
         receiver=lox.NoiseTempReceiver(
             frequency=10 * lox.GHz,
             system_noise_temperature=t_sys_k * lox.K,
@@ -309,7 +309,7 @@ NPD_CASES = [150.0, 290.0, 500.0, 1000.0]
 def test_noise_power_density(t_sys_k):
     """k_B · T should agree between lox and spacelink to 0.001 dB."""
     rx_sys = lox.CommunicationSystem(
-        lox.ConstantAntenna(gain=0.0 * lox.dB, beamwidth=360.0 * lox.deg),
+        lox.ConstantAntenna(gain=0.0 * lox.dB),
         receiver=lox.NoiseTempReceiver(
             frequency=10 * lox.GHz,
             system_noise_temperature=t_sys_k * lox.K,
@@ -341,7 +341,7 @@ GT_CASES = [
 @pytest.mark.parametrize("gain_db,t_sys_k", GT_CASES)
 def test_gt_decomposition(gain_db, t_sys_k):
     """G/T computed by lox should decompose correctly via spacelink."""
-    antenna = lox.ConstantAntenna(gain=gain_db * lox.dB, beamwidth=5.0 * lox.deg)
+    antenna = lox.ConstantAntenna(gain=gain_db * lox.dB)
     rx_sys = lox.CommunicationSystem(
         antenna,
         receiver=lox.NoiseTempReceiver(
@@ -350,7 +350,7 @@ def test_gt_decomposition(gain_db, t_sys_k):
         ),
     )
     tx_sys = lox.CommunicationSystem(
-        lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=5.0 * lox.deg),
+        lox.ConstantAntenna(gain=30.0 * lox.dB),
         transmitter=lox.AmplifierTransmitter(
             frequency=29 * lox.GHz,
             power=10.0 * lox.W,
