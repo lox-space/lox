@@ -286,47 +286,36 @@ def test_dipole_repr_roundtrip():
     )
 
 
-def test_complex_antenna_dipole_beamwidth_is_none():
-    # DipolePattern returns None because the API has no plane-of-measurement
-    # parameter; the E-plane HPBW is physically defined but not expressible as
-    # a single value here. PatternedAntenna delegates to the pattern, so it also
-    # returns None.
-    d = lox.DipolePattern(length=0.005 * lox.m)
-    a = lox.PatternedAntenna(pattern=d, boresight=[0.0, 0.0, 1.0])
-    assert a.beamwidth(frequency=29e9 * lox.Hz) is None
-
-
 # --- Antennas ---
 
 
 def test_simple_antenna():
-    a = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    a = lox.ConstantAntenna(gain=30.0 * lox.dB)
     r = repr(a)
-    assert r.startswith("ConstantAntenna(gain=Decibel(30.0), beamwidth=Angle(")
+    assert r == "ConstantAntenna(gain=Decibel(30.0))"
 
 
 def test_simple_antenna_eq():
-    a = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
-    b = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
-    c = lox.ConstantAntenna(gain=20.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    a = lox.ConstantAntenna(gain=30.0 * lox.dB)
+    b = lox.ConstantAntenna(gain=30.0 * lox.dB)
+    c = lox.ConstantAntenna(gain=20.0 * lox.dB)
     assert a == b
     assert not (a == c)
 
 
 def test_simple_antenna_pickle():
-    a = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    a = lox.ConstantAntenna(gain=30.0 * lox.dB)
     assert pickle.loads(pickle.dumps(a)) == a
 
 
 def test_simple_antenna_repr_roundtrip():
-    a = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    a = lox.ConstantAntenna(gain=30.0 * lox.dB)
     assert (
         eval(
             repr(a),
             {
                 "ConstantAntenna": lox.ConstantAntenna,
                 "Decibel": lox.Decibel,
-                "Angle": lox.Angle,
             },
         )
         == a
@@ -369,7 +358,7 @@ def test_complex_antenna_repr():
 def test_transmitter_eirp():
     # 10 dBi antenna, 5 W power, 1 dB line loss, 0 dB OBO
     # EIRP = 10 + 10*log10(5) - 1 = 15.99 dBW
-    a = lox.ConstantAntenna(gain=10.0 * lox.dB, beamwidth=10.0 * lox.deg)
+    a = lox.ConstantAntenna(gain=10.0 * lox.dB)
     tx = lox.AmplifierTransmitter(
         frequency=29e9 * lox.Hz, power=5.0 * lox.W, line_loss=1.0 * lox.dB
     )
@@ -721,13 +710,13 @@ def test_freq_overlap_partial():
 
 
 def test_communication_system_c_n0():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB, beamwidth=0.7 * lox.deg)
+    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
     tx = lox.AmplifierTransmitter(
         frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
     )
     tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
 
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     rx = lox.NoiseTempReceiver(
         frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
     )
@@ -744,7 +733,7 @@ def test_communication_system_c_n0():
 
 
 def test_communication_system_noise_power():
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     rx = lox.NoiseTempReceiver(
         frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
     )
@@ -755,7 +744,7 @@ def test_communication_system_noise_power():
 
 
 def test_communication_system_pickle():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB, beamwidth=0.7 * lox.deg)
+    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
     tx = lox.AmplifierTransmitter(
         frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
     )
@@ -766,7 +755,7 @@ def test_communication_system_pickle():
 
 
 def test_communication_system_pickle_with_receiver():
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     rx = lox.NoiseTempReceiver(
         frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
     )
@@ -782,13 +771,13 @@ def test_communication_system_pickle_with_receiver():
 
 
 def test_link_stats_end_to_end():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB, beamwidth=0.7 * lox.deg)
+    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
     tx = lox.AmplifierTransmitter(
         frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
     )
     tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
 
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     rx = lox.NoiseTempReceiver(
         frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
     )
@@ -833,13 +822,13 @@ def test_link_stats_end_to_end():
 
 
 def test_link_stats_with_losses():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB, beamwidth=0.7 * lox.deg)
+    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
     tx = lox.AmplifierTransmitter(
         frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
     )
     tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
 
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     rx = lox.NoiseTempReceiver(
         frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
     )
@@ -981,13 +970,13 @@ def test_channel_repr_with_chip_rate():
 
 
 def test_communication_system_carrier_power():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB, beamwidth=0.7 * lox.deg)
+    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
     tx = lox.AmplifierTransmitter(
         frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
     )
     tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
 
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     rx = lox.NoiseTempReceiver(
         frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
     )
@@ -1020,7 +1009,7 @@ def test_communication_system_with_complex_antenna():
 
 
 def test_communication_system_with_complex_receiver():
-    ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     rx = lox.CascadeReceiver(
         frequency=29 * lox.GHz,
         antenna_noise_temperature=100.0 * lox.K,
@@ -1042,7 +1031,7 @@ def test_communication_system_invalid_antenna():
 
 
 def test_communication_system_invalid_receiver():
-    ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     with pytest.raises(ValueError, match="expected NoiseTempReceiver, CascadeReceiver, or GtReceiver"):
         lox.CommunicationSystem(antenna=ant, receiver="not a receiver")
 
@@ -1072,14 +1061,6 @@ def test_complex_antenna_dipole_repr():
     assert float(restored.peak_gain(29e9 * lox.Hz)) == pytest.approx(
         float(a.peak_gain(29e9 * lox.Hz)), abs=1e-10
     )
-
-
-def test_complex_antenna_beamwidth():
-    p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
-    a = lox.PatternedAntenna(pattern=p, boresight=[0.0, 0.0, 1.0])
-    bw = a.beamwidth(frequency=29e9 * lox.Hz)
-    assert bw is not None
-    assert bw.to_degrees() > 0
 
 
 def test_complex_antenna_peak_gain():
@@ -1126,13 +1107,13 @@ def test_noise_stage_pickle():
 
 
 def test_link_stats_all_getters():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB, beamwidth=0.7 * lox.deg)
+    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
     tx = lox.AmplifierTransmitter(
         frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
     )
     tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
 
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     rx = lox.NoiseTempReceiver(
         frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
     )
@@ -1163,13 +1144,13 @@ def test_link_stats_all_getters():
 
 
 def test_link_stats_repr():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB, beamwidth=0.7 * lox.deg)
+    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
     tx = lox.AmplifierTransmitter(
         frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
     )
     tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
 
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     rx = lox.NoiseTempReceiver(
         frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
     )
@@ -1264,7 +1245,7 @@ def test_transmitter_eirp_invalid_antenna():
 
 
 def test_communication_system_repr_minimal():
-    ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     sys = lox.CommunicationSystem(antenna=ant)
     r = repr(sys)
     assert "CommunicationSystem" in r
@@ -1274,7 +1255,7 @@ def test_communication_system_repr_minimal():
 
 
 def test_communication_system_repr_with_transmitter():
-    ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     tx = lox.AmplifierTransmitter(
         frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
     )
@@ -1346,8 +1327,8 @@ def test_lumped_link_interference_requires_absolute_power():
 
 
 def test_missing_transmitter_raises_value_error():
-    antenna = lox.ConstantAntenna(0.0 * lox.dB, 1.0 * lox.deg)
-    rx_antenna = lox.ConstantAntenna(0.0 * lox.dB, 1.0 * lox.deg)
+    antenna = lox.ConstantAntenna(0.0 * lox.dB)
+    rx_antenna = lox.ConstantAntenna(0.0 * lox.dB)
     rx_receiver = lox.NoiseTempReceiver(29.0 * lox.GHz, 500.0 * lox.K)
     tx = lox.CommunicationSystem(antenna=antenna)
     rx = lox.CommunicationSystem(antenna=rx_antenna, receiver=rx_receiver)
@@ -1359,12 +1340,12 @@ def test_missing_transmitter_raises_value_error():
 
 
 def test_missing_receiver_raises_value_error():
-    tx_antenna = lox.ConstantAntenna(0.0 * lox.dB, 1.0 * lox.deg)
+    tx_antenna = lox.ConstantAntenna(0.0 * lox.dB)
     tx_transmitter = lox.AmplifierTransmitter(
         frequency=29.0 * lox.GHz, power=10.0 * lox.W, line_loss=0.0 * lox.dB,
     )
     tx = lox.CommunicationSystem(antenna=tx_antenna, transmitter=tx_transmitter)
-    rx_antenna = lox.ConstantAntenna(0.0 * lox.dB, 1.0 * lox.deg)
+    rx_antenna = lox.ConstantAntenna(0.0 * lox.dB)
     rx = lox.CommunicationSystem(antenna=rx_antenna)
     with pytest.raises(ValueError, match="receiver"):
         tx.carrier_to_noise_density(
@@ -1388,7 +1369,7 @@ def test_frequency_mismatch_raises_value_error():
 
 
 def test_unexpected_antenna_raises_value_error():
-    antenna = lox.ConstantAntenna(46.0 * lox.dB, 0.7 * lox.deg)
+    antenna = lox.ConstantAntenna(46.0 * lox.dB)
     tx_transmitter = lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
     with pytest.raises(ValueError, match="EirpTransmitter must not be paired"):
         lox.CommunicationSystem(antenna=antenna, transmitter=tx_transmitter)
@@ -1423,13 +1404,13 @@ def test_lumped_communication_system_via_constructor_pickle():
 
 
 def test_modulated_with_interference_component_tier():
-    tx_antenna = lox.ConstantAntenna(46.0 * lox.dB, 0.7 * lox.deg)
+    tx_antenna = lox.ConstantAntenna(46.0 * lox.dB)
     tx_transmitter = lox.AmplifierTransmitter(
         frequency=29.0 * lox.GHz, power=10.0 * lox.W, line_loss=1.0 * lox.dB,
     )
     tx = lox.CommunicationSystem(antenna=tx_antenna, transmitter=tx_transmitter)
 
-    rx_antenna = lox.ConstantAntenna(30.0 * lox.dB, 3.0 * lox.deg)
+    rx_antenna = lox.ConstantAntenna(30.0 * lox.dB)
     rx_receiver = lox.NoiseTempReceiver(29.0 * lox.GHz, 500.0 * lox.K)
     rx = lox.CommunicationSystem(antenna=rx_antenna, receiver=rx_receiver)
 
@@ -1457,7 +1438,7 @@ def test_modulated_with_interference_component_tier():
 
 
 def test_build_transmitter_rejects_non_transmitter():
-    antenna = lox.ConstantAntenna(0.0 * lox.dB, 1.0 * lox.deg)
+    antenna = lox.ConstantAntenna(0.0 * lox.dB)
     with pytest.raises(ValueError, match="EirpTransmitter or AmplifierTransmitter"):
         lox.CommunicationSystem(antenna=antenna, transmitter="not a transmitter")
 
@@ -1469,7 +1450,7 @@ def test_amplifier_without_antenna_rejected():
 
 
 def test_gt_receiver_with_antenna_rejected():
-    antenna = lox.ConstantAntenna(30.0 * lox.dB, 3.0 * lox.deg)
+    antenna = lox.ConstantAntenna(30.0 * lox.dB)
     rx = lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
     with pytest.raises(ValueError, match="GtReceiver must not be paired"):
         lox.CommunicationSystem(antenna=antenna, receiver=rx)
@@ -1553,7 +1534,7 @@ def test_simple_receiver_repr():
 
 
 def test_communication_system_eq():
-    ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
     a = lox.CommunicationSystem(antenna=ant, transmitter=tx)
     b = lox.CommunicationSystem(antenna=ant, transmitter=tx)
@@ -1583,11 +1564,11 @@ def test_channel_dsss_pickle():
 
 
 def test_link_stats_angle_getters():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB, beamwidth=0.7 * lox.deg)
+    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
     tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
     tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
 
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     rx = lox.NoiseTempReceiver(frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K)
     rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
 
@@ -1602,11 +1583,11 @@ def test_link_stats_angle_getters():
 
 
 def test_modulated_link_stats_link_and_channel_getters():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB, beamwidth=0.7 * lox.deg)
+    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
     tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
     tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
 
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     rx = lox.NoiseTempReceiver(frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K)
     rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
 
@@ -1634,13 +1615,13 @@ def test_modulated_link_stats_link_and_channel_getters():
 
 
 def test_interference_stats_c_n0i0_and_repr():
-    tx_antenna = lox.ConstantAntenna(46.0 * lox.dB, 0.7 * lox.deg)
+    tx_antenna = lox.ConstantAntenna(46.0 * lox.dB)
     tx_transmitter = lox.AmplifierTransmitter(
         frequency=29.0 * lox.GHz, power=10.0 * lox.W, line_loss=1.0 * lox.dB,
     )
     tx = lox.CommunicationSystem(antenna=tx_antenna, transmitter=tx_transmitter)
 
-    rx_antenna = lox.ConstantAntenna(30.0 * lox.dB, 3.0 * lox.deg)
+    rx_antenna = lox.ConstantAntenna(30.0 * lox.dB)
     rx_receiver = lox.NoiseTempReceiver(29.0 * lox.GHz, 500.0 * lox.K)
     rx = lox.CommunicationSystem(antenna=rx_antenna, receiver=rx_receiver)
 
@@ -1667,11 +1648,11 @@ def test_interference_stats_c_n0i0_and_repr():
 
 
 def test_modulated_link_stats_repr():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB, beamwidth=0.7 * lox.deg)
+    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
     tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
     tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
 
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB, beamwidth=3.0 * lox.deg)
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
     rx = lox.NoiseTempReceiver(frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K)
     rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
 

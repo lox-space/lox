@@ -262,10 +262,7 @@ mod tests {
 
     fn tx_system() -> CommunicationSystem {
         CommunicationSystem {
-            antenna: Some(Antenna::Constant(ConstantAntenna {
-                gain: 46.0.db(),
-                beamwidth: Angle::degrees(0.7),
-            })),
+            antenna: Some(Antenna::Constant(ConstantAntenna { gain: 46.0.db() })),
             receiver: None,
             transmitter: Some(Transmitter::Amplifier(AmplifierTransmitter::new(
                 29.0.ghz(),
@@ -278,10 +275,7 @@ mod tests {
 
     fn rx_system() -> CommunicationSystem {
         CommunicationSystem {
-            antenna: Some(Antenna::Constant(ConstantAntenna {
-                gain: 30.0.db(),
-                beamwidth: Angle::degrees(3.0),
-            })),
+            antenna: Some(Antenna::Constant(ConstantAntenna { gain: 30.0.db() })),
             receiver: Some(Receiver::NoiseTemperature(NoiseTempReceiver {
                 frequency: 29.0.ghz(),
                 system_noise_temperature: 500.0,
@@ -439,10 +433,7 @@ mod tests {
         use crate::transmitter::EirpTransmitter;
 
         let tx = CommunicationSystem {
-            antenna: Some(Antenna::Constant(ConstantAntenna {
-                gain: 46.0.db(),
-                beamwidth: Angle::degrees(0.7),
-            })),
+            antenna: Some(Antenna::Constant(ConstantAntenna { gain: 46.0.db() })),
             receiver: None,
             transmitter: Some(Transmitter::Eirp(EirpTransmitter {
                 frequency: 29.0.ghz(),
@@ -592,10 +583,7 @@ mod tests {
 
     #[test]
     fn test_amplifier_with_constructor() {
-        let antenna = Antenna::Constant(ConstantAntenna {
-            gain: 46.0.db(),
-            beamwidth: Angle::degrees(0.7),
-        });
+        let antenna = Antenna::Constant(ConstantAntenna { gain: 46.0.db() });
         let tx = AmplifierTransmitter::new(29.0.ghz(), 10.0, 1.0.db(), 0.0.db());
         let sys = CommunicationSystem::amplifier_with(antenna, tx);
         assert!(sys.antenna.is_some());
@@ -605,10 +593,7 @@ mod tests {
 
     #[test]
     fn test_receiver_with_constructor() {
-        let antenna = Antenna::Constant(ConstantAntenna {
-            gain: 30.0.db(),
-            beamwidth: Angle::degrees(3.0),
-        });
+        let antenna = Antenna::Constant(ConstantAntenna { gain: 30.0.db() });
         let rx = Receiver::NoiseTemperature(NoiseTempReceiver {
             frequency: 29.0.ghz(),
             system_noise_temperature: 500.0,

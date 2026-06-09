@@ -2389,7 +2389,7 @@ class GaussianPattern:
     def gain(self, frequency: Frequency, angle: Angle) -> Decibel:
         """Returns the gain in dBi at the given frequency and off-boresight angle."""
         ...
-    def beamwidth(self, frequency: Frequency) -> Angle | None:
+    def beamwidth(self, frequency: Frequency) -> Angle:
         """Returns the half-power beamwidth."""
         ...
     def peak_gain(self, frequency: Frequency) -> Decibel:
@@ -2415,13 +2415,12 @@ class DipolePattern:
     def __repr__(self) -> str: ...
 
 class ConstantAntenna:
-    """A simple antenna with constant gain and beamwidth.
+    """An antenna with constant gain.
 
     Args:
         gain: Peak gain as Decibel.
-        beamwidth: Half-power beamwidth as Angle.
     """
-    def __new__(cls, gain: Decibel, beamwidth: Angle) -> Self: ...
+    def __new__(cls, gain: Decibel) -> Self: ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
@@ -2440,12 +2439,12 @@ class PatternedAntenna:
     def gain(self, frequency: Frequency, angle: Angle) -> Decibel:
         """Returns the gain in dBi at the given frequency and off-boresight angle."""
         ...
-    def beamwidth(self, frequency: Frequency) -> Angle | None:
-        """Returns the half-power beamwidth, or ``None`` when the
-        underlying pattern does not define a beamwidth."""
-        ...
     def peak_gain(self, frequency: Frequency) -> Decibel:
         """Returns the peak gain in dBi."""
+        ...
+    def beamwidth(self, frequency: Frequency) -> Angle | None:
+        """Returns the half-power beamwidth, or ``None`` when the underlying
+        pattern does not define one."""
         ...
     def __repr__(self) -> str: ...
 

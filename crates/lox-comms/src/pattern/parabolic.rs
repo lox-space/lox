@@ -69,6 +69,23 @@ impl ParabolicPattern {
         let aperture_gain = 4.0 * PI * self.area() / (wavelength_m * wavelength_m);
         Decibel::from_linear(aperture_gain) + Decibel::from_linear(self.efficiency)
     }
+
+    /// Returns the half-power beamwidth at the given frequency.
+    ///
+    /// Returns `None` when the antenna diameter is too small relative to the
+    /// wavelength for this uniformly illuminated circular-aperture expression.
+    pub fn beamwidth(&self, frequency: Frequency) -> Option<Angle> {
+        let wavelength_m = frequency.wavelength().to_meters();
+        let d = self.diameter.to_meters();
+        let arg = BESSEL_J1_HPBW * wavelength_m / (PI * d);
+        // When d < ~0.51λ the argument exceeds 1.0 and asin is undefined.
+        if arg > 1.0 {
+            None
+        } else {
+            // Full HPBW = 2 · arcsin(u_3dB · λ / (π · D))
+            Some(Angle::radians(2.0 * arg.asin()))
+        }
+    }
 }
 
 impl AntennaGain for ParabolicPattern {
@@ -91,19 +108,6 @@ impl AntennaGain for ParabolicPattern {
         };
 
         self.peak_gain(frequency) + Decibel::from_linear(pattern_loss_linear)
-    }
-
-    fn beamwidth(&self, frequency: Frequency) -> Option<Angle> {
-        let wavelength_m = frequency.wavelength().to_meters();
-        let d = self.diameter.to_meters();
-        let arg = BESSEL_J1_HPBW * wavelength_m / (PI * d);
-        // When d < ~0.51λ the argument exceeds 1.0 and asin is undefined.
-        if arg > 1.0 {
-            None
-        } else {
-            // Full HPBW = 2 · arcsin(u_3dB · λ / (π · D))
-            Some(Angle::radians(2.0 * arg.asin()))
-        }
     }
 }
 

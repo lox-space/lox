@@ -100,10 +100,7 @@ mod tests {
 
     #[test]
     fn test_eirp_simple() {
-        let antenna = ConstantAntenna {
-            gain: 10.0.db(),
-            beamwidth: Angle::degrees(10.0),
-        };
+        let antenna = ConstantAntenna { gain: 10.0.db() };
         let tx = AmplifierTransmitter::new(29.0.ghz(), 5.0, 1.0.db(), 0.0.db());
         let eirp = tx.eirp(&antenna, Angle::radians(0.0));
         assert_approx_eq!(eirp.as_f64(), 15.9897, atol <= 0.001);
@@ -111,10 +108,7 @@ mod tests {
 
     #[test]
     fn test_eirp_with_obo() {
-        let antenna = ConstantAntenna {
-            gain: 20.0.db(),
-            beamwidth: Angle::degrees(5.0),
-        };
+        let antenna = ConstantAntenna { gain: 20.0.db() };
         let tx = AmplifierTransmitter::new(29.0.ghz(), 10.0, 2.0.db(), 3.0.db());
         let eirp = tx.eirp(&antenna, Angle::radians(0.0));
         assert_approx_eq!(eirp.as_f64(), 25.0, atol <= 1e-10);
@@ -122,10 +116,7 @@ mod tests {
 
     #[test]
     fn test_enum_dispatch_amplifier() {
-        let antenna = ConstantAntenna {
-            gain: 10.0.db(),
-            beamwidth: Angle::degrees(10.0),
-        };
+        let antenna = ConstantAntenna { gain: 10.0.db() };
         let tx = Transmitter::Amplifier(AmplifierTransmitter::new(
             29.0.ghz(),
             5.0,
@@ -141,7 +132,6 @@ mod tests {
     fn test_enum_dispatch_eirp_ignores_antenna_and_angle() {
         let antenna = ConstantAntenna {
             gain: 1000.0.db(), // Deliberately absurd value
-            beamwidth: Angle::degrees(10.0),
         };
         let tx = Transmitter::Eirp(EirpTransmitter {
             frequency: 29.0.ghz(),

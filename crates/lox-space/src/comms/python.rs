@@ -261,10 +261,9 @@ impl PyGaussianPattern {
         PyDecibel(self.0.gain(frequency.0, angle.0))
     }
 
-    /// Returns the half-power beamwidth, or ``None`` when the
-    /// antenna diameter is smaller than ~1.22 wavelengths at this frequency.
-    fn beamwidth(&self, frequency: PyFrequency) -> Option<PyAngle> {
-        self.0.beamwidth(frequency.0).map(PyAngle)
+    /// Returns the half-power beamwidth.
+    fn beamwidth(&self, frequency: PyFrequency) -> PyAngle {
+        PyAngle(self.0.beamwidth(frequency.0))
     }
 
     /// Returns the peak gain in dBi.
@@ -333,11 +332,10 @@ impl PyDipolePattern {
 
 // --- Antennas ---
 
-/// A simple antenna with constant gain and beamwidth.
+/// An antenna with constant gain.
 ///
 /// Args:
 ///     gain: Peak gain as Decibel.
-///     beamwidth: Half-power beamwidth as Angle.
 #[pyclass(name = "ConstantAntenna", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyConstantAntenna {
@@ -348,29 +346,24 @@ pub struct PyConstantAntenna {
 #[pymethods]
 impl PyConstantAntenna {
     #[new]
-    fn new(gain: PyDecibel, beamwidth: PyAngle) -> Self {
+    fn new(gain: PyDecibel) -> Self {
         Self {
-            inner: ConstantAntenna {
-                gain: gain.0,
-                beamwidth: beamwidth.0,
-            },
+            inner: ConstantAntenna { gain: gain.0 },
         }
     }
 
     fn __eq__(&self, other: &PyConstantAntenna) -> bool {
         self.inner.gain.as_f64() == other.inner.gain.as_f64()
-            && f64::from(self.inner.beamwidth) == f64::from(other.inner.beamwidth)
     }
 
-    fn __getnewargs__(&self) -> (PyDecibel, PyAngle) {
-        (PyDecibel(self.inner.gain), PyAngle(self.inner.beamwidth))
+    fn __getnewargs__(&self) -> (PyDecibel,) {
+        (PyDecibel(self.inner.gain),)
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "ConstantAntenna(gain={}, beamwidth={})",
+            "ConstantAntenna(gain={})",
             PyDecibel(self.inner.gain).__repr__(),
-            PyAngle(self.inner.beamwidth).__repr__(),
         )
     }
 }
@@ -405,16 +398,16 @@ impl PyPatternedAntenna {
         PyDecibel(self.0.gain(frequency.0, angle.0))
     }
 
-    /// Returns the half-power beamwidth, or ``None`` when the
-    /// underlying pattern does not define a beamwidth (e.g. ``DipolePattern``,
-    /// or a ``ParabolicPattern`` whose diameter is below ~1.22 wavelengths).
-    fn beamwidth(&self, frequency: PyFrequency) -> Option<PyAngle> {
-        self.0.beamwidth(frequency.0).map(PyAngle)
-    }
-
     /// Returns the peak gain in dBi.
     fn peak_gain(&self, frequency: PyFrequency) -> PyDecibel {
         PyDecibel(self.0.peak_gain(frequency.0))
+    }
+
+    /// Returns the half-power beamwidth, or ``None`` when the underlying
+    /// pattern does not define one (e.g. ``DipolePattern``, or a
+    /// ``ParabolicPattern`` whose diameter is below ~0.51 wavelengths).
+    fn beamwidth(&self, frequency: PyFrequency) -> Option<PyAngle> {
+        self.0.pattern.beamwidth(frequency.0).map(PyAngle)
     }
 
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> (Bound<'py, PyAny>, [f64; 3]) {
@@ -496,10 +489,7 @@ fn antenna_to_py<'py>(py: Python<'py>, antenna: &Antenna) -> Bound<'py, PyAny> {
         Antenna::Constant(a) => Bound::new(
             py,
             PyConstantAntenna {
-                inner: ConstantAntenna {
-                    gain: a.gain,
-                    beamwidth: a.beamwidth,
-                },
+                inner: ConstantAntenna { gain: a.gain },
             },
         )
         .unwrap()
@@ -558,10 +548,7 @@ fn receiver_to_py<'py>(py: Python<'py>, receiver: &Receiver) -> Bound<'py, PyAny
 
 fn build_antenna(obj: &Bound<'_, PyAny>) -> PyResult<Antenna> {
     if let Ok(a) = obj.extract::<PyRef<'_, PyConstantAntenna>>() {
-        Ok(Antenna::Constant(ConstantAntenna {
-            gain: a.inner.gain,
-            beamwidth: a.inner.beamwidth,
-        }))
+        Ok(Antenna::Constant(ConstantAntenna { gain: a.inner.gain }))
     } else if let Ok(a) = obj.extract::<PyRef<'_, PyPatternedAntenna>>() {
         let pattern = match &a.0.pattern {
             AntennaPattern::Parabolic(p) => {
@@ -1358,11 +1345,9 @@ impl PyCommunicationSystem {
 
     fn __repr__(&self) -> String {
         let antenna_repr = match self.0.antenna.as_ref() {
-            Some(Antenna::Constant(a)) => format!(
-                "ConstantAntenna(gain={}, beamwidth={})",
-                PyDecibel(a.gain).__repr__(),
-                PyAngle(a.beamwidth).__repr__(),
-            ),
+            Some(Antenna::Constant(a)) => {
+                format!("ConstantAntenna(gain={})", PyDecibel(a.gain).__repr__())
+            }
             Some(Antenna::Patterned(a)) => {
                 let pattern_repr = match &a.pattern {
                     AntennaPattern::Parabolic(p) => format!(

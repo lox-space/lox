@@ -196,10 +196,7 @@ mod tests {
 
     fn test_link() -> (CommunicationSystem, CommunicationSystem, Channel) {
         let tx_sys = CommunicationSystem {
-            antenna: Some(Antenna::Constant(ConstantAntenna {
-                gain: 46.0.db(),
-                beamwidth: Angle::degrees(0.7),
-            })),
+            antenna: Some(Antenna::Constant(ConstantAntenna { gain: 46.0.db() })),
             receiver: None,
             transmitter: Some(Transmitter::Amplifier(AmplifierTransmitter::new(
                 29.0.ghz(),
@@ -209,10 +206,7 @@ mod tests {
             ))),
         };
         let rx_sys = CommunicationSystem {
-            antenna: Some(Antenna::Constant(ConstantAntenna {
-                gain: 30.0.db(),
-                beamwidth: Angle::degrees(3.0),
-            })),
+            antenna: Some(Antenna::Constant(ConstantAntenna { gain: 30.0.db() })),
             receiver: Some(Receiver::NoiseTemperature(NoiseTempReceiver {
                 frequency: 29.0.ghz(),
                 system_noise_temperature: 500.0,

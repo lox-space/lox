@@ -38,14 +38,6 @@ impl AntennaGain for AntennaPattern {
             AntennaPattern::Dipole(p) => p.gain(frequency, angle),
         }
     }
-
-    fn beamwidth(&self, frequency: Frequency) -> Option<Angle> {
-        match self {
-            AntennaPattern::Parabolic(p) => p.beamwidth(frequency),
-            AntennaPattern::Gaussian(p) => p.beamwidth(frequency),
-            AntennaPattern::Dipole(p) => p.beamwidth(frequency),
-        }
-    }
 }
 
 impl AntennaPattern {
@@ -55,6 +47,17 @@ impl AntennaPattern {
             AntennaPattern::Parabolic(p) => p.peak_gain(frequency),
             AntennaPattern::Gaussian(p) => p.peak_gain(frequency),
             AntennaPattern::Dipole(p) => p.peak_gain(frequency),
+        }
+    }
+
+    /// Returns the half-power beamwidth at the given frequency, or `None`
+    /// when the underlying pattern does not define one (dipole) or the
+    /// aperture is sub-wavelength (parabolic with `D < ~0.51·λ`).
+    pub fn beamwidth(&self, frequency: Frequency) -> Option<Angle> {
+        match self {
+            AntennaPattern::Parabolic(p) => p.beamwidth(frequency),
+            AntennaPattern::Gaussian(p) => Some(p.beamwidth(frequency)),
+            AntennaPattern::Dipole(_) => None,
         }
     }
 }
@@ -79,7 +82,6 @@ mod tests {
         let gain = p.gain(f, lox_core::units::Angle::radians(0.0));
         let peak = p.peak_gain(f);
         assert_approx_eq!(gain.as_f64(), peak.as_f64(), atol <= 1e-10);
-        assert!(p.beamwidth(f).is_some());
     }
 
     #[test]
@@ -89,7 +91,6 @@ mod tests {
         let gain = p.gain(f, lox_core::units::Angle::radians(0.0));
         let peak = p.peak_gain(f);
         assert_approx_eq!(gain.as_f64(), peak.as_f64(), atol <= 1e-10);
-        assert!(p.beamwidth(f).is_some());
     }
 
     #[test]
@@ -103,8 +104,6 @@ mod tests {
             lox_core::units::Angle::radians(std::f64::consts::PI / 2.0),
         );
         assert_approx_eq!(gain.as_f64(), 2.15, atol <= 0.01);
-        // Dipole has no well-defined beamwidth
-        assert!(p.beamwidth(f).is_none());
         let peak = p.peak_gain(f);
         // Peak gain is at broadside for a half-wave
         assert!(peak.as_f64() > 2.0);
