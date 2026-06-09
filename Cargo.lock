@@ -1099,6 +1099,7 @@ dependencies = [
  "lox-itur",
  "lox-test-utils",
  "serde",
+ "serde_json",
  "thiserror",
 ]
 
