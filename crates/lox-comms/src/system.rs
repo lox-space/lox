@@ -102,8 +102,9 @@ impl CommunicationSystem {
             });
         }
 
-        let eirp = tx_eirp(tx, &self.antenna, tx_angle)?;
-        let gt = rx_gt(receiver, &rx.antenna, rx_angle)?;
+        let phi = Angle::radians(0.0);
+        let eirp = tx_eirp(tx, &self.antenna, tx_angle, phi)?;
+        let gt = rx_gt(receiver, &rx.antenna, rx_angle, phi)?;
         let fspl = free_space_path_loss(range, tx.frequency());
         let k_db = Decibel::from_linear(BOLTZMANN_CONSTANT);
 
@@ -149,9 +150,10 @@ impl CommunicationSystem {
         }
 
         let antenna = rx.antenna.as_ref().ok_or(LinkBudgetError::MissingAntenna)?;
-        let eirp = tx_eirp(tx, &self.antenna, tx_angle)?;
+        let phi = Angle::radians(0.0);
+        let eirp = tx_eirp(tx, &self.antenna, tx_angle, phi)?;
         let fspl = free_space_path_loss(range, tx.frequency());
-        let g_rx = receiver.total_gain(antenna, rx_angle);
+        let g_rx = receiver.total_gain(antenna, rx_angle, phi);
         Ok(Some(eirp - fspl - losses + g_rx))
     }
 
@@ -186,7 +188,7 @@ impl CommunicationSystem {
             .transmitter
             .as_ref()
             .ok_or(LinkBudgetError::MissingTransmitter)?;
-        tx_eirp(tx, &self.antenna, angle)
+        tx_eirp(tx, &self.antenna, angle, Angle::radians(0.0))
     }
 
     /// Returns the G/T at the given off-boresight angle.
@@ -197,7 +199,7 @@ impl CommunicationSystem {
             .receiver
             .as_ref()
             .ok_or(LinkBudgetError::MissingReceiver)?;
-        rx_gt(rx, &self.antenna, angle)
+        rx_gt(rx, &self.antenna, angle, Angle::radians(0.0))
     }
 
     /// Returns the transmit frequency, if this system has a transmitter.
@@ -214,7 +216,8 @@ impl CommunicationSystem {
 fn tx_eirp(
     tx: &Transmitter,
     antenna: &Option<Antenna>,
-    angle: Angle,
+    theta: Angle,
+    phi: Angle,
 ) -> Result<Decibel, LinkBudgetError> {
     match tx {
         Transmitter::Eirp(t) => {
@@ -225,7 +228,7 @@ fn tx_eirp(
         }
         Transmitter::Amplifier(t) => {
             let ant = antenna.as_ref().ok_or(LinkBudgetError::MissingAntenna)?;
-            Ok(t.eirp(ant, angle))
+            Ok(t.eirp(ant, theta, phi))
         }
     }
 }
@@ -233,7 +236,8 @@ fn tx_eirp(
 fn rx_gt(
     rx: &Receiver,
     antenna: &Option<Antenna>,
-    angle: Angle,
+    theta: Angle,
+    phi: Angle,
 ) -> Result<Decibel, LinkBudgetError> {
     match rx {
         Receiver::Gt(r) => {
@@ -244,7 +248,7 @@ fn rx_gt(
         }
         Receiver::NoiseTemperature(_) | Receiver::Cascade(_) => {
             let ant = antenna.as_ref().ok_or(LinkBudgetError::MissingAntenna)?;
-            Ok(rx.gain_to_noise_temperature(ant, angle))
+            Ok(rx.gain_to_noise_temperature(ant, theta, phi))
         }
     }
 }

@@ -22,7 +22,7 @@ use lox_comms::receiver::{CascadeReceiver, GtReceiver, NoiseStage, NoiseTempRece
 use lox_comms::system::CommunicationSystem;
 use lox_comms::transmitter::{AmplifierTransmitter, EirpTransmitter, Transmitter};
 use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
-use lox_core::units::Decibel;
+use lox_core::units::{Angle, Decibel};
 
 use crate::units::python::{PyAngle, PyDistance, PyFrequency, PyPower, PyTemperature};
 
@@ -206,9 +206,14 @@ impl PyParabolicPattern {
         ))
     }
 
-    /// Returns the gain in dBi at the given frequency and off-boresight angle.
-    fn gain(&self, frequency: PyFrequency, angle: PyAngle) -> PyDecibel {
-        PyDecibel(self.0.gain(frequency.0, angle.0))
+    /// Returns the gain in dBi at the given frequency and pattern angles.
+    #[pyo3(signature = (frequency, theta, phi=None))]
+    fn gain(&self, frequency: PyFrequency, theta: PyAngle, phi: Option<PyAngle>) -> PyDecibel {
+        PyDecibel(self.0.gain(
+            frequency.0,
+            theta.0,
+            phi.map_or(Angle::radians(0.0), |p| p.0),
+        ))
     }
 
     /// Returns the half-power beamwidth, or ``None`` when the
@@ -256,9 +261,14 @@ impl PyGaussianPattern {
         Self(GaussianPattern::new(diameter.0, efficiency))
     }
 
-    /// Returns the gain in dBi at the given frequency and off-boresight angle.
-    fn gain(&self, frequency: PyFrequency, angle: PyAngle) -> PyDecibel {
-        PyDecibel(self.0.gain(frequency.0, angle.0))
+    /// Returns the gain in dBi at the given frequency and pattern angles.
+    #[pyo3(signature = (frequency, theta, phi=None))]
+    fn gain(&self, frequency: PyFrequency, theta: PyAngle, phi: Option<PyAngle>) -> PyDecibel {
+        PyDecibel(self.0.gain(
+            frequency.0,
+            theta.0,
+            phi.map_or(Angle::radians(0.0), |p| p.0),
+        ))
     }
 
     /// Returns the half-power beamwidth.
@@ -304,9 +314,14 @@ impl PyDipolePattern {
         Self(DipolePattern::new(length.0))
     }
 
-    /// Returns the gain in dBi at the given frequency and off-boresight angle.
-    fn gain(&self, frequency: PyFrequency, angle: PyAngle) -> PyDecibel {
-        PyDecibel(self.0.gain(frequency.0, angle.0))
+    /// Returns the gain in dBi at the given frequency and pattern angles.
+    #[pyo3(signature = (frequency, theta, phi=None))]
+    fn gain(&self, frequency: PyFrequency, theta: PyAngle, phi: Option<PyAngle>) -> PyDecibel {
+        PyDecibel(self.0.gain(
+            frequency.0,
+            theta.0,
+            phi.map_or(Angle::radians(0.0), |p| p.0),
+        ))
     }
 
     /// Returns the peak gain in dBi.
@@ -393,9 +408,14 @@ impl PyPatternedAntenna {
         }))
     }
 
-    /// Returns the gain in dBi at the given frequency and off-boresight angle.
-    fn gain(&self, frequency: PyFrequency, angle: PyAngle) -> PyDecibel {
-        PyDecibel(self.0.gain(frequency.0, angle.0))
+    /// Returns the gain in dBi at the given frequency and pattern angles.
+    #[pyo3(signature = (frequency, theta, phi=None))]
+    fn gain(&self, frequency: PyFrequency, theta: PyAngle, phi: Option<PyAngle>) -> PyDecibel {
+        PyDecibel(self.0.gain(
+            frequency.0,
+            theta.0,
+            phi.map_or(Angle::radians(0.0), |p| p.0),
+        ))
     }
 
     /// Returns the peak gain in dBi.
@@ -655,10 +675,20 @@ impl PyAmplifierTransmitter {
         )))
     }
 
-    /// Returns the EIRP in dBW for the given antenna and off-boresight angle.
-    fn eirp(&self, antenna: &Bound<'_, PyAny>, angle: PyAngle) -> PyResult<PyDecibel> {
+    /// Returns the EIRP in dBW for the given antenna and pattern angles.
+    #[pyo3(signature = (antenna, theta, phi=None))]
+    fn eirp(
+        &self,
+        antenna: &Bound<'_, PyAny>,
+        theta: PyAngle,
+        phi: Option<PyAngle>,
+    ) -> PyResult<PyDecibel> {
         let ant = build_antenna(antenna)?;
-        Ok(PyDecibel(self.0.eirp(&ant, angle.0)))
+        Ok(PyDecibel(self.0.eirp(
+            &ant,
+            theta.0,
+            phi.map_or(Angle::radians(0.0), |p| p.0),
+        )))
     }
 
     fn __eq__(&self, other: &PyAmplifierTransmitter) -> bool {
