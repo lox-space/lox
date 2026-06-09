@@ -184,12 +184,12 @@ impl Receiver {
     ///
     /// The returned value is not physically meaningful for [`Receiver::Gt`]; callers
     /// outside the link-budget path must match on the variant before calling.
-    pub fn total_gain(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
+    pub fn total_gain(&self, antenna: &impl AntennaGain, theta: Angle, phi: Angle) -> Decibel {
         match self {
             Receiver::Gt(_) => Decibel::new(0.0),
-            Receiver::NoiseTemperature(r) => antenna.gain(r.frequency, angle),
+            Receiver::NoiseTemperature(r) => antenna.gain(r.frequency, theta, phi),
             Receiver::Cascade(r) => {
-                antenna.gain(r.frequency, angle) - r.demodulator_loss - r.implementation_loss
+                antenna.gain(r.frequency, theta, phi) - r.demodulator_loss - r.implementation_loss
             }
         }
     }
@@ -197,11 +197,16 @@ impl Receiver {
     /// Returns the gain-to-noise-temperature ratio (G/T) in dB/K.
     ///
     /// G/T = G_total − 10·log₁₀(T_sys)
-    pub fn gain_to_noise_temperature(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
+    pub fn gain_to_noise_temperature(
+        &self,
+        antenna: &impl AntennaGain,
+        theta: Angle,
+        phi: Angle,
+    ) -> Decibel {
         match self {
             Receiver::Gt(r) => r.gt,
             Receiver::NoiseTemperature(_) | Receiver::Cascade(_) => {
-                let g_total = self.total_gain(antenna, angle);
+                let g_total = self.total_gain(antenna, theta, phi);
                 let t_sys = self.system_noise_temperature();
                 g_total - Decibel::from_linear(t_sys)
             }
@@ -299,7 +304,7 @@ mod tests {
             frequency: 29.0.ghz(),
             system_noise_temperature: 500.0,
         });
-        let gt = rx.gain_to_noise_temperature(&antenna, Angle::radians(0.0));
+        let gt = rx.gain_to_noise_temperature(&antenna, Angle::radians(0.0), Angle::radians(0.0));
         assert_approx_eq!(gt.as_f64(), 3.0103, atol <= 0.001);
     }
 
@@ -373,7 +378,7 @@ mod tests {
             0.5.db(),
         ));
         // Just verify G/T computes without panicking and is reasonable
-        let gt = rx.gain_to_noise_temperature(&antenna, Angle::radians(0.0));
+        let gt = rx.gain_to_noise_temperature(&antenna, Angle::radians(0.0), Angle::radians(0.0));
         assert!(gt.as_f64() > 0.0);
     }
 
@@ -399,7 +404,7 @@ mod tests {
             demodulator_loss: 1.0.db(),
             implementation_loss: 0.5.db(),
         });
-        let g_total = rx.total_gain(&antenna, Angle::radians(0.0));
+        let g_total = rx.total_gain(&antenna, Angle::radians(0.0), Angle::radians(0.0));
         assert_approx_eq!(g_total.as_f64(), 28.5, atol <= 1e-10);
     }
 
@@ -414,12 +419,12 @@ mod tests {
         // Sentinel values for the component-tier paths
         assert_eq!(rx.system_noise_temperature(), 0.0);
         let antenna = ConstantAntenna { gain: 30.0.db() };
-        let total = rx.total_gain(&antenna, Angle::radians(0.0));
+        let total = rx.total_gain(&antenna, Angle::radians(0.0), Angle::radians(0.0));
         assert_eq!(total.as_f64(), 0.0);
         // Frequency accessor returns the stored frequency
         assert_eq!(rx.frequency().to_hertz(), 29e9);
         // gain_to_noise_temperature returns the stored G/T figure directly
-        let gt = rx.gain_to_noise_temperature(&antenna, Angle::radians(0.0));
+        let gt = rx.gain_to_noise_temperature(&antenna, Angle::radians(0.0), Angle::radians(0.0));
         assert_approx_eq!(gt.as_f64(), 3.01, atol <= 1e-10);
     }
 }

@@ -152,14 +152,14 @@ def test_parabolic_beamwidth_none_for_sub_wavelength_diameter():
 def test_parabolic_on_axis_equals_peak():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
     f = 29e9 * lox.Hz
-    gain = p.gain(f, angle=0.0 * lox.deg)
+    gain = p.gain(f, theta=0.0 * lox.deg)
     peak = p.peak_gain(f)
     assert float(gain) == pytest.approx(float(peak), abs=1e-6)
 
 
 def test_parabolic_gain_at_180():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
-    gain = p.gain(29e9 * lox.Hz, angle=180.0 * lox.deg)
+    gain = p.gain(29e9 * lox.Hz, theta=180.0 * lox.deg)
     assert float(gain) < -50.0
 
 
@@ -210,7 +210,7 @@ def test_gaussian_3db_at_half_beamwidth():
     bw = p.beamwidth(f)
     half_bw = bw * 0.5
     peak = float(p.peak_gain(f))
-    gain = float(p.gain(f, angle=half_bw))
+    gain = float(p.gain(f, theta=half_bw))
     assert peak - gain == pytest.approx(3.0103, abs=0.01)
 
 
@@ -245,7 +245,7 @@ def test_half_wave_dipole_broadside():
     c = 299792458.0
     wavelength = c / 29e9
     d = lox.DipolePattern(length=(wavelength / 2.0) * lox.m)
-    gain = d.gain(29e9 * lox.Hz, angle=90.0 * lox.deg)
+    gain = d.gain(29e9 * lox.Hz, theta=90.0 * lox.deg)
     assert float(gain) == pytest.approx(2.15, abs=0.01)
 
 
@@ -253,7 +253,7 @@ def test_half_wave_dipole_endfire():
     c = 299792458.0
     wavelength = c / 29e9
     d = lox.DipolePattern(length=(wavelength / 2.0) * lox.m)
-    gain = d.gain(29e9 * lox.Hz, angle=0.0 * lox.deg)
+    gain = d.gain(29e9 * lox.Hz, theta=0.0 * lox.deg)
     assert float(gain) < -50.0
 
 
@@ -325,7 +325,7 @@ def test_simple_antenna_repr_roundtrip():
 def test_complex_antenna():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
     a = lox.PatternedAntenna(pattern=p, boresight=[0.0, 0.0, 1.0])
-    gain = a.gain(29e9 * lox.Hz, angle=0.0 * lox.deg)
+    gain = a.gain(29e9 * lox.Hz, theta=0.0 * lox.deg)
     assert float(gain) == pytest.approx(46.01119, rel=1e-4)
 
 
@@ -362,7 +362,7 @@ def test_transmitter_eirp():
     tx = lox.AmplifierTransmitter(
         frequency=29e9 * lox.Hz, power=5.0 * lox.W, line_loss=1.0 * lox.dB
     )
-    eirp = tx.eirp(a, angle=0.0 * lox.deg)
+    eirp = tx.eirp(a, theta=0.0 * lox.deg)
     assert float(eirp) == pytest.approx(15.99, abs=0.01)
 
 
@@ -1229,7 +1229,7 @@ def test_transmitter_eirp_complex_antenna():
     tx = lox.AmplifierTransmitter(
         frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
     )
-    eirp = tx.eirp(a, angle=0.0 * lox.deg)
+    eirp = tx.eirp(a, theta=0.0 * lox.deg)
     assert math.isfinite(float(eirp))
 
 
@@ -1238,7 +1238,7 @@ def test_transmitter_eirp_invalid_antenna():
         frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
     )
     with pytest.raises(ValueError, match="expected a ConstantAntenna or PatternedAntenna"):
-        tx.eirp("not an antenna", angle=0.0 * lox.deg)
+        tx.eirp("not an antenna", theta=0.0 * lox.deg)
 
 
 # --- CommunicationSystem repr with no receiver/transmitter ---
