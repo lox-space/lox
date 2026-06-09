@@ -40,8 +40,8 @@ impl AmplifierTransmitter {
     }
 
     /// Returns the Effective Isotropic Radiated Power (EIRP) in dBW.
-    pub fn eirp(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
-        antenna.gain(self.frequency, angle) + Decibel::from_linear(self.power_w)
+    pub fn eirp(&self, antenna: &impl AntennaGain, theta: Angle, phi: Angle) -> Decibel {
+        antenna.gain(self.frequency, theta, phi) + Decibel::from_linear(self.power_w)
             - self.line_loss
             - self.output_back_off
     }
@@ -78,13 +78,13 @@ impl Transmitter {
         }
     }
 
-    /// Returns the EIRP in dBW for the given antenna at the given off-boresight angle.
+    /// Returns the EIRP in dBW for the given antenna at the given pattern angles.
     ///
-    /// For the lumped `Eirp` variant, `antenna` and `angle` are ignored.
-    pub fn eirp(&self, antenna: &impl AntennaGain, angle: Angle) -> Decibel {
+    /// For the lumped `Eirp` variant, `antenna`, `theta`, and `phi` are ignored.
+    pub fn eirp(&self, antenna: &impl AntennaGain, theta: Angle, phi: Angle) -> Decibel {
         match self {
             Transmitter::Eirp(t) => t.eirp,
-            Transmitter::Amplifier(t) => t.eirp(antenna, angle),
+            Transmitter::Amplifier(t) => t.eirp(antenna, theta, phi),
         }
     }
 }
@@ -102,7 +102,7 @@ mod tests {
     fn test_eirp_simple() {
         let antenna = ConstantAntenna { gain: 10.0.db() };
         let tx = AmplifierTransmitter::new(29.0.ghz(), 5.0, 1.0.db(), 0.0.db());
-        let eirp = tx.eirp(&antenna, Angle::radians(0.0));
+        let eirp = tx.eirp(&antenna, Angle::radians(0.0), Angle::radians(0.0));
         assert_approx_eq!(eirp.as_f64(), 15.9897, atol <= 0.001);
     }
 
@@ -110,7 +110,7 @@ mod tests {
     fn test_eirp_with_obo() {
         let antenna = ConstantAntenna { gain: 20.0.db() };
         let tx = AmplifierTransmitter::new(29.0.ghz(), 10.0, 2.0.db(), 3.0.db());
-        let eirp = tx.eirp(&antenna, Angle::radians(0.0));
+        let eirp = tx.eirp(&antenna, Angle::radians(0.0), Angle::radians(0.0));
         assert_approx_eq!(eirp.as_f64(), 25.0, atol <= 1e-10);
     }
 
@@ -123,7 +123,7 @@ mod tests {
             1.0.db(),
             0.0.db(),
         ));
-        let eirp = tx.eirp(&antenna, Angle::radians(0.0));
+        let eirp = tx.eirp(&antenna, Angle::radians(0.0), Angle::radians(0.0));
         assert_approx_eq!(eirp.as_f64(), 15.9897, atol <= 0.001);
         assert_eq!(tx.frequency().to_hertz(), 29e9);
     }
@@ -138,10 +138,10 @@ mod tests {
             eirp: 55.0.db(),
         });
         // For Eirp, antenna gain and angle are ignored — the stored figure is returned verbatim.
-        let eirp = tx.eirp(&antenna, Angle::radians(0.0));
+        let eirp = tx.eirp(&antenna, Angle::radians(0.0), Angle::radians(0.0));
         assert_approx_eq!(eirp.as_f64(), 55.0, atol <= 1e-10);
-        // Same at any off-boresight angle
-        let eirp_off = tx.eirp(&antenna, Angle::radians(1.0));
+        // Same at any pattern angles
+        let eirp_off = tx.eirp(&antenna, Angle::radians(1.0), Angle::radians(2.0));
         assert_approx_eq!(eirp_off.as_f64(), 55.0, atol <= 1e-10);
         assert_eq!(tx.frequency().to_hertz(), 29e9);
     }

@@ -31,11 +31,11 @@ pub enum AntennaPattern {
 }
 
 impl AntennaGain for AntennaPattern {
-    fn gain(&self, frequency: Frequency, angle: Angle) -> Decibel {
+    fn gain(&self, frequency: Frequency, theta: Angle, phi: Angle) -> Decibel {
         match self {
-            AntennaPattern::Parabolic(p) => p.gain(frequency, angle),
-            AntennaPattern::Gaussian(p) => p.gain(frequency, angle),
-            AntennaPattern::Dipole(p) => p.gain(frequency, angle),
+            AntennaPattern::Parabolic(p) => p.gain(frequency, theta, phi),
+            AntennaPattern::Gaussian(p) => p.gain(frequency, theta, phi),
+            AntennaPattern::Dipole(p) => p.gain(frequency, theta, phi),
         }
     }
 }
@@ -79,7 +79,11 @@ mod tests {
     fn test_pattern_enum_parabolic_dispatch() {
         let p = AntennaPattern::Parabolic(ParabolicPattern::new(Distance::meters(0.98), 0.45));
         let f = test_frequency();
-        let gain = p.gain(f, lox_core::units::Angle::radians(0.0));
+        let gain = p.gain(
+            f,
+            lox_core::units::Angle::radians(0.0),
+            lox_core::units::Angle::radians(0.0),
+        );
         let peak = p.peak_gain(f);
         assert_approx_eq!(gain.as_f64(), peak.as_f64(), atol <= 1e-10);
     }
@@ -88,7 +92,11 @@ mod tests {
     fn test_pattern_enum_gaussian_dispatch() {
         let p = AntennaPattern::Gaussian(GaussianPattern::new(Distance::meters(0.98), 0.45));
         let f = test_frequency();
-        let gain = p.gain(f, lox_core::units::Angle::radians(0.0));
+        let gain = p.gain(
+            f,
+            lox_core::units::Angle::radians(0.0),
+            lox_core::units::Angle::radians(0.0),
+        );
         let peak = p.peak_gain(f);
         assert_approx_eq!(gain.as_f64(), peak.as_f64(), atol <= 1e-10);
     }
@@ -102,6 +110,7 @@ mod tests {
         let gain = p.gain(
             f,
             lox_core::units::Angle::radians(std::f64::consts::PI / 2.0),
+            lox_core::units::Angle::radians(0.0),
         );
         assert_approx_eq!(gain.as_f64(), 2.15, atol <= 0.01);
         let peak = p.peak_gain(f);

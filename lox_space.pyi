@@ -2365,8 +2365,10 @@ class ParabolicPattern:
             efficiency: Aperture efficiency (0, 1].
         """
         ...
-    def gain(self, frequency: Frequency, angle: Angle) -> Decibel:
-        """Returns the gain in dBi at the given frequency and off-boresight angle."""
+    def gain(
+        self, frequency: Frequency, theta: Angle, phi: Angle | None = None
+    ) -> Decibel:
+        """Returns the gain in dBi at the given frequency and pattern angles."""
         ...
     def beamwidth(self, frequency: Frequency) -> Angle | None:
         """Returns the half-power beamwidth, or ``None`` when the
@@ -2386,8 +2388,10 @@ class GaussianPattern:
         efficiency: Aperture efficiency (0, 1].
     """
     def __new__(cls, diameter: Distance, efficiency: float) -> Self: ...
-    def gain(self, frequency: Frequency, angle: Angle) -> Decibel:
-        """Returns the gain in dBi at the given frequency and off-boresight angle."""
+    def gain(
+        self, frequency: Frequency, theta: Angle, phi: Angle | None = None
+    ) -> Decibel:
+        """Returns the gain in dBi at the given frequency and pattern angles."""
         ...
     def beamwidth(self, frequency: Frequency) -> Angle:
         """Returns the half-power beamwidth."""
@@ -2405,8 +2409,10 @@ class DipolePattern:
         length: Dipole length as Distance.
     """
     def __new__(cls, length: Distance) -> Self: ...
-    def gain(self, frequency: Frequency, angle: Angle) -> Decibel:
-        """Returns the gain in dBi at the given frequency and off-boresight angle."""
+    def gain(
+        self, frequency: Frequency, theta: Angle, phi: Angle | None = None
+    ) -> Decibel:
+        """Returns the gain in dBi at the given frequency and pattern angles."""
         ...
     def peak_gain(self, frequency: Frequency) -> Decibel:
         """Returns the peak gain in dBi."""
@@ -2436,8 +2442,10 @@ class PatternedAntenna:
         pattern: ParabolicPattern | GaussianPattern | DipolePattern,
         boresight: list[float],
     ) -> Self: ...
-    def gain(self, frequency: Frequency, angle: Angle) -> Decibel:
-        """Returns the gain in dBi at the given frequency and off-boresight angle."""
+    def gain(
+        self, frequency: Frequency, theta: Angle, phi: Angle | None = None
+    ) -> Decibel:
+        """Returns the gain in dBi at the given frequency and pattern angles."""
         ...
     def peak_gain(self, frequency: Frequency) -> Decibel:
         """Returns the peak gain in dBi."""
@@ -2464,8 +2472,13 @@ class AmplifierTransmitter:
         line_loss: Decibel,
         output_back_off: Decibel | None = None,
     ) -> Self: ...
-    def eirp(self, antenna: ConstantAntenna | PatternedAntenna, angle: Angle) -> Decibel:
-        """Returns the EIRP in dBW for the given antenna and off-boresight angle."""
+    def eirp(
+        self,
+        antenna: ConstantAntenna | PatternedAntenna,
+        theta: Angle,
+        phi: Angle | None = None,
+    ) -> Decibel:
+        """Returns the EIRP in dBW for the given antenna and pattern angles."""
         ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
