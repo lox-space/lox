@@ -179,7 +179,11 @@ pub struct Terminal {
 
 /// Communications hardware inventory and wiring for one platform.
 #[derive(Debug, Clone, Default)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "CommsPayloadRepr")
+)]
 pub struct CommsPayload {
     antennas: SlotMap<AntennaId, Named<Antenna>>,
     transmitters: SlotMap<TransmitterId, Named<AmplifierTransmitter>>,
@@ -189,6 +193,43 @@ pub struct CommsPayload {
     tx_ports: SlotMap<TxPortId, TxPort>,
     rx_ports: SlotMap<RxPortId, RxPort>,
     terminals: SlotMap<TerminalId, Terminal>,
+}
+
+/// Serde wire format for [`CommsPayload`]: mirrors the field layout so the
+/// representation is unchanged, but forces deserialization through
+/// [`CommsPayload::validate`] so persisted inventories uphold the same
+/// invariants as the construction API.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct CommsPayloadRepr {
+    antennas: SlotMap<AntennaId, Named<Antenna>>,
+    transmitters: SlotMap<TransmitterId, Named<AmplifierTransmitter>>,
+    receivers: SlotMap<ReceiverId, Named<Receiver>>,
+    eirp_models: SlotMap<EirpModelId, EirpModel>,
+    gt_models: SlotMap<GtModelId, GtModel>,
+    tx_ports: SlotMap<TxPortId, TxPort>,
+    rx_ports: SlotMap<RxPortId, RxPort>,
+    terminals: SlotMap<TerminalId, Terminal>,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<CommsPayloadRepr> for CommsPayload {
+    type Error = PayloadError;
+
+    fn try_from(repr: CommsPayloadRepr) -> Result<Self, Self::Error> {
+        let payload = CommsPayload {
+            antennas: repr.antennas,
+            transmitters: repr.transmitters,
+            receivers: repr.receivers,
+            eirp_models: repr.eirp_models,
+            gt_models: repr.gt_models,
+            tx_ports: repr.tx_ports,
+            rx_ports: repr.rx_ports,
+            terminals: repr.terminals,
+        };
+        payload.validate()?;
+        Ok(payload)
+    }
 }
 
 impl CommsPayload {
@@ -358,8 +399,7 @@ impl CommsPayload {
         name: impl Into<String>,
         transmitter: AmplifierTransmitter,
     ) -> Result<TransmitterId, PayloadError> {
-        validate_positive("transmit power [W]", transmitter.power_w)?;
-        validate_non_negative("output back-off [dB]", transmitter.output_back_off.as_f64())?;
+        validate_transmitter(&transmitter)?;
         Ok(self.transmitters.insert(Named {
             name: name.into(),
             value: transmitter,
@@ -405,7 +445,7 @@ impl CommsPayload {
     ///
     /// Rejects a non-finite EIRP figure (negative dBW values are valid).
     pub fn add_eirp_model(&mut self, model: EirpModel) -> Result<EirpModelId, PayloadError> {
-        validate_finite("EIRP [dBW]", model.eirp.as_f64())?;
+        validate_eirp_model(&model)?;
         Ok(self.eirp_models.insert(model))
     }
 
@@ -413,37 +453,23 @@ impl CommsPayload {
     ///
     /// Rejects a non-finite G/T figure (negative dB/K values are valid).
     pub fn add_gt_model(&mut self, model: GtModel) -> Result<GtModelId, PayloadError> {
-        validate_finite("G/T [dB/K]", model.gt.as_f64())?;
+        validate_gt_model(&model)?;
         Ok(self.gt_models.insert(model))
     }
 
     /// Adds a transmit port, validating that the referenced antenna and
     /// transmitter exist in this payload.
     pub fn add_tx_port(&mut self, port: TxPort) -> Result<TxPortId, PayloadError> {
-        validate_non_negative("feed loss [dB]", port.feed_loss.as_f64())?;
-        if !self.antennas.contains_key(port.antenna) {
-            return Err(PayloadError::UnknownAntenna(port.antenna));
-        }
-        if !self.transmitters.contains_key(port.transmitter) {
-            return Err(PayloadError::UnknownTransmitter(port.transmitter));
-        }
+        validate_tx_port_values(&port)?;
+        self.validate_tx_port_wiring(&port)?;
         Ok(self.tx_ports.insert(port))
     }
 
     /// Adds a receive port, validating that the referenced antenna and
     /// receiver exist in this payload.
     pub fn add_rx_port(&mut self, port: RxPort) -> Result<RxPortId, PayloadError> {
-        validate_non_negative("feed loss [dB]", port.feed_loss.as_f64())?;
-        validate_non_negative(
-            "antenna noise temperature [K]",
-            port.antenna_noise_temperature,
-        )?;
-        if !self.antennas.contains_key(port.antenna) {
-            return Err(PayloadError::UnknownAntenna(port.antenna));
-        }
-        if !self.receivers.contains_key(port.receiver) {
-            return Err(PayloadError::UnknownReceiver(port.receiver));
-        }
+        validate_rx_port_values(&port)?;
+        self.validate_rx_port_wiring(&port)?;
         Ok(self.rx_ports.insert(port))
     }
 
@@ -459,6 +485,65 @@ impl CommsPayload {
             }
         }
         Ok(self.terminals.insert(terminal))
+    }
+
+    /// Re-validates every inventory value and wiring invariant.
+    ///
+    /// Construction through the `add_*` methods maintains these invariants
+    /// incrementally; this checks the whole payload at once, e.g. after
+    /// deserialization.
+    pub fn validate(&self) -> Result<(), PayloadError> {
+        for (_, transmitter) in &self.transmitters {
+            validate_transmitter(&transmitter.value)?;
+        }
+        for (_, receiver) in &self.receivers {
+            validate_receiver(&receiver.value)?;
+        }
+        for (_, model) in &self.eirp_models {
+            validate_eirp_model(model)?;
+        }
+        for (_, model) in &self.gt_models {
+            validate_gt_model(model)?;
+        }
+        for (_, port) in &self.tx_ports {
+            validate_tx_port_values(port)?;
+            self.validate_tx_port_wiring(port)?;
+        }
+        for (_, port) in &self.rx_ports {
+            validate_rx_port_values(port)?;
+            self.validate_rx_port_wiring(port)?;
+        }
+        for (_, terminal) in &self.terminals {
+            match terminal.role {
+                TerminalRole::Tx(tx) => self.validate_tx_chain(tx)?,
+                TerminalRole::Rx(rx) => self.validate_rx_chain(rx)?,
+                TerminalRole::Transceiver { tx, rx } => {
+                    self.validate_tx_chain(tx)?;
+                    self.validate_rx_chain(rx)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_tx_port_wiring(&self, port: &TxPort) -> Result<(), PayloadError> {
+        if !self.antennas.contains_key(port.antenna) {
+            return Err(PayloadError::UnknownAntenna(port.antenna));
+        }
+        if !self.transmitters.contains_key(port.transmitter) {
+            return Err(PayloadError::UnknownTransmitter(port.transmitter));
+        }
+        Ok(())
+    }
+
+    fn validate_rx_port_wiring(&self, port: &RxPort) -> Result<(), PayloadError> {
+        if !self.antennas.contains_key(port.antenna) {
+            return Err(PayloadError::UnknownAntenna(port.antenna));
+        }
+        if !self.receivers.contains_key(port.receiver) {
+            return Err(PayloadError::UnknownReceiver(port.receiver));
+        }
+        Ok(())
     }
 
     fn validate_tx_chain(&self, chain: TxChain) -> Result<(), PayloadError> {
@@ -652,6 +737,58 @@ impl fmt::Display for CommsPayload {
         }
         Ok(())
     }
+}
+
+/// Validates a transmitter's physical parameters.
+fn validate_transmitter(transmitter: &AmplifierTransmitter) -> Result<(), PayloadError> {
+    validate_positive("transmit power [W]", transmitter.power_w)?;
+    validate_non_negative("output back-off [dB]", transmitter.output_back_off.as_f64())
+}
+
+/// Validates a receiver's physical parameters.
+fn validate_receiver(receiver: &Receiver) -> Result<(), PayloadError> {
+    match receiver {
+        Receiver::NoiseTemperature(rx) => {
+            validate_positive("receiver noise temperature [K]", rx.noise_temperature)
+        }
+        Receiver::Cascade(rx) => {
+            for stage in &rx.stages {
+                validate_non_negative("stage noise temperature [K]", stage.noise_temperature)?;
+                if !stage.gain.as_f64().is_finite() {
+                    return Err(PayloadError::NonPhysical {
+                        quantity: "stage gain [dB]",
+                        value: stage.gain.as_f64(),
+                    });
+                }
+            }
+            validate_non_negative("demodulator loss [dB]", rx.demodulator_loss.as_f64())?;
+            validate_non_negative("implementation loss [dB]", rx.implementation_loss.as_f64())
+        }
+    }
+}
+
+/// Validates a lumped EIRP model's figure.
+fn validate_eirp_model(model: &EirpModel) -> Result<(), PayloadError> {
+    validate_finite("EIRP [dBW]", model.eirp.as_f64())
+}
+
+/// Validates a lumped G/T model's figure.
+fn validate_gt_model(model: &GtModel) -> Result<(), PayloadError> {
+    validate_finite("G/T [dB/K]", model.gt.as_f64())
+}
+
+/// Validates a transmit port's physical parameters.
+fn validate_tx_port_values(port: &TxPort) -> Result<(), PayloadError> {
+    validate_non_negative("feed loss [dB]", port.feed_loss.as_f64())
+}
+
+/// Validates a receive port's physical parameters.
+fn validate_rx_port_values(port: &RxPort) -> Result<(), PayloadError> {
+    validate_non_negative("feed loss [dB]", port.feed_loss.as_f64())?;
+    validate_non_negative(
+        "antenna noise temperature [K]",
+        port.antenna_noise_temperature,
+    )
 }
 
 /// Validates that a quantity is finite.
@@ -1044,6 +1181,55 @@ mod tests {
                 })
                 .is_ok()
         );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_payload_serde_rejects_invalid_inventory() {
+        // Tampered persisted payloads must fail deserialization with the
+        // same invariants as the construction API.
+        let (payload, _) = diplexer_payload();
+        let json = serde_json::to_string(&payload).unwrap();
+
+        // Negative transmit power
+        let bad = json.replace("\"power_w\":10.0", "\"power_w\":-10.0");
+        assert_ne!(bad, json);
+        let err = serde_json::from_str::<CommsPayload>(&bad).unwrap_err();
+        assert!(err.to_string().contains("transmit power"));
+
+        // Negative feed loss on the RX port (0.5 dB in the fixture)
+        let bad = json.replace("\"feed_loss\":0.5", "\"feed_loss\":-0.5");
+        assert_ne!(bad, json);
+        let err = serde_json::from_str::<CommsPayload>(&bad).unwrap_err();
+        assert!(err.to_string().contains("feed loss"));
+
+        // Negative antenna noise temperature
+        let bad = json.replace(
+            "\"antenna_noise_temperature\":150.0",
+            "\"antenna_noise_temperature\":-150.0",
+        );
+        assert_ne!(bad, json);
+        let err = serde_json::from_str::<CommsPayload>(&bad).unwrap_err();
+        assert!(err.to_string().contains("antenna noise temperature"));
+
+        // The untampered payload still round-trips.
+        assert!(serde_json::from_str::<CommsPayload>(&json).is_ok());
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_payload_serde_rejects_dangling_wiring() {
+        // Corrupt a wiring key so the TX port references a missing
+        // transmitter slot: the wiring re-validation must reject it.
+        let (payload, _) = diplexer_payload();
+        let json = serde_json::to_string(&payload).unwrap();
+        let bad = json.replace(
+            "\"transmitter\":{\"idx\":1,\"version\":1}",
+            "\"transmitter\":{\"idx\":9,\"version\":1}",
+        );
+        assert_ne!(bad, json);
+        let err = serde_json::from_str::<CommsPayload>(&bad).unwrap_err();
+        assert!(err.to_string().contains("unknown transmitter"));
     }
 
     #[cfg(feature = "serde")]
