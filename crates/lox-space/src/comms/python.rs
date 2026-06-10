@@ -1106,9 +1106,9 @@ pub struct PyLinkStats(pub LinkStats);
 impl PyLinkStats {
     /// Computes a modulation-agnostic link budget between payload terminals.
     ///
-    /// Resolves the TX and RX terminals into endpoints and evaluates the
+    /// Resolves the TX and RX terminals and evaluates the
     /// link at the given carrier. The carrier must lie inside both
-    /// endpoints' supported frequency ranges. Each endpoint's pointing is
+    /// terminals' effective frequency ranges. Each endpoint's pointing is
     /// given either as an off-boresight angle or as a line-of-sight
     /// direction vector in the antenna's parent frame; omitting both
     /// assumes ideal (boresight) pointing.
@@ -1154,18 +1154,18 @@ impl PyLinkStats {
             .map(|l| l.0.clone())
             .unwrap_or_else(EnvironmentalLosses::none);
 
-        let tx_endpoint = tx_payload
+        let resolve_tx = tx_payload
             .0
-            .tx_endpoint(tx_terminal.0)
+            .resolve_tx(tx_terminal.0)
             .map_err(|err| PyValueError::new_err(err.to_string()))?;
-        let rx_endpoint = rx_payload
+        let resolve_rx = rx_payload
             .0
-            .rx_endpoint(rx_terminal.0)
+            .resolve_rx(rx_terminal.0)
             .map_err(|err| PyValueError::new_err(err.to_string()))?;
 
         LinkStats::for_link(
-            &tx_endpoint,
-            &rx_endpoint,
+            &resolve_tx,
+            &resolve_rx,
             carrier.0,
             bandwidth.0,
             range.0,
@@ -1906,7 +1906,7 @@ impl PyCommsPayload {
     /// Returns the effective transmit frequency range of a terminal.
     fn tx_band(&self, terminal: PyTerminalId) -> PyResult<PyFrequencyRange> {
         self.0
-            .tx_endpoint(terminal.0)
+            .resolve_tx(terminal.0)
             .map(|endpoint| PyFrequencyRange(endpoint.band()))
             .map_err(|err| PyValueError::new_err(err.to_string()))
     }
@@ -1914,7 +1914,7 @@ impl PyCommsPayload {
     /// Returns the effective receive frequency range of a terminal.
     fn rx_band(&self, terminal: PyTerminalId) -> PyResult<PyFrequencyRange> {
         self.0
-            .rx_endpoint(terminal.0)
+            .resolve_rx(terminal.0)
             .map(|endpoint| PyFrequencyRange(endpoint.band()))
             .map_err(|err| PyValueError::new_err(err.to_string()))
     }
@@ -1934,7 +1934,7 @@ impl PyCommsPayload {
         let pointing = build_pointing(angle, direction, "")?;
         let endpoint = self
             .0
-            .tx_endpoint(terminal.0)
+            .resolve_tx(terminal.0)
             .map_err(|err| PyValueError::new_err(err.to_string()))?;
         endpoint
             .eirp_at(carrier.0, pointing)
@@ -1957,7 +1957,7 @@ impl PyCommsPayload {
         let pointing = build_pointing(angle, direction, "")?;
         let endpoint = self
             .0
-            .rx_endpoint(terminal.0)
+            .resolve_rx(terminal.0)
             .map_err(|err| PyValueError::new_err(err.to_string()))?;
         endpoint
             .gt_at(carrier.0, pointing)

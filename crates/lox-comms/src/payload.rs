@@ -559,12 +559,16 @@ pub enum TerminalRole {
     },
 }
 
-/// An operational endpoint exposed by a [`CommsPayload`].
+/// An operational identity exposed by a [`CommsPayload`].
 ///
-/// Terminals are what mission operations and link analysis address. A
-/// switchable-antenna transmitter is modelled as multiple terminals sharing
-/// one transmitter through different ports — selecting the terminal *is* the
-/// switch state, so the payload itself stays stateless.
+/// Terminals are the durable, named configuration that mission operations
+/// and link analysis address; resolve one into a borrowed
+/// [`ResolvedTxTerminal`](crate::resolve::ResolvedTxTerminal) or
+/// [`ResolvedRxTerminal`](crate::resolve::ResolvedRxTerminal) view for
+/// link-budget evaluation. A switchable-antenna transmitter is modelled as
+/// multiple terminals sharing one transmitter through different ports —
+/// selecting the terminal *is* the switch state, so the payload itself
+/// stays stateless.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Terminal {

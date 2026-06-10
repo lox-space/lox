@@ -67,15 +67,15 @@ pub enum LinkBudgetError {
     /// A physical quantity is outside its valid domain.
     #[error(transparent)]
     NonPhysical(#[from] NonPhysicalError),
-    /// The carrier frequency lies outside an endpoint's supported range.
-    #[error("carrier {} Hz outside the supported range {band} of endpoint '{endpoint}'", carrier.to_hertz())]
+    /// The carrier frequency lies outside a terminal's effective range.
+    #[error("carrier {} Hz outside the supported range {band} of terminal '{terminal}'", carrier.to_hertz())]
     CarrierOutOfBand {
         /// The requested carrier frequency.
         carrier: Frequency,
-        /// The endpoint's supported frequency range.
+        /// The terminal's effective frequency range.
         band: FrequencyRange,
-        /// Name of the terminal whose endpoint rejected the carrier.
-        endpoint: String,
+        /// Name of the terminal that rejected the carrier.
+        terminal: String,
     },
 }
 
@@ -92,11 +92,11 @@ mod tests {
         let err = LinkBudgetError::CarrierOutOfBand {
             carrier: 29.0.ghz(),
             band: FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap(),
-            endpoint: "rx".to_owned(),
+            terminal: "rx".to_owned(),
         };
         assert_eq!(
             err.to_string(),
-            "carrier 29000000000 Hz outside the supported range 17.000–21.000 GHz of endpoint 'rx'"
+            "carrier 29000000000 Hz outside the supported range 17.000–21.000 GHz of terminal 'rx'"
         );
     }
 

@@ -73,7 +73,7 @@ gain = antenna.gain_toward(29 * lox.GHz, [1.0, 0.0, 0.0])  # on boresight
 A `CommsPayload` models the communications hardware of one platform as
 inventory plus wiring: antennas, radios, and lumped models are added to the
 inventory, ports wire an antenna to a radio (with a per-path feed loss), and
-terminals expose the operational endpoints that link analysis addresses.
+terminals expose the operational identities that link analysis addresses.
 Shared hardware is expressed naturally — a diplexer is two ports referencing
 the same antenna:
 
@@ -108,7 +108,7 @@ rx_payload, rx_terminal = lox.CommsPayload.gt_only("rx", ka_band, 3.01 * lox.dB)
 ```
 
 `LinkStats.for_link` computes a link budget between two terminals. The
-carrier is a link-level input and must lie inside both endpoints' supported
+carrier is a link-level input and must lie inside both terminals' effective
 frequency ranges:
 
 ```python

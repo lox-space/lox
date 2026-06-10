@@ -2959,9 +2959,9 @@ class LinkStats:
     ) -> LinkStats:
         """Computes a modulation-agnostic link budget between payload terminals.
 
-        Resolves the TX and RX terminals into endpoints and evaluates the link
-        at the given carrier. The carrier must lie inside both endpoints'
-        supported frequency ranges. Each endpoint's pointing is given either
+        Resolves the TX and RX terminals and evaluates the link
+        at the given carrier. The carrier must lie inside both terminals'
+        effective frequency ranges. Each end's pointing is given either
         as an off-boresight angle or as a line-of-sight direction vector in
         the antenna's parent frame; omitting both assumes ideal (boresight)
         pointing. ``direction`` is "uplink", "downlink", or "crosslink".

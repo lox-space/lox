@@ -12,7 +12,6 @@
 pub mod antenna;
 pub mod band;
 pub mod channel;
-pub mod endpoint;
 pub mod error;
 pub mod link_budget;
 pub mod pattern;
@@ -20,6 +19,7 @@ pub mod payload;
 pub mod pfd;
 pub mod pointing;
 pub mod receiver;
+pub mod resolve;
 pub mod transmitter;
 pub mod utils;
 

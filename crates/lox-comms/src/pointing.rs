@@ -2,14 +2,14 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Line-of-sight pointing at link endpoints.
+//! Line-of-sight pointing at link terminals.
 
 use lox_core::glam::DVec3;
 use lox_core::units::Angle;
 
-/// Line-of-sight pointing at one link endpoint.
+/// Line-of-sight pointing at one end of a link.
 ///
-/// Describes how the line of sight relates to the endpoint's antenna so the
+/// Describes how the line of sight relates to the terminal's antenna so the
 /// link budget can evaluate the gain pattern in the right direction.
 /// [`Pointing::Direction`] is the primary form for trajectory-driven analyses;
 /// the other variants are convenience entry points for ideal pointing and for

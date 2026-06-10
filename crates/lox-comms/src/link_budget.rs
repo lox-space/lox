@@ -7,9 +7,9 @@
 use lox_core::units::{Angle, Decibel, Distance, Frequency, Power};
 
 use crate::channel::{Channel, LinkDirection};
-use crate::endpoint::{RxEndpoint, TxEndpoint};
 use crate::error::NonPhysicalError;
 use crate::pointing::Pointing;
+use crate::resolve::{ResolvedRxTerminal, ResolvedTxTerminal};
 use crate::utils::free_space_path_loss;
 use crate::{BOLTZMANN_CONSTANT, LinkBudgetError};
 
@@ -56,16 +56,16 @@ pub struct LinkStats {
     /// Carrier-to-noise ratio (C/N).
     pub c_n: Decibel,
     /// Derived TX pattern polar angle from boresight (zero for lumped or
-    /// constant-gain endpoints).
+    /// constant-gain chains).
     pub tx_theta: Angle,
     /// Derived TX pattern azimuth about boresight (zero for lumped or
-    /// constant-gain endpoints).
+    /// constant-gain chains).
     pub tx_phi: Angle,
     /// Derived RX pattern polar angle from boresight (zero for lumped or
-    /// constant-gain endpoints).
+    /// constant-gain chains).
     pub rx_theta: Angle,
     /// Derived RX pattern azimuth about boresight (zero for lumped or
-    /// constant-gain endpoints).
+    /// constant-gain chains).
     pub rx_phi: Angle,
     /// Link direction.
     ///
@@ -75,19 +75,19 @@ pub struct LinkStats {
 }
 
 impl LinkStats {
-    /// Computes a modulation-agnostic link budget between resolved endpoints.
+    /// Computes a modulation-agnostic link budget between resolved terminals.
     ///
-    /// The carrier must lie inside both endpoints' supported frequency
+    /// The carrier must lie inside both terminals' effective frequency
     /// ranges. `bandwidth` is the noise bandwidth used to compute
     /// `noise_power` and `C/N` from `C/N₀`. The pointings are resolved into
-    /// pattern angles against each endpoint's antenna frame once and
+    /// pattern angles against each terminal's antenna frame once and
     /// reported in the result. `direction` is reserved for
     /// direction-dependent effects (e.g. rain-degraded G/T) and does not
     /// affect the current calculation.
     #[allow(clippy::too_many_arguments)]
     pub fn for_link(
-        tx: &TxEndpoint<'_>,
-        rx: &RxEndpoint<'_>,
+        tx: &ResolvedTxTerminal<'_>,
+        rx: &ResolvedRxTerminal<'_>,
         carrier: Frequency,
         bandwidth: Frequency,
         range: Distance,
@@ -103,7 +103,7 @@ impl LinkStats {
             NonPhysicalError::check_positive(quantity, value)?;
         }
 
-        for (band, endpoint) in [
+        for (band, terminal) in [
             (tx.band(), tx.terminal_name()),
             (rx.band(), rx.terminal_name()),
         ] {
@@ -111,7 +111,7 @@ impl LinkStats {
                 return Err(LinkBudgetError::CarrierOutOfBand {
                     carrier,
                     band,
-                    endpoint: endpoint.to_owned(),
+                    terminal: terminal.to_owned(),
                 });
             }
         }
@@ -313,8 +313,8 @@ mod tests {
     fn component_stats() -> LinkStats {
         let (tx_payload, tx_terminal, rx_payload, rx_terminal) = component_link();
         LinkStats::for_link(
-            &tx_payload.tx_endpoint(tx_terminal).unwrap(),
-            &rx_payload.rx_endpoint(rx_terminal).unwrap(),
+            &tx_payload.resolve_tx(tx_terminal).unwrap(),
+            &rx_payload.resolve_rx(rx_terminal).unwrap(),
             29.0.ghz(),
             channel().bandwidth(),
             Distance::kilometers(1000.0),
@@ -382,8 +382,8 @@ mod tests {
     fn test_for_link_lumped_budget() {
         let (tx_payload, tx_terminal, rx_payload, rx_terminal) = lumped_link();
         let stats = LinkStats::for_link(
-            &tx_payload.tx_endpoint(tx_terminal).unwrap(),
-            &rx_payload.rx_endpoint(rx_terminal).unwrap(),
+            &tx_payload.resolve_tx(tx_terminal).unwrap(),
+            &rx_payload.resolve_rx(rx_terminal).unwrap(),
             29.0.ghz(),
             5.0.mhz(),
             Distance::kilometers(1000.0),
@@ -413,8 +413,8 @@ mod tests {
 
         // 29 GHz fits the TX band but not the RX band.
         let err = LinkStats::for_link(
-            &tx_payload.tx_endpoint(tx_terminal).unwrap(),
-            &rx_payload.rx_endpoint(rx_terminal).unwrap(),
+            &tx_payload.resolve_tx(tx_terminal).unwrap(),
+            &rx_payload.resolve_rx(rx_terminal).unwrap(),
             29.0.ghz(),
             5.0.mhz(),
             Distance::kilometers(1000.0),
@@ -441,8 +441,8 @@ mod tests {
             (5.0.mhz(), Distance::kilometers(-1.0)),
         ] {
             let err = LinkStats::for_link(
-                &tx_payload.tx_endpoint(tx_terminal).unwrap(),
-                &rx_payload.rx_endpoint(rx_terminal).unwrap(),
+                &tx_payload.resolve_tx(tx_terminal).unwrap(),
+                &rx_payload.resolve_rx(rx_terminal).unwrap(),
                 29.0.ghz(),
                 bandwidth,
                 range,
@@ -495,8 +495,8 @@ mod tests {
         let (tx_payload, tx_terminal, rx_payload, rx_terminal) = lumped_link();
         let ch = channel();
         let stats = LinkStats::for_link(
-            &tx_payload.tx_endpoint(tx_terminal).unwrap(),
-            &rx_payload.rx_endpoint(rx_terminal).unwrap(),
+            &tx_payload.resolve_tx(tx_terminal).unwrap(),
+            &rx_payload.resolve_rx(rx_terminal).unwrap(),
             29.0.ghz(),
             ch.bandwidth(),
             Distance::kilometers(1000.0),

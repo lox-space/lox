@@ -2,16 +2,17 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Resolved link endpoints.
+//! Terminal resolution.
 //!
-//! [`CommsPayload::tx_endpoint`] and [`CommsPayload::rx_endpoint`] resolve a
-//! terminal into borrowed endpoint views with the wiring already followed:
-//! radio, antenna, feed loss (or lumped model), and the effective frequency
-//! range. Resolution fails on wiring problems ([`ResolveError`]); the
-//! link-budget calculation that consumes the views only fails on physics.
+//! [`CommsPayload::resolve_tx`] and [`CommsPayload::resolve_rx`] resolve a
+//! [`Terminal`](crate::payload::Terminal) into a borrowed view with the
+//! wiring already followed: radio, antenna, feed loss (or lumped model), and
+//! the effective frequency range. Resolution fails on wiring problems
+//! ([`ResolveError`]); the link-budget calculation that consumes the views
+//! only fails on physics.
 //!
-//! Endpoints are cheap to construct but meant to be resolved once per pass
-//! and reused across time steps.
+//! Resolved terminals are cheap to construct but meant to be resolved once
+//! per pass and reused across time steps.
 
 use lox_core::units::{Angle, Decibel, Frequency, Temperature};
 use thiserror::Error;
@@ -27,16 +28,16 @@ use crate::pointing::Pointing;
 use crate::receiver::Receiver;
 use crate::transmitter::AmplifierTransmitter;
 
-/// A resolved transmit endpoint.
+/// A terminal's transmit chain, resolved into a borrowed view.
 #[derive(Debug, Clone, Copy)]
-pub struct TxEndpoint<'a> {
+pub struct ResolvedTxTerminal<'a> {
     terminal_name: &'a str,
-    kind: TxEndpointKind<'a>,
+    kind: ResolvedTxChain<'a>,
 }
 
-/// The resolved transmit chain behind a [`TxEndpoint`].
+/// The wiring behind a [`ResolvedTxTerminal`].
 #[derive(Debug, Clone, Copy)]
-pub enum TxEndpointKind<'a> {
+pub enum ResolvedTxChain<'a> {
     /// Component tier: transmitter + feed + antenna.
     Component {
         /// The antenna radiating this path.
@@ -52,16 +53,16 @@ pub enum TxEndpointKind<'a> {
     Lumped(&'a EirpModel),
 }
 
-/// A resolved receive endpoint.
+/// A terminal's receive chain, resolved into a borrowed view.
 #[derive(Debug, Clone, Copy)]
-pub struct RxEndpoint<'a> {
+pub struct ResolvedRxTerminal<'a> {
     terminal_name: &'a str,
-    kind: RxEndpointKind<'a>,
+    kind: ResolvedRxChain<'a>,
 }
 
-/// The resolved receive chain behind an [`RxEndpoint`].
+/// The resolved receive chain behind an [`ResolvedRxTerminal`].
 #[derive(Debug, Clone, Copy)]
-pub enum RxEndpointKind<'a> {
+pub enum ResolvedRxChain<'a> {
     /// Component tier: antenna + feed + receiver.
     Component {
         /// The antenna feeding this path.
@@ -80,12 +81,12 @@ pub enum RxEndpointKind<'a> {
 }
 
 impl CommsPayload {
-    /// Resolves the transmit chain of a terminal into an endpoint view.
+    /// Resolves the transmit chain of a terminal into a borrowed view.
     ///
     /// Fails when the terminal does not exist in this payload, has no
     /// transmit chain, or its wiring references missing inventory (only
     /// possible with IDs minted by a different payload).
-    pub fn tx_endpoint(&self, id: TerminalId) -> Result<TxEndpoint<'_>, ResolveError> {
+    pub fn resolve_tx(&self, id: TerminalId) -> Result<ResolvedTxTerminal<'_>, ResolveError> {
         let terminal = self.terminal(id).ok_or(ResolveError::UnknownTerminal(id))?;
         let chain = match terminal.role {
             TerminalRole::Tx(tx) | TerminalRole::Transceiver { tx, .. } => tx,
@@ -102,7 +103,7 @@ impl CommsPayload {
                     .transmitter(port.transmitter())
                     .ok_or(ResolveError::BrokenTransmitter(port.transmitter()))?
                     .value;
-                TxEndpointKind::Component {
+                ResolvedTxChain::Component {
                     antenna: &self
                         .antenna(port.antenna())
                         .ok_or(ResolveError::BrokenAntenna(port.antenna()))?
@@ -112,23 +113,23 @@ impl CommsPayload {
                     band: effective_band(transmitter.band(), port.band(), &terminal.name)?,
                 }
             }
-            TxChain::Lumped(model_id) => TxEndpointKind::Lumped(
+            TxChain::Lumped(model_id) => ResolvedTxChain::Lumped(
                 self.eirp_model(model_id)
                     .ok_or(ResolveError::BrokenEirpModel(model_id))?,
             ),
         };
-        Ok(TxEndpoint {
+        Ok(ResolvedTxTerminal {
             terminal_name: &terminal.name,
             kind,
         })
     }
 
-    /// Resolves the receive chain of a terminal into an endpoint view.
+    /// Resolves the receive chain of a terminal into a borrowed view.
     ///
     /// Fails when the terminal does not exist in this payload, has no
     /// receive chain, or its wiring references missing inventory (only
     /// possible with IDs minted by a different payload).
-    pub fn rx_endpoint(&self, id: TerminalId) -> Result<RxEndpoint<'_>, ResolveError> {
+    pub fn resolve_rx(&self, id: TerminalId) -> Result<ResolvedRxTerminal<'_>, ResolveError> {
         let terminal = self.terminal(id).ok_or(ResolveError::UnknownTerminal(id))?;
         let chain = match terminal.role {
             TerminalRole::Rx(rx) | TerminalRole::Transceiver { rx, .. } => rx,
@@ -145,7 +146,7 @@ impl CommsPayload {
                     .receiver(port.receiver())
                     .ok_or(ResolveError::BrokenReceiver(port.receiver()))?
                     .value;
-                RxEndpointKind::Component {
+                ResolvedRxChain::Component {
                     antenna: &self
                         .antenna(port.antenna())
                         .ok_or(ResolveError::BrokenAntenna(port.antenna()))?
@@ -156,48 +157,48 @@ impl CommsPayload {
                     band: effective_band(receiver.band(), port.band(), &terminal.name)?,
                 }
             }
-            RxChain::Lumped(model_id) => RxEndpointKind::Lumped(
+            RxChain::Lumped(model_id) => ResolvedRxChain::Lumped(
                 self.gt_model(model_id)
                     .ok_or(ResolveError::BrokenGtModel(model_id))?,
             ),
         };
-        Ok(RxEndpoint {
+        Ok(ResolvedRxTerminal {
             terminal_name: &terminal.name,
             kind,
         })
     }
 }
 
-impl<'a> TxEndpoint<'a> {
+impl<'a> ResolvedTxTerminal<'a> {
     /// Returns the name of the terminal this endpoint was resolved from.
     pub fn terminal_name(&self) -> &'a str {
         self.terminal_name
     }
 
     /// Returns the resolved transmit chain.
-    pub fn kind(&self) -> &TxEndpointKind<'a> {
+    pub fn chain(&self) -> &ResolvedTxChain<'a> {
         &self.kind
     }
 
-    /// Returns the effective frequency range of this endpoint.
+    /// Returns the effective frequency range of this resolved terminal.
     pub fn band(&self) -> FrequencyRange {
         match &self.kind {
-            TxEndpointKind::Component { band, .. } => *band,
-            TxEndpointKind::Lumped(model) => model.band(),
+            ResolvedTxChain::Component { band, .. } => *band,
+            ResolvedTxChain::Lumped(model) => model.band(),
         }
     }
 
-    /// Resolves a pointing into pattern angles against this endpoint's antenna.
+    /// Resolves a pointing into pattern angles against this terminal's antenna.
     ///
-    /// Lumped endpoints ignore the pointing and resolve to zero angles.
+    /// Lumped chains ignore the pointing and resolve to zero angles.
     pub fn pattern_angles(&self, pointing: Pointing) -> Result<(Angle, Angle), LinkBudgetError> {
         resolve_pointing(self.antenna(), pointing)
     }
 
     /// Returns the EIRP in dBW at the given carrier and pointing.
     ///
-    /// For lumped endpoints the carrier and pointing are ignored and the
-    /// stored figure is returned. For component endpoints:
+    /// For lumped chains the carrier and pointing are ignored and the
+    /// stored figure is returned. For component chains:
     ///
     /// EIRP = G_ant(carrier, θ, φ) + 10·log₁₀(P) − OBO − feed loss
     pub fn eirp_at(
@@ -206,8 +207,8 @@ impl<'a> TxEndpoint<'a> {
         pointing: Pointing,
     ) -> Result<Decibel, LinkBudgetError> {
         match &self.kind {
-            TxEndpointKind::Lumped(model) => Ok(model.eirp()),
-            TxEndpointKind::Component {
+            ResolvedTxChain::Lumped(model) => Ok(model.eirp()),
+            ResolvedTxChain::Component {
                 antenna,
                 transmitter,
                 feed_loss,
@@ -224,34 +225,34 @@ impl<'a> TxEndpoint<'a> {
 
     fn antenna(&self) -> Option<&'a Antenna> {
         match &self.kind {
-            TxEndpointKind::Component { antenna, .. } => Some(antenna),
-            TxEndpointKind::Lumped(_) => None,
+            ResolvedTxChain::Component { antenna, .. } => Some(antenna),
+            ResolvedTxChain::Lumped(_) => None,
         }
     }
 }
 
-impl<'a> RxEndpoint<'a> {
+impl<'a> ResolvedRxTerminal<'a> {
     /// Returns the name of the terminal this endpoint was resolved from.
     pub fn terminal_name(&self) -> &'a str {
         self.terminal_name
     }
 
     /// Returns the resolved receive chain.
-    pub fn kind(&self) -> &RxEndpointKind<'a> {
+    pub fn chain(&self) -> &ResolvedRxChain<'a> {
         &self.kind
     }
 
-    /// Returns the effective frequency range of this endpoint.
+    /// Returns the effective frequency range of this resolved terminal.
     pub fn band(&self) -> FrequencyRange {
         match &self.kind {
-            RxEndpointKind::Component { band, .. } => *band,
-            RxEndpointKind::Lumped(model) => model.band(),
+            ResolvedRxChain::Component { band, .. } => *band,
+            ResolvedRxChain::Lumped(model) => model.band(),
         }
     }
 
-    /// Resolves a pointing into pattern angles against this endpoint's antenna.
+    /// Resolves a pointing into pattern angles against this terminal's antenna.
     ///
-    /// Lumped endpoints ignore the pointing and resolve to zero angles.
+    /// Lumped chains ignore the pointing and resolve to zero angles.
     pub fn pattern_angles(&self, pointing: Pointing) -> Result<(Angle, Angle), LinkBudgetError> {
         resolve_pointing(self.antenna(), pointing)
     }
@@ -266,11 +267,11 @@ impl<'a> RxEndpoint<'a> {
     /// T_sys = T_ant + T_feed + T_rx / G_feed
     ///
     /// where `T_rx` is the receiver's input-referred (chain) noise
-    /// temperature. Lumped G/T endpoints return `None`.
+    /// temperature. Lumped G/T chains return `None`.
     pub fn system_noise_temperature(&self) -> Option<Temperature> {
         match &self.kind {
-            RxEndpointKind::Lumped(_) => None,
-            RxEndpointKind::Component {
+            ResolvedRxChain::Lumped(_) => None,
+            ResolvedRxChain::Component {
                 receiver,
                 feed_loss,
                 antenna_noise_temperature,
@@ -289,23 +290,23 @@ impl<'a> RxEndpoint<'a> {
         }
     }
 
-    /// Returns the clear-sky antenna noise temperature at this endpoint's
+    /// Returns the clear-sky antenna noise temperature at this terminal's
     /// port, when the chain exposes one.
     pub fn antenna_noise_temperature(&self) -> Option<Temperature> {
         match &self.kind {
-            RxEndpointKind::Component {
+            ResolvedRxChain::Component {
                 antenna_noise_temperature,
                 ..
             } => Some(*antenna_noise_temperature),
-            RxEndpointKind::Lumped(_) => None,
+            ResolvedRxChain::Lumped(_) => None,
         }
     }
 
     /// Returns the gain-to-noise-temperature ratio (G/T) in dB/K at the given
     /// carrier and pointing.
     ///
-    /// For lumped endpoints the carrier and pointing are ignored and the
-    /// stored figure is returned. For component endpoints, with both gain and
+    /// For lumped chains the carrier and pointing are ignored and the
+    /// stored figure is returned. For component chains, with both gain and
     /// noise referred to the antenna flange:
     ///
     /// G/T = G_total(carrier, θ, φ) − 10·log₁₀(T_sys)
@@ -319,14 +320,14 @@ impl<'a> RxEndpoint<'a> {
         pointing: Pointing,
     ) -> Result<Decibel, LinkBudgetError> {
         match &self.kind {
-            RxEndpointKind::Lumped(model) => Ok(model.gt()),
-            RxEndpointKind::Component { .. } => {
+            ResolvedRxChain::Lumped(model) => Ok(model.gt()),
+            ResolvedRxChain::Component { .. } => {
                 let gain = self
                     .total_gain(carrier, pointing)?
-                    .expect("component endpoints expose a total gain");
+                    .expect("component chains expose a total gain");
                 let t_sys = self
                     .system_noise_temperature()
-                    .expect("component endpoints expose a system noise temperature");
+                    .expect("component chains expose a system noise temperature");
                 Ok(gain - Decibel::from_linear(t_sys.to_kelvin()))
             }
         }
@@ -338,7 +339,7 @@ impl<'a> RxEndpoint<'a> {
     /// With the noise input-referred to the flange the signal gain is the
     /// antenna gain (less demodulator/implementation losses for cascade
     /// chains); the feed loss is accounted in the noise referral instead.
-    /// `None` for lumped G/T endpoints — the absolute gain is not recoverable
+    /// `None` for lumped G/T chains — the absolute gain is not recoverable
     /// from a G/T figure. Consistent with [`Self::gt_at`]:
     /// `total_gain − 10·log₁₀(T_sys) == G/T`.
     pub fn total_gain(
@@ -347,8 +348,8 @@ impl<'a> RxEndpoint<'a> {
         pointing: Pointing,
     ) -> Result<Option<Decibel>, LinkBudgetError> {
         match &self.kind {
-            RxEndpointKind::Lumped(_) => Ok(None),
-            RxEndpointKind::Component {
+            ResolvedRxChain::Lumped(_) => Ok(None),
+            ResolvedRxChain::Component {
                 antenna, receiver, ..
             } => {
                 let (theta, phi) = self.pattern_angles(pointing)?;
@@ -365,8 +366,8 @@ impl<'a> RxEndpoint<'a> {
 
     fn antenna(&self) -> Option<&'a Antenna> {
         match &self.kind {
-            RxEndpointKind::Component { antenna, .. } => Some(antenna),
-            RxEndpointKind::Lumped(_) => None,
+            ResolvedRxChain::Component { antenna, .. } => Some(antenna),
+            ResolvedRxChain::Lumped(_) => None,
         }
     }
 }
@@ -526,9 +527,9 @@ mod tests {
     }
 
     #[test]
-    fn test_tx_endpoint_eirp_with_port_feed_loss() {
+    fn test_resolve_tx_eirp_with_port_feed_loss() {
         let (payload, terminal) = transceiver_payload();
-        let tx = payload.tx_endpoint(terminal).unwrap();
+        let tx = payload.resolve_tx(terminal).unwrap();
         // EIRP = 46 + 10·log10(10) − 0 (OBO) − 1 (feed) = 55 dBW
         let eirp = tx.eirp_at(29.0.ghz(), Pointing::Boresight).unwrap();
         assert_approx_eq!(eirp.as_f64(), 55.0, atol <= 1e-10);
@@ -538,9 +539,9 @@ mod tests {
     }
 
     #[test]
-    fn test_rx_endpoint_gt_noise_temp_receiver() {
+    fn test_resolve_rx_gt_noise_temp_receiver() {
         let (payload, terminal) = transceiver_payload();
-        let rx = payload.rx_endpoint(terminal).unwrap();
+        let rx = payload.resolve_rx(terminal).unwrap();
         // G/T = 30 − 10·log10(500) = 3.0103 dB/K
         let gt = rx.gt_at(29.0.ghz(), Pointing::Boresight).unwrap();
         assert_approx_eq!(gt.as_f64(), 3.0103, atol <= 1e-3);
@@ -592,7 +593,7 @@ mod tests {
             })
             .unwrap();
 
-        let endpoint = payload.rx_endpoint(terminal).unwrap();
+        let endpoint = payload.resolve_rx(terminal).unwrap();
         let loss_linear = 10.0_f64.powf(3.0 / 10.0);
         let expected_t_sys = 150.0 + 290.0 * (loss_linear - 1.0) + 500.0 * loss_linear;
         assert_approx_eq!(
@@ -616,7 +617,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rx_endpoint_cascade_synthesizes_feed_stage() {
+    fn test_resolve_rx_cascade_synthesizes_feed_stage() {
         // T_ant=265 K on the port, feed=3 dB on the port, chain: single stage
         // NF=5 dB / G=20 dB. Friis with the synthesized feed:
         // T_sys = T_ant + 290·(L−1) + T_rx/(1/L)
@@ -653,7 +654,7 @@ mod tests {
             })
             .unwrap();
 
-        let endpoint = payload.rx_endpoint(terminal).unwrap();
+        let endpoint = payload.resolve_rx(terminal).unwrap();
         let feed_linear = 10.0_f64.powf(-3.0 / 10.0);
         let t_feed = 290.0 * (10.0_f64.powf(3.0 / 10.0) - 1.0);
         let t_rx = noise_figure_to_temperature(5.0.db());
@@ -680,8 +681,8 @@ mod tests {
             })
             .unwrap();
 
-        let tx = payload.tx_endpoint(terminal).unwrap();
-        let rx = payload.rx_endpoint(terminal).unwrap();
+        let tx = payload.resolve_tx(terminal).unwrap();
+        let rx = payload.resolve_rx(terminal).unwrap();
         let pointing = Pointing::off_boresight(Angle::degrees(45.0));
         assert_approx_eq!(
             tx.eirp_at(29.0.ghz(), pointing).unwrap().as_f64(),
@@ -720,7 +721,7 @@ mod tests {
             })
             .unwrap();
 
-        let tx = payload.tx_endpoint(terminal).unwrap();
+        let tx = payload.resolve_tx(terminal).unwrap();
         assert_eq!(tx.band(), narrow);
     }
 
@@ -746,7 +747,7 @@ mod tests {
             })
             .unwrap();
 
-        let err = payload.tx_endpoint(terminal).unwrap_err();
+        let err = payload.resolve_tx(terminal).unwrap_err();
         assert!(matches!(err, ResolveError::EmptyBandIntersection(_)));
         assert!(err.to_string().contains("disjoint"));
     }
@@ -762,16 +763,16 @@ mod tests {
             })
             .unwrap();
 
-        let err = payload.tx_endpoint(rx_only).unwrap_err();
+        let err = payload.resolve_tx(rx_only).unwrap_err();
         assert!(matches!(err, ResolveError::NotATransmitTerminal(_)));
         assert!(err.to_string().contains("no transmit chain"));
-        assert!(payload.rx_endpoint(rx_only).is_ok());
+        assert!(payload.resolve_rx(rx_only).is_ok());
     }
 
     #[test]
     fn test_unknown_terminal_is_error() {
         let payload = CommsPayload::new();
-        let err = payload.tx_endpoint(TerminalId::default()).unwrap_err();
+        let err = payload.resolve_tx(TerminalId::default()).unwrap_err();
         assert!(matches!(err, ResolveError::UnknownTerminal(_)));
     }
 }

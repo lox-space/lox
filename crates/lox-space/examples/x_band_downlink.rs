@@ -7,7 +7,7 @@
 //! A 500 km EO satellite downlinks payload data in the 8.025–8.4 GHz EESS
 //! band to a 3.7 m ground station at 5° elevation (worst-case geometry).
 //! The example builds both platforms as `CommsPayload` hardware
-//! inventories, resolves their terminals into link endpoints, evaluates the
+//! inventories, resolves their terminals for link evaluation, computes the
 //! modulation-agnostic and DVB-S2-style modulated budgets, and checks the
 //! downlink against the ITU RR Article 21.16 power flux density mask.
 //!
@@ -51,7 +51,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Spacecraft: 0.25 m gimballed dish, 2 W X-band amplifier with 0.5 dB
     // output back-off, 0.8 dB feed run. The inventory is wired explicitly:
     // ports connect radios to antennas, terminals expose the operational
-    // endpoints that link analysis addresses.
+    // identities that link analysis addresses.
     // ------------------------------------------------------------------
     let mut spacecraft = CommsPayload::new();
     let dish = spacecraft.add_antenna("payload dish", Antenna::parabolic(0.25.m(), 0.6)?);
@@ -95,10 +95,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("{ground_station}");
 
     // ------------------------------------------------------------------
-    // Resolve the terminals into link endpoints and inspect the figures.
+    // Resolve the terminals and inspect the figures.
     // ------------------------------------------------------------------
-    let tx = spacecraft.tx_endpoint(downlink_terminal)?;
-    let rx = ground_station.rx_endpoint(station_terminal)?;
+    let tx = spacecraft.resolve_tx(downlink_terminal)?;
+    let rx = ground_station.resolve_rx(station_terminal)?;
 
     // 2° residual pointing error on the spacecraft gimbal; the station
     // autotracks on boresight. Trajectory-driven analyses would pass
