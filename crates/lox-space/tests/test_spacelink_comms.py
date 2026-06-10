@@ -446,9 +446,7 @@ def test_tdrs_ka_band_return_link():
     tx_line_loss_db = 1.0
 
     tx_pattern = lox.ParabolicPattern(tx_diameter * lox.m, tx_efficiency)
-    tx_antenna = lox.PatternedAntenna(
-        pattern=tx_pattern, boresight=[0.0, 0.0, 1.0]
-    )
+    tx_antenna = lox.PatternedAntenna(pattern=tx_pattern)
     tx = lox.AmplifierTransmitter(
         frequency=freq,
         power=tx_power_w * lox.W,
@@ -476,9 +474,7 @@ def test_tdrs_ka_band_return_link():
     rx_nf_db = 3.0
 
     rx_pattern = lox.ParabolicPattern(rx_diameter * lox.m, rx_efficiency)
-    rx_antenna = lox.PatternedAntenna(
-        pattern=rx_pattern, boresight=[0.0, 0.0, 1.0]
-    )
+    rx_antenna = lox.PatternedAntenna(pattern=rx_pattern)
     rx = lox.CascadeReceiver.from_lna_and_noise_figure(
         frequency=freq,
         antenna_noise_temperature=t_ant * lox.K,
