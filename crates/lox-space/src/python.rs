@@ -12,11 +12,11 @@ use crate::analysis::python::{
 };
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
-    PyAmplifierTransmitter, PyCascadeReceiver, PyChannel, PyCommunicationSystem, PyConstantAntenna,
-    PyDecibel, PyDipolePattern, PyEirpTransmitter, PyGaussianPattern, PyGtReceiver,
-    PyInterferenceStats, PyLinkStats, PyModulatedLinkStats, PyModulation, PyNoiseStage,
-    PyNoiseTempReceiver, PyParabolicPattern, PyPatternedAntenna, freq_overlap, fspl, pfd_mask,
-    power_flux_density, slant_range,
+    PyAmplifierTransmitter, PyAntennaFrame, PyCascadeReceiver, PyChannel, PyCommunicationSystem,
+    PyConstantAntenna, PyDecibel, PyDipolePattern, PyEirpTransmitter, PyGaussianPattern,
+    PyGtReceiver, PyInterferenceStats, PyLinkStats, PyModulatedLinkStats, PyModulation,
+    PyNoiseStage, PyNoiseTempReceiver, PyParabolicPattern, PyPatternedAntenna, freq_overlap, fspl,
+    pfd_mask, power_flux_density, slant_range,
 };
 use crate::constellations::python::{PyConstellation, PyConstellationSatellite};
 use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
@@ -63,6 +63,7 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyParabolicPattern>()?;
     m.add_class::<PyGaussianPattern>()?;
     m.add_class::<PyDipolePattern>()?;
+    m.add_class::<PyAntennaFrame>()?;
     m.add_class::<PyConstantAntenna>()?;
     m.add_class::<PyPatternedAntenna>()?;
     m.add_class::<PyAmplifierTransmitter>()?;

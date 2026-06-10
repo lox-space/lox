@@ -324,19 +324,19 @@ def test_simple_antenna_repr_roundtrip():
 
 def test_complex_antenna():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
-    a = lox.PatternedAntenna(pattern=p, boresight=[0.0, 0.0, 1.0])
+    a = lox.PatternedAntenna(pattern=p)
     gain = a.gain(29e9 * lox.Hz, theta=0.0 * lox.deg)
     assert float(gain) == pytest.approx(46.01119, rel=1e-4)
 
 
 def test_complex_antenna_invalid_pattern():
     with pytest.raises(ValueError, match="expected a ParabolicPattern"):
-        lox.PatternedAntenna(pattern="not a pattern", boresight=[0.0, 0.0, 1.0])
+        lox.PatternedAntenna(pattern="not a pattern")
 
 
 def test_complex_antenna_pickle():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
-    a = lox.PatternedAntenna(pattern=p, boresight=[0.0, 0.0, 1.0])
+    a = lox.PatternedAntenna(pattern=p)
     restored = pickle.loads(pickle.dumps(a))
     # PatternedAntenna doesn't have __eq__, verify via gain
     assert float(restored.gain(29e9 * lox.Hz, 0.0 * lox.deg)) == pytest.approx(
@@ -346,10 +346,63 @@ def test_complex_antenna_pickle():
 
 def test_complex_antenna_repr():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
-    a = lox.PatternedAntenna(pattern=p, boresight=[0.0, 0.0, 1.0])
+    a = lox.PatternedAntenna(pattern=p)
     r = repr(a)
     assert r.startswith("PatternedAntenna(pattern=ParabolicPattern(")
-    assert "boresight=[0.0, 0.0, 1.0]" in r
+    assert "frame=AntennaFrame(boresight=[0.0, 0.0, 1.0]" in r
+
+
+def test_antenna_frame_identity_axes_and_pickle():
+    frame = lox.AntennaFrame.identity()
+    assert frame.x() == [1.0, 0.0, 0.0]
+    assert frame.y() == [0.0, 1.0, 0.0]
+    assert frame.z() == [0.0, 0.0, 1.0]
+    assert pickle.loads(pickle.dumps(frame)) == frame
+
+
+def test_antenna_frame_angles_for():
+    frame = lox.AntennaFrame.from_boresight_and_reference(
+        [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]
+    )
+    theta, phi = frame.angles_for([1.0, 0.0, 0.0])
+    assert float(theta) == pytest.approx(0.0, abs=1e-12)
+    assert float(phi) == pytest.approx(0.0, abs=1e-12)
+
+    theta, phi = frame.angles_for([0.0, 0.0, 1.0])
+    assert float(theta) == pytest.approx(math.pi / 2.0, abs=1e-12)
+    assert float(phi) == pytest.approx(0.0, abs=1e-12)
+
+
+def test_antenna_frame_rejects_invalid_inputs():
+    with pytest.raises(ValueError, match="invalid boresight"):
+        lox.AntennaFrame.from_boresight_and_reference(
+            [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]
+        )
+    with pytest.raises(ValueError, match="invalid reference"):
+        lox.AntennaFrame.from_boresight_and_reference(
+            [0.0, 0.0, 1.0], [0.0, 0.0, 1.0]
+        )
+    with pytest.raises(ValueError, match="invalid direction"):
+        lox.AntennaFrame.identity().angles_for([0.0, 0.0, 0.0])
+
+
+def test_complex_antenna_gain_toward_uses_frame():
+    p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
+    frame = lox.AntennaFrame.from_boresight_and_reference(
+        [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]
+    )
+    a = lox.PatternedAntenna(pattern=p, frame=frame)
+    on_axis = a.gain_toward(29e9 * lox.Hz, [1.0, 0.0, 0.0])
+    off_axis = a.gain_toward(29e9 * lox.Hz, [0.0, 1.0, 0.0])
+    assert float(on_axis) == pytest.approx(float(a.peak_gain(29e9 * lox.Hz)), abs=1e-10)
+    assert float(off_axis) < float(on_axis)
+
+
+def test_complex_antenna_gain_toward_rejects_invalid_direction():
+    p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
+    a = lox.PatternedAntenna(pattern=p)
+    with pytest.raises(ValueError, match="invalid direction"):
+        a.gain_toward(29e9 * lox.Hz, [0.0, 0.0, 0.0])
 
 
 # --- Transmitter ---
@@ -995,7 +1048,7 @@ def test_communication_system_carrier_power():
 
 def test_communication_system_with_complex_antenna():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
-    ant = lox.PatternedAntenna(pattern=p, boresight=[0.0, 0.0, 1.0])
+    ant = lox.PatternedAntenna(pattern=p)
     tx = lox.AmplifierTransmitter(
         frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
     )
@@ -1041,7 +1094,10 @@ def test_communication_system_invalid_receiver():
 
 def test_complex_antenna_gaussian_repr():
     p = lox.GaussianPattern(diameter=0.98 * lox.m, efficiency=0.45)
-    a = lox.PatternedAntenna(pattern=p, boresight=[1.0, 0.0, 0.0])
+    frame = lox.AntennaFrame.from_boresight_and_reference(
+        [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]
+    )
+    a = lox.PatternedAntenna(pattern=p, frame=frame)
     r = repr(a)
     assert "GaussianPattern" in r
     # Pickle roundtrip
@@ -1053,7 +1109,10 @@ def test_complex_antenna_gaussian_repr():
 
 def test_complex_antenna_dipole_repr():
     d = lox.DipolePattern(length=0.005 * lox.m)
-    a = lox.PatternedAntenna(pattern=d, boresight=[0.0, 1.0, 0.0])
+    frame = lox.AntennaFrame.from_boresight_and_reference(
+        [0.0, 1.0, 0.0], [1.0, 0.0, 0.0]
+    )
+    a = lox.PatternedAntenna(pattern=d, frame=frame)
     r = repr(a)
     assert "DipolePattern" in r
     # Pickle roundtrip
@@ -1065,7 +1124,7 @@ def test_complex_antenna_dipole_repr():
 
 def test_complex_antenna_peak_gain():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
-    a = lox.PatternedAntenna(pattern=p, boresight=[0.0, 0.0, 1.0])
+    a = lox.PatternedAntenna(pattern=p)
     pg = a.peak_gain(frequency=29e9 * lox.Hz)
     assert float(pg) == pytest.approx(46.01119, rel=1e-4)
 
@@ -1225,7 +1284,7 @@ def test_pfd_mask():
 
 def test_transmitter_eirp_complex_antenna():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
-    a = lox.PatternedAntenna(pattern=p, boresight=[0.0, 0.0, 1.0])
+    a = lox.PatternedAntenna(pattern=p)
     tx = lox.AmplifierTransmitter(
         frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
     )
