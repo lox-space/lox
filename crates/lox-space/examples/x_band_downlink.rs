@@ -31,7 +31,7 @@ use lox_space::comms::receiver::{CascadeReceiver, NoiseStage, Receiver};
 use lox_space::comms::transmitter::AmplifierTransmitter;
 use lox_space::comms::utils::slant_range;
 use lox_space::units::{
-    Angle, Decibel, DecibelUnits, Distance, Frequency, FrequencyUnits, Power, Temperature,
+    AngleUnits, DecibelUnits, DistanceUnits, FrequencyUnits, PowerUnits, TemperatureUnits,
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -40,12 +40,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // ------------------------------------------------------------------
     let eess_band = FrequencyRange::new(8.025.ghz(), 8.4.ghz())?;
     let carrier = 8.2.ghz();
-    let elevation = Angle::degrees(5.0);
-    let range = slant_range(
-        elevation,
-        Distance::kilometers(6371.0),
-        Distance::kilometers(500.0),
-    );
+    let elevation = 5.0.deg();
+    let range = slant_range(elevation, 6371.0.km(), 500.0.km());
     println!(
         "Slant range at {}° elevation: {:.0} km",
         elevation.to_degrees(),
@@ -62,13 +58,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dish = spacecraft.add_antenna(
         "payload dish",
         Antenna::Patterned(PatternedAntenna {
-            pattern: AntennaPattern::Parabolic(ParabolicPattern::new(Distance::meters(0.25), 0.6)?),
+            pattern: AntennaPattern::Parabolic(ParabolicPattern::new(0.25.m(), 0.6)?),
             frame: AntennaFrame::identity(),
         }),
     );
     let amplifier = spacecraft.add_transmitter(
         "x-band sspa",
-        AmplifierTransmitter::new(eess_band, Power::watts(2.0), 0.5.db())?,
+        AmplifierTransmitter::new(eess_band, 2.0.w(), 0.5.db())?,
     );
     let tx_port = spacecraft.add_tx_port(TxPort::new(
         "tx feed",
@@ -88,8 +84,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // clear-sky antenna noise temperature at low elevation. The single-
     // chain convenience constructor wires the same structure in one call.
     // ------------------------------------------------------------------
-    let lna = NoiseStage::new(35.0.db(), Temperature::kelvin(50.0))?;
-    let downconverter = NoiseStage::new(0.0.db(), Temperature::kelvin(1540.0))?; // NF ≈ 8 dB
+    let lna = NoiseStage::new(35.0.db(), 50.0.k())?;
+    let downconverter = NoiseStage::new(0.0.db(), 1540.0.k())?; // NF ≈ 8 dB
     let front_end = CascadeReceiver::new(
         eess_band,
         vec![lna, downconverter],
@@ -99,12 +95,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (ground_station, station_terminal) = CommsPayload::receiver_only(
         "3.7m station",
         Antenna::Patterned(PatternedAntenna {
-            pattern: AntennaPattern::Parabolic(ParabolicPattern::new(Distance::meters(3.7), 0.6)?),
+            pattern: AntennaPattern::Parabolic(ParabolicPattern::new(3.7.m(), 0.6)?),
             frame: AntennaFrame::identity(),
         }),
         Receiver::Cascade(front_end),
         0.3.db(),
-        Temperature::kelvin(60.0),
+        60.0.k(),
         Some(eess_band),
     )?;
 
@@ -120,7 +116,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // 2° residual pointing error on the spacecraft gimbal; the station
     // autotracks on boresight. Trajectory-driven analyses would pass
     // `Pointing::Direction` with line-of-sight vectors instead.
-    let tx_pointing = Pointing::off_boresight(Angle::degrees(2.0));
+    let tx_pointing = Pointing::off_boresight(2.0.deg());
     let rx_pointing = Pointing::Boresight;
 
     println!("Effective TX band:   {}", tx.band());
@@ -147,9 +143,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         rain: 1.2.db(),
         gaseous: 0.4.db(),
         scintillation: 0.3.db(),
-        atmospheric: Decibel::new(0.0),
+        atmospheric: 0.0.db(),
         cloud: 0.1.db(),
-        depolarization: Decibel::new(0.0),
+        depolarization: 0.0.db(),
     };
 
     // ------------------------------------------------------------------
@@ -208,12 +204,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Regulatory check: PFD on the ground vs. the RR Art. 21.16 mask
     // (−150 dBW/m²/4 kHz below 5° for the 8.025–8.4 GHz EESS allocation).
     // ------------------------------------------------------------------
-    let pfd = power_flux_density(
-        modulated.link.eirp,
-        range,
-        channel.bandwidth(),
-        Frequency::kilohertz(4.0),
-    );
+    let pfd = power_flux_density(modulated.link.eirp, range, channel.bandwidth(), 4.0.khz());
     let mask = PfdMask::art_21_16((-150.0).db());
     let limit = mask.value_at(elevation);
     println!(

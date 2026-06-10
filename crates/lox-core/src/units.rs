@@ -1212,6 +1212,33 @@ impl Display for Temperature {
     }
 }
 
+/// Extension trait for ergonomic temperature construction.
+///
+/// # Example
+///
+/// ```
+/// use lox_core::units::TemperatureUnits;
+///
+/// let t = 290.k();
+/// assert_eq!(t.to_kelvin(), 290.0);
+/// ```
+pub trait TemperatureUnits {
+    /// Creates a temperature from a value in Kelvin.
+    fn k(&self) -> Temperature;
+}
+
+impl TemperatureUnits for f64 {
+    fn k(&self) -> Temperature {
+        Temperature::kelvin(*self)
+    }
+}
+
+impl TemperatureUnits for i64 {
+    fn k(&self) -> Temperature {
+        Temperature::kelvin(*self as f64)
+    }
+}
+
 type Pascals = f64;
 
 /// Pressure in pascals.
@@ -1308,6 +1335,43 @@ impl Display for Power {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.0.fmt(f)?;
         write!(f, " W")
+    }
+}
+
+/// Extension trait for ergonomic power construction.
+///
+/// # Example
+///
+/// ```
+/// use lox_core::units::PowerUnits;
+///
+/// let p = 2.w();
+/// assert_eq!(p.to_watts(), 2.0);
+/// ```
+pub trait PowerUnits {
+    /// Creates a power from a value in watts.
+    fn w(&self) -> Power;
+    /// Creates a power from a value in kilowatts.
+    fn kw(&self) -> Power;
+}
+
+impl PowerUnits for f64 {
+    fn w(&self) -> Power {
+        Power::watts(*self)
+    }
+
+    fn kw(&self) -> Power {
+        Power::kilowatts(*self)
+    }
+}
+
+impl PowerUnits for i64 {
+    fn w(&self) -> Power {
+        Power::watts(*self as f64)
+    }
+
+    fn kw(&self) -> Power {
+        Power::kilowatts(*self as f64)
     }
 }
 
