@@ -26,7 +26,7 @@ use lox_space::comms::link_budget::{EnvironmentalLosses, LinkStats};
 use lox_space::comms::payload::{CommsPayload, TxChain, TxPort};
 use lox_space::comms::pfd::{PfdMask, power_flux_density};
 use lox_space::comms::pointing::Pointing;
-use lox_space::comms::receiver::{CascadeReceiver, NoiseStage, Receiver};
+use lox_space::comms::receiver::CascadeReceiver;
 use lox_space::comms::transmitter::AmplifierTransmitter;
 use lox_space::comms::utils::slant_range;
 use lox_space::units::{
@@ -74,22 +74,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     // clear-sky antenna noise temperature at low elevation. The single-
     // chain convenience constructor wires the same structure in one call.
     // ------------------------------------------------------------------
-    let lna = NoiseStage::new(35.0.db(), 50.0.k())?;
-    let downconverter = NoiseStage::new(0.0.db(), 1540.0.k())?; // NF ≈ 8 dB
-    let front_end = CascadeReceiver::new(
-        eess_band,
-        vec![lna, downconverter],
-        0.5.db(), // demodulator loss
-        0.5.db(), // implementation loss
-    )?;
-    let (ground_station, station_terminal) = CommsPayload::receiver_only(
-        "3.7m station",
-        Antenna::parabolic(3.7.m(), 0.6)?,
-        Receiver::Cascade(front_end),
-        0.3.db(),
-        60.0.k(),
-        Some(eess_band),
-    )?;
+    let front_end = CascadeReceiver::builder(eess_band)
+        .stage(35.0.db(), 50.0.k()) // LNA
+        .stage(0.0.db(), 1540.0.k()) // downconverter, NF ≈ 8 dB
+        .demodulator_loss(0.5.db())
+        .implementation_loss(0.5.db())
+        .build()?;
+    let (ground_station, station_terminal) =
+        CommsPayload::receiver_only("3.7m station", Antenna::parabolic(3.7.m(), 0.6)?, front_end)
+            .feed_loss(0.3.db())
+            .antenna_noise_temperature(60.0.k())
+            .band(eess_band)
+            .build()?;
 
     println!("\n{spacecraft}");
     println!("{ground_station}");

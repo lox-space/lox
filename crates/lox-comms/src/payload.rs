@@ -665,120 +665,68 @@ impl CommsPayload {
         Self::default()
     }
 
-    /// Creates a single-terminal transmit-only payload.
+    /// Starts building a single-terminal transmit-only payload.
     ///
-    /// Wires `antenna` to `transmitter` through one TX port with the given
-    /// feed loss and optional band constraint, and exposes it as a terminal
-    /// named `name`.
+    /// Wires `antenna` to `transmitter` through one TX port and exposes it
+    /// as a terminal named `name`. Unset fields default to a lossless feed
+    /// and an unconstrained band.
     pub fn transmitter_only(
         name: impl Into<String>,
         antenna: Antenna,
         transmitter: AmplifierTransmitter,
-        feed_loss: Decibel,
-        band: Option<FrequencyRange>,
-    ) -> Result<(Self, TerminalId), PayloadError> {
-        let name = name.into();
-        let mut payload = Self::new();
-        let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
-        let transmitter = payload.add_transmitter(format!("{name} transmitter"), transmitter);
-        let port = payload.add_tx_port(TxPort::new(
-            format!("{name} feed"),
+    ) -> TransmitterOnlyBuilder {
+        TransmitterOnlyBuilder {
+            name: name.into(),
             antenna,
             transmitter,
-            feed_loss,
-            band,
-        )?)?;
-        let terminal = payload
-            .add_terminal(Terminal {
-                name,
-                role: TerminalRole::Tx(TxChain::Component(port)),
-            })
-            .expect("freshly inserted IDs are valid");
-        Ok((payload, terminal))
+            feed_loss: Decibel::new(0.0),
+            band: None,
+        }
     }
 
-    /// Creates a single-terminal receive-only payload.
+    /// Starts building a single-terminal receive-only payload.
     ///
-    /// Wires `antenna` to `receiver` through one RX port with the given feed
-    /// loss, clear-sky antenna noise temperature, and optional band
-    /// constraint, and exposes it as a terminal named `name`.
-    ///
+    /// Wires `antenna` to `receiver` through one RX port and exposes it as a
+    /// terminal named `name`. Unset fields default to a lossless feed, a 0 K
+    /// antenna noise temperature, and an unconstrained band.
     pub fn receiver_only(
         name: impl Into<String>,
         antenna: Antenna,
-        receiver: Receiver,
-        feed_loss: Decibel,
-        antenna_noise_temperature: Temperature,
-        band: Option<FrequencyRange>,
-    ) -> Result<(Self, TerminalId), PayloadError> {
-        let name = name.into();
-        let mut payload = Self::new();
-        let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
-        let receiver = payload.add_receiver(format!("{name} receiver"), receiver);
-        let port = payload.add_rx_port(RxPort::new(
-            format!("{name} feed"),
+        receiver: impl Into<Receiver>,
+    ) -> ReceiverOnlyBuilder {
+        ReceiverOnlyBuilder {
+            name: name.into(),
             antenna,
-            receiver,
-            feed_loss,
-            antenna_noise_temperature,
-            band,
-        )?)?;
-        let terminal = payload
-            .add_terminal(Terminal {
-                name,
-                role: TerminalRole::Rx(RxChain::Component(port)),
-            })
-            .expect("freshly inserted IDs are valid");
-        Ok((payload, terminal))
+            receiver: receiver.into(),
+            feed_loss: Decibel::new(0.0),
+            antenna_noise_temperature: Temperature::kelvin(0.0),
+            band: None,
+        }
     }
 
-    /// Creates a single-terminal transceiver payload sharing one antenna.
+    /// Starts building a single-terminal transceiver payload sharing one
+    /// antenna.
     ///
     /// Wires `antenna` to both `transmitter` and `receiver` through one TX
     /// and one RX port (diplexer-style) and exposes them as one transceiver
-    /// terminal named `name`.
-    ///
-    #[allow(clippy::too_many_arguments)]
+    /// terminal named `name`. Unset fields default to lossless feeds, a 0 K
+    /// antenna noise temperature, and an unconstrained band.
     pub fn transceiver(
         name: impl Into<String>,
         antenna: Antenna,
         transmitter: AmplifierTransmitter,
-        receiver: Receiver,
-        tx_feed_loss: Decibel,
-        rx_feed_loss: Decibel,
-        antenna_noise_temperature: Temperature,
-        band: Option<FrequencyRange>,
-    ) -> Result<(Self, TerminalId), PayloadError> {
-        let name = name.into();
-        let mut payload = Self::new();
-        let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
-        let transmitter = payload.add_transmitter(format!("{name} transmitter"), transmitter);
-        let receiver = payload.add_receiver(format!("{name} receiver"), receiver);
-        let tx_port = payload.add_tx_port(TxPort::new(
-            format!("{name} tx feed"),
+        receiver: impl Into<Receiver>,
+    ) -> TransceiverBuilder {
+        TransceiverBuilder {
+            name: name.into(),
             antenna,
             transmitter,
-            tx_feed_loss,
-            band,
-        )?)?;
-        let rx_port = payload.add_rx_port(RxPort::new(
-            format!("{name} rx feed"),
-            antenna,
-            receiver,
-            rx_feed_loss,
-            antenna_noise_temperature,
-            band,
-        )?)?;
-        let terminal = payload
-            .add_terminal(Terminal {
-                name,
-                role: TerminalRole::Transceiver {
-                    tx: TxChain::Component(tx_port),
-                    rx: RxChain::Component(rx_port),
-                },
-            })
-            .expect("freshly inserted IDs are valid");
-        Ok((payload, terminal))
+            receiver: receiver.into(),
+            tx_feed_loss: Decibel::new(0.0),
+            rx_feed_loss: Decibel::new(0.0),
+            antenna_noise_temperature: Temperature::kelvin(0.0),
+            band: None,
+        }
     }
 
     /// Creates a single-terminal payload from a lumped EIRP model.
@@ -1145,6 +1093,171 @@ impl fmt::Display for CommsPayload {
     }
 }
 
+/// Builder for a single-terminal transmit-only [`CommsPayload`].
+///
+/// Created via [`CommsPayload::transmitter_only`].
+#[derive(Debug, Clone)]
+pub struct TransmitterOnlyBuilder {
+    name: String,
+    antenna: Antenna,
+    transmitter: AmplifierTransmitter,
+    feed_loss: Decibel,
+    band: Option<FrequencyRange>,
+}
+
+impl TransmitterOnlyBuilder {
+    /// Sets the feed loss between transmitter output and antenna.
+    pub fn feed_loss(mut self, feed_loss: Decibel) -> Self {
+        self.feed_loss = feed_loss;
+        self
+    }
+
+    /// Narrows the supported frequency range for the path.
+    pub fn band(mut self, band: FrequencyRange) -> Self {
+        self.band = Some(band);
+        self
+    }
+
+    /// Builds the payload and returns it with its terminal.
+    pub fn build(self) -> Result<(CommsPayload, TerminalId), PayloadError> {
+        let mut payload = CommsPayload::new();
+        let antenna = payload.add_antenna(format!("{} antenna", self.name), self.antenna);
+        let transmitter =
+            payload.add_transmitter(format!("{} transmitter", self.name), self.transmitter);
+        let port = payload.add_tx_port(TxPort::new(
+            format!("{} feed", self.name),
+            antenna,
+            transmitter,
+            self.feed_loss,
+            self.band,
+        )?)?;
+        let terminal = payload.add_tx_terminal(self.name, TxChain::Component(port))?;
+        Ok((payload, terminal))
+    }
+}
+
+/// Builder for a single-terminal receive-only [`CommsPayload`].
+///
+/// Created via [`CommsPayload::receiver_only`].
+#[derive(Debug, Clone)]
+pub struct ReceiverOnlyBuilder {
+    name: String,
+    antenna: Antenna,
+    receiver: Receiver,
+    feed_loss: Decibel,
+    antenna_noise_temperature: Temperature,
+    band: Option<FrequencyRange>,
+}
+
+impl ReceiverOnlyBuilder {
+    /// Sets the feed loss between antenna and receiver input.
+    pub fn feed_loss(mut self, feed_loss: Decibel) -> Self {
+        self.feed_loss = feed_loss;
+        self
+    }
+
+    /// Sets the clear-sky antenna noise temperature at the port.
+    pub fn antenna_noise_temperature(mut self, temperature: Temperature) -> Self {
+        self.antenna_noise_temperature = temperature;
+        self
+    }
+
+    /// Narrows the supported frequency range for the path.
+    pub fn band(mut self, band: FrequencyRange) -> Self {
+        self.band = Some(band);
+        self
+    }
+
+    /// Builds the payload and returns it with its terminal.
+    pub fn build(self) -> Result<(CommsPayload, TerminalId), PayloadError> {
+        let mut payload = CommsPayload::new();
+        let antenna = payload.add_antenna(format!("{} antenna", self.name), self.antenna);
+        let receiver = payload.add_receiver(format!("{} receiver", self.name), self.receiver);
+        let port = payload.add_rx_port(RxPort::new(
+            format!("{} feed", self.name),
+            antenna,
+            receiver,
+            self.feed_loss,
+            self.antenna_noise_temperature,
+            self.band,
+        )?)?;
+        let terminal = payload.add_rx_terminal(self.name, RxChain::Component(port))?;
+        Ok((payload, terminal))
+    }
+}
+
+/// Builder for a single-terminal transceiver [`CommsPayload`] sharing one
+/// antenna.
+///
+/// Created via [`CommsPayload::transceiver`].
+#[derive(Debug, Clone)]
+pub struct TransceiverBuilder {
+    name: String,
+    antenna: Antenna,
+    transmitter: AmplifierTransmitter,
+    receiver: Receiver,
+    tx_feed_loss: Decibel,
+    rx_feed_loss: Decibel,
+    antenna_noise_temperature: Temperature,
+    band: Option<FrequencyRange>,
+}
+
+impl TransceiverBuilder {
+    /// Sets the feed loss between transmitter output and antenna.
+    pub fn tx_feed_loss(mut self, feed_loss: Decibel) -> Self {
+        self.tx_feed_loss = feed_loss;
+        self
+    }
+
+    /// Sets the feed loss between antenna and receiver input.
+    pub fn rx_feed_loss(mut self, feed_loss: Decibel) -> Self {
+        self.rx_feed_loss = feed_loss;
+        self
+    }
+
+    /// Sets the clear-sky antenna noise temperature at the receive port.
+    pub fn antenna_noise_temperature(mut self, temperature: Temperature) -> Self {
+        self.antenna_noise_temperature = temperature;
+        self
+    }
+
+    /// Narrows the supported frequency range for both paths.
+    pub fn band(mut self, band: FrequencyRange) -> Self {
+        self.band = Some(band);
+        self
+    }
+
+    /// Builds the payload and returns it with its terminal.
+    pub fn build(self) -> Result<(CommsPayload, TerminalId), PayloadError> {
+        let mut payload = CommsPayload::new();
+        let antenna = payload.add_antenna(format!("{} antenna", self.name), self.antenna);
+        let transmitter =
+            payload.add_transmitter(format!("{} transmitter", self.name), self.transmitter);
+        let receiver = payload.add_receiver(format!("{} receiver", self.name), self.receiver);
+        let tx_port = payload.add_tx_port(TxPort::new(
+            format!("{} tx feed", self.name),
+            antenna,
+            transmitter,
+            self.tx_feed_loss,
+            self.band,
+        )?)?;
+        let rx_port = payload.add_rx_port(RxPort::new(
+            format!("{} rx feed", self.name),
+            antenna,
+            receiver,
+            self.rx_feed_loss,
+            self.antenna_noise_temperature,
+            self.band,
+        )?)?;
+        let terminal = payload.add_transceiver_terminal(
+            self.name,
+            TxChain::Component(tx_port),
+            RxChain::Component(rx_port),
+        )?;
+        Ok((payload, terminal))
+    }
+}
+
 /// Errors produced while assembling a [`CommsPayload`].
 #[derive(Debug, Clone, PartialEq, Error)]
 #[non_exhaustive]
@@ -1469,14 +1582,13 @@ mod tests {
             "ka terminal",
             Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
             AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
-            Receiver::NoiseTemperature(
-                NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
-            ),
-            1.0.db(),
-            0.5.db(),
-            Temperature::kelvin(150.0),
-            Some(ka_band()),
+            NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
         )
+        .tx_feed_loss(1.0.db())
+        .rx_feed_loss(0.5.db())
+        .antenna_noise_temperature(Temperature::kelvin(150.0))
+        .band(ka_band())
+        .build()
         .unwrap();
 
         let terminal = payload.terminal(terminal).unwrap();

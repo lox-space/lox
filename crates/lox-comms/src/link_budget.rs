@@ -255,7 +255,7 @@ mod tests {
     use crate::band::FrequencyRange;
     use crate::channel::Modulation;
     use crate::payload::{CommsPayload, EirpModel, GtModel, TerminalId};
-    use crate::receiver::{NoiseTempReceiver, Receiver};
+    use crate::receiver::NoiseTempReceiver;
     use crate::transmitter::AmplifierTransmitter;
 
     use super::*;
@@ -271,20 +271,16 @@ mod tests {
             "tx",
             Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
             AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
-            1.0.db(),
-            None,
         )
+        .feed_loss(1.0.db())
+        .build()
         .unwrap();
         let (rx_payload, rx_terminal) = CommsPayload::receiver_only(
             "rx",
             Antenna::Constant(ConstantAntenna::new(30.0.db()).unwrap()),
-            Receiver::NoiseTemperature(
-                NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
-            ),
-            0.0.db(),
-            Temperature::kelvin(0.0),
-            None,
+            NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
         )
+        .build()
         .unwrap();
         (tx_payload, tx_terminal, rx_payload, rx_terminal)
     }

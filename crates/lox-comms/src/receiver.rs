@@ -198,7 +198,67 @@ impl TryFrom<CascadeReceiverRepr> for CascadeReceiver {
     }
 }
 
+/// Builder for [`CascadeReceiver`].
+///
+/// Created via [`CascadeReceiver::builder`]. Stages are appended in chain
+/// order (LNA first); unset losses default to 0 dB. Stage parameters are
+/// validated at [`CascadeReceiverBuilder::build`].
+#[derive(Debug, Clone)]
+pub struct CascadeReceiverBuilder {
+    band: FrequencyRange,
+    stages: Vec<(Decibel, Temperature)>,
+    demodulator_loss: Decibel,
+    implementation_loss: Decibel,
+}
+
+impl CascadeReceiverBuilder {
+    /// Appends a stage with the given gain and equivalent noise temperature.
+    pub fn stage(mut self, gain: Decibel, noise_temperature: Temperature) -> Self {
+        self.stages.push((gain, noise_temperature));
+        self
+    }
+
+    /// Sets the demodulator implementation loss.
+    pub fn demodulator_loss(mut self, loss: Decibel) -> Self {
+        self.demodulator_loss = loss;
+        self
+    }
+
+    /// Sets the other implementation losses.
+    pub fn implementation_loss(mut self, loss: Decibel) -> Self {
+        self.implementation_loss = loss;
+        self
+    }
+
+    /// Builds the receiver, validating all physical parameters.
+    pub fn build(self) -> Result<CascadeReceiver, NonPhysicalError> {
+        let stages = self
+            .stages
+            .into_iter()
+            .map(|(gain, noise_temperature)| NoiseStage::new(gain, noise_temperature))
+            .collect::<Result<Vec<_>, _>>()?;
+        CascadeReceiver::new(
+            self.band,
+            stages,
+            self.demodulator_loss,
+            self.implementation_loss,
+        )
+    }
+}
+
 impl CascadeReceiver {
+    /// Starts building a cascade receiver over the given band.
+    ///
+    /// Stages are appended in chain order; unset losses default to 0 dB.
+    pub fn builder(band: FrequencyRange) -> CascadeReceiverBuilder {
+        CascadeReceiverBuilder {
+            band,
+            stages: Vec::new(),
+            demodulator_loss: Decibel::new(0.0),
+            implementation_loss: Decibel::new(0.0),
+        }
+    }
+
     /// Creates a new cascade receiver from an ordered chain of stages
     /// (LNA first, then filters, mixers, etc.).
     ///
@@ -296,6 +356,18 @@ pub enum Receiver {
     NoiseTemperature(NoiseTempReceiver),
     /// Receiver with an N-stage cascade noise model.
     Cascade(CascadeReceiver),
+}
+
+impl From<NoiseTempReceiver> for Receiver {
+    fn from(receiver: NoiseTempReceiver) -> Self {
+        Receiver::NoiseTemperature(receiver)
+    }
+}
+
+impl From<CascadeReceiver> for Receiver {
+    fn from(receiver: CascadeReceiver) -> Self {
+        Receiver::Cascade(receiver)
+    }
 }
 
 impl Receiver {

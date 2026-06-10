@@ -2900,21 +2900,28 @@ class CommsPayload:
         name: str,
         antenna: ConstantAntenna | PatternedAntenna,
         transmitter: AmplifierTransmitter,
-        feed_loss: Decibel,
+        feed_loss: Decibel | None = None,
         band: FrequencyRange | None = None,
     ) -> tuple[CommsPayload, TerminalId]:
-        """Creates a single-terminal transmit-only payload."""
+        """Creates a single-terminal transmit-only payload.
+
+        ``feed_loss`` defaults to a lossless feed (0 dB).
+        """
         ...
     @staticmethod
     def receiver_only(
         name: str,
         antenna: ConstantAntenna | PatternedAntenna,
         receiver: NoiseTempReceiver | CascadeReceiver,
-        feed_loss: Decibel,
-        antenna_noise_temperature: Temperature,
+        feed_loss: Decibel | None = None,
+        antenna_noise_temperature: Temperature | None = None,
         band: FrequencyRange | None = None,
     ) -> tuple[CommsPayload, TerminalId]:
-        """Creates a single-terminal receive-only payload."""
+        """Creates a single-terminal receive-only payload.
+
+        ``feed_loss`` defaults to a lossless feed (0 dB) and
+        ``antenna_noise_temperature`` to 0 K.
+        """
         ...
     @staticmethod
     def transceiver(
@@ -2922,12 +2929,16 @@ class CommsPayload:
         antenna: ConstantAntenna | PatternedAntenna,
         transmitter: AmplifierTransmitter,
         receiver: NoiseTempReceiver | CascadeReceiver,
-        tx_feed_loss: Decibel,
-        rx_feed_loss: Decibel,
-        antenna_noise_temperature: Temperature,
+        tx_feed_loss: Decibel | None = None,
+        rx_feed_loss: Decibel | None = None,
+        antenna_noise_temperature: Temperature | None = None,
         band: FrequencyRange | None = None,
     ) -> tuple[CommsPayload, TerminalId]:
-        """Creates a single-terminal transceiver payload sharing one antenna."""
+        """Creates a single-terminal transceiver payload sharing one antenna.
+
+        Feed losses default to lossless (0 dB) and
+        ``antenna_noise_temperature`` to 0 K.
+        """
         ...
     @staticmethod
     def eirp_only(name: str, band: FrequencyRange, eirp: Decibel) -> tuple[CommsPayload, TerminalId]:
