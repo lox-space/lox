@@ -1683,6 +1683,17 @@ def test_for_link_error_paths():
     assert tx_payload.tx_band(tx_terminal) == KA_BAND
 
 
+def test_foreign_terminal_ids_are_rejected():
+    # Two payloads built with the same insertion order mint colliding
+    # internal keys; the payload identity must keep the handles apart.
+    payload_a, terminal_a = lox.CommsPayload.eirp_only("a", KA_BAND, 55.0 * lox.dB)
+    payload_b, terminal_b = lox.CommsPayload.eirp_only("b", KA_BAND, 99.0 * lox.dB)
+    assert terminal_a != terminal_b
+    with pytest.raises(ValueError, match="unknown terminal"):
+        payload_b.eirp_at(terminal_a, 29.0 * lox.GHz)
+    assert float(payload_a.eirp_at(terminal_a, 29.0 * lox.GHz)) == pytest.approx(55.0)
+
+
 def test_transceiver_static_and_direction_getter():
     payload, terminal = lox.CommsPayload.transceiver(
         "sat",

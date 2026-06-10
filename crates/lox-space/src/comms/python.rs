@@ -1637,42 +1637,42 @@ macro_rules! py_payload_id {
 
 py_payload_id!(
     /// Identifier of an antenna in a CommsPayload. Only valid for the payload
-    /// that minted it.
+    /// that minted it; other payloads reject it.
     "AntennaId", lox_comms::payload::AntennaId, PyAntennaId
 );
 py_payload_id!(
     /// Identifier of a transmitter in a CommsPayload. Only valid for the
-    /// payload that minted it.
+    /// payload that minted it; other payloads reject it.
     "TransmitterId", lox_comms::payload::TransmitterId, PyTransmitterId
 );
 py_payload_id!(
     /// Identifier of a receiver in a CommsPayload. Only valid for the payload
-    /// that minted it.
+    /// that minted it; other payloads reject it.
     "ReceiverId", lox_comms::payload::ReceiverId, PyReceiverId
 );
 py_payload_id!(
     /// Identifier of a lumped EIRP model in a CommsPayload. Only valid for
-    /// the payload that minted it.
+    /// the payload that minted it; other payloads reject it.
     "EirpModelId", lox_comms::payload::EirpModelId, PyEirpModelId
 );
 py_payload_id!(
     /// Identifier of a lumped G/T model in a CommsPayload. Only valid for the
-    /// payload that minted it.
+    /// payload that minted it; other payloads reject it.
     "GtModelId", lox_comms::payload::GtModelId, PyGtModelId
 );
 py_payload_id!(
     /// Identifier of a transmit port in a CommsPayload. Only valid for the
-    /// payload that minted it.
+    /// payload that minted it; other payloads reject it.
     "TxPortId", lox_comms::payload::TxPortId, PyTxPortId
 );
 py_payload_id!(
     /// Identifier of a receive port in a CommsPayload. Only valid for the
-    /// payload that minted it.
+    /// payload that minted it; other payloads reject it.
     "RxPortId", lox_comms::payload::RxPortId, PyRxPortId
 );
 py_payload_id!(
     /// Identifier of a terminal in a CommsPayload. Only valid for the payload
-    /// that minted it.
+    /// that minted it; other payloads reject it.
     "TerminalId", lox_comms::payload::TerminalId, PyTerminalId
 );
 

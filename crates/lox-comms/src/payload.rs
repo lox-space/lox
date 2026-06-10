@@ -16,6 +16,7 @@
 //! addressing is always by key.
 
 use std::fmt;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use lox_core::units::{Decibel, Temperature};
 use slotmap::{SlotMap, new_key_type};
@@ -28,23 +29,86 @@ use crate::receiver::Receiver;
 use crate::transmitter::AmplifierTransmitter;
 
 new_key_type! {
-    /// Identifier of an antenna in a [`CommsPayload`].
-    pub struct AntennaId;
-    /// Identifier of a component-tier transmitter in a [`CommsPayload`].
-    pub struct TransmitterId;
-    /// Identifier of a component-tier receiver in a [`CommsPayload`].
-    pub struct ReceiverId;
-    /// Identifier of a lumped EIRP model in a [`CommsPayload`].
-    pub struct EirpModelId;
-    /// Identifier of a lumped G/T model in a [`CommsPayload`].
-    pub struct GtModelId;
-    /// Identifier of a transmit port in a [`CommsPayload`].
-    pub struct TxPortId;
-    /// Identifier of a receive port in a [`CommsPayload`].
-    pub struct RxPortId;
-    /// Identifier of a terminal in a [`CommsPayload`].
-    pub struct TerminalId;
+    struct AntennaKey;
+    struct TransmitterKey;
+    struct ReceiverKey;
+    struct EirpModelKey;
+    struct GtModelKey;
+    struct TxPortKey;
+    struct RxPortKey;
+    struct TerminalKey;
 }
+
+/// Identity of the [`CommsPayload`] that minted an ID.
+///
+/// Fresh payloads draw a process-unique tag and clones share it, so IDs
+/// remain valid across clones but are rejected by any other payload.
+/// Deserialization mints a new tag. The default tag matches no payload.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+struct PayloadTag(u64);
+
+impl PayloadTag {
+    fn mint() -> Self {
+        static NEXT: AtomicU64 = AtomicU64::new(1);
+        Self(NEXT.fetch_add(1, Ordering::Relaxed))
+    }
+}
+
+macro_rules! payload_id_type {
+    ($(#[$doc:meta])* $id:ident($key:ident)) => {
+        $(#[$doc])*
+        ///
+        /// Only meaningful for the [`CommsPayload`] that minted it (or a
+        /// clone of it): every other payload rejects it. Deserialization
+        /// mints a fresh payload identity, so IDs issued before
+        /// serialization are rejected as well; look inventory up again by
+        /// name instead. The default value matches no payload.
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+        #[cfg_attr(
+            feature = "serde",
+            derive(serde::Serialize, serde::Deserialize),
+            serde(transparent)
+        )]
+        pub struct $id {
+            #[cfg_attr(feature = "serde", serde(skip))]
+            tag: PayloadTag,
+            key: $key,
+        }
+    };
+}
+
+payload_id_type!(
+    /// Identifier of an antenna in a [`CommsPayload`].
+    AntennaId(AntennaKey)
+);
+payload_id_type!(
+    /// Identifier of a component-tier transmitter in a [`CommsPayload`].
+    TransmitterId(TransmitterKey)
+);
+payload_id_type!(
+    /// Identifier of a component-tier receiver in a [`CommsPayload`].
+    ReceiverId(ReceiverKey)
+);
+payload_id_type!(
+    /// Identifier of a lumped EIRP model in a [`CommsPayload`].
+    EirpModelId(EirpModelKey)
+);
+payload_id_type!(
+    /// Identifier of a lumped G/T model in a [`CommsPayload`].
+    GtModelId(GtModelKey)
+);
+payload_id_type!(
+    /// Identifier of a transmit port in a [`CommsPayload`].
+    TxPortId(TxPortKey)
+);
+payload_id_type!(
+    /// Identifier of a receive port in a [`CommsPayload`].
+    RxPortId(RxPortKey)
+);
+payload_id_type!(
+    /// Identifier of a terminal in a [`CommsPayload`].
+    TerminalId(TerminalKey)
+);
 
 /// A named inventory item.
 ///
@@ -605,38 +669,60 @@ impl Terminal {
 }
 
 /// Communications hardware inventory and wiring for one platform.
-#[derive(Debug, Clone, Default)]
+///
+/// IDs are scoped to the payload that minted them (clones included);
+/// methods reject IDs minted by a different payload.
+#[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize, serde::Deserialize),
     serde(try_from = "CommsPayloadRepr")
 )]
 pub struct CommsPayload {
-    antennas: SlotMap<AntennaId, Named<Antenna>>,
-    transmitters: SlotMap<TransmitterId, Named<AmplifierTransmitter>>,
-    receivers: SlotMap<ReceiverId, Named<Receiver>>,
-    eirp_models: SlotMap<EirpModelId, EirpModel>,
-    gt_models: SlotMap<GtModelId, GtModel>,
-    tx_ports: SlotMap<TxPortId, TxPort>,
-    rx_ports: SlotMap<RxPortId, RxPort>,
-    terminals: SlotMap<TerminalId, Terminal>,
+    #[cfg_attr(feature = "serde", serde(skip))]
+    tag: PayloadTag,
+    antennas: SlotMap<AntennaKey, Named<Antenna>>,
+    transmitters: SlotMap<TransmitterKey, Named<AmplifierTransmitter>>,
+    receivers: SlotMap<ReceiverKey, Named<Receiver>>,
+    eirp_models: SlotMap<EirpModelKey, EirpModel>,
+    gt_models: SlotMap<GtModelKey, GtModel>,
+    tx_ports: SlotMap<TxPortKey, TxPort>,
+    rx_ports: SlotMap<RxPortKey, RxPort>,
+    terminals: SlotMap<TerminalKey, Terminal>,
+}
+
+impl Default for CommsPayload {
+    fn default() -> Self {
+        Self {
+            tag: PayloadTag::mint(),
+            antennas: SlotMap::with_key(),
+            transmitters: SlotMap::with_key(),
+            receivers: SlotMap::with_key(),
+            eirp_models: SlotMap::with_key(),
+            gt_models: SlotMap::with_key(),
+            tx_ports: SlotMap::with_key(),
+            rx_ports: SlotMap::with_key(),
+            terminals: SlotMap::with_key(),
+        }
+    }
 }
 
 /// Serde wire format for [`CommsPayload`]: mirrors the field layout so the
 /// representation is unchanged, but forces deserialization through
 /// [`CommsPayload::validate`] so persisted inventories uphold the same
-/// invariants as the construction API.
+/// invariants as the construction API. The deserialized payload carries a
+/// fresh identity: IDs minted before serialization are rejected.
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct CommsPayloadRepr {
-    antennas: SlotMap<AntennaId, Named<Antenna>>,
-    transmitters: SlotMap<TransmitterId, Named<AmplifierTransmitter>>,
-    receivers: SlotMap<ReceiverId, Named<Receiver>>,
-    eirp_models: SlotMap<EirpModelId, EirpModel>,
-    gt_models: SlotMap<GtModelId, GtModel>,
-    tx_ports: SlotMap<TxPortId, TxPort>,
-    rx_ports: SlotMap<RxPortId, RxPort>,
-    terminals: SlotMap<TerminalId, Terminal>,
+    antennas: SlotMap<AntennaKey, Named<Antenna>>,
+    transmitters: SlotMap<TransmitterKey, Named<AmplifierTransmitter>>,
+    receivers: SlotMap<ReceiverKey, Named<Receiver>>,
+    eirp_models: SlotMap<EirpModelKey, EirpModel>,
+    gt_models: SlotMap<GtModelKey, GtModel>,
+    tx_ports: SlotMap<TxPortKey, TxPort>,
+    rx_ports: SlotMap<RxPortKey, RxPort>,
+    terminals: SlotMap<TerminalKey, Terminal>,
 }
 
 #[cfg(feature = "serde")]
@@ -644,7 +730,8 @@ impl TryFrom<CommsPayloadRepr> for CommsPayload {
     type Error = PayloadError;
 
     fn try_from(repr: CommsPayloadRepr) -> Result<Self, Self::Error> {
-        let payload = CommsPayload {
+        let mut payload = CommsPayload {
+            tag: PayloadTag::mint(),
             antennas: repr.antennas,
             transmitters: repr.transmitters,
             receivers: repr.receivers,
@@ -654,6 +741,7 @@ impl TryFrom<CommsPayloadRepr> for CommsPayload {
             rx_ports: repr.rx_ports,
             terminals: repr.terminals,
         };
+        payload.retag();
         payload.validate()?;
         Ok(payload)
     }
@@ -759,10 +847,13 @@ impl CommsPayload {
 
     /// Adds an antenna to the inventory.
     pub fn add_antenna(&mut self, name: impl Into<String>, antenna: Antenna) -> AntennaId {
-        self.antennas.insert(Named {
-            name: name.into(),
-            value: antenna,
-        })
+        AntennaId {
+            tag: self.tag,
+            key: self.antennas.insert(Named {
+                name: name.into(),
+                value: antenna,
+            }),
+        }
     }
 
     /// Adds a component-tier transmitter to the inventory.
@@ -774,42 +865,60 @@ impl CommsPayload {
         name: impl Into<String>,
         transmitter: AmplifierTransmitter,
     ) -> TransmitterId {
-        self.transmitters.insert(Named {
-            name: name.into(),
-            value: transmitter,
-        })
+        TransmitterId {
+            tag: self.tag,
+            key: self.transmitters.insert(Named {
+                name: name.into(),
+                value: transmitter,
+            }),
+        }
     }
 
     /// Adds a component-tier receiver to the inventory.
     pub fn add_receiver(&mut self, name: impl Into<String>, receiver: Receiver) -> ReceiverId {
-        self.receivers.insert(Named {
-            name: name.into(),
-            value: receiver,
-        })
+        ReceiverId {
+            tag: self.tag,
+            key: self.receivers.insert(Named {
+                name: name.into(),
+                value: receiver,
+            }),
+        }
     }
 
     /// Adds a lumped EIRP model to the inventory.
     pub fn add_eirp_model(&mut self, model: EirpModel) -> EirpModelId {
-        self.eirp_models.insert(model)
+        EirpModelId {
+            tag: self.tag,
+            key: self.eirp_models.insert(model),
+        }
     }
 
     /// Adds a lumped G/T model to the inventory.
     pub fn add_gt_model(&mut self, model: GtModel) -> GtModelId {
-        self.gt_models.insert(model)
+        GtModelId {
+            tag: self.tag,
+            key: self.gt_models.insert(model),
+        }
     }
 
     /// Adds a transmit port, validating that the referenced antenna and
     /// transmitter exist in this payload.
     pub fn add_tx_port(&mut self, port: TxPort) -> Result<TxPortId, PayloadError> {
         self.validate_tx_port_wiring(&port)?;
-        Ok(self.tx_ports.insert(port))
+        Ok(TxPortId {
+            tag: self.tag,
+            key: self.tx_ports.insert(port),
+        })
     }
 
     /// Adds a receive port, validating that the referenced antenna and
     /// receiver exist in this payload.
     pub fn add_rx_port(&mut self, port: RxPort) -> Result<RxPortId, PayloadError> {
         self.validate_rx_port_wiring(&port)?;
-        Ok(self.rx_ports.insert(port))
+        Ok(RxPortId {
+            tag: self.tag,
+            key: self.rx_ports.insert(port),
+        })
     }
 
     /// Adds a terminal, validating that all referenced chains exist in this
@@ -823,7 +932,10 @@ impl CommsPayload {
                 self.validate_rx_chain(rx)?;
             }
         }
-        Ok(self.terminals.insert(terminal))
+        Ok(TerminalId {
+            tag: self.tag,
+            key: self.terminals.insert(terminal),
+        })
     }
 
     /// Re-validates the payload's wiring invariants.
@@ -881,20 +993,20 @@ impl CommsPayload {
     }
 
     fn validate_tx_port_wiring(&self, port: &TxPort) -> Result<(), PayloadError> {
-        if !self.antennas.contains_key(port.antenna) {
+        if self.antenna(port.antenna).is_none() {
             return Err(PayloadError::UnknownAntenna(port.antenna));
         }
-        if !self.transmitters.contains_key(port.transmitter) {
+        if self.transmitter(port.transmitter).is_none() {
             return Err(PayloadError::UnknownTransmitter(port.transmitter));
         }
         Ok(())
     }
 
     fn validate_rx_port_wiring(&self, port: &RxPort) -> Result<(), PayloadError> {
-        if !self.antennas.contains_key(port.antenna) {
+        if self.antenna(port.antenna).is_none() {
             return Err(PayloadError::UnknownAntenna(port.antenna));
         }
-        if !self.receivers.contains_key(port.receiver) {
+        if self.receiver(port.receiver).is_none() {
             return Err(PayloadError::UnknownReceiver(port.receiver));
         }
         Ok(())
@@ -902,10 +1014,10 @@ impl CommsPayload {
 
     fn validate_tx_chain(&self, chain: TxChain) -> Result<(), PayloadError> {
         match chain {
-            TxChain::Component(port) if !self.tx_ports.contains_key(port) => {
+            TxChain::Component(port) if self.tx_port(port).is_none() => {
                 Err(PayloadError::UnknownTxPort(port))
             }
-            TxChain::Lumped(model) if !self.eirp_models.contains_key(model) => {
+            TxChain::Lumped(model) if self.eirp_model(model).is_none() => {
                 Err(PayloadError::UnknownEirpModel(model))
             }
             _ => Ok(()),
@@ -914,59 +1026,125 @@ impl CommsPayload {
 
     fn validate_rx_chain(&self, chain: RxChain) -> Result<(), PayloadError> {
         match chain {
-            RxChain::Component(port) if !self.rx_ports.contains_key(port) => {
+            RxChain::Component(port) if self.rx_port(port).is_none() => {
                 Err(PayloadError::UnknownRxPort(port))
             }
-            RxChain::Lumped(model) if !self.gt_models.contains_key(model) => {
+            RxChain::Lumped(model) if self.gt_model(model).is_none() => {
                 Err(PayloadError::UnknownGtModel(model))
             }
             _ => Ok(()),
         }
     }
 
+    /// Stamps this payload's identity onto all stored wiring references.
+    ///
+    /// Deserialization strips ID tags from the wire format; this restores
+    /// them against the freshly minted payload identity.
+    #[cfg(feature = "serde")]
+    fn retag(&mut self) {
+        fn retag_tx(chain: &mut TxChain, tag: PayloadTag) {
+            match chain {
+                TxChain::Component(id) => id.tag = tag,
+                TxChain::Lumped(id) => id.tag = tag,
+            }
+        }
+        fn retag_rx(chain: &mut RxChain, tag: PayloadTag) {
+            match chain {
+                RxChain::Component(id) => id.tag = tag,
+                RxChain::Lumped(id) => id.tag = tag,
+            }
+        }
+        let tag = self.tag;
+        for port in self.tx_ports.values_mut() {
+            port.antenna.tag = tag;
+            port.transmitter.tag = tag;
+        }
+        for port in self.rx_ports.values_mut() {
+            port.antenna.tag = tag;
+            port.receiver.tag = tag;
+        }
+        for terminal in self.terminals.values_mut() {
+            match &mut terminal.role {
+                TerminalRole::Tx(tx) => retag_tx(tx, tag),
+                TerminalRole::Rx(rx) => retag_rx(rx, tag),
+                TerminalRole::Transceiver { tx, rx } => {
+                    retag_tx(tx, tag);
+                    retag_rx(rx, tag);
+                }
+            }
+        }
+    }
+
     /// Returns the antenna with the given ID.
     pub fn antenna(&self, id: AntennaId) -> Option<&Named<Antenna>> {
-        self.antennas.get(id)
+        if id.tag != self.tag {
+            return None;
+        }
+        self.antennas.get(id.key)
     }
 
     /// Returns the transmitter with the given ID.
     pub fn transmitter(&self, id: TransmitterId) -> Option<&Named<AmplifierTransmitter>> {
-        self.transmitters.get(id)
+        if id.tag != self.tag {
+            return None;
+        }
+        self.transmitters.get(id.key)
     }
 
     /// Returns the receiver with the given ID.
     pub fn receiver(&self, id: ReceiverId) -> Option<&Named<Receiver>> {
-        self.receivers.get(id)
+        if id.tag != self.tag {
+            return None;
+        }
+        self.receivers.get(id.key)
     }
 
     /// Returns the lumped EIRP model with the given ID.
     pub fn eirp_model(&self, id: EirpModelId) -> Option<&EirpModel> {
-        self.eirp_models.get(id)
+        if id.tag != self.tag {
+            return None;
+        }
+        self.eirp_models.get(id.key)
     }
 
     /// Returns the lumped G/T model with the given ID.
     pub fn gt_model(&self, id: GtModelId) -> Option<&GtModel> {
-        self.gt_models.get(id)
+        if id.tag != self.tag {
+            return None;
+        }
+        self.gt_models.get(id.key)
     }
 
     /// Returns the transmit port with the given ID.
     pub fn tx_port(&self, id: TxPortId) -> Option<&TxPort> {
-        self.tx_ports.get(id)
+        if id.tag != self.tag {
+            return None;
+        }
+        self.tx_ports.get(id.key)
     }
 
     /// Returns the receive port with the given ID.
     pub fn rx_port(&self, id: RxPortId) -> Option<&RxPort> {
-        self.rx_ports.get(id)
+        if id.tag != self.tag {
+            return None;
+        }
+        self.rx_ports.get(id.key)
     }
 
     /// Returns the terminal with the given ID.
     pub fn terminal(&self, id: TerminalId) -> Option<&Terminal> {
-        self.terminals.get(id)
+        if id.tag != self.tag {
+            return None;
+        }
+        self.terminals.get(id.key)
     }
 
     /// Iterates over all terminals.
     pub fn terminals(&self) -> impl Iterator<Item = (TerminalId, &Terminal)> {
-        self.terminals.iter()
+        let tag = self.tag;
+        self.terminals
+            .iter()
+            .map(move |(key, terminal)| (TerminalId { tag, key }, terminal))
     }
 
     /// Returns the first terminal with the given name, if any.
@@ -976,7 +1154,7 @@ impl CommsPayload {
         self.terminals
             .iter()
             .find(|(_, terminal)| terminal.name == name)
-            .map(|(id, _)| id)
+            .map(|(key, _)| TerminalId { tag: self.tag, key })
     }
 
     /// Returns the first antenna with the given name, if any.
@@ -984,7 +1162,7 @@ impl CommsPayload {
         self.antennas
             .iter()
             .find(|(_, antenna)| antenna.name == name)
-            .map(|(id, _)| id)
+            .map(|(key, _)| AntennaId { tag: self.tag, key })
     }
 }
 
@@ -1886,8 +2064,12 @@ mod tests {
         let json = serde_json::to_string(&payload).unwrap();
         let round_trip: CommsPayload = serde_json::from_str(&json).unwrap();
 
-        // The terminal ID minted before serialization stays valid after.
-        let restored = round_trip.terminal(terminal).unwrap();
+        // The deserialized payload has a fresh identity: IDs minted before
+        // serialization are rejected; look the terminal up by name instead.
+        assert!(round_trip.terminal(terminal).is_none());
+        let restored = round_trip
+            .terminal(round_trip.find_terminal("ka transceiver").unwrap())
+            .unwrap();
         assert_eq!(restored.name, "ka transceiver");
         let TerminalRole::Transceiver { tx, .. } = restored.role else {
             panic!("expected transceiver terminal");
@@ -1896,5 +2078,47 @@ mod tests {
             panic!("expected component TX chain");
         };
         assert_eq!(round_trip.tx_port(tx_port).unwrap().name, "diplexer tx leg");
+    }
+
+    #[test]
+    fn test_foreign_ids_are_rejected() {
+        // Two payloads built with the same insertion order mint colliding
+        // slotmap keys; the payload identity tag must keep them apart.
+        let (payload_a, terminal_a) =
+            CommsPayload::eirp_only(EirpModel::new("a", ka_band(), 55.0.db()).unwrap());
+        let (payload_b, terminal_b) =
+            CommsPayload::eirp_only(EirpModel::new("b", ka_band(), 99.0.db()).unwrap());
+
+        assert_ne!(terminal_a, terminal_b);
+        assert!(payload_b.terminal(terminal_a).is_none());
+        assert!(payload_a.terminal(terminal_b).is_none());
+
+        // Foreign inventory IDs are rejected at wiring time, too.
+        let mut payload = CommsPayload::new();
+        let mut other = CommsPayload::new();
+        let antenna = other.add_antenna(
+            "dish",
+            Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
+        );
+        let transmitter = payload.add_transmitter(
+            "pa",
+            AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
+        );
+        let err = payload
+            .add_tx_port(
+                TxPort::builder("feed", antenna, transmitter)
+                    .build()
+                    .unwrap(),
+            )
+            .unwrap_err();
+        assert!(matches!(err, PayloadError::UnknownAntenna(_)));
+    }
+
+    #[test]
+    fn test_clones_share_payload_identity() {
+        let (payload, terminal) =
+            CommsPayload::eirp_only(EirpModel::new("a", ka_band(), 55.0.db()).unwrap());
+        let clone = payload.clone();
+        assert_eq!(clone.terminal(terminal).unwrap().name, "a");
     }
 }

@@ -84,9 +84,8 @@ pub enum ResolvedRxChain<'a> {
 impl CommsPayload {
     /// Resolves the transmit chain of a terminal into a borrowed view.
     ///
-    /// Fails when the terminal does not exist in this payload, has no
-    /// transmit chain, or its wiring references missing inventory (only
-    /// possible with IDs minted by a different payload).
+    /// Fails when the terminal does not exist in this payload — including
+    /// IDs minted by a different payload — or has no transmit chain.
     pub fn resolve_tx(&self, id: TerminalId) -> Result<ResolvedTxTerminal<'_>, ResolveError> {
         let terminal = self.terminal(id).ok_or(ResolveError::UnknownTerminal(id))?;
         let chain = match terminal.role {
@@ -127,9 +126,8 @@ impl CommsPayload {
 
     /// Resolves the receive chain of a terminal into a borrowed view.
     ///
-    /// Fails when the terminal does not exist in this payload, has no
-    /// receive chain, or its wiring references missing inventory (only
-    /// possible with IDs minted by a different payload).
+    /// Fails when the terminal does not exist in this payload — including
+    /// IDs minted by a different payload — or has no receive chain.
     pub fn resolve_rx(&self, id: TerminalId) -> Result<ResolvedRxTerminal<'_>, ResolveError> {
         let terminal = self.terminal(id).ok_or(ResolveError::UnknownTerminal(id))?;
         let chain = match terminal.role {
