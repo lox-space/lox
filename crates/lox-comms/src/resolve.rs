@@ -252,6 +252,11 @@ impl<'a> ResolvedRxTerminal<'a> {
         }
     }
 
+    /// Rejects a carrier outside this terminal's effective frequency range.
+    pub fn check_carrier(&self, carrier: Frequency) -> Result<(), LinkBudgetError> {
+        check_carrier(carrier, self.band(), self.terminal_name)
+    }
+
     /// Resolves a pointing into pattern angles against this terminal's antenna.
     ///
     /// Lumped chains ignore the pointing and resolve to zero angles.
@@ -324,7 +329,7 @@ impl<'a> ResolvedRxTerminal<'a> {
         carrier: Frequency,
         pointing: Pointing,
     ) -> Result<Decibel, LinkBudgetError> {
-        check_carrier(carrier, self.band(), self.terminal_name)?;
+        self.check_carrier(carrier)?;
         match &self.kind {
             ResolvedRxChain::Lumped(model) => Ok(model.gt()),
             ResolvedRxChain::Component { .. } => {

@@ -15,6 +15,9 @@ use crate::{BOLTZMANN_CONSTANT, LinkBudgetError};
 
 pub use lox_itur::EnvironmentalLosses;
 
+/// Boltzmann constant in dB(W/Hz/K).
+const BOLTZMANN_CONSTANT_DB: Decibel = Decibel::new(-228.599_167_173_217_67);
+
 /// Interference statistics for a link.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -115,18 +118,28 @@ impl LinkStats {
         };
 
         let eirp = tx.eirp_at(carrier, tx_angles)?;
-        let gt = rx.gt_at(carrier, rx_angles)?;
+        rx.check_carrier(carrier)?;
+        let rx_total_gain = rx.total_gain(carrier, rx_angles)?;
+        let t_sys = rx.system_noise_temperature();
+        let gt = match (rx_total_gain, t_sys) {
+            (Some(gain), Some(t_sys)) => {
+                NonPhysicalError::check_positive(
+                    "system noise temperature [K]",
+                    t_sys.to_kelvin(),
+                )?;
+                gain - Decibel::from_linear(t_sys.to_kelvin())
+            }
+            (None, None) => rx.gt_at(carrier, rx_angles)?,
+            _ => unreachable!("resolved RX chain exposes gain and noise temperature together"),
+        };
         let fspl = free_space_path_loss(range, carrier);
         let env_loss = losses.total();
-        let k_db = Decibel::from_linear(BOLTZMANN_CONSTANT);
 
-        let c_n0 = eirp + gt - fspl - env_loss - k_db;
+        let c_n0 = eirp + gt - fspl - env_loss - BOLTZMANN_CONSTANT_DB;
         let c_n = c_n0 - Decibel::from_linear(bandwidth.to_hertz());
 
-        let carrier_rx_power = rx
-            .total_gain(carrier, rx_angles)?
-            .map(|g_rx| eirp - fspl - env_loss + g_rx);
-        let noise_power = rx.system_noise_temperature().map(|t_sys| {
+        let carrier_rx_power = rx_total_gain.map(|g_rx| eirp - fspl - env_loss + g_rx);
+        let noise_power = t_sys.map(|t_sys| {
             Decibel::from_linear(t_sys.to_kelvin() * BOLTZMANN_CONSTANT * bandwidth.to_hertz())
         });
 
