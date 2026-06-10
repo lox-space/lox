@@ -19,12 +19,13 @@ readme = "README.md"
 [dependencies]
 lox-core = { workspace = true, features = ["std"] }
 lox-itur = { workspace = true }
+slotmap = { workspace = true }
 thiserror = { workspace = true, features = ["std"] }
 
 serde = { workspace = true, optional = true }
 
 [features]
-serde = ["dep:serde", "lox-core/serde", "lox-itur/serde"]
+serde = ["dep:serde", "lox-core/serde", "lox-itur/serde", "slotmap/serde"]
 
 [dev-dependencies]
 lox-test-utils = { workspace = true, features = ["derive"] }

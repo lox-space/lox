@@ -15,6 +15,7 @@ pub mod channel;
 pub mod error;
 pub mod link_budget;
 pub mod pattern;
+pub mod payload;
 pub mod pfd;
 pub mod receiver;
 pub mod system;
