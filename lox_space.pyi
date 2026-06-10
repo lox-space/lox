@@ -2682,6 +2682,21 @@ class EnvironmentalLosses:
         diameter: Distance,
         polarisation_tilt: Angle | None = None,
     ) -> Self: ...
+    @staticmethod
+    def none() -> EnvironmentalLosses:
+        """Returns zero environmental losses."""
+        ...
+    @staticmethod
+    def from_values(
+        rain: Decibel | None = None,
+        gaseous: Decibel | None = None,
+        scintillation: Decibel | None = None,
+        atmospheric: Decibel | None = None,
+        cloud: Decibel | None = None,
+        depolarization: Decibel | None = None,
+    ) -> EnvironmentalLosses:
+        """Creates environmental losses from individual values."""
+        ...
     @property
     def rain(self) -> Decibel:
         """Rain attenuation."""

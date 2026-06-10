@@ -177,7 +177,7 @@ channel = lox.Channel(
     fec=0.5,
 )
 modulated = channel.apply(link)
-print(f"Margin = {modulated.margin.as_float():.2f} dB")
+print(f"Margin = {float(modulated.margin):.2f} dB")
 ```
 
 Use the component tier (configure antennas, amplifiers, receiver noise) when
