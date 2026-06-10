@@ -18,13 +18,20 @@ def run(
     return subprocess.run(cmd, env=merged_env, check=check)
 
 
-def get_llvm_cov_env() -> dict[str, str]:
-    """Get the environment variables from cargo llvm-cov show-env"""
+def get_llvm_cov_env(target_dir: Path) -> dict[str, str]:
+    """Get the environment variables from cargo llvm-cov show-env
+
+    Coverage builds must use a dedicated target dir: cargo-llvm-cov >= 0.8
+    injects instrumentation via RUSTC_WRAPPER, which cargo does not include
+    in build fingerprints, so instrumented and regular artifacts would
+    otherwise poison each other's cache.
+    """
     result = subprocess.run(
         ["cargo", "llvm-cov", "show-env"],
         capture_output=True,
         text=True,
         check=True,
+        env={**os.environ, "CARGO_TARGET_DIR": str(target_dir)},
     )
 
     env = {}
@@ -55,7 +62,7 @@ def main():
 
     # Get llvm-cov environment
     print("Setting up coverage environment...")
-    cov_env = get_llvm_cov_env()
+    cov_env = get_llvm_cov_env(project_root / "target" / "llvm-cov")
 
     # Clean previous coverage data
     print("\nCleaning previous coverage data...")
