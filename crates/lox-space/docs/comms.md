@@ -182,62 +182,100 @@ detailed component trade studies.
 
 ## Quick Example
 
+An end-to-end budget for a LEO Earth-observation X-band downlink: a 500 km
+satellite transmitting in the 8.025–8.4 GHz EESS band to a 3.7 m ground
+station at 5° elevation. (The same scenario is available as a Rust example:
+`cargo run --example x_band_downlink -p lox-space`.)
+
 ```python
 import lox_space as lox
 
-# Define a Ka-band downlink
-frequency = 29 * lox.GHz
+eess_band = lox.FrequencyRange(8.025 * lox.GHz, 8.4 * lox.GHz)
+carrier = 8.2 * lox.GHz
+elevation = 5.0 * lox.deg
+slant_range = lox.slant_range(elevation, 6371.0 * lox.km, 500.0 * lox.km)
 
-band = lox.FrequencyRange(27.0 * lox.GHz, 31.0 * lox.GHz)
+# Spacecraft: 0.25 m gimballed dish, 2 W amplifier, 0.8 dB feed run
+spacecraft = lox.CommsPayload()
+dish = spacecraft.add_antenna(
+    "payload dish",
+    lox.PatternedAntenna(pattern=lox.ParabolicPattern(0.25 * lox.m, 0.6)),
+)
+sspa = spacecraft.add_transmitter(
+    "x-band sspa",
+    lox.AmplifierTransmitter(band=eess_band, power=2.0 * lox.W, output_back_off=0.5 * lox.dB),
+)
+tx_port = spacecraft.add_tx_port("tx feed", dish, sspa, 0.8 * lox.dB, band=eess_band)
+downlink_terminal = spacecraft.add_tx_terminal("x-band downlink", port=tx_port)
 
-# Transmitter: satellite with parabolic antenna, 1 dB feed loss
-tx_pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
-tx_antenna = lox.PatternedAntenna(pattern=tx_pattern)
-tx_payload, tx_terminal = lox.CommsPayload.transmitter_only(
-    "satellite", tx_antenna, lox.AmplifierTransmitter(band=band, power=10 * lox.W),
-    feed_loss=1.0 * lox.dB,
+# Ground station: 3.7 m dish, Friis-cascade front end (LNA → downconverter),
+# 0.3 dB feed run, 60 K clear-sky antenna noise temperature
+front_end = lox.CascadeReceiver(
+    band=eess_band,
+    stages=[
+        lox.NoiseStage(35.0 * lox.dB, 50.0 * lox.K),
+        lox.NoiseStage(0.0 * lox.dB, 1540.0 * lox.K),  # NF ≈ 8 dB
+    ],
+    demodulator_loss=0.5 * lox.dB,
+    implementation_loss=0.5 * lox.dB,
+)
+ground_station, station_terminal = lox.CommsPayload.receiver_only(
+    "3.7m station",
+    lox.PatternedAntenna(pattern=lox.ParabolicPattern(3.7 * lox.m, 0.6)),
+    front_end,
+    feed_loss=0.3 * lox.dB,
+    antenna_noise_temperature=60.0 * lox.K,
+    band=eess_band,
 )
 
-# Receiver: ground station with known system noise temperature
-rx_antenna = lox.ConstantAntenna(gain=40.0 * lox.dB)
-rx_payload, rx_terminal = lox.CommsPayload.receiver_only(
-    "ground station", rx_antenna,
-    lox.NoiseTempReceiver(band=band, noise_temperature=200 * lox.K),
-    feed_loss=0.0 * lox.dB, antenna_noise_temperature=0.0 * lox.K,
+# Atmospherics at X-band, 5° elevation (static values; lox-itur computes
+# them from the ITU-R P-series maps)
+losses = lox.EnvironmentalLosses.from_values(
+    rain=1.2 * lox.dB,
+    gaseous=0.4 * lox.dB,
+    scintillation=0.3 * lox.dB,
+    cloud=0.1 * lox.dB,
 )
 
-# Define a QPSK channel at 5 Msps
+# DVB-S2-style channel: QPSK 3/4 at 150 Msps → 225 Mbit/s net
 channel = lox.Channel(
     link_type="downlink",
-    symbol_rate=5 * lox.MHz,
-    required_eb_n0=10.0 * lox.dB,
+    symbol_rate=150 * lox.MHz,
+    required_eb_n0=4.5 * lox.dB,
     margin=3.0 * lox.dB,
     modulation=lox.Modulation("QPSK"),
-    roll_off=0.35,
-    fec=0.5,
+    roll_off=0.25,
+    fec=0.75,
 )
 
-# Compute a full link budget at 1000 km slant range.
-# Pointing defaults to boresight; pass tx_angle/rx_angle for off-boresight
-# angles or tx_direction/rx_direction for line-of-sight vectors.
+# 2° residual pointing error on the spacecraft gimbal; the station
+# autotracks on boresight.
 link = lox.LinkStats.for_link(
-    tx_payload,
-    tx_terminal,
-    rx_payload,
-    rx_terminal,
-    carrier=frequency,
+    spacecraft,
+    downlink_terminal,
+    ground_station,
+    station_terminal,
+    carrier=carrier,
     bandwidth=channel.bandwidth(),
-    range=1000 * lox.km,
+    range=slant_range,
     direction="downlink",
+    tx_angle=2.0 * lox.deg,
+    losses=losses,
 )
 modulated = channel.apply(link)
 
-print(f"EIRP:        {float(link.eirp):.1f} dBW")
-print(f"FSPL:        {float(link.fspl):.1f} dB")
-print(f"C/N0:        {float(link.c_n0):.1f} dB·Hz")
-print(f"Es/N0:       {float(modulated.es_n0):.1f} dB")
-print(f"Eb/N0:       {float(modulated.eb_n0):.1f} dB")
-print(f"Link margin: {float(modulated.margin):.1f} dB")
+print(f"EIRP:        {float(link.eirp):.2f} dBW")
+print(f"FSPL:        {float(link.fspl):.2f} dB")
+print(f"G/T:         {float(link.gt):.2f} dB/K")
+print(f"C/N0:        {float(link.c_n0):.2f} dB·Hz")
+print(f"Eb/N0:       {float(modulated.eb_n0):.2f} dB")
+print(f"Data rate:   {float(channel.information_rate()) / 1e6:.1f} Mbit/s")
+print(f"Link margin: {float(modulated.margin):.2f} dB")
+
+# Regulatory check: PFD on the ground vs. the RR Art. 21.16 mask
+pfd = lox.power_flux_density(link.eirp, slant_range, channel.bandwidth(), 4.0 * lox.kHz)
+mask = lox.PfdMask.art_21_16(-150.0 * lox.dB)
+assert float(pfd) <= float(mask.value_at(elevation))
 ```
 
 ### Direction-Aware Pointing
@@ -251,22 +289,24 @@ import lox_space as lox
 
 # Dish boresight along +X
 frame = lox.AntennaFrame(boresight=[1.0, 0.0, 0.0], reference=[0.0, 0.0, 1.0])
-pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
-antenna = lox.PatternedAntenna(pattern=pattern, frame=frame)
-tx_payload, tx_terminal = lox.CommsPayload.transmitter_only(
-    "satellite", antenna,
-    lox.AmplifierTransmitter(band=band, power=10.0 * lox.W),
-    feed_loss=1.0 * lox.dB,
+antenna = lox.PatternedAntenna(
+    pattern=lox.ParabolicPattern(0.25 * lox.m, 0.6), frame=frame
+)
+spacecraft, downlink_terminal = lox.CommsPayload.transmitter_only(
+    "satellite",
+    antenna,
+    lox.AmplifierTransmitter(band=eess_band, power=2.0 * lox.W),
+    feed_loss=0.8 * lox.dB,
 )
 
 link = lox.LinkStats.for_link(
-    tx_payload,
-    tx_terminal,
-    rx_payload,
-    rx_terminal,
-    carrier=29 * lox.GHz,
+    spacecraft,
+    downlink_terminal,
+    ground_station,
+    station_terminal,
+    carrier=carrier,
     bandwidth=channel.bandwidth(),
-    range=1000 * lox.km,
+    range=slant_range,
     direction="downlink",
     tx_direction=[0.9, 0.1, 0.0],  # line of sight in the TX parent frame
 )
@@ -306,7 +346,7 @@ print(f"FSPL: {float(loss):.1f} dB")
 ```python
 import lox_space as lox
 
-losses = lox.EnvironmentalLosses(
+losses = lox.EnvironmentalLosses.from_values(
     rain=2.0 * lox.dB,
     gaseous=0.3 * lox.dB,
     atmospheric=0.5 * lox.dB,
@@ -315,13 +355,13 @@ print(f"Total: {float(losses.total()):.1f} dB")
 
 # Pass to LinkStats.for_link via the losses parameter
 link = lox.LinkStats.for_link(
-    tx_payload,
-    tx_terminal,
-    rx_payload,
-    rx_terminal,
-    carrier=29 * lox.GHz,
+    spacecraft,
+    downlink_terminal,
+    ground_station,
+    station_terminal,
+    carrier=carrier,
     bandwidth=channel.bandwidth(),
-    range=1000 * lox.km,
+    range=slant_range,
     direction="downlink",
     losses=losses,
 )
