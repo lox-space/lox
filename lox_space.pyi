@@ -2372,7 +2372,7 @@ class ParabolicPattern:
         ...
     def beamwidth(self, frequency: Frequency) -> Angle | None:
         """Returns the half-power beamwidth, or ``None`` when the
-        antenna diameter is smaller than ~1.22 wavelengths at this frequency."""
+        antenna diameter is smaller than ~0.51 wavelengths at this frequency."""
         ...
     def peak_gain(self, frequency: Frequency) -> Decibel:
         """Returns the peak gain in dBi."""

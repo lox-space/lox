@@ -224,7 +224,7 @@ impl PyParabolicPattern {
     }
 
     /// Returns the half-power beamwidth, or ``None`` when the
-    /// antenna diameter is smaller than ~1.22 wavelengths at this frequency.
+    /// antenna diameter is smaller than ~0.51 wavelengths at this frequency.
     fn beamwidth(&self, frequency: PyFrequency) -> Option<PyAngle> {
         self.0.beamwidth(frequency.0).map(PyAngle)
     }
