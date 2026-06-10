@@ -12,6 +12,7 @@
 pub mod antenna;
 pub mod band;
 pub mod channel;
+pub mod endpoint;
 pub mod error;
 pub mod link_budget;
 pub mod pattern;
