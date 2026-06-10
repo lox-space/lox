@@ -2964,18 +2964,32 @@ def power_flux_density(
     """
     ...
 
-def pfd_mask(elevation: Angle, start_val: Decibel, end_val: Decibel) -> Decibel:
-    """Computes the ITU RR Article 21.16 PFD mask value.
+class PfdMask:
+    """A piecewise-linear PFD mask over elevation in dBW/m²/ref_bw.
+
+    The mask is linear in elevation between consecutive breakpoints and constant
+    below the first and above the last.
 
     Args:
-        elevation: Elevation angle.
-        start_val: PFD limit at low elevation as Decibel.
-        end_val: PFD limit at high elevation as Decibel.
-
-    Returns:
-        PFD mask value as Decibel.
+        nodes: (elevation, value) breakpoints with strictly ascending elevations.
     """
-    ...
+    def __new__(cls, nodes: list[tuple[Angle, Decibel]]) -> Self: ...
+    @staticmethod
+    def art_21_16(start: Decibel) -> PfdMask:
+        """The ITU RR Article 21.16 mask shape for a given low-elevation limit.
+
+        Rises from `start` at 5° elevation by 0.5 dB per degree to `start + 10 dB`
+        at 25° and is constant outside that range.
+        """
+        ...
+    def value_at(self, elevation: Angle) -> Decibel:
+        """Returns the mask value at the given elevation angle."""
+        ...
+    def nodes(self) -> list[tuple[Angle, Decibel]]:
+        """Returns the mask breakpoints as (elevation, value) tuples."""
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
 
 def slant_range(elevation: Angle, earth_radius: Distance, altitude: Distance) -> Distance:
     """Computes the slant range from a ground station to a satellite.

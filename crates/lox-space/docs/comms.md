@@ -357,7 +357,7 @@ link = lox.LinkStats.calculate(
 
 ---
 
-::: lox_space.pfd_mask
+::: lox_space.PfdMask
     options:
       show_source: false
 
