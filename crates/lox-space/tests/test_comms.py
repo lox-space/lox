@@ -1601,6 +1601,8 @@ def test_cascade_receiver_accessors_and_validation():
         lox.CascadeReceiver(
             band=KA_BAND, stages=[], demodulator_loss=-0.5 * lox.dB
         )
+    with pytest.raises(ValueError, match="stage count"):
+        lox.CascadeReceiver(band=KA_BAND, stages=[])
     with pytest.raises(ValueError, match="stage noise temperature"):
         lox.NoiseStage(35.0 * lox.dB, -50.0 * lox.K)
     lna = lox.CascadeReceiver.from_lna_and_noise_figure(

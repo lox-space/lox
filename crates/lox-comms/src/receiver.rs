@@ -201,8 +201,9 @@ impl TryFrom<CascadeReceiverRepr> for CascadeReceiver {
 /// Builder for [`CascadeReceiver`].
 ///
 /// Created via [`CascadeReceiver::builder`]. Stages are appended in chain
-/// order (LNA first); unset losses default to 0 dB. Stage parameters are
-/// validated at [`CascadeReceiverBuilder::build`].
+/// order (LNA first); at least one stage is required and unset losses
+/// default to 0 dB. Stage parameters are validated at
+/// [`CascadeReceiverBuilder::build`].
 #[derive(Debug, Clone)]
 pub struct CascadeReceiverBuilder {
     band: FrequencyRange,
@@ -249,7 +250,8 @@ impl CascadeReceiverBuilder {
 impl CascadeReceiver {
     /// Starts building a cascade receiver over the given band.
     ///
-    /// Stages are appended in chain order; unset losses default to 0 dB.
+    /// Stages are appended in chain order; at least one stage is required.
+    /// Unset losses default to 0 dB.
     pub fn builder(band: FrequencyRange) -> CascadeReceiverBuilder {
         CascadeReceiverBuilder {
             band,
@@ -262,7 +264,8 @@ impl CascadeReceiver {
     /// Creates a new cascade receiver from an ordered chain of stages
     /// (LNA first, then filters, mixers, etc.).
     ///
-    /// Rejects non-finite or negative demodulator/implementation losses.
+    /// Rejects an empty stage list and non-finite or negative
+    /// demodulator/implementation losses.
     pub fn new(
         band: FrequencyRange,
         stages: Vec<NoiseStage>,
@@ -274,6 +277,7 @@ impl CascadeReceiver {
             "implementation loss [dB]",
             implementation_loss.as_f64(),
         )?;
+        NonPhysicalError::check_positive("cascade receiver stage count", stages.len() as f64)?;
         Ok(Self {
             band,
             stages,
@@ -511,15 +515,8 @@ mod tests {
 
     #[test]
     fn test_builder_defaults_and_validation() {
-        // Defaults: no stages, lossless demodulator/implementation.
-        let bare = CascadeReceiver::builder(ka_band()).build().unwrap();
-        assert!(bare.stages().is_empty());
-        assert_approx_eq!(
-            bare.chain_noise_temperature().to_kelvin(),
-            0.0,
-            atol <= 1e-15
-        );
-        assert_approx_eq!(bare.chain_gain().as_f64(), 0.0, atol <= 1e-15);
+        // An empty chain has no defined noise temperature and is rejected.
+        assert!(CascadeReceiver::builder(ka_band()).build().is_err());
 
         let chain = CascadeReceiver::builder(ka_band())
             .stage(20.0.db(), Temperature::kelvin(50.0))

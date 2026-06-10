@@ -21,6 +21,7 @@ use crate::LinkBudgetError;
 use crate::ROOM_TEMPERATURE;
 use crate::antenna::{Antenna, AntennaGain};
 use crate::band::FrequencyRange;
+use crate::error::NonPhysicalError;
 use crate::payload::{
     CommsPayload, EirpModel, GtModel, RxChain, TerminalId, TerminalRole, TxChain,
 };
@@ -314,6 +315,8 @@ impl<'a> ResolvedRxTerminal<'a> {
     /// where `T_sys` is computed per [`Self::system_noise_temperature`] and
     /// `G_total` per [`Self::total_gain`]. The feed loss enters through the
     /// noise referral, never as a gain reduction.
+    ///
+    /// Errors if the system noise temperature is not strictly positive.
     pub fn gt_at(
         &self,
         carrier: Frequency,
@@ -328,6 +331,10 @@ impl<'a> ResolvedRxTerminal<'a> {
                 let t_sys = self
                     .system_noise_temperature()
                     .expect("component chains expose a system noise temperature");
+                NonPhysicalError::check_positive(
+                    "system noise temperature [K]",
+                    t_sys.to_kelvin(),
+                )?;
                 Ok(gain - Decibel::from_linear(t_sys.to_kelvin()))
             }
         }
@@ -664,6 +671,49 @@ mod tests {
             expected,
             rtol <= 1e-12
         );
+    }
+
+    #[test]
+    fn test_zero_system_noise_temperature_is_error() {
+        // Individually valid inputs (an idealized 0 K stage, the 0 K antenna
+        // noise default, a lossless feed) must not combine into T_sys = 0 and
+        // an infinite G/T.
+        let chain = CascadeReceiver::new(
+            ka_band(),
+            vec![NoiseStage::new(20.0.db(), Temperature::kelvin(0.0)).unwrap()],
+            0.0.db(),
+            0.0.db(),
+        )
+        .unwrap();
+        let mut payload = CommsPayload::new();
+        let antenna = payload.add_antenna(
+            "antenna",
+            Antenna::Constant(ConstantAntenna::new(30.0.db()).unwrap()),
+        );
+        let rx = payload.add_receiver("receiver", Receiver::Cascade(chain));
+        let port = payload
+            .add_rx_port(
+                RxPort::new(
+                    "feed",
+                    antenna,
+                    rx,
+                    0.0.db(),
+                    Temperature::kelvin(0.0),
+                    None,
+                )
+                .unwrap(),
+            )
+            .unwrap();
+        let terminal = payload
+            .add_terminal(Terminal {
+                name: "rx".into(),
+                role: TerminalRole::Rx(RxChain::Component(port)),
+            })
+            .unwrap();
+
+        let endpoint = payload.resolve_rx(terminal).unwrap();
+        let err = endpoint.gt_at(29.0.ghz(), Pointing::Boresight).unwrap_err();
+        assert!(matches!(err, LinkBudgetError::NonPhysical(_)));
     }
 
     #[test]

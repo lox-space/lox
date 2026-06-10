@@ -798,7 +798,7 @@ impl PyNoiseStage {
 ///
 /// Args:
 ///     band: Supported frequency range.
-///     stages: List of NoiseStage (ordered: LNA first, then downstream).
+///     stages: Non-empty list of NoiseStage (ordered: LNA first, then downstream).
 ///     demodulator_loss: Demodulator loss as Decibel (default Decibel(0)).
 ///     implementation_loss: Other implementation losses as Decibel (default Decibel(0)).
 #[pyclass(name = "CascadeReceiver", module = "lox_space", frozen, from_py_object)]
