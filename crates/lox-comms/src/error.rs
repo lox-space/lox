@@ -8,6 +8,7 @@ use lox_core::units::Frequency;
 use thiserror::Error;
 
 use crate::antenna::AntennaFrameError;
+use crate::band::FrequencyRange;
 
 /// Errors that can arise when computing a link budget.
 #[derive(Debug, Clone, PartialEq, Error)]
@@ -31,6 +32,16 @@ pub enum LinkBudgetError {
     /// A line-of-sight direction could not be converted to pattern angles.
     #[error("invalid pointing: {0}")]
     InvalidPointing(#[from] AntennaFrameError),
+    /// The carrier frequency lies outside an endpoint's supported range.
+    #[error("carrier {} Hz outside the supported range {band} of endpoint '{endpoint}'", carrier.to_hertz())]
+    CarrierOutOfBand {
+        /// The requested carrier frequency.
+        carrier: Frequency,
+        /// The endpoint's supported frequency range.
+        band: FrequencyRange,
+        /// Name of the terminal whose endpoint rejected the carrier.
+        endpoint: String,
+    },
     /// Transmitter and receiver frequencies disagree.
     #[error(
         "transmitter frequency {} Hz differs from receiver frequency {} Hz",

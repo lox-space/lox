@@ -344,6 +344,40 @@ impl<'a> RxEndpoint<'a> {
         }
     }
 
+    /// Returns the receive system gain in dB before noise referral, when the
+    /// chain exposes one.
+    ///
+    /// `None` for lumped G/T endpoints — the absolute gain is not recoverable
+    /// from a G/T figure. Consistent with [`Self::gt_at`]:
+    /// `total_gain − 10·log₁₀(T_sys) == G/T`.
+    pub fn total_gain(
+        &self,
+        carrier: Frequency,
+        pointing: Pointing,
+    ) -> Result<Option<Decibel>, LinkBudgetError> {
+        match &self.kind {
+            RxEndpointKind::Lumped(_) => Ok(None),
+            RxEndpointKind::Component {
+                antenna,
+                receiver,
+                feed_loss,
+                ..
+            } => {
+                let (theta, phi) = self.pattern_angles(pointing)?;
+                let gain = antenna.gain(carrier, theta, phi);
+                match receiver {
+                    Receiver::Gt(_) => {
+                        unreachable!("CommsPayload::add_receiver rejects lumped G/T receivers")
+                    }
+                    Receiver::NoiseTemperature(_) => Ok(Some(gain - *feed_loss)),
+                    Receiver::Cascade(rx) => {
+                        Ok(Some(gain - rx.demodulator_loss - rx.implementation_loss))
+                    }
+                }
+            }
+        }
+    }
+
     fn antenna(&self) -> Option<&'a Antenna> {
         match &self.kind {
             RxEndpointKind::Component { antenna, .. } => Some(antenna),

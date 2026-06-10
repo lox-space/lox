@@ -6,10 +6,11 @@
 
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
-use crate::LinkBudgetError;
-use crate::channel::Channel;
+use crate::channel::{Channel, LinkDirection};
+use crate::endpoint::{RxEndpoint, TxEndpoint};
 use crate::system::{CommunicationSystem, Pointing, resolve_pointing};
 use crate::utils::free_space_path_loss;
+use crate::{BOLTZMANN_CONSTANT, LinkBudgetError};
 
 pub use lox_itur::EnvironmentalLosses;
 
@@ -65,6 +66,12 @@ pub struct LinkStats {
     /// Derived RX pattern azimuth about boresight (zero for lumped or
     /// constant-gain endpoints).
     pub rx_phi: Angle,
+    /// Link direction, when known.
+    ///
+    /// Always `Some` for endpoint-based budgets ([`Self::for_link`]).
+    /// Reserved for direction-dependent effects such as rain-degraded G/T;
+    /// it does not affect the current calculation.
+    pub direction: Option<LinkDirection>,
 }
 
 impl LinkStats {
@@ -131,6 +138,90 @@ impl LinkStats {
             tx_phi,
             rx_theta,
             rx_phi,
+            direction: None,
+        })
+    }
+
+    /// Computes a modulation-agnostic link budget between resolved endpoints.
+    ///
+    /// The carrier must lie inside both endpoints' supported frequency
+    /// ranges. `bandwidth` is the noise bandwidth used to compute
+    /// `noise_power` and `C/N` from `C/N₀`. The pointings are resolved into
+    /// pattern angles against each endpoint's antenna frame once and
+    /// reported in the result. `direction` is reserved for
+    /// direction-dependent effects (e.g. rain-degraded G/T) and does not
+    /// affect the current calculation.
+    #[allow(clippy::too_many_arguments)]
+    pub fn for_link(
+        tx: &TxEndpoint<'_>,
+        rx: &RxEndpoint<'_>,
+        carrier: Frequency,
+        bandwidth: Frequency,
+        range: Distance,
+        losses: EnvironmentalLosses,
+        tx_pointing: Pointing,
+        rx_pointing: Pointing,
+        direction: LinkDirection,
+    ) -> Result<Self, LinkBudgetError> {
+        for (band, endpoint) in [
+            (tx.band(), tx.terminal_name()),
+            (rx.band(), rx.terminal_name()),
+        ] {
+            if let Some(band) = band
+                && !band.contains(carrier)
+            {
+                return Err(LinkBudgetError::CarrierOutOfBand {
+                    carrier,
+                    band,
+                    endpoint: endpoint.to_owned(),
+                });
+            }
+        }
+
+        let (tx_theta, tx_phi) = tx.pattern_angles(tx_pointing)?;
+        let (rx_theta, rx_phi) = rx.pattern_angles(rx_pointing)?;
+        let tx_angles = Pointing::Angles {
+            theta: tx_theta,
+            phi: tx_phi,
+        };
+        let rx_angles = Pointing::Angles {
+            theta: rx_theta,
+            phi: rx_phi,
+        };
+
+        let eirp = tx.eirp_at(carrier, tx_angles)?;
+        let gt = rx.gt_at(carrier, rx_angles)?;
+        let fspl = free_space_path_loss(range, carrier);
+        let env_loss = losses.total();
+        let k_db = Decibel::from_linear(BOLTZMANN_CONSTANT);
+
+        let c_n0 = eirp + gt - fspl - env_loss - k_db;
+        let c_n = c_n0 - Decibel::from_linear(bandwidth.to_hertz());
+
+        let carrier_rx_power = rx
+            .total_gain(carrier, rx_angles)?
+            .map(|g_rx| eirp - fspl - env_loss + g_rx);
+        let noise_power = rx
+            .system_noise_temperature()
+            .map(|t_sys| Decibel::from_linear(t_sys * BOLTZMANN_CONSTANT * bandwidth.to_hertz()));
+
+        Ok(Self {
+            slant_range: range,
+            frequency: carrier,
+            fspl,
+            eirp,
+            gt,
+            losses,
+            carrier_rx_power,
+            noise_power,
+            bandwidth,
+            c_n0,
+            c_n,
+            tx_theta,
+            tx_phi,
+            rx_theta,
+            rx_phi,
+            direction: Some(direction),
         })
     }
 }
@@ -346,6 +437,237 @@ mod tests {
         assert_approx_eq!(stats.tx_phi.to_radians(), 0.0, atol <= 1e-12);
         // The EIRP must reflect the off-axis gain, far below the 55 dBW peak.
         assert!(stats.eirp.as_f64() < 0.0);
+    }
+
+    #[test]
+    fn test_for_link_component_parity_with_legacy_calculate() {
+        use crate::band::FrequencyRange;
+        use crate::payload::{
+            CommsPayload, RxChain, RxPort, Terminal, TerminalRole, TxChain, TxPort,
+        };
+
+        // The same physical link expressed both ways must produce identical
+        // numbers: legacy puts the 1 dB feed loss on the transmitter
+        // (line_loss), the payload puts it on the TX port.
+        let (tx_sys, rx_sys, channel) = test_link();
+        let legacy = LinkStats::calculate(
+            &tx_sys,
+            &rx_sys,
+            Distance::kilometers(1000.0),
+            channel.bandwidth(),
+            EnvironmentalLosses::none(),
+            Pointing::Boresight,
+            Pointing::Boresight,
+        )
+        .unwrap();
+
+        let mut payload = CommsPayload::new();
+        let tx_antenna = payload.add_antenna(
+            "tx antenna",
+            Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
+        );
+        let rx_antenna = payload.add_antenna(
+            "rx antenna",
+            Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
+        );
+        let pa = payload.add_transmitter(
+            "pa",
+            AmplifierTransmitter::new(29.0.ghz(), 10.0, 0.0.db(), 0.0.db()),
+        );
+        let receiver = payload
+            .add_receiver(
+                "receiver",
+                Receiver::NoiseTemperature(NoiseTempReceiver {
+                    frequency: 29.0.ghz(),
+                    system_noise_temperature: 500.0,
+                }),
+            )
+            .unwrap();
+        let band = FrequencyRange::new(27.0.ghz(), 31.0.ghz()).unwrap();
+        let tx_port = payload
+            .add_tx_port(TxPort {
+                name: "tx feed".into(),
+                antenna: tx_antenna,
+                transmitter: pa,
+                feed_loss: 1.0.db(),
+                band: Some(band),
+            })
+            .unwrap();
+        let rx_port = payload
+            .add_rx_port(RxPort {
+                name: "rx feed".into(),
+                antenna: rx_antenna,
+                receiver,
+                feed_loss: 0.0.db(),
+                antenna_noise_temperature: 150.0,
+                band: Some(band),
+            })
+            .unwrap();
+        let tx_terminal = payload
+            .add_terminal(Terminal {
+                name: "tx".into(),
+                role: TerminalRole::Tx(TxChain::Component(tx_port)),
+            })
+            .unwrap();
+        let rx_terminal = payload
+            .add_terminal(Terminal {
+                name: "rx".into(),
+                role: TerminalRole::Rx(RxChain::Component(rx_port)),
+            })
+            .unwrap();
+
+        let stats = LinkStats::for_link(
+            &payload.tx_endpoint(tx_terminal).unwrap(),
+            &payload.rx_endpoint(rx_terminal).unwrap(),
+            29.0.ghz(),
+            channel.bandwidth(),
+            Distance::kilometers(1000.0),
+            EnvironmentalLosses::none(),
+            Pointing::Boresight,
+            Pointing::Boresight,
+            LinkDirection::Downlink,
+        )
+        .unwrap();
+
+        assert_approx_eq!(stats.eirp.as_f64(), legacy.eirp.as_f64(), atol <= 1e-12);
+        assert_approx_eq!(stats.gt.as_f64(), legacy.gt.as_f64(), atol <= 1e-12);
+        assert_approx_eq!(stats.fspl.as_f64(), legacy.fspl.as_f64(), atol <= 1e-12);
+        assert_approx_eq!(stats.c_n0.as_f64(), legacy.c_n0.as_f64(), atol <= 1e-12);
+        assert_approx_eq!(stats.c_n.as_f64(), legacy.c_n.as_f64(), atol <= 1e-12);
+        assert_approx_eq!(
+            stats.carrier_rx_power.unwrap().as_f64(),
+            legacy.carrier_rx_power.unwrap().as_f64(),
+            atol <= 1e-12
+        );
+        assert_approx_eq!(
+            stats.noise_power.unwrap().as_f64(),
+            legacy.noise_power.unwrap().as_f64(),
+            atol <= 1e-12
+        );
+        assert_eq!(stats.direction, Some(LinkDirection::Downlink));
+        assert_eq!(legacy.direction, None);
+    }
+
+    #[test]
+    fn test_for_link_lumped_parity_with_legacy_calculate() {
+        use crate::band::FrequencyRange;
+        use crate::payload::{
+            CommsPayload, EirpModel, GtModel, RxChain, Terminal, TerminalRole, TxChain,
+        };
+        use crate::receiver::GtReceiver;
+        use crate::transmitter::EirpTransmitter;
+
+        let legacy_tx = CommunicationSystem::eirp_only(EirpTransmitter {
+            frequency: 29.0.ghz(),
+            eirp: 55.0.db(),
+        });
+        let legacy_rx = CommunicationSystem::gt_only(GtReceiver {
+            frequency: 29.0.ghz(),
+            gt: 3.01.db(),
+        });
+        let legacy = LinkStats::calculate(
+            &legacy_tx,
+            &legacy_rx,
+            Distance::kilometers(1000.0),
+            5.0.mhz(),
+            EnvironmentalLosses::none(),
+            Pointing::Boresight,
+            Pointing::Boresight,
+        )
+        .unwrap();
+
+        let band = FrequencyRange::new(27.0.ghz(), 31.0.ghz()).unwrap();
+        let mut payload = CommsPayload::new();
+        let eirp = payload.add_eirp_model(EirpModel {
+            name: "eirp".into(),
+            band,
+            eirp: 55.0.db(),
+        });
+        let gt = payload.add_gt_model(GtModel {
+            name: "gt".into(),
+            band,
+            gt: 3.01.db(),
+        });
+        let tx_terminal = payload
+            .add_terminal(Terminal {
+                name: "tx".into(),
+                role: TerminalRole::Tx(TxChain::Lumped(eirp)),
+            })
+            .unwrap();
+        let rx_terminal = payload
+            .add_terminal(Terminal {
+                name: "rx".into(),
+                role: TerminalRole::Rx(RxChain::Lumped(gt)),
+            })
+            .unwrap();
+
+        let stats = LinkStats::for_link(
+            &payload.tx_endpoint(tx_terminal).unwrap(),
+            &payload.rx_endpoint(rx_terminal).unwrap(),
+            29.0.ghz(),
+            5.0.mhz(),
+            Distance::kilometers(1000.0),
+            EnvironmentalLosses::none(),
+            Pointing::Boresight,
+            Pointing::Boresight,
+            LinkDirection::Uplink,
+        )
+        .unwrap();
+
+        assert_approx_eq!(stats.c_n0.as_f64(), legacy.c_n0.as_f64(), atol <= 1e-12);
+        assert!(stats.carrier_rx_power.is_none());
+        assert!(stats.noise_power.is_none());
+    }
+
+    #[test]
+    fn test_for_link_rejects_carrier_out_of_band() {
+        use crate::band::FrequencyRange;
+        use crate::payload::{
+            CommsPayload, EirpModel, GtModel, RxChain, Terminal, TerminalRole, TxChain,
+        };
+
+        let mut payload = CommsPayload::new();
+        let eirp = payload.add_eirp_model(EirpModel {
+            name: "eirp".into(),
+            band: FrequencyRange::new(27.0.ghz(), 31.0.ghz()).unwrap(),
+            eirp: 55.0.db(),
+        });
+        let gt = payload.add_gt_model(GtModel {
+            name: "gt".into(),
+            band: FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap(),
+            gt: 3.01.db(),
+        });
+        let tx_terminal = payload
+            .add_terminal(Terminal {
+                name: "tx".into(),
+                role: TerminalRole::Tx(TxChain::Lumped(eirp)),
+            })
+            .unwrap();
+        let rx_terminal = payload
+            .add_terminal(Terminal {
+                name: "rx".into(),
+                role: TerminalRole::Rx(RxChain::Lumped(gt)),
+            })
+            .unwrap();
+
+        // 29 GHz fits the TX band but not the RX band.
+        let err = LinkStats::for_link(
+            &payload.tx_endpoint(tx_terminal).unwrap(),
+            &payload.rx_endpoint(rx_terminal).unwrap(),
+            29.0.ghz(),
+            5.0.mhz(),
+            Distance::kilometers(1000.0),
+            EnvironmentalLosses::none(),
+            Pointing::Boresight,
+            Pointing::Boresight,
+            LinkDirection::Downlink,
+        )
+        .unwrap_err();
+
+        assert!(matches!(err, LinkBudgetError::CarrierOutOfBand { .. }));
+        let message = err.to_string();
+        assert!(message.contains("'rx'"));
+        assert!(message.contains("17.000–21.000 GHz"));
     }
 
     #[test]
