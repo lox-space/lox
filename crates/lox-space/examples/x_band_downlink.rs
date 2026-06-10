@@ -23,7 +23,7 @@ use lox_space::comms::antenna::Antenna;
 use lox_space::comms::band::FrequencyRange;
 use lox_space::comms::channel::{Channel, LinkDirection, Modulation};
 use lox_space::comms::link_budget::{EnvironmentalLosses, LinkStats};
-use lox_space::comms::payload::{CommsPayload, Terminal, TerminalRole, TxChain, TxPort};
+use lox_space::comms::payload::{CommsPayload, TxChain, TxPort};
 use lox_space::comms::pfd::{PfdMask, power_flux_density};
 use lox_space::comms::pointing::Pointing;
 use lox_space::comms::receiver::{CascadeReceiver, NoiseStage, Receiver};
@@ -66,10 +66,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.8.db(),
         Some(eess_band),
     )?)?;
-    let downlink_terminal = spacecraft.add_terminal(Terminal {
-        name: "x-band downlink".into(),
-        role: TerminalRole::Tx(TxChain::Component(tx_port)),
-    })?;
+    let downlink_terminal =
+        spacecraft.add_tx_terminal("x-band downlink", TxChain::Component(tx_port))?;
 
     // ------------------------------------------------------------------
     // Ground station: 3.7 m dish with an X-band front end described as a

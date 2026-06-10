@@ -454,6 +454,32 @@ pub struct Terminal {
     pub role: TerminalRole,
 }
 
+impl Terminal {
+    /// Creates a transmit-only terminal.
+    pub fn tx(name: impl Into<String>, chain: TxChain) -> Self {
+        Self {
+            name: name.into(),
+            role: TerminalRole::Tx(chain),
+        }
+    }
+
+    /// Creates a receive-only terminal.
+    pub fn rx(name: impl Into<String>, chain: RxChain) -> Self {
+        Self {
+            name: name.into(),
+            role: TerminalRole::Rx(chain),
+        }
+    }
+
+    /// Creates a transceiver terminal with one chain per direction.
+    pub fn transceiver(name: impl Into<String>, tx: TxChain, rx: RxChain) -> Self {
+        Self {
+            name: name.into(),
+            role: TerminalRole::Transceiver { tx, rx },
+        }
+    }
+}
+
 /// Communications hardware inventory and wiring for one platform.
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(
@@ -752,6 +778,34 @@ impl CommsPayload {
             }
         }
         Ok(())
+    }
+
+    /// Adds a transmit-only terminal, validating the referenced chain.
+    pub fn add_tx_terminal(
+        &mut self,
+        name: impl Into<String>,
+        chain: TxChain,
+    ) -> Result<TerminalId, PayloadError> {
+        self.add_terminal(Terminal::tx(name, chain))
+    }
+
+    /// Adds a receive-only terminal, validating the referenced chain.
+    pub fn add_rx_terminal(
+        &mut self,
+        name: impl Into<String>,
+        chain: RxChain,
+    ) -> Result<TerminalId, PayloadError> {
+        self.add_terminal(Terminal::rx(name, chain))
+    }
+
+    /// Adds a transceiver terminal, validating the referenced chains.
+    pub fn add_transceiver_terminal(
+        &mut self,
+        name: impl Into<String>,
+        tx: TxChain,
+        rx: RxChain,
+    ) -> Result<TerminalId, PayloadError> {
+        self.add_terminal(Terminal::transceiver(name, tx, rx))
     }
 
     fn validate_tx_port_wiring(&self, port: &TxPort) -> Result<(), PayloadError> {
@@ -1131,6 +1185,32 @@ mod tests {
             payload.tx_port(high_port).unwrap().transmitter,
             payload.tx_port(low_port).unwrap().transmitter
         );
+    }
+
+    #[test]
+    fn test_terminal_constructors_and_helpers() {
+        let mut payload = CommsPayload::new();
+        let eirp =
+            payload.add_eirp_model(EirpModel::new("datasheet", ka_band(), 55.0.db()).unwrap());
+        let gt = payload.add_gt_model(GtModel::new("datasheet", ka_band(), 3.01.db()).unwrap());
+
+        let tx = payload
+            .add_tx_terminal("tx", TxChain::Lumped(eirp))
+            .unwrap();
+        let rx = payload.add_rx_terminal("rx", RxChain::Lumped(gt)).unwrap();
+        let both = payload
+            .add_transceiver_terminal("both", TxChain::Lumped(eirp), RxChain::Lumped(gt))
+            .unwrap();
+
+        assert!(matches!(
+            payload.terminal(tx).unwrap().role,
+            TerminalRole::Tx(_)
+        ));
+        assert!(matches!(
+            payload.terminal(rx).unwrap().role,
+            TerminalRole::Rx(_)
+        ));
+        assert_eq!(payload.terminal(both).unwrap().name, "both");
     }
 
     #[test]
