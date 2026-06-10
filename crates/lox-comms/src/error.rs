@@ -20,6 +20,14 @@ pub enum LinkBudgetError {
     /// A line-of-sight direction could not be converted to pattern angles.
     #[error("invalid pointing: {0}")]
     InvalidPointing(#[from] AntennaFrameError),
+    /// A physical quantity is outside its valid domain.
+    #[error("non-physical {quantity}: {value}")]
+    NonPhysical {
+        /// Name of the offending quantity.
+        quantity: &'static str,
+        /// The rejected value.
+        value: f64,
+    },
     /// The carrier frequency lies outside an endpoint's supported range.
     #[error("carrier {} Hz outside the supported range {band} of endpoint '{endpoint}'", carrier.to_hertz())]
     CarrierOutOfBand {

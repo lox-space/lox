@@ -1723,8 +1723,11 @@ impl PyCommsPayload {
         &mut self,
         name: String,
         transmitter: PyAmplifierTransmitter,
-    ) -> PyTransmitterId {
-        PyTransmitterId(self.0.add_transmitter(name, transmitter.0.clone()))
+    ) -> PyResult<PyTransmitterId> {
+        self.0
+            .add_transmitter(name, transmitter.0.clone())
+            .map(PyTransmitterId)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Adds a component-tier receiver (NoiseTempReceiver or CascadeReceiver)
@@ -1734,9 +1737,10 @@ impl PyCommsPayload {
         name: String,
         receiver: &Bound<'_, PyAny>,
     ) -> PyResult<PyReceiverId> {
-        Ok(PyReceiverId(
-            self.0.add_receiver(name, build_receiver_any(receiver)?),
-        ))
+        self.0
+            .add_receiver(name, build_receiver_any(receiver)?)
+            .map(PyReceiverId)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Adds a lumped EIRP model to the inventory.
@@ -1885,7 +1889,8 @@ impl PyCommsPayload {
             transmitter.0.clone(),
             feed_loss.0,
             band.map(|b| b.0),
-        );
+        )
+        .map_err(|err| PyValueError::new_err(err.to_string()))?;
         Ok((Self(payload), PyTerminalId(terminal)))
     }
 
@@ -1907,7 +1912,8 @@ impl PyCommsPayload {
             feed_loss.0,
             f64::from(antenna_noise_temperature.0),
             band.map(|b| b.0),
-        );
+        )
+        .map_err(|err| PyValueError::new_err(err.to_string()))?;
         Ok((Self(payload), PyTerminalId(terminal)))
     }
 
@@ -1934,7 +1940,8 @@ impl PyCommsPayload {
             rx_feed_loss.0,
             f64::from(antenna_noise_temperature.0),
             band.map(|b| b.0),
-        );
+        )
+        .map_err(|err| PyValueError::new_err(err.to_string()))?;
         Ok((Self(payload), PyTerminalId(terminal)))
     }
 

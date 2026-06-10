@@ -1490,3 +1490,16 @@ def test_ground_station_comms_payload():
 
     bare = lox.GroundStation("bare", location, mask)
     assert bare.comms_payload() is None
+
+
+def test_comms_payload_rejects_non_physical_inputs():
+    payload = lox.CommsPayload()
+    with pytest.raises(ValueError, match="non-physical"):
+        payload.add_transmitter(
+            "pa", lox.AmplifierTransmitter(band=KA_BAND, power=0.0 * lox.W)
+        )
+    with pytest.raises(ValueError, match="non-physical"):
+        payload.add_receiver(
+            "rx",
+            lox.NoiseTempReceiver(band=KA_BAND, noise_temperature=-10.0 * lox.K),
+        )

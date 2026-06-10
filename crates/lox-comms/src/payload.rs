@@ -206,27 +206,25 @@ impl CommsPayload {
         transmitter: AmplifierTransmitter,
         feed_loss: Decibel,
         band: Option<FrequencyRange>,
-    ) -> (Self, TerminalId) {
+    ) -> Result<(Self, TerminalId), PayloadError> {
         let name = name.into();
         let mut payload = Self::new();
         let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
-        let transmitter = payload.add_transmitter(format!("{name} transmitter"), transmitter);
-        let port = payload
-            .add_tx_port(TxPort {
-                name: format!("{name} feed"),
-                antenna,
-                transmitter,
-                feed_loss,
-                band,
-            })
-            .expect("freshly inserted IDs are valid");
+        let transmitter = payload.add_transmitter(format!("{name} transmitter"), transmitter)?;
+        let port = payload.add_tx_port(TxPort {
+            name: format!("{name} feed"),
+            antenna,
+            transmitter,
+            feed_loss,
+            band,
+        })?;
         let terminal = payload
             .add_terminal(Terminal {
                 name,
                 role: TerminalRole::Tx(TxChain::Component(port)),
             })
             .expect("freshly inserted IDs are valid");
-        (payload, terminal)
+        Ok((payload, terminal))
     }
 
     /// Creates a single-terminal receive-only payload.
@@ -242,28 +240,26 @@ impl CommsPayload {
         feed_loss: Decibel,
         antenna_noise_temperature: Kelvin,
         band: Option<FrequencyRange>,
-    ) -> (Self, TerminalId) {
+    ) -> Result<(Self, TerminalId), PayloadError> {
         let name = name.into();
         let mut payload = Self::new();
         let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
-        let receiver = payload.add_receiver(format!("{name} receiver"), receiver);
-        let port = payload
-            .add_rx_port(RxPort {
-                name: format!("{name} feed"),
-                antenna,
-                receiver,
-                feed_loss,
-                antenna_noise_temperature,
-                band,
-            })
-            .expect("freshly inserted IDs are valid");
+        let receiver = payload.add_receiver(format!("{name} receiver"), receiver)?;
+        let port = payload.add_rx_port(RxPort {
+            name: format!("{name} feed"),
+            antenna,
+            receiver,
+            feed_loss,
+            antenna_noise_temperature,
+            band,
+        })?;
         let terminal = payload
             .add_terminal(Terminal {
                 name,
                 role: TerminalRole::Rx(RxChain::Component(port)),
             })
             .expect("freshly inserted IDs are valid");
-        (payload, terminal)
+        Ok((payload, terminal))
     }
 
     /// Creates a single-terminal transceiver payload sharing one antenna.
@@ -282,31 +278,27 @@ impl CommsPayload {
         rx_feed_loss: Decibel,
         antenna_noise_temperature: Kelvin,
         band: Option<FrequencyRange>,
-    ) -> (Self, TerminalId) {
+    ) -> Result<(Self, TerminalId), PayloadError> {
         let name = name.into();
         let mut payload = Self::new();
         let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
-        let transmitter = payload.add_transmitter(format!("{name} transmitter"), transmitter);
-        let receiver = payload.add_receiver(format!("{name} receiver"), receiver);
-        let tx_port = payload
-            .add_tx_port(TxPort {
-                name: format!("{name} tx feed"),
-                antenna,
-                transmitter,
-                feed_loss: tx_feed_loss,
-                band,
-            })
-            .expect("freshly inserted IDs are valid");
-        let rx_port = payload
-            .add_rx_port(RxPort {
-                name: format!("{name} rx feed"),
-                antenna,
-                receiver,
-                feed_loss: rx_feed_loss,
-                antenna_noise_temperature,
-                band,
-            })
-            .expect("freshly inserted IDs are valid");
+        let transmitter = payload.add_transmitter(format!("{name} transmitter"), transmitter)?;
+        let receiver = payload.add_receiver(format!("{name} receiver"), receiver)?;
+        let tx_port = payload.add_tx_port(TxPort {
+            name: format!("{name} tx feed"),
+            antenna,
+            transmitter,
+            feed_loss: tx_feed_loss,
+            band,
+        })?;
+        let rx_port = payload.add_rx_port(RxPort {
+            name: format!("{name} rx feed"),
+            antenna,
+            receiver,
+            feed_loss: rx_feed_loss,
+            antenna_noise_temperature,
+            band,
+        })?;
         let terminal = payload
             .add_terminal(Terminal {
                 name,
@@ -316,7 +308,7 @@ impl CommsPayload {
                 },
             })
             .expect("freshly inserted IDs are valid");
-        (payload, terminal)
+        Ok((payload, terminal))
     }
 
     /// Creates a single-terminal payload from a lumped EIRP model.
@@ -356,23 +348,55 @@ impl CommsPayload {
     }
 
     /// Adds a component-tier transmitter to the inventory.
+    ///
+    /// Rejects non-physical parameters: transmit power must be finite and
+    /// positive, output back-off finite and non-negative.
     pub fn add_transmitter(
         &mut self,
         name: impl Into<String>,
         transmitter: AmplifierTransmitter,
-    ) -> TransmitterId {
-        self.transmitters.insert(Named {
+    ) -> Result<TransmitterId, PayloadError> {
+        validate_positive("transmit power [W]", transmitter.power_w)?;
+        validate_non_negative("output back-off [dB]", transmitter.output_back_off.as_f64())?;
+        Ok(self.transmitters.insert(Named {
             name: name.into(),
             value: transmitter,
-        })
+        }))
     }
 
     /// Adds a component-tier receiver to the inventory.
-    pub fn add_receiver(&mut self, name: impl Into<String>, receiver: Receiver) -> ReceiverId {
-        self.receivers.insert(Named {
+    ///
+    /// Rejects non-physical parameters: noise temperatures must be finite
+    /// and non-negative (the equivalent noise temperature of a known-T_rx
+    /// receiver strictly positive), losses finite and non-negative, stage
+    /// gains finite.
+    pub fn add_receiver(
+        &mut self,
+        name: impl Into<String>,
+        receiver: Receiver,
+    ) -> Result<ReceiverId, PayloadError> {
+        match &receiver {
+            Receiver::NoiseTemperature(rx) => {
+                validate_positive("receiver noise temperature [K]", rx.noise_temperature)?;
+            }
+            Receiver::Cascade(rx) => {
+                for stage in &rx.stages {
+                    validate_non_negative("stage noise temperature [K]", stage.noise_temperature)?;
+                    if !stage.gain.as_f64().is_finite() {
+                        return Err(PayloadError::NonPhysical {
+                            quantity: "stage gain [dB]",
+                            value: stage.gain.as_f64(),
+                        });
+                    }
+                }
+                validate_non_negative("demodulator loss [dB]", rx.demodulator_loss.as_f64())?;
+                validate_non_negative("implementation loss [dB]", rx.implementation_loss.as_f64())?;
+            }
+        }
+        Ok(self.receivers.insert(Named {
             name: name.into(),
             value: receiver,
-        })
+        }))
     }
 
     /// Adds a lumped EIRP model to the inventory.
@@ -388,6 +412,7 @@ impl CommsPayload {
     /// Adds a transmit port, validating that the referenced antenna and
     /// transmitter exist in this payload.
     pub fn add_tx_port(&mut self, port: TxPort) -> Result<TxPortId, PayloadError> {
+        validate_non_negative("feed loss [dB]", port.feed_loss.as_f64())?;
         if !self.antennas.contains_key(port.antenna) {
             return Err(PayloadError::UnknownAntenna(port.antenna));
         }
@@ -400,6 +425,11 @@ impl CommsPayload {
     /// Adds a receive port, validating that the referenced antenna and
     /// receiver exist in this payload.
     pub fn add_rx_port(&mut self, port: RxPort) -> Result<RxPortId, PayloadError> {
+        validate_non_negative("feed loss [dB]", port.feed_loss.as_f64())?;
+        validate_non_negative(
+            "antenna noise temperature [K]",
+            port.antenna_noise_temperature,
+        )?;
         if !self.antennas.contains_key(port.antenna) {
             return Err(PayloadError::UnknownAntenna(port.antenna));
         }
@@ -511,8 +541,24 @@ impl CommsPayload {
     }
 }
 
+/// Validates that a quantity is finite and strictly positive.
+fn validate_positive(quantity: &'static str, value: f64) -> Result<(), PayloadError> {
+    if !value.is_finite() || value <= 0.0 {
+        return Err(PayloadError::NonPhysical { quantity, value });
+    }
+    Ok(())
+}
+
+/// Validates that a quantity is finite and non-negative.
+fn validate_non_negative(quantity: &'static str, value: f64) -> Result<(), PayloadError> {
+    if !value.is_finite() || value < 0.0 {
+        return Err(PayloadError::NonPhysical { quantity, value });
+    }
+    Ok(())
+}
+
 /// Errors produced while assembling a [`CommsPayload`].
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[derive(Debug, Clone, PartialEq, Error)]
 #[non_exhaustive]
 pub enum PayloadError {
     /// The referenced antenna does not exist in this payload.
@@ -536,6 +582,14 @@ pub enum PayloadError {
     /// The referenced receive port does not exist in this payload.
     #[error("unknown RX port ID {0:?}")]
     UnknownRxPort(RxPortId),
+    /// A physical quantity is outside its valid domain.
+    #[error("non-physical {quantity}: {value}")]
+    NonPhysical {
+        /// Name of the offending quantity.
+        quantity: &'static str,
+        /// The rejected value.
+        value: f64,
+    },
 }
 
 #[cfg(test)]
@@ -559,15 +613,18 @@ mod tests {
             "dish",
             Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
         );
-        let tx =
-            payload.add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()));
-        let rx = payload.add_receiver(
-            "lnb",
-            Receiver::NoiseTemperature(NoiseTempReceiver {
-                band: ka_band(),
-                noise_temperature: 500.0,
-            }),
-        );
+        let tx = payload
+            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
+            .unwrap();
+        let rx = payload
+            .add_receiver(
+                "lnb",
+                Receiver::NoiseTemperature(NoiseTempReceiver {
+                    band: ka_band(),
+                    noise_temperature: 500.0,
+                }),
+            )
+            .unwrap();
         let tx_port = payload
             .add_tx_port(TxPort {
                 name: "diplexer tx leg".into(),
@@ -629,8 +686,9 @@ mod tests {
             "low gain",
             Antenna::Constant(ConstantAntenna { gain: 6.0.db() }),
         );
-        let tx =
-            payload.add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()));
+        let tx = payload
+            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
+            .unwrap();
         let high_port = payload
             .add_tx_port(TxPort {
                 name: "hga path".into(),
@@ -701,8 +759,9 @@ mod tests {
     #[test]
     fn test_add_port_rejects_dangling_keys() {
         let mut payload = CommsPayload::new();
-        let tx =
-            payload.add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()));
+        let tx = payload
+            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
+            .unwrap();
         let err = payload
             .add_tx_port(TxPort {
                 name: "dangling antenna".into(),
@@ -749,7 +808,8 @@ mod tests {
             0.5.db(),
             150.0,
             Some(ka_band()),
-        );
+        )
+        .unwrap();
 
         let terminal = payload.terminal(terminal).unwrap();
         assert_eq!(terminal.name, "ka terminal");
@@ -784,6 +844,48 @@ mod tests {
             payload.terminal(terminal).unwrap().role,
             TerminalRole::Rx(RxChain::Lumped(_))
         ));
+    }
+
+    #[test]
+    fn test_non_physical_inputs_are_rejected() {
+        let mut payload = CommsPayload::new();
+        // Zero, negative, and non-finite transmit power
+        for power in [0.0, -10.0, f64::NAN, f64::INFINITY] {
+            let err = payload
+                .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), power, 0.0.db()))
+                .unwrap_err();
+            assert!(matches!(err, PayloadError::NonPhysical { .. }));
+        }
+        // Negative noise temperature
+        let err = payload
+            .add_receiver(
+                "rx",
+                Receiver::NoiseTemperature(NoiseTempReceiver {
+                    band: ka_band(),
+                    noise_temperature: -10.0,
+                }),
+            )
+            .unwrap_err();
+        assert!(matches!(err, PayloadError::NonPhysical { .. }));
+        assert!(err.to_string().contains("noise temperature"));
+        // Negative feed loss on a port
+        let antenna = payload.add_antenna(
+            "antenna",
+            Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
+        );
+        let tx = payload
+            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
+            .unwrap();
+        let err = payload
+            .add_tx_port(TxPort {
+                name: "feed".into(),
+                antenna,
+                transmitter: tx,
+                feed_loss: (-1.0).db(),
+                band: None,
+            })
+            .unwrap_err();
+        assert!(matches!(err, PayloadError::NonPhysical { .. }));
     }
 
     #[cfg(feature = "serde")]

@@ -484,15 +484,18 @@ mod tests {
             "rx antenna",
             Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
         );
-        let pa =
-            payload.add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()));
-        let rx = payload.add_receiver(
-            "receiver",
-            Receiver::NoiseTemperature(NoiseTempReceiver {
-                band: ka_band(),
-                noise_temperature: 500.0,
-            }),
-        );
+        let pa = payload
+            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
+            .unwrap();
+        let rx = payload
+            .add_receiver(
+                "receiver",
+                Receiver::NoiseTemperature(NoiseTempReceiver {
+                    band: ka_band(),
+                    noise_temperature: 500.0,
+                }),
+            )
+            .unwrap();
         let tx_port = payload
             .add_tx_port(TxPort {
                 name: "tx feed".into(),
@@ -557,13 +560,15 @@ mod tests {
             "antenna",
             Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
         );
-        let rx = payload.add_receiver(
-            "receiver",
-            Receiver::NoiseTemperature(NoiseTempReceiver {
-                band: ka_band(),
-                noise_temperature: 500.0,
-            }),
-        );
+        let rx = payload
+            .add_receiver(
+                "receiver",
+                Receiver::NoiseTemperature(NoiseTempReceiver {
+                    band: ka_band(),
+                    noise_temperature: 500.0,
+                }),
+            )
+            .unwrap();
         let port = payload
             .add_rx_port(RxPort {
                 name: "feed".into(),
@@ -623,7 +628,9 @@ mod tests {
             "antenna",
             Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
         );
-        let rx = payload.add_receiver("receiver", Receiver::Cascade(chain));
+        let rx = payload
+            .add_receiver("receiver", Receiver::Cascade(chain))
+            .unwrap();
         let port = payload
             .add_rx_port(RxPort {
                 name: "feed".into(),
@@ -701,8 +708,9 @@ mod tests {
             "dish",
             Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
         );
-        let pa =
-            payload.add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()));
+        let pa = payload
+            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
+            .unwrap();
         let narrow = FrequencyRange::new(28.0.ghz(), 29.5.ghz()).unwrap();
         let port = payload
             .add_tx_port(TxPort {
@@ -731,8 +739,9 @@ mod tests {
             "dish",
             Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
         );
-        let pa =
-            payload.add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()));
+        let pa = payload
+            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
+            .unwrap();
         let disjoint = FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap();
         let port = payload
             .add_tx_port(TxPort {

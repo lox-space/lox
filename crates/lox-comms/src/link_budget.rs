@@ -95,6 +95,15 @@ impl LinkStats {
         rx_pointing: Pointing,
         direction: LinkDirection,
     ) -> Result<Self, LinkBudgetError> {
+        for (quantity, value) in [
+            ("noise bandwidth [Hz]", bandwidth.to_hertz()),
+            ("slant range [m]", range.to_meters()),
+        ] {
+            if !value.is_finite() || value <= 0.0 {
+                return Err(LinkBudgetError::NonPhysical { quantity, value });
+            }
+        }
+
         for (band, endpoint) in [
             (tx.band(), tx.terminal_name()),
             (rx.band(), rx.terminal_name()),
@@ -261,7 +270,8 @@ mod tests {
             AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()),
             1.0.db(),
             None,
-        );
+        )
+        .unwrap();
         let (rx_payload, rx_terminal) = CommsPayload::receiver_only(
             "rx",
             Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
@@ -272,7 +282,8 @@ mod tests {
             0.0.db(),
             0.0,
             None,
-        );
+        )
+        .unwrap();
         (tx_payload, tx_terminal, rx_payload, rx_terminal)
     }
 
@@ -422,6 +433,31 @@ mod tests {
         let message = err.to_string();
         assert!(message.contains("'rx'"));
         assert!(message.contains("17.000–21.000 GHz"));
+    }
+
+    #[test]
+    fn test_for_link_rejects_non_physical_inputs() {
+        let (tx_payload, tx_terminal, rx_payload, rx_terminal) = lumped_link();
+        for (bandwidth, range) in [
+            (Frequency::hertz(0.0), Distance::kilometers(1000.0)),
+            (Frequency::hertz(-5e6), Distance::kilometers(1000.0)),
+            (5.0.mhz(), Distance::kilometers(0.0)),
+            (5.0.mhz(), Distance::kilometers(-1.0)),
+        ] {
+            let err = LinkStats::for_link(
+                &tx_payload.tx_endpoint(tx_terminal).unwrap(),
+                &rx_payload.rx_endpoint(rx_terminal).unwrap(),
+                29.0.ghz(),
+                bandwidth,
+                range,
+                EnvironmentalLosses::none(),
+                Pointing::Boresight,
+                Pointing::Boresight,
+                LinkDirection::Downlink,
+            )
+            .unwrap_err();
+            assert!(matches!(err, LinkBudgetError::NonPhysical { .. }));
+        }
     }
 
     #[test]
