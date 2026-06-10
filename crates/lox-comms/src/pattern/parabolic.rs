@@ -11,6 +11,7 @@ use std::f64::consts::{FRAC_2_PI, PI};
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 use crate::antenna::AntennaGain;
+use crate::pattern::GAIN_FLOOR_LINEAR;
 
 /// Argument `u` at which the Airy disk pattern `|2·J₁(u)/u|²` equals 0.5 (−3 dB).
 ///
@@ -20,9 +21,6 @@ const BESSEL_J1_HPBW: f64 = 1.616_330_8;
 
 /// Threshold below which we treat `u` as zero to avoid division by zero.
 const DIV_BY_ZERO_LIMIT: f64 = 1e-6;
-
-/// Floor gain in linear representation (~-120 dB).
-const MINF_GAIN_LINEAR: f64 = 1e-12;
 
 /// Parabolic antenna gain pattern (uniform illuminated aperture).
 #[derive(Debug, Clone)]
@@ -95,16 +93,17 @@ impl AntennaGain for ParabolicPattern {
         let theta_rad = theta.to_radians();
         let u = PI * d / wavelength_m * theta_rad.sin();
 
-        let pattern_loss_linear = if theta_rad.cos() < (PI / 2.0).cos() {
+        let pattern_loss_linear = if theta_rad.cos() < 0.0 {
             // Beyond hemisphere — floor gain
-            MINF_GAIN_LINEAR
+            GAIN_FLOOR_LINEAR
         } else if u.abs() < DIV_BY_ZERO_LIMIT {
             // On-axis — no pattern loss
             1.0
         } else {
             let j1u = bessel_j1(u);
             let ratio = 2.0 * j1u / u;
-            ratio * ratio
+            // The Airy pattern has exact nulls; floor them to keep gains finite.
+            (ratio * ratio).max(GAIN_FLOOR_LINEAR)
         };
 
         self.peak_gain(frequency) + Decibel::from_linear(pattern_loss_linear)
@@ -210,6 +209,22 @@ mod tests {
         let peak = p.peak_gain(test_frequency());
         assert_approx_eq!(gain.as_f64(), 46.01119000490658, rtol <= 1e-6);
         assert_approx_eq!(peak.as_f64(), 46.01119000490658, rtol <= 1e-6);
+    }
+
+    #[test]
+    fn test_parabolic_gain_at_airy_null_is_finite() {
+        // At the first null of J₁ the pattern is exactly zero; the floor must
+        // keep the gain finite instead of −∞.
+        let p = test_pattern();
+        let f = test_frequency();
+        let wavelength = f.wavelength().to_meters();
+        let sin_theta = BESSEL_J1_FIRST_ZERO * wavelength / (PI * p.diameter.to_meters());
+        let gain = p.gain(f, Angle::radians(sin_theta.asin()), Angle::ZERO);
+        let floor = p.peak_gain(f).as_f64() - 120.0;
+        assert!(gain.as_f64().is_finite());
+        assert!(gain.as_f64() >= floor - 1e-9);
+        // Deep in the null: far below the first sidelobe (−17.6 dB)
+        assert!(gain.as_f64() < p.peak_gain(f).as_f64() - 60.0);
     }
 
     #[test]
