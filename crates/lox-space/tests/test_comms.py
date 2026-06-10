@@ -1256,27 +1256,45 @@ def test_power_flux_density():
     assert float(pfd) == pytest.approx(expected, abs=0.01)
 
 
-def test_pfd_mask():
-    mask = lox.pfd_mask(
-        elevation=0.0 * lox.deg,
-        start_val=-154.0 * lox.dB,
-        end_val=-144.0 * lox.dB,
-    )
-    assert float(mask) == pytest.approx(-154.0, abs=1e-10)
+def test_pfd_mask_art_21_16():
+    mask = lox.PfdMask.art_21_16(-154.0 * lox.dB)
+    assert float(mask.value_at(0.0 * lox.deg)) == pytest.approx(-154.0, abs=1e-10)
+    assert float(mask.value_at(15.0 * lox.deg)) == pytest.approx(-149.0, abs=1e-10)
+    assert float(mask.value_at(90.0 * lox.deg)) == pytest.approx(-144.0, abs=1e-10)
 
-    mask = lox.pfd_mask(
-        elevation=15.0 * lox.deg,
-        start_val=-154.0 * lox.dB,
-        end_val=-144.0 * lox.dB,
-    )
-    assert float(mask) == pytest.approx(-149.0, abs=1e-10)
 
-    mask = lox.pfd_mask(
-        elevation=90.0 * lox.deg,
-        start_val=-154.0 * lox.dB,
-        end_val=-144.0 * lox.dB,
+def test_pfd_mask_custom_nodes():
+    mask = lox.PfdMask(
+        [
+            (5.0 * lox.deg, -150.0 * lox.dB),
+            (15.0 * lox.deg, -145.0 * lox.dB),
+            (25.0 * lox.deg, -142.5 * lox.dB),
+        ]
     )
-    assert float(mask) == pytest.approx(-144.0, abs=1e-10)
+    assert float(mask.value_at(0.0 * lox.deg)) == pytest.approx(-150.0, abs=1e-10)
+    assert float(mask.value_at(10.0 * lox.deg)) == pytest.approx(-147.5, abs=1e-10)
+    assert float(mask.value_at(20.0 * lox.deg)) == pytest.approx(-143.75, abs=1e-10)
+    assert float(mask.value_at(60.0 * lox.deg)) == pytest.approx(-142.5, abs=1e-10)
+    assert len(mask.nodes()) == 3
+
+
+def test_pfd_mask_rejects_invalid_nodes():
+    with pytest.raises(ValueError):
+        lox.PfdMask([(5.0 * lox.deg, -150.0 * lox.dB)])
+    with pytest.raises(ValueError):
+        lox.PfdMask(
+            [
+                (25.0 * lox.deg, -144.0 * lox.dB),
+                (5.0 * lox.deg, -154.0 * lox.dB),
+            ]
+        )
+
+
+def test_pfd_mask_eq_and_pickle():
+    mask = lox.PfdMask.art_21_16(-154.0 * lox.dB)
+    assert mask == lox.PfdMask.art_21_16(-154.0 * lox.dB)
+    assert mask != lox.PfdMask.art_21_16(-150.0 * lox.dB)
+    assert pickle.loads(pickle.dumps(mask)) == mask
 
 
 # --- AmplifierTransmitter with PatternedAntenna ---

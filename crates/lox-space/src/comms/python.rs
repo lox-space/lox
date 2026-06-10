@@ -1855,18 +1855,78 @@ pub fn power_flux_density(
     ))
 }
 
-/// Computes the ITU RR Article 21.16 PFD mask value.
+/// A piecewise-linear PFD mask over elevation in dBW/m²/ref_bw.
+///
+/// The mask is linear in elevation between consecutive breakpoints and constant
+/// below the first and above the last.
 ///
 /// Args:
-///     elevation: Elevation angle.
-///     start_val: PFD limit at low elevation as Decibel.
-///     end_val: PFD limit at high elevation as Decibel.
-///
-/// Returns:
-///     PFD mask value as Decibel.
-#[pyfunction]
-pub fn pfd_mask(elevation: PyAngle, start_val: PyDecibel, end_val: PyDecibel) -> PyDecibel {
-    PyDecibel(pfd::pfd_mask(elevation.0, start_val.0, end_val.0))
+///     nodes: (elevation, value) breakpoints with strictly ascending elevations.
+#[pyclass(name = "PfdMask", module = "lox_space", frozen, from_py_object)]
+#[derive(Debug, Clone)]
+pub struct PyPfdMask(pub pfd::PfdMask);
+
+#[pymethods]
+impl PyPfdMask {
+    #[new]
+    fn new(nodes: Vec<(PyAngle, PyDecibel)>) -> PyResult<Self> {
+        pfd::PfdMask::new(
+            nodes
+                .into_iter()
+                .map(|(elevation, value)| (elevation.0, value.0))
+                .collect(),
+        )
+        .map(Self)
+        .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// The ITU RR Article 21.16 mask shape for a given low-elevation limit.
+    ///
+    /// Rises from `start` at 5° elevation by 0.5 dB per degree to `start + 10 dB`
+    /// at 25° and is constant outside that range.
+    #[staticmethod]
+    fn art_21_16(start: PyDecibel) -> Self {
+        Self(pfd::PfdMask::art_21_16(start.0))
+    }
+
+    /// Returns the mask value at the given elevation angle.
+    fn value_at(&self, elevation: PyAngle) -> PyDecibel {
+        PyDecibel(self.0.value_at(elevation.0))
+    }
+
+    /// Returns the mask breakpoints as (elevation, value) tuples.
+    fn nodes(&self) -> Vec<(PyAngle, PyDecibel)> {
+        self.0
+            .nodes()
+            .iter()
+            .map(|&(elevation, value)| (PyAngle(elevation), PyDecibel(value)))
+            .collect()
+    }
+
+    fn __eq__(&self, other: &PyPfdMask) -> bool {
+        self.0 == other.0
+    }
+
+    fn __getnewargs__(&self) -> (Vec<(PyAngle, PyDecibel)>,) {
+        (self.nodes(),)
+    }
+
+    fn __repr__(&self) -> String {
+        let nodes = self
+            .0
+            .nodes()
+            .iter()
+            .map(|(elevation, value)| {
+                format!(
+                    "(Angle({}), Decibel({}))",
+                    repr_f64(elevation.to_radians()),
+                    repr_f64(value.as_f64())
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("PfdMask(nodes=[{nodes}])")
+    }
 }
 
 /// Computes the slant range from a ground station to a satellite.
