@@ -191,8 +191,10 @@ pub struct PyParabolicPattern(pub ParabolicPattern);
 #[pymethods]
 impl PyParabolicPattern {
     #[new]
-    fn new(diameter: PyDistance, efficiency: f64) -> Self {
-        Self(ParabolicPattern::new(diameter.0, efficiency))
+    fn new(diameter: PyDistance, efficiency: f64) -> PyResult<Self> {
+        ParabolicPattern::new(diameter.0, efficiency)
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Creates a parabolic pattern from a desired beamwidth.
@@ -202,12 +204,14 @@ impl PyParabolicPattern {
     ///     frequency: Frequency.
     ///     efficiency: Aperture efficiency (0, 1].
     #[staticmethod]
-    fn from_beamwidth(beamwidth: PyAngle, frequency: PyFrequency, efficiency: f64) -> Self {
-        Self(ParabolicPattern::from_beamwidth(
-            beamwidth.0,
-            frequency.0,
-            efficiency,
-        ))
+    fn from_beamwidth(
+        beamwidth: PyAngle,
+        frequency: PyFrequency,
+        efficiency: f64,
+    ) -> PyResult<Self> {
+        ParabolicPattern::from_beamwidth(beamwidth.0, frequency.0, efficiency)
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Returns the gain in dBi at the given frequency and pattern angles.
@@ -231,19 +235,19 @@ impl PyParabolicPattern {
     }
 
     fn __eq__(&self, other: &PyParabolicPattern) -> bool {
-        self.0.diameter.to_meters() == other.0.diameter.to_meters()
-            && self.0.efficiency == other.0.efficiency
+        self.0.diameter().to_meters() == other.0.diameter().to_meters()
+            && self.0.efficiency() == other.0.efficiency()
     }
 
     fn __getnewargs__(&self) -> (PyDistance, f64) {
-        (PyDistance(self.0.diameter), self.0.efficiency)
+        (PyDistance(self.0.diameter()), self.0.efficiency())
     }
 
     fn __repr__(&self) -> String {
         format!(
             "ParabolicPattern(diameter={}, efficiency={})",
-            PyDistance(self.0.diameter).__repr__(),
-            repr_f64(self.0.efficiency),
+            PyDistance(self.0.diameter()).__repr__(),
+            repr_f64(self.0.efficiency()),
         )
     }
 }
@@ -260,8 +264,10 @@ pub struct PyGaussianPattern(pub GaussianPattern);
 #[pymethods]
 impl PyGaussianPattern {
     #[new]
-    fn new(diameter: PyDistance, efficiency: f64) -> Self {
-        Self(GaussianPattern::new(diameter.0, efficiency))
+    fn new(diameter: PyDistance, efficiency: f64) -> PyResult<Self> {
+        GaussianPattern::new(diameter.0, efficiency)
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Returns the gain in dBi at the given frequency and pattern angles.
@@ -284,19 +290,19 @@ impl PyGaussianPattern {
     }
 
     fn __eq__(&self, other: &PyGaussianPattern) -> bool {
-        self.0.diameter.to_meters() == other.0.diameter.to_meters()
-            && self.0.efficiency == other.0.efficiency
+        self.0.diameter().to_meters() == other.0.diameter().to_meters()
+            && self.0.efficiency() == other.0.efficiency()
     }
 
     fn __getnewargs__(&self) -> (PyDistance, f64) {
-        (PyDistance(self.0.diameter), self.0.efficiency)
+        (PyDistance(self.0.diameter()), self.0.efficiency())
     }
 
     fn __repr__(&self) -> String {
         format!(
             "GaussianPattern(diameter={}, efficiency={})",
-            PyDistance(self.0.diameter).__repr__(),
-            repr_f64(self.0.efficiency),
+            PyDistance(self.0.diameter()).__repr__(),
+            repr_f64(self.0.efficiency()),
         )
     }
 }
@@ -312,8 +318,10 @@ pub struct PyDipolePattern(pub DipolePattern);
 #[pymethods]
 impl PyDipolePattern {
     #[new]
-    fn new(length: PyDistance) -> Self {
-        Self(DipolePattern::new(length.0))
+    fn new(length: PyDistance) -> PyResult<Self> {
+        DipolePattern::new(length.0)
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Returns the gain in dBi at the given frequency and pattern angles.
@@ -331,17 +339,17 @@ impl PyDipolePattern {
     }
 
     fn __eq__(&self, other: &PyDipolePattern) -> bool {
-        self.0.length.to_meters() == other.0.length.to_meters()
+        self.0.length().to_meters() == other.0.length().to_meters()
     }
 
     fn __getnewargs__(&self) -> (PyDistance,) {
-        (PyDistance(self.0.length),)
+        (PyDistance(self.0.length()),)
     }
 
     fn __repr__(&self) -> String {
         format!(
             "DipolePattern(length={})",
-            PyDistance(self.0.length).__repr__(),
+            PyDistance(self.0.length()).__repr__(),
         )
     }
 }
@@ -362,24 +370,25 @@ pub struct PyConstantAntenna {
 #[pymethods]
 impl PyConstantAntenna {
     #[new]
-    fn new(gain: PyDecibel) -> Self {
-        Self {
-            inner: ConstantAntenna { gain: gain.0 },
-        }
+    fn new(gain: PyDecibel) -> PyResult<Self> {
+        Ok(Self {
+            inner: ConstantAntenna::new(gain.0)
+                .map_err(|err| PyValueError::new_err(err.to_string()))?,
+        })
     }
 
     fn __eq__(&self, other: &PyConstantAntenna) -> bool {
-        self.inner.gain.as_f64() == other.inner.gain.as_f64()
+        self.inner.peak_gain().as_f64() == other.inner.peak_gain().as_f64()
     }
 
     fn __getnewargs__(&self) -> (PyDecibel,) {
-        (PyDecibel(self.inner.gain),)
+        (PyDecibel(self.inner.peak_gain()),)
     }
 
     fn __repr__(&self) -> String {
         format!(
             "ConstantAntenna(gain={})",
-            PyDecibel(self.inner.gain).__repr__(),
+            PyDecibel(self.inner.peak_gain()).__repr__(),
         )
     }
 }
@@ -528,16 +537,19 @@ impl PyPatternedAntenna {
         let pattern_repr = match &self.0.pattern {
             AntennaPattern::Parabolic(p) => format!(
                 "ParabolicPattern(diameter={}, efficiency={})",
-                PyDistance(p.diameter).__repr__(),
-                repr_f64(p.efficiency),
+                PyDistance(p.diameter()).__repr__(),
+                repr_f64(p.efficiency()),
             ),
             AntennaPattern::Gaussian(p) => format!(
                 "GaussianPattern(diameter={}, efficiency={})",
-                PyDistance(p.diameter).__repr__(),
-                repr_f64(p.efficiency),
+                PyDistance(p.diameter()).__repr__(),
+                repr_f64(p.efficiency()),
             ),
             AntennaPattern::Dipole(p) => {
-                format!("DipolePattern(length={})", PyDistance(p.length).__repr__())
+                format!(
+                    "DipolePattern(length={})",
+                    PyDistance(p.length()).__repr__()
+                )
             }
             &_ => unreachable!("unknown antenna variant"),
         };
@@ -550,17 +562,11 @@ impl PyPatternedAntenna {
 
 fn extract_antenna_pattern(obj: &Bound<'_, PyAny>) -> PyResult<AntennaPattern> {
     if let Ok(p) = obj.extract::<PyRef<'_, PyParabolicPattern>>() {
-        Ok(AntennaPattern::Parabolic(ParabolicPattern::new(
-            p.0.diameter,
-            p.0.efficiency,
-        )))
+        Ok(AntennaPattern::Parabolic(p.0.clone()))
     } else if let Ok(p) = obj.extract::<PyRef<'_, PyGaussianPattern>>() {
-        Ok(AntennaPattern::Gaussian(GaussianPattern::new(
-            p.0.diameter,
-            p.0.efficiency,
-        )))
+        Ok(AntennaPattern::Gaussian(p.0.clone()))
     } else if let Ok(p) = obj.extract::<PyRef<'_, PyDipolePattern>>() {
-        Ok(AntennaPattern::Dipole(DipolePattern::new(p.0.length)))
+        Ok(AntennaPattern::Dipole(p.0.clone()))
     } else {
         Err(PyValueError::new_err(
             "expected a ParabolicPattern, GaussianPattern, or DipolePattern",
@@ -570,19 +576,13 @@ fn extract_antenna_pattern(obj: &Bound<'_, PyAny>) -> PyResult<AntennaPattern> {
 
 fn pattern_to_py<'py>(py: Python<'py>, pattern: &AntennaPattern) -> Bound<'py, PyAny> {
     match pattern {
-        AntennaPattern::Parabolic(p) => Bound::new(
-            py,
-            PyParabolicPattern(ParabolicPattern::new(p.diameter, p.efficiency)),
-        )
-        .unwrap()
-        .into_any(),
-        AntennaPattern::Gaussian(p) => Bound::new(
-            py,
-            PyGaussianPattern(GaussianPattern::new(p.diameter, p.efficiency)),
-        )
-        .unwrap()
-        .into_any(),
-        AntennaPattern::Dipole(p) => Bound::new(py, PyDipolePattern(DipolePattern::new(p.length)))
+        AntennaPattern::Parabolic(p) => Bound::new(py, PyParabolicPattern(p.clone()))
+            .unwrap()
+            .into_any(),
+        AntennaPattern::Gaussian(p) => Bound::new(py, PyGaussianPattern(p.clone()))
+            .unwrap()
+            .into_any(),
+        AntennaPattern::Dipole(p) => Bound::new(py, PyDipolePattern(p.clone()))
             .unwrap()
             .into_any(),
         _ => unreachable!("unknown antenna variant"),
@@ -591,22 +591,9 @@ fn pattern_to_py<'py>(py: Python<'py>, pattern: &AntennaPattern) -> Bound<'py, P
 
 fn build_antenna(obj: &Bound<'_, PyAny>) -> PyResult<Antenna> {
     if let Ok(a) = obj.extract::<PyRef<'_, PyConstantAntenna>>() {
-        Ok(Antenna::Constant(ConstantAntenna { gain: a.inner.gain }))
+        Ok(Antenna::Constant(a.inner.clone()))
     } else if let Ok(a) = obj.extract::<PyRef<'_, PyPatternedAntenna>>() {
-        let pattern = match &a.0.pattern {
-            AntennaPattern::Parabolic(p) => {
-                AntennaPattern::Parabolic(ParabolicPattern::new(p.diameter, p.efficiency))
-            }
-            AntennaPattern::Gaussian(p) => {
-                AntennaPattern::Gaussian(GaussianPattern::new(p.diameter, p.efficiency))
-            }
-            AntennaPattern::Dipole(p) => AntennaPattern::Dipole(DipolePattern::new(p.length)),
-            _ => unreachable!("unknown antenna variant"),
-        };
-        Ok(Antenna::Patterned(PatternedAntenna {
-            pattern,
-            frame: a.0.frame,
-        }))
+        Ok(Antenna::Patterned(a.0.clone()))
     } else {
         Err(PyValueError::new_err(
             "expected a ConstantAntenna or PatternedAntenna",

@@ -478,11 +478,11 @@ mod tests {
         let mut payload = CommsPayload::new();
         let dish = payload.add_antenna(
             "dish",
-            Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
+            Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
         );
         let rx_antenna = payload.add_antenna(
             "rx antenna",
-            Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
+            Antenna::Constant(ConstantAntenna::new(30.0.db()).unwrap()),
         );
         let pa = payload.add_transmitter(
             "pa",
@@ -541,7 +541,7 @@ mod tests {
         let mut payload = CommsPayload::new();
         let antenna = payload.add_antenna(
             "antenna",
-            Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
+            Antenna::Constant(ConstantAntenna::new(30.0.db()).unwrap()),
         );
         let rx = payload.add_receiver(
             "receiver",
@@ -595,7 +595,7 @@ mod tests {
         let mut payload = CommsPayload::new();
         let antenna = payload.add_antenna(
             "antenna",
-            Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
+            Antenna::Constant(ConstantAntenna::new(30.0.db()).unwrap()),
         );
         let rx = payload.add_receiver("receiver", Receiver::Cascade(chain));
         let port = payload
@@ -658,7 +658,7 @@ mod tests {
         let mut payload = CommsPayload::new();
         let dish = payload.add_antenna(
             "dish",
-            Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
+            Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
         );
         let pa = payload.add_transmitter(
             "pa",
@@ -684,7 +684,7 @@ mod tests {
         let mut payload = CommsPayload::new();
         let dish = payload.add_antenna(
             "dish",
-            Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
+            Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
         );
         let pa = payload.add_transmitter(
             "pa",

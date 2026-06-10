@@ -83,8 +83,27 @@ mod tests {
     }
 
     #[test]
+    fn test_patterns_reject_non_physical_parameters() {
+        for diameter in [0.0, -1.0, f64::NAN] {
+            assert!(ParabolicPattern::new(Distance::meters(diameter), 0.45).is_err());
+            assert!(GaussianPattern::new(Distance::meters(diameter), 0.45).is_err());
+        }
+        for efficiency in [0.0, -0.1, 1.1, f64::NAN] {
+            assert!(ParabolicPattern::new(Distance::meters(0.98), efficiency).is_err());
+            assert!(GaussianPattern::new(Distance::meters(0.98), efficiency).is_err());
+        }
+        assert!(DipolePattern::new(Distance::meters(0.0)).is_err());
+        assert!(DipolePattern::new(Distance::meters(-0.1)).is_err());
+        assert!(ParabolicPattern::from_beamwidth(Angle::degrees(0.0), 29.0e9.hz(), 0.45).is_err());
+        assert!(
+            ParabolicPattern::from_beamwidth(Angle::degrees(181.0), 29.0e9.hz(), 0.45).is_err()
+        );
+    }
+
+    #[test]
     fn test_pattern_enum_parabolic_dispatch() {
-        let p = AntennaPattern::Parabolic(ParabolicPattern::new(Distance::meters(0.98), 0.45));
+        let p =
+            AntennaPattern::Parabolic(ParabolicPattern::new(Distance::meters(0.98), 0.45).unwrap());
         let f = test_frequency();
         let gain = p.gain(f, Angle::ZERO, Angle::ZERO);
         let peak = p.peak_gain(f);
@@ -93,7 +112,8 @@ mod tests {
 
     #[test]
     fn test_pattern_enum_gaussian_dispatch() {
-        let p = AntennaPattern::Gaussian(GaussianPattern::new(Distance::meters(0.98), 0.45));
+        let p =
+            AntennaPattern::Gaussian(GaussianPattern::new(Distance::meters(0.98), 0.45).unwrap());
         let f = test_frequency();
         let gain = p.gain(f, Angle::ZERO, Angle::ZERO);
         let peak = p.peak_gain(f);
@@ -104,7 +124,8 @@ mod tests {
     fn test_pattern_enum_dipole_dispatch() {
         let f = test_frequency();
         let wavelength = f.wavelength().to_meters();
-        let p = AntennaPattern::Dipole(DipolePattern::new(Distance::meters(wavelength / 2.0)));
+        let p =
+            AntennaPattern::Dipole(DipolePattern::new(Distance::meters(wavelength / 2.0)).unwrap());
         // Broadside of a half-wave dipole — finite gain
         let gain = p.gain(
             f,

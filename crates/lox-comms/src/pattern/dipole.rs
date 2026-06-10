@@ -11,6 +11,7 @@ use std::f64::consts::{FRAC_PI_2, PI};
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 use crate::antenna::AntennaGain;
+use crate::error::NonPhysicalError;
 use crate::pattern::GAIN_FLOOR_LINEAR;
 
 /// Threshold below which `|sin(θ)|` is treated as zero to avoid division by zero.
@@ -23,17 +24,47 @@ const SHORT_DIPOLE_LIMIT: f64 = 0.1;
 const EULER_GAMMA: f64 = 0.577_215_664_901_532_9;
 
 /// Dipole antenna gain pattern.
+///
+/// Valid by construction: the length is finite and positive.
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "DipolePatternRepr")
+)]
 pub struct DipolePattern {
-    /// Dipole length.
-    pub length: Distance,
+    length: Distance,
+}
+
+/// Serde wire format for [`DipolePattern`]: forces deserialization through
+/// the validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct DipolePatternRepr {
+    length: Distance,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<DipolePatternRepr> for DipolePattern {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: DipolePatternRepr) -> Result<Self, Self::Error> {
+        DipolePattern::new(repr.length)
+    }
 }
 
 impl DipolePattern {
     /// Creates a new dipole pattern with the given length.
-    pub fn new(length: Distance) -> Self {
-        Self { length }
+    ///
+    /// Rejects a non-finite or non-positive length.
+    pub fn new(length: Distance) -> Result<Self, NonPhysicalError> {
+        NonPhysicalError::check_positive("dipole length [m]", length.to_meters())?;
+        Ok(Self { length })
+    }
+
+    /// Returns the dipole length.
+    pub fn length(&self) -> Distance {
+        self.length
     }
 
     /// Returns the normalized linear gain pattern F(θ) at the given angle.
@@ -238,7 +269,7 @@ mod tests {
 
     fn half_wave_dipole() -> DipolePattern {
         let wavelength = test_frequency().wavelength();
-        DipolePattern::new(Distance::meters(wavelength.to_meters() / 2.0))
+        DipolePattern::new(Distance::meters(wavelength.to_meters() / 2.0)).unwrap()
     }
 
     #[test]
@@ -275,7 +306,7 @@ mod tests {
         let f = test_frequency();
         let wavelength = f.wavelength().to_meters();
         for length_factor in [0.5, 1.0, 1.25, 1.5, 2.3] {
-            let d = DipolePattern::new(Distance::meters(length_factor * wavelength));
+            let d = DipolePattern::new(Distance::meters(length_factor * wavelength)).unwrap();
             let integral = simpsons_rule(0.0, PI, 1000, |theta| {
                 d.gain_pattern(f, Angle::radians(theta)) * theta.sin()
             });
@@ -294,7 +325,7 @@ mod tests {
     #[test]
     fn test_short_dipole_directivity_is_exactly_three_halves() {
         let wavelength = test_frequency().wavelength().to_meters();
-        let d = DipolePattern::new(Distance::meters(wavelength / 100.0));
+        let d = DipolePattern::new(Distance::meters(wavelength / 100.0)).unwrap();
         assert_approx_eq!(d.directivity(test_frequency()), 1.5, atol <= 1e-12);
     }
 
@@ -318,7 +349,7 @@ mod tests {
     fn test_short_dipole_peak() {
         // Short dipole (L = λ/100) peak gain ≈ 1.76 dBi
         let wavelength = test_frequency().wavelength().to_meters();
-        let d = DipolePattern::new(Distance::meters(wavelength / 100.0));
+        let d = DipolePattern::new(Distance::meters(wavelength / 100.0)).unwrap();
         let peak = d.peak_gain(test_frequency());
         assert_approx_eq!(peak.as_f64(), 1.76, atol <= 0.1);
     }
@@ -327,7 +358,7 @@ mod tests {
     fn test_1_25_wavelength_dipole_peak() {
         // 1.25λ dipole peak gain ≈ 5.2 dBi
         let wavelength = test_frequency().wavelength().to_meters();
-        let d = DipolePattern::new(Distance::meters(1.25 * wavelength));
+        let d = DipolePattern::new(Distance::meters(1.25 * wavelength)).unwrap();
         let peak = d.peak_gain(test_frequency());
         assert_approx_eq!(peak.as_f64(), 5.2, atol <= 0.1);
     }
@@ -336,7 +367,7 @@ mod tests {
     fn test_1_5_wavelength_dipole_at_45_degrees() {
         // 1.5λ dipole at 45° ≈ 3.5 dBi
         let wavelength = test_frequency().wavelength().to_meters();
-        let d = DipolePattern::new(Distance::meters(1.5 * wavelength));
+        let d = DipolePattern::new(Distance::meters(1.5 * wavelength)).unwrap();
         let gain = d.gain(test_frequency(), Angle::degrees(45.0), Angle::ZERO);
         assert_approx_eq!(gain.as_f64(), 3.5, atol <= 0.1);
     }

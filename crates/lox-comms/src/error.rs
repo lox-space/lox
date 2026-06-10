@@ -44,6 +44,14 @@ impl NonPhysicalError {
         }
         Ok(())
     }
+
+    /// Validates that a quantity lies in the half-open unit interval (0, 1].
+    pub(crate) fn check_unit_interval(quantity: &'static str, value: f64) -> Result<(), Self> {
+        if !(value > 0.0 && value <= 1.0) {
+            return Err(Self { quantity, value });
+        }
+        Ok(())
+    }
 }
 
 /// Errors that can arise when computing a link budget.

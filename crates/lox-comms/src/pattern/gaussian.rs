@@ -11,25 +11,64 @@ use std::f64::consts::PI;
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 use crate::antenna::AntennaGain;
+use crate::error::NonPhysicalError;
 use crate::pattern::GAIN_FLOOR_LINEAR;
 
 /// Gaussian antenna gain pattern.
+///
+/// Valid by construction: the diameter is finite and positive, the aperture
+/// efficiency in (0, 1].
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "GaussianPatternRepr")
+)]
 pub struct GaussianPattern {
-    /// Antenna diameter.
-    pub diameter: Distance,
-    /// Aperture efficiency (0, 1].
-    pub efficiency: f64,
+    diameter: Distance,
+    efficiency: f64,
+}
+
+/// Serde wire format for [`GaussianPattern`]: forces deserialization through
+/// the validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct GaussianPatternRepr {
+    diameter: Distance,
+    efficiency: f64,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<GaussianPatternRepr> for GaussianPattern {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: GaussianPatternRepr) -> Result<Self, Self::Error> {
+        GaussianPattern::new(repr.diameter, repr.efficiency)
+    }
 }
 
 impl GaussianPattern {
     /// Creates a new Gaussian pattern with the given diameter and efficiency.
-    pub fn new(diameter: Distance, efficiency: f64) -> Self {
-        Self {
+    ///
+    /// Rejects a non-finite or non-positive diameter and an aperture
+    /// efficiency outside (0, 1].
+    pub fn new(diameter: Distance, efficiency: f64) -> Result<Self, NonPhysicalError> {
+        NonPhysicalError::check_positive("antenna diameter [m]", diameter.to_meters())?;
+        NonPhysicalError::check_unit_interval("aperture efficiency", efficiency)?;
+        Ok(Self {
             diameter,
             efficiency,
-        }
+        })
+    }
+
+    /// Returns the antenna diameter.
+    pub fn diameter(&self) -> Distance {
+        self.diameter
+    }
+
+    /// Returns the aperture efficiency.
+    pub fn efficiency(&self) -> f64 {
+        self.efficiency
     }
 
     /// Returns the peak gain in dBi at the given frequency.
@@ -76,7 +115,7 @@ mod tests {
     }
 
     fn test_pattern() -> GaussianPattern {
-        GaussianPattern::new(Distance::meters(0.98), 0.45)
+        GaussianPattern::new(Distance::meters(0.98), 0.45).unwrap()
     }
 
     #[test]

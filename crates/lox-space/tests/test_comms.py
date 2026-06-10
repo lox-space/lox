@@ -1550,3 +1550,18 @@ def test_comms_payload_introspection():
         payload.eirp_at(
             terminal, 29.0 * lox.GHz, angle=1.0 * lox.deg, direction=[1.0, 0.0, 0.0]
         )
+
+
+def test_antenna_patterns_reject_non_physical_parameters():
+    with pytest.raises(ValueError, match="diameter"):
+        lox.ParabolicPattern(diameter=-0.5 * lox.m, efficiency=0.45)
+    with pytest.raises(ValueError, match="efficiency"):
+        lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=1.5)
+    with pytest.raises(ValueError, match="efficiency"):
+        lox.GaussianPattern(diameter=0.98 * lox.m, efficiency=0.0)
+    with pytest.raises(ValueError, match="length"):
+        lox.DipolePattern(length=0.0 * lox.m)
+    with pytest.raises(ValueError, match="beamwidth"):
+        lox.ParabolicPattern.from_beamwidth(0.0 * lox.deg, 29.0 * lox.GHz, 0.45)
+    with pytest.raises(ValueError, match="gain"):
+        lox.ConstantAntenna(gain=float("nan") * lox.dB)

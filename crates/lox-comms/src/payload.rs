@@ -1016,7 +1016,7 @@ mod tests {
         let mut payload = CommsPayload::new();
         let dish = payload.add_antenna(
             "dish",
-            Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
+            Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
         );
         let tx = payload.add_transmitter(
             "pa",
@@ -1081,11 +1081,11 @@ mod tests {
         let mut payload = CommsPayload::new();
         let high_gain = payload.add_antenna(
             "high gain",
-            Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
+            Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
         );
         let low_gain = payload.add_antenna(
             "low gain",
-            Antenna::Constant(ConstantAntenna { gain: 6.0.db() }),
+            Antenna::Constant(ConstantAntenna::new(6.0.db()).unwrap()),
         );
         let tx = payload.add_transmitter(
             "pa",
@@ -1194,7 +1194,7 @@ mod tests {
     fn test_transceiver_convenience_constructor() {
         let (payload, terminal) = CommsPayload::transceiver(
             "ka terminal",
-            Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
+            Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
             AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
             Receiver::NoiseTemperature(NoiseTempReceiver::new(ka_band(), 500.0).unwrap()),
             1.0.db(),

@@ -204,11 +204,48 @@ pub trait AntennaGain {
 }
 
 /// Antenna with angle-independent gain.
+///
+/// Valid by construction: the gain is finite.
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "ConstantAntennaRepr")
+)]
 pub struct ConstantAntenna {
-    /// Peak gain in dBi.
-    pub gain: Decibel,
+    gain: Decibel,
+}
+
+/// Serde wire format for [`ConstantAntenna`]: forces deserialization through
+/// the validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct ConstantAntennaRepr {
+    gain: Decibel,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<ConstantAntennaRepr> for ConstantAntenna {
+    type Error = crate::error::NonPhysicalError;
+
+    fn try_from(repr: ConstantAntennaRepr) -> Result<Self, Self::Error> {
+        ConstantAntenna::new(repr.gain)
+    }
+}
+
+impl ConstantAntenna {
+    /// Creates a new constant-gain antenna.
+    ///
+    /// Rejects a non-finite gain.
+    pub fn new(gain: Decibel) -> Result<Self, crate::error::NonPhysicalError> {
+        crate::error::NonPhysicalError::check_finite("antenna gain [dBi]", gain.as_f64())?;
+        Ok(Self { gain })
+    }
+
+    /// Returns the peak gain in dBi.
+    pub fn peak_gain(&self) -> Decibel {
+        self.gain
+    }
 }
 
 impl AntennaGain for ConstantAntenna {
@@ -285,7 +322,7 @@ impl Antenna {
         direction: DVec3,
     ) -> Result<Decibel, AntennaFrameError> {
         match self {
-            Antenna::Constant(a) => Ok(a.gain),
+            Antenna::Constant(a) => Ok(a.peak_gain()),
             Antenna::Patterned(a) => a.gain_toward(frequency, direction),
         }
     }
@@ -321,7 +358,9 @@ mod tests {
 
     fn parabolic() -> PatternedAntenna {
         PatternedAntenna {
-            pattern: AntennaPattern::Parabolic(ParabolicPattern::new(Distance::meters(0.98), 0.45)),
+            pattern: AntennaPattern::Parabolic(
+                ParabolicPattern::new(Distance::meters(0.98), 0.45).unwrap(),
+            ),
             frame: AntennaFrame::identity(),
         }
     }
@@ -510,7 +549,7 @@ mod tests {
 
     #[test]
     fn test_constant_antenna_gain_dispatch() {
-        let a = ConstantAntenna { gain: 10.0.db() };
+        let a = ConstantAntenna::new(10.0.db()).unwrap();
         let g = a.gain(29.0.ghz(), Angle::ZERO, Angle::ZERO);
         assert_approx_eq!(g.as_f64(), 10.0, atol <= 1e-10);
     }
@@ -528,7 +567,9 @@ mod tests {
     #[test]
     fn test_patterned_antenna_gain_toward_uses_frame() {
         let a = PatternedAntenna {
-            pattern: AntennaPattern::Parabolic(ParabolicPattern::new(Distance::meters(0.98), 0.45)),
+            pattern: AntennaPattern::Parabolic(
+                ParabolicPattern::new(Distance::meters(0.98), 0.45).unwrap(),
+            ),
             frame: AntennaFrame::from_boresight_and_reference(DVec3::X, DVec3::Z).unwrap(),
         };
         let f = 29.0.ghz();
@@ -542,9 +583,7 @@ mod tests {
 
     #[test]
     fn test_antenna_enum_constant_dispatch() {
-        let a = Antenna::Constant(ConstantAntenna {
-            gain: Decibel::new(20.0),
-        });
+        let a = Antenna::Constant(ConstantAntenna::new(Decibel::new(20.0)).unwrap());
         let g = a.gain(29.0.ghz(), Angle::ZERO, Angle::ZERO);
         assert_approx_eq!(g.as_f64(), 20.0, atol <= 1e-10);
     }
@@ -559,7 +598,7 @@ mod tests {
 
     #[test]
     fn test_antenna_enum_gain_toward_constant_ignores_direction() {
-        let a = Antenna::Constant(ConstantAntenna { gain: 20.0.db() });
+        let a = Antenna::Constant(ConstantAntenna::new(20.0.db()).unwrap());
         let g = a.gain_toward(29.0.ghz(), DVec3::Y).unwrap();
         assert_approx_eq!(g.as_f64(), 20.0, atol <= 1e-10);
     }

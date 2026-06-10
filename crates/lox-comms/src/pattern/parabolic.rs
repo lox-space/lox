@@ -11,6 +11,7 @@ use std::f64::consts::{FRAC_2_PI, PI};
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 use crate::antenna::AntennaGain;
+use crate::error::NonPhysicalError;
 use crate::pattern::GAIN_FLOOR_LINEAR;
 
 /// Argument `u` at which the Airy disk pattern `|2·J₁(u)/u|²` equals 0.5 (−3 dB).
@@ -23,36 +24,83 @@ const BESSEL_J1_HPBW: f64 = 1.616_330_8;
 const DIV_BY_ZERO_LIMIT: f64 = 1e-6;
 
 /// Parabolic antenna gain pattern (uniform illuminated aperture).
+///
+/// Valid by construction: the diameter is finite and positive, the aperture
+/// efficiency in (0, 1].
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "ParabolicPatternRepr")
+)]
 pub struct ParabolicPattern {
-    /// Antenna diameter.
-    pub diameter: Distance,
-    /// Aperture efficiency (0, 1].
-    pub efficiency: f64,
+    diameter: Distance,
+    efficiency: f64,
+}
+
+/// Serde wire format for [`ParabolicPattern`]: forces deserialization
+/// through the validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct ParabolicPatternRepr {
+    diameter: Distance,
+    efficiency: f64,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<ParabolicPatternRepr> for ParabolicPattern {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: ParabolicPatternRepr) -> Result<Self, Self::Error> {
+        ParabolicPattern::new(repr.diameter, repr.efficiency)
+    }
 }
 
 impl ParabolicPattern {
     /// Creates a new parabolic pattern with the given diameter and efficiency.
-    pub fn new(diameter: Distance, efficiency: f64) -> Self {
-        Self {
+    ///
+    /// Rejects a non-finite or non-positive diameter and an aperture
+    /// efficiency outside (0, 1].
+    pub fn new(diameter: Distance, efficiency: f64) -> Result<Self, NonPhysicalError> {
+        NonPhysicalError::check_positive("antenna diameter [m]", diameter.to_meters())?;
+        NonPhysicalError::check_unit_interval("aperture efficiency", efficiency)?;
+        Ok(Self {
             diameter,
             efficiency,
-        }
+        })
     }
 
     /// Creates a parabolic pattern from a desired half-power beamwidth at a given frequency.
     ///
-    /// `beamwidth` is the full HPBW (from −3 dB to +3 dB).
-    /// Uses the exact Airy-disk inversion: `diameter = BESSEL_J1_HPBW · λ / (π · sin(HPBW/2))`.
-    pub fn from_beamwidth(beamwidth: Angle, frequency: Frequency, efficiency: f64) -> Self {
-        let wavelength_m = frequency.wavelength().to_meters();
-        let half_bw = beamwidth.to_radians() / 2.0;
-        let diameter_m = BESSEL_J1_HPBW * wavelength_m / (PI * half_bw.sin());
-        Self {
-            diameter: Distance::meters(diameter_m),
-            efficiency,
+    /// `beamwidth` is the full HPBW (from −3 dB to +3 dB) and must lie in
+    /// (0, π). Uses the exact Airy-disk inversion:
+    /// `diameter = BESSEL_J1_HPBW · λ / (π · sin(HPBW/2))`.
+    pub fn from_beamwidth(
+        beamwidth: Angle,
+        frequency: Frequency,
+        efficiency: f64,
+    ) -> Result<Self, NonPhysicalError> {
+        let beamwidth_rad = beamwidth.to_radians();
+        if !(beamwidth_rad > 0.0 && beamwidth_rad < PI) {
+            return Err(NonPhysicalError {
+                quantity: "half-power beamwidth [rad]",
+                value: beamwidth_rad,
+            });
         }
+        let wavelength_m = frequency.wavelength().to_meters();
+        let half_bw = beamwidth_rad / 2.0;
+        let diameter_m = BESSEL_J1_HPBW * wavelength_m / (PI * half_bw.sin());
+        Self::new(Distance::meters(diameter_m), efficiency)
+    }
+
+    /// Returns the antenna diameter.
+    pub fn diameter(&self) -> Distance {
+        self.diameter
+    }
+
+    /// Returns the aperture efficiency.
+    pub fn efficiency(&self) -> f64 {
+        self.efficiency
     }
 
     /// Returns the physical aperture area in m².
@@ -161,7 +209,7 @@ mod tests {
     }
 
     fn test_pattern() -> ParabolicPattern {
-        ParabolicPattern::new(Distance::meters(0.98), 0.45)
+        ParabolicPattern::new(Distance::meters(0.98), 0.45).unwrap()
     }
 
     #[test]
@@ -172,7 +220,7 @@ mod tests {
     #[test]
     fn test_beamwidth_none_for_sub_wavelength_diameter() {
         let f = 1.0.ghz(); // λ ≈ 0.300 m
-        let p = ParabolicPattern::new(Distance::meters(0.1), 0.65); // D ≈ 0.33λ < 0.51λ
+        let p = ParabolicPattern::new(Distance::meters(0.1), 0.65).unwrap(); // D ≈ 0.33λ < 0.51λ
         assert!(p.beamwidth(f).is_none());
     }
 
@@ -254,7 +302,7 @@ mod tests {
     fn test_parabolic_from_beamwidth_roundtrip() {
         let beamwidth = Angle::radians(0.1);
         let f = 2.0.ghz();
-        let p = ParabolicPattern::from_beamwidth(beamwidth, f, 0.65);
+        let p = ParabolicPattern::from_beamwidth(beamwidth, f, 0.65).unwrap();
         let actual_bw = p.beamwidth(f).unwrap();
         assert_approx_eq!(actual_bw.to_radians(), beamwidth.to_radians(), rtol <= 0.01);
     }

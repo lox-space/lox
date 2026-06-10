@@ -266,7 +266,7 @@ mod tests {
     fn component_link() -> (CommsPayload, TerminalId, CommsPayload, TerminalId) {
         let (tx_payload, tx_terminal) = CommsPayload::transmitter_only(
             "tx",
-            Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
+            Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
             AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
             1.0.db(),
             None,
@@ -274,7 +274,7 @@ mod tests {
         .unwrap();
         let (rx_payload, rx_terminal) = CommsPayload::receiver_only(
             "rx",
-            Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
+            Antenna::Constant(ConstantAntenna::new(30.0.db()).unwrap()),
             Receiver::NoiseTemperature(NoiseTempReceiver::new(ka_band(), 500.0).unwrap()),
             0.0.db(),
             0.0,
