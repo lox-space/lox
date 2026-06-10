@@ -700,11 +700,11 @@ impl PyAmplifierTransmitter {
 
 // --- Receivers ---
 
-/// A receiver with a known system noise temperature.
+/// A receiver with a known input-referred noise temperature.
 ///
 /// Args:
 ///     band: Supported frequency range.
-///     noise_temperature: System noise temperature.
+///     noise_temperature: Equivalent noise temperature at the receiver input connector.
 #[pyclass(
     name = "NoiseTempReceiver",
     module = "lox_space",
@@ -729,7 +729,7 @@ impl PyNoiseTempReceiver {
         PyFrequencyRange(self.0.band())
     }
 
-    /// System noise temperature.
+    /// Equivalent noise temperature at the receiver input connector.
     #[getter]
     fn noise_temperature(&self) -> PyTemperature {
         PyTemperature(self.0.noise_temperature())

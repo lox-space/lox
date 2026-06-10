@@ -356,7 +356,7 @@ impl CascadeReceiver {
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 #[non_exhaustive]
 pub enum Receiver {
-    /// Receiver with a known system noise temperature.
+    /// Receiver with a known input-referred noise temperature.
     NoiseTemperature(NoiseTempReceiver),
     /// Receiver with an N-stage cascade noise model.
     Cascade(CascadeReceiver),
