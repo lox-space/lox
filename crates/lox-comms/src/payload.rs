@@ -195,6 +195,160 @@ impl CommsPayload {
         Self::default()
     }
 
+    /// Creates a single-terminal transmit-only payload.
+    ///
+    /// Wires `antenna` to `transmitter` through one TX port with the given
+    /// feed loss and optional band constraint, and exposes it as a terminal
+    /// named `name`.
+    pub fn transmitter_only(
+        name: impl Into<String>,
+        antenna: Antenna,
+        transmitter: AmplifierTransmitter,
+        feed_loss: Decibel,
+        band: Option<FrequencyRange>,
+    ) -> (Self, TerminalId) {
+        let name = name.into();
+        let mut payload = Self::new();
+        let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
+        let transmitter = payload.add_transmitter(format!("{name} transmitter"), transmitter);
+        let port = payload
+            .add_tx_port(TxPort {
+                name: format!("{name} feed"),
+                antenna,
+                transmitter,
+                feed_loss,
+                band,
+            })
+            .expect("freshly inserted IDs are valid");
+        let terminal = payload
+            .add_terminal(Terminal {
+                name,
+                role: TerminalRole::Tx(TxChain::Component(port)),
+            })
+            .expect("freshly inserted IDs are valid");
+        (payload, terminal)
+    }
+
+    /// Creates a single-terminal receive-only payload.
+    ///
+    /// Wires `antenna` to `receiver` through one RX port with the given feed
+    /// loss, clear-sky antenna noise temperature, and optional band
+    /// constraint, and exposes it as a terminal named `name`.
+    ///
+    /// Returns an error for lumped [`Receiver::Gt`]; use [`Self::gt_only`].
+    pub fn receiver_only(
+        name: impl Into<String>,
+        antenna: Antenna,
+        receiver: Receiver,
+        feed_loss: Decibel,
+        antenna_noise_temperature: Kelvin,
+        band: Option<FrequencyRange>,
+    ) -> Result<(Self, TerminalId), PayloadError> {
+        let name = name.into();
+        let mut payload = Self::new();
+        let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
+        let receiver = payload.add_receiver(format!("{name} receiver"), receiver)?;
+        let port = payload
+            .add_rx_port(RxPort {
+                name: format!("{name} feed"),
+                antenna,
+                receiver,
+                feed_loss,
+                antenna_noise_temperature,
+                band,
+            })
+            .expect("freshly inserted IDs are valid");
+        let terminal = payload
+            .add_terminal(Terminal {
+                name,
+                role: TerminalRole::Rx(RxChain::Component(port)),
+            })
+            .expect("freshly inserted IDs are valid");
+        Ok((payload, terminal))
+    }
+
+    /// Creates a single-terminal transceiver payload sharing one antenna.
+    ///
+    /// Wires `antenna` to both `transmitter` and `receiver` through one TX
+    /// and one RX port (diplexer-style) and exposes them as one transceiver
+    /// terminal named `name`.
+    ///
+    /// Returns an error for lumped [`Receiver::Gt`]; use [`Self::gt_only`].
+    #[allow(clippy::too_many_arguments)]
+    pub fn transceiver(
+        name: impl Into<String>,
+        antenna: Antenna,
+        transmitter: AmplifierTransmitter,
+        receiver: Receiver,
+        tx_feed_loss: Decibel,
+        rx_feed_loss: Decibel,
+        antenna_noise_temperature: Kelvin,
+        band: Option<FrequencyRange>,
+    ) -> Result<(Self, TerminalId), PayloadError> {
+        let name = name.into();
+        let mut payload = Self::new();
+        let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
+        let transmitter = payload.add_transmitter(format!("{name} transmitter"), transmitter);
+        let receiver = payload.add_receiver(format!("{name} receiver"), receiver)?;
+        let tx_port = payload
+            .add_tx_port(TxPort {
+                name: format!("{name} tx feed"),
+                antenna,
+                transmitter,
+                feed_loss: tx_feed_loss,
+                band,
+            })
+            .expect("freshly inserted IDs are valid");
+        let rx_port = payload
+            .add_rx_port(RxPort {
+                name: format!("{name} rx feed"),
+                antenna,
+                receiver,
+                feed_loss: rx_feed_loss,
+                antenna_noise_temperature,
+                band,
+            })
+            .expect("freshly inserted IDs are valid");
+        let terminal = payload
+            .add_terminal(Terminal {
+                name,
+                role: TerminalRole::Transceiver {
+                    tx: TxChain::Component(tx_port),
+                    rx: RxChain::Component(rx_port),
+                },
+            })
+            .expect("freshly inserted IDs are valid");
+        Ok((payload, terminal))
+    }
+
+    /// Creates a single-terminal payload from a lumped EIRP model.
+    pub fn eirp_only(model: EirpModel) -> (Self, TerminalId) {
+        let name = model.name.clone();
+        let mut payload = Self::new();
+        let model = payload.add_eirp_model(model);
+        let terminal = payload
+            .add_terminal(Terminal {
+                name,
+                role: TerminalRole::Tx(TxChain::Lumped(model)),
+            })
+            .expect("freshly inserted IDs are valid");
+        (payload, terminal)
+    }
+
+    /// Creates a single-terminal payload from a lumped G/T model.
+    pub fn gt_only(model: GtModel) -> (Self, TerminalId) {
+        let name = model.name.clone();
+        let mut payload = Self::new();
+        let model = payload.add_gt_model(model);
+        let terminal = payload
+            .add_terminal(Terminal {
+                name,
+                role: TerminalRole::Rx(RxChain::Lumped(model)),
+            })
+            .expect("freshly inserted IDs are valid");
+        (payload, terminal)
+    }
+
     /// Adds an antenna to the inventory.
     pub fn add_antenna(&mut self, name: impl Into<String>, antenna: Antenna) -> AntennaId {
         self.antennas.insert(Named {
@@ -617,6 +771,58 @@ mod tests {
             })
             .unwrap_err();
         assert!(matches!(err, PayloadError::UnknownGtModel(_)));
+    }
+
+    #[test]
+    fn test_transceiver_convenience_constructor() {
+        let (payload, terminal) = CommsPayload::transceiver(
+            "ka terminal",
+            Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
+            AmplifierTransmitter::new(29.0.ghz(), 10.0, 0.0.db(), 0.0.db()),
+            Receiver::NoiseTemperature(NoiseTempReceiver {
+                frequency: 19.7.ghz(),
+                system_noise_temperature: 500.0,
+            }),
+            1.0.db(),
+            0.5.db(),
+            150.0,
+            Some(ka_band()),
+        )
+        .unwrap();
+
+        let terminal = payload.terminal(terminal).unwrap();
+        assert_eq!(terminal.name, "ka terminal");
+        let TerminalRole::Transceiver { tx, rx } = terminal.role else {
+            panic!("expected transceiver terminal");
+        };
+        let (TxChain::Component(tx_port), RxChain::Component(rx_port)) = (tx, rx) else {
+            panic!("expected component chains");
+        };
+        // Diplexer-style: both ports share the single antenna.
+        assert_eq!(
+            payload.tx_port(tx_port).unwrap().antenna,
+            payload.rx_port(rx_port).unwrap().antenna
+        );
+    }
+
+    #[test]
+    fn test_lumped_convenience_constructors() {
+        let (payload, terminal) = CommsPayload::eirp_only(EirpModel {
+            name: "datasheet".into(),
+            band: ka_band(),
+            eirp: 55.0.db(),
+        });
+        assert_eq!(payload.terminal(terminal).unwrap().name, "datasheet");
+
+        let (payload, terminal) = CommsPayload::gt_only(GtModel {
+            name: "datasheet".into(),
+            band: ka_band(),
+            gt: 3.01.db(),
+        });
+        assert!(matches!(
+            payload.terminal(terminal).unwrap().role,
+            TerminalRole::Rx(RxChain::Lumped(_))
+        ));
     }
 
     #[cfg(feature = "serde")]

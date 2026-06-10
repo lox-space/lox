@@ -315,7 +315,7 @@ class GroundStation:
         id: Unique identifier for this ground station.
         location: Ground station location.
         mask: Elevation mask defining minimum elevation constraints.
-        communication_systems: Optional list of communication systems.
+        comms_payload: Optional communications payload (hardware inventory).
 
     Examples:
         >>> gs = lox.GroundStation("ESOC", ground_location, elevation_mask)
@@ -327,7 +327,7 @@ class GroundStation:
         mask: ElevationMask,
         body_fixed_frame: Frame | None = None,
         network_id: str | None = None,
-        communication_systems: list[CommunicationSystem] | None = None,
+        comms_payload: CommsPayload | None = None,
     ) -> Self: ...
     def id(self) -> str:
         """Return the asset identifier."""
@@ -344,8 +344,8 @@ class GroundStation:
     def body_fixed_frame(self) -> Frame:
         """Return the body-fixed frame."""
         ...
-    def communication_systems(self) -> list[CommunicationSystem]:
-        """Return the communication systems."""
+    def comms_payload(self) -> CommsPayload | None:
+        """Return the communications payload, if set."""
         ...
 
 class Spacecraft:
@@ -359,7 +359,7 @@ class Spacecraft:
         orbit: Orbit source — an SGP4, Vallado, J2, J4, Numerical
             propagator, or a pre-computed Trajectory.
         max_slew_rate: Optional maximum slew rate.
-        communication_systems: Optional list of communication systems.
+        comms_payload: Optional communications payload (hardware inventory).
 
     Examples:
         >>> sc = lox.Spacecraft("ISS", lox.SGP4(tle))
@@ -373,7 +373,7 @@ class Spacecraft:
         constellation_id: str | None = None,
         optical_payload: "OpticalPayload | None" = None,
         sar_payload: "SarPayload | None" = None,
-        communication_systems: list[CommunicationSystem] | None = None,
+        comms_payload: CommsPayload | None = None,
     ) -> Self: ...
     def id(self) -> str:
         """Return the asset identifier."""
@@ -390,8 +390,8 @@ class Spacecraft:
     def sar_payload(self) -> "SarPayload | None":
         """Return the SAR payload, if set."""
         ...
-    def communication_systems(self) -> list[CommunicationSystem]:
-        """Return the communication systems."""
+    def comms_payload(self) -> CommsPayload | None:
+        """Return the communications payload, if set."""
         ...
 
 class Scenario:
@@ -2805,6 +2805,195 @@ class CommunicationSystem:
         ...
     def __repr__(self) -> str: ...
 
+class FrequencyRange:
+    """A contiguous frequency range with inclusive bounds.
+
+    Args:
+        min: Lower frequency bound.
+        max: Upper frequency bound.
+    """
+    def __new__(cls, min: Frequency, max: Frequency) -> Self: ...
+    @staticmethod
+    def from_wavelengths(
+        min_wavelength: Distance, max_wavelength: Distance
+    ) -> FrequencyRange:
+        """Creates a frequency range from wavelength bounds (e.g. optical bands)."""
+        ...
+    def min(self) -> Frequency:
+        """Returns the lower frequency bound."""
+        ...
+    def max(self) -> Frequency:
+        """Returns the upper frequency bound."""
+        ...
+    def contains(self, frequency: Frequency) -> bool:
+        """Returns whether the frequency lies within the range (bounds inclusive)."""
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+class AntennaId:
+    """Identifier of an antenna in a CommsPayload. Only valid for the payload that minted it."""
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class TransmitterId:
+    """Identifier of a transmitter in a CommsPayload. Only valid for the payload that minted it."""
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class ReceiverId:
+    """Identifier of a receiver in a CommsPayload. Only valid for the payload that minted it."""
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class EirpModelId:
+    """Identifier of a lumped EIRP model in a CommsPayload. Only valid for the payload that minted it."""
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class GtModelId:
+    """Identifier of a lumped G/T model in a CommsPayload. Only valid for the payload that minted it."""
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class TxPortId:
+    """Identifier of a transmit port in a CommsPayload. Only valid for the payload that minted it."""
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class RxPortId:
+    """Identifier of a receive port in a CommsPayload. Only valid for the payload that minted it."""
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class TerminalId:
+    """Identifier of a terminal in a CommsPayload. Only valid for the payload that minted it."""
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class CommsPayload:
+    """Communications hardware inventory and wiring for one platform.
+
+    Owns antennas, radios, lumped models, ports, and terminals. Wiring is by
+    ID and validated at insertion; names are display-only. The payload holds
+    no operational state: carrier, bandwidth, modulation, and pointing are
+    link-level inputs.
+    """
+    def __new__(cls) -> Self: ...
+    def add_antenna(
+        self, name: str, antenna: ConstantAntenna | PatternedAntenna
+    ) -> AntennaId:
+        """Adds an antenna to the inventory."""
+        ...
+    def add_transmitter(self, name: str, transmitter: AmplifierTransmitter) -> TransmitterId:
+        """Adds a component-tier transmitter to the inventory."""
+        ...
+    def add_receiver(
+        self, name: str, receiver: NoiseTempReceiver | CascadeReceiver
+    ) -> ReceiverId:
+        """Adds a component-tier receiver to the inventory."""
+        ...
+    def add_eirp_model(self, name: str, band: FrequencyRange, eirp: Decibel) -> EirpModelId:
+        """Adds a lumped EIRP model to the inventory."""
+        ...
+    def add_gt_model(self, name: str, band: FrequencyRange, gt: Decibel) -> GtModelId:
+        """Adds a lumped G/T model to the inventory."""
+        ...
+    def add_tx_port(
+        self,
+        name: str,
+        antenna: AntennaId,
+        transmitter: TransmitterId,
+        feed_loss: Decibel,
+        band: FrequencyRange | None = None,
+    ) -> TxPortId:
+        """Adds a transmit port wiring an antenna to a transmitter."""
+        ...
+    def add_rx_port(
+        self,
+        name: str,
+        antenna: AntennaId,
+        receiver: ReceiverId,
+        feed_loss: Decibel,
+        antenna_noise_temperature: Temperature,
+        band: FrequencyRange | None = None,
+    ) -> RxPortId:
+        """Adds a receive port wiring an antenna to a receiver."""
+        ...
+    def add_tx_terminal(
+        self,
+        name: str,
+        port: TxPortId | None = None,
+        eirp_model: EirpModelId | None = None,
+    ) -> TerminalId:
+        """Adds a transmit-only terminal from a port or a lumped EIRP model."""
+        ...
+    def add_rx_terminal(
+        self,
+        name: str,
+        port: RxPortId | None = None,
+        gt_model: GtModelId | None = None,
+    ) -> TerminalId:
+        """Adds a receive-only terminal from a port or a lumped G/T model."""
+        ...
+    def add_transceiver_terminal(
+        self,
+        name: str,
+        tx_port: TxPortId | None = None,
+        rx_port: RxPortId | None = None,
+        eirp_model: EirpModelId | None = None,
+        gt_model: GtModelId | None = None,
+    ) -> TerminalId:
+        """Adds a transceiver terminal with one chain per direction."""
+        ...
+    def find_terminal(self, name: str) -> TerminalId | None:
+        """Returns the first terminal with the given name, if any."""
+        ...
+    @staticmethod
+    def transmitter_only(
+        name: str,
+        antenna: ConstantAntenna | PatternedAntenna,
+        transmitter: AmplifierTransmitter,
+        feed_loss: Decibel,
+        band: FrequencyRange | None = None,
+    ) -> tuple[CommsPayload, TerminalId]:
+        """Creates a single-terminal transmit-only payload."""
+        ...
+    @staticmethod
+    def receiver_only(
+        name: str,
+        antenna: ConstantAntenna | PatternedAntenna,
+        receiver: NoiseTempReceiver | CascadeReceiver,
+        feed_loss: Decibel,
+        antenna_noise_temperature: Temperature,
+        band: FrequencyRange | None = None,
+    ) -> tuple[CommsPayload, TerminalId]:
+        """Creates a single-terminal receive-only payload."""
+        ...
+    @staticmethod
+    def transceiver(
+        name: str,
+        antenna: ConstantAntenna | PatternedAntenna,
+        transmitter: AmplifierTransmitter,
+        receiver: NoiseTempReceiver | CascadeReceiver,
+        tx_feed_loss: Decibel,
+        rx_feed_loss: Decibel,
+        antenna_noise_temperature: Temperature,
+        band: FrequencyRange | None = None,
+    ) -> tuple[CommsPayload, TerminalId]:
+        """Creates a single-terminal transceiver payload sharing one antenna."""
+        ...
+    @staticmethod
+    def eirp_only(name: str, band: FrequencyRange, eirp: Decibel) -> tuple[CommsPayload, TerminalId]:
+        """Creates a single-terminal payload from a lumped EIRP model."""
+        ...
+    @staticmethod
+    def gt_only(name: str, band: FrequencyRange, gt: Decibel) -> tuple[CommsPayload, TerminalId]:
+        """Creates a single-terminal payload from a lumped G/T model."""
+        ...
+    def __repr__(self) -> str: ...
+
 class LinkStats:
     """Modulation-agnostic link budget statistics."""
     @staticmethod
@@ -2836,6 +3025,30 @@ class LinkStats:
             tx_direction: Line-of-sight direction at transmitter as [x, y, z] (optional).
             rx_direction: Line-of-sight direction at receiver as [x, y, z] (optional).
             losses: EnvironmentalLosses (optional, defaults to none).
+        """
+        ...
+    @staticmethod
+    def for_link(
+        tx_payload: CommsPayload,
+        tx_terminal: TerminalId,
+        rx_payload: CommsPayload,
+        rx_terminal: TerminalId,
+        carrier: Frequency,
+        bandwidth: Frequency,
+        range: Distance,
+        direction: str,
+        tx_angle: Angle | None = None,
+        rx_angle: Angle | None = None,
+        tx_direction: list[float] | None = None,
+        rx_direction: list[float] | None = None,
+        losses: EnvironmentalLosses | None = None,
+    ) -> LinkStats:
+        """Computes a modulation-agnostic link budget between payload terminals.
+
+        Resolves the TX and RX terminals into endpoints and evaluates the link
+        at the given carrier. The carrier must lie inside both endpoints'
+        supported frequency ranges. Pointing arguments behave as in
+        ``calculate``; ``direction`` is "uplink", "downlink", or "crosslink".
         """
         ...
     @property
@@ -2893,6 +3106,10 @@ class LinkStats:
     @property
     def rx_phi(self) -> Angle:
         """Derived RX pattern azimuth about boresight."""
+        ...
+    @property
+    def direction(self) -> str | None:
+        """Link direction ("uplink", "downlink", or "crosslink"), when known."""
         ...
     def __repr__(self) -> str: ...
 

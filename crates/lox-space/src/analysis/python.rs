@@ -19,7 +19,7 @@ use crate::analysis::visibility::{
 };
 use crate::bodies::DynOrigin;
 use crate::bodies::python::PyOrigin;
-use crate::comms::python::PyCommunicationSystem;
+use crate::comms::python::PyCommsPayload;
 use crate::ephem::python::PySpk;
 use crate::ephem::spk::parser::Spk;
 use crate::frames::python::PyFrame;
@@ -72,7 +72,7 @@ impl From<PyElevationMaskError> for PyErr {
 ///     id: Unique identifier for this ground station.
 ///     location: Ground station location.
 ///     mask: Elevation mask defining minimum elevation constraints.
-///     communication_systems: Optional list of communication systems.
+///     comms_payload: Optional communications payload (hardware inventory).
 #[pyclass(name = "GroundStation", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyGroundStation(pub GroundStation);
@@ -80,14 +80,14 @@ pub struct PyGroundStation(pub GroundStation);
 #[pymethods]
 impl PyGroundStation {
     #[new]
-    #[pyo3(signature = (id, location, mask, body_fixed_frame=None, network_id=None, communication_systems=None))]
+    #[pyo3(signature = (id, location, mask, body_fixed_frame=None, network_id=None, comms_payload=None))]
     fn new(
         id: String,
         location: PyGroundLocation,
         mask: PyElevationMask,
         body_fixed_frame: Option<PyFrame>,
         network_id: Option<String>,
-        communication_systems: Option<Vec<PyCommunicationSystem>>,
+        comms_payload: Option<PyCommsPayload>,
     ) -> Self {
         let mut gs = GroundStation::new(id, location.0, mask.0);
         if let Some(frame) = body_fixed_frame {
@@ -96,10 +96,8 @@ impl PyGroundStation {
         if let Some(nid) = network_id {
             gs = gs.with_network_id(nid);
         }
-        if let Some(systems) = communication_systems {
-            for system in systems {
-                gs = gs.with_communication_system(system.0);
-            }
+        if let Some(payload) = comms_payload {
+            gs = gs.with_comms_payload(payload.0);
         }
         PyGroundStation(gs)
     }
@@ -129,13 +127,9 @@ impl PyGroundStation {
         PyFrame(self.0.body_fixed_frame())
     }
 
-    /// Return the communication systems.
-    fn communication_systems(&self) -> Vec<PyCommunicationSystem> {
-        self.0
-            .communication_systems()
-            .iter()
-            .map(|s| PyCommunicationSystem(s.clone()))
-            .collect()
+    /// Return the communications payload, if set.
+    fn comms_payload(&self) -> Option<PyCommsPayload> {
+        self.0.comms_payload().cloned().map(PyCommsPayload)
     }
 
     fn __repr__(&self) -> String {
@@ -184,7 +178,7 @@ fn extract_orbit_source(obj: &Bound<'_, PyAny>) -> PyResult<OrbitSource> {
 ///         pre-computed Trajectory.
 ///     max_slew_rate: Optional maximum slew rate (angular rate) for this
 ///         spacecraft's antenna/gimbal.
-///     communication_systems: Optional list of communication systems.
+///     comms_payload: Optional communications payload (hardware inventory).
 #[pyclass(name = "Spacecraft", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PySpacecraft(pub Spacecraft);
@@ -192,7 +186,7 @@ pub struct PySpacecraft(pub Spacecraft);
 #[pymethods]
 impl PySpacecraft {
     #[new]
-    #[pyo3(signature = (id, orbit, max_slew_rate=None, constellation_id=None, optical_payload=None, sar_payload=None, communication_systems=None))]
+    #[pyo3(signature = (id, orbit, max_slew_rate=None, constellation_id=None, optical_payload=None, sar_payload=None, comms_payload=None))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         id: String,
@@ -201,7 +195,7 @@ impl PySpacecraft {
         constellation_id: Option<String>,
         optical_payload: Option<PyOpticalPayload>,
         sar_payload: Option<PySarPayload>,
-        communication_systems: Option<Vec<PyCommunicationSystem>>,
+        comms_payload: Option<PyCommsPayload>,
     ) -> PyResult<Self> {
         let orbit_source = extract_orbit_source(orbit)?;
         let mut asset = Spacecraft::new(id, orbit_source);
@@ -217,10 +211,8 @@ impl PySpacecraft {
         if let Some(payload) = sar_payload {
             asset = asset.with_sar_payload(payload.0);
         }
-        if let Some(systems) = communication_systems {
-            for system in systems {
-                asset = asset.with_communication_system(system.0);
-            }
+        if let Some(payload) = comms_payload {
+            asset = asset.with_comms_payload(payload.0);
         }
         Ok(PySpacecraft(asset))
     }
@@ -250,13 +242,9 @@ impl PySpacecraft {
         self.0.sar_payload().map(PySarPayload)
     }
 
-    /// Return the communication systems.
-    fn communication_systems(&self) -> Vec<PyCommunicationSystem> {
-        self.0
-            .communication_systems()
-            .iter()
-            .map(|s| PyCommunicationSystem(s.clone()))
-            .collect()
+    /// Return the communications payload, if set.
+    fn comms_payload(&self) -> Option<PyCommsPayload> {
+        self.0.comms_payload().cloned().map(PyCommsPayload)
     }
 
     fn __repr__(&self) -> String {

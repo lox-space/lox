@@ -9,6 +9,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use lox_comms::antenna::{Antenna, AntennaFrame, AntennaGain, ConstantAntenna, PatternedAntenna};
+use lox_comms::band::FrequencyRange;
 use lox_comms::channel::{Channel, LinkDirection, Modulation};
 use lox_comms::link_budget::{
     InterferenceStats, LinkStats, ModulatedLinkStats, frequency_overlap_factor,
@@ -17,6 +18,9 @@ use lox_itur::EnvironmentalLosses;
 
 use crate::itur::python::PyEnvironmentalLosses;
 use lox_comms::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
+use lox_comms::payload::{
+    CommsPayload, EirpModel, GtModel, RxChain, RxPort, Terminal, TerminalRole, TxChain, TxPort,
+};
 use lox_comms::pfd;
 use lox_comms::receiver::{CascadeReceiver, GtReceiver, NoiseStage, NoiseTempReceiver, Receiver};
 use lox_comms::system::{CommunicationSystem, Pointing};
@@ -1625,6 +1629,78 @@ impl PyLinkStats {
         .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
+    /// Computes a modulation-agnostic link budget between payload terminals.
+    ///
+    /// Resolves the TX and RX terminals into endpoints and evaluates the
+    /// link at the given carrier. The carrier must lie inside both
+    /// endpoints' supported frequency ranges. Pointing arguments behave as
+    /// in ``calculate``.
+    ///
+    /// Args:
+    ///     tx_payload: The transmitting CommsPayload.
+    ///     tx_terminal: Terminal of the transmitting payload.
+    ///     rx_payload: The receiving CommsPayload.
+    ///     rx_terminal: Terminal of the receiving payload.
+    ///     carrier: Carrier frequency.
+    ///     bandwidth: Noise bandwidth as Frequency.
+    ///     range: Slant range as Distance.
+    ///     direction: Link direction ("uplink", "downlink", or "crosslink").
+    ///     tx_angle: Off-boresight angle at transmitter as Angle (optional).
+    ///     rx_angle: Off-boresight angle at receiver as Angle (optional).
+    ///     tx_direction: Line-of-sight direction at transmitter as [x, y, z] (optional).
+    ///     rx_direction: Line-of-sight direction at receiver as [x, y, z] (optional).
+    ///     losses: EnvironmentalLosses (optional, defaults to none).
+    #[staticmethod]
+    #[pyo3(signature = (tx_payload, tx_terminal, rx_payload, rx_terminal, carrier, bandwidth, range, direction, tx_angle=None, rx_angle=None, tx_direction=None, rx_direction=None, losses=None))]
+    #[allow(clippy::too_many_arguments)]
+    fn for_link(
+        tx_payload: &PyCommsPayload,
+        tx_terminal: PyTerminalId,
+        rx_payload: &PyCommsPayload,
+        rx_terminal: PyTerminalId,
+        carrier: PyFrequency,
+        bandwidth: PyFrequency,
+        range: PyDistance,
+        direction: &str,
+        tx_angle: Option<PyAngle>,
+        rx_angle: Option<PyAngle>,
+        tx_direction: Option<[f64; 3]>,
+        rx_direction: Option<[f64; 3]>,
+        losses: Option<&PyEnvironmentalLosses>,
+    ) -> PyResult<Self> {
+        let direction: LinkDirection = direction
+            .parse()
+            .map_err(|err: String| PyValueError::new_err(err))?;
+        let tx_pointing = build_pointing(tx_angle, tx_direction, "tx")?;
+        let rx_pointing = build_pointing(rx_angle, rx_direction, "rx")?;
+        let env_losses = losses
+            .map(|l| l.0.clone())
+            .unwrap_or_else(EnvironmentalLosses::none);
+
+        let tx_endpoint = tx_payload
+            .0
+            .tx_endpoint(tx_terminal.0)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        let rx_endpoint = rx_payload
+            .0
+            .rx_endpoint(rx_terminal.0)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+
+        LinkStats::for_link(
+            &tx_endpoint,
+            &rx_endpoint,
+            carrier.0,
+            bandwidth.0,
+            range.0,
+            env_losses,
+            tx_pointing,
+            rx_pointing,
+            direction,
+        )
+        .map(Self)
+        .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
     /// Slant range.
     #[getter]
     fn slant_range(&self) -> PyDistance {
@@ -1707,6 +1783,12 @@ impl PyLinkStats {
     #[getter]
     fn rx_phi(&self) -> PyAngle {
         PyAngle(self.0.rx_phi)
+    }
+
+    /// Link direction ("uplink", "downlink", or "crosslink"), when known.
+    #[getter]
+    fn direction(&self) -> Option<String> {
+        self.0.direction.map(|d| d.to_string())
     }
 
     fn __repr__(&self) -> String {
@@ -2005,4 +2087,445 @@ pub fn slant_range(
     altitude: PyDistance,
 ) -> PyDistance {
     PyDistance(comms_slant_range(elevation.0, earth_radius.0, altitude.0))
+}
+
+// --- Frequency ranges ---
+
+/// A contiguous frequency range with inclusive bounds.
+///
+/// Args:
+///     min: Lower frequency bound.
+///     max: Upper frequency bound.
+#[pyclass(
+    name = "FrequencyRange",
+    module = "lox_space",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PyFrequencyRange(pub FrequencyRange);
+
+#[pymethods]
+impl PyFrequencyRange {
+    #[new]
+    fn new(min: PyFrequency, max: PyFrequency) -> PyResult<Self> {
+        FrequencyRange::new(min.0, max.0)
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Creates a frequency range from wavelength bounds (e.g. optical bands).
+    #[staticmethod]
+    fn from_wavelengths(min_wavelength: PyDistance, max_wavelength: PyDistance) -> PyResult<Self> {
+        FrequencyRange::from_wavelengths(min_wavelength.0, max_wavelength.0)
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Returns the lower frequency bound.
+    fn min(&self) -> PyFrequency {
+        PyFrequency(self.0.min())
+    }
+
+    /// Returns the upper frequency bound.
+    fn max(&self) -> PyFrequency {
+        PyFrequency(self.0.max())
+    }
+
+    /// Returns whether the frequency lies within the range (bounds inclusive).
+    fn contains(&self, frequency: PyFrequency) -> bool {
+        self.0.contains(frequency.0)
+    }
+
+    fn __getnewargs__(&self) -> (PyFrequency, PyFrequency) {
+        (self.min(), self.max())
+    }
+
+    fn __str__(&self) -> String {
+        self.0.to_string()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "FrequencyRange(min=Frequency({}), max=Frequency({}))",
+            repr_f64(self.0.min().to_hertz()),
+            repr_f64(self.0.max().to_hertz()),
+        )
+    }
+}
+
+// --- Comms payload (inventory + wiring) ---
+
+macro_rules! py_payload_id {
+    ($(#[$doc:meta])* $pyname:literal, $id:ty, $wrapper:ident) => {
+        $(#[$doc])*
+        #[pyclass(name = $pyname, module = "lox_space", frozen, eq)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        pub struct $wrapper(pub $id);
+
+        #[pymethods]
+        impl $wrapper {
+            fn __repr__(&self) -> String {
+                format!("<{} {:?}>", $pyname, self.0)
+            }
+        }
+    };
+}
+
+py_payload_id!(
+    /// Identifier of an antenna in a CommsPayload. Only valid for the payload
+    /// that minted it.
+    "AntennaId", lox_comms::payload::AntennaId, PyAntennaId
+);
+py_payload_id!(
+    /// Identifier of a transmitter in a CommsPayload. Only valid for the
+    /// payload that minted it.
+    "TransmitterId", lox_comms::payload::TransmitterId, PyTransmitterId
+);
+py_payload_id!(
+    /// Identifier of a receiver in a CommsPayload. Only valid for the payload
+    /// that minted it.
+    "ReceiverId", lox_comms::payload::ReceiverId, PyReceiverId
+);
+py_payload_id!(
+    /// Identifier of a lumped EIRP model in a CommsPayload. Only valid for
+    /// the payload that minted it.
+    "EirpModelId", lox_comms::payload::EirpModelId, PyEirpModelId
+);
+py_payload_id!(
+    /// Identifier of a lumped G/T model in a CommsPayload. Only valid for the
+    /// payload that minted it.
+    "GtModelId", lox_comms::payload::GtModelId, PyGtModelId
+);
+py_payload_id!(
+    /// Identifier of a transmit port in a CommsPayload. Only valid for the
+    /// payload that minted it.
+    "TxPortId", lox_comms::payload::TxPortId, PyTxPortId
+);
+py_payload_id!(
+    /// Identifier of a receive port in a CommsPayload. Only valid for the
+    /// payload that minted it.
+    "RxPortId", lox_comms::payload::RxPortId, PyRxPortId
+);
+py_payload_id!(
+    /// Identifier of a terminal in a CommsPayload. Only valid for the payload
+    /// that minted it.
+    "TerminalId", lox_comms::payload::TerminalId, PyTerminalId
+);
+
+fn component_transmitter(transmitter: &PyAmplifierTransmitter) -> PyResult<AmplifierTransmitter> {
+    match &transmitter.0 {
+        Transmitter::Amplifier(tx) => Ok(tx.clone()),
+        _ => Err(PyValueError::new_err(
+            "expected a component-tier amplifier transmitter",
+        )),
+    }
+}
+
+fn build_tx_chain(
+    port: Option<PyTxPortId>,
+    eirp_model: Option<PyEirpModelId>,
+) -> PyResult<TxChain> {
+    match (port, eirp_model) {
+        (Some(port), None) => Ok(TxChain::Component(port.0)),
+        (None, Some(model)) => Ok(TxChain::Lumped(model.0)),
+        _ => Err(PyValueError::new_err(
+            "specify exactly one of port or eirp_model",
+        )),
+    }
+}
+
+fn build_rx_chain(port: Option<PyRxPortId>, gt_model: Option<PyGtModelId>) -> PyResult<RxChain> {
+    match (port, gt_model) {
+        (Some(port), None) => Ok(RxChain::Component(port.0)),
+        (None, Some(model)) => Ok(RxChain::Lumped(model.0)),
+        _ => Err(PyValueError::new_err(
+            "specify exactly one of port or gt_model",
+        )),
+    }
+}
+
+/// Communications hardware inventory and wiring for one platform.
+///
+/// Owns antennas, radios, lumped models, ports, and terminals. Wiring is by
+/// ID and validated at insertion; names are display-only. The payload holds
+/// no operational state: carrier, bandwidth, modulation, and pointing are
+/// link-level inputs.
+#[pyclass(name = "CommsPayload", module = "lox_space")]
+#[derive(Debug, Clone, Default)]
+pub struct PyCommsPayload(pub CommsPayload);
+
+#[pymethods]
+impl PyCommsPayload {
+    #[new]
+    fn new() -> Self {
+        Self::default()
+    }
+
+    /// Adds an antenna (ConstantAntenna or PatternedAntenna) to the inventory.
+    fn add_antenna(&mut self, name: String, antenna: &Bound<'_, PyAny>) -> PyResult<PyAntennaId> {
+        Ok(PyAntennaId(
+            self.0.add_antenna(name, build_antenna(antenna)?),
+        ))
+    }
+
+    /// Adds a component-tier transmitter to the inventory.
+    fn add_transmitter(
+        &mut self,
+        name: String,
+        transmitter: PyAmplifierTransmitter,
+    ) -> PyResult<PyTransmitterId> {
+        Ok(PyTransmitterId(self.0.add_transmitter(
+            name,
+            component_transmitter(&transmitter)?,
+        )))
+    }
+
+    /// Adds a component-tier receiver (NoiseTempReceiver or CascadeReceiver)
+    /// to the inventory.
+    fn add_receiver(
+        &mut self,
+        name: String,
+        receiver: &Bound<'_, PyAny>,
+    ) -> PyResult<PyReceiverId> {
+        self.0
+            .add_receiver(name, build_receiver_any(receiver)?)
+            .map(PyReceiverId)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Adds a lumped EIRP model to the inventory.
+    fn add_eirp_model(
+        &mut self,
+        name: String,
+        band: PyFrequencyRange,
+        eirp: PyDecibel,
+    ) -> PyEirpModelId {
+        PyEirpModelId(self.0.add_eirp_model(EirpModel {
+            name,
+            band: band.0,
+            eirp: eirp.0,
+        }))
+    }
+
+    /// Adds a lumped G/T model to the inventory.
+    fn add_gt_model(&mut self, name: String, band: PyFrequencyRange, gt: PyDecibel) -> PyGtModelId {
+        PyGtModelId(self.0.add_gt_model(GtModel {
+            name,
+            band: band.0,
+            gt: gt.0,
+        }))
+    }
+
+    /// Adds a transmit port wiring an antenna to a transmitter.
+    #[pyo3(signature = (name, antenna, transmitter, feed_loss, band=None))]
+    fn add_tx_port(
+        &mut self,
+        name: String,
+        antenna: PyAntennaId,
+        transmitter: PyTransmitterId,
+        feed_loss: PyDecibel,
+        band: Option<PyFrequencyRange>,
+    ) -> PyResult<PyTxPortId> {
+        self.0
+            .add_tx_port(TxPort {
+                name,
+                antenna: antenna.0,
+                transmitter: transmitter.0,
+                feed_loss: feed_loss.0,
+                band: band.map(|b| b.0),
+            })
+            .map(PyTxPortId)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Adds a receive port wiring an antenna to a receiver.
+    #[pyo3(signature = (name, antenna, receiver, feed_loss, antenna_noise_temperature, band=None))]
+    fn add_rx_port(
+        &mut self,
+        name: String,
+        antenna: PyAntennaId,
+        receiver: PyReceiverId,
+        feed_loss: PyDecibel,
+        antenna_noise_temperature: PyTemperature,
+        band: Option<PyFrequencyRange>,
+    ) -> PyResult<PyRxPortId> {
+        self.0
+            .add_rx_port(RxPort {
+                name,
+                antenna: antenna.0,
+                receiver: receiver.0,
+                feed_loss: feed_loss.0,
+                antenna_noise_temperature: f64::from(antenna_noise_temperature.0),
+                band: band.map(|b| b.0),
+            })
+            .map(PyRxPortId)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Adds a transmit-only terminal from a port or a lumped EIRP model.
+    #[pyo3(signature = (name, port=None, eirp_model=None))]
+    fn add_tx_terminal(
+        &mut self,
+        name: String,
+        port: Option<PyTxPortId>,
+        eirp_model: Option<PyEirpModelId>,
+    ) -> PyResult<PyTerminalId> {
+        self.0
+            .add_terminal(Terminal {
+                name,
+                role: TerminalRole::Tx(build_tx_chain(port, eirp_model)?),
+            })
+            .map(PyTerminalId)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Adds a receive-only terminal from a port or a lumped G/T model.
+    #[pyo3(signature = (name, port=None, gt_model=None))]
+    fn add_rx_terminal(
+        &mut self,
+        name: String,
+        port: Option<PyRxPortId>,
+        gt_model: Option<PyGtModelId>,
+    ) -> PyResult<PyTerminalId> {
+        self.0
+            .add_terminal(Terminal {
+                name,
+                role: TerminalRole::Rx(build_rx_chain(port, gt_model)?),
+            })
+            .map(PyTerminalId)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Adds a transceiver terminal with one chain per direction.
+    #[pyo3(signature = (name, tx_port=None, rx_port=None, eirp_model=None, gt_model=None))]
+    fn add_transceiver_terminal(
+        &mut self,
+        name: String,
+        tx_port: Option<PyTxPortId>,
+        rx_port: Option<PyRxPortId>,
+        eirp_model: Option<PyEirpModelId>,
+        gt_model: Option<PyGtModelId>,
+    ) -> PyResult<PyTerminalId> {
+        self.0
+            .add_terminal(Terminal {
+                name,
+                role: TerminalRole::Transceiver {
+                    tx: build_tx_chain(tx_port, eirp_model)?,
+                    rx: build_rx_chain(rx_port, gt_model)?,
+                },
+            })
+            .map(PyTerminalId)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Returns the first terminal with the given name, if any.
+    fn find_terminal(&self, name: &str) -> Option<PyTerminalId> {
+        self.0.find_terminal(name).map(PyTerminalId)
+    }
+
+    /// Creates a single-terminal transmit-only payload.
+    #[staticmethod]
+    #[pyo3(signature = (name, antenna, transmitter, feed_loss, band=None))]
+    fn transmitter_only(
+        name: String,
+        antenna: &Bound<'_, PyAny>,
+        transmitter: PyAmplifierTransmitter,
+        feed_loss: PyDecibel,
+        band: Option<PyFrequencyRange>,
+    ) -> PyResult<(Self, PyTerminalId)> {
+        let (payload, terminal) = CommsPayload::transmitter_only(
+            name,
+            build_antenna(antenna)?,
+            component_transmitter(&transmitter)?,
+            feed_loss.0,
+            band.map(|b| b.0),
+        );
+        Ok((Self(payload), PyTerminalId(terminal)))
+    }
+
+    /// Creates a single-terminal receive-only payload.
+    #[staticmethod]
+    #[pyo3(signature = (name, antenna, receiver, feed_loss, antenna_noise_temperature, band=None))]
+    fn receiver_only(
+        name: String,
+        antenna: &Bound<'_, PyAny>,
+        receiver: &Bound<'_, PyAny>,
+        feed_loss: PyDecibel,
+        antenna_noise_temperature: PyTemperature,
+        band: Option<PyFrequencyRange>,
+    ) -> PyResult<(Self, PyTerminalId)> {
+        let (payload, terminal) = CommsPayload::receiver_only(
+            name,
+            build_antenna(antenna)?,
+            build_receiver_any(receiver)?,
+            feed_loss.0,
+            f64::from(antenna_noise_temperature.0),
+            band.map(|b| b.0),
+        )
+        .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        Ok((Self(payload), PyTerminalId(terminal)))
+    }
+
+    /// Creates a single-terminal transceiver payload sharing one antenna.
+    #[staticmethod]
+    #[pyo3(signature = (name, antenna, transmitter, receiver, tx_feed_loss, rx_feed_loss, antenna_noise_temperature, band=None))]
+    #[allow(clippy::too_many_arguments)]
+    fn transceiver(
+        name: String,
+        antenna: &Bound<'_, PyAny>,
+        transmitter: PyAmplifierTransmitter,
+        receiver: &Bound<'_, PyAny>,
+        tx_feed_loss: PyDecibel,
+        rx_feed_loss: PyDecibel,
+        antenna_noise_temperature: PyTemperature,
+        band: Option<PyFrequencyRange>,
+    ) -> PyResult<(Self, PyTerminalId)> {
+        let (payload, terminal) = CommsPayload::transceiver(
+            name,
+            build_antenna(antenna)?,
+            component_transmitter(&transmitter)?,
+            build_receiver_any(receiver)?,
+            tx_feed_loss.0,
+            rx_feed_loss.0,
+            f64::from(antenna_noise_temperature.0),
+            band.map(|b| b.0),
+        )
+        .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        Ok((Self(payload), PyTerminalId(terminal)))
+    }
+
+    /// Creates a single-terminal payload from a lumped EIRP model.
+    #[staticmethod]
+    fn eirp_only(name: String, band: PyFrequencyRange, eirp: PyDecibel) -> (Self, PyTerminalId) {
+        let (payload, terminal) = CommsPayload::eirp_only(EirpModel {
+            name,
+            band: band.0,
+            eirp: eirp.0,
+        });
+        (Self(payload), PyTerminalId(terminal))
+    }
+
+    /// Creates a single-terminal payload from a lumped G/T model.
+    #[staticmethod]
+    fn gt_only(name: String, band: PyFrequencyRange, gt: PyDecibel) -> (Self, PyTerminalId) {
+        let (payload, terminal) = CommsPayload::gt_only(GtModel {
+            name,
+            band: band.0,
+            gt: gt.0,
+        });
+        (Self(payload), PyTerminalId(terminal))
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "<CommsPayload terminals=[{}]>",
+            self.0
+                .terminals()
+                .map(|(_, t)| t.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", "),
+        )
+    }
 }

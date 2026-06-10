@@ -1846,3 +1846,165 @@ def test_modulation_repr_all_variants():
     }
     for name, expected_repr in expected.items():
         assert repr(lox.Modulation(name)) == expected_repr
+
+
+# --- CommsPayload (inventory + wiring) and endpoint-based link budgets ---
+
+
+KA_BAND = lox.FrequencyRange(27.0 * lox.GHz, 31.0 * lox.GHz)
+
+
+def test_frequency_range():
+    assert KA_BAND.contains(29.0 * lox.GHz)
+    assert not KA_BAND.contains(45.0 * lox.GHz)
+    assert KA_BAND.min().to_gigahertz() == pytest.approx(27.0)
+    assert str(KA_BAND) == "27.000–31.000 GHz"
+    optical = lox.FrequencyRange.from_wavelengths(1530e-9 * lox.m, 1565e-9 * lox.m)
+    assert optical.contains(193.4 * lox.THz)
+    with pytest.raises(ValueError):
+        lox.FrequencyRange(31.0 * lox.GHz, 27.0 * lox.GHz)
+    assert pickle.loads(pickle.dumps(KA_BAND)) == KA_BAND
+
+
+def test_comms_payload_manual_wiring_diplexer():
+    payload = lox.CommsPayload()
+    dish = payload.add_antenna("dish", lox.ConstantAntenna(gain=46.0 * lox.dB))
+    pa = payload.add_transmitter(
+        "pa",
+        lox.AmplifierTransmitter(
+            frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=0.0 * lox.dB
+        ),
+    )
+    lnb = payload.add_receiver(
+        "lnb",
+        lox.NoiseTempReceiver(
+            frequency=19.7e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
+        ),
+    )
+    tx_port = payload.add_tx_port("tx leg", dish, pa, 1.0 * lox.dB, band=KA_BAND)
+    rx_port = payload.add_rx_port(
+        "rx leg", dish, lnb, 0.5 * lox.dB, antenna_noise_temperature=150.0 * lox.K
+    )
+    terminal = payload.add_transceiver_terminal(
+        "ka transceiver", tx_port=tx_port, rx_port=rx_port
+    )
+    assert payload.find_terminal("ka transceiver") == terminal
+    assert payload.find_terminal("nonexistent") is None
+
+
+def test_comms_payload_for_link_parity_with_calculate():
+    # The same physical link expressed both ways must agree: the legacy
+    # CommunicationSystem carries the 1 dB loss on the transmitter, the
+    # payload carries it on the TX port.
+    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
+    legacy_tx = lox.CommunicationSystem(
+        antenna=tx_ant,
+        transmitter=lox.AmplifierTransmitter(
+            frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
+        ),
+    )
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
+    legacy_rx = lox.CommunicationSystem(
+        antenna=rx_ant,
+        receiver=lox.NoiseTempReceiver(
+            frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
+        ),
+    )
+    legacy = lox.LinkStats.calculate(
+        legacy_tx, legacy_rx, 1000.0 * lox.km, 5.0 * lox.MHz
+    )
+
+    tx_payload, tx_terminal = lox.CommsPayload.transmitter_only(
+        "tx",
+        tx_ant,
+        lox.AmplifierTransmitter(
+            frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=0.0 * lox.dB
+        ),
+        feed_loss=1.0 * lox.dB,
+        band=KA_BAND,
+    )
+    rx_payload, rx_terminal = lox.CommsPayload.receiver_only(
+        "rx",
+        rx_ant,
+        lox.NoiseTempReceiver(
+            frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
+        ),
+        feed_loss=0.0 * lox.dB,
+        antenna_noise_temperature=150.0 * lox.K,
+        band=KA_BAND,
+    )
+    stats = lox.LinkStats.for_link(
+        tx_payload,
+        tx_terminal,
+        rx_payload,
+        rx_terminal,
+        carrier=29.0 * lox.GHz,
+        bandwidth=5.0 * lox.MHz,
+        range=1000.0 * lox.km,
+        direction="downlink",
+    )
+
+    assert float(stats.eirp) == pytest.approx(float(legacy.eirp), abs=1e-12)
+    assert float(stats.gt) == pytest.approx(float(legacy.gt), abs=1e-12)
+    assert float(stats.c_n0) == pytest.approx(float(legacy.c_n0), abs=1e-12)
+    assert float(stats.carrier_rx_power) == pytest.approx(
+        float(legacy.carrier_rx_power), abs=1e-12
+    )
+    assert stats.direction == "downlink"
+    assert legacy.direction is None
+
+
+def test_comms_payload_lumped_link():
+    tx_payload, tx_terminal = lox.CommsPayload.eirp_only("eirp", KA_BAND, 55.0 * lox.dB)
+    rx_payload, rx_terminal = lox.CommsPayload.gt_only("gt", KA_BAND, 3.01 * lox.dB)
+    stats = lox.LinkStats.for_link(
+        tx_payload,
+        tx_terminal,
+        rx_payload,
+        rx_terminal,
+        carrier=29.0 * lox.GHz,
+        bandwidth=5.0 * lox.MHz,
+        range=1000.0 * lox.km,
+        direction="uplink",
+    )
+    assert float(stats.c_n0) == pytest.approx(104.913, abs=0.1)
+    assert stats.carrier_rx_power is None
+    assert stats.noise_power is None
+
+
+def test_comms_payload_carrier_out_of_band():
+    tx_payload, tx_terminal = lox.CommsPayload.eirp_only("eirp", KA_BAND, 55.0 * lox.dB)
+    rx_band = lox.FrequencyRange(17.0 * lox.GHz, 21.0 * lox.GHz)
+    rx_payload, rx_terminal = lox.CommsPayload.gt_only("gt", rx_band, 3.01 * lox.dB)
+    with pytest.raises(ValueError, match="outside the supported range"):
+        lox.LinkStats.for_link(
+            tx_payload,
+            tx_terminal,
+            rx_payload,
+            rx_terminal,
+            carrier=29.0 * lox.GHz,
+            bandwidth=5.0 * lox.MHz,
+            range=1000.0 * lox.km,
+            direction="downlink",
+        )
+
+
+def test_comms_payload_rejects_mixed_chain_args():
+    payload = lox.CommsPayload()
+    with pytest.raises(ValueError, match="exactly one of"):
+        payload.add_tx_terminal("bad")
+
+
+def test_ground_station_comms_payload():
+    payload, _terminal = lox.CommsPayload.gt_only("gs gt", KA_BAND, 30.0 * lox.dB)
+    location = lox.GroundLocation(
+        lox.Origin("Earth"), 13.4 * lox.deg, 52.5 * lox.deg, 0.1 * lox.km
+    )
+    mask = lox.ElevationMask.fixed(5.0 * lox.deg)
+    gs = lox.GroundStation("berlin", location, mask, comms_payload=payload)
+    restored = gs.comms_payload()
+    assert restored is not None
+    assert restored.find_terminal("gs gt") is not None
+
+    bare = lox.GroundStation("bare", location, mask)
+    assert bare.comms_payload() is None

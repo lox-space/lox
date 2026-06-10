@@ -68,6 +68,66 @@ antenna = lox.PatternedAntenna(pattern=pattern, frame=frame)
 gain = antenna.gain_toward(29 * lox.GHz, [1.0, 0.0, 0.0])  # on boresight
 ```
 
+## Hardware Inventory: CommsPayload
+
+A `CommsPayload` models the communications hardware of one platform as
+inventory plus wiring: antennas, radios, and lumped models are added to the
+inventory, ports wire an antenna to a radio (with a per-path feed loss), and
+terminals expose the operational endpoints that link analysis addresses.
+Shared hardware is expressed naturally — a diplexer is two ports referencing
+the same antenna:
+
+```python
+import lox_space as lox
+
+ka_band = lox.FrequencyRange(27.0 * lox.GHz, 31.0 * lox.GHz)
+
+payload = lox.CommsPayload()
+dish = payload.add_antenna("dish", lox.ConstantAntenna(gain=46.0 * lox.dB))
+pa = payload.add_transmitter(
+    "pa",
+    lox.AmplifierTransmitter(frequency=29 * lox.GHz, power=10 * lox.W, line_loss=0.0 * lox.dB),
+)
+lnb = payload.add_receiver(
+    "lnb",
+    lox.NoiseTempReceiver(frequency=19.7 * lox.GHz, system_noise_temperature=500 * lox.K),
+)
+tx_port = payload.add_tx_port("tx leg", dish, pa, 1.0 * lox.dB, band=ka_band)
+rx_port = payload.add_rx_port(
+    "rx leg", dish, lnb, 0.5 * lox.dB, antenna_noise_temperature=150 * lox.K
+)
+terminal = payload.add_transceiver_terminal("ka transceiver", tx_port=tx_port, rx_port=rx_port)
+```
+
+For the common single-chain cases the one-shot constructors return the
+payload and its terminal directly:
+
+```python
+tx_payload, tx_terminal = lox.CommsPayload.eirp_only("tx", ka_band, 55.0 * lox.dB)
+rx_payload, rx_terminal = lox.CommsPayload.gt_only("rx", ka_band, 3.01 * lox.dB)
+```
+
+`LinkStats.for_link` computes a link budget between two terminals. The
+carrier is a link-level input and must lie inside both endpoints' supported
+frequency ranges:
+
+```python
+link = lox.LinkStats.for_link(
+    tx_payload,
+    tx_terminal,
+    rx_payload,
+    rx_terminal,
+    carrier=29.0 * lox.GHz,
+    bandwidth=5.0 * lox.MHz,
+    range=1000.0 * lox.km,
+    direction="downlink",
+)
+print(f"C/N0 = {float(link.c_n0):.2f} dB·Hz")
+```
+
+Payloads attach to assets for scenario analysis via
+`GroundStation(..., comms_payload=...)` and `Spacecraft(..., comms_payload=...)`.
+
 ## Lumped EIRP and G/T
 
 For early-phase mission studies — where manufacturer datasheets typically
@@ -385,6 +445,18 @@ link = lox.LinkStats.calculate(
 ---
 
 ::: lox_space.PfdMask
+    options:
+      show_source: false
+
+---
+
+::: lox_space.FrequencyRange
+    options:
+      show_source: false
+
+---
+
+::: lox_space.CommsPayload
     options:
       show_source: false
 

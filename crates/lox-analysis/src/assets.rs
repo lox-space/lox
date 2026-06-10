@@ -22,7 +22,7 @@ use lox_time::time_scales::{DynTimeScale, Tai};
 use rayon::prelude::*;
 
 #[cfg(feature = "comms")]
-use lox_comms::system::CommunicationSystem;
+use lox_comms::payload::CommsPayload;
 
 use crate::visibility::ElevationMask;
 use lox_orbits::constellations::{ConstellationPropagator, DynConstellation};
@@ -113,7 +113,7 @@ pub struct GroundStation {
     body_fixed_frame: DynFrame,
     network: Option<NetworkId>,
     #[cfg(feature = "comms")]
-    communication_systems: Vec<CommunicationSystem>,
+    comms_payload: Option<CommsPayload>,
 }
 
 impl GroundStation {
@@ -127,7 +127,7 @@ impl GroundStation {
             body_fixed_frame,
             network: None,
             #[cfg(feature = "comms")]
-            communication_systems: Vec::new(),
+            comms_payload: None,
         }
     }
 
@@ -143,10 +143,10 @@ impl GroundStation {
         self
     }
 
-    /// Adds a communication system to this ground station.
+    /// Sets the communications payload of this ground station.
     #[cfg(feature = "comms")]
-    pub fn with_communication_system(mut self, system: CommunicationSystem) -> Self {
-        self.communication_systems.push(system);
+    pub fn with_comms_payload(mut self, payload: CommsPayload) -> Self {
+        self.comms_payload = Some(payload);
         self
     }
 
@@ -175,10 +175,10 @@ impl GroundStation {
         self.body_fixed_frame
     }
 
-    /// Returns the communication systems attached to this ground station.
+    /// Returns the communications payload of this ground station, if set.
     #[cfg(feature = "comms")]
-    pub fn communication_systems(&self) -> &[CommunicationSystem] {
-        &self.communication_systems
+    pub fn comms_payload(&self) -> Option<&CommsPayload> {
+        self.comms_payload.as_ref()
     }
 }
 
@@ -195,7 +195,7 @@ pub struct Spacecraft {
     #[cfg(feature = "imaging")]
     sar_payload: Option<SarPayload>,
     #[cfg(feature = "comms")]
-    communication_systems: Vec<CommunicationSystem>,
+    comms_payload: Option<CommsPayload>,
 }
 
 impl Spacecraft {
@@ -211,7 +211,7 @@ impl Spacecraft {
             #[cfg(feature = "imaging")]
             sar_payload: None,
             #[cfg(feature = "comms")]
-            communication_systems: Vec::new(),
+            comms_payload: None,
         }
     }
 
@@ -241,10 +241,10 @@ impl Spacecraft {
         self
     }
 
-    /// Adds a communication system to this spacecraft.
+    /// Sets the communications payload of this spacecraft.
     #[cfg(feature = "comms")]
-    pub fn with_communication_system(mut self, system: CommunicationSystem) -> Self {
-        self.communication_systems.push(system);
+    pub fn with_comms_payload(mut self, payload: CommsPayload) -> Self {
+        self.comms_payload = Some(payload);
         self
     }
 
@@ -280,10 +280,10 @@ impl Spacecraft {
         self.sar_payload
     }
 
-    /// Returns the communication systems attached to this spacecraft.
+    /// Returns the communications payload of this spacecraft, if set.
     #[cfg(feature = "comms")]
-    pub fn communication_systems(&self) -> &[CommunicationSystem] {
-        &self.communication_systems
+    pub fn comms_payload(&self) -> Option<&CommsPayload> {
+        self.comms_payload.as_ref()
     }
 }
 
