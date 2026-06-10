@@ -19,7 +19,7 @@ use crate::itur::python::PyEnvironmentalLosses;
 use lox_comms::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
 use lox_comms::pfd;
 use lox_comms::receiver::{CascadeReceiver, GtReceiver, NoiseStage, NoiseTempReceiver, Receiver};
-use lox_comms::system::CommunicationSystem;
+use lox_comms::system::{CommunicationSystem, Pointing};
 use lox_comms::transmitter::{AmplifierTransmitter, EirpTransmitter, Transmitter};
 use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
 use lox_core::units::{Angle, Decibel};
@@ -1297,6 +1297,22 @@ impl PyChannel {
     }
 }
 
+/// Builds a [`Pointing`] from mutually exclusive angle/direction arguments.
+fn build_pointing(
+    angle: Option<PyAngle>,
+    direction: Option<[f64; 3]>,
+    endpoint: &str,
+) -> PyResult<Pointing> {
+    match (angle, direction) {
+        (Some(_), Some(_)) => Err(PyValueError::new_err(format!(
+            "specify either {endpoint}_angle or {endpoint}_direction, not both"
+        ))),
+        (Some(angle), None) => Ok(Pointing::off_boresight(angle.0)),
+        (None, Some(direction)) => Ok(Pointing::Direction(DVec3::from_array(direction))),
+        (None, None) => Ok(Pointing::Boresight),
+    }
+}
+
 // --- Communication System ---
 
 /// A communication system combining an antenna with optional transmitter and receiver.
@@ -1383,40 +1399,59 @@ impl PyCommunicationSystem {
 
     /// Computes the carrier-to-noise density ratio (C/N0).
     ///
+    /// Each endpoint's pointing is given either as an off-boresight angle or
+    /// as a line-of-sight direction vector in the antenna's parent frame;
+    /// omitting both assumes ideal (boresight) pointing.
+    ///
     /// Args:
     ///     rx_system: The receiving CommunicationSystem.
     ///     losses: Additional losses as Decibel.
     ///     range: Slant range as Distance.
-    ///     tx_angle: Off-boresight angle at transmitter as Angle.
-    ///     rx_angle: Off-boresight angle at receiver as Angle.
+    ///     tx_angle: Off-boresight angle at transmitter as Angle (optional).
+    ///     rx_angle: Off-boresight angle at receiver as Angle (optional).
+    ///     tx_direction: Line-of-sight direction at transmitter as [x, y, z] (optional).
+    ///     rx_direction: Line-of-sight direction at receiver as [x, y, z] (optional).
+    #[pyo3(signature = (rx_system, losses, range, tx_angle=None, rx_angle=None, tx_direction=None, rx_direction=None))]
+    #[allow(clippy::too_many_arguments)]
     fn carrier_to_noise_density(
         &self,
         rx_system: &PyCommunicationSystem,
         losses: PyDecibel,
         range: PyDistance,
-        tx_angle: PyAngle,
-        rx_angle: PyAngle,
+        tx_angle: Option<PyAngle>,
+        rx_angle: Option<PyAngle>,
+        tx_direction: Option<[f64; 3]>,
+        rx_direction: Option<[f64; 3]>,
     ) -> PyResult<PyDecibel> {
+        let tx_pointing = build_pointing(tx_angle, tx_direction, "tx")?;
+        let rx_pointing = build_pointing(rx_angle, rx_direction, "rx")?;
         Ok(PyDecibel(
             self.0
-                .carrier_to_noise_density(&rx_system.0, losses.0, range.0, tx_angle.0, rx_angle.0)
+                .carrier_to_noise_density(&rx_system.0, losses.0, range.0, tx_pointing, rx_pointing)
                 .map_err(|e| PyValueError::new_err(e.to_string()))?,
         ))
     }
 
     /// Computes the received carrier power in dBW.
     ///
+    /// Accepts the same pointing arguments as ``carrier_to_noise_density``.
     /// Returns ``None`` for lumped G/T receivers.
+    #[pyo3(signature = (rx_system, losses, range, tx_angle=None, rx_angle=None, tx_direction=None, rx_direction=None))]
+    #[allow(clippy::too_many_arguments)]
     fn carrier_power(
         &self,
         rx_system: &PyCommunicationSystem,
         losses: PyDecibel,
         range: PyDistance,
-        tx_angle: PyAngle,
-        rx_angle: PyAngle,
+        tx_angle: Option<PyAngle>,
+        rx_angle: Option<PyAngle>,
+        tx_direction: Option<[f64; 3]>,
+        rx_direction: Option<[f64; 3]>,
     ) -> PyResult<Option<PyDecibel>> {
+        let tx_pointing = build_pointing(tx_angle, tx_direction, "tx")?;
+        let rx_pointing = build_pointing(rx_angle, rx_direction, "rx")?;
         self.0
-            .carrier_power(&rx_system.0, losses.0, range.0, tx_angle.0, rx_angle.0)
+            .carrier_power(&rx_system.0, losses.0, range.0, tx_pointing, rx_pointing)
             .map_err(|e| PyValueError::new_err(e.to_string()))
             .map(|opt| opt.map(PyDecibel))
     }
@@ -1534,23 +1569,33 @@ pub struct PyLinkStats(pub LinkStats);
 impl PyLinkStats {
     /// Computes a modulation-agnostic link budget.
     ///
+    /// Each endpoint's pointing is given either as an off-boresight angle or
+    /// as a line-of-sight direction vector in the antenna's parent frame;
+    /// omitting both assumes ideal (boresight) pointing. The pattern angles
+    /// derived from the pointing are reported on the result.
+    ///
     /// Args:
     ///     tx_system: The transmitting CommunicationSystem.
     ///     rx_system: The receiving CommunicationSystem.
     ///     range: Slant range as Distance.
     ///     bandwidth: Noise bandwidth as Frequency.
-    ///     tx_angle: Off-boresight angle at transmitter as Angle.
-    ///     rx_angle: Off-boresight angle at receiver as Angle.
+    ///     tx_angle: Off-boresight angle at transmitter as Angle (optional).
+    ///     rx_angle: Off-boresight angle at receiver as Angle (optional).
+    ///     tx_direction: Line-of-sight direction at transmitter as [x, y, z] (optional).
+    ///     rx_direction: Line-of-sight direction at receiver as [x, y, z] (optional).
     ///     losses: EnvironmentalLosses (optional, defaults to none).
     #[staticmethod]
-    #[pyo3(signature = (tx_system, rx_system, range, bandwidth, tx_angle, rx_angle, losses=None))]
+    #[pyo3(signature = (tx_system, rx_system, range, bandwidth, tx_angle=None, rx_angle=None, tx_direction=None, rx_direction=None, losses=None))]
+    #[allow(clippy::too_many_arguments)]
     fn calculate(
         tx_system: &PyCommunicationSystem,
         rx_system: &PyCommunicationSystem,
         range: PyDistance,
         bandwidth: PyFrequency,
-        tx_angle: PyAngle,
-        rx_angle: PyAngle,
+        tx_angle: Option<PyAngle>,
+        rx_angle: Option<PyAngle>,
+        tx_direction: Option<[f64; 3]>,
+        rx_direction: Option<[f64; 3]>,
         losses: Option<&PyEnvironmentalLosses>,
     ) -> PyResult<Self> {
         let env_losses = losses
@@ -1564,14 +1609,17 @@ impl PyLinkStats {
             })
             .unwrap_or_else(EnvironmentalLosses::none);
 
+        let tx_pointing = build_pointing(tx_angle, tx_direction, "tx")?;
+        let rx_pointing = build_pointing(rx_angle, rx_direction, "rx")?;
+
         LinkStats::calculate(
             &tx_system.0,
             &rx_system.0,
             range.0,
             bandwidth.0,
             env_losses,
-            tx_angle.0,
-            rx_angle.0,
+            tx_pointing,
+            rx_pointing,
         )
         .map(Self)
         .map_err(|e| PyValueError::new_err(e.to_string()))
@@ -1637,16 +1685,28 @@ impl PyLinkStats {
         PyFrequency(self.0.frequency)
     }
 
-    /// Off-boresight angle at the transmitter.
+    /// Derived TX pattern polar angle from boresight.
     #[getter]
-    fn tx_angle(&self) -> PyAngle {
-        PyAngle(self.0.tx_angle)
+    fn tx_theta(&self) -> PyAngle {
+        PyAngle(self.0.tx_theta)
     }
 
-    /// Off-boresight angle at the receiver.
+    /// Derived TX pattern azimuth about boresight.
     #[getter]
-    fn rx_angle(&self) -> PyAngle {
-        PyAngle(self.0.rx_angle)
+    fn tx_phi(&self) -> PyAngle {
+        PyAngle(self.0.tx_phi)
+    }
+
+    /// Derived RX pattern polar angle from boresight.
+    #[getter]
+    fn rx_theta(&self) -> PyAngle {
+        PyAngle(self.0.rx_theta)
+    }
+
+    /// Derived RX pattern azimuth about boresight.
+    #[getter]
+    fn rx_phi(&self) -> PyAngle {
+        PyAngle(self.0.rx_phi)
     }
 
     fn __repr__(&self) -> String {

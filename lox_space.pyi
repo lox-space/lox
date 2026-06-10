@@ -2763,17 +2763,25 @@ class CommunicationSystem:
         rx_system: CommunicationSystem,
         losses: Decibel,
         range: Distance,
-        tx_angle: Angle,
-        rx_angle: Angle,
+        tx_angle: Angle | None = None,
+        rx_angle: Angle | None = None,
+        tx_direction: list[float] | None = None,
+        rx_direction: list[float] | None = None,
     ) -> Decibel:
         """Computes the carrier-to-noise density ratio (C/N0) in dB·Hz.
+
+        Each endpoint's pointing is given either as an off-boresight angle or
+        as a line-of-sight direction vector in the antenna's parent frame;
+        omitting both assumes ideal (boresight) pointing.
 
         Args:
             rx_system: The receiving CommunicationSystem.
             losses: Additional losses as Decibel.
             range: Slant range as Distance.
-            tx_angle: Off-boresight angle at transmitter as Angle.
-            rx_angle: Off-boresight angle at receiver as Angle.
+            tx_angle: Off-boresight angle at transmitter as Angle (optional).
+            rx_angle: Off-boresight angle at receiver as Angle (optional).
+            tx_direction: Line-of-sight direction at transmitter as [x, y, z] (optional).
+            rx_direction: Line-of-sight direction at receiver as [x, y, z] (optional).
         """
         ...
     def carrier_power(
@@ -2781,10 +2789,16 @@ class CommunicationSystem:
         rx_system: CommunicationSystem,
         losses: Decibel,
         range: Distance,
-        tx_angle: Angle,
-        rx_angle: Angle,
+        tx_angle: Angle | None = None,
+        rx_angle: Angle | None = None,
+        tx_direction: list[float] | None = None,
+        rx_direction: list[float] | None = None,
     ) -> Decibel | None:
-        """Computes the received carrier power in dBW. Returns ``None`` for lumped G/T receivers."""
+        """Computes the received carrier power in dBW.
+
+        Accepts the same pointing arguments as ``carrier_to_noise_density``.
+        Returns ``None`` for lumped G/T receivers.
+        """
         ...
     def noise_power(self, bandwidth: Frequency) -> Decibel | None:
         """Computes the noise power in dBW for a given bandwidth. Returns ``None`` for lumped G/T receivers."""
@@ -2799,19 +2813,28 @@ class LinkStats:
         rx_system: CommunicationSystem,
         range: Distance,
         bandwidth: Frequency,
-        tx_angle: Angle,
-        rx_angle: Angle,
+        tx_angle: Angle | None = None,
+        rx_angle: Angle | None = None,
+        tx_direction: list[float] | None = None,
+        rx_direction: list[float] | None = None,
         losses: EnvironmentalLosses | None = None,
     ) -> LinkStats:
         """Computes a modulation-agnostic link budget.
+
+        Each endpoint's pointing is given either as an off-boresight angle or
+        as a line-of-sight direction vector in the antenna's parent frame;
+        omitting both assumes ideal (boresight) pointing. The pattern angles
+        derived from the pointing are reported on the result.
 
         Args:
             tx_system: The transmitting CommunicationSystem.
             rx_system: The receiving CommunicationSystem.
             range: Slant range as Distance.
             bandwidth: Noise bandwidth as Frequency.
-            tx_angle: Off-boresight angle at transmitter as Angle.
-            rx_angle: Off-boresight angle at receiver as Angle.
+            tx_angle: Off-boresight angle at transmitter as Angle (optional).
+            rx_angle: Off-boresight angle at receiver as Angle (optional).
+            tx_direction: Line-of-sight direction at transmitter as [x, y, z] (optional).
+            rx_direction: Line-of-sight direction at receiver as [x, y, z] (optional).
             losses: EnvironmentalLosses (optional, defaults to none).
         """
         ...
@@ -2856,12 +2879,20 @@ class LinkStats:
         """Link frequency."""
         ...
     @property
-    def tx_angle(self) -> Angle:
-        """Off-boresight angle at the transmitter."""
+    def tx_theta(self) -> Angle:
+        """Derived TX pattern polar angle from boresight."""
         ...
     @property
-    def rx_angle(self) -> Angle:
-        """Off-boresight angle at the receiver."""
+    def tx_phi(self) -> Angle:
+        """Derived TX pattern azimuth about boresight."""
+        ...
+    @property
+    def rx_theta(self) -> Angle:
+        """Derived RX pattern polar angle from boresight."""
+        ...
+    @property
+    def rx_phi(self) -> Angle:
+        """Derived RX pattern azimuth about boresight."""
         ...
     def __repr__(self) -> str: ...
 
