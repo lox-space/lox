@@ -663,16 +663,20 @@ mod tests {
     #[test]
     fn test_lumped_endpoints_ignore_carrier_and_pointing() {
         let mut payload = CommsPayload::new();
-        let eirp = payload.add_eirp_model(EirpModel {
-            name: "eirp".into(),
-            band: ka_band(),
-            eirp: 55.0.db(),
-        });
-        let gt = payload.add_gt_model(GtModel {
-            name: "gt".into(),
-            band: ka_band(),
-            gt: 3.01.db(),
-        });
+        let eirp = payload
+            .add_eirp_model(EirpModel {
+                name: "eirp".into(),
+                band: ka_band(),
+                eirp: 55.0.db(),
+            })
+            .unwrap();
+        let gt = payload
+            .add_gt_model(GtModel {
+                name: "gt".into(),
+                band: ka_band(),
+                gt: 3.01.db(),
+            })
+            .unwrap();
         let terminal = payload
             .add_terminal(Terminal {
                 name: "lumped".into(),
@@ -767,11 +771,13 @@ mod tests {
     #[test]
     fn test_wrong_direction_terminal_is_error() {
         let mut payload = CommsPayload::new();
-        let gt = payload.add_gt_model(GtModel {
-            name: "gt".into(),
-            band: ka_band(),
-            gt: 3.01.db(),
-        });
+        let gt = payload
+            .add_gt_model(GtModel {
+                name: "gt".into(),
+                band: ka_band(),
+                gt: 3.01.db(),
+            })
+            .unwrap();
         let rx_only = payload
             .add_terminal(Terminal {
                 name: "rx only".into(),

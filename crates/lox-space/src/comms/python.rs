@@ -1756,21 +1756,32 @@ impl PyCommsPayload {
         name: String,
         band: PyFrequencyRange,
         eirp: PyDecibel,
-    ) -> PyEirpModelId {
-        PyEirpModelId(self.0.add_eirp_model(EirpModel {
-            name,
-            band: band.0,
-            eirp: eirp.0,
-        }))
+    ) -> PyResult<PyEirpModelId> {
+        self.0
+            .add_eirp_model(EirpModel {
+                name,
+                band: band.0,
+                eirp: eirp.0,
+            })
+            .map(PyEirpModelId)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Adds a lumped G/T model to the inventory.
-    fn add_gt_model(&mut self, name: String, band: PyFrequencyRange, gt: PyDecibel) -> PyGtModelId {
-        PyGtModelId(self.0.add_gt_model(GtModel {
-            name,
-            band: band.0,
-            gt: gt.0,
-        }))
+    fn add_gt_model(
+        &mut self,
+        name: String,
+        band: PyFrequencyRange,
+        gt: PyDecibel,
+    ) -> PyResult<PyGtModelId> {
+        self.0
+            .add_gt_model(GtModel {
+                name,
+                band: band.0,
+                gt: gt.0,
+            })
+            .map(PyGtModelId)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Adds a transmit port wiring an antenna to a transmitter.
@@ -2041,24 +2052,34 @@ impl PyCommsPayload {
 
     /// Creates a single-terminal payload from a lumped EIRP model.
     #[staticmethod]
-    fn eirp_only(name: String, band: PyFrequencyRange, eirp: PyDecibel) -> (Self, PyTerminalId) {
+    fn eirp_only(
+        name: String,
+        band: PyFrequencyRange,
+        eirp: PyDecibel,
+    ) -> PyResult<(Self, PyTerminalId)> {
         let (payload, terminal) = CommsPayload::eirp_only(EirpModel {
             name,
             band: band.0,
             eirp: eirp.0,
-        });
-        (Self(payload), PyTerminalId(terminal))
+        })
+        .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        Ok((Self(payload), PyTerminalId(terminal)))
     }
 
     /// Creates a single-terminal payload from a lumped G/T model.
     #[staticmethod]
-    fn gt_only(name: String, band: PyFrequencyRange, gt: PyDecibel) -> (Self, PyTerminalId) {
+    fn gt_only(
+        name: String,
+        band: PyFrequencyRange,
+        gt: PyDecibel,
+    ) -> PyResult<(Self, PyTerminalId)> {
         let (payload, terminal) = CommsPayload::gt_only(GtModel {
             name,
             band: band.0,
             gt: gt.0,
-        });
-        (Self(payload), PyTerminalId(terminal))
+        })
+        .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        Ok((Self(payload), PyTerminalId(terminal)))
     }
 
     fn __repr__(&self) -> String {

@@ -314,31 +314,31 @@ impl CommsPayload {
     }
 
     /// Creates a single-terminal payload from a lumped EIRP model.
-    pub fn eirp_only(model: EirpModel) -> (Self, TerminalId) {
+    pub fn eirp_only(model: EirpModel) -> Result<(Self, TerminalId), PayloadError> {
         let name = model.name.clone();
         let mut payload = Self::new();
-        let model = payload.add_eirp_model(model);
+        let model = payload.add_eirp_model(model)?;
         let terminal = payload
             .add_terminal(Terminal {
                 name,
                 role: TerminalRole::Tx(TxChain::Lumped(model)),
             })
             .expect("freshly inserted IDs are valid");
-        (payload, terminal)
+        Ok((payload, terminal))
     }
 
     /// Creates a single-terminal payload from a lumped G/T model.
-    pub fn gt_only(model: GtModel) -> (Self, TerminalId) {
+    pub fn gt_only(model: GtModel) -> Result<(Self, TerminalId), PayloadError> {
         let name = model.name.clone();
         let mut payload = Self::new();
-        let model = payload.add_gt_model(model);
+        let model = payload.add_gt_model(model)?;
         let terminal = payload
             .add_terminal(Terminal {
                 name,
                 role: TerminalRole::Rx(RxChain::Lumped(model)),
             })
             .expect("freshly inserted IDs are valid");
-        (payload, terminal)
+        Ok((payload, terminal))
     }
 
     /// Adds an antenna to the inventory.
@@ -402,13 +402,19 @@ impl CommsPayload {
     }
 
     /// Adds a lumped EIRP model to the inventory.
-    pub fn add_eirp_model(&mut self, model: EirpModel) -> EirpModelId {
-        self.eirp_models.insert(model)
+    ///
+    /// Rejects a non-finite EIRP figure (negative dBW values are valid).
+    pub fn add_eirp_model(&mut self, model: EirpModel) -> Result<EirpModelId, PayloadError> {
+        validate_finite("EIRP [dBW]", model.eirp.as_f64())?;
+        Ok(self.eirp_models.insert(model))
     }
 
     /// Adds a lumped G/T model to the inventory.
-    pub fn add_gt_model(&mut self, model: GtModel) -> GtModelId {
-        self.gt_models.insert(model)
+    ///
+    /// Rejects a non-finite G/T figure (negative dB/K values are valid).
+    pub fn add_gt_model(&mut self, model: GtModel) -> Result<GtModelId, PayloadError> {
+        validate_finite("G/T [dB/K]", model.gt.as_f64())?;
+        Ok(self.gt_models.insert(model))
     }
 
     /// Adds a transmit port, validating that the referenced antenna and
@@ -648,6 +654,14 @@ impl fmt::Display for CommsPayload {
     }
 }
 
+/// Validates that a quantity is finite.
+fn validate_finite(quantity: &'static str, value: f64) -> Result<(), PayloadError> {
+    if !value.is_finite() {
+        return Err(PayloadError::NonPhysical { quantity, value });
+    }
+    Ok(())
+}
+
 /// Validates that a quantity is finite and strictly positive.
 fn validate_positive(quantity: &'static str, value: f64) -> Result<(), PayloadError> {
     if !value.is_finite() || value <= 0.0 {
@@ -839,16 +853,20 @@ mod tests {
     #[test]
     fn test_lumped_models_are_inventory_citizens() {
         let mut payload = CommsPayload::new();
-        let eirp = payload.add_eirp_model(EirpModel {
-            name: "datasheet eirp".into(),
-            band: ka_band(),
-            eirp: 55.0.db(),
-        });
-        let gt = payload.add_gt_model(GtModel {
-            name: "datasheet gt".into(),
-            band: ka_band(),
-            gt: 3.01.db(),
-        });
+        let eirp = payload
+            .add_eirp_model(EirpModel {
+                name: "datasheet eirp".into(),
+                band: ka_band(),
+                eirp: 55.0.db(),
+            })
+            .unwrap();
+        let gt = payload
+            .add_gt_model(GtModel {
+                name: "datasheet gt".into(),
+                band: ka_band(),
+                gt: 3.01.db(),
+            })
+            .unwrap();
         let terminal = payload
             .add_terminal(Terminal {
                 name: "lumped transceiver".into(),
@@ -939,14 +957,16 @@ mod tests {
             name: "datasheet".into(),
             band: ka_band(),
             eirp: 55.0.db(),
-        });
+        })
+        .unwrap();
         assert_eq!(payload.terminal(terminal).unwrap().name, "datasheet");
 
         let (payload, terminal) = CommsPayload::gt_only(GtModel {
             name: "datasheet".into(),
             band: ka_band(),
             gt: 3.01.db(),
-        });
+        })
+        .unwrap();
         assert!(matches!(
             payload.terminal(terminal).unwrap().role,
             TerminalRole::Rx(RxChain::Lumped(_))
@@ -993,6 +1013,37 @@ mod tests {
             })
             .unwrap_err();
         assert!(matches!(err, PayloadError::NonPhysical { .. }));
+    }
+
+    #[test]
+    fn test_non_finite_lumped_figures_are_rejected() {
+        let mut payload = CommsPayload::new();
+        let err = payload
+            .add_eirp_model(EirpModel {
+                name: "bad".into(),
+                band: ka_band(),
+                eirp: Decibel::new(f64::NAN),
+            })
+            .unwrap_err();
+        assert!(matches!(err, PayloadError::NonPhysical { .. }));
+        let err = payload
+            .add_gt_model(GtModel {
+                name: "bad".into(),
+                band: ka_band(),
+                gt: Decibel::new(f64::INFINITY),
+            })
+            .unwrap_err();
+        assert!(matches!(err, PayloadError::NonPhysical { .. }));
+        // Negative figures are physically meaningful and accepted.
+        assert!(
+            payload
+                .add_gt_model(GtModel {
+                    name: "small terminal".into(),
+                    band: ka_band(),
+                    gt: Decibel::new(-5.0),
+                })
+                .is_ok()
+        );
     }
 
     #[cfg(feature = "serde")]

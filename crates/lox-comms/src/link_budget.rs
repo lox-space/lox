@@ -192,6 +192,12 @@ impl ModulatedLinkStats {
         &self,
         interference_power_w: f64,
     ) -> Result<InterferenceStats, LinkBudgetError> {
+        if !interference_power_w.is_finite() || interference_power_w < 0.0 {
+            return Err(LinkBudgetError::NonPhysical {
+                quantity: "interference power [W]",
+                value: interference_power_w,
+            });
+        }
         let noise_linear = self
             .link
             .noise_power
@@ -292,12 +298,14 @@ mod tests {
             name: "eirp".into(),
             band: ka_band(),
             eirp: 55.0.db(),
-        });
+        })
+        .unwrap();
         let (rx_payload, rx_terminal) = CommsPayload::gt_only(GtModel {
             name: "gt".into(),
             band: ka_band(),
             gt: 3.01.db(),
-        });
+        })
+        .unwrap();
         (tx_payload, tx_terminal, rx_payload, rx_terminal)
     }
 
@@ -408,12 +416,14 @@ mod tests {
             name: "tx".into(),
             band: ka_band(),
             eirp: 55.0.db(),
-        });
+        })
+        .unwrap();
         let (rx_payload, rx_terminal) = CommsPayload::gt_only(GtModel {
             name: "rx".into(),
             band: FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap(),
             gt: 3.01.db(),
-        });
+        })
+        .unwrap();
 
         // 29 GHz fits the TX band but not the RX band.
         let err = LinkStats::for_link(
@@ -476,6 +486,22 @@ mod tests {
         let interference = m.with_interference(1e-12).unwrap();
         assert!(interference.margin_with_interference.as_f64() <= m.margin.as_f64());
         assert!(interference.eb_n0i0.as_f64() <= m.eb_n0.as_f64());
+    }
+
+    #[test]
+    fn test_with_interference_rejects_non_physical_power() {
+        let m = channel().apply(component_stats());
+        for power in [-1e-12, f64::NAN, f64::INFINITY] {
+            let err = m.with_interference(power).unwrap_err();
+            assert!(matches!(err, LinkBudgetError::NonPhysical { .. }));
+        }
+        // Zero interference is valid and must not change the margin.
+        let interference = m.with_interference(0.0).unwrap();
+        assert_approx_eq!(
+            interference.margin_with_interference.as_f64(),
+            m.margin.as_f64(),
+            atol <= 1e-10
+        );
     }
 
     #[test]
