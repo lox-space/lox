@@ -1683,6 +1683,17 @@ def test_for_link_error_paths():
     assert tx_payload.tx_band(tx_terminal) == KA_BAND
 
 
+def test_out_of_band_terminal_figures_are_rejected():
+    # eirp_at/gt_at enforce the same carrier-in-band check as for_link
+    # instead of extrapolating the hardware figures out of band.
+    payload, terminal = lox.CommsPayload.eirp_only("a", KA_BAND, 55.0 * lox.dB)
+    with pytest.raises(ValueError, match="outside the supported range"):
+        payload.eirp_at(terminal, 2.4 * lox.GHz)
+    payload, terminal = lox.CommsPayload.gt_only("b", KA_BAND, 3.0 * lox.dB)
+    with pytest.raises(ValueError, match="outside the supported range"):
+        payload.gt_at(terminal, 2.4 * lox.GHz)
+
+
 def test_foreign_terminal_ids_are_rejected():
     # Two payloads built with the same insertion order mint colliding
     # internal keys; the payload identity must keep the handles apart.

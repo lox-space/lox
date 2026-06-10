@@ -2883,7 +2883,10 @@ class CommsPayload:
         angle: Angle | None = None,
         direction: list[float] | None = None,
     ) -> Decibel:
-        """Returns the EIRP in dBW of a terminal at the given carrier and pointing."""
+        """Returns the EIRP in dBW of a terminal at the given carrier and pointing.
+
+        Raises ValueError when the carrier lies outside the terminal's effective band.
+        """
         ...
     def gt_at(
         self,
@@ -2892,7 +2895,10 @@ class CommsPayload:
         angle: Angle | None = None,
         direction: list[float] | None = None,
     ) -> Decibel:
-        """Returns the G/T in dB/K of a terminal at the given carrier and pointing."""
+        """Returns the G/T in dB/K of a terminal at the given carrier and pointing.
+
+        Raises ValueError when the carrier lies outside the terminal's effective band.
+        """
         ...
     def __str__(self) -> str: ...
     @staticmethod

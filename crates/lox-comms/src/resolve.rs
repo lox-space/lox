@@ -196,15 +196,18 @@ impl<'a> ResolvedTxTerminal<'a> {
 
     /// Returns the EIRP in dBW at the given carrier and pointing.
     ///
-    /// For lumped chains the carrier and pointing are ignored and the
-    /// stored figure is returned. For component chains:
+    /// For lumped chains the pointing is ignored and the stored figure is
+    /// returned. For component chains:
     ///
     /// EIRP = G_ant(carrier, θ, φ) + 10·log₁₀(P) − OBO − feed loss
+    ///
+    /// Errors when the carrier lies outside the terminal's effective band.
     pub fn eirp_at(
         &self,
         carrier: Frequency,
         pointing: Pointing,
     ) -> Result<Decibel, LinkBudgetError> {
+        check_carrier(carrier, self.band(), self.terminal_name)?;
         match &self.kind {
             ResolvedTxChain::Lumped(model) => Ok(model.eirp()),
             ResolvedTxChain::Component {
@@ -304,9 +307,9 @@ impl<'a> ResolvedRxTerminal<'a> {
     /// Returns the gain-to-noise-temperature ratio (G/T) in dB/K at the given
     /// carrier and pointing.
     ///
-    /// For lumped chains the carrier and pointing are ignored and the
-    /// stored figure is returned. For component chains, with both gain and
-    /// noise referred to the antenna flange:
+    /// For lumped chains the pointing is ignored and the stored figure is
+    /// returned. For component chains, with both gain and noise referred to
+    /// the antenna flange:
     ///
     /// G/T = G_total(carrier, θ, φ) − 10·log₁₀(T_sys)
     ///
@@ -314,12 +317,14 @@ impl<'a> ResolvedRxTerminal<'a> {
     /// `G_total` per [`Self::total_gain`]. The feed loss enters through the
     /// noise referral, never as a gain reduction.
     ///
-    /// Errors if the system noise temperature is not strictly positive.
+    /// Errors when the carrier lies outside the terminal's effective band or
+    /// the system noise temperature is not strictly positive.
     pub fn gt_at(
         &self,
         carrier: Frequency,
         pointing: Pointing,
     ) -> Result<Decibel, LinkBudgetError> {
+        check_carrier(carrier, self.band(), self.terminal_name)?;
         match &self.kind {
             ResolvedRxChain::Lumped(model) => Ok(model.gt()),
             ResolvedRxChain::Component { .. } => {
@@ -375,6 +380,22 @@ impl<'a> ResolvedRxTerminal<'a> {
             ResolvedRxChain::Lumped(_) => None,
         }
     }
+}
+
+/// Rejects a carrier outside a terminal's effective band.
+fn check_carrier(
+    carrier: Frequency,
+    band: FrequencyRange,
+    terminal: &str,
+) -> Result<(), LinkBudgetError> {
+    if !band.contains(carrier) {
+        return Err(LinkBudgetError::CarrierOutOfBand {
+            carrier,
+            band,
+            terminal: terminal.to_owned(),
+        });
+    }
+    Ok(())
 }
 
 /// Refers a receiver's input-referred noise temperature back to the antenna
@@ -712,6 +733,26 @@ mod tests {
         let endpoint = payload.resolve_rx(terminal).unwrap();
         let err = endpoint.gt_at(29.0.ghz(), Pointing::Boresight).unwrap_err();
         assert!(matches!(err, LinkBudgetError::NonPhysical(_)));
+    }
+
+    #[test]
+    fn test_out_of_band_carrier_is_error() {
+        // Probing terminal figures outside the effective band must fail
+        // like LinkStats::for_link does, not extrapolate the pattern.
+        let (payload, terminal) = transceiver_payload();
+        let tx = payload.resolve_tx(terminal).unwrap();
+        let rx = payload.resolve_rx(terminal).unwrap();
+        let err = tx.eirp_at(2.4.ghz(), Pointing::Boresight).unwrap_err();
+        assert!(matches!(err, LinkBudgetError::CarrierOutOfBand { .. }));
+        let err = rx.gt_at(2.4.ghz(), Pointing::Boresight).unwrap_err();
+        assert!(matches!(err, LinkBudgetError::CarrierOutOfBand { .. }));
+
+        // Lumped figures are carrier-flat but only defined over their band.
+        let (payload, terminal) =
+            CommsPayload::eirp_only(EirpModel::new("a", ka_band(), 55.0.db()).unwrap());
+        let tx = payload.resolve_tx(terminal).unwrap();
+        let err = tx.eirp_at(2.4.ghz(), Pointing::Boresight).unwrap_err();
+        assert!(matches!(err, LinkBudgetError::CarrierOutOfBand { .. }));
     }
 
     #[test]

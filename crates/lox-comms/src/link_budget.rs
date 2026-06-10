@@ -103,19 +103,6 @@ impl LinkStats {
             NonPhysicalError::check_positive(quantity, value)?;
         }
 
-        for (band, terminal) in [
-            (tx.band(), tx.terminal_name()),
-            (rx.band(), rx.terminal_name()),
-        ] {
-            if !band.contains(carrier) {
-                return Err(LinkBudgetError::CarrierOutOfBand {
-                    carrier,
-                    band,
-                    terminal: terminal.to_owned(),
-                });
-            }
-        }
-
         let (tx_theta, tx_phi) = tx.pattern_angles(tx_pointing)?;
         let (rx_theta, rx_phi) = rx.pattern_angles(rx_pointing)?;
         let tx_angles = Pointing::Angles {

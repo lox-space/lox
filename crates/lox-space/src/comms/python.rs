@@ -1926,7 +1926,8 @@ impl PyCommsPayload {
     /// Returns the EIRP in dBW of a terminal at the given carrier and pointing.
     ///
     /// Pointing is given as an off-boresight angle or a line-of-sight
-    /// direction vector; omitting both assumes boresight.
+    /// direction vector; omitting both assumes boresight. Raises ValueError
+    /// when the carrier lies outside the terminal's effective band.
     #[pyo3(signature = (terminal, carrier, angle=None, direction=None))]
     fn eirp_at(
         &self,
@@ -1949,7 +1950,8 @@ impl PyCommsPayload {
     /// Returns the G/T in dB/K of a terminal at the given carrier and pointing.
     ///
     /// Pointing is given as an off-boresight angle or a line-of-sight
-    /// direction vector; omitting both assumes boresight.
+    /// direction vector; omitting both assumes boresight. Raises ValueError
+    /// when the carrier lies outside the terminal's effective band.
     #[pyo3(signature = (terminal, carrier, angle=None, direction=None))]
     fn gt_at(
         &self,
