@@ -21,18 +21,22 @@ pub fn noise_figure_to_temperature(nf: Decibel) -> Kelvin {
     ROOM_TEMPERATURE * (nf.to_linear() - 1.0)
 }
 
-/// A receiver with a known system noise temperature.
+/// A receiver characterised by a single equivalent noise temperature.
 ///
-/// The stored figure is treated as the complete system noise temperature;
-/// port feed losses reduce the gain but are assumed to be included in the
-/// figure's noise.
+/// The figure is referred to the receiver's input connector, exactly like a
+/// [`CascadeReceiver`]'s chain: the system noise temperature at the antenna
+/// flange is assembled at link-budget setup as
+/// `T_sys = T_ant + T_feed + T_rx / G_feed` from the port's antenna noise
+/// temperature and feed loss. For a datasheet figure that already includes
+/// the antenna and feed contributions, set both port values to zero.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NoiseTempReceiver {
     /// Supported frequency range.
     pub band: FrequencyRange,
-    /// System noise temperature in Kelvin.
-    pub system_noise_temperature: Kelvin,
+    /// Equivalent noise temperature in Kelvin, referred to the receiver's
+    /// input connector.
+    pub noise_temperature: Kelvin,
 }
 
 /// A single stage in an RF receiver chain.
@@ -227,7 +231,7 @@ mod tests {
     fn test_receiver_band_accessor() {
         let rx = Receiver::NoiseTemperature(NoiseTempReceiver {
             band: ka_band(),
-            system_noise_temperature: 500.0,
+            noise_temperature: 500.0,
         });
         assert!(rx.band().contains(29.0.ghz()));
     }

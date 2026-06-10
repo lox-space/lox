@@ -24,7 +24,7 @@ use crate::payload::{
     CommsPayload, EirpModel, GtModel, RxChain, TerminalId, TerminalRole, TxChain,
 };
 use crate::pointing::Pointing;
-use crate::receiver::{CascadeReceiver, NoiseStage, Receiver};
+use crate::receiver::Receiver;
 use crate::transmitter::AmplifierTransmitter;
 
 /// A resolved transmit endpoint.
@@ -257,12 +257,17 @@ impl<'a> RxEndpoint<'a> {
         resolve_pointing(self.antenna(), pointing)
     }
 
-    /// Returns the system noise temperature in Kelvin, when the chain exposes one.
+    /// Returns the system noise temperature in Kelvin, referred to the
+    /// antenna flange, when the chain exposes one.
     ///
-    /// For cascade receivers the port feed loss is synthesized as a passive
-    /// attenuator at 290 K ahead of the chain and the port's antenna noise
-    /// temperature replaces the receiver's own. For known-T_sys receivers the
-    /// stored figure is returned unchanged. Lumped G/T endpoints return `None`.
+    /// The port feed loss is synthesized as a passive attenuator at 290 K
+    /// ahead of the receiver and the Friis formula referred back to the
+    /// flange:
+    ///
+    /// T_sys = T_ant + T_feed + T_rx / G_feed
+    ///
+    /// where `T_rx` is the receiver's input-referred (chain) noise
+    /// temperature. Lumped G/T endpoints return `None`.
     pub fn system_noise_temperature(&self) -> Option<Kelvin> {
         match &self.kind {
             RxEndpointKind::Lumped(_) => None,
@@ -271,14 +276,17 @@ impl<'a> RxEndpoint<'a> {
                 feed_loss,
                 antenna_noise_temperature,
                 ..
-            } => match receiver {
-                Receiver::NoiseTemperature(rx) => Some(rx.system_noise_temperature),
-                Receiver::Cascade(rx) => Some(cascade_noise_temperature(
-                    rx,
-                    *feed_loss,
+            } => {
+                let chain_temperature = match receiver {
+                    Receiver::NoiseTemperature(rx) => rx.noise_temperature,
+                    Receiver::Cascade(rx) => rx.chain_noise_temperature(),
+                };
+                Some(flange_noise_temperature(
                     *antenna_noise_temperature,
-                )),
-            },
+                    *feed_loss,
+                    chain_temperature,
+                ))
+            }
         }
     }
 
@@ -298,13 +306,14 @@ impl<'a> RxEndpoint<'a> {
     /// carrier and pointing.
     ///
     /// For lumped endpoints the carrier and pointing are ignored and the
-    /// stored figure is returned. For component endpoints:
+    /// stored figure is returned. For component endpoints, with both gain and
+    /// noise referred to the antenna flange:
     ///
     /// G/T = G_total(carrier, θ, φ) − 10·log₁₀(T_sys)
     ///
-    /// where `T_sys` is computed per [`Self::system_noise_temperature`].
-    /// For known-T_sys receivers the port feed loss reduces the gain; the
-    /// stored figure is assumed to already include the feed's noise.
+    /// where `T_sys` is computed per [`Self::system_noise_temperature`] and
+    /// `G_total` per [`Self::total_gain`]. The feed loss enters through the
+    /// noise referral, never as a gain reduction.
     pub fn gt_at(
         &self,
         carrier: Frequency,
@@ -312,35 +321,24 @@ impl<'a> RxEndpoint<'a> {
     ) -> Result<Decibel, LinkBudgetError> {
         match &self.kind {
             RxEndpointKind::Lumped(model) => Ok(model.gt),
-            RxEndpointKind::Component {
-                antenna,
-                receiver,
-                feed_loss,
-                antenna_noise_temperature,
-                ..
-            } => {
-                let (theta, phi) = self.pattern_angles(pointing)?;
-                let gain = antenna.gain(carrier, theta, phi);
-                match receiver {
-                    Receiver::NoiseTemperature(rx) => {
-                        Ok(gain - *feed_loss - Decibel::from_linear(rx.system_noise_temperature))
-                    }
-                    Receiver::Cascade(rx) => {
-                        let t_sys =
-                            cascade_noise_temperature(rx, *feed_loss, *antenna_noise_temperature);
-                        Ok(gain
-                            - rx.demodulator_loss
-                            - rx.implementation_loss
-                            - Decibel::from_linear(t_sys))
-                    }
-                }
+            RxEndpointKind::Component { .. } => {
+                let gain = self
+                    .total_gain(carrier, pointing)?
+                    .expect("component endpoints expose a total gain");
+                let t_sys = self
+                    .system_noise_temperature()
+                    .expect("component endpoints expose a system noise temperature");
+                Ok(gain - Decibel::from_linear(t_sys))
             }
         }
     }
 
-    /// Returns the receive system gain in dB before noise referral, when the
+    /// Returns the receive system gain in dB at the antenna flange, when the
     /// chain exposes one.
     ///
+    /// With the noise input-referred to the flange the signal gain is the
+    /// antenna gain (less demodulator/implementation losses for cascade
+    /// chains); the feed loss is accounted in the noise referral instead.
     /// `None` for lumped G/T endpoints — the absolute gain is not recoverable
     /// from a G/T figure. Consistent with [`Self::gt_at`]:
     /// `total_gain − 10·log₁₀(T_sys) == G/T`.
@@ -352,15 +350,12 @@ impl<'a> RxEndpoint<'a> {
         match &self.kind {
             RxEndpointKind::Lumped(_) => Ok(None),
             RxEndpointKind::Component {
-                antenna,
-                receiver,
-                feed_loss,
-                ..
+                antenna, receiver, ..
             } => {
                 let (theta, phi) = self.pattern_angles(pointing)?;
                 let gain = antenna.gain(carrier, theta, phi);
                 match receiver {
-                    Receiver::NoiseTemperature(_) => Ok(Some(gain - *feed_loss)),
+                    Receiver::NoiseTemperature(_) => Ok(Some(gain)),
                     Receiver::Cascade(rx) => {
                         Ok(Some(gain - rx.demodulator_loss - rx.implementation_loss))
                     }
@@ -377,28 +372,19 @@ impl<'a> RxEndpoint<'a> {
     }
 }
 
-/// Friis cascade with the port feed synthesized as the first stage.
+/// Refers a receiver's input-referred noise temperature back to the antenna
+/// flange through a passive feed at 290 K.
 ///
-/// T_sys = T_ant + T_feed + T_1/G_feed + T_2/(G_feed·G_1) + ...
-///
-/// The receiver's own `antenna_noise_temperature` is ignored; the port's
-/// value is authoritative.
-fn cascade_noise_temperature(
-    receiver: &CascadeReceiver,
-    feed_loss: Decibel,
+/// T_sys = T_ant + T_feed + T_rx / G_feed, with T_feed = 290·(L − 1) and
+/// G_feed = 1/L.
+fn flange_noise_temperature(
     antenna_noise_temperature: Kelvin,
+    feed_loss: Decibel,
+    chain_temperature: Kelvin,
 ) -> Kelvin {
-    let feed_stage = NoiseStage {
-        gain: -feed_loss,
-        noise_temperature: ROOM_TEMPERATURE * (feed_loss.to_linear() - 1.0),
-    };
-    let mut t_sys = antenna_noise_temperature;
-    let mut cumulative_gain_linear = 1.0;
-    for stage in std::iter::once(&feed_stage).chain(receiver.stages.iter()) {
-        t_sys += stage.noise_temperature / cumulative_gain_linear;
-        cumulative_gain_linear *= stage.gain.to_linear();
-    }
-    t_sys
+    let loss_linear = feed_loss.to_linear();
+    let feed_temperature = ROOM_TEMPERATURE * (loss_linear - 1.0);
+    antenna_noise_temperature + feed_temperature + chain_temperature * loss_linear
 }
 
 /// Intersects a radio band with an optional port narrowing.
@@ -476,7 +462,9 @@ mod tests {
 
     use crate::antenna::ConstantAntenna;
     use crate::payload::{RxPort, Terminal, TxPort};
-    use crate::receiver::{NoiseTempReceiver, noise_figure_to_temperature};
+    use crate::receiver::{
+        CascadeReceiver, NoiseStage, NoiseTempReceiver, noise_figure_to_temperature,
+    };
 
     use super::*;
 
@@ -502,7 +490,7 @@ mod tests {
             "receiver",
             Receiver::NoiseTemperature(NoiseTempReceiver {
                 band: ka_band(),
-                system_noise_temperature: 500.0,
+                noise_temperature: 500.0,
             }),
         );
         let tx_port = payload
@@ -520,7 +508,7 @@ mod tests {
                 antenna: rx_antenna,
                 receiver: rx,
                 feed_loss: 0.0.db(),
-                antenna_noise_temperature: 150.0,
+                antenna_noise_temperature: 0.0,
                 band: None,
             })
             .unwrap();
@@ -556,9 +544,62 @@ mod tests {
         let gt = rx.gt_at(29.0.ghz(), Pointing::Boresight).unwrap();
         assert_approx_eq!(gt.as_f64(), 3.0103, atol <= 1e-3);
         assert_approx_eq!(rx.system_noise_temperature().unwrap(), 500.0, atol <= 1e-12);
+        assert_approx_eq!(rx.antenna_noise_temperature().unwrap(), 0.0, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_noise_temp_receiver_uniform_flange_referral() {
+        // A known-T_rx receiver behind a lossy feed uses the same flange
+        // referral as a cascade: T_sys = T_ant + T_feed + T_rx·L, and the
+        // feed must NOT additionally reduce the signal gain.
+        let mut payload = CommsPayload::new();
+        let antenna = payload.add_antenna(
+            "antenna",
+            Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
+        );
+        let rx = payload.add_receiver(
+            "receiver",
+            Receiver::NoiseTemperature(NoiseTempReceiver {
+                band: ka_band(),
+                noise_temperature: 500.0,
+            }),
+        );
+        let port = payload
+            .add_rx_port(RxPort {
+                name: "feed".into(),
+                antenna,
+                receiver: rx,
+                feed_loss: 3.0.db(),
+                antenna_noise_temperature: 150.0,
+                band: None,
+            })
+            .unwrap();
+        let terminal = payload
+            .add_terminal(Terminal {
+                name: "rx".into(),
+                role: TerminalRole::Rx(RxChain::Component(port)),
+            })
+            .unwrap();
+
+        let endpoint = payload.rx_endpoint(terminal).unwrap();
+        let loss_linear = 10.0_f64.powf(3.0 / 10.0);
+        let expected_t_sys = 150.0 + 290.0 * (loss_linear - 1.0) + 500.0 * loss_linear;
         assert_approx_eq!(
-            rx.antenna_noise_temperature().unwrap(),
-            150.0,
+            endpoint.system_noise_temperature().unwrap(),
+            expected_t_sys,
+            rtol <= 1e-12
+        );
+        // Flange-referred signal gain is the antenna gain alone.
+        let gain = endpoint
+            .total_gain(29.0.ghz(), Pointing::Boresight)
+            .unwrap()
+            .unwrap();
+        assert_approx_eq!(gain.as_f64(), 30.0, atol <= 1e-12);
+        // And G/T is consistent: G − 10·log10(T_sys).
+        let gt = endpoint.gt_at(29.0.ghz(), Pointing::Boresight).unwrap();
+        assert_approx_eq!(
+            gt.as_f64(),
+            30.0 - 10.0 * expected_t_sys.log10(),
             atol <= 1e-12
         );
     }

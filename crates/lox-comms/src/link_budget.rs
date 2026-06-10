@@ -267,10 +267,10 @@ mod tests {
             Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
             Receiver::NoiseTemperature(NoiseTempReceiver {
                 band: ka_band(),
-                system_noise_temperature: 500.0,
+                noise_temperature: 500.0,
             }),
             0.0.db(),
-            150.0,
+            0.0,
             None,
         );
         (tx_payload, tx_terminal, rx_payload, rx_terminal)

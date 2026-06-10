@@ -90,11 +90,11 @@ pa = payload.add_transmitter(
 )
 lnb = payload.add_receiver(
     "lnb",
-    lox.NoiseTempReceiver(band=ka_band, system_noise_temperature=500 * lox.K),
+    lox.NoiseTempReceiver(band=ka_band, noise_temperature=500 * lox.K),
 )
 tx_port = payload.add_tx_port("tx leg", dish, pa, 1.0 * lox.dB, band=ka_band)
 rx_port = payload.add_rx_port(
-    "rx leg", dish, lnb, 0.5 * lox.dB, antenna_noise_temperature=150 * lox.K
+    "rx leg", dish, lnb, 0.5 * lox.dB, antenna_noise_temperature=0.0 * lox.K
 )
 terminal = payload.add_transceiver_terminal("ka transceiver", tx_port=tx_port, rx_port=rx_port)
 ```
@@ -202,8 +202,8 @@ tx_payload, tx_terminal = lox.CommsPayload.transmitter_only(
 rx_antenna = lox.ConstantAntenna(gain=40.0 * lox.dB)
 rx_payload, rx_terminal = lox.CommsPayload.receiver_only(
     "ground station", rx_antenna,
-    lox.NoiseTempReceiver(band=band, system_noise_temperature=200 * lox.K),
-    feed_loss=0.0 * lox.dB, antenna_noise_temperature=150 * lox.K,
+    lox.NoiseTempReceiver(band=band, noise_temperature=200 * lox.K),
+    feed_loss=0.0 * lox.dB, antenna_noise_temperature=0.0 * lox.K,
 )
 
 # Define a QPSK channel at 5 Msps

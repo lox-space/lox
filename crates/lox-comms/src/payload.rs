@@ -565,7 +565,7 @@ mod tests {
             "lnb",
             Receiver::NoiseTemperature(NoiseTempReceiver {
                 band: ka_band(),
-                system_noise_temperature: 500.0,
+                noise_temperature: 500.0,
             }),
         );
         let tx_port = payload
@@ -743,7 +743,7 @@ mod tests {
             AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()),
             Receiver::NoiseTemperature(NoiseTempReceiver {
                 band: ka_band(),
-                system_noise_temperature: 500.0,
+                noise_temperature: 500.0,
             }),
             1.0.db(),
             0.5.db(),

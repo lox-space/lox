@@ -30,10 +30,10 @@ def make_rx_payload(gain=30.0, noise_temperature=500.0, feed_loss=0.0):
         "rx",
         lox.ConstantAntenna(gain=gain * lox.dB),
         lox.NoiseTempReceiver(
-            band=KA_BAND, system_noise_temperature=noise_temperature * lox.K
+            band=KA_BAND, noise_temperature=noise_temperature * lox.K
         ),
         feed_loss=feed_loss * lox.dB,
-        antenna_noise_temperature=150.0 * lox.K,
+        antenna_noise_temperature=0.0 * lox.K,
     )
 
 
@@ -525,26 +525,26 @@ def test_complex_receiver_from_lna_and_noise_figure():
 
 
 def test_simple_receiver_eq():
-    a = lox.NoiseTempReceiver(band=KA_BAND, system_noise_temperature=500.0 * lox.K)
-    b = lox.NoiseTempReceiver(band=KA_BAND, system_noise_temperature=500.0 * lox.K)
-    c = lox.NoiseTempReceiver(band=KA_BAND, system_noise_temperature=600.0 * lox.K)
+    a = lox.NoiseTempReceiver(band=KA_BAND, noise_temperature=500.0 * lox.K)
+    b = lox.NoiseTempReceiver(band=KA_BAND, noise_temperature=500.0 * lox.K)
+    c = lox.NoiseTempReceiver(band=KA_BAND, noise_temperature=600.0 * lox.K)
     assert a == b
     assert not (a == c)
 
 
 def test_simple_receiver_getters():
-    rx = lox.NoiseTempReceiver(band=KA_BAND, system_noise_temperature=500.0 * lox.K)
+    rx = lox.NoiseTempReceiver(band=KA_BAND, noise_temperature=500.0 * lox.K)
     assert rx.band == KA_BAND
-    assert rx.system_noise_temperature.to_kelvin() == pytest.approx(500.0, abs=1e-12)
+    assert rx.noise_temperature.to_kelvin() == pytest.approx(500.0, abs=1e-12)
 
 
 def test_simple_receiver_pickle():
-    rx = lox.NoiseTempReceiver(band=KA_BAND, system_noise_temperature=500.0 * lox.K)
+    rx = lox.NoiseTempReceiver(band=KA_BAND, noise_temperature=500.0 * lox.K)
     assert pickle.loads(pickle.dumps(rx)) == rx
 
 
 def test_simple_receiver_repr_roundtrip():
-    rx = lox.NoiseTempReceiver(band=KA_BAND, system_noise_temperature=500.0 * lox.K)
+    rx = lox.NoiseTempReceiver(band=KA_BAND, noise_temperature=500.0 * lox.K)
     assert (
         eval(
             repr(rx),
@@ -1217,7 +1217,7 @@ def test_modulated_with_interference_component_tier():
 
 
 def test_simple_receiver_repr():
-    rx = lox.NoiseTempReceiver(band=KA_BAND, system_noise_temperature=500.0 * lox.K)
+    rx = lox.NoiseTempReceiver(band=KA_BAND, noise_temperature=500.0 * lox.K)
     r = repr(rx)
     assert "NoiseTempReceiver" in r
     assert "500" in r
@@ -1410,12 +1410,12 @@ def test_comms_payload_manual_wiring_diplexer():
         "lnb",
         lox.NoiseTempReceiver(
             band=lox.FrequencyRange(17.0 * lox.GHz, 21.0 * lox.GHz),
-            system_noise_temperature=500.0 * lox.K,
+            noise_temperature=500.0 * lox.K,
         ),
     )
     tx_port = payload.add_tx_port("tx leg", dish, pa, 1.0 * lox.dB, band=KA_BAND)
     rx_port = payload.add_rx_port(
-        "rx leg", dish, lnb, 0.5 * lox.dB, antenna_noise_temperature=150.0 * lox.K
+        "rx leg", dish, lnb, 0.5 * lox.dB, antenna_noise_temperature=0.0 * lox.K
     )
     terminal = payload.add_transceiver_terminal(
         "ka transceiver", tx_port=tx_port, rx_port=rx_port

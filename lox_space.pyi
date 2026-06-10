@@ -2523,22 +2523,28 @@ class AmplifierTransmitter:
     def __repr__(self) -> str: ...
 
 class NoiseTempReceiver:
-    """A receiver with a known system noise temperature.
+    """A receiver characterised by a single equivalent noise temperature.
+
+    The figure is referred to the receiver's input connector; the system
+    noise temperature at the antenna flange is assembled at link-budget
+    setup from the port's antenna noise temperature and feed loss. For a
+    datasheet figure that already includes antenna and feed contributions,
+    set both port values to zero.
 
     Args:
         band: Supported frequency range.
-        system_noise_temperature: System noise temperature.
+        noise_temperature: Equivalent noise temperature at the input connector.
     """
     def __new__(
-        cls, band: FrequencyRange, system_noise_temperature: Temperature
+        cls, band: FrequencyRange, noise_temperature: Temperature
     ) -> Self: ...
     @property
     def band(self) -> FrequencyRange:
         """Supported frequency range."""
         ...
     @property
-    def system_noise_temperature(self) -> Temperature:
-        """System noise temperature."""
+    def noise_temperature(self) -> Temperature:
+        """Equivalent noise temperature referred to the receiver's input connector."""
         ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...

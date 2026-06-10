@@ -64,10 +64,10 @@ def noise_temp_link_stats(t_sys_k, bandwidth_hz, rx_gain_db=30.0):
         "rx",
         lox.ConstantAntenna(gain=rx_gain_db * lox.dB),
         lox.NoiseTempReceiver(
-            band=WIDE_BAND, system_noise_temperature=t_sys_k * lox.K
+            band=WIDE_BAND, noise_temperature=t_sys_k * lox.K
         ),
         feed_loss=0.0 * lox.dB,
-        antenna_noise_temperature=150.0 * lox.K,
+        antenna_noise_temperature=0.0 * lox.K,
     )
     return lox.LinkStats.for_link(
         tx_payload,

@@ -618,7 +618,7 @@ fn build_receiver(obj: &Bound<'_, PyAny>) -> PyResult<Receiver> {
     if let Ok(r) = obj.extract::<PyRef<'_, PyNoiseTempReceiver>>() {
         Ok(Receiver::NoiseTemperature(NoiseTempReceiver {
             band: r.0.band,
-            system_noise_temperature: r.0.system_noise_temperature,
+            noise_temperature: r.0.noise_temperature,
         }))
     } else if let Ok(r) = obj.extract::<PyRef<'_, PyCascadeReceiver>>() {
         Ok(Receiver::Cascade(r.0.clone()))
@@ -710,7 +710,7 @@ impl PyAmplifierTransmitter {
 ///
 /// Args:
 ///     band: Supported frequency range.
-///     system_noise_temperature: System noise temperature.
+///     noise_temperature: System noise temperature.
 #[pyclass(
     name = "NoiseTempReceiver",
     module = "lox_space",
@@ -723,10 +723,10 @@ pub struct PyNoiseTempReceiver(pub NoiseTempReceiver);
 #[pymethods]
 impl PyNoiseTempReceiver {
     #[new]
-    fn new(band: PyFrequencyRange, system_noise_temperature: PyTemperature) -> Self {
+    fn new(band: PyFrequencyRange, noise_temperature: PyTemperature) -> Self {
         Self(NoiseTempReceiver {
             band: band.0,
-            system_noise_temperature: f64::from(system_noise_temperature.0),
+            noise_temperature: f64::from(noise_temperature.0),
         })
     }
 
@@ -738,27 +738,26 @@ impl PyNoiseTempReceiver {
 
     /// System noise temperature.
     #[getter]
-    fn system_noise_temperature(&self) -> PyTemperature {
-        PyTemperature::new(self.0.system_noise_temperature)
+    fn noise_temperature(&self) -> PyTemperature {
+        PyTemperature::new(self.0.noise_temperature)
     }
 
     fn __eq__(&self, other: &PyNoiseTempReceiver) -> bool {
-        self.0.band == other.0.band
-            && self.0.system_noise_temperature == other.0.system_noise_temperature
+        self.0.band == other.0.band && self.0.noise_temperature == other.0.noise_temperature
     }
 
     fn __getnewargs__(&self) -> (PyFrequencyRange, PyTemperature) {
         (
             PyFrequencyRange(self.0.band),
-            PyTemperature::new(self.0.system_noise_temperature),
+            PyTemperature::new(self.0.noise_temperature),
         )
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "NoiseTempReceiver(band={}, system_noise_temperature={})",
+            "NoiseTempReceiver(band={}, noise_temperature={})",
             PyFrequencyRange(self.0.band).__repr__(),
-            PyTemperature::new(self.0.system_noise_temperature).__repr__(),
+            PyTemperature::new(self.0.noise_temperature).__repr__(),
         )
     }
 }
