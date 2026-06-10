@@ -17,15 +17,14 @@ spacelink function mapping:
     | lox.fspl() (combined)                              | spreading_loss() + aperture_loss()                      |
     | lox.ParabolicPattern.peak_gain()                   | spacelink.core.antenna.dish_gain()                      |
     | lox.GaussianPattern.peak_gain()                    | spacelink.core.antenna.dish_gain()                      |
-    | lox.ComplexReceiver.system_noise_temperature()     | spacelink.core.noise.noise_factor_to_temperature()      |
-    | lox.CommunicationSystem.noise_power()              | spacelink.core.noise.noise_power()                      |
+    | lox.CascadeReceiver.chain_noise_temperature()      | spacelink.core.noise.noise_factor_to_temperature()      |
+    | lox.LinkStats.for_link() noise_power               | spacelink.core.noise.noise_power()                      |
     | lox.Channel.eb_n0()                                | spacelink.core.noise.cn0_to_ebn0()                      |
     | lox noise_figure round-trip                        | spacelink.core.noise.temperature_to_noise_figure()      |
     | lox noise_power_density (via k_B constant)         | spacelink.core.noise.noise_power_density()              |
     | lox G/T decomposition                              | spacelink.core.antenna.gain_from_g_over_t()             |
     | lox.DipolePattern.peak_gain()                      | (no spacelink equivalent — see internal unit tests)     |
-    | lox.Transmitter.eirp()                             | (no spacelink equivalent)                               |
-    | lox.CommunicationSystem.carrier_to_noise_density() | (no spacelink equivalent)                               |
+    | lox.LinkStats.for_link() C/N0                      | (no spacelink equivalent)                               |
 """
 
 import math
@@ -47,6 +46,39 @@ from spacelink.core.noise import temperature_to_noise_figure as sl_temp_to_nf
 from spacelink.core.noise import cn0_to_ebn0 as sl_cn0_to_ebn0
 from spacelink.core.noise import noise_power as sl_noise_power
 import astropy.units as u
+
+
+BOLTZMANN_CONSTANT = 1.380649e-23
+WIDE_BAND = lox.FrequencyRange(1.0 * lox.GHz, 31.0 * lox.GHz)
+
+
+def noise_temp_link_stats(t_sys_k, bandwidth_hz, rx_gain_db=30.0):
+    """Evaluates a 10 GHz link against a known-T_sys receiver and returns LinkStats."""
+    tx_payload, tx_terminal = lox.CommsPayload.transmitter_only(
+        "tx",
+        lox.ConstantAntenna(gain=30.0 * lox.dB),
+        lox.AmplifierTransmitter(band=WIDE_BAND, power=10.0 * lox.W),
+        feed_loss=0.0 * lox.dB,
+    )
+    rx_payload, rx_terminal = lox.CommsPayload.receiver_only(
+        "rx",
+        lox.ConstantAntenna(gain=rx_gain_db * lox.dB),
+        lox.NoiseTempReceiver(
+            band=WIDE_BAND, system_noise_temperature=t_sys_k * lox.K
+        ),
+        feed_loss=0.0 * lox.dB,
+        antenna_noise_temperature=150.0 * lox.K,
+    )
+    return lox.LinkStats.for_link(
+        tx_payload,
+        tx_terminal,
+        rx_payload,
+        rx_terminal,
+        carrier=10.0 * lox.GHz,
+        bandwidth=bandwidth_hz * lox.Hz,
+        range=1000.0 * lox.km,
+        direction="downlink",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -162,33 +194,30 @@ def test_noise_temperature(noise_figure_db):
     """Noise figure to temperature should agree between lox and spacelink to 0.01 K."""
     # Build a receiver with only the NF stage (LNA has zero noise, unity gain)
     rx = lox.CascadeReceiver.from_lna_and_noise_figure(
-        frequency=29 * lox.GHz,
-        antenna_noise_temperature=0.0 * lox.K,
+        band=WIDE_BAND,
         lna_gain=0.0 * lox.dB,
         lna_noise_temperature=0.0 * lox.K,
         receiver_noise_figure=noise_figure_db * lox.dB,
     )
-    # T_sys = 0 + 0 + T_rx/1 = T_rx
-    lox_t = rx.system_noise_temperature().to_kelvin()
+    # T_chain = 0 + T_rx/1 = T_rx
+    lox_t = rx.chain_noise_temperature().to_kelvin()
     sl_t = float(sl_nf_to_temp(noise_figure_db * u.dB).value)
     assert lox_t == pytest.approx(sl_t, abs=0.01)
 
 
 # ---------------------------------------------------------------------------
-# Test 6: system_noise_temperature() degenerate case
+# Test 6: chain_noise_temperature() degenerate case
 #
-# With T_ant=0 and no LNA noise, T_sys should equal the receiver noise
+# A single-stage chain's noise temperature should equal the receiver noise
 # temperature from the noise figure alone.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("noise_figure_db", NF_CASES)
-def test_system_noise_temperature_degenerate(noise_figure_db):
-    """With no antenna temperature and transparent LNA,
-    system_noise_temperature() must equal the bare receiver noise temperature."""
+def test_chain_noise_temperature_degenerate(noise_figure_db):
+    """A single-stage cascade must reproduce the bare receiver noise temperature."""
     rx = lox.CascadeReceiver(
-        frequency=29 * lox.GHz,
-        antenna_noise_temperature=0.0 * lox.K,
+        band=WIDE_BAND,
         stages=[
             lox.NoiseStage(
                 gain=0.0 * lox.dB,
@@ -196,7 +225,7 @@ def test_system_noise_temperature_degenerate(noise_figure_db):
             ),
         ],
     )
-    lox_t = rx.system_noise_temperature().to_kelvin()
+    lox_t = rx.chain_noise_temperature().to_kelvin()
     sl_t = float(sl_nf_to_temp(noise_figure_db * u.dB).value)
     assert lox_t == pytest.approx(sl_t, abs=0.01)
 
@@ -240,11 +269,11 @@ def test_cn0_to_ebn0(cn0_dbhz, data_rate_hz):
 
 
 # ---------------------------------------------------------------------------
-# Test 8: CommunicationSystem.noise_power() vs spacelink
+# Test 8: LinkStats.for_link() noise_power vs spacelink
 #
 # spacelink.core.noise.noise_power(bandwidth, temperature) computes k_B·T·BW
-# in watts. CommunicationSystem.noise_power() returns the same quantity in
-# dBW as 10·log₁₀(T_sys · k_B · BW).
+# in watts. LinkStats.noise_power is the same quantity in dBW as
+# 10·log₁₀(T_sys · k_B · BW).
 # ---------------------------------------------------------------------------
 
 # (system_noise_temperature_k, bandwidth_hz)
@@ -255,17 +284,18 @@ NOISE_POWER_CASES = [
 ]
 
 
+def t_sys_from_stats(stats, bandwidth_hz):
+    """Recovers T_sys in Kelvin from the noise power reported by LinkStats."""
+    return 10.0 ** (float(stats.noise_power) / 10.0) / (
+        BOLTZMANN_CONSTANT * bandwidth_hz
+    )
+
+
 @pytest.mark.parametrize("t_sys_k,bandwidth_hz", NOISE_POWER_CASES)
 def test_noise_power(t_sys_k, bandwidth_hz):
-    """CommunicationSystem.noise_power() should agree with spacelink to 0.001 dBW."""
-    rx_sys = lox.CommunicationSystem(
-        lox.ConstantAntenna(gain=30.0 * lox.dB),
-        receiver=lox.NoiseTempReceiver(
-            frequency=10 * lox.GHz,
-            system_noise_temperature=t_sys_k * lox.K,
-        ),
-    )
-    lox_dbw = float(rx_sys.noise_power(bandwidth_hz * lox.Hz))
+    """LinkStats.noise_power should agree with spacelink to 0.001 dBW."""
+    stats = noise_temp_link_stats(t_sys_k, bandwidth_hz)
+    lox_dbw = float(stats.noise_power)
     sl_w = float(sl_noise_power(bandwidth_hz * u.Hz, t_sys_k * u.K).to(u.W).value)
     sl_dbw = 10.0 * math.log10(sl_w)
     assert lox_dbw == pytest.approx(sl_dbw, abs=1e-3)
@@ -283,14 +313,15 @@ def test_noise_power(t_sys_k, bandwidth_hz):
 @pytest.mark.parametrize("noise_figure_db", NF_CASES)
 def test_noise_figure_round_trip(noise_figure_db):
     """NF → T (lox) → NF (spacelink) should recover the original noise figure."""
+    # A zero-gain, zero-temperature LNA leaves the chain temperature equal to
+    # the receiver stage's NF-derived temperature.
     rx = lox.CascadeReceiver.from_lna_and_noise_figure(
-        frequency=29 * lox.GHz,
-        antenna_noise_temperature=0.0 * lox.K,
+        band=WIDE_BAND,
         lna_gain=0.0 * lox.dB,
         lna_noise_temperature=0.0 * lox.K,
         receiver_noise_figure=noise_figure_db * lox.dB,
     )
-    lox_t = rx.system_noise_temperature().to_kelvin()
+    lox_t = rx.chain_noise_temperature().to_kelvin()
     recovered_nf = float(sl_temp_to_nf(lox_t * u.K).value)
     assert recovered_nf == pytest.approx(noise_figure_db, abs=1e-4)
 
@@ -298,7 +329,7 @@ def test_noise_figure_round_trip(noise_figure_db):
 # ---------------------------------------------------------------------------
 # Test 10: Noise power density (Boltzmann constant agreement)
 #
-# lox noise_power(BW=1Hz) in dBW should equal spacelink noise_power_density
+# lox noise_power at BW=1Hz in dBW should equal spacelink noise_power_density
 # in dBW/Hz, validating that both use the same k_B.
 # ---------------------------------------------------------------------------
 
@@ -308,15 +339,9 @@ NPD_CASES = [150.0, 290.0, 500.0, 1000.0]
 @pytest.mark.parametrize("t_sys_k", NPD_CASES)
 def test_noise_power_density(t_sys_k):
     """k_B · T should agree between lox and spacelink to 0.001 dB."""
-    rx_sys = lox.CommunicationSystem(
-        lox.ConstantAntenna(gain=0.0 * lox.dB),
-        receiver=lox.NoiseTempReceiver(
-            frequency=10 * lox.GHz,
-            system_noise_temperature=t_sys_k * lox.K,
-        ),
-    )
+    stats = noise_temp_link_stats(t_sys_k, 1.0)
     # noise_power(BW=1Hz) = 10·log₁₀(k_B · T · 1) = noise power density in dBW/Hz
-    lox_dbw_hz = float(rx_sys.noise_power(1.0 * lox.Hz))
+    lox_dbw_hz = float(stats.noise_power)
     sl_w_hz = float(sl_npd(t_sys_k * u.K).to(u.W / u.Hz).value)
     sl_dbw_hz = 10.0 * math.log10(sl_w_hz)
     assert lox_dbw_hz == pytest.approx(sl_dbw_hz, abs=1e-3)
@@ -341,37 +366,7 @@ GT_CASES = [
 @pytest.mark.parametrize("gain_db,t_sys_k", GT_CASES)
 def test_gt_decomposition(gain_db, t_sys_k):
     """G/T computed by lox should decompose correctly via spacelink."""
-    antenna = lox.ConstantAntenna(gain=gain_db * lox.dB)
-    rx_sys = lox.CommunicationSystem(
-        antenna,
-        receiver=lox.NoiseTempReceiver(
-            frequency=29 * lox.GHz,
-            system_noise_temperature=t_sys_k * lox.K,
-        ),
-    )
-    tx_sys = lox.CommunicationSystem(
-        lox.ConstantAntenna(gain=30.0 * lox.dB),
-        transmitter=lox.AmplifierTransmitter(
-            frequency=29 * lox.GHz,
-            power=10.0 * lox.W,
-            line_loss=0.0 * lox.dB,
-        ),
-    )
-    channel = lox.Channel(
-        link_type="downlink",
-        symbol_rate=lox.Frequency(1e6),
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("BPSK"),
-        fec=1.0,
-    )
-    stats = lox.LinkStats.calculate(
-        tx_sys, rx_sys,
-        range=1000 * lox.km,
-        bandwidth=channel.bandwidth(),
-        tx_angle=0.0 * lox.deg,
-        rx_angle=0.0 * lox.deg,
-    )
+    stats = noise_temp_link_stats(t_sys_k, 1e6, rx_gain_db=gain_db)
     lox_gt = float(stats.gt)
     # Use spacelink to recover gain from G/T and T_sys
     recovered_gain = float(
@@ -383,9 +378,10 @@ def test_gt_decomposition(gain_db, t_sys_k):
 # ---------------------------------------------------------------------------
 # Test 12: Friis cascade with feed loss — stage-level validation
 #
-# Build a two-stage ComplexReceiver (feed loss + receiver NF) and verify
-# each stage's noise temperature individually against spacelink, then
-# verify the Friis cascade T_sys against hand calculation.
+# Build a cascade receive chain behind a lossy port feed and verify each
+# stage's noise temperature individually against spacelink, then verify the
+# Friis cascade T_sys (port feed synthesized at link setup) against hand
+# calculation.
 # ---------------------------------------------------------------------------
 
 
@@ -395,27 +391,49 @@ def test_friis_cascade_feed_loss():
     feed_loss_db = 3.0
     rx_nf_db = 5.0
     t_ant = 265.0
+    bandwidth_hz = 1e6
 
-    rx = lox.CascadeReceiver.from_feed_loss_and_noise_figure(
-        frequency=29 * lox.GHz,
-        antenna_noise_temperature=t_ant * lox.K,
-        feed_loss=feed_loss_db * lox.dB,
-        receiver_noise_figure=rx_nf_db * lox.dB,
-        receiver_gain=20 * lox.dB,
-    )
-    lox_t_sys = rx.system_noise_temperature().to_kelvin()
+    # Receiver stage temperature from its noise figure
+    t_rx = 290.0 * (10.0 ** (rx_nf_db / 10.0) - 1.0)
+    sl_t_rx = float(sl_nf_to_temp(rx_nf_db * u.dB).value)
+    assert t_rx == pytest.approx(sl_t_rx, abs=0.01)
 
-    # Feed stage: passive attenuator at 290K → T_feed = 290*(L-1) where L = 10^(loss/10)
+    # Feed stage: passive attenuator at 290K → T_feed = 290*(L-1)
     l_linear = 10.0 ** (feed_loss_db / 10.0)
     t_feed = 290.0 * (l_linear - 1.0)
     # Verify feed temperature against spacelink NF→T (feed NF = feed loss for passive)
     sl_t_feed = float(sl_nf_to_temp(feed_loss_db * u.dB).value)
     assert t_feed == pytest.approx(sl_t_feed, abs=0.01)
 
-    # Receiver stage temperature
-    t_rx = 290.0 * (10.0 ** (rx_nf_db / 10.0) - 1.0)
-    sl_t_rx = float(sl_nf_to_temp(rx_nf_db * u.dB).value)
-    assert t_rx == pytest.approx(sl_t_rx, abs=0.01)
+    # The chain holds one 20 dB stage at T_rx; the feed lives on the port.
+    chain = lox.CascadeReceiver(
+        band=WIDE_BAND,
+        stages=[lox.NoiseStage(gain=20.0 * lox.dB, noise_temperature=t_rx * lox.K)],
+    )
+    tx_payload, tx_terminal = lox.CommsPayload.transmitter_only(
+        "tx",
+        lox.ConstantAntenna(gain=30.0 * lox.dB),
+        lox.AmplifierTransmitter(band=WIDE_BAND, power=10.0 * lox.W),
+        feed_loss=0.0 * lox.dB,
+    )
+    rx_payload, rx_terminal = lox.CommsPayload.receiver_only(
+        "rx",
+        lox.ConstantAntenna(gain=30.0 * lox.dB),
+        chain,
+        feed_loss=feed_loss_db * lox.dB,
+        antenna_noise_temperature=t_ant * lox.K,
+    )
+    stats = lox.LinkStats.for_link(
+        tx_payload,
+        tx_terminal,
+        rx_payload,
+        rx_terminal,
+        carrier=10.0 * lox.GHz,
+        bandwidth=bandwidth_hz * lox.Hz,
+        range=1000.0 * lox.km,
+        direction="downlink",
+    )
+    lox_t_sys = t_sys_from_stats(stats, bandwidth_hz)
 
     # Friis: T_sys = T_ant + T_feed + T_rx / G_feed
     # G_feed = 1/L (feed is lossy, gain = -loss)
@@ -434,7 +452,7 @@ def test_friis_cascade_feed_loss():
 
 
 def test_tdrs_ka_band_return_link():
-    """End-to-end Ka-band link budget with ComplexReceiver, validated
+    """End-to-end Ka-band link budget with a cascade receive chain, validated
     step-by-step against spacelink building blocks."""
     freq_ghz = 25.5
     freq = freq_ghz * lox.GHz
@@ -443,16 +461,16 @@ def test_tdrs_ka_band_return_link():
     tx_diameter = 0.6  # m
     tx_efficiency = 0.55
     tx_power_w = 10.0
-    tx_line_loss_db = 1.0
+    tx_feed_loss_db = 1.0
 
     tx_pattern = lox.ParabolicPattern(tx_diameter * lox.m, tx_efficiency)
     tx_antenna = lox.PatternedAntenna(pattern=tx_pattern)
-    tx = lox.AmplifierTransmitter(
-        frequency=freq,
-        power=tx_power_w * lox.W,
-        line_loss=tx_line_loss_db * lox.dB,
+    tx_payload, tx_terminal = lox.CommsPayload.transmitter_only(
+        "leo user",
+        tx_antenna,
+        lox.AmplifierTransmitter(band=WIDE_BAND, power=tx_power_w * lox.W),
+        feed_loss=tx_feed_loss_db * lox.dB,
     )
-    tx_sys = lox.CommunicationSystem(tx_antenna, transmitter=tx)
 
     # Cross-check TX antenna gain against spacelink
     lox_tx_gain = float(tx_pattern.peak_gain(freq))
@@ -476,13 +494,18 @@ def test_tdrs_ka_band_return_link():
     rx_pattern = lox.ParabolicPattern(rx_diameter * lox.m, rx_efficiency)
     rx_antenna = lox.PatternedAntenna(pattern=rx_pattern)
     rx = lox.CascadeReceiver.from_lna_and_noise_figure(
-        frequency=freq,
-        antenna_noise_temperature=t_ant * lox.K,
+        band=WIDE_BAND,
         lna_gain=lna_gain_db * lox.dB,
         lna_noise_temperature=lna_noise_temp * lox.K,
         receiver_noise_figure=rx_nf_db * lox.dB,
     )
-    rx_sys = lox.CommunicationSystem(rx_antenna, receiver=rx)
+    rx_payload, rx_terminal = lox.CommsPayload.receiver_only(
+        "geo relay",
+        rx_antenna,
+        rx,
+        feed_loss=0.0 * lox.dB,
+        antenna_noise_temperature=t_ant * lox.K,
+    )
 
     # Cross-check RX antenna gain against spacelink
     lox_rx_gain = float(rx_pattern.peak_gain(freq))
@@ -500,12 +523,6 @@ def test_tdrs_ka_band_return_link():
     sl_t_rx = float(sl_nf_to_temp(rx_nf_db * u.dB).value)
     assert t_rx == pytest.approx(sl_t_rx, abs=0.01)
 
-    # Verify T_sys via Friis: T_ant + T_LNA + T_rx/G_LNA
-    g_lna = 10.0 ** (lna_gain_db / 10.0)
-    t_sys_expected = t_ant + lna_noise_temp + t_rx / g_lna
-    lox_t_sys = rx.system_noise_temperature().to_kelvin()
-    assert lox_t_sys == pytest.approx(t_sys_expected, abs=0.01)
-
     # --- Channel ---
     channel = lox.Channel(
         link_type="downlink",
@@ -519,14 +536,24 @@ def test_tdrs_ka_band_return_link():
 
     # --- Link budget ---
     range_km = 40000.0
-    stats = lox.LinkStats.calculate(
-        tx_sys, rx_sys,
-        range=range_km * lox.km,
+    bandwidth_hz = float(channel.bandwidth())
+    stats = lox.LinkStats.for_link(
+        tx_payload,
+        tx_terminal,
+        rx_payload,
+        rx_terminal,
+        carrier=freq,
         bandwidth=channel.bandwidth(),
-        tx_angle=0.0 * lox.deg,
-        rx_angle=0.0 * lox.deg,
+        range=range_km * lox.km,
+        direction="downlink",
     )
     modulated = channel.apply(stats)
+
+    # Verify T_sys via Friis: T_ant + T_LNA + T_rx/G_LNA (zero feed loss)
+    g_lna = 10.0 ** (lna_gain_db / 10.0)
+    t_sys_expected = t_ant + lna_noise_temp + t_rx / g_lna
+    lox_t_sys = t_sys_from_stats(stats, bandwidth_hz)
+    assert lox_t_sys == pytest.approx(t_sys_expected, abs=0.01)
 
     # Cross-check FSPL against spacelink
     sl_fspl_db = float(sl_fspl(range_km * u.km, freq_ghz * u.GHz).value)

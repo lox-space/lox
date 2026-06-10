@@ -18,8 +18,8 @@ pub mod link_budget;
 pub mod pattern;
 pub mod payload;
 pub mod pfd;
+pub mod pointing;
 pub mod receiver;
-pub mod system;
 pub mod transmitter;
 pub mod utils;
 

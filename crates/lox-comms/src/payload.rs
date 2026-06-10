@@ -235,7 +235,6 @@ impl CommsPayload {
     /// loss, clear-sky antenna noise temperature, and optional band
     /// constraint, and exposes it as a terminal named `name`.
     ///
-    /// Returns an error for lumped [`Receiver::Gt`]; use [`Self::gt_only`].
     pub fn receiver_only(
         name: impl Into<String>,
         antenna: Antenna,
@@ -243,11 +242,11 @@ impl CommsPayload {
         feed_loss: Decibel,
         antenna_noise_temperature: Kelvin,
         band: Option<FrequencyRange>,
-    ) -> Result<(Self, TerminalId), PayloadError> {
+    ) -> (Self, TerminalId) {
         let name = name.into();
         let mut payload = Self::new();
         let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
-        let receiver = payload.add_receiver(format!("{name} receiver"), receiver)?;
+        let receiver = payload.add_receiver(format!("{name} receiver"), receiver);
         let port = payload
             .add_rx_port(RxPort {
                 name: format!("{name} feed"),
@@ -264,7 +263,7 @@ impl CommsPayload {
                 role: TerminalRole::Rx(RxChain::Component(port)),
             })
             .expect("freshly inserted IDs are valid");
-        Ok((payload, terminal))
+        (payload, terminal)
     }
 
     /// Creates a single-terminal transceiver payload sharing one antenna.
@@ -273,7 +272,6 @@ impl CommsPayload {
     /// and one RX port (diplexer-style) and exposes them as one transceiver
     /// terminal named `name`.
     ///
-    /// Returns an error for lumped [`Receiver::Gt`]; use [`Self::gt_only`].
     #[allow(clippy::too_many_arguments)]
     pub fn transceiver(
         name: impl Into<String>,
@@ -284,12 +282,12 @@ impl CommsPayload {
         rx_feed_loss: Decibel,
         antenna_noise_temperature: Kelvin,
         band: Option<FrequencyRange>,
-    ) -> Result<(Self, TerminalId), PayloadError> {
+    ) -> (Self, TerminalId) {
         let name = name.into();
         let mut payload = Self::new();
         let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
         let transmitter = payload.add_transmitter(format!("{name} transmitter"), transmitter);
-        let receiver = payload.add_receiver(format!("{name} receiver"), receiver)?;
+        let receiver = payload.add_receiver(format!("{name} receiver"), receiver);
         let tx_port = payload
             .add_tx_port(TxPort {
                 name: format!("{name} tx feed"),
@@ -318,7 +316,7 @@ impl CommsPayload {
                 },
             })
             .expect("freshly inserted IDs are valid");
-        Ok((payload, terminal))
+        (payload, terminal)
     }
 
     /// Creates a single-terminal payload from a lumped EIRP model.
@@ -370,21 +368,11 @@ impl CommsPayload {
     }
 
     /// Adds a component-tier receiver to the inventory.
-    ///
-    /// Returns [`PayloadError::LumpedReceiverInInventory`] for
-    /// [`Receiver::Gt`]: lumped G/T figures belong in [`Self::add_gt_model`].
-    pub fn add_receiver(
-        &mut self,
-        name: impl Into<String>,
-        receiver: Receiver,
-    ) -> Result<ReceiverId, PayloadError> {
-        if matches!(receiver, Receiver::Gt(_)) {
-            return Err(PayloadError::LumpedReceiverInInventory);
-        }
-        Ok(self.receivers.insert(Named {
+    pub fn add_receiver(&mut self, name: impl Into<String>, receiver: Receiver) -> ReceiverId {
+        self.receivers.insert(Named {
             name: name.into(),
             value: receiver,
-        }))
+        })
     }
 
     /// Adds a lumped EIRP model to the inventory.
@@ -527,9 +515,6 @@ impl CommsPayload {
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[non_exhaustive]
 pub enum PayloadError {
-    /// Lumped G/T figures are modelled as [`GtModel`]s, not receivers.
-    #[error("lumped G/T receivers belong in gt_models, not the receiver inventory")]
-    LumpedReceiverInInventory,
     /// The referenced antenna does not exist in this payload.
     #[error("unknown antenna ID {0:?}")]
     UnknownAntenna(AntennaId),
@@ -558,12 +543,12 @@ mod tests {
     use lox_core::units::{DecibelUnits, FrequencyUnits};
 
     use crate::antenna::ConstantAntenna;
-    use crate::receiver::{GtReceiver, NoiseTempReceiver};
+    use crate::receiver::NoiseTempReceiver;
 
     use super::*;
 
     fn ka_band() -> FrequencyRange {
-        FrequencyRange::new(27.0.ghz(), 31.0.ghz()).unwrap()
+        FrequencyRange::new(17.0.ghz(), 31.0.ghz()).unwrap()
     }
 
     /// One dish, one TX, one RX through a diplexer, exposed as one
@@ -574,19 +559,15 @@ mod tests {
             "dish",
             Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
         );
-        let tx = payload.add_transmitter(
-            "pa",
-            AmplifierTransmitter::new(29.0.ghz(), 10.0, 0.0.db(), 0.0.db()),
+        let tx =
+            payload.add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()));
+        let rx = payload.add_receiver(
+            "lnb",
+            Receiver::NoiseTemperature(NoiseTempReceiver {
+                band: ka_band(),
+                system_noise_temperature: 500.0,
+            }),
         );
-        let rx = payload
-            .add_receiver(
-                "lnb",
-                Receiver::NoiseTemperature(NoiseTempReceiver {
-                    frequency: 19.7.ghz(),
-                    system_noise_temperature: 500.0,
-                }),
-            )
-            .unwrap();
         let tx_port = payload
             .add_tx_port(TxPort {
                 name: "diplexer tx leg".into(),
@@ -648,10 +629,8 @@ mod tests {
             "low gain",
             Antenna::Constant(ConstantAntenna { gain: 6.0.db() }),
         );
-        let tx = payload.add_transmitter(
-            "pa",
-            AmplifierTransmitter::new(29.0.ghz(), 10.0, 0.0.db(), 0.0.db()),
-        );
+        let tx =
+            payload.add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()));
         let high_port = payload
             .add_tx_port(TxPort {
                 name: "hga path".into(),
@@ -720,27 +699,10 @@ mod tests {
     }
 
     #[test]
-    fn test_add_receiver_rejects_lumped_gt() {
-        let mut payload = CommsPayload::new();
-        let err = payload
-            .add_receiver(
-                "wrong tier",
-                Receiver::Gt(GtReceiver {
-                    frequency: 29.0.ghz(),
-                    gt: 3.01.db(),
-                }),
-            )
-            .unwrap_err();
-        assert_eq!(err, PayloadError::LumpedReceiverInInventory);
-    }
-
-    #[test]
     fn test_add_port_rejects_dangling_keys() {
         let mut payload = CommsPayload::new();
-        let tx = payload.add_transmitter(
-            "pa",
-            AmplifierTransmitter::new(29.0.ghz(), 10.0, 0.0.db(), 0.0.db()),
-        );
+        let tx =
+            payload.add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()));
         let err = payload
             .add_tx_port(TxPort {
                 name: "dangling antenna".into(),
@@ -778,17 +740,16 @@ mod tests {
         let (payload, terminal) = CommsPayload::transceiver(
             "ka terminal",
             Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
-            AmplifierTransmitter::new(29.0.ghz(), 10.0, 0.0.db(), 0.0.db()),
+            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()),
             Receiver::NoiseTemperature(NoiseTempReceiver {
-                frequency: 19.7.ghz(),
+                band: ka_band(),
                 system_noise_temperature: 500.0,
             }),
             1.0.db(),
             0.5.db(),
             150.0,
             Some(ka_band()),
-        )
-        .unwrap();
+        );
 
         let terminal = payload.terminal(terminal).unwrap();
         assert_eq!(terminal.name, "ka terminal");

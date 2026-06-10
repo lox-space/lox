@@ -86,11 +86,11 @@ payload = lox.CommsPayload()
 dish = payload.add_antenna("dish", lox.ConstantAntenna(gain=46.0 * lox.dB))
 pa = payload.add_transmitter(
     "pa",
-    lox.AmplifierTransmitter(frequency=29 * lox.GHz, power=10 * lox.W, line_loss=0.0 * lox.dB),
+    lox.AmplifierTransmitter(band=ka_band, power=10 * lox.W),
 )
 lnb = payload.add_receiver(
     "lnb",
-    lox.NoiseTempReceiver(frequency=19.7 * lox.GHz, system_noise_temperature=500 * lox.K),
+    lox.NoiseTempReceiver(band=ka_band, system_noise_temperature=500 * lox.K),
 )
 tx_port = payload.add_tx_port("tx leg", dish, pa, 1.0 * lox.dB, band=ka_band)
 rx_port = payload.add_rx_port(
@@ -132,29 +132,26 @@ Payloads attach to assets for scenario analysis via
 
 For early-phase mission studies — where manufacturer datasheets typically
 publish only aggregate figures — you can build a link budget directly from
-an `EirpTransmitter` and a `GtReceiver`, without configuring an antenna or
-amplifier separately. Use `CommunicationSystem.eirp_only` and
-`CommunicationSystem.gt_only`:
+lumped EIRP and G/T models. Use `CommsPayload.eirp_only` and
+`CommsPayload.gt_only`:
 
 ```python
 import lox_space as lox
 
-tx = lox.CommunicationSystem.eirp_only(
-    lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
+ka_band = lox.FrequencyRange(27.0 * lox.GHz, 31.0 * lox.GHz)
+tx_payload, tx_terminal = lox.CommsPayload.eirp_only("tx", ka_band, 55.0 * lox.dB)
+rx_payload, rx_terminal = lox.CommsPayload.gt_only("rx", ka_band, 3.01 * lox.dB)
+link = lox.LinkStats.for_link(
+    tx_payload,
+    tx_terminal,
+    rx_payload,
+    rx_terminal,
+    carrier=29.0 * lox.GHz,
+    bandwidth=5.0 * lox.MHz,
+    range=1000.0 * lox.km,
+    direction="downlink",
 )
-rx = lox.CommunicationSystem.gt_only(
-    lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
-)
-link = lox.LinkStats.calculate(
-    tx,
-    rx,
-    1000.0 * lox.km,
-    5.0 * lox.MHz,
-    0.0 * lox.rad,
-    0.0 * lox.rad,
-    lox.EnvironmentalLosses.none(),
-)
-print(f"C/N0 = {link.c_n0.as_float():.2f} dB·Hz")
+print(f"C/N0 = {float(link.c_n0):.2f} dB·Hz")
 ```
 
 For lumped links, `link.carrier_rx_power` and `link.noise_power` are `None` —
@@ -191,16 +188,23 @@ import lox_space as lox
 # Define a Ka-band downlink
 frequency = 29 * lox.GHz
 
-# Transmitter: satellite with parabolic antenna
+band = lox.FrequencyRange(27.0 * lox.GHz, 31.0 * lox.GHz)
+
+# Transmitter: satellite with parabolic antenna, 1 dB feed loss
 tx_pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
 tx_antenna = lox.PatternedAntenna(pattern=tx_pattern)
-tx = lox.AmplifierTransmitter(frequency=frequency, power=10 * lox.W, line_loss=1.0 * lox.dB)
-tx_system = lox.CommunicationSystem(antenna=tx_antenna, transmitter=tx)
+tx_payload, tx_terminal = lox.CommsPayload.transmitter_only(
+    "satellite", tx_antenna, lox.AmplifierTransmitter(band=band, power=10 * lox.W),
+    feed_loss=1.0 * lox.dB,
+)
 
 # Receiver: ground station with known system noise temperature
 rx_antenna = lox.ConstantAntenna(gain=40.0 * lox.dB)
-rx = lox.NoiseTempReceiver(frequency=frequency, system_noise_temperature=200 * lox.K)
-rx_system = lox.CommunicationSystem(antenna=rx_antenna, receiver=rx)
+rx_payload, rx_terminal = lox.CommsPayload.receiver_only(
+    "ground station", rx_antenna,
+    lox.NoiseTempReceiver(band=band, system_noise_temperature=200 * lox.K),
+    feed_loss=0.0 * lox.dB, antenna_noise_temperature=150 * lox.K,
+)
 
 # Define a QPSK channel at 5 Msps
 channel = lox.Channel(
@@ -216,11 +220,15 @@ channel = lox.Channel(
 # Compute a full link budget at 1000 km slant range.
 # Pointing defaults to boresight; pass tx_angle/rx_angle for off-boresight
 # angles or tx_direction/rx_direction for line-of-sight vectors.
-link = lox.LinkStats.calculate(
-    tx_system=tx_system,
-    rx_system=rx_system,
-    range=1000 * lox.km,
+link = lox.LinkStats.for_link(
+    tx_payload,
+    tx_terminal,
+    rx_payload,
+    rx_terminal,
+    carrier=frequency,
     bandwidth=channel.bandwidth(),
+    range=1000 * lox.km,
+    direction="downlink",
 )
 modulated = channel.apply(link)
 
@@ -245,16 +253,21 @@ import lox_space as lox
 frame = lox.AntennaFrame(boresight=[1.0, 0.0, 0.0], reference=[0.0, 0.0, 1.0])
 pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
 antenna = lox.PatternedAntenna(pattern=pattern, frame=frame)
-tx = lox.AmplifierTransmitter(
-    frequency=29 * lox.GHz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
+tx_payload, tx_terminal = lox.CommsPayload.transmitter_only(
+    "satellite", antenna,
+    lox.AmplifierTransmitter(band=band, power=10.0 * lox.W),
+    feed_loss=1.0 * lox.dB,
 )
-tx_system = lox.CommunicationSystem(antenna=antenna, transmitter=tx)
 
-link = lox.LinkStats.calculate(
-    tx_system=tx_system,
-    rx_system=rx_system,
-    range=1000 * lox.km,
+link = lox.LinkStats.for_link(
+    tx_payload,
+    tx_terminal,
+    rx_payload,
+    rx_terminal,
+    carrier=29 * lox.GHz,
     bandwidth=channel.bandwidth(),
+    range=1000 * lox.km,
+    direction="downlink",
     tx_direction=[0.9, 0.1, 0.0],  # line of sight in the TX parent frame
 )
 print(f"TX theta: {link.tx_theta.to_degrees():.2f} deg")
@@ -300,12 +313,16 @@ losses = lox.EnvironmentalLosses(
 )
 print(f"Total: {float(losses.total()):.1f} dB")
 
-# Pass to LinkStats.calculate via the losses parameter
-link = lox.LinkStats.calculate(
-    tx_system=tx_system,
-    rx_system=rx_system,
-    range=1000 * lox.km,
+# Pass to LinkStats.for_link via the losses parameter
+link = lox.LinkStats.for_link(
+    tx_payload,
+    tx_terminal,
+    rx_payload,
+    rx_terminal,
+    carrier=29 * lox.GHz,
     bandwidth=channel.bandwidth(),
+    range=1000 * lox.km,
+    direction="downlink",
     losses=losses,
 )
 ```
@@ -366,12 +383,6 @@ link = lox.LinkStats.calculate(
 
 ---
 
-::: lox_space.EirpTransmitter
-    options:
-      show_source: false
-
----
-
 ::: lox_space.NoiseTempReceiver
     options:
       show_source: false
@@ -379,12 +390,6 @@ link = lox.LinkStats.calculate(
 ---
 
 ::: lox_space.CascadeReceiver
-    options:
-      show_source: false
-
----
-
-::: lox_space.GtReceiver
     options:
       show_source: false
 
@@ -403,12 +408,6 @@ link = lox.LinkStats.calculate(
 ---
 
 ::: lox_space.EnvironmentalLosses
-    options:
-      show_source: false
-
----
-
-::: lox_space.CommunicationSystem
     options:
       show_source: false
 

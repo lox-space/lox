@@ -14,18 +14,6 @@ use crate::band::FrequencyRange;
 #[derive(Debug, Clone, PartialEq, Error)]
 #[non_exhaustive]
 pub enum LinkBudgetError {
-    /// The transmitting system has no transmitter configured.
-    #[error("transmitting system has no transmitter configured")]
-    MissingTransmitter,
-    /// The receiving system has no receiver configured.
-    #[error("receiving system has no receiver configured")]
-    MissingReceiver,
-    /// A component-tier transmitter/receiver requires an antenna but none was provided.
-    #[error("component-tier transmitter/receiver requires an antenna")]
-    MissingAntenna,
-    /// A lumped (`Eirp`/`Gt`) transmitter/receiver must not be paired with an antenna.
-    #[error("lumped (Eirp/Gt) transmitter/receiver must not be paired with an antenna")]
-    UnexpectedAntenna,
     /// Absolute carrier and noise powers are required but are unavailable.
     #[error("absolute carrier and noise powers are unavailable for this link")]
     AbsolutePowerUnavailable,
@@ -42,60 +30,27 @@ pub enum LinkBudgetError {
         /// Name of the terminal whose endpoint rejected the carrier.
         endpoint: String,
     },
-    /// Transmitter and receiver frequencies disagree.
-    #[error(
-        "transmitter frequency {} Hz differs from receiver frequency {} Hz",
-        tx.to_hertz(),
-        rx.to_hertz()
-    )]
-    FrequencyMismatch {
-        /// Transmitter frequency.
-        tx: Frequency,
-        /// Receiver frequency.
-        rx: Frequency,
-    },
 }
 
 #[cfg(test)]
 mod tests {
     use lox_core::units::FrequencyUnits;
 
+    use crate::band::FrequencyRange;
+
     use super::*;
 
     #[test]
-    fn test_display_missing_transmitter() {
-        let s = LinkBudgetError::MissingTransmitter.to_string();
-        assert!(s.contains("transmitter"));
-    }
-
-    #[test]
-    fn test_display_frequency_mismatch() {
-        let err = LinkBudgetError::FrequencyMismatch {
-            tx: 29.0.ghz(),
-            rx: 30.0.ghz(),
+    fn test_display_carrier_out_of_band() {
+        let err = LinkBudgetError::CarrierOutOfBand {
+            carrier: 29.0.ghz(),
+            band: FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap(),
+            endpoint: "rx".to_owned(),
         };
         assert_eq!(
             err.to_string(),
-            "transmitter frequency 29000000000 Hz differs from receiver frequency 30000000000 Hz"
+            "carrier 29000000000 Hz outside the supported range 17.000–21.000 GHz of endpoint 'rx'"
         );
-    }
-
-    #[test]
-    fn test_display_missing_receiver() {
-        let s = LinkBudgetError::MissingReceiver.to_string();
-        assert!(s.contains("receiver"));
-    }
-
-    #[test]
-    fn test_display_missing_antenna() {
-        let s = LinkBudgetError::MissingAntenna.to_string();
-        assert!(s.contains("antenna"));
-    }
-
-    #[test]
-    fn test_display_unexpected_antenna() {
-        let s = LinkBudgetError::UnexpectedAntenna.to_string();
-        assert!(s.contains("antenna"));
     }
 
     #[test]
@@ -107,6 +62,6 @@ mod tests {
     #[test]
     fn test_is_error() {
         fn assert_is_error<E: std::error::Error>(_: &E) {}
-        assert_is_error(&LinkBudgetError::MissingReceiver);
+        assert_is_error(&LinkBudgetError::AbsolutePowerUnavailable);
     }
 }
