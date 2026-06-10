@@ -1739,6 +1739,22 @@ mod tests {
     }
 
     #[test]
+    fn test_temperature_units_trait() {
+        assert_eq!(290.0.k().to_kelvin(), 290.0);
+        assert_eq!(290.k().to_kelvin(), 290.0);
+        assert_eq!(290.0.k().as_f64(), 290.0);
+    }
+
+    #[test]
+    fn test_power_units_trait() {
+        assert_eq!(2.0.w().to_watts(), 2.0);
+        assert_eq!(2.w().to_watts(), 2.0);
+        assert_eq!(1.5.kw().to_watts(), 1500.0);
+        assert_eq!(2.kw().to_kilowatts(), 2.0);
+        assert_eq!(10.0.w().to_dbw(), 10.0);
+    }
+
+    #[test]
     fn test_frequency_wavelength() {
         let f = 1.0.ghz();
         let wavelength = f.wavelength();

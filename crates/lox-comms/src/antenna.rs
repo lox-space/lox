@@ -380,18 +380,16 @@ impl AntennaGain for Antenna {
 impl Antenna {
     /// Returns the gain in dBi toward a parent-frame direction vector.
     ///
-    /// For [`Antenna::Constant`] the direction is ignored and the constant
-    /// gain is returned. For [`Antenna::Patterned`] the direction is converted
-    /// into pattern angles using the antenna frame.
+    /// The direction is converted into pattern angles via
+    /// [`Self::pattern_angles`]; for [`Antenna::Constant`] the resulting
+    /// angles do not affect the gain but the direction is still validated.
     pub fn gain_toward(
         &self,
         frequency: Frequency,
         direction: DVec3,
     ) -> Result<Decibel, AntennaFrameError> {
-        match self {
-            Antenna::Constant(a) => Ok(a.peak_gain()),
-            Antenna::Patterned(a) => a.gain_toward(frequency, direction),
-        }
+        let (theta, phi) = self.pattern_angles(direction)?;
+        Ok(self.gain(frequency, theta, phi))
     }
 
     /// Returns the pattern angles for a parent-frame direction vector.
@@ -419,7 +417,7 @@ mod tests {
     use lox_core::units::{Angle, Decibel, DecibelUnits, Distance, FrequencyUnits};
     use lox_test_utils::assert_approx_eq;
 
-    use crate::pattern::{AntennaPattern, ParabolicPattern};
+    use crate::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
 
     use super::*;
 
@@ -636,6 +634,33 @@ mod tests {
             panic!("expected patterned antenna");
         };
         assert_eq!(antenna.frame, frame);
+    }
+
+    #[test]
+    fn test_antenna_from_conversions_and_constant_paths() {
+        let constant: Antenna = ConstantAntenna::new(20.0.db()).unwrap().into();
+        assert!(matches!(constant, Antenna::Constant(_)));
+        // gain_toward ignores the direction for constant antennas...
+        let gain = constant.gain_toward(29.0.ghz(), DVec3::Y).unwrap();
+        assert_approx_eq!(gain.as_f64(), 20.0, atol <= 1e-12);
+        // ...but still validates it.
+        assert!(constant.gain_toward(29.0.ghz(), DVec3::ZERO).is_err());
+        assert!(constant.pattern_angles(DVec3::ZERO).is_err());
+
+        let patterned: Antenna =
+            PatternedAntenna::new(GaussianPattern::new(Distance::meters(0.98), 0.45).unwrap())
+                .into();
+        assert!(matches!(patterned, Antenna::Patterned(_)));
+        let dipole: AntennaPattern = DipolePattern::new(Distance::meters(0.0185)).unwrap().into();
+        assert!(matches!(dipole, AntennaPattern::Dipole(_)));
+
+        // Smart constructors evaluate to working gain models.
+        let gaussian = Antenna::gaussian(Distance::meters(0.98), 0.45).unwrap();
+        let on_axis = gaussian.gain_toward(29.0.ghz(), DVec3::Z).unwrap();
+        assert!(on_axis.as_f64() > 40.0);
+        assert!(Antenna::constant(Decibel::new(f64::NAN)).is_err());
+        assert!(Antenna::gaussian(Distance::meters(0.98), 1.5).is_err());
+        assert!(Antenna::dipole(Distance::meters(-1.0)).is_err());
     }
 
     #[test]

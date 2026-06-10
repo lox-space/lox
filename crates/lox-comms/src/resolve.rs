@@ -465,7 +465,7 @@ mod tests {
     use lox_test_utils::assert_approx_eq;
 
     use crate::antenna::ConstantAntenna;
-    use crate::payload::{RxPort, Terminal, TxPort};
+    use crate::payload::{EirpModel, RxPort, Terminal, TxPort};
     use crate::receiver::{
         CascadeReceiver, NoiseStage, NoiseTempReceiver, noise_figure_to_temperature,
     };
@@ -767,6 +767,78 @@ mod tests {
         assert!(matches!(err, ResolveError::NotATransmitTerminal(_)));
         assert!(err.to_string().contains("no transmit chain"));
         assert!(payload.resolve_rx(rx_only).is_ok());
+    }
+
+    #[test]
+    fn test_chain_accessors_and_rx_direction() {
+        let (payload, terminal) = transceiver_payload();
+        let tx = payload.resolve_tx(terminal).unwrap();
+        assert!(matches!(tx.chain(), ResolvedTxChain::Component { .. }));
+        let rx = payload.resolve_rx(terminal).unwrap();
+        assert!(matches!(rx.chain(), ResolvedRxChain::Component { .. }));
+        assert_eq!(rx.terminal_name(), "transceiver");
+        assert!(rx.band().contains(29.0.ghz()));
+
+        // Direction-based pointing resolves through the RX antenna frame too.
+        let (theta, phi) = rx
+            .pattern_angles(Pointing::Direction(lox_core::glam::DVec3::Z))
+            .unwrap();
+        assert_approx_eq!(theta.to_radians(), 0.0, atol <= 1e-12);
+        assert_approx_eq!(phi.to_radians(), 0.0, atol <= 1e-12);
+
+        // Constant-gain RX: total gain is the antenna gain at the flange.
+        let total = rx
+            .total_gain(29.0.ghz(), Pointing::Boresight)
+            .unwrap()
+            .unwrap();
+        assert_approx_eq!(total.as_f64(), 30.0, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_resolve_rx_on_tx_only_terminal_is_error() {
+        let mut payload = CommsPayload::new();
+        let eirp = payload.add_eirp_model(EirpModel::new("eirp", ka_band(), 55.0.db()).unwrap());
+        let tx_only = payload
+            .add_tx_terminal("tx only", TxChain::Lumped(eirp))
+            .unwrap();
+
+        let err = payload.resolve_rx(tx_only).unwrap_err();
+        assert!(matches!(err, ResolveError::NotAReceiveTerminal(_)));
+        assert!(err.to_string().contains("no receive chain"));
+        assert!(payload.resolve_tx(tx_only).is_ok());
+        // Lumped TX exposes no total gain counterpart; its band is the model's.
+        let tx = payload.resolve_tx(tx_only).unwrap();
+        assert!(matches!(tx.chain(), ResolvedTxChain::Lumped(_)));
+    }
+
+    #[test]
+    fn test_disjoint_rx_bands_is_error() {
+        let mut payload = CommsPayload::new();
+        let antenna = payload.add_antenna(
+            "antenna",
+            Antenna::Constant(ConstantAntenna::new(30.0.db()).unwrap()),
+        );
+        let receiver = payload.add_receiver(
+            "rx",
+            Receiver::NoiseTemperature(
+                NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
+            ),
+        );
+        let disjoint = FrequencyRange::new(2.0.ghz(), 4.0.ghz()).unwrap();
+        let port = payload
+            .add_rx_port(
+                RxPort::builder("feed", antenna, receiver)
+                    .band(disjoint)
+                    .build()
+                    .unwrap(),
+            )
+            .unwrap();
+        let terminal = payload
+            .add_rx_terminal("rx", RxChain::Component(port))
+            .unwrap();
+
+        let err = payload.resolve_rx(terminal).unwrap_err();
+        assert!(matches!(err, ResolveError::EmptyBandIntersection(_)));
     }
 
     #[test]

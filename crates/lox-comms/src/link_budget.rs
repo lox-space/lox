@@ -453,6 +453,77 @@ mod tests {
     }
 
     #[test]
+    fn test_for_link_rejects_carrier_out_of_band_on_tx_side() {
+        let (tx_payload, tx_terminal) = CommsPayload::eirp_only(
+            EirpModel::new(
+                "tx",
+                FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap(),
+                55.0.db(),
+            )
+            .unwrap(),
+        );
+        let (rx_payload, rx_terminal) =
+            CommsPayload::gt_only(GtModel::new("rx", ka_band(), 3.01.db()).unwrap());
+
+        let err = LinkStats::for_link(
+            &tx_payload.resolve_tx(tx_terminal).unwrap(),
+            &rx_payload.resolve_rx(rx_terminal).unwrap(),
+            29.0.ghz(),
+            5.0.mhz(),
+            Distance::kilometers(1000.0),
+            EnvironmentalLosses::none(),
+            Pointing::Boresight,
+            Pointing::Boresight,
+            LinkDirection::Downlink,
+        )
+        .unwrap_err();
+        assert!(matches!(err, LinkBudgetError::CarrierOutOfBand { .. }));
+        assert!(err.to_string().contains("'tx'"));
+    }
+
+    #[test]
+    fn test_for_link_applies_environmental_losses() {
+        let (tx_payload, tx_terminal, rx_payload, rx_terminal) = lumped_link();
+        let losses = EnvironmentalLosses {
+            rain: 2.0.db(),
+            gaseous: 0.5.db(),
+            scintillation: 0.3.db(),
+            atmospheric: 1.0.db(),
+            cloud: 0.2.db(),
+            depolarization: 0.1.db(),
+        };
+        let clear = LinkStats::for_link(
+            &tx_payload.resolve_tx(tx_terminal).unwrap(),
+            &rx_payload.resolve_rx(rx_terminal).unwrap(),
+            29.0.ghz(),
+            5.0.mhz(),
+            Distance::kilometers(1000.0),
+            EnvironmentalLosses::none(),
+            Pointing::Boresight,
+            Pointing::Boresight,
+            LinkDirection::Downlink,
+        )
+        .unwrap();
+        let faded = LinkStats::for_link(
+            &tx_payload.resolve_tx(tx_terminal).unwrap(),
+            &rx_payload.resolve_rx(rx_terminal).unwrap(),
+            29.0.ghz(),
+            5.0.mhz(),
+            Distance::kilometers(1000.0),
+            losses,
+            Pointing::Boresight,
+            Pointing::Boresight,
+            LinkDirection::Downlink,
+        )
+        .unwrap();
+        assert_approx_eq!(
+            clear.c_n0.as_f64() - faded.c_n0.as_f64(),
+            4.1,
+            atol <= 1e-10
+        );
+    }
+
+    #[test]
     fn test_channel_apply_produces_modulated_stats() {
         let stats = component_stats();
         let m = channel().apply(stats);

@@ -533,6 +533,10 @@ impl PyPatternedAntenna {
         (pattern, PyAntennaFrame(self.0.frame))
     }
 
+    fn __eq__(&self, other: &PyPatternedAntenna) -> bool {
+        self.__repr__() == other.__repr__()
+    }
+
     fn __repr__(&self) -> String {
         let pattern_repr = match &self.0.pattern {
             AntennaPattern::Parabolic(p) => format!(

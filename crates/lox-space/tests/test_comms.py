@@ -1565,3 +1565,193 @@ def test_antenna_patterns_reject_non_physical_parameters():
         lox.ParabolicPattern.from_beamwidth(0.0 * lox.deg, 29.0 * lox.GHz, 0.45)
     with pytest.raises(ValueError, match="gain"):
         lox.ConstantAntenna(gain=float("nan") * lox.dB)
+
+
+# --- Coverage: binding error paths, reprs, and pickles ---
+
+
+def test_amplifier_transmitter_accessors_repr_pickle():
+    tx = lox.AmplifierTransmitter(
+        band=KA_BAND, power=10.0 * lox.W, output_back_off=0.5 * lox.dB
+    )
+    assert tx.band == KA_BAND
+    assert float(tx.power) == pytest.approx(10.0)
+    assert float(tx.output_back_off) == pytest.approx(0.5)
+    assert "AmplifierTransmitter" in repr(tx)
+    restored = pickle.loads(pickle.dumps(tx))
+    assert restored == tx
+    assert tx != lox.AmplifierTransmitter(band=KA_BAND, power=5.0 * lox.W)
+    with pytest.raises(ValueError, match="transmit power"):
+        lox.AmplifierTransmitter(band=KA_BAND, power=-1.0 * lox.W)
+
+
+def test_cascade_receiver_accessors_and_validation():
+    rx = lox.CascadeReceiver(
+        band=KA_BAND,
+        stages=[lox.NoiseStage(35.0 * lox.dB, 50.0 * lox.K)],
+        demodulator_loss=0.5 * lox.dB,
+    )
+    assert rx.band == KA_BAND
+    assert rx.chain_noise_temperature().to_kelvin() == pytest.approx(50.0)
+    assert float(rx.chain_gain()) == pytest.approx(35.0)
+    assert "CascadeReceiver" in repr(rx)
+    restored = pickle.loads(pickle.dumps(rx))
+    assert restored == rx
+    with pytest.raises(ValueError, match="demodulator loss"):
+        lox.CascadeReceiver(
+            band=KA_BAND, stages=[], demodulator_loss=-0.5 * lox.dB
+        )
+    with pytest.raises(ValueError, match="stage noise temperature"):
+        lox.NoiseStage(35.0 * lox.dB, -50.0 * lox.K)
+    lna = lox.CascadeReceiver.from_lna_and_noise_figure(
+        band=KA_BAND,
+        lna_gain=20.0 * lox.dB,
+        lna_noise_temperature=175.0 * lox.K,
+        receiver_noise_figure=2.0 * lox.dB,
+    )
+    assert lna.chain_noise_temperature().to_kelvin() == pytest.approx(176.696, abs=0.01)
+
+
+def test_payload_wiring_error_paths():
+    payload = lox.CommsPayload()
+    other = lox.CommsPayload()
+    foreign_antenna = other.add_antenna(
+        "foreign", lox.ConstantAntenna(gain=46.0 * lox.dB)
+    )
+    pa = payload.add_transmitter(
+        "pa", lox.AmplifierTransmitter(band=KA_BAND, power=10.0 * lox.W)
+    )
+    # Foreign ID → unknown antenna
+    with pytest.raises(ValueError, match="unknown antenna"):
+        payload.add_tx_port("leg", foreign_antenna, pa, 0.0 * lox.dB)
+    # Negative feed loss → non-physical
+    dish = payload.add_antenna("dish", lox.ConstantAntenna(gain=46.0 * lox.dB))
+    with pytest.raises(ValueError, match="feed loss"):
+        payload.add_tx_port("leg", dish, pa, -1.0 * lox.dB)
+    # Wrong input types
+    with pytest.raises(ValueError, match="expected a ConstantAntenna"):
+        payload.add_antenna("bad", 42)
+    with pytest.raises(ValueError, match="expected"):
+        payload.add_receiver("bad", "not a receiver")
+    # Terminal chain arguments are mutually exclusive
+    eirp = payload.add_eirp_model("eirp", KA_BAND, 55.0 * lox.dB)
+    port = payload.add_tx_port("leg", dish, pa, 0.0 * lox.dB)
+    with pytest.raises(ValueError, match="exactly one of"):
+        payload.add_tx_terminal("bad", port=port, eirp_model=eirp)
+    with pytest.raises(ValueError, match="exactly one of"):
+        payload.add_rx_terminal("bad")
+    # Non-finite lumped figures
+    with pytest.raises(ValueError, match="EIRP"):
+        payload.add_eirp_model("bad", KA_BAND, float("nan") * lox.dB)
+    with pytest.raises(ValueError, match="G/T"):
+        payload.add_gt_model("bad", KA_BAND, float("inf") * lox.dB)
+
+
+def test_for_link_error_paths():
+    tx_payload, tx_terminal = lox.CommsPayload.eirp_only("tx", KA_BAND, 55.0 * lox.dB)
+    rx_payload, rx_terminal = lox.CommsPayload.gt_only("rx", KA_BAND, 3.01 * lox.dB)
+    # Invalid direction string
+    with pytest.raises(ValueError, match="unknown link direction"):
+        lox.LinkStats.for_link(
+            tx_payload, tx_terminal, rx_payload, rx_terminal,
+            carrier=29.0 * lox.GHz, bandwidth=5.0 * lox.MHz,
+            range=1000.0 * lox.km, direction="sideways",
+        )
+    # Wrong-direction terminal
+    with pytest.raises(ValueError, match="no transmit chain"):
+        lox.LinkStats.for_link(
+            rx_payload, rx_terminal, rx_payload, rx_terminal,
+            carrier=29.0 * lox.GHz, bandwidth=5.0 * lox.MHz,
+            range=1000.0 * lox.km, direction="downlink",
+        )
+    # Non-physical link inputs
+    with pytest.raises(ValueError, match="non-physical"):
+        lox.LinkStats.for_link(
+            tx_payload, tx_terminal, rx_payload, rx_terminal,
+            carrier=29.0 * lox.GHz, bandwidth=0.0 * lox.MHz,
+            range=1000.0 * lox.km, direction="downlink",
+        )
+    # Introspection on the wrong direction
+    with pytest.raises(ValueError, match="no receive chain"):
+        tx_payload.gt_at(tx_terminal, 29.0 * lox.GHz)
+    with pytest.raises(ValueError, match="no transmit chain"):
+        rx_payload.eirp_at(rx_terminal, 29.0 * lox.GHz)
+    with pytest.raises(ValueError, match="no receive chain"):
+        tx_payload.rx_band(tx_terminal)
+    assert tx_payload.tx_band(tx_terminal) == KA_BAND
+
+
+def test_transceiver_static_and_direction_getter():
+    payload, terminal = lox.CommsPayload.transceiver(
+        "sat",
+        lox.ConstantAntenna(gain=46.0 * lox.dB),
+        lox.AmplifierTransmitter(band=KA_BAND, power=10.0 * lox.W),
+        lox.NoiseTempReceiver(band=KA_BAND, noise_temperature=500.0 * lox.K),
+        tx_feed_loss=1.0 * lox.dB,
+        rx_feed_loss=0.5 * lox.dB,
+        band=KA_BAND,
+    )
+    terminals = payload.terminals()
+    assert terminals[0][2] == "transceiver"
+    assert "sat" in repr(payload)
+
+    rx_payload, rx_terminal = lox.CommsPayload.gt_only("gs", KA_BAND, 30.0 * lox.dB)
+    link = lox.LinkStats.for_link(
+        payload, terminal, rx_payload, rx_terminal,
+        carrier=29.0 * lox.GHz, bandwidth=5.0 * lox.MHz,
+        range=1000.0 * lox.km, direction="downlink",
+        rx_angle=0.0 * lox.deg,
+    )
+    assert link.direction == "downlink"
+    assert float(link.eirp) == pytest.approx(46.0 + 10.0 - 1.0, abs=1e-9)
+
+
+def test_id_reprs():
+    payload = lox.CommsPayload()
+    dish = payload.add_antenna("dish", lox.ConstantAntenna(gain=46.0 * lox.dB))
+    assert "AntennaId" in repr(dish)
+    pa = payload.add_transmitter(
+        "pa", lox.AmplifierTransmitter(band=KA_BAND, power=10.0 * lox.W)
+    )
+    assert "TransmitterId" in repr(pa)
+    eirp = payload.add_eirp_model("e", KA_BAND, 55.0 * lox.dB)
+    assert "EirpModelId" in repr(eirp)
+    gt = payload.add_gt_model("g", KA_BAND, 3.0 * lox.dB)
+    assert "GtModelId" in repr(gt)
+    terminal = payload.add_tx_terminal("t", eirp_model=eirp)
+    assert "TerminalId" in repr(terminal)
+
+
+def test_spacecraft_comms_payload():
+    payload, _terminal = lox.CommsPayload.eirp_only("sc", KA_BAND, 30.0 * lox.dB)
+    tle = """ISS (ZARYA)
+1 25544U 98067A   24170.37528350  .00016566  00000+0  30244-3 0  9996
+2 25544  51.6410 309.3890 0010444 339.5369 107.8830 15.49495945458731
+"""
+    sc = lox.Spacecraft("iss", lox.SGP4(tle), comms_payload=payload)
+    restored = sc.comms_payload()
+    assert restored is not None
+    assert restored.find_terminal("sc") is not None
+
+
+def test_antenna_and_pattern_pickle_round_trips():
+    parabolic = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
+    gaussian = lox.GaussianPattern(diameter=0.98 * lox.m, efficiency=0.45)
+    dipole = lox.DipolePattern(length=0.0185 * lox.m)
+    for pattern in [parabolic, gaussian, dipole]:
+        restored = pickle.loads(pickle.dumps(pattern))
+        assert restored == pattern
+
+    frame = lox.AntennaFrame(boresight=[1.0, 0.0, 0.0], reference=[0.0, 0.0, 1.0])
+    antenna = lox.PatternedAntenna(pattern=parabolic, frame=frame)
+    restored = pickle.loads(pickle.dumps(antenna))
+    assert restored == antenna
+
+    constant = lox.ConstantAntenna(gain=46.0 * lox.dB)
+    restored = pickle.loads(pickle.dumps(constant))
+    assert restored == constant
+    assert constant != lox.ConstantAntenna(gain=30.0 * lox.dB)
+
+    receiver = lox.NoiseTempReceiver(band=KA_BAND, noise_temperature=500.0 * lox.K)
+    restored = pickle.loads(pickle.dumps(receiver))
+    assert restored == receiver

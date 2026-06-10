@@ -481,6 +481,104 @@ mod tests {
         assert!(CascadeReceiver::new(ka_band(), vec![], (-1.0).db(), 0.0.db()).is_err());
     }
 
+    #[test]
+    fn test_accessors_and_conversions() {
+        let stage = NoiseStage::new(20.0.db(), Temperature::kelvin(50.0)).unwrap();
+        assert_approx_eq!(stage.gain().as_f64(), 20.0, atol <= 1e-15);
+        assert_approx_eq!(stage.noise_temperature().to_kelvin(), 50.0, atol <= 1e-15);
+
+        let cascade = CascadeReceiver::new(ka_band(), vec![stage], 0.5.db(), 0.25.db()).unwrap();
+        assert!(cascade.band().contains(29.0.ghz()));
+        assert_eq!(cascade.stages().len(), 1);
+        assert_approx_eq!(cascade.demodulator_loss().as_f64(), 0.5, atol <= 1e-15);
+        assert_approx_eq!(cascade.implementation_loss().as_f64(), 0.25, atol <= 1e-15);
+
+        let noise_temp = NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap();
+        assert!(noise_temp.band().contains(29.0.ghz()));
+        assert_approx_eq!(
+            noise_temp.noise_temperature().to_kelvin(),
+            500.0,
+            atol <= 1e-15
+        );
+
+        // From conversions into the Receiver enum.
+        let rx: Receiver = noise_temp.into();
+        assert!(matches!(rx, Receiver::NoiseTemperature(_)));
+        let rx: Receiver = cascade.into();
+        assert!(matches!(rx, Receiver::Cascade(_)));
+        assert!(rx.band().contains(29.0.ghz()));
+    }
+
+    #[test]
+    fn test_builder_defaults_and_validation() {
+        // Defaults: no stages, lossless demodulator/implementation.
+        let bare = CascadeReceiver::builder(ka_band()).build().unwrap();
+        assert!(bare.stages().is_empty());
+        assert_approx_eq!(
+            bare.chain_noise_temperature().to_kelvin(),
+            0.0,
+            atol <= 1e-15
+        );
+        assert_approx_eq!(bare.chain_gain().as_f64(), 0.0, atol <= 1e-15);
+
+        let chain = CascadeReceiver::builder(ka_band())
+            .stage(20.0.db(), Temperature::kelvin(50.0))
+            .stage(0.0.db(), Temperature::kelvin(170.0))
+            .demodulator_loss(0.5.db())
+            .implementation_loss(0.25.db())
+            .build()
+            .unwrap();
+        assert_eq!(chain.stages().len(), 2);
+        assert_approx_eq!(
+            chain.chain_noise_temperature().to_kelvin(),
+            50.0 + 170.0 / 100.0,
+            rtol <= 1e-12
+        );
+
+        // Stage parameters are validated at build().
+        assert!(
+            CascadeReceiver::builder(ka_band())
+                .stage(20.0.db(), Temperature::kelvin(-1.0))
+                .build()
+                .is_err()
+        );
+        // Losses are validated too.
+        assert!(
+            CascadeReceiver::builder(ka_band())
+                .demodulator_loss((-0.5).db())
+                .build()
+                .is_err()
+        );
+        // from_lna_and_noise_figure propagates stage validation.
+        assert!(
+            CascadeReceiver::from_lna_and_noise_figure(
+                ka_band(),
+                20.0.db(),
+                Temperature::kelvin(-1.0),
+                2.0.db(),
+                0.0.db(),
+                0.0.db(),
+            )
+            .is_err()
+        );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_stage_and_cascade_serde_reject_invalid() {
+        let stage = NoiseStage::new(20.0.db(), Temperature::kelvin(50.0)).unwrap();
+        let json = serde_json::to_string(&stage).unwrap();
+        assert!(serde_json::from_str::<NoiseStage>(&json).is_ok());
+        let bad = json.replace("\"noise_temperature\":50.0", "\"noise_temperature\":-50.0");
+        assert!(serde_json::from_str::<NoiseStage>(&bad).is_err());
+
+        let cascade = CascadeReceiver::new(ka_band(), vec![stage], 0.5.db(), 0.0.db()).unwrap();
+        let json = serde_json::to_string(&cascade).unwrap();
+        assert!(serde_json::from_str::<CascadeReceiver>(&json).is_ok());
+        let bad = json.replace("\"demodulator_loss\":0.5", "\"demodulator_loss\":-0.5");
+        assert!(serde_json::from_str::<CascadeReceiver>(&bad).is_err());
+    }
+
     #[cfg(feature = "serde")]
     #[test]
     fn test_receiver_serde_rejects_invalid() {

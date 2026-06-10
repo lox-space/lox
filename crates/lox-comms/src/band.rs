@@ -318,6 +318,46 @@ mod tests {
     }
 
     #[test]
+    fn test_from_all_letter_bands() {
+        // Every IEEE letter band converts to a valid range whose midpoint
+        // classifies back to the same band.
+        for band in [
+            FrequencyBand::HF,
+            FrequencyBand::VHF,
+            FrequencyBand::UHF,
+            FrequencyBand::L,
+            FrequencyBand::S,
+            FrequencyBand::C,
+            FrequencyBand::X,
+            FrequencyBand::Ku,
+            FrequencyBand::K,
+            FrequencyBand::Ka,
+            FrequencyBand::V,
+            FrequencyBand::W,
+            FrequencyBand::G,
+        ] {
+            let range = FrequencyRange::from(band);
+            assert!(range.min().to_hertz() < range.max().to_hertz());
+            let midpoint =
+                Frequency::hertz((range.min().to_hertz() + range.max().to_hertz()) / 2.0);
+            assert!(range.contains(midpoint));
+            assert_eq!(midpoint.band(), Some(band));
+        }
+    }
+
+    #[test]
+    fn test_error_displays() {
+        let err = FrequencyRange::new(Frequency::hertz(-1.0), 29.0.ghz()).unwrap_err();
+        assert!(err.to_string().contains("finite and positive"));
+        let err = FrequencyRange::new(31.0.ghz(), 27.0.ghz()).unwrap_err();
+        assert!(err.to_string().contains("empty"));
+        let err =
+            FrequencyRange::from_wavelengths(Distance::meters(-1.0), Distance::meters(1565e-9))
+                .unwrap_err();
+        assert!(err.to_string().contains("wavelength"));
+    }
+
+    #[test]
     fn test_display_rf_and_optical() {
         assert_eq!(ka_uplink().to_string(), "27.500–31.000 GHz");
         let uhf =

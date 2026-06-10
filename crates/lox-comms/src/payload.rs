@@ -1652,6 +1652,184 @@ mod tests {
         assert!(GtModel::new("small terminal", ka_band(), Decibel::new(-5.0)).is_ok());
     }
 
+    #[test]
+    fn test_display_covers_all_terminal_shapes() {
+        let mut payload = CommsPayload::new();
+        let antenna = payload.add_antenna(
+            "dish",
+            Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
+        );
+        let transmitter = payload.add_transmitter(
+            "pa",
+            AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
+        );
+        let receiver = payload.add_receiver(
+            "lnb",
+            Receiver::NoiseTemperature(
+                NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
+            ),
+        );
+        let tx_port = payload
+            .add_tx_port(
+                TxPort::builder("tx leg", antenna, transmitter)
+                    .feed_loss(1.0.db())
+                    .band(ka_band())
+                    .build()
+                    .unwrap(),
+            )
+            .unwrap();
+        let rx_port = payload
+            .add_rx_port(
+                RxPort::builder("rx leg", antenna, receiver)
+                    .antenna_noise_temperature(Temperature::kelvin(60.0))
+                    .build()
+                    .unwrap(),
+            )
+            .unwrap();
+        let eirp = payload.add_eirp_model(EirpModel::new("eirp", ka_band(), 55.0.db()).unwrap());
+        let gt = payload.add_gt_model(GtModel::new("gt", ka_band(), 3.01.db()).unwrap());
+
+        payload
+            .add_tx_terminal("tx only", TxChain::Component(tx_port))
+            .unwrap();
+        payload
+            .add_rx_terminal("rx only", RxChain::Component(rx_port))
+            .unwrap();
+        payload
+            .add_tx_terminal("lumped tx", TxChain::Lumped(eirp))
+            .unwrap();
+        payload
+            .add_rx_terminal("lumped rx", RxChain::Lumped(gt))
+            .unwrap();
+        payload
+            .add_transceiver_terminal(
+                "both",
+                TxChain::Component(tx_port),
+                RxChain::Component(rx_port),
+            )
+            .unwrap();
+
+        let rendered = payload.to_string();
+        for needle in [
+            "tx only",
+            "rx only",
+            "lumped tx",
+            "lumped rx",
+            "both",
+            "dish",
+            "pa",
+            "lnb",
+            "55 dBW",
+            "3.01 dB/K",
+            "T_ant 60 K",
+            "(transceiver)",
+            "(tx)",
+            "(rx)",
+        ] {
+            assert!(
+                rendered.contains(needle),
+                "missing {needle:?} in:\n{rendered}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_accessors_and_error_displays() {
+        let mut payload = CommsPayload::new();
+        let antenna = payload.add_antenna(
+            "dish",
+            Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
+        );
+        assert_eq!(payload.find_antenna("dish"), Some(antenna));
+        assert_eq!(payload.find_antenna("nope"), None);
+        assert_eq!(payload.antenna(antenna).unwrap().name, "dish");
+
+        let eirp_model = EirpModel::new("eirp", ka_band(), 55.0.db()).unwrap();
+        assert_eq!(eirp_model.name(), "eirp");
+        assert!(eirp_model.band().contains(29.0.ghz()));
+        assert_approx_eq!(eirp_model.eirp().as_f64(), 55.0, atol <= 1e-15);
+        let gt_model = GtModel::new("gt", ka_band(), 3.01.db()).unwrap();
+        assert_eq!(gt_model.name(), "gt");
+        assert!(gt_model.band().contains(29.0.ghz()));
+        assert_approx_eq!(gt_model.gt().as_f64(), 3.01, atol <= 1e-15);
+
+        let transmitter = payload.add_transmitter(
+            "pa",
+            AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
+        );
+        let port = TxPort::builder("leg", antenna, transmitter)
+            .band(ka_band())
+            .build()
+            .unwrap();
+        assert_eq!(port.name(), "leg");
+        assert_eq!(port.antenna(), antenna);
+        assert_eq!(port.transmitter(), transmitter);
+        assert!(port.band().unwrap().contains(29.0.ghz()));
+
+        for (error, needle) in [
+            (
+                PayloadError::UnknownAntenna(AntennaId::default()),
+                "unknown antenna",
+            ),
+            (
+                PayloadError::UnknownTransmitter(TransmitterId::default()),
+                "unknown transmitter",
+            ),
+            (
+                PayloadError::UnknownReceiver(ReceiverId::default()),
+                "unknown receiver",
+            ),
+            (
+                PayloadError::UnknownEirpModel(EirpModelId::default()),
+                "EIRP model",
+            ),
+            (
+                PayloadError::UnknownGtModel(GtModelId::default()),
+                "G/T model",
+            ),
+            (PayloadError::UnknownTxPort(TxPortId::default()), "TX port"),
+            (PayloadError::UnknownRxPort(RxPortId::default()), "RX port"),
+        ] {
+            assert!(error.to_string().contains(needle));
+        }
+    }
+
+    #[test]
+    fn test_single_terminal_builder_defaults() {
+        let (payload, terminal) = CommsPayload::transmitter_only(
+            "tx",
+            Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
+            AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
+        )
+        .build()
+        .unwrap();
+        assert!(payload.terminal(terminal).is_some());
+
+        let (payload, terminal) = CommsPayload::receiver_only(
+            "rx",
+            Antenna::Constant(ConstantAntenna::new(30.0.db()).unwrap()),
+            NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
+        )
+        .feed_loss(0.3.db())
+        .antenna_noise_temperature(Temperature::kelvin(60.0))
+        .band(ka_band())
+        .build()
+        .unwrap();
+        assert!(payload.terminal(terminal).is_some());
+
+        // Validation propagates from the port construction.
+        assert!(
+            CommsPayload::transmitter_only(
+                "tx",
+                Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
+                AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
+            )
+            .feed_loss((-1.0).db())
+            .build()
+            .is_err()
+        );
+    }
+
     #[cfg(feature = "serde")]
     #[test]
     fn test_payload_serde_rejects_invalid_inventory() {
