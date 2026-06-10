@@ -37,6 +37,24 @@ pub enum AntennaPattern {
     Dipole(DipolePattern),
 }
 
+impl From<ParabolicPattern> for AntennaPattern {
+    fn from(pattern: ParabolicPattern) -> Self {
+        AntennaPattern::Parabolic(pattern)
+    }
+}
+
+impl From<GaussianPattern> for AntennaPattern {
+    fn from(pattern: GaussianPattern) -> Self {
+        AntennaPattern::Gaussian(pattern)
+    }
+}
+
+impl From<DipolePattern> for AntennaPattern {
+    fn from(pattern: DipolePattern) -> Self {
+        AntennaPattern::Dipole(pattern)
+    }
+}
+
 impl AntennaGain for AntennaPattern {
     fn gain(&self, frequency: Frequency, theta: Angle, phi: Angle) -> Decibel {
         match self {

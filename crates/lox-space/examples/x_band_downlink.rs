@@ -19,11 +19,10 @@
 
 use std::error::Error;
 
-use lox_space::comms::antenna::{Antenna, AntennaFrame, PatternedAntenna};
+use lox_space::comms::antenna::Antenna;
 use lox_space::comms::band::FrequencyRange;
 use lox_space::comms::channel::{Channel, LinkDirection, Modulation};
 use lox_space::comms::link_budget::{EnvironmentalLosses, LinkStats};
-use lox_space::comms::pattern::{AntennaPattern, ParabolicPattern};
 use lox_space::comms::payload::{CommsPayload, Terminal, TerminalRole, TxChain, TxPort};
 use lox_space::comms::pfd::{PfdMask, power_flux_density};
 use lox_space::comms::pointing::Pointing;
@@ -55,13 +54,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // endpoints that link analysis addresses.
     // ------------------------------------------------------------------
     let mut spacecraft = CommsPayload::new();
-    let dish = spacecraft.add_antenna(
-        "payload dish",
-        Antenna::Patterned(PatternedAntenna {
-            pattern: AntennaPattern::Parabolic(ParabolicPattern::new(0.25.m(), 0.6)?),
-            frame: AntennaFrame::identity(),
-        }),
-    );
+    let dish = spacecraft.add_antenna("payload dish", Antenna::parabolic(0.25.m(), 0.6)?);
     let amplifier = spacecraft.add_transmitter(
         "x-band sspa",
         AmplifierTransmitter::new(eess_band, 2.0.w(), 0.5.db())?,
@@ -94,10 +87,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     )?;
     let (ground_station, station_terminal) = CommsPayload::receiver_only(
         "3.7m station",
-        Antenna::Patterned(PatternedAntenna {
-            pattern: AntennaPattern::Parabolic(ParabolicPattern::new(3.7.m(), 0.6)?),
-            frame: AntennaFrame::identity(),
-        }),
+        Antenna::parabolic(3.7.m(), 0.6)?,
         Receiver::Cascade(front_end),
         0.3.db(),
         60.0.k(),

@@ -5,10 +5,10 @@
 //! Antenna types and the [`AntennaGain`] trait.
 
 use lox_core::glam::DVec3;
-use lox_core::units::{Angle, Decibel, Frequency};
+use lox_core::units::{Angle, Decibel, Distance, Frequency};
 use thiserror::Error;
 
-use crate::pattern::AntennaPattern;
+use crate::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
 
 /// Right-handed antenna coordinate frame expressed in a parent frame.
 ///
@@ -264,6 +264,22 @@ pub struct PatternedAntenna {
     pub frame: AntennaFrame,
 }
 
+impl PatternedAntenna {
+    /// Creates a patterned antenna with an identity frame.
+    pub fn new(pattern: impl Into<AntennaPattern>) -> Self {
+        Self {
+            pattern: pattern.into(),
+            frame: AntennaFrame::identity(),
+        }
+    }
+
+    /// Sets the orientation of the antenna pattern in its parent frame.
+    pub fn with_frame(mut self, frame: AntennaFrame) -> Self {
+        self.frame = frame;
+        self
+    }
+}
+
 impl AntennaGain for PatternedAntenna {
     fn gain(&self, frequency: Frequency, theta: Angle, phi: Angle) -> Decibel {
         self.pattern.gain(frequency, theta, phi)
@@ -299,6 +315,57 @@ pub enum Antenna {
     Constant(ConstantAntenna),
     /// Pattern-based antenna with antenna frame.
     Patterned(PatternedAntenna),
+}
+
+impl From<ConstantAntenna> for Antenna {
+    fn from(antenna: ConstantAntenna) -> Self {
+        Antenna::Constant(antenna)
+    }
+}
+
+impl From<PatternedAntenna> for Antenna {
+    fn from(antenna: PatternedAntenna) -> Self {
+        Antenna::Patterned(antenna)
+    }
+}
+
+impl Antenna {
+    /// Creates a constant-gain antenna.
+    ///
+    /// Rejects a non-finite gain.
+    pub fn constant(gain: Decibel) -> Result<Self, crate::error::NonPhysicalError> {
+        Ok(ConstantAntenna::new(gain)?.into())
+    }
+
+    /// Creates a parabolic-dish antenna with an identity frame.
+    ///
+    /// Rejects a non-finite or non-positive diameter and an aperture
+    /// efficiency outside (0, 1]. Use
+    /// [`PatternedAntenna::with_frame`] to orient the pattern.
+    pub fn parabolic(
+        diameter: Distance,
+        efficiency: f64,
+    ) -> Result<Self, crate::error::NonPhysicalError> {
+        Ok(PatternedAntenna::new(ParabolicPattern::new(diameter, efficiency)?).into())
+    }
+
+    /// Creates a Gaussian-pattern antenna with an identity frame.
+    ///
+    /// Rejects a non-finite or non-positive diameter and an aperture
+    /// efficiency outside (0, 1].
+    pub fn gaussian(
+        diameter: Distance,
+        efficiency: f64,
+    ) -> Result<Self, crate::error::NonPhysicalError> {
+        Ok(PatternedAntenna::new(GaussianPattern::new(diameter, efficiency)?).into())
+    }
+
+    /// Creates a dipole antenna with an identity frame.
+    ///
+    /// Rejects a non-finite or non-positive length.
+    pub fn dipole(length: Distance) -> Result<Self, crate::error::NonPhysicalError> {
+        Ok(PatternedAntenna::new(DipolePattern::new(length)?).into())
+    }
 }
 
 impl AntennaGain for Antenna {
@@ -545,6 +612,30 @@ mod tests {
 
         assert!(matches!(err, AntennaFrameError::InvalidDirection(_)));
         assert!(err.to_string().contains("invalid direction"));
+    }
+
+    #[test]
+    fn test_antenna_smart_constructors() {
+        // One-liners replace the nested enum/struct construction.
+        let dish = Antenna::parabolic(Distance::meters(0.98), 0.45).unwrap();
+        assert!(matches!(dish, Antenna::Patterned(_)));
+        let constant = Antenna::constant(46.0.db()).unwrap();
+        assert!(matches!(constant, Antenna::Constant(_)));
+        assert!(Antenna::gaussian(Distance::meters(0.98), 0.45).is_ok());
+        assert!(Antenna::dipole(Distance::meters(0.0185)).is_ok());
+        // Validation flows through unchanged.
+        assert!(Antenna::parabolic(Distance::meters(-1.0), 0.45).is_err());
+
+        // Oriented patterns: builder + From conversions.
+        let frame = AntennaFrame::from_boresight_and_reference(DVec3::X, DVec3::Z).unwrap();
+        let oriented: Antenna =
+            PatternedAntenna::new(ParabolicPattern::new(Distance::meters(0.98), 0.45).unwrap())
+                .with_frame(frame)
+                .into();
+        let Antenna::Patterned(antenna) = oriented else {
+            panic!("expected patterned antenna");
+        };
+        assert_eq!(antenna.frame, frame);
     }
 
     #[test]
