@@ -24,7 +24,7 @@ pub fn free_space_path_loss(distance: Distance, frequency: Frequency) -> Decibel
 ///
 /// d = √(Re²·sin²(el) + 2·Re·h + h²) − Re·sin(el)
 pub fn slant_range(elevation: Angle, earth_radius: Distance, altitude: Distance) -> Distance {
-    let el = elevation.as_f64();
+    let el = elevation.to_radians();
     let re = earth_radius.to_meters();
     let h = altitude.to_meters();
     let sin_el = el.sin();
