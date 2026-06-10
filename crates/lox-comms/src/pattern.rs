@@ -12,6 +12,13 @@ pub mod dipole;
 pub mod gaussian;
 pub mod parabolic;
 
+/// Floor for pattern gain values in linear representation (~−120 dB).
+///
+/// Applied by all analytic patterns so that off-pattern directions produce a
+/// large-but-finite loss instead of −∞ dB, which would poison downstream
+/// link-budget arithmetic.
+pub(crate) const GAIN_FLOOR_LINEAR: f64 = 1e-12;
+
 pub use dipole::DipolePattern;
 pub use gaussian::GaussianPattern;
 pub use parabolic::ParabolicPattern;
