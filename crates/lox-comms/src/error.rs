@@ -10,6 +10,42 @@ use thiserror::Error;
 use crate::antenna::AntennaFrameError;
 use crate::band::FrequencyRange;
 
+/// A physical quantity is outside its valid domain.
+#[derive(Debug, Clone, PartialEq, Error)]
+#[error("non-physical {quantity}: {value}")]
+pub struct NonPhysicalError {
+    /// Name of the offending quantity.
+    pub quantity: &'static str,
+    /// The rejected value.
+    pub value: f64,
+}
+
+impl NonPhysicalError {
+    /// Validates that a quantity is finite.
+    pub(crate) fn check_finite(quantity: &'static str, value: f64) -> Result<(), Self> {
+        if !value.is_finite() {
+            return Err(Self { quantity, value });
+        }
+        Ok(())
+    }
+
+    /// Validates that a quantity is finite and strictly positive.
+    pub(crate) fn check_positive(quantity: &'static str, value: f64) -> Result<(), Self> {
+        if !value.is_finite() || value <= 0.0 {
+            return Err(Self { quantity, value });
+        }
+        Ok(())
+    }
+
+    /// Validates that a quantity is finite and non-negative.
+    pub(crate) fn check_non_negative(quantity: &'static str, value: f64) -> Result<(), Self> {
+        if !value.is_finite() || value < 0.0 {
+            return Err(Self { quantity, value });
+        }
+        Ok(())
+    }
+}
+
 /// Errors that can arise when computing a link budget.
 #[derive(Debug, Clone, PartialEq, Error)]
 #[non_exhaustive]
@@ -21,13 +57,8 @@ pub enum LinkBudgetError {
     #[error("invalid pointing: {0}")]
     InvalidPointing(#[from] AntennaFrameError),
     /// A physical quantity is outside its valid domain.
-    #[error("non-physical {quantity}: {value}")]
-    NonPhysical {
-        /// Name of the offending quantity.
-        quantity: &'static str,
-        /// The rejected value.
-        value: f64,
-    },
+    #[error(transparent)]
+    NonPhysical(#[from] NonPhysicalError),
     /// The carrier frequency lies outside an endpoint's supported range.
     #[error("carrier {} Hz outside the supported range {band} of endpoint '{endpoint}'", carrier.to_hertz())]
     CarrierOutOfBand {

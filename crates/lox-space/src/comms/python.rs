@@ -616,10 +616,7 @@ fn build_antenna(obj: &Bound<'_, PyAny>) -> PyResult<Antenna> {
 
 fn build_receiver(obj: &Bound<'_, PyAny>) -> PyResult<Receiver> {
     if let Ok(r) = obj.extract::<PyRef<'_, PyNoiseTempReceiver>>() {
-        Ok(Receiver::NoiseTemperature(NoiseTempReceiver {
-            band: r.0.band,
-            noise_temperature: r.0.noise_temperature,
-        }))
+        Ok(Receiver::NoiseTemperature(r.0.clone()))
     } else if let Ok(r) = obj.extract::<PyRef<'_, PyCascadeReceiver>>() {
         Ok(Receiver::Cascade(r.0.clone()))
     } else {
@@ -654,52 +651,58 @@ pub struct PyAmplifierTransmitter(pub AmplifierTransmitter);
 impl PyAmplifierTransmitter {
     #[new]
     #[pyo3(signature = (band, power, output_back_off=None))]
-    fn new(band: PyFrequencyRange, power: PyPower, output_back_off: Option<PyDecibel>) -> Self {
-        Self(AmplifierTransmitter::new(
+    fn new(
+        band: PyFrequencyRange,
+        power: PyPower,
+        output_back_off: Option<PyDecibel>,
+    ) -> PyResult<Self> {
+        AmplifierTransmitter::new(
             band.0,
             f64::from(power.0),
             output_back_off.map_or(Decibel::new(0.0), |d| d.0),
-        ))
+        )
+        .map(Self)
+        .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Supported frequency range.
     #[getter]
     fn band(&self) -> PyFrequencyRange {
-        PyFrequencyRange(self.0.band)
+        PyFrequencyRange(self.0.band())
     }
 
     /// Transmit power.
     #[getter]
     fn power(&self) -> PyPower {
-        PyPower::new(self.0.power_w)
+        PyPower::new(self.0.power_w())
     }
 
     /// Output back-off.
     #[getter]
     fn output_back_off(&self) -> PyDecibel {
-        PyDecibel(self.0.output_back_off)
+        PyDecibel(self.0.output_back_off())
     }
 
     fn __eq__(&self, other: &PyAmplifierTransmitter) -> bool {
-        self.0.band == other.0.band
-            && self.0.power_w == other.0.power_w
-            && self.0.output_back_off.as_f64() == other.0.output_back_off.as_f64()
+        self.0.band() == other.0.band()
+            && self.0.power_w() == other.0.power_w()
+            && self.0.output_back_off().as_f64() == other.0.output_back_off().as_f64()
     }
 
     fn __getnewargs__(&self) -> (PyFrequencyRange, PyPower, Option<PyDecibel>) {
         (
-            PyFrequencyRange(self.0.band),
-            PyPower::new(self.0.power_w),
-            Some(PyDecibel(self.0.output_back_off)),
+            PyFrequencyRange(self.0.band()),
+            PyPower::new(self.0.power_w()),
+            Some(PyDecibel(self.0.output_back_off())),
         )
     }
 
     fn __repr__(&self) -> String {
         format!(
             "AmplifierTransmitter(band={}, power={}, output_back_off={})",
-            PyFrequencyRange(self.0.band).__repr__(),
-            PyPower::new(self.0.power_w).__repr__(),
-            PyDecibel(self.0.output_back_off).__repr__(),
+            PyFrequencyRange(self.0.band()).__repr__(),
+            PyPower::new(self.0.power_w()).__repr__(),
+            PyDecibel(self.0.output_back_off()).__repr__(),
         )
     }
 }
@@ -723,41 +726,40 @@ pub struct PyNoiseTempReceiver(pub NoiseTempReceiver);
 #[pymethods]
 impl PyNoiseTempReceiver {
     #[new]
-    fn new(band: PyFrequencyRange, noise_temperature: PyTemperature) -> Self {
-        Self(NoiseTempReceiver {
-            band: band.0,
-            noise_temperature: f64::from(noise_temperature.0),
-        })
+    fn new(band: PyFrequencyRange, noise_temperature: PyTemperature) -> PyResult<Self> {
+        NoiseTempReceiver::new(band.0, f64::from(noise_temperature.0))
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Supported frequency range.
     #[getter]
     fn band(&self) -> PyFrequencyRange {
-        PyFrequencyRange(self.0.band)
+        PyFrequencyRange(self.0.band())
     }
 
     /// System noise temperature.
     #[getter]
     fn noise_temperature(&self) -> PyTemperature {
-        PyTemperature::new(self.0.noise_temperature)
+        PyTemperature::new(self.0.noise_temperature())
     }
 
     fn __eq__(&self, other: &PyNoiseTempReceiver) -> bool {
-        self.0.band == other.0.band && self.0.noise_temperature == other.0.noise_temperature
+        self.0.band() == other.0.band() && self.0.noise_temperature() == other.0.noise_temperature()
     }
 
     fn __getnewargs__(&self) -> (PyFrequencyRange, PyTemperature) {
         (
-            PyFrequencyRange(self.0.band),
-            PyTemperature::new(self.0.noise_temperature),
+            PyFrequencyRange(self.0.band()),
+            PyTemperature::new(self.0.noise_temperature()),
         )
     }
 
     fn __repr__(&self) -> String {
         format!(
             "NoiseTempReceiver(band={}, noise_temperature={})",
-            PyFrequencyRange(self.0.band).__repr__(),
-            PyTemperature::new(self.0.noise_temperature).__repr__(),
+            PyFrequencyRange(self.0.band()).__repr__(),
+            PyTemperature::new(self.0.noise_temperature()).__repr__(),
         )
     }
 }
@@ -776,25 +778,24 @@ pub struct PyNoiseStage(pub NoiseStage);
 #[pymethods]
 impl PyNoiseStage {
     #[new]
-    fn new(gain: PyDecibel, noise_temperature: PyTemperature) -> Self {
-        Self(NoiseStage {
-            gain: gain.0,
-            noise_temperature: f64::from(noise_temperature.0),
-        })
+    fn new(gain: PyDecibel, noise_temperature: PyTemperature) -> PyResult<Self> {
+        NoiseStage::new(gain.0, f64::from(noise_temperature.0))
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     fn __getnewargs__(&self) -> (PyDecibel, PyTemperature) {
         (
-            PyDecibel(self.0.gain),
-            PyTemperature::new(self.0.noise_temperature),
+            PyDecibel(self.0.gain()),
+            PyTemperature::new(self.0.noise_temperature()),
         )
     }
 
     fn __repr__(&self) -> String {
         format!(
             "NoiseStage(gain={}, noise_temperature={})",
-            PyDecibel(self.0.gain).__repr__(),
-            PyTemperature::new(self.0.noise_temperature).__repr__(),
+            PyDecibel(self.0.gain()).__repr__(),
+            PyTemperature::new(self.0.noise_temperature()).__repr__(),
         )
     }
 }
@@ -821,13 +822,15 @@ impl PyCascadeReceiver {
         stages: Vec<PyNoiseStage>,
         demodulator_loss: Option<PyDecibel>,
         implementation_loss: Option<PyDecibel>,
-    ) -> Self {
-        Self(CascadeReceiver {
-            band: band.0,
-            stages: stages.into_iter().map(|s| s.0).collect(),
-            demodulator_loss: demodulator_loss.map_or(Decibel::new(0.0), |d| d.0),
-            implementation_loss: implementation_loss.map_or(Decibel::new(0.0), |d| d.0),
-        })
+    ) -> PyResult<Self> {
+        CascadeReceiver::new(
+            band.0,
+            stages.into_iter().map(|s| s.0).collect(),
+            demodulator_loss.map_or(Decibel::new(0.0), |d| d.0),
+            implementation_loss.map_or(Decibel::new(0.0), |d| d.0),
+        )
+        .map(Self)
+        .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Creates a two-stage model: LNA → receiver (from noise figure).
@@ -840,15 +843,17 @@ impl PyCascadeReceiver {
         receiver_noise_figure: PyDecibel,
         demodulator_loss: Option<PyDecibel>,
         implementation_loss: Option<PyDecibel>,
-    ) -> Self {
-        Self(CascadeReceiver::from_lna_and_noise_figure(
+    ) -> PyResult<Self> {
+        CascadeReceiver::from_lna_and_noise_figure(
             band.0,
             lna_gain.0,
             f64::from(lna_noise_temperature.0),
             receiver_noise_figure.0,
             demodulator_loss.map_or(Decibel::new(0.0), |d| d.0),
             implementation_loss.map_or(Decibel::new(0.0), |d| d.0),
-        ))
+        )
+        .map(Self)
+        .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Returns the chain's equivalent noise temperature referred to its
@@ -865,22 +870,23 @@ impl PyCascadeReceiver {
     /// Supported frequency range.
     #[getter]
     fn band(&self) -> PyFrequencyRange {
-        PyFrequencyRange(self.0.band)
+        PyFrequencyRange(self.0.band())
     }
 
     fn __eq__(&self, other: &PyCascadeReceiver) -> bool {
-        self.0.band == other.0.band
-            && self.0.stages.len() == other.0.stages.len()
+        self.0.band() == other.0.band()
+            && self.0.stages().len() == other.0.stages().len()
             && self
                 .0
-                .stages
+                .stages()
                 .iter()
-                .zip(other.0.stages.iter())
+                .zip(other.0.stages().iter())
                 .all(|(a, b)| {
-                    a.gain.as_f64() == b.gain.as_f64() && a.noise_temperature == b.noise_temperature
+                    a.gain().as_f64() == b.gain().as_f64()
+                        && a.noise_temperature() == b.noise_temperature()
                 })
-            && self.0.demodulator_loss.as_f64() == other.0.demodulator_loss.as_f64()
-            && self.0.implementation_loss.as_f64() == other.0.implementation_loss.as_f64()
+            && self.0.demodulator_loss().as_f64() == other.0.demodulator_loss().as_f64()
+            && self.0.implementation_loss().as_f64() == other.0.implementation_loss().as_f64()
     }
 
     fn __getnewargs__(
@@ -892,36 +898,36 @@ impl PyCascadeReceiver {
         Option<PyDecibel>,
     ) {
         (
-            PyFrequencyRange(self.0.band),
+            PyFrequencyRange(self.0.band()),
             self.0
-                .stages
+                .stages()
                 .iter()
                 .map(|s| PyNoiseStage(s.clone()))
                 .collect(),
-            Some(PyDecibel(self.0.demodulator_loss)),
-            Some(PyDecibel(self.0.implementation_loss)),
+            Some(PyDecibel(self.0.demodulator_loss())),
+            Some(PyDecibel(self.0.implementation_loss())),
         )
     }
 
     fn __repr__(&self) -> String {
         let stages_repr: Vec<String> = self
             .0
-            .stages
+            .stages()
             .iter()
             .map(|s| {
                 format!(
                     "NoiseStage(gain={}, noise_temperature={})",
-                    PyDecibel(s.gain).__repr__(),
-                    PyTemperature::new(s.noise_temperature).__repr__(),
+                    PyDecibel(s.gain()).__repr__(),
+                    PyTemperature::new(s.noise_temperature()).__repr__(),
                 )
             })
             .collect();
         format!(
             "CascadeReceiver(band={}, stages=[{}], demodulator_loss={}, implementation_loss={})",
-            PyFrequencyRange(self.0.band).__repr__(),
+            PyFrequencyRange(self.0.band()).__repr__(),
             stages_repr.join(", "),
-            PyDecibel(self.0.demodulator_loss).__repr__(),
-            PyDecibel(self.0.implementation_loss).__repr__(),
+            PyDecibel(self.0.demodulator_loss()).__repr__(),
+            PyDecibel(self.0.implementation_loss()).__repr__(),
         )
     }
 }
@@ -1731,10 +1737,9 @@ impl PyCommsPayload {
         name: String,
         transmitter: PyAmplifierTransmitter,
     ) -> PyResult<PyTransmitterId> {
-        self.0
-            .add_transmitter(name, transmitter.0.clone())
-            .map(PyTransmitterId)
-            .map_err(|err| PyValueError::new_err(err.to_string()))
+        Ok(PyTransmitterId(
+            self.0.add_transmitter(name, transmitter.0.clone()),
+        ))
     }
 
     /// Adds a component-tier receiver (NoiseTempReceiver or CascadeReceiver)
@@ -1744,10 +1749,9 @@ impl PyCommsPayload {
         name: String,
         receiver: &Bound<'_, PyAny>,
     ) -> PyResult<PyReceiverId> {
-        self.0
-            .add_receiver(name, build_receiver_any(receiver)?)
-            .map(PyReceiverId)
-            .map_err(|err| PyValueError::new_err(err.to_string()))
+        Ok(PyReceiverId(
+            self.0.add_receiver(name, build_receiver_any(receiver)?),
+        ))
     }
 
     /// Adds a lumped EIRP model to the inventory.
@@ -1757,14 +1761,9 @@ impl PyCommsPayload {
         band: PyFrequencyRange,
         eirp: PyDecibel,
     ) -> PyResult<PyEirpModelId> {
-        self.0
-            .add_eirp_model(EirpModel {
-                name,
-                band: band.0,
-                eirp: eirp.0,
-            })
-            .map(PyEirpModelId)
-            .map_err(|err| PyValueError::new_err(err.to_string()))
+        let model = EirpModel::new(name, band.0, eirp.0)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        Ok(PyEirpModelId(self.0.add_eirp_model(model)))
     }
 
     /// Adds a lumped G/T model to the inventory.
@@ -1774,14 +1773,9 @@ impl PyCommsPayload {
         band: PyFrequencyRange,
         gt: PyDecibel,
     ) -> PyResult<PyGtModelId> {
-        self.0
-            .add_gt_model(GtModel {
-                name,
-                band: band.0,
-                gt: gt.0,
-            })
-            .map(PyGtModelId)
-            .map_err(|err| PyValueError::new_err(err.to_string()))
+        let model = GtModel::new(name, band.0, gt.0)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        Ok(PyGtModelId(self.0.add_gt_model(model)))
     }
 
     /// Adds a transmit port wiring an antenna to a transmitter.
@@ -1794,14 +1788,16 @@ impl PyCommsPayload {
         feed_loss: PyDecibel,
         band: Option<PyFrequencyRange>,
     ) -> PyResult<PyTxPortId> {
+        let port = TxPort::new(
+            name,
+            antenna.0,
+            transmitter.0,
+            feed_loss.0,
+            band.map(|b| b.0),
+        )
+        .map_err(|err| PyValueError::new_err(err.to_string()))?;
         self.0
-            .add_tx_port(TxPort {
-                name,
-                antenna: antenna.0,
-                transmitter: transmitter.0,
-                feed_loss: feed_loss.0,
-                band: band.map(|b| b.0),
-            })
+            .add_tx_port(port)
             .map(PyTxPortId)
             .map_err(|err| PyValueError::new_err(err.to_string()))
     }
@@ -1817,15 +1813,17 @@ impl PyCommsPayload {
         antenna_noise_temperature: PyTemperature,
         band: Option<PyFrequencyRange>,
     ) -> PyResult<PyRxPortId> {
+        let port = RxPort::new(
+            name,
+            antenna.0,
+            receiver.0,
+            feed_loss.0,
+            f64::from(antenna_noise_temperature.0),
+            band.map(|b| b.0),
+        )
+        .map_err(|err| PyValueError::new_err(err.to_string()))?;
         self.0
-            .add_rx_port(RxPort {
-                name,
-                antenna: antenna.0,
-                receiver: receiver.0,
-                feed_loss: feed_loss.0,
-                antenna_noise_temperature: f64::from(antenna_noise_temperature.0),
-                band: band.map(|b| b.0),
-            })
+            .add_rx_port(port)
             .map(PyRxPortId)
             .map_err(|err| PyValueError::new_err(err.to_string()))
     }
@@ -2057,12 +2055,9 @@ impl PyCommsPayload {
         band: PyFrequencyRange,
         eirp: PyDecibel,
     ) -> PyResult<(Self, PyTerminalId)> {
-        let (payload, terminal) = CommsPayload::eirp_only(EirpModel {
-            name,
-            band: band.0,
-            eirp: eirp.0,
-        })
-        .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        let model = EirpModel::new(name, band.0, eirp.0)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        let (payload, terminal) = CommsPayload::eirp_only(model);
         Ok((Self(payload), PyTerminalId(terminal)))
     }
 
@@ -2073,12 +2068,9 @@ impl PyCommsPayload {
         band: PyFrequencyRange,
         gt: PyDecibel,
     ) -> PyResult<(Self, PyTerminalId)> {
-        let (payload, terminal) = CommsPayload::gt_only(GtModel {
-            name,
-            band: band.0,
-            gt: gt.0,
-        })
-        .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        let model = GtModel::new(name, band.0, gt.0)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        let (payload, terminal) = CommsPayload::gt_only(model);
         Ok((Self(payload), PyTerminalId(terminal)))
     }
 

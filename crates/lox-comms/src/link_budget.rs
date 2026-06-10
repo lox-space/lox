@@ -8,6 +8,7 @@ use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 use crate::channel::{Channel, LinkDirection};
 use crate::endpoint::{RxEndpoint, TxEndpoint};
+use crate::error::NonPhysicalError;
 use crate::pointing::Pointing;
 use crate::utils::free_space_path_loss;
 use crate::{BOLTZMANN_CONSTANT, LinkBudgetError};
@@ -99,9 +100,7 @@ impl LinkStats {
             ("noise bandwidth [Hz]", bandwidth.to_hertz()),
             ("slant range [m]", range.to_meters()),
         ] {
-            if !value.is_finite() || value <= 0.0 {
-                return Err(LinkBudgetError::NonPhysical { quantity, value });
-            }
+            NonPhysicalError::check_positive(quantity, value)?;
         }
 
         for (band, endpoint) in [
@@ -192,12 +191,7 @@ impl ModulatedLinkStats {
         &self,
         interference_power_w: f64,
     ) -> Result<InterferenceStats, LinkBudgetError> {
-        if !interference_power_w.is_finite() || interference_power_w < 0.0 {
-            return Err(LinkBudgetError::NonPhysical {
-                quantity: "interference power [W]",
-                value: interference_power_w,
-            });
-        }
+        NonPhysicalError::check_non_negative("interference power [W]", interference_power_w)?;
         let noise_linear = self
             .link
             .noise_power
@@ -273,7 +267,7 @@ mod tests {
         let (tx_payload, tx_terminal) = CommsPayload::transmitter_only(
             "tx",
             Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
-            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()),
+            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
             1.0.db(),
             None,
         )
@@ -281,10 +275,7 @@ mod tests {
         let (rx_payload, rx_terminal) = CommsPayload::receiver_only(
             "rx",
             Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
-            Receiver::NoiseTemperature(NoiseTempReceiver {
-                band: ka_band(),
-                noise_temperature: 500.0,
-            }),
+            Receiver::NoiseTemperature(NoiseTempReceiver::new(ka_band(), 500.0).unwrap()),
             0.0.db(),
             0.0,
             None,
@@ -294,18 +285,10 @@ mod tests {
     }
 
     fn lumped_link() -> (CommsPayload, TerminalId, CommsPayload, TerminalId) {
-        let (tx_payload, tx_terminal) = CommsPayload::eirp_only(EirpModel {
-            name: "eirp".into(),
-            band: ka_band(),
-            eirp: 55.0.db(),
-        })
-        .unwrap();
-        let (rx_payload, rx_terminal) = CommsPayload::gt_only(GtModel {
-            name: "gt".into(),
-            band: ka_band(),
-            gt: 3.01.db(),
-        })
-        .unwrap();
+        let (tx_payload, tx_terminal) =
+            CommsPayload::eirp_only(EirpModel::new("eirp", ka_band(), 55.0.db()).unwrap());
+        let (rx_payload, rx_terminal) =
+            CommsPayload::gt_only(GtModel::new("gt", ka_band(), 3.01.db()).unwrap());
         (tx_payload, tx_terminal, rx_payload, rx_terminal)
     }
 
@@ -412,18 +395,16 @@ mod tests {
 
     #[test]
     fn test_for_link_rejects_carrier_out_of_band() {
-        let (tx_payload, tx_terminal) = CommsPayload::eirp_only(EirpModel {
-            name: "tx".into(),
-            band: ka_band(),
-            eirp: 55.0.db(),
-        })
-        .unwrap();
-        let (rx_payload, rx_terminal) = CommsPayload::gt_only(GtModel {
-            name: "rx".into(),
-            band: FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap(),
-            gt: 3.01.db(),
-        })
-        .unwrap();
+        let (tx_payload, tx_terminal) =
+            CommsPayload::eirp_only(EirpModel::new("tx", ka_band(), 55.0.db()).unwrap());
+        let (rx_payload, rx_terminal) = CommsPayload::gt_only(
+            GtModel::new(
+                "rx",
+                FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap(),
+                3.01.db(),
+            )
+            .unwrap(),
+        );
 
         // 29 GHz fits the TX band but not the RX band.
         let err = LinkStats::for_link(

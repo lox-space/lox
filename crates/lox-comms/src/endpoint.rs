@@ -99,17 +99,17 @@ impl CommsPayload {
                     .tx_port(port_id)
                     .ok_or(ResolveError::BrokenTxPort(port_id))?;
                 let transmitter = &self
-                    .transmitter(port.transmitter)
-                    .ok_or(ResolveError::BrokenTransmitter(port.transmitter))?
+                    .transmitter(port.transmitter())
+                    .ok_or(ResolveError::BrokenTransmitter(port.transmitter()))?
                     .value;
                 TxEndpointKind::Component {
                     antenna: &self
-                        .antenna(port.antenna)
-                        .ok_or(ResolveError::BrokenAntenna(port.antenna))?
+                        .antenna(port.antenna())
+                        .ok_or(ResolveError::BrokenAntenna(port.antenna()))?
                         .value,
                     transmitter,
-                    feed_loss: port.feed_loss,
-                    band: effective_band(transmitter.band, port.band, &terminal.name)?,
+                    feed_loss: port.feed_loss(),
+                    band: effective_band(transmitter.band(), port.band(), &terminal.name)?,
                 }
             }
             TxChain::Lumped(model_id) => TxEndpointKind::Lumped(
@@ -142,18 +142,18 @@ impl CommsPayload {
                     .rx_port(port_id)
                     .ok_or(ResolveError::BrokenRxPort(port_id))?;
                 let receiver = &self
-                    .receiver(port.receiver)
-                    .ok_or(ResolveError::BrokenReceiver(port.receiver))?
+                    .receiver(port.receiver())
+                    .ok_or(ResolveError::BrokenReceiver(port.receiver()))?
                     .value;
                 RxEndpointKind::Component {
                     antenna: &self
-                        .antenna(port.antenna)
-                        .ok_or(ResolveError::BrokenAntenna(port.antenna))?
+                        .antenna(port.antenna())
+                        .ok_or(ResolveError::BrokenAntenna(port.antenna()))?
                         .value,
                     receiver,
-                    feed_loss: port.feed_loss,
-                    antenna_noise_temperature: port.antenna_noise_temperature,
-                    band: effective_band(receiver.band(), port.band, &terminal.name)?,
+                    feed_loss: port.feed_loss(),
+                    antenna_noise_temperature: port.antenna_noise_temperature(),
+                    band: effective_band(receiver.band(), port.band(), &terminal.name)?,
                 }
             }
             RxChain::Lumped(model_id) => RxEndpointKind::Lumped(
@@ -183,7 +183,7 @@ impl<'a> TxEndpoint<'a> {
     pub fn band(&self) -> FrequencyRange {
         match &self.kind {
             TxEndpointKind::Component { band, .. } => *band,
-            TxEndpointKind::Lumped(model) => model.band,
+            TxEndpointKind::Lumped(model) => model.band(),
         }
     }
 
@@ -206,7 +206,7 @@ impl<'a> TxEndpoint<'a> {
         pointing: Pointing,
     ) -> Result<Decibel, LinkBudgetError> {
         match &self.kind {
-            TxEndpointKind::Lumped(model) => Ok(model.eirp),
+            TxEndpointKind::Lumped(model) => Ok(model.eirp()),
             TxEndpointKind::Component {
                 antenna,
                 transmitter,
@@ -215,8 +215,8 @@ impl<'a> TxEndpoint<'a> {
             } => {
                 let (theta, phi) = self.pattern_angles(pointing)?;
                 Ok(
-                    antenna.gain(carrier, theta, phi) + Decibel::from_linear(transmitter.power_w)
-                        - transmitter.output_back_off
+                    antenna.gain(carrier, theta, phi) + Decibel::from_linear(transmitter.power_w())
+                        - transmitter.output_back_off()
                         - *feed_loss,
                 )
             }
@@ -246,7 +246,7 @@ impl<'a> RxEndpoint<'a> {
     pub fn band(&self) -> FrequencyRange {
         match &self.kind {
             RxEndpointKind::Component { band, .. } => *band,
-            RxEndpointKind::Lumped(model) => model.band,
+            RxEndpointKind::Lumped(model) => model.band(),
         }
     }
 
@@ -278,7 +278,7 @@ impl<'a> RxEndpoint<'a> {
                 ..
             } => {
                 let chain_temperature = match receiver {
-                    Receiver::NoiseTemperature(rx) => rx.noise_temperature,
+                    Receiver::NoiseTemperature(rx) => rx.noise_temperature(),
                     Receiver::Cascade(rx) => rx.chain_noise_temperature(),
                 };
                 Some(flange_noise_temperature(
@@ -320,7 +320,7 @@ impl<'a> RxEndpoint<'a> {
         pointing: Pointing,
     ) -> Result<Decibel, LinkBudgetError> {
         match &self.kind {
-            RxEndpointKind::Lumped(model) => Ok(model.gt),
+            RxEndpointKind::Lumped(model) => Ok(model.gt()),
             RxEndpointKind::Component { .. } => {
                 let gain = self
                     .total_gain(carrier, pointing)?
@@ -356,9 +356,9 @@ impl<'a> RxEndpoint<'a> {
                 let gain = antenna.gain(carrier, theta, phi);
                 match receiver {
                     Receiver::NoiseTemperature(_) => Ok(Some(gain)),
-                    Receiver::Cascade(rx) => {
-                        Ok(Some(gain - rx.demodulator_loss - rx.implementation_loss))
-                    }
+                    Receiver::Cascade(rx) => Ok(Some(
+                        gain - rx.demodulator_loss() - rx.implementation_loss(),
+                    )),
                 }
             }
         }
@@ -484,36 +484,19 @@ mod tests {
             "rx antenna",
             Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
         );
-        let pa = payload
-            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
-            .unwrap();
-        let rx = payload
-            .add_receiver(
-                "receiver",
-                Receiver::NoiseTemperature(NoiseTempReceiver {
-                    band: ka_band(),
-                    noise_temperature: 500.0,
-                }),
-            )
-            .unwrap();
+        let pa = payload.add_transmitter(
+            "pa",
+            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+        );
+        let rx = payload.add_receiver(
+            "receiver",
+            Receiver::NoiseTemperature(NoiseTempReceiver::new(ka_band(), 500.0).unwrap()),
+        );
         let tx_port = payload
-            .add_tx_port(TxPort {
-                name: "tx feed".into(),
-                antenna: dish,
-                transmitter: pa,
-                feed_loss: 1.0.db(),
-                band: None,
-            })
+            .add_tx_port(TxPort::new("tx feed", dish, pa, 1.0.db(), None).unwrap())
             .unwrap();
         let rx_port = payload
-            .add_rx_port(RxPort {
-                name: "rx feed".into(),
-                antenna: rx_antenna,
-                receiver: rx,
-                feed_loss: 0.0.db(),
-                antenna_noise_temperature: 0.0,
-                band: None,
-            })
+            .add_rx_port(RxPort::new("rx feed", rx_antenna, rx, 0.0.db(), 0.0, None).unwrap())
             .unwrap();
         let terminal = payload
             .add_terminal(Terminal {
@@ -560,24 +543,12 @@ mod tests {
             "antenna",
             Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
         );
-        let rx = payload
-            .add_receiver(
-                "receiver",
-                Receiver::NoiseTemperature(NoiseTempReceiver {
-                    band: ka_band(),
-                    noise_temperature: 500.0,
-                }),
-            )
-            .unwrap();
+        let rx = payload.add_receiver(
+            "receiver",
+            Receiver::NoiseTemperature(NoiseTempReceiver::new(ka_band(), 500.0).unwrap()),
+        );
         let port = payload
-            .add_rx_port(RxPort {
-                name: "feed".into(),
-                antenna,
-                receiver: rx,
-                feed_loss: 3.0.db(),
-                antenna_noise_temperature: 150.0,
-                band: None,
-            })
+            .add_rx_port(RxPort::new("feed", antenna, rx, 3.0.db(), 150.0, None).unwrap())
             .unwrap();
         let terminal = payload
             .add_terminal(Terminal {
@@ -614,32 +585,21 @@ mod tests {
         // T_ant=265 K on the port, feed=3 dB on the port, chain: single stage
         // NF=5 dB / G=20 dB. Friis with the synthesized feed:
         // T_sys = T_ant + 290·(L−1) + T_rx/(1/L)
-        let chain = CascadeReceiver {
-            band: ka_band(),
-            stages: vec![NoiseStage {
-                gain: 20.0.db(),
-                noise_temperature: noise_figure_to_temperature(5.0.db()),
-            }],
-            demodulator_loss: 0.0.db(),
-            implementation_loss: 0.0.db(),
-        };
+        let chain = CascadeReceiver::new(
+            ka_band(),
+            vec![NoiseStage::new(20.0.db(), noise_figure_to_temperature(5.0.db())).unwrap()],
+            0.0.db(),
+            0.0.db(),
+        )
+        .unwrap();
         let mut payload = CommsPayload::new();
         let antenna = payload.add_antenna(
             "antenna",
             Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
         );
-        let rx = payload
-            .add_receiver("receiver", Receiver::Cascade(chain))
-            .unwrap();
+        let rx = payload.add_receiver("receiver", Receiver::Cascade(chain));
         let port = payload
-            .add_rx_port(RxPort {
-                name: "feed".into(),
-                antenna,
-                receiver: rx,
-                feed_loss: 3.0.db(),
-                antenna_noise_temperature: 265.0,
-                band: None,
-            })
+            .add_rx_port(RxPort::new("feed", antenna, rx, 3.0.db(), 265.0, None).unwrap())
             .unwrap();
         let terminal = payload
             .add_terminal(Terminal {
@@ -663,20 +623,8 @@ mod tests {
     #[test]
     fn test_lumped_endpoints_ignore_carrier_and_pointing() {
         let mut payload = CommsPayload::new();
-        let eirp = payload
-            .add_eirp_model(EirpModel {
-                name: "eirp".into(),
-                band: ka_band(),
-                eirp: 55.0.db(),
-            })
-            .unwrap();
-        let gt = payload
-            .add_gt_model(GtModel {
-                name: "gt".into(),
-                band: ka_band(),
-                gt: 3.01.db(),
-            })
-            .unwrap();
+        let eirp = payload.add_eirp_model(EirpModel::new("eirp", ka_band(), 55.0.db()).unwrap());
+        let gt = payload.add_gt_model(GtModel::new("gt", ka_band(), 3.01.db()).unwrap());
         let terminal = payload
             .add_terminal(Terminal {
                 name: "lumped".into(),
@@ -712,18 +660,13 @@ mod tests {
             "dish",
             Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
         );
-        let pa = payload
-            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
-            .unwrap();
+        let pa = payload.add_transmitter(
+            "pa",
+            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+        );
         let narrow = FrequencyRange::new(28.0.ghz(), 29.5.ghz()).unwrap();
         let port = payload
-            .add_tx_port(TxPort {
-                name: "feed".into(),
-                antenna: dish,
-                transmitter: pa,
-                feed_loss: 0.0.db(),
-                band: Some(narrow),
-            })
+            .add_tx_port(TxPort::new("feed", dish, pa, 0.0.db(), Some(narrow)).unwrap())
             .unwrap();
         let terminal = payload
             .add_terminal(Terminal {
@@ -743,18 +686,13 @@ mod tests {
             "dish",
             Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
         );
-        let pa = payload
-            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
-            .unwrap();
+        let pa = payload.add_transmitter(
+            "pa",
+            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+        );
         let disjoint = FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap();
         let port = payload
-            .add_tx_port(TxPort {
-                name: "feed".into(),
-                antenna: dish,
-                transmitter: pa,
-                feed_loss: 0.0.db(),
-                band: Some(disjoint),
-            })
+            .add_tx_port(TxPort::new("feed", dish, pa, 0.0.db(), Some(disjoint)).unwrap())
             .unwrap();
         let terminal = payload
             .add_terminal(Terminal {
@@ -771,13 +709,7 @@ mod tests {
     #[test]
     fn test_wrong_direction_terminal_is_error() {
         let mut payload = CommsPayload::new();
-        let gt = payload
-            .add_gt_model(GtModel {
-                name: "gt".into(),
-                band: ka_band(),
-                gt: 3.01.db(),
-            })
-            .unwrap();
+        let gt = payload.add_gt_model(GtModel::new("gt", ka_band(), 3.01.db()).unwrap());
         let rx_only = payload
             .add_terminal(Terminal {
                 name: "rx only".into(),

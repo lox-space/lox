@@ -23,6 +23,7 @@ use thiserror::Error;
 
 use crate::antenna::Antenna;
 use crate::band::FrequencyRange;
+use crate::error::NonPhysicalError;
 use crate::receiver::Receiver;
 use crate::transmitter::AmplifierTransmitter;
 
@@ -62,67 +63,343 @@ pub struct Named<T> {
 ///
 /// Inventory citizen of the lumped tier; the component tier uses
 /// [`AmplifierTransmitter`] wired to an antenna through a [`TxPort`].
+///
+/// Valid by construction: the EIRP figure is finite.
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "EirpModelRepr")
+)]
 pub struct EirpModel {
-    /// Display name.
-    pub name: String,
-    /// Frequency range over which the figure applies.
-    pub band: FrequencyRange,
-    /// Effective isotropic radiated power in dBW.
-    pub eirp: Decibel,
+    name: String,
+    band: FrequencyRange,
+    eirp: Decibel,
+}
+
+/// Serde wire format for [`EirpModel`]: forces deserialization through the
+/// validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct EirpModelRepr {
+    name: String,
+    band: FrequencyRange,
+    eirp: Decibel,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<EirpModelRepr> for EirpModel {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: EirpModelRepr) -> Result<Self, Self::Error> {
+        EirpModel::new(repr.name, repr.band, repr.eirp)
+    }
+}
+
+impl EirpModel {
+    /// Creates a new lumped EIRP model.
+    ///
+    /// Rejects a non-finite EIRP figure (negative dBW values are valid).
+    pub fn new(
+        name: impl Into<String>,
+        band: FrequencyRange,
+        eirp: Decibel,
+    ) -> Result<Self, NonPhysicalError> {
+        NonPhysicalError::check_finite("EIRP [dBW]", eirp.as_f64())?;
+        Ok(Self {
+            name: name.into(),
+            band,
+            eirp,
+        })
+    }
+
+    /// Returns the display name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Returns the frequency range over which the figure applies.
+    pub fn band(&self) -> FrequencyRange {
+        self.band
+    }
+
+    /// Returns the effective isotropic radiated power in dBW.
+    pub fn eirp(&self) -> Decibel {
+        self.eirp
+    }
 }
 
 /// Lumped receiver model: an aggregate G/T figure over a band.
+///
+/// Valid by construction: the G/T figure is finite.
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "GtModelRepr")
+)]
 pub struct GtModel {
-    /// Display name.
-    pub name: String,
-    /// Frequency range over which the figure applies.
-    pub band: FrequencyRange,
-    /// Gain-to-noise-temperature ratio in dB/K.
-    pub gt: Decibel,
+    name: String,
+    band: FrequencyRange,
+    gt: Decibel,
+}
+
+/// Serde wire format for [`GtModel`]: forces deserialization through the
+/// validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct GtModelRepr {
+    name: String,
+    band: FrequencyRange,
+    gt: Decibel,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<GtModelRepr> for GtModel {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: GtModelRepr) -> Result<Self, Self::Error> {
+        GtModel::new(repr.name, repr.band, repr.gt)
+    }
+}
+
+impl GtModel {
+    /// Creates a new lumped G/T model.
+    ///
+    /// Rejects a non-finite G/T figure (negative dB/K values are valid).
+    pub fn new(
+        name: impl Into<String>,
+        band: FrequencyRange,
+        gt: Decibel,
+    ) -> Result<Self, NonPhysicalError> {
+        NonPhysicalError::check_finite("G/T [dB/K]", gt.as_f64())?;
+        Ok(Self {
+            name: name.into(),
+            band,
+            gt,
+        })
+    }
+
+    /// Returns the display name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Returns the frequency range over which the figure applies.
+    pub fn band(&self) -> FrequencyRange {
+        self.band
+    }
+
+    /// Returns the gain-to-noise-temperature ratio in dB/K.
+    pub fn gt(&self) -> Decibel {
+        self.gt
+    }
 }
 
 /// One transmit signal path: an antenna fed by a transmitter.
 ///
 /// TX feed loss subtracts from EIRP. Multiple ports may reference the same
 /// antenna (diplexer) or the same transmitter (switchable antennas).
+///
+/// Valid by construction: the feed loss is finite and non-negative. Whether
+/// the referenced IDs exist is validated by [`CommsPayload::add_tx_port`].
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "TxPortRepr")
+)]
 pub struct TxPort {
-    /// Display name.
-    pub name: String,
-    /// The antenna this path radiates from.
-    pub antenna: AntennaId,
-    /// The transmitter driving this path.
-    pub transmitter: TransmitterId,
-    /// Feed loss between transmitter output and antenna (cable, diplexer leg).
-    pub feed_loss: Decibel,
-    /// Optional narrowing of the supported frequency range for this path.
-    pub band: Option<FrequencyRange>,
+    name: String,
+    antenna: AntennaId,
+    transmitter: TransmitterId,
+    feed_loss: Decibel,
+    band: Option<FrequencyRange>,
+}
+
+/// Serde wire format for [`TxPort`]: forces deserialization through the
+/// validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct TxPortRepr {
+    name: String,
+    antenna: AntennaId,
+    transmitter: TransmitterId,
+    feed_loss: Decibel,
+    band: Option<FrequencyRange>,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<TxPortRepr> for TxPort {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: TxPortRepr) -> Result<Self, Self::Error> {
+        TxPort::new(
+            repr.name,
+            repr.antenna,
+            repr.transmitter,
+            repr.feed_loss,
+            repr.band,
+        )
+    }
+}
+
+impl TxPort {
+    /// Creates a new transmit port.
+    ///
+    /// Rejects a non-finite or negative feed loss.
+    pub fn new(
+        name: impl Into<String>,
+        antenna: AntennaId,
+        transmitter: TransmitterId,
+        feed_loss: Decibel,
+        band: Option<FrequencyRange>,
+    ) -> Result<Self, NonPhysicalError> {
+        NonPhysicalError::check_non_negative("feed loss [dB]", feed_loss.as_f64())?;
+        Ok(Self {
+            name: name.into(),
+            antenna,
+            transmitter,
+            feed_loss,
+            band,
+        })
+    }
+
+    /// Returns the display name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Returns the antenna this path radiates from.
+    pub fn antenna(&self) -> AntennaId {
+        self.antenna
+    }
+
+    /// Returns the transmitter driving this path.
+    pub fn transmitter(&self) -> TransmitterId {
+        self.transmitter
+    }
+
+    /// Returns the feed loss between transmitter output and antenna.
+    pub fn feed_loss(&self) -> Decibel {
+        self.feed_loss
+    }
+
+    /// Returns the optional narrowing of the supported frequency range.
+    pub fn band(&self) -> Option<FrequencyRange> {
+        self.band
+    }
 }
 
 /// One receive signal path: a receiver fed by an antenna.
 ///
 /// RX feed loss is a noise contribution: link-budget setup synthesizes a
 /// passive 290 K attenuator stage from it ahead of the receiver chain.
+///
+/// Valid by construction: the feed loss and antenna noise temperature are
+/// finite and non-negative. Whether the referenced IDs exist is validated by
+/// [`CommsPayload::add_rx_port`].
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "RxPortRepr")
+)]
 pub struct RxPort {
-    /// Display name.
-    pub name: String,
-    /// The antenna this path receives from.
-    pub antenna: AntennaId,
-    /// The receiver terminating this path.
-    pub receiver: ReceiverId,
-    /// Feed loss between antenna and receiver input (cable, diplexer leg).
-    pub feed_loss: Decibel,
-    /// Clear-sky antenna noise temperature seen at this port, in Kelvin.
-    pub antenna_noise_temperature: Kelvin,
-    /// Optional narrowing of the supported frequency range for this path.
-    pub band: Option<FrequencyRange>,
+    name: String,
+    antenna: AntennaId,
+    receiver: ReceiverId,
+    feed_loss: Decibel,
+    antenna_noise_temperature: Kelvin,
+    band: Option<FrequencyRange>,
+}
+
+/// Serde wire format for [`RxPort`]: forces deserialization through the
+/// validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct RxPortRepr {
+    name: String,
+    antenna: AntennaId,
+    receiver: ReceiverId,
+    feed_loss: Decibel,
+    antenna_noise_temperature: Kelvin,
+    band: Option<FrequencyRange>,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<RxPortRepr> for RxPort {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: RxPortRepr) -> Result<Self, Self::Error> {
+        RxPort::new(
+            repr.name,
+            repr.antenna,
+            repr.receiver,
+            repr.feed_loss,
+            repr.antenna_noise_temperature,
+            repr.band,
+        )
+    }
+}
+
+impl RxPort {
+    /// Creates a new receive port.
+    ///
+    /// Rejects a non-finite or negative feed loss or antenna noise
+    /// temperature.
+    pub fn new(
+        name: impl Into<String>,
+        antenna: AntennaId,
+        receiver: ReceiverId,
+        feed_loss: Decibel,
+        antenna_noise_temperature: Kelvin,
+        band: Option<FrequencyRange>,
+    ) -> Result<Self, NonPhysicalError> {
+        NonPhysicalError::check_non_negative("feed loss [dB]", feed_loss.as_f64())?;
+        NonPhysicalError::check_non_negative(
+            "antenna noise temperature [K]",
+            antenna_noise_temperature,
+        )?;
+        Ok(Self {
+            name: name.into(),
+            antenna,
+            receiver,
+            feed_loss,
+            antenna_noise_temperature,
+            band,
+        })
+    }
+
+    /// Returns the display name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Returns the antenna this path receives from.
+    pub fn antenna(&self) -> AntennaId {
+        self.antenna
+    }
+
+    /// Returns the receiver terminating this path.
+    pub fn receiver(&self) -> ReceiverId {
+        self.receiver
+    }
+
+    /// Returns the feed loss between antenna and receiver input.
+    pub fn feed_loss(&self) -> Decibel {
+        self.feed_loss
+    }
+
+    /// Returns the clear-sky antenna noise temperature at this port, in Kelvin.
+    pub fn antenna_noise_temperature(&self) -> Kelvin {
+        self.antenna_noise_temperature
+    }
+
+    /// Returns the optional narrowing of the supported frequency range.
+    pub fn band(&self) -> Option<FrequencyRange> {
+        self.band
+    }
 }
 
 /// A transmit chain: a component-tier port or a lumped EIRP model.
@@ -253,14 +530,14 @@ impl CommsPayload {
         let name = name.into();
         let mut payload = Self::new();
         let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
-        let transmitter = payload.add_transmitter(format!("{name} transmitter"), transmitter)?;
-        let port = payload.add_tx_port(TxPort {
-            name: format!("{name} feed"),
+        let transmitter = payload.add_transmitter(format!("{name} transmitter"), transmitter);
+        let port = payload.add_tx_port(TxPort::new(
+            format!("{name} feed"),
             antenna,
             transmitter,
             feed_loss,
             band,
-        })?;
+        )?)?;
         let terminal = payload
             .add_terminal(Terminal {
                 name,
@@ -287,15 +564,15 @@ impl CommsPayload {
         let name = name.into();
         let mut payload = Self::new();
         let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
-        let receiver = payload.add_receiver(format!("{name} receiver"), receiver)?;
-        let port = payload.add_rx_port(RxPort {
-            name: format!("{name} feed"),
+        let receiver = payload.add_receiver(format!("{name} receiver"), receiver);
+        let port = payload.add_rx_port(RxPort::new(
+            format!("{name} feed"),
             antenna,
             receiver,
             feed_loss,
             antenna_noise_temperature,
             band,
-        })?;
+        )?)?;
         let terminal = payload
             .add_terminal(Terminal {
                 name,
@@ -325,23 +602,23 @@ impl CommsPayload {
         let name = name.into();
         let mut payload = Self::new();
         let antenna = payload.add_antenna(format!("{name} antenna"), antenna);
-        let transmitter = payload.add_transmitter(format!("{name} transmitter"), transmitter)?;
-        let receiver = payload.add_receiver(format!("{name} receiver"), receiver)?;
-        let tx_port = payload.add_tx_port(TxPort {
-            name: format!("{name} tx feed"),
+        let transmitter = payload.add_transmitter(format!("{name} transmitter"), transmitter);
+        let receiver = payload.add_receiver(format!("{name} receiver"), receiver);
+        let tx_port = payload.add_tx_port(TxPort::new(
+            format!("{name} tx feed"),
             antenna,
             transmitter,
-            feed_loss: tx_feed_loss,
+            tx_feed_loss,
             band,
-        })?;
-        let rx_port = payload.add_rx_port(RxPort {
-            name: format!("{name} rx feed"),
+        )?)?;
+        let rx_port = payload.add_rx_port(RxPort::new(
+            format!("{name} rx feed"),
             antenna,
             receiver,
-            feed_loss: rx_feed_loss,
+            rx_feed_loss,
             antenna_noise_temperature,
             band,
-        })?;
+        )?)?;
         let terminal = payload
             .add_terminal(Terminal {
                 name,
@@ -355,31 +632,31 @@ impl CommsPayload {
     }
 
     /// Creates a single-terminal payload from a lumped EIRP model.
-    pub fn eirp_only(model: EirpModel) -> Result<(Self, TerminalId), PayloadError> {
+    pub fn eirp_only(model: EirpModel) -> (Self, TerminalId) {
         let name = model.name.clone();
         let mut payload = Self::new();
-        let model = payload.add_eirp_model(model)?;
+        let model = payload.add_eirp_model(model);
         let terminal = payload
             .add_terminal(Terminal {
                 name,
                 role: TerminalRole::Tx(TxChain::Lumped(model)),
             })
             .expect("freshly inserted IDs are valid");
-        Ok((payload, terminal))
+        (payload, terminal)
     }
 
     /// Creates a single-terminal payload from a lumped G/T model.
-    pub fn gt_only(model: GtModel) -> Result<(Self, TerminalId), PayloadError> {
+    pub fn gt_only(model: GtModel) -> (Self, TerminalId) {
         let name = model.name.clone();
         let mut payload = Self::new();
-        let model = payload.add_gt_model(model)?;
+        let model = payload.add_gt_model(model);
         let terminal = payload
             .add_terminal(Terminal {
                 name,
                 role: TerminalRole::Rx(RxChain::Lumped(model)),
             })
             .expect("freshly inserted IDs are valid");
-        Ok((payload, terminal))
+        (payload, terminal)
     }
 
     /// Adds an antenna to the inventory.
@@ -398,69 +675,34 @@ impl CommsPayload {
         &mut self,
         name: impl Into<String>,
         transmitter: AmplifierTransmitter,
-    ) -> Result<TransmitterId, PayloadError> {
-        validate_transmitter(&transmitter)?;
-        Ok(self.transmitters.insert(Named {
+    ) -> TransmitterId {
+        self.transmitters.insert(Named {
             name: name.into(),
             value: transmitter,
-        }))
+        })
     }
 
     /// Adds a component-tier receiver to the inventory.
-    ///
-    /// Rejects non-physical parameters: noise temperatures must be finite
-    /// and non-negative (the equivalent noise temperature of a known-T_rx
-    /// receiver strictly positive), losses finite and non-negative, stage
-    /// gains finite.
-    pub fn add_receiver(
-        &mut self,
-        name: impl Into<String>,
-        receiver: Receiver,
-    ) -> Result<ReceiverId, PayloadError> {
-        match &receiver {
-            Receiver::NoiseTemperature(rx) => {
-                validate_positive("receiver noise temperature [K]", rx.noise_temperature)?;
-            }
-            Receiver::Cascade(rx) => {
-                for stage in &rx.stages {
-                    validate_non_negative("stage noise temperature [K]", stage.noise_temperature)?;
-                    if !stage.gain.as_f64().is_finite() {
-                        return Err(PayloadError::NonPhysical {
-                            quantity: "stage gain [dB]",
-                            value: stage.gain.as_f64(),
-                        });
-                    }
-                }
-                validate_non_negative("demodulator loss [dB]", rx.demodulator_loss.as_f64())?;
-                validate_non_negative("implementation loss [dB]", rx.implementation_loss.as_f64())?;
-            }
-        }
-        Ok(self.receivers.insert(Named {
+    pub fn add_receiver(&mut self, name: impl Into<String>, receiver: Receiver) -> ReceiverId {
+        self.receivers.insert(Named {
             name: name.into(),
             value: receiver,
-        }))
+        })
     }
 
     /// Adds a lumped EIRP model to the inventory.
-    ///
-    /// Rejects a non-finite EIRP figure (negative dBW values are valid).
-    pub fn add_eirp_model(&mut self, model: EirpModel) -> Result<EirpModelId, PayloadError> {
-        validate_eirp_model(&model)?;
-        Ok(self.eirp_models.insert(model))
+    pub fn add_eirp_model(&mut self, model: EirpModel) -> EirpModelId {
+        self.eirp_models.insert(model)
     }
 
     /// Adds a lumped G/T model to the inventory.
-    ///
-    /// Rejects a non-finite G/T figure (negative dB/K values are valid).
-    pub fn add_gt_model(&mut self, model: GtModel) -> Result<GtModelId, PayloadError> {
-        validate_gt_model(&model)?;
-        Ok(self.gt_models.insert(model))
+    pub fn add_gt_model(&mut self, model: GtModel) -> GtModelId {
+        self.gt_models.insert(model)
     }
 
     /// Adds a transmit port, validating that the referenced antenna and
     /// transmitter exist in this payload.
     pub fn add_tx_port(&mut self, port: TxPort) -> Result<TxPortId, PayloadError> {
-        validate_tx_port_values(&port)?;
         self.validate_tx_port_wiring(&port)?;
         Ok(self.tx_ports.insert(port))
     }
@@ -468,7 +710,6 @@ impl CommsPayload {
     /// Adds a receive port, validating that the referenced antenna and
     /// receiver exist in this payload.
     pub fn add_rx_port(&mut self, port: RxPort) -> Result<RxPortId, PayloadError> {
-        validate_rx_port_values(&port)?;
         self.validate_rx_port_wiring(&port)?;
         Ok(self.rx_ports.insert(port))
     }
@@ -487,30 +728,17 @@ impl CommsPayload {
         Ok(self.terminals.insert(terminal))
     }
 
-    /// Re-validates every inventory value and wiring invariant.
+    /// Re-validates the payload's wiring invariants.
     ///
-    /// Construction through the `add_*` methods maintains these invariants
-    /// incrementally; this checks the whole payload at once, e.g. after
-    /// deserialization.
+    /// Physical values are valid by construction of the component types;
+    /// construction through the `add_*` methods maintains the wiring
+    /// invariants incrementally. This checks the whole payload at once,
+    /// e.g. after deserialization.
     pub fn validate(&self) -> Result<(), PayloadError> {
-        for (_, transmitter) in &self.transmitters {
-            validate_transmitter(&transmitter.value)?;
-        }
-        for (_, receiver) in &self.receivers {
-            validate_receiver(&receiver.value)?;
-        }
-        for (_, model) in &self.eirp_models {
-            validate_eirp_model(model)?;
-        }
-        for (_, model) in &self.gt_models {
-            validate_gt_model(model)?;
-        }
         for (_, port) in &self.tx_ports {
-            validate_tx_port_values(port)?;
             self.validate_tx_port_wiring(port)?;
         }
         for (_, port) in &self.rx_ports {
-            validate_rx_port_values(port)?;
             self.validate_rx_port_wiring(port)?;
         }
         for (_, terminal) in &self.terminals {
@@ -739,82 +967,6 @@ impl fmt::Display for CommsPayload {
     }
 }
 
-/// Validates a transmitter's physical parameters.
-fn validate_transmitter(transmitter: &AmplifierTransmitter) -> Result<(), PayloadError> {
-    validate_positive("transmit power [W]", transmitter.power_w)?;
-    validate_non_negative("output back-off [dB]", transmitter.output_back_off.as_f64())
-}
-
-/// Validates a receiver's physical parameters.
-fn validate_receiver(receiver: &Receiver) -> Result<(), PayloadError> {
-    match receiver {
-        Receiver::NoiseTemperature(rx) => {
-            validate_positive("receiver noise temperature [K]", rx.noise_temperature)
-        }
-        Receiver::Cascade(rx) => {
-            for stage in &rx.stages {
-                validate_non_negative("stage noise temperature [K]", stage.noise_temperature)?;
-                if !stage.gain.as_f64().is_finite() {
-                    return Err(PayloadError::NonPhysical {
-                        quantity: "stage gain [dB]",
-                        value: stage.gain.as_f64(),
-                    });
-                }
-            }
-            validate_non_negative("demodulator loss [dB]", rx.demodulator_loss.as_f64())?;
-            validate_non_negative("implementation loss [dB]", rx.implementation_loss.as_f64())
-        }
-    }
-}
-
-/// Validates a lumped EIRP model's figure.
-fn validate_eirp_model(model: &EirpModel) -> Result<(), PayloadError> {
-    validate_finite("EIRP [dBW]", model.eirp.as_f64())
-}
-
-/// Validates a lumped G/T model's figure.
-fn validate_gt_model(model: &GtModel) -> Result<(), PayloadError> {
-    validate_finite("G/T [dB/K]", model.gt.as_f64())
-}
-
-/// Validates a transmit port's physical parameters.
-fn validate_tx_port_values(port: &TxPort) -> Result<(), PayloadError> {
-    validate_non_negative("feed loss [dB]", port.feed_loss.as_f64())
-}
-
-/// Validates a receive port's physical parameters.
-fn validate_rx_port_values(port: &RxPort) -> Result<(), PayloadError> {
-    validate_non_negative("feed loss [dB]", port.feed_loss.as_f64())?;
-    validate_non_negative(
-        "antenna noise temperature [K]",
-        port.antenna_noise_temperature,
-    )
-}
-
-/// Validates that a quantity is finite.
-fn validate_finite(quantity: &'static str, value: f64) -> Result<(), PayloadError> {
-    if !value.is_finite() {
-        return Err(PayloadError::NonPhysical { quantity, value });
-    }
-    Ok(())
-}
-
-/// Validates that a quantity is finite and strictly positive.
-fn validate_positive(quantity: &'static str, value: f64) -> Result<(), PayloadError> {
-    if !value.is_finite() || value <= 0.0 {
-        return Err(PayloadError::NonPhysical { quantity, value });
-    }
-    Ok(())
-}
-
-/// Validates that a quantity is finite and non-negative.
-fn validate_non_negative(quantity: &'static str, value: f64) -> Result<(), PayloadError> {
-    if !value.is_finite() || value < 0.0 {
-        return Err(PayloadError::NonPhysical { quantity, value });
-    }
-    Ok(())
-}
-
 /// Errors produced while assembling a [`CommsPayload`].
 #[derive(Debug, Clone, PartialEq, Error)]
 #[non_exhaustive]
@@ -841,13 +993,8 @@ pub enum PayloadError {
     #[error("unknown RX port ID {0:?}")]
     UnknownRxPort(RxPortId),
     /// A physical quantity is outside its valid domain.
-    #[error("non-physical {quantity}: {value}")]
-    NonPhysical {
-        /// Name of the offending quantity.
-        quantity: &'static str,
-        /// The rejected value.
-        value: f64,
-    },
+    #[error(transparent)]
+    NonPhysical(#[from] NonPhysicalError),
 }
 
 #[cfg(test)]
@@ -871,18 +1018,14 @@ mod tests {
             "dish",
             Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
         );
-        let tx = payload
-            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
-            .unwrap();
-        let rx = payload
-            .add_receiver(
-                "lnb",
-                Receiver::NoiseTemperature(NoiseTempReceiver {
-                    band: ka_band(),
-                    noise_temperature: 500.0,
-                }),
-            )
-            .unwrap();
+        let tx = payload.add_transmitter(
+            "pa",
+            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+        );
+        let rx = payload.add_receiver(
+            "lnb",
+            Receiver::NoiseTemperature(NoiseTempReceiver::new(ka_band(), 500.0).unwrap()),
+        );
         let tx_port = payload
             .add_tx_port(TxPort {
                 name: "diplexer tx leg".into(),
@@ -944,9 +1087,10 @@ mod tests {
             "low gain",
             Antenna::Constant(ConstantAntenna { gain: 6.0.db() }),
         );
-        let tx = payload
-            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
-            .unwrap();
+        let tx = payload.add_transmitter(
+            "pa",
+            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+        );
         let high_port = payload
             .add_tx_port(TxPort {
                 name: "hga path".into(),
@@ -990,20 +1134,9 @@ mod tests {
     #[test]
     fn test_lumped_models_are_inventory_citizens() {
         let mut payload = CommsPayload::new();
-        let eirp = payload
-            .add_eirp_model(EirpModel {
-                name: "datasheet eirp".into(),
-                band: ka_band(),
-                eirp: 55.0.db(),
-            })
-            .unwrap();
-        let gt = payload
-            .add_gt_model(GtModel {
-                name: "datasheet gt".into(),
-                band: ka_band(),
-                gt: 3.01.db(),
-            })
-            .unwrap();
+        let eirp =
+            payload.add_eirp_model(EirpModel::new("datasheet eirp", ka_band(), 55.0.db()).unwrap());
+        let gt = payload.add_gt_model(GtModel::new("datasheet gt", ka_band(), 3.01.db()).unwrap());
         let terminal = payload
             .add_terminal(Terminal {
                 name: "lumped transceiver".into(),
@@ -1021,9 +1154,10 @@ mod tests {
     #[test]
     fn test_add_port_rejects_dangling_keys() {
         let mut payload = CommsPayload::new();
-        let tx = payload
-            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
-            .unwrap();
+        let tx = payload.add_transmitter(
+            "pa",
+            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+        );
         let err = payload
             .add_tx_port(TxPort {
                 name: "dangling antenna".into(),
@@ -1061,11 +1195,8 @@ mod tests {
         let (payload, terminal) = CommsPayload::transceiver(
             "ka terminal",
             Antenna::Constant(ConstantAntenna { gain: 46.0.db() }),
-            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()),
-            Receiver::NoiseTemperature(NoiseTempReceiver {
-                band: ka_band(),
-                noise_temperature: 500.0,
-            }),
+            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+            Receiver::NoiseTemperature(NoiseTempReceiver::new(ka_band(), 500.0).unwrap()),
             1.0.db(),
             0.5.db(),
             150.0,
@@ -1090,20 +1221,12 @@ mod tests {
 
     #[test]
     fn test_lumped_convenience_constructors() {
-        let (payload, terminal) = CommsPayload::eirp_only(EirpModel {
-            name: "datasheet".into(),
-            band: ka_band(),
-            eirp: 55.0.db(),
-        })
-        .unwrap();
+        let (payload, terminal) =
+            CommsPayload::eirp_only(EirpModel::new("datasheet", ka_band(), 55.0.db()).unwrap());
         assert_eq!(payload.terminal(terminal).unwrap().name, "datasheet");
 
-        let (payload, terminal) = CommsPayload::gt_only(GtModel {
-            name: "datasheet".into(),
-            band: ka_band(),
-            gt: 3.01.db(),
-        })
-        .unwrap();
+        let (payload, terminal) =
+            CommsPayload::gt_only(GtModel::new("datasheet", ka_band(), 3.01.db()).unwrap());
         assert!(matches!(
             payload.terminal(terminal).unwrap().role,
             TerminalRole::Rx(RxChain::Lumped(_))
@@ -1111,76 +1234,35 @@ mod tests {
     }
 
     #[test]
-    fn test_non_physical_inputs_are_rejected() {
-        let mut payload = CommsPayload::new();
-        // Zero, negative, and non-finite transmit power
+    fn test_non_physical_inputs_are_rejected_at_construction() {
+        // Component types are valid by construction; the payload cannot
+        // receive invalid values.
         for power in [0.0, -10.0, f64::NAN, f64::INFINITY] {
-            let err = payload
-                .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), power, 0.0.db()))
-                .unwrap_err();
-            assert!(matches!(err, PayloadError::NonPhysical { .. }));
+            assert!(AmplifierTransmitter::new(ka_band(), power, 0.0.db()).is_err());
         }
-        // Negative noise temperature
-        let err = payload
-            .add_receiver(
-                "rx",
-                Receiver::NoiseTemperature(NoiseTempReceiver {
-                    band: ka_band(),
-                    noise_temperature: -10.0,
-                }),
-            )
-            .unwrap_err();
-        assert!(matches!(err, PayloadError::NonPhysical { .. }));
-        assert!(err.to_string().contains("noise temperature"));
-        // Negative feed loss on a port
-        let antenna = payload.add_antenna(
-            "antenna",
-            Antenna::Constant(ConstantAntenna { gain: 30.0.db() }),
-        );
-        let tx = payload
-            .add_transmitter("pa", AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()))
-            .unwrap();
-        let err = payload
-            .add_tx_port(TxPort {
-                name: "feed".into(),
+        assert!(NoiseTempReceiver::new(ka_band(), -10.0).is_err());
+        let antenna = AntennaId::default();
+        let transmitter = TransmitterId::default();
+        assert!(TxPort::new("feed", antenna, transmitter, (-1.0).db(), None).is_err());
+        assert!(
+            RxPort::new(
+                "feed",
                 antenna,
-                transmitter: tx,
-                feed_loss: (-1.0).db(),
-                band: None,
-            })
-            .unwrap_err();
-        assert!(matches!(err, PayloadError::NonPhysical { .. }));
+                ReceiverId::default(),
+                0.0.db(),
+                -150.0,
+                None
+            )
+            .is_err()
+        );
     }
 
     #[test]
     fn test_non_finite_lumped_figures_are_rejected() {
-        let mut payload = CommsPayload::new();
-        let err = payload
-            .add_eirp_model(EirpModel {
-                name: "bad".into(),
-                band: ka_band(),
-                eirp: Decibel::new(f64::NAN),
-            })
-            .unwrap_err();
-        assert!(matches!(err, PayloadError::NonPhysical { .. }));
-        let err = payload
-            .add_gt_model(GtModel {
-                name: "bad".into(),
-                band: ka_band(),
-                gt: Decibel::new(f64::INFINITY),
-            })
-            .unwrap_err();
-        assert!(matches!(err, PayloadError::NonPhysical { .. }));
+        assert!(EirpModel::new("bad", ka_band(), Decibel::new(f64::NAN)).is_err());
+        assert!(GtModel::new("bad", ka_band(), Decibel::new(f64::INFINITY)).is_err());
         // Negative figures are physically meaningful and accepted.
-        assert!(
-            payload
-                .add_gt_model(GtModel {
-                    name: "small terminal".into(),
-                    band: ka_band(),
-                    gt: Decibel::new(-5.0),
-                })
-                .is_ok()
-        );
+        assert!(GtModel::new("small terminal", ka_band(), Decibel::new(-5.0)).is_ok());
     }
 
     #[cfg(feature = "serde")]

@@ -13,6 +13,7 @@ use lox_core::units::{Decibel, Kelvin};
 
 use crate::ROOM_TEMPERATURE;
 use crate::band::FrequencyRange;
+use crate::error::NonPhysicalError;
 
 /// Converts a noise figure in dB to an equivalent noise temperature in Kelvin.
 ///
@@ -29,24 +30,117 @@ pub fn noise_figure_to_temperature(nf: Decibel) -> Kelvin {
 /// `T_sys = T_ant + T_feed + T_rx / G_feed` from the port's antenna noise
 /// temperature and feed loss. For a datasheet figure that already includes
 /// the antenna and feed contributions, set both port values to zero.
+///
+/// Valid by construction: the noise temperature is finite and positive.
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "NoiseTempReceiverRepr")
+)]
 pub struct NoiseTempReceiver {
-    /// Supported frequency range.
-    pub band: FrequencyRange,
-    /// Equivalent noise temperature in Kelvin, referred to the receiver's
-    /// input connector.
-    pub noise_temperature: Kelvin,
+    band: FrequencyRange,
+    noise_temperature: Kelvin,
+}
+
+/// Serde wire format for [`NoiseTempReceiver`]: forces deserialization
+/// through the validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct NoiseTempReceiverRepr {
+    band: FrequencyRange,
+    noise_temperature: Kelvin,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<NoiseTempReceiverRepr> for NoiseTempReceiver {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: NoiseTempReceiverRepr) -> Result<Self, Self::Error> {
+        NoiseTempReceiver::new(repr.band, repr.noise_temperature)
+    }
+}
+
+impl NoiseTempReceiver {
+    /// Creates a new known-noise-temperature receiver.
+    ///
+    /// Rejects a non-finite or non-positive noise temperature.
+    pub fn new(band: FrequencyRange, noise_temperature: Kelvin) -> Result<Self, NonPhysicalError> {
+        NonPhysicalError::check_positive("receiver noise temperature [K]", noise_temperature)?;
+        Ok(Self {
+            band,
+            noise_temperature,
+        })
+    }
+
+    /// Returns the supported frequency range.
+    pub fn band(&self) -> FrequencyRange {
+        self.band
+    }
+
+    /// Returns the equivalent noise temperature in Kelvin, referred to the
+    /// receiver's input connector.
+    pub fn noise_temperature(&self) -> Kelvin {
+        self.noise_temperature
+    }
 }
 
 /// A single stage in an RF receiver chain.
+///
+/// Valid by construction: the noise temperature is finite and non-negative,
+/// the gain finite.
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "NoiseStageRepr")
+)]
 pub struct NoiseStage {
-    /// Stage gain in dB.
-    pub gain: Decibel,
-    /// Stage equivalent noise temperature in Kelvin.
-    pub noise_temperature: Kelvin,
+    gain: Decibel,
+    noise_temperature: Kelvin,
+}
+
+/// Serde wire format for [`NoiseStage`]: forces deserialization through the
+/// validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct NoiseStageRepr {
+    gain: Decibel,
+    noise_temperature: Kelvin,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<NoiseStageRepr> for NoiseStage {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: NoiseStageRepr) -> Result<Self, Self::Error> {
+        NoiseStage::new(repr.gain, repr.noise_temperature)
+    }
+}
+
+impl NoiseStage {
+    /// Creates a new RF chain stage.
+    ///
+    /// Rejects a non-finite gain and a non-finite or negative noise
+    /// temperature.
+    pub fn new(gain: Decibel, noise_temperature: Kelvin) -> Result<Self, NonPhysicalError> {
+        NonPhysicalError::check_finite("stage gain [dB]", gain.as_f64())?;
+        NonPhysicalError::check_non_negative("stage noise temperature [K]", noise_temperature)?;
+        Ok(Self {
+            gain,
+            noise_temperature,
+        })
+    }
+
+    /// Returns the stage gain in dB.
+    pub fn gain(&self) -> Decibel {
+        self.gain
+    }
+
+    /// Returns the stage equivalent noise temperature in Kelvin.
+    pub fn noise_temperature(&self) -> Kelvin {
+        self.noise_temperature
+    }
 }
 
 /// An N-stage cascade receiver using the Friis noise formula.
@@ -54,20 +148,71 @@ pub struct NoiseStage {
 /// The chain is described strictly from the receiver's input connector
 /// onward; the antenna noise temperature and feed loss are supplied by the
 /// port at link-budget setup.
+///
+/// Valid by construction: stages uphold [`NoiseStage`]'s invariants and the
+/// demodulator/implementation losses are finite and non-negative.
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "CascadeReceiverRepr")
+)]
 pub struct CascadeReceiver {
-    /// Supported frequency range.
-    pub band: FrequencyRange,
-    /// Ordered chain of RF stages (LNA first, then filters, mixers, etc.).
-    pub stages: Vec<NoiseStage>,
-    /// Demodulator implementation loss.
-    pub demodulator_loss: Decibel,
-    /// Other implementation losses.
-    pub implementation_loss: Decibel,
+    band: FrequencyRange,
+    stages: Vec<NoiseStage>,
+    demodulator_loss: Decibel,
+    implementation_loss: Decibel,
+}
+
+/// Serde wire format for [`CascadeReceiver`]: forces deserialization through
+/// the validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct CascadeReceiverRepr {
+    band: FrequencyRange,
+    stages: Vec<NoiseStage>,
+    demodulator_loss: Decibel,
+    implementation_loss: Decibel,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<CascadeReceiverRepr> for CascadeReceiver {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: CascadeReceiverRepr) -> Result<Self, Self::Error> {
+        CascadeReceiver::new(
+            repr.band,
+            repr.stages,
+            repr.demodulator_loss,
+            repr.implementation_loss,
+        )
+    }
 }
 
 impl CascadeReceiver {
+    /// Creates a new cascade receiver from an ordered chain of stages
+    /// (LNA first, then filters, mixers, etc.).
+    ///
+    /// Rejects non-finite or negative demodulator/implementation losses.
+    pub fn new(
+        band: FrequencyRange,
+        stages: Vec<NoiseStage>,
+        demodulator_loss: Decibel,
+        implementation_loss: Decibel,
+    ) -> Result<Self, NonPhysicalError> {
+        NonPhysicalError::check_non_negative("demodulator loss [dB]", demodulator_loss.as_f64())?;
+        NonPhysicalError::check_non_negative(
+            "implementation loss [dB]",
+            implementation_loss.as_f64(),
+        )?;
+        Ok(Self {
+            band,
+            stages,
+            demodulator_loss,
+            implementation_loss,
+        })
+    }
+
     /// Creates a two-stage receiver model: LNA → receiver (from noise figure).
     pub fn from_lna_and_noise_figure(
         band: FrequencyRange,
@@ -76,21 +221,38 @@ impl CascadeReceiver {
         receiver_noise_figure: Decibel,
         demodulator_loss: Decibel,
         implementation_loss: Decibel,
-    ) -> Self {
-        let lna_stage = NoiseStage {
-            gain: lna_gain,
-            noise_temperature: lna_noise_temperature,
-        };
-        let rx_stage = NoiseStage {
-            gain: Decibel::new(0.0),
-            noise_temperature: noise_figure_to_temperature(receiver_noise_figure),
-        };
-        Self {
+    ) -> Result<Self, NonPhysicalError> {
+        let lna_stage = NoiseStage::new(lna_gain, lna_noise_temperature)?;
+        let rx_stage = NoiseStage::new(
+            Decibel::new(0.0),
+            noise_figure_to_temperature(receiver_noise_figure),
+        )?;
+        Self::new(
             band,
-            stages: vec![lna_stage, rx_stage],
+            vec![lna_stage, rx_stage],
             demodulator_loss,
             implementation_loss,
-        }
+        )
+    }
+
+    /// Returns the supported frequency range.
+    pub fn band(&self) -> FrequencyRange {
+        self.band
+    }
+
+    /// Returns the ordered chain of RF stages.
+    pub fn stages(&self) -> &[NoiseStage] {
+        &self.stages
+    }
+
+    /// Returns the demodulator implementation loss.
+    pub fn demodulator_loss(&self) -> Decibel {
+        self.demodulator_loss
+    }
+
+    /// Returns the other implementation losses.
+    pub fn implementation_loss(&self) -> Decibel {
+        self.implementation_loss
     }
 
     /// Returns the chain's equivalent noise temperature in Kelvin, referred
@@ -170,32 +332,25 @@ mod tests {
             2.0.db(),
             0.0.db(),
             0.0.db(),
-        );
+        )
+        .unwrap();
         assert_approx_eq!(rx.chain_noise_temperature(), 176.696, atol <= 0.01);
     }
 
     #[test]
     fn test_cascade_receiver_three_stage() {
         // Stages: LNA(G=20dB,T=50K), Filter(G=-3dB,T=290K), Rx(G=30dB,T=500K)
-        let rx = CascadeReceiver {
-            band: ka_band(),
-            stages: vec![
-                NoiseStage {
-                    gain: 20.0.db(),
-                    noise_temperature: 50.0,
-                },
-                NoiseStage {
-                    gain: (-3.0).db(),
-                    noise_temperature: 290.0,
-                },
-                NoiseStage {
-                    gain: 30.0.db(),
-                    noise_temperature: 500.0,
-                },
+        let rx = CascadeReceiver::new(
+            ka_band(),
+            vec![
+                NoiseStage::new(20.0.db(), 50.0).unwrap(),
+                NoiseStage::new((-3.0).db(), 290.0).unwrap(),
+                NoiseStage::new(30.0.db(), 500.0).unwrap(),
             ],
-            demodulator_loss: 0.0.db(),
-            implementation_loss: 0.0.db(),
-        };
+            0.0.db(),
+            0.0.db(),
+        )
+        .unwrap();
         let g1 = 100.0_f64; // 10^(20/10)
         let g2 = 10.0_f64.powf(-3.0 / 10.0); // ~0.5012
         let expected = 50.0 + 290.0 / g1 + 500.0 / (g1 * g2);
@@ -204,35 +359,48 @@ mod tests {
 
     #[test]
     fn test_cascade_receiver_chain_gain() {
-        let rx = CascadeReceiver {
-            band: ka_band(),
-            stages: vec![
-                NoiseStage {
-                    gain: 20.0.db(),
-                    noise_temperature: 50.0,
-                },
-                NoiseStage {
-                    gain: (-3.0).db(),
-                    noise_temperature: 290.0,
-                },
-                NoiseStage {
-                    gain: 30.0.db(),
-                    noise_temperature: 500.0,
-                },
+        let rx = CascadeReceiver::new(
+            ka_band(),
+            vec![
+                NoiseStage::new(20.0.db(), 50.0).unwrap(),
+                NoiseStage::new((-3.0).db(), 290.0).unwrap(),
+                NoiseStage::new(30.0.db(), 500.0).unwrap(),
             ],
-            demodulator_loss: 0.0.db(),
-            implementation_loss: 0.0.db(),
-        };
+            0.0.db(),
+            0.0.db(),
+        )
+        .unwrap();
         // chain_gain = 20 + (-3) + 30 = 47 dB
         assert_approx_eq!(rx.chain_gain().as_f64(), 47.0, atol <= 1e-10);
     }
 
     #[test]
     fn test_receiver_band_accessor() {
-        let rx = Receiver::NoiseTemperature(NoiseTempReceiver {
-            band: ka_band(),
-            noise_temperature: 500.0,
-        });
+        let rx = Receiver::NoiseTemperature(NoiseTempReceiver::new(ka_band(), 500.0).unwrap());
         assert!(rx.band().contains(29.0.ghz()));
+    }
+
+    #[test]
+    fn test_receivers_reject_non_physical_inputs() {
+        for temperature in [0.0, -10.0, f64::NAN] {
+            assert!(NoiseTempReceiver::new(ka_band(), temperature).is_err());
+        }
+        assert!(NoiseStage::new(Decibel::new(f64::NAN), 50.0).is_err());
+        assert!(NoiseStage::new(20.0.db(), -1.0).is_err());
+        assert!(CascadeReceiver::new(ka_band(), vec![], (-1.0).db(), 0.0.db()).is_err());
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_receiver_serde_rejects_invalid() {
+        let rx = NoiseTempReceiver::new(ka_band(), 500.0).unwrap();
+        let json = serde_json::to_string(&rx).unwrap();
+        assert!(serde_json::from_str::<NoiseTempReceiver>(&json).is_ok());
+
+        let bad = json.replace(
+            "\"noise_temperature\":500.0",
+            "\"noise_temperature\":-500.0",
+        );
+        assert!(serde_json::from_str::<NoiseTempReceiver>(&bad).is_err());
     }
 }
