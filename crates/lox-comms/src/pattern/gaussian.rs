@@ -11,6 +11,7 @@ use std::f64::consts::PI;
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 use crate::antenna::AntennaGain;
+use crate::pattern::GAIN_FLOOR_LINEAR;
 
 /// Gaussian antenna gain pattern.
 #[derive(Debug, Clone)]
@@ -50,10 +51,16 @@ impl GaussianPattern {
 impl AntennaGain for GaussianPattern {
     fn gain(&self, frequency: Frequency, theta: Angle, _phi: Angle) -> Decibel {
         let theta = theta.to_radians();
-        let bw = self.beamwidth(frequency).to_radians();
-        // Gaussian roll-off: G = G_peak · exp(-4·ln(2)·(θ/θ_3dB)²)
-        let exponent = -4.0 * 2.0_f64.ln() * (theta / bw).powi(2);
-        self.peak_gain(frequency) + Decibel::from_linear(exponent.exp())
+        let pattern_loss_linear = if theta.cos() < 0.0 {
+            // Beyond hemisphere — floor gain
+            GAIN_FLOOR_LINEAR
+        } else {
+            let bw = self.beamwidth(frequency).to_radians();
+            // Gaussian roll-off: G = G_peak · exp(-4·ln(2)·(θ/θ_3dB)²)
+            let exponent = -4.0 * 2.0_f64.ln() * (theta / bw).powi(2);
+            exponent.exp().max(GAIN_FLOOR_LINEAR)
+        };
+        self.peak_gain(frequency) + Decibel::from_linear(pattern_loss_linear)
     }
 }
 
@@ -110,6 +117,28 @@ mod tests {
         let gain_pos = p.gain(f, angle, Angle::ZERO);
         let gain_neg = p.gain(f, Angle::degrees(-1.0), Angle::ZERO);
         assert_approx_eq!(gain_pos.as_f64(), gain_neg.as_f64(), atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_gaussian_far_off_axis_gain_is_finite() {
+        // The Gaussian roll-off underflows to 0 beyond ~16.4 beamwidths; the
+        // floor must keep the gain finite (peak − 120 dB) instead of −∞.
+        let p = test_pattern();
+        let f = test_frequency();
+        let gain = p.gain(f, Angle::degrees(45.0), Angle::ZERO);
+        let floor = p.peak_gain(f).as_f64() - 120.0;
+        assert!(gain.as_f64().is_finite());
+        assert_approx_eq!(gain.as_f64(), floor, atol <= 1e-9);
+    }
+
+    #[test]
+    fn test_gaussian_back_hemisphere_is_floored() {
+        let p = test_pattern();
+        let f = test_frequency();
+        let gain = p.gain(f, Angle::degrees(135.0), Angle::ZERO);
+        let floor = p.peak_gain(f).as_f64() - 120.0;
+        assert!(gain.as_f64().is_finite());
+        assert_approx_eq!(gain.as_f64(), floor, atol <= 1e-9);
     }
 
     #[test]
