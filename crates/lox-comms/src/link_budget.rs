@@ -8,7 +8,7 @@ use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 use crate::LinkBudgetError;
 use crate::channel::Channel;
-use crate::system::CommunicationSystem;
+use crate::system::{CommunicationSystem, Pointing, resolve_pointing};
 use crate::utils::free_space_path_loss;
 
 pub use lox_itur::EnvironmentalLosses;
@@ -53,10 +53,18 @@ pub struct LinkStats {
     pub c_n0: Decibel,
     /// Carrier-to-noise ratio (C/N).
     pub c_n: Decibel,
-    /// Off-boresight angle at the transmitter (0 for lumped `Eirp`).
-    pub tx_angle: Angle,
-    /// Off-boresight angle at the receiver (0 for lumped `Gt`).
-    pub rx_angle: Angle,
+    /// Derived TX pattern polar angle from boresight (zero for lumped or
+    /// constant-gain endpoints).
+    pub tx_theta: Angle,
+    /// Derived TX pattern azimuth about boresight (zero for lumped or
+    /// constant-gain endpoints).
+    pub tx_phi: Angle,
+    /// Derived RX pattern polar angle from boresight (zero for lumped or
+    /// constant-gain endpoints).
+    pub rx_theta: Angle,
+    /// Derived RX pattern azimuth about boresight (zero for lumped or
+    /// constant-gain endpoints).
+    pub rx_phi: Angle,
 }
 
 impl LinkStats {
@@ -64,21 +72,35 @@ impl LinkStats {
     ///
     /// `bandwidth` is the noise bandwidth used to compute `noise_power` and `C/N` from
     /// `C/N₀`. It is independent of any modulation scheme.
+    ///
+    /// The pointings are resolved into pattern angles against each endpoint's
+    /// antenna frame once and reported in the result for traceability.
     pub fn calculate(
         tx_system: &CommunicationSystem,
         rx_system: &CommunicationSystem,
         range: Distance,
         bandwidth: Frequency,
         losses: EnvironmentalLosses,
-        tx_angle: Angle,
-        rx_angle: Angle,
+        tx_pointing: Pointing,
+        rx_pointing: Pointing,
     ) -> Result<Self, LinkBudgetError> {
         let env_loss = losses.total();
 
+        let (tx_theta, tx_phi) = resolve_pointing(&tx_system.antenna, tx_pointing)?;
+        let (rx_theta, rx_phi) = resolve_pointing(&rx_system.antenna, rx_pointing)?;
+        let tx_angles = Pointing::Angles {
+            theta: tx_theta,
+            phi: tx_phi,
+        };
+        let rx_angles = Pointing::Angles {
+            theta: rx_theta,
+            phi: rx_phi,
+        };
+
         let c_n0 =
-            tx_system.carrier_to_noise_density(rx_system, env_loss, range, tx_angle, rx_angle)?;
+            tx_system.carrier_to_noise_density(rx_system, env_loss, range, tx_angles, rx_angles)?;
         let carrier_rx_power =
-            tx_system.carrier_power(rx_system, env_loss, range, tx_angle, rx_angle)?;
+            tx_system.carrier_power(rx_system, env_loss, range, tx_angles, rx_angles)?;
         let noise_power = rx_system.noise_power(bandwidth.to_hertz())?;
 
         let tx = tx_system
@@ -88,8 +110,8 @@ impl LinkStats {
         let frequency = tx.frequency();
         let fspl = free_space_path_loss(range, frequency);
 
-        let eirp = tx_system.eirp_at(tx_angle)?;
-        let gt = rx_system.gt_at(rx_angle)?;
+        let eirp = tx_system.eirp_at(tx_angles)?;
+        let gt = rx_system.gt_at(rx_angles)?;
 
         let c_n = c_n0 - Decibel::from_linear(bandwidth.to_hertz());
 
@@ -105,8 +127,10 @@ impl LinkStats {
             bandwidth,
             c_n0,
             c_n,
-            tx_angle,
-            rx_angle,
+            tx_theta,
+            tx_phi,
+            rx_theta,
+            rx_phi,
         })
     }
 }
@@ -254,8 +278,8 @@ mod tests {
             Distance::kilometers(1000.0),
             channel.bandwidth(),
             EnvironmentalLosses::none(),
-            Angle::ZERO,
-            Angle::ZERO,
+            Pointing::Boresight,
+            Pointing::Boresight,
         )
         .unwrap();
 
@@ -269,6 +293,59 @@ mod tests {
         assert!(stats.carrier_rx_power.is_some());
         // noise_power should be Some for component-tier
         assert!(stats.noise_power.is_some());
+        // Boresight pointing resolves to zero pattern angles
+        assert_approx_eq!(stats.tx_theta.to_radians(), 0.0, atol <= 1e-15);
+        assert_approx_eq!(stats.tx_phi.to_radians(), 0.0, atol <= 1e-15);
+        assert_approx_eq!(stats.rx_theta.to_radians(), 0.0, atol <= 1e-15);
+        assert_approx_eq!(stats.rx_phi.to_radians(), 0.0, atol <= 1e-15);
+    }
+
+    #[test]
+    fn test_link_stats_reports_derived_pattern_angles() {
+        use lox_core::glam::DVec3;
+
+        use crate::antenna::{AntennaFrame, PatternedAntenna};
+        use crate::pattern::{AntennaPattern, ParabolicPattern};
+
+        // Dish boresight along +X; the line of sight along +Z is 90° off
+        // boresight in the φ = 0 plane, and must be reported as such.
+        let tx_sys = CommunicationSystem {
+            antenna: Some(Antenna::Patterned(PatternedAntenna {
+                pattern: AntennaPattern::Parabolic(ParabolicPattern::new(
+                    Distance::meters(0.98),
+                    0.45,
+                )),
+                frame: AntennaFrame::from_boresight_and_reference(DVec3::X, DVec3::Z).unwrap(),
+            })),
+            receiver: None,
+            transmitter: Some(Transmitter::Amplifier(AmplifierTransmitter::new(
+                29.0.ghz(),
+                10.0,
+                1.0.db(),
+                0.0.db(),
+            ))),
+        };
+        let (_, rx_sys, channel) = test_link();
+
+        let stats = LinkStats::calculate(
+            &tx_sys,
+            &rx_sys,
+            Distance::kilometers(1000.0),
+            channel.bandwidth(),
+            EnvironmentalLosses::none(),
+            Pointing::Direction(DVec3::Z),
+            Pointing::Boresight,
+        )
+        .unwrap();
+
+        assert_approx_eq!(
+            stats.tx_theta.to_radians(),
+            std::f64::consts::FRAC_PI_2,
+            atol <= 1e-12
+        );
+        assert_approx_eq!(stats.tx_phi.to_radians(), 0.0, atol <= 1e-12);
+        // The EIRP must reflect the off-axis gain, far below the 55 dBW peak.
+        assert!(stats.eirp.as_f64() < 0.0);
     }
 
     #[test]
@@ -308,8 +385,8 @@ mod tests {
             Distance::kilometers(1000.0),
             channel.bandwidth(),
             EnvironmentalLosses::none(),
-            Angle::ZERO,
-            Angle::ZERO,
+            Pointing::Boresight,
+            Pointing::Boresight,
         )
         .unwrap();
         let m = channel.apply(link);
@@ -328,8 +405,8 @@ mod tests {
             Distance::kilometers(1000.0),
             channel.bandwidth(),
             EnvironmentalLosses::none(),
-            Angle::ZERO,
-            Angle::ZERO,
+            Pointing::Boresight,
+            Pointing::Boresight,
         )
         .unwrap();
         let m = channel.apply(link);
@@ -357,8 +434,8 @@ mod tests {
             Distance::kilometers(1000.0),
             5.0.mhz(),
             EnvironmentalLosses::none(),
-            Angle::ZERO,
-            Angle::ZERO,
+            Pointing::Boresight,
+            Pointing::Boresight,
         )
         .unwrap();
         assert!(stats.carrier_rx_power.is_none());
@@ -395,8 +472,8 @@ mod tests {
             Distance::kilometers(1000.0),
             channel.bandwidth(),
             EnvironmentalLosses::none(),
-            Angle::ZERO,
-            Angle::ZERO,
+            Pointing::Boresight,
+            Pointing::Boresight,
         )
         .unwrap();
         let err = channel.apply(link).with_interference(1e-12).unwrap_err();

@@ -4,6 +4,7 @@
 
 //! Communication system composing antenna, transmitter, and receiver.
 
+use lox_core::glam::DVec3;
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 use crate::BOLTZMANN_CONSTANT;
@@ -12,6 +13,59 @@ use crate::antenna::Antenna;
 use crate::receiver::Receiver;
 use crate::transmitter::Transmitter;
 use crate::utils::free_space_path_loss;
+
+/// Line-of-sight pointing at one link endpoint.
+///
+/// Describes how the line of sight relates to the endpoint's antenna so the
+/// link budget can evaluate the gain pattern in the right direction.
+/// [`Pointing::Direction`] is the primary form for trajectory-driven analyses;
+/// the other variants are convenience entry points for ideal pointing and for
+/// pre-computed pattern angles.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[non_exhaustive]
+pub enum Pointing {
+    /// The antenna boresight is aligned with the line of sight (θ = φ = 0).
+    #[default]
+    Boresight,
+    /// Explicit pattern angles in the antenna frame.
+    Angles {
+        /// Polar angle from boresight.
+        theta: Angle,
+        /// Azimuth about boresight from the antenna-frame `+X` axis toward `+Y`.
+        phi: Angle,
+    },
+    /// Line-of-sight direction vector in the antenna's parent frame.
+    Direction(DVec3),
+}
+
+impl Pointing {
+    /// Convenience for an off-boresight polar angle with `φ = 0`.
+    pub fn off_boresight(theta: Angle) -> Self {
+        Self::Angles {
+            theta,
+            phi: Angle::ZERO,
+        }
+    }
+}
+
+/// Resolves a pointing into pattern angles against the endpoint's antenna.
+///
+/// Lumped endpoints have no antenna and ignore the pointing entirely, so a
+/// direction resolves to zero angles there.
+pub(crate) fn resolve_pointing(
+    antenna: &Option<Antenna>,
+    pointing: Pointing,
+) -> Result<(Angle, Angle), LinkBudgetError> {
+    match pointing {
+        Pointing::Boresight => Ok((Angle::ZERO, Angle::ZERO)),
+        Pointing::Angles { theta, phi } => Ok((theta, phi)),
+        Pointing::Direction(direction) => match antenna {
+            None => Ok((Angle::ZERO, Angle::ZERO)),
+            Some(antenna) => Ok(antenna.pattern_angles(direction)?),
+        },
+    }
+}
 
 /// A communication system combining an optional antenna with optional transmitter and receiver.
 #[derive(Debug, Clone)]
@@ -81,8 +135,8 @@ impl CommunicationSystem {
         rx: &CommunicationSystem,
         losses: Decibel,
         range: Distance,
-        tx_angle: Angle,
-        rx_angle: Angle,
+        tx_pointing: Pointing,
+        rx_pointing: Pointing,
     ) -> Result<Decibel, LinkBudgetError> {
         let tx = self
             .transmitter
@@ -102,9 +156,10 @@ impl CommunicationSystem {
             });
         }
 
-        let phi = Angle::ZERO;
-        let eirp = tx_eirp(tx, &self.antenna, tx_angle, phi)?;
-        let gt = rx_gt(receiver, &rx.antenna, rx_angle, phi)?;
+        let (tx_theta, tx_phi) = resolve_pointing(&self.antenna, tx_pointing)?;
+        let (rx_theta, rx_phi) = resolve_pointing(&rx.antenna, rx_pointing)?;
+        let eirp = tx_eirp(tx, &self.antenna, tx_theta, tx_phi)?;
+        let gt = rx_gt(receiver, &rx.antenna, rx_theta, rx_phi)?;
         let fspl = free_space_path_loss(range, tx.frequency());
         let k_db = Decibel::from_linear(BOLTZMANN_CONSTANT);
 
@@ -124,8 +179,8 @@ impl CommunicationSystem {
         rx: &CommunicationSystem,
         losses: Decibel,
         range: Distance,
-        tx_angle: Angle,
-        rx_angle: Angle,
+        tx_pointing: Pointing,
+        rx_pointing: Pointing,
     ) -> Result<Option<Decibel>, LinkBudgetError> {
         let tx = self
             .transmitter
@@ -150,10 +205,11 @@ impl CommunicationSystem {
         }
 
         let antenna = rx.antenna.as_ref().ok_or(LinkBudgetError::MissingAntenna)?;
-        let phi = Angle::ZERO;
-        let eirp = tx_eirp(tx, &self.antenna, tx_angle, phi)?;
+        let (tx_theta, tx_phi) = resolve_pointing(&self.antenna, tx_pointing)?;
+        let (rx_theta, rx_phi) = resolve_pointing(&rx.antenna, rx_pointing)?;
+        let eirp = tx_eirp(tx, &self.antenna, tx_theta, tx_phi)?;
         let fspl = free_space_path_loss(range, tx.frequency());
-        let g_rx = receiver.total_gain(antenna, rx_angle, phi);
+        let g_rx = receiver.total_gain(antenna, rx_theta, rx_phi);
         Ok(Some(eirp - fspl - losses + g_rx))
     }
 
@@ -180,26 +236,28 @@ impl CommunicationSystem {
         Ok(Some(Decibel::from_linear(p_noise_w)))
     }
 
-    /// Returns the EIRP at the given off-boresight angle.
+    /// Returns the EIRP at the given pointing.
     ///
-    /// For lumped `Eirp` transmitters, returns the stored figure; the angle is ignored.
-    pub fn eirp_at(&self, angle: Angle) -> Result<Decibel, LinkBudgetError> {
+    /// For lumped `Eirp` transmitters, returns the stored figure; the pointing is ignored.
+    pub fn eirp_at(&self, pointing: Pointing) -> Result<Decibel, LinkBudgetError> {
         let tx = self
             .transmitter
             .as_ref()
             .ok_or(LinkBudgetError::MissingTransmitter)?;
-        tx_eirp(tx, &self.antenna, angle, Angle::ZERO)
+        let (theta, phi) = resolve_pointing(&self.antenna, pointing)?;
+        tx_eirp(tx, &self.antenna, theta, phi)
     }
 
-    /// Returns the G/T at the given off-boresight angle.
+    /// Returns the G/T at the given pointing.
     ///
-    /// For lumped `Gt` receivers, returns the stored figure; the angle is ignored.
-    pub fn gt_at(&self, angle: Angle) -> Result<Decibel, LinkBudgetError> {
+    /// For lumped `Gt` receivers, returns the stored figure; the pointing is ignored.
+    pub fn gt_at(&self, pointing: Pointing) -> Result<Decibel, LinkBudgetError> {
         let rx = self
             .receiver
             .as_ref()
             .ok_or(LinkBudgetError::MissingReceiver)?;
-        rx_gt(rx, &self.antenna, angle, Angle::ZERO)
+        let (theta, phi) = resolve_pointing(&self.antenna, pointing)?;
+        rx_gt(rx, &self.antenna, theta, phi)
     }
 
     /// Returns the transmit frequency, if this system has a transmitter.
@@ -258,7 +316,8 @@ mod tests {
     use lox_core::units::{DecibelUnits, FrequencyUnits};
     use lox_test_utils::assert_approx_eq;
 
-    use crate::antenna::ConstantAntenna;
+    use crate::antenna::{AntennaFrame, ConstantAntenna, PatternedAntenna};
+    use crate::pattern::{AntennaPattern, ParabolicPattern};
     use crate::receiver::NoiseTempReceiver;
     use crate::transmitter::AmplifierTransmitter;
 
@@ -267,6 +326,26 @@ mod tests {
     fn tx_system() -> CommunicationSystem {
         CommunicationSystem {
             antenna: Some(Antenna::Constant(ConstantAntenna { gain: 46.0.db() })),
+            receiver: None,
+            transmitter: Some(Transmitter::Amplifier(AmplifierTransmitter::new(
+                29.0.ghz(),
+                10.0,
+                1.0.db(),
+                0.0.db(),
+            ))),
+        }
+    }
+
+    /// TX system with a parabolic dish whose boresight points along +X.
+    fn patterned_tx_system() -> CommunicationSystem {
+        CommunicationSystem {
+            antenna: Some(Antenna::Patterned(PatternedAntenna {
+                pattern: AntennaPattern::Parabolic(ParabolicPattern::new(
+                    Distance::meters(0.98),
+                    0.45,
+                )),
+                frame: AntennaFrame::from_boresight_and_reference(DVec3::X, DVec3::Z).unwrap(),
+            })),
             receiver: None,
             transmitter: Some(Transmitter::Amplifier(AmplifierTransmitter::new(
                 29.0.ghz(),
@@ -302,8 +381,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap();
         // Verify within reasonable tolerance (some rounding in intermediate values)
@@ -321,8 +400,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap()
             .expect("component receiver produces carrier_power");
@@ -351,10 +430,22 @@ mod tests {
         let bw = 1e6;
 
         let c_n0 = tx
-            .carrier_to_noise_density(&rx, 0.0.db(), range, Angle::ZERO, Angle::ZERO)
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                range,
+                Pointing::Boresight,
+                Pointing::Boresight,
+            )
             .unwrap();
         let p_rx = tx
-            .carrier_power(&rx, 0.0.db(), range, Angle::ZERO, Angle::ZERO)
+            .carrier_power(
+                &rx,
+                0.0.db(),
+                range,
+                Pointing::Boresight,
+                Pointing::Boresight,
+            )
             .unwrap()
             .expect("component receiver produces carrier_power");
         let p_noise = rx
@@ -385,8 +476,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap();
         // EIRP=55, G/T=3.01, FSPL≈181.696, losses=0, k_dB≈-228.599
@@ -412,8 +503,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap();
         assert!(p.is_none());
@@ -438,8 +529,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::UnexpectedAntenna);
@@ -465,8 +556,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingAntenna);
@@ -490,8 +581,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap_err();
         assert!(matches!(err, LinkBudgetError::FrequencyMismatch { .. }));
@@ -510,8 +601,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingTransmitter);
@@ -530,8 +621,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingReceiver);
@@ -566,8 +657,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap_err();
         assert!(matches!(err, LinkBudgetError::FrequencyMismatch { .. }));
@@ -609,8 +700,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingTransmitter);
@@ -629,8 +720,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingReceiver);
@@ -653,8 +744,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingAntenna);
@@ -667,7 +758,7 @@ mod tests {
             receiver: None,
             transmitter: None,
         };
-        let err = sys.eirp_at(Angle::ZERO).unwrap_err();
+        let err = sys.eirp_at(Pointing::Boresight).unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingTransmitter);
     }
 
@@ -679,10 +770,12 @@ mod tests {
             frequency: 29.0.ghz(),
             eirp: 55.0.db(),
         });
-        let e = sys.eirp_at(Angle::ZERO).unwrap();
+        let e = sys.eirp_at(Pointing::Boresight).unwrap();
         assert_approx_eq!(e.as_f64(), 55.0, atol <= 1e-10);
         // Angle is ignored for the lumped Eirp variant
-        let e_off = sys.eirp_at(Angle::radians(1.0)).unwrap();
+        let e_off = sys
+            .eirp_at(Pointing::off_boresight(Angle::radians(1.0)))
+            .unwrap();
         assert_approx_eq!(e_off.as_f64(), 55.0, atol <= 1e-10);
     }
 
@@ -693,7 +786,7 @@ mod tests {
             receiver: None,
             transmitter: None,
         };
-        let err = sys.gt_at(Angle::ZERO).unwrap_err();
+        let err = sys.gt_at(Pointing::Boresight).unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingReceiver);
     }
 
@@ -705,7 +798,7 @@ mod tests {
             frequency: 29.0.ghz(),
             gt: 3.01.db(),
         });
-        let g = sys.gt_at(Angle::ZERO).unwrap();
+        let g = sys.gt_at(Pointing::Boresight).unwrap();
         assert_approx_eq!(g.as_f64(), 3.01, atol <= 1e-10);
     }
 
@@ -750,10 +843,124 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::ZERO,
-                Angle::ZERO,
+                Pointing::Boresight,
+                Pointing::Boresight,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingAntenna);
+    }
+
+    #[test]
+    fn test_pointing_off_boresight_is_angles_with_zero_phi() {
+        let theta = Angle::degrees(1.5);
+        assert_eq!(
+            Pointing::off_boresight(theta),
+            Pointing::Angles {
+                theta,
+                phi: Angle::ZERO
+            }
+        );
+        assert_eq!(Pointing::default(), Pointing::Boresight);
+    }
+
+    #[test]
+    fn test_eirp_at_direction_resolves_through_antenna_frame() {
+        // The dish boresight points along +X. A line of sight along +X must
+        // give the on-axis EIRP, and one along +Z (90° off boresight) less.
+        let tx = patterned_tx_system();
+        let on_axis = tx.eirp_at(Pointing::Direction(DVec3::X)).unwrap();
+        let boresight = tx.eirp_at(Pointing::Boresight).unwrap();
+        let off_axis = tx.eirp_at(Pointing::Direction(DVec3::Z)).unwrap();
+
+        assert_approx_eq!(on_axis.as_f64(), boresight.as_f64(), atol <= 1e-10);
+        assert!(off_axis.as_f64() < on_axis.as_f64());
+    }
+
+    #[test]
+    fn test_carrier_to_noise_density_direction_matches_resolved_angles() {
+        // A direction-based pointing must produce the same C/N0 as the
+        // explicitly resolved pattern angles.
+        let tx = patterned_tx_system();
+        let rx = rx_system();
+        let range = Distance::kilometers(1000.0);
+        let direction = DVec3::new(1.0, 0.2, 0.0).normalize();
+
+        let c_n0_direction = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                range,
+                Pointing::Direction(direction),
+                Pointing::Boresight,
+            )
+            .unwrap();
+
+        let antenna = tx.antenna.as_ref().unwrap();
+        let (theta, phi) = antenna.pattern_angles(direction).unwrap();
+        let c_n0_angles = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                range,
+                Pointing::Angles { theta, phi },
+                Pointing::Boresight,
+            )
+            .unwrap();
+
+        assert_approx_eq!(c_n0_direction.as_f64(), c_n0_angles.as_f64(), atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_lumped_endpoints_ignore_direction() {
+        use crate::receiver::GtReceiver;
+        use crate::transmitter::EirpTransmitter;
+
+        let tx = CommunicationSystem::eirp_only(EirpTransmitter {
+            frequency: 29.0.ghz(),
+            eirp: 55.0.db(),
+        });
+        let rx = CommunicationSystem::gt_only(GtReceiver {
+            frequency: 29.0.ghz(),
+            gt: 3.01.db(),
+        });
+        let range = Distance::kilometers(1000.0);
+
+        let boresight = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                range,
+                Pointing::Boresight,
+                Pointing::Boresight,
+            )
+            .unwrap();
+        let direction = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                range,
+                Pointing::Direction(DVec3::Y),
+                Pointing::Direction(DVec3::Z),
+            )
+            .unwrap();
+
+        assert_approx_eq!(boresight.as_f64(), direction.as_f64(), atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_invalid_direction_is_error() {
+        let tx = tx_system();
+        let rx = rx_system();
+        let err = tx
+            .carrier_to_noise_density(
+                &rx,
+                0.0.db(),
+                Distance::kilometers(1000.0),
+                Pointing::Direction(DVec3::ZERO),
+                Pointing::Boresight,
+            )
+            .unwrap_err();
+        assert!(matches!(err, LinkBudgetError::InvalidPointing(_)));
+        assert!(err.to_string().contains("invalid pointing"));
     }
 }

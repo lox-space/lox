@@ -153,14 +153,14 @@ channel = lox.Channel(
     fec=0.5,
 )
 
-# Compute a full link budget at 1000 km slant range
+# Compute a full link budget at 1000 km slant range.
+# Pointing defaults to boresight; pass tx_angle/rx_angle for off-boresight
+# angles or tx_direction/rx_direction for line-of-sight vectors.
 link = lox.LinkStats.calculate(
     tx_system=tx_system,
     rx_system=rx_system,
     range=1000 * lox.km,
     bandwidth=channel.bandwidth(),
-    tx_angle=0.0 * lox.deg,
-    rx_angle=0.0 * lox.deg,
 )
 modulated = channel.apply(link)
 
@@ -170,6 +170,35 @@ print(f"C/N0:        {float(link.c_n0):.1f} dB·Hz")
 print(f"Es/N0:       {float(modulated.es_n0):.1f} dB")
 print(f"Eb/N0:       {float(modulated.eb_n0):.1f} dB")
 print(f"Link margin: {float(modulated.margin):.1f} dB")
+```
+
+### Direction-Aware Pointing
+
+For patterned antennas the link budget can derive the pattern angles directly
+from a line-of-sight vector expressed in the antenna's parent frame, using the
+antenna's `AntennaFrame`. The derived angles are reported on the result:
+
+```python
+import lox_space as lox
+
+# Dish boresight along +X
+frame = lox.AntennaFrame(boresight=[1.0, 0.0, 0.0], reference=[0.0, 0.0, 1.0])
+pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
+antenna = lox.PatternedAntenna(pattern=pattern, frame=frame)
+tx = lox.AmplifierTransmitter(
+    frequency=29 * lox.GHz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
+)
+tx_system = lox.CommunicationSystem(antenna=antenna, transmitter=tx)
+
+link = lox.LinkStats.calculate(
+    tx_system=tx_system,
+    rx_system=rx_system,
+    range=1000 * lox.km,
+    bandwidth=channel.bandwidth(),
+    tx_direction=[0.9, 0.1, 0.0],  # line of sight in the TX parent frame
+)
+print(f"TX theta: {link.tx_theta.to_degrees():.2f} deg")
+print(f"TX phi:   {link.tx_phi.to_degrees():.2f} deg")
 ```
 
 ### Working with Decibels
@@ -217,8 +246,6 @@ link = lox.LinkStats.calculate(
     rx_system=rx_system,
     range=1000 * lox.km,
     bandwidth=channel.bandwidth(),
-    tx_angle=0.0 * lox.deg,
-    rx_angle=0.0 * lox.deg,
     losses=losses,
 )
 ```

@@ -7,6 +7,8 @@
 use lox_core::units::Frequency;
 use thiserror::Error;
 
+use crate::antenna::AntennaFrameError;
+
 /// Errors that can arise when computing a link budget.
 #[derive(Debug, Clone, PartialEq, Error)]
 #[non_exhaustive]
@@ -26,6 +28,9 @@ pub enum LinkBudgetError {
     /// Absolute carrier and noise powers are required but are unavailable.
     #[error("absolute carrier and noise powers are unavailable for this link")]
     AbsolutePowerUnavailable,
+    /// A line-of-sight direction could not be converted to pattern angles.
+    #[error("invalid pointing: {0}")]
+    InvalidPointing(#[from] AntennaFrameError),
     /// Transmitter and receiver frequencies disagree.
     #[error(
         "transmitter frequency {} Hz differs from receiver frequency {} Hz",

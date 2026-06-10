@@ -903,7 +903,7 @@ def test_link_stats_with_losses():
         tx_sys, rx_sys, 1000 * lox.km, ch.bandwidth(), 0 * lox.deg, 0 * lox.deg
     )
     stats_loss = lox.LinkStats.calculate(
-        tx_sys, rx_sys, 1000 * lox.km, ch.bandwidth(), 0 * lox.deg, 0 * lox.deg, losses
+        tx_sys, rx_sys, 1000 * lox.km, ch.bandwidth(), 0 * lox.deg, 0 * lox.deg, losses=losses
     )
     modulated_no_loss = ch.apply(stats_no_loss)
     modulated_loss = ch.apply(stats_loss)
@@ -1637,10 +1637,10 @@ def test_channel_dsss_pickle():
     assert float(restored.processing_gain()) == pytest.approx(float(ch.processing_gain()), abs=1e-10)
 
 
-# --- LinkStats tx_angle and rx_angle getters ---
+# --- LinkStats pattern-angle getters and pointing arguments ---
 
 
-def test_link_stats_angle_getters():
+def test_link_stats_pattern_angle_getters():
     tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
     tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
     tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
@@ -1652,8 +1652,69 @@ def test_link_stats_angle_getters():
     stats = lox.LinkStats.calculate(
         tx_sys, rx_sys, 1000.0 * lox.km, 5.0 * lox.MHz, 2.0 * lox.deg, 1.0 * lox.deg
     )
-    assert stats.tx_angle.to_degrees() == pytest.approx(2.0, abs=1e-10)
-    assert stats.rx_angle.to_degrees() == pytest.approx(1.0, abs=1e-10)
+    assert stats.tx_theta.to_degrees() == pytest.approx(2.0, abs=1e-10)
+    assert stats.tx_phi.to_degrees() == pytest.approx(0.0, abs=1e-10)
+    assert stats.rx_theta.to_degrees() == pytest.approx(1.0, abs=1e-10)
+    assert stats.rx_phi.to_degrees() == pytest.approx(0.0, abs=1e-10)
+
+
+def test_link_stats_defaults_to_boresight():
+    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
+    tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
+    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
+
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
+    rx = lox.NoiseTempReceiver(frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K)
+    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
+
+    stats = lox.LinkStats.calculate(tx_sys, rx_sys, 1000.0 * lox.km, 5.0 * lox.MHz)
+    assert stats.tx_theta.to_degrees() == pytest.approx(0.0, abs=1e-10)
+    assert stats.rx_theta.to_degrees() == pytest.approx(0.0, abs=1e-10)
+    assert float(stats.c_n0) == pytest.approx(104.913, abs=0.1)
+
+
+def test_link_stats_direction_pointing():
+    # Dish boresight along +X; a line of sight along +Z is 90° off boresight.
+    frame = lox.AntennaFrame(boresight=[1.0, 0.0, 0.0], reference=[0.0, 0.0, 1.0])
+    pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
+    tx_ant = lox.PatternedAntenna(pattern=pattern, frame=frame)
+    tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
+    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
+
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
+    rx = lox.NoiseTempReceiver(frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K)
+    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
+
+    on_axis = lox.LinkStats.calculate(
+        tx_sys, rx_sys, 1000.0 * lox.km, 5.0 * lox.MHz, tx_direction=[1.0, 0.0, 0.0]
+    )
+    off_axis = lox.LinkStats.calculate(
+        tx_sys, rx_sys, 1000.0 * lox.km, 5.0 * lox.MHz, tx_direction=[0.0, 0.0, 1.0]
+    )
+
+    assert on_axis.tx_theta.to_degrees() == pytest.approx(0.0, abs=1e-10)
+    assert off_axis.tx_theta.to_degrees() == pytest.approx(90.0, abs=1e-10)
+    assert float(off_axis.eirp) < float(on_axis.eirp)
+
+
+def test_link_stats_rejects_angle_and_direction():
+    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
+    tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
+    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
+
+    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
+    rx = lox.NoiseTempReceiver(frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K)
+    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
+
+    with pytest.raises(ValueError, match="tx_angle or tx_direction"):
+        lox.LinkStats.calculate(
+            tx_sys,
+            rx_sys,
+            1000.0 * lox.km,
+            5.0 * lox.MHz,
+            tx_angle=1.0 * lox.deg,
+            tx_direction=[1.0, 0.0, 0.0],
+        )
 
 
 # --- ModulatedLinkStats link, channel, interference getters ---

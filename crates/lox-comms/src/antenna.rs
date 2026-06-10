@@ -179,7 +179,7 @@ impl Default for AntennaFrame {
 }
 
 /// Errors produced while constructing an [`AntennaFrame`].
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, PartialEq, Error)]
 pub enum AntennaFrameError {
     /// The boresight vector is zero-length or non-finite.
     #[error("invalid boresight {0:?}: vector must be nonzero and finite")]
@@ -287,6 +287,24 @@ impl Antenna {
         match self {
             Antenna::Constant(a) => Ok(a.gain),
             Antenna::Patterned(a) => a.gain_toward(frequency, direction),
+        }
+    }
+
+    /// Returns the pattern angles for a parent-frame direction vector.
+    ///
+    /// For [`Antenna::Patterned`] the direction is converted using the antenna
+    /// frame. [`Antenna::Constant`] has no frame and its gain is
+    /// direction-independent, so zero angles are returned; the direction is
+    /// still validated.
+    pub fn pattern_angles(&self, direction: DVec3) -> Result<(Angle, Angle), AntennaFrameError> {
+        match self {
+            Antenna::Constant(_) => {
+                direction
+                    .try_normalize()
+                    .ok_or(AntennaFrameError::InvalidDirection(direction))?;
+                Ok((Angle::ZERO, Angle::ZERO))
+            }
+            Antenna::Patterned(a) => a.frame.angles_for(direction),
         }
     }
 }
