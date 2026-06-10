@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn test_parabolic_peak_gain() {
         let p = test_pattern();
-        let gain = p.gain(test_frequency(), Angle::radians(0.0), Angle::radians(0.0));
+        let gain = p.gain(test_frequency(), Angle::ZERO, Angle::ZERO);
         let peak = p.peak_gain(test_frequency());
         assert_approx_eq!(gain.as_f64(), 46.01119000490658, rtol <= 1e-6);
         assert_approx_eq!(peak.as_f64(), 46.01119000490658, rtol <= 1e-6);
@@ -218,7 +218,7 @@ mod tests {
         let gain = p.gain(
             test_frequency(),
             Angle::radians(std::f64::consts::PI),
-            Angle::radians(0.0),
+            Angle::ZERO,
         );
         assert!(gain.as_f64() < -50.0);
     }
@@ -230,7 +230,7 @@ mod tests {
         let f = test_frequency();
         let half_bw = Angle::radians(p.beamwidth(f).unwrap().to_radians() / 2.0);
         let peak = p.peak_gain(f);
-        let gain_at_half_bw = p.gain(f, half_bw, Angle::radians(0.0));
+        let gain_at_half_bw = p.gain(f, half_bw, Angle::ZERO);
         let diff = (peak - gain_at_half_bw).as_f64();
         assert_approx_eq!(diff, 3.0103, atol <= 0.5);
     }

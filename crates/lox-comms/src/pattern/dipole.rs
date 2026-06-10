@@ -175,7 +175,7 @@ mod tests {
     fn test_half_wave_dipole_at_zero() {
         // Gain along axis of dipole (θ=0) should be very low
         let d = half_wave_dipole();
-        let gain = d.gain(test_frequency(), Angle::radians(0.0), Angle::radians(0.0));
+        let gain = d.gain(test_frequency(), Angle::ZERO, Angle::ZERO);
         assert!(gain.as_f64() < -50.0);
     }
 
@@ -183,11 +183,7 @@ mod tests {
     fn test_half_wave_dipole_at_broadside() {
         // Half-wave dipole peak gain ≈ 2.15 dBi at θ=π/2
         let d = half_wave_dipole();
-        let gain = d.gain(
-            test_frequency(),
-            Angle::radians(PI / 2.0),
-            Angle::radians(0.0),
-        );
+        let gain = d.gain(test_frequency(), Angle::radians(PI / 2.0), Angle::ZERO);
         assert_approx_eq!(gain.as_f64(), 2.15, atol <= 0.01);
     }
 
@@ -214,7 +210,7 @@ mod tests {
         // 1.5λ dipole at 45° ≈ 3.5 dBi
         let wavelength = test_frequency().wavelength().to_meters();
         let d = DipolePattern::new(Distance::meters(1.5 * wavelength));
-        let gain = d.gain(test_frequency(), Angle::degrees(45.0), Angle::radians(0.0));
+        let gain = d.gain(test_frequency(), Angle::degrees(45.0), Angle::ZERO);
         assert_approx_eq!(gain.as_f64(), 3.5, atol <= 0.1);
     }
 

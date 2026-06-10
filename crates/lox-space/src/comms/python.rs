@@ -209,11 +209,10 @@ impl PyParabolicPattern {
     /// Returns the gain in dBi at the given frequency and pattern angles.
     #[pyo3(signature = (frequency, theta, phi=None))]
     fn gain(&self, frequency: PyFrequency, theta: PyAngle, phi: Option<PyAngle>) -> PyDecibel {
-        PyDecibel(self.0.gain(
-            frequency.0,
-            theta.0,
-            phi.map_or(Angle::radians(0.0), |p| p.0),
-        ))
+        PyDecibel(
+            self.0
+                .gain(frequency.0, theta.0, phi.map_or(Angle::ZERO, |p| p.0)),
+        )
     }
 
     /// Returns the half-power beamwidth, or ``None`` when the
@@ -264,11 +263,10 @@ impl PyGaussianPattern {
     /// Returns the gain in dBi at the given frequency and pattern angles.
     #[pyo3(signature = (frequency, theta, phi=None))]
     fn gain(&self, frequency: PyFrequency, theta: PyAngle, phi: Option<PyAngle>) -> PyDecibel {
-        PyDecibel(self.0.gain(
-            frequency.0,
-            theta.0,
-            phi.map_or(Angle::radians(0.0), |p| p.0),
-        ))
+        PyDecibel(
+            self.0
+                .gain(frequency.0, theta.0, phi.map_or(Angle::ZERO, |p| p.0)),
+        )
     }
 
     /// Returns the half-power beamwidth.
@@ -317,11 +315,10 @@ impl PyDipolePattern {
     /// Returns the gain in dBi at the given frequency and pattern angles.
     #[pyo3(signature = (frequency, theta, phi=None))]
     fn gain(&self, frequency: PyFrequency, theta: PyAngle, phi: Option<PyAngle>) -> PyDecibel {
-        PyDecibel(self.0.gain(
-            frequency.0,
-            theta.0,
-            phi.map_or(Angle::radians(0.0), |p| p.0),
-        ))
+        PyDecibel(
+            self.0
+                .gain(frequency.0, theta.0, phi.map_or(Angle::ZERO, |p| p.0)),
+        )
     }
 
     /// Returns the peak gain in dBi.
@@ -492,11 +489,10 @@ impl PyPatternedAntenna {
     /// Returns the gain in dBi at the given frequency and pattern angles.
     #[pyo3(signature = (frequency, theta, phi=None))]
     fn gain(&self, frequency: PyFrequency, theta: PyAngle, phi: Option<PyAngle>) -> PyDecibel {
-        PyDecibel(self.0.gain(
-            frequency.0,
-            theta.0,
-            phi.map_or(Angle::radians(0.0), |p| p.0),
-        ))
+        PyDecibel(
+            self.0
+                .gain(frequency.0, theta.0, phi.map_or(Angle::ZERO, |p| p.0)),
+        )
     }
 
     /// Returns the peak gain in dBi.
@@ -772,7 +768,7 @@ impl PyAmplifierTransmitter {
         Ok(PyDecibel(self.0.eirp(
             &ant,
             theta.0,
-            phi.map_or(Angle::radians(0.0), |p| p.0),
+            phi.map_or(Angle::ZERO, |p| p.0),
         )))
     }
 

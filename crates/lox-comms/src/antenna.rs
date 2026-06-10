@@ -493,7 +493,7 @@ mod tests {
     #[test]
     fn test_constant_antenna_gain_dispatch() {
         let a = ConstantAntenna { gain: 10.0.db() };
-        let g = a.gain(29.0.ghz(), Angle::radians(0.0), Angle::radians(0.0));
+        let g = a.gain(29.0.ghz(), Angle::ZERO, Angle::ZERO);
         assert_approx_eq!(g.as_f64(), 10.0, atol <= 1e-10);
     }
 
@@ -502,7 +502,7 @@ mod tests {
         let a = parabolic();
         let f = 29.0.ghz();
         let peak = a.peak_gain(f);
-        let on_axis = a.gain(f, Angle::radians(0.0), Angle::radians(0.0));
+        let on_axis = a.gain(f, Angle::ZERO, Angle::ZERO);
         // On-axis gain equals peak gain
         assert_approx_eq!(on_axis.as_f64(), peak.as_f64(), atol <= 1e-10);
     }
@@ -527,7 +527,7 @@ mod tests {
         let a = Antenna::Constant(ConstantAntenna {
             gain: Decibel::new(20.0),
         });
-        let g = a.gain(29.0.ghz(), Angle::radians(0.0), Angle::radians(0.0));
+        let g = a.gain(29.0.ghz(), Angle::ZERO, Angle::ZERO);
         assert_approx_eq!(g.as_f64(), 20.0, atol <= 1e-10);
     }
 
@@ -535,7 +535,7 @@ mod tests {
     fn test_antenna_enum_patterned_dispatch() {
         let a = Antenna::Patterned(parabolic());
         let f = 29.0.ghz();
-        let on_axis = a.gain(f, Angle::radians(0.0), Angle::radians(0.0));
+        let on_axis = a.gain(f, Angle::ZERO, Angle::ZERO);
         assert!(on_axis.as_f64() > 40.0);
     }
 
