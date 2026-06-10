@@ -42,6 +42,7 @@ lox-units = { workspace = true, optional = true }
 geo = { workspace = true, optional = true }
 numpy = { workspace = true, optional = true }
 pyo3 = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 sgp4 = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -120,10 +121,12 @@ python = [
   "core",
   "imaging",
   "itur",
+  "serde",
   "time",
   "units",
   "dep:numpy",
   "dep:pyo3",
+  "dep:serde_json",
   "dep:sgp4",
 ]
 time = ["io", "math", "units", "dep:lox-time"]

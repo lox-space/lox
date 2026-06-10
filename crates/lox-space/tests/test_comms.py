@@ -1713,6 +1713,17 @@ def test_foreign_terminal_ids_are_rejected():
     assert float(payload_a.eirp_at(terminal_a, 29.0 * lox.GHz)) == pytest.approx(55.0)
 
 
+def test_comms_payload_pickle_round_trips_with_fresh_ids():
+    payload, terminal = lox.CommsPayload.eirp_only("a", KA_BAND, 55.0 * lox.dB)
+    restored = pickle.loads(pickle.dumps(payload))
+
+    restored_terminal = restored.find_terminal("a")
+    assert restored_terminal is not None
+    assert float(restored.eirp_at(restored_terminal, 29.0 * lox.GHz)) == pytest.approx(55.0)
+    with pytest.raises(ValueError, match="unknown terminal"):
+        restored.eirp_at(terminal, 29.0 * lox.GHz)
+
+
 def test_transceiver_static_and_direction_getter():
     payload, terminal = lox.CommsPayload.transceiver(
         "sat",

@@ -26,7 +26,7 @@ use lox_comms::pointing::Pointing;
 use lox_comms::receiver::{CascadeReceiver, NoiseStage, NoiseTempReceiver, Receiver};
 use lox_comms::transmitter::AmplifierTransmitter;
 use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
-use lox_core::units::{Angle, Decibel, Temperature};
+use lox_core::units::{Angle, Decibel};
 
 use crate::units::python::{PyAngle, PyDistance, PyFrequency, PyPower, PyTemperature};
 
@@ -1972,6 +1972,16 @@ impl PyCommsPayload {
 
     fn __str__(&self) -> String {
         self.0.to_string()
+    }
+
+    fn __getstate__(&self) -> PyResult<String> {
+        serde_json::to_string(&self.0).map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    fn __setstate__(&mut self, state: &str) -> PyResult<()> {
+        self.0 =
+            serde_json::from_str(state).map_err(|err| PyValueError::new_err(err.to_string()))?;
+        Ok(())
     }
 
     /// Creates a single-terminal transmit-only payload.
