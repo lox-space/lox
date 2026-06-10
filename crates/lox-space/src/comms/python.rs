@@ -26,7 +26,7 @@ use lox_comms::pointing::Pointing;
 use lox_comms::receiver::{CascadeReceiver, NoiseStage, NoiseTempReceiver, Receiver};
 use lox_comms::transmitter::AmplifierTransmitter;
 use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
-use lox_core::units::{Angle, Decibel};
+use lox_core::units::{Angle, Decibel, Temperature};
 
 use crate::units::python::{PyAngle, PyDistance, PyFrequency, PyPower, PyTemperature};
 
@@ -1767,20 +1767,22 @@ impl PyCommsPayload {
     }
 
     /// Adds a transmit port wiring an antenna to a transmitter.
-    #[pyo3(signature = (name, antenna, transmitter, feed_loss, band=None))]
+    ///
+    /// ``feed_loss`` defaults to a lossless feed (0 dB).
+    #[pyo3(signature = (name, antenna, transmitter, feed_loss=None, band=None))]
     fn add_tx_port(
         &mut self,
         name: String,
         antenna: PyAntennaId,
         transmitter: PyTransmitterId,
-        feed_loss: PyDecibel,
+        feed_loss: Option<PyDecibel>,
         band: Option<PyFrequencyRange>,
     ) -> PyResult<PyTxPortId> {
         let port = TxPort::new(
             name,
             antenna.0,
             transmitter.0,
-            feed_loss.0,
+            feed_loss.map_or(Decibel::new(0.0), |l| l.0),
             band.map(|b| b.0),
         )
         .map_err(|err| PyValueError::new_err(err.to_string()))?;
@@ -1791,22 +1793,25 @@ impl PyCommsPayload {
     }
 
     /// Adds a receive port wiring an antenna to a receiver.
-    #[pyo3(signature = (name, antenna, receiver, feed_loss, antenna_noise_temperature, band=None))]
+    ///
+    /// ``feed_loss`` defaults to a lossless feed (0 dB) and
+    /// ``antenna_noise_temperature`` to 0 K.
+    #[pyo3(signature = (name, antenna, receiver, feed_loss=None, antenna_noise_temperature=None, band=None))]
     fn add_rx_port(
         &mut self,
         name: String,
         antenna: PyAntennaId,
         receiver: PyReceiverId,
-        feed_loss: PyDecibel,
-        antenna_noise_temperature: PyTemperature,
+        feed_loss: Option<PyDecibel>,
+        antenna_noise_temperature: Option<PyTemperature>,
         band: Option<PyFrequencyRange>,
     ) -> PyResult<PyRxPortId> {
         let port = RxPort::new(
             name,
             antenna.0,
             receiver.0,
-            feed_loss.0,
-            antenna_noise_temperature.0,
+            feed_loss.map_or(Decibel::new(0.0), |l| l.0),
+            antenna_noise_temperature.map_or(Temperature::kelvin(0.0), |t| t.0),
             band.map(|b| b.0),
         )
         .map_err(|err| PyValueError::new_err(err.to_string()))?;

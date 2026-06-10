@@ -2812,21 +2812,28 @@ class CommsPayload:
         name: str,
         antenna: AntennaId,
         transmitter: TransmitterId,
-        feed_loss: Decibel,
+        feed_loss: Decibel | None = None,
         band: FrequencyRange | None = None,
     ) -> TxPortId:
-        """Adds a transmit port wiring an antenna to a transmitter."""
+        """Adds a transmit port wiring an antenna to a transmitter.
+
+        ``feed_loss`` defaults to a lossless feed (0 dB).
+        """
         ...
     def add_rx_port(
         self,
         name: str,
         antenna: AntennaId,
         receiver: ReceiverId,
-        feed_loss: Decibel,
-        antenna_noise_temperature: Temperature,
+        feed_loss: Decibel | None = None,
+        antenna_noise_temperature: Temperature | None = None,
         band: FrequencyRange | None = None,
     ) -> RxPortId:
-        """Adds a receive port wiring an antenna to a receiver."""
+        """Adds a receive port wiring an antenna to a receiver.
+
+        ``feed_loss`` defaults to a lossless feed (0 dB) and
+        ``antenna_noise_temperature`` to 0 K.
+        """
         ...
     def add_tx_terminal(
         self,

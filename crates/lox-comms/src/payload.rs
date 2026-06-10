@@ -244,7 +244,62 @@ impl TryFrom<TxPortRepr> for TxPort {
     }
 }
 
+/// Builder for [`TxPort`].
+///
+/// Created via [`TxPort::builder`]. Unset fields default to a lossless feed
+/// (0 dB) and an unconstrained band.
+#[derive(Debug, Clone)]
+pub struct TxPortBuilder {
+    name: String,
+    antenna: AntennaId,
+    transmitter: TransmitterId,
+    feed_loss: Decibel,
+    band: Option<FrequencyRange>,
+}
+
+impl TxPortBuilder {
+    /// Sets the feed loss between transmitter output and antenna.
+    pub fn feed_loss(mut self, feed_loss: Decibel) -> Self {
+        self.feed_loss = feed_loss;
+        self
+    }
+
+    /// Narrows the supported frequency range for this path.
+    pub fn band(mut self, band: FrequencyRange) -> Self {
+        self.band = Some(band);
+        self
+    }
+
+    /// Builds the port, validating its physical parameters.
+    pub fn build(self) -> Result<TxPort, NonPhysicalError> {
+        TxPort::new(
+            self.name,
+            self.antenna,
+            self.transmitter,
+            self.feed_loss,
+            self.band,
+        )
+    }
+}
+
 impl TxPort {
+    /// Starts building a transmit port wiring `antenna` to `transmitter`.
+    ///
+    /// Unset fields default to a lossless feed and an unconstrained band.
+    pub fn builder(
+        name: impl Into<String>,
+        antenna: AntennaId,
+        transmitter: TransmitterId,
+    ) -> TxPortBuilder {
+        TxPortBuilder {
+            name: name.into(),
+            antenna,
+            transmitter,
+            feed_loss: Decibel::new(0.0),
+            band: None,
+        }
+    }
+
     /// Creates a new transmit port.
     ///
     /// Rejects a non-finite or negative feed loss.
@@ -343,7 +398,72 @@ impl TryFrom<RxPortRepr> for RxPort {
     }
 }
 
+/// Builder for [`RxPort`].
+///
+/// Created via [`RxPort::builder`]. Unset fields default to a lossless feed
+/// (0 dB), a 0 K antenna noise temperature, and an unconstrained band.
+#[derive(Debug, Clone)]
+pub struct RxPortBuilder {
+    name: String,
+    antenna: AntennaId,
+    receiver: ReceiverId,
+    feed_loss: Decibel,
+    antenna_noise_temperature: Temperature,
+    band: Option<FrequencyRange>,
+}
+
+impl RxPortBuilder {
+    /// Sets the feed loss between antenna and receiver input.
+    pub fn feed_loss(mut self, feed_loss: Decibel) -> Self {
+        self.feed_loss = feed_loss;
+        self
+    }
+
+    /// Sets the clear-sky antenna noise temperature seen at this port.
+    pub fn antenna_noise_temperature(mut self, temperature: Temperature) -> Self {
+        self.antenna_noise_temperature = temperature;
+        self
+    }
+
+    /// Narrows the supported frequency range for this path.
+    pub fn band(mut self, band: FrequencyRange) -> Self {
+        self.band = Some(band);
+        self
+    }
+
+    /// Builds the port, validating its physical parameters.
+    pub fn build(self) -> Result<RxPort, NonPhysicalError> {
+        RxPort::new(
+            self.name,
+            self.antenna,
+            self.receiver,
+            self.feed_loss,
+            self.antenna_noise_temperature,
+            self.band,
+        )
+    }
+}
+
 impl RxPort {
+    /// Starts building a receive port wiring `antenna` to `receiver`.
+    ///
+    /// Unset fields default to a lossless feed, a 0 K antenna noise
+    /// temperature, and an unconstrained band.
+    pub fn builder(
+        name: impl Into<String>,
+        antenna: AntennaId,
+        receiver: ReceiverId,
+    ) -> RxPortBuilder {
+        RxPortBuilder {
+            name: name.into(),
+            antenna,
+            receiver,
+            feed_loss: Decibel::new(0.0),
+            antenna_noise_temperature: Temperature::kelvin(0.0),
+            band: None,
+        }
+    }
+
     /// Creates a new receive port.
     ///
     /// Rejects a non-finite or negative feed loss or antenna noise
@@ -1054,6 +1174,7 @@ pub enum PayloadError {
 #[cfg(test)]
 mod tests {
     use lox_core::units::{DecibelUnits, FrequencyUnits, Power, Temperature};
+    use lox_test_utils::assert_approx_eq;
 
     use crate::antenna::ConstantAntenna;
     use crate::receiver::NoiseTempReceiver;
@@ -1184,6 +1305,72 @@ mod tests {
         assert_eq!(
             payload.tx_port(high_port).unwrap().transmitter,
             payload.tx_port(low_port).unwrap().transmitter
+        );
+    }
+
+    #[test]
+    fn test_port_builders() {
+        let mut payload = CommsPayload::new();
+        let antenna = payload.add_antenna(
+            "dish",
+            Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
+        );
+        let transmitter = payload.add_transmitter(
+            "pa",
+            AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
+        );
+        let receiver = payload.add_receiver(
+            "rx",
+            Receiver::NoiseTemperature(
+                NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
+            ),
+        );
+
+        // Defaults: lossless feed, unconstrained band, 0 K antenna temperature.
+        let bare = TxPort::builder("bare", antenna, transmitter)
+            .build()
+            .unwrap();
+        assert_approx_eq!(bare.feed_loss().as_f64(), 0.0, atol <= 1e-15);
+        assert!(bare.band().is_none());
+
+        let tx_port = payload
+            .add_tx_port(
+                TxPort::builder("tx feed", antenna, transmitter)
+                    .feed_loss(0.8.db())
+                    .band(ka_band())
+                    .build()
+                    .unwrap(),
+            )
+            .unwrap();
+        let rx_port = payload
+            .add_rx_port(
+                RxPort::builder("rx feed", antenna, receiver)
+                    .feed_loss(0.3.db())
+                    .antenna_noise_temperature(Temperature::kelvin(60.0))
+                    .build()
+                    .unwrap(),
+            )
+            .unwrap();
+        assert_approx_eq!(
+            payload.tx_port(tx_port).unwrap().feed_loss().as_f64(),
+            0.8,
+            atol <= 1e-15
+        );
+        assert_approx_eq!(
+            payload
+                .rx_port(rx_port)
+                .unwrap()
+                .antenna_noise_temperature()
+                .to_kelvin(),
+            60.0,
+            atol <= 1e-15
+        );
+        // Validation still applies at build().
+        assert!(
+            TxPort::builder("bad", antenna, transmitter)
+                .feed_loss((-1.0).db())
+                .build()
+                .is_err()
         );
     }
 

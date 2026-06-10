@@ -59,13 +59,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         "x-band sspa",
         AmplifierTransmitter::new(eess_band, 2.0.w(), 0.5.db())?,
     );
-    let tx_port = spacecraft.add_tx_port(TxPort::new(
-        "tx feed",
-        dish,
-        amplifier,
-        0.8.db(),
-        Some(eess_band),
-    )?)?;
+    let tx_port = spacecraft.add_tx_port(
+        TxPort::builder("tx feed", dish, amplifier)
+            .feed_loss(0.8.db())
+            .band(eess_band)
+            .build()?,
+    )?;
     let downlink_terminal =
         spacecraft.add_tx_terminal("x-band downlink", TxChain::Component(tx_port))?;
 
