@@ -80,12 +80,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         .demodulator_loss(0.5.db())
         .implementation_loss(0.5.db())
         .build()?;
-    let (ground_station, station_terminal) =
-        CommsPayload::receiver_only("3.7m station", Antenna::parabolic(3.7.m(), 0.6)?, front_end)
-            .feed_loss(0.3.db())
-            .antenna_noise_temperature(60.0.k())
-            .band(eess_band)
-            .build()?;
+    let (ground_station, station_terminal) = CommsPayload::receiver_only(
+        "3.7m station",
+        Antenna::parabolic(3.7.m(), 0.6)?,
+        front_end,
+        60.0.k(),
+    )
+    .feed_loss(0.3.db())
+    .band(eess_band)
+    .build()?;
 
     println!("\n{spacecraft}");
     println!("{ground_station}");

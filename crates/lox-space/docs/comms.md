@@ -94,7 +94,11 @@ lnb = payload.add_receiver(
 )
 tx_port = payload.add_tx_port("tx leg", dish, pa, 1.0 * lox.dB, band=ka_band)
 rx_port = payload.add_rx_port(
-    "rx leg", dish, lnb, 0.5 * lox.dB, antenna_noise_temperature=0.0 * lox.K
+    "rx leg",
+    dish,
+    lnb,
+    antenna_noise_temperature=0.0 * lox.K,
+    feed_loss=0.5 * lox.dB,
 )
 terminal = payload.add_transceiver_terminal("ka transceiver", tx_port=tx_port, rx_port=rx_port)
 ```
@@ -223,8 +227,8 @@ ground_station, station_terminal = lox.CommsPayload.receiver_only(
     "3.7m station",
     lox.PatternedAntenna(pattern=lox.ParabolicPattern(3.7 * lox.m, 0.6)),
     front_end,
-    feed_loss=0.3 * lox.dB,
     antenna_noise_temperature=60.0 * lox.K,
+    feed_loss=0.3 * lox.dB,
     band=eess_band,
 )
 

@@ -266,6 +266,7 @@ mod tests {
             "rx",
             Antenna::Constant(ConstantAntenna::new(30.0.db()).unwrap()),
             NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
+            Temperature::kelvin(0.0),
         )
         .build()
         .unwrap();

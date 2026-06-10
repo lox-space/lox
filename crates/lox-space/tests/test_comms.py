@@ -32,8 +32,8 @@ def make_rx_payload(gain=30.0, noise_temperature=500.0, feed_loss=0.0):
         lox.NoiseTempReceiver(
             band=KA_BAND, noise_temperature=noise_temperature * lox.K
         ),
-        feed_loss=feed_loss * lox.dB,
         antenna_noise_temperature=0.0 * lox.K,
+        feed_loss=feed_loss * lox.dB,
     )
 
 
@@ -1415,7 +1415,11 @@ def test_comms_payload_manual_wiring_diplexer():
     )
     tx_port = payload.add_tx_port("tx leg", dish, pa, 1.0 * lox.dB, band=KA_BAND)
     rx_port = payload.add_rx_port(
-        "rx leg", dish, lnb, 0.5 * lox.dB, antenna_noise_temperature=0.0 * lox.K
+        "rx leg",
+        dish,
+        lnb,
+        antenna_noise_temperature=0.0 * lox.K,
+        feed_loss=0.5 * lox.dB,
     )
     terminal = payload.add_transceiver_terminal(
         "ka transceiver", tx_port=tx_port, rx_port=rx_port
@@ -1516,7 +1520,11 @@ def test_comms_payload_introspection():
     )
     tx_port = payload.add_tx_port("tx leg", dish, pa, 1.0 * lox.dB)
     rx_port = payload.add_rx_port(
-        "rx leg", dish, lnb, 0.5 * lox.dB, antenna_noise_temperature=0.0 * lox.K
+        "rx leg",
+        dish,
+        lnb,
+        antenna_noise_temperature=0.0 * lox.K,
+        feed_loss=0.5 * lox.dB,
     )
     terminal = payload.add_transceiver_terminal(
         "ka transceiver", tx_port=tx_port, rx_port=rx_port
@@ -1711,6 +1719,7 @@ def test_transceiver_static_and_direction_getter():
         lox.ConstantAntenna(gain=46.0 * lox.dB),
         lox.AmplifierTransmitter(band=KA_BAND, power=10.0 * lox.W),
         lox.NoiseTempReceiver(band=KA_BAND, noise_temperature=500.0 * lox.K),
+        antenna_noise_temperature=150.0 * lox.K,
         tx_feed_loss=1.0 * lox.dB,
         rx_feed_loss=0.5 * lox.dB,
         band=KA_BAND,

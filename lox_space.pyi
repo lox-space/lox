@@ -2825,14 +2825,13 @@ class CommsPayload:
         name: str,
         antenna: AntennaId,
         receiver: ReceiverId,
+        antenna_noise_temperature: Temperature,
         feed_loss: Decibel | None = None,
-        antenna_noise_temperature: Temperature | None = None,
         band: FrequencyRange | None = None,
     ) -> RxPortId:
         """Adds a receive port wiring an antenna to a receiver.
 
-        ``feed_loss`` defaults to a lossless feed (0 dB) and
-        ``antenna_noise_temperature`` to 0 K.
+        ``feed_loss`` defaults to a lossless feed (0 dB).
         """
         ...
     def add_tx_terminal(
@@ -2919,14 +2918,13 @@ class CommsPayload:
         name: str,
         antenna: ConstantAntenna | PatternedAntenna,
         receiver: NoiseTempReceiver | CascadeReceiver,
+        antenna_noise_temperature: Temperature,
         feed_loss: Decibel | None = None,
-        antenna_noise_temperature: Temperature | None = None,
         band: FrequencyRange | None = None,
     ) -> tuple[CommsPayload, TerminalId]:
         """Creates a single-terminal receive-only payload.
 
-        ``feed_loss`` defaults to a lossless feed (0 dB) and
-        ``antenna_noise_temperature`` to 0 K.
+        ``feed_loss`` defaults to a lossless feed (0 dB).
         """
         ...
     @staticmethod
@@ -2935,15 +2933,14 @@ class CommsPayload:
         antenna: ConstantAntenna | PatternedAntenna,
         transmitter: AmplifierTransmitter,
         receiver: NoiseTempReceiver | CascadeReceiver,
+        antenna_noise_temperature: Temperature,
         tx_feed_loss: Decibel | None = None,
         rx_feed_loss: Decibel | None = None,
-        antenna_noise_temperature: Temperature | None = None,
         band: FrequencyRange | None = None,
     ) -> tuple[CommsPayload, TerminalId]:
         """Creates a single-terminal transceiver payload sharing one antenna.
 
-        Feed losses default to lossless (0 dB) and
-        ``antenna_noise_temperature`` to 0 K.
+        Feed losses default to lossless (0 dB).
         """
         ...
     @staticmethod

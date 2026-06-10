@@ -1798,16 +1798,15 @@ impl PyCommsPayload {
 
     /// Adds a receive port wiring an antenna to a receiver.
     ///
-    /// ``feed_loss`` defaults to a lossless feed (0 dB) and
-    /// ``antenna_noise_temperature`` to 0 K.
-    #[pyo3(signature = (name, antenna, receiver, feed_loss=None, antenna_noise_temperature=None, band=None))]
+    /// ``feed_loss`` defaults to a lossless feed (0 dB).
+    #[pyo3(signature = (name, antenna, receiver, antenna_noise_temperature, feed_loss=None, band=None))]
     fn add_rx_port(
         &mut self,
         name: String,
         antenna: PyAntennaId,
         receiver: PyReceiverId,
+        antenna_noise_temperature: PyTemperature,
         feed_loss: Option<PyDecibel>,
-        antenna_noise_temperature: Option<PyTemperature>,
         band: Option<PyFrequencyRange>,
     ) -> PyResult<PyRxPortId> {
         let port = RxPort::new(
@@ -1815,7 +1814,7 @@ impl PyCommsPayload {
             antenna.0,
             receiver.0,
             feed_loss.map_or(Decibel::new(0.0), |l| l.0),
-            antenna_noise_temperature.map_or(Temperature::kelvin(0.0), |t| t.0),
+            antenna_noise_temperature.0,
             band.map(|b| b.0),
         )
         .map_err(|err| PyValueError::new_err(err.to_string()))?;
@@ -2001,25 +2000,23 @@ impl PyCommsPayload {
 
     /// Creates a single-terminal receive-only payload.
     #[staticmethod]
-    #[pyo3(signature = (name, antenna, receiver, feed_loss=None, antenna_noise_temperature=None, band=None))]
+    #[pyo3(signature = (name, antenna, receiver, antenna_noise_temperature, feed_loss=None, band=None))]
     fn receiver_only(
         name: String,
         antenna: &Bound<'_, PyAny>,
         receiver: &Bound<'_, PyAny>,
+        antenna_noise_temperature: PyTemperature,
         feed_loss: Option<PyDecibel>,
-        antenna_noise_temperature: Option<PyTemperature>,
         band: Option<PyFrequencyRange>,
     ) -> PyResult<(Self, PyTerminalId)> {
         let mut builder = CommsPayload::receiver_only(
             name,
             build_antenna(antenna)?,
             build_receiver_any(receiver)?,
+            antenna_noise_temperature.0,
         );
         if let Some(feed_loss) = feed_loss {
             builder = builder.feed_loss(feed_loss.0);
-        }
-        if let Some(temperature) = antenna_noise_temperature {
-            builder = builder.antenna_noise_temperature(temperature.0);
         }
         if let Some(band) = band {
             builder = builder.band(band.0);
@@ -2032,16 +2029,16 @@ impl PyCommsPayload {
 
     /// Creates a single-terminal transceiver payload sharing one antenna.
     #[staticmethod]
-    #[pyo3(signature = (name, antenna, transmitter, receiver, tx_feed_loss=None, rx_feed_loss=None, antenna_noise_temperature=None, band=None))]
+    #[pyo3(signature = (name, antenna, transmitter, receiver, antenna_noise_temperature, tx_feed_loss=None, rx_feed_loss=None, band=None))]
     #[allow(clippy::too_many_arguments)]
     fn transceiver(
         name: String,
         antenna: &Bound<'_, PyAny>,
         transmitter: PyAmplifierTransmitter,
         receiver: &Bound<'_, PyAny>,
+        antenna_noise_temperature: PyTemperature,
         tx_feed_loss: Option<PyDecibel>,
         rx_feed_loss: Option<PyDecibel>,
-        antenna_noise_temperature: Option<PyTemperature>,
         band: Option<PyFrequencyRange>,
     ) -> PyResult<(Self, PyTerminalId)> {
         let mut builder = CommsPayload::transceiver(
@@ -2049,15 +2046,13 @@ impl PyCommsPayload {
             build_antenna(antenna)?,
             transmitter.0.clone(),
             build_receiver_any(receiver)?,
+            antenna_noise_temperature.0,
         );
         if let Some(feed_loss) = tx_feed_loss {
             builder = builder.tx_feed_loss(feed_loss.0);
         }
         if let Some(feed_loss) = rx_feed_loss {
             builder = builder.rx_feed_loss(feed_loss.0);
-        }
-        if let Some(temperature) = antenna_noise_temperature {
-            builder = builder.antenna_noise_temperature(temperature.0);
         }
         if let Some(band) = band {
             builder = builder.band(band.0);

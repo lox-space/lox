@@ -465,7 +465,7 @@ impl TryFrom<RxPortRepr> for RxPort {
 /// Builder for [`RxPort`].
 ///
 /// Created via [`RxPort::builder`]. Unset fields default to a lossless feed
-/// (0 dB), a 0 K antenna noise temperature, and an unconstrained band.
+/// (0 dB) and an unconstrained band.
 #[derive(Debug, Clone)]
 pub struct RxPortBuilder {
     name: String,
@@ -480,12 +480,6 @@ impl RxPortBuilder {
     /// Sets the feed loss between antenna and receiver input.
     pub fn feed_loss(mut self, feed_loss: Decibel) -> Self {
         self.feed_loss = feed_loss;
-        self
-    }
-
-    /// Sets the clear-sky antenna noise temperature seen at this port.
-    pub fn antenna_noise_temperature(mut self, temperature: Temperature) -> Self {
-        self.antenna_noise_temperature = temperature;
         self
     }
 
@@ -511,19 +505,19 @@ impl RxPortBuilder {
 impl RxPort {
     /// Starts building a receive port wiring `antenna` to `receiver`.
     ///
-    /// Unset fields default to a lossless feed, a 0 K antenna noise
-    /// temperature, and an unconstrained band.
+    /// Unset fields default to a lossless feed and an unconstrained band.
     pub fn builder(
         name: impl Into<String>,
         antenna: AntennaId,
         receiver: ReceiverId,
+        antenna_noise_temperature: Temperature,
     ) -> RxPortBuilder {
         RxPortBuilder {
             name: name.into(),
             antenna,
             receiver,
             feed_loss: Decibel::new(0.0),
-            antenna_noise_temperature: Temperature::kelvin(0.0),
+            antenna_noise_temperature,
             band: None,
         }
     }
@@ -775,19 +769,20 @@ impl CommsPayload {
     /// Starts building a single-terminal receive-only payload.
     ///
     /// Wires `antenna` to `receiver` through one RX port and exposes it as a
-    /// terminal named `name`. Unset fields default to a lossless feed, a 0 K
-    /// antenna noise temperature, and an unconstrained band.
+    /// terminal named `name`. Unset fields default to a lossless feed and an
+    /// unconstrained band.
     pub fn receiver_only(
         name: impl Into<String>,
         antenna: Antenna,
         receiver: impl Into<Receiver>,
+        antenna_noise_temperature: Temperature,
     ) -> ReceiverOnlyBuilder {
         ReceiverOnlyBuilder {
             name: name.into(),
             antenna,
             receiver: receiver.into(),
             feed_loss: Decibel::new(0.0),
-            antenna_noise_temperature: Temperature::kelvin(0.0),
+            antenna_noise_temperature,
             band: None,
         }
     }
@@ -797,13 +792,14 @@ impl CommsPayload {
     ///
     /// Wires `antenna` to both `transmitter` and `receiver` through one TX
     /// and one RX port (diplexer-style) and exposes them as one transceiver
-    /// terminal named `name`. Unset fields default to lossless feeds, a 0 K
-    /// antenna noise temperature, and an unconstrained band.
+    /// terminal named `name`. Unset fields default to lossless feeds and an
+    /// unconstrained band.
     pub fn transceiver(
         name: impl Into<String>,
         antenna: Antenna,
         transmitter: AmplifierTransmitter,
         receiver: impl Into<Receiver>,
+        antenna_noise_temperature: Temperature,
     ) -> TransceiverBuilder {
         TransceiverBuilder {
             name: name.into(),
@@ -812,7 +808,7 @@ impl CommsPayload {
             receiver: receiver.into(),
             tx_feed_loss: Decibel::new(0.0),
             rx_feed_loss: Decibel::new(0.0),
-            antenna_noise_temperature: Temperature::kelvin(0.0),
+            antenna_noise_temperature,
             band: None,
         }
     }
@@ -1334,12 +1330,6 @@ impl ReceiverOnlyBuilder {
         self
     }
 
-    /// Sets the clear-sky antenna noise temperature at the port.
-    pub fn antenna_noise_temperature(mut self, temperature: Temperature) -> Self {
-        self.antenna_noise_temperature = temperature;
-        self
-    }
-
     /// Narrows the supported frequency range for the path.
     pub fn band(mut self, band: FrequencyRange) -> Self {
         self.band = Some(band);
@@ -1390,12 +1380,6 @@ impl TransceiverBuilder {
     /// Sets the feed loss between antenna and receiver input.
     pub fn rx_feed_loss(mut self, feed_loss: Decibel) -> Self {
         self.rx_feed_loss = feed_loss;
-        self
-    }
-
-    /// Sets the clear-sky antenna noise temperature at the receive port.
-    pub fn antenna_noise_temperature(mut self, temperature: Temperature) -> Self {
-        self.antenna_noise_temperature = temperature;
         self
     }
 
@@ -1639,9 +1623,8 @@ mod tests {
             .unwrap();
         let rx_port = payload
             .add_rx_port(
-                RxPort::builder("rx feed", antenna, receiver)
+                RxPort::builder("rx feed", antenna, receiver, Temperature::kelvin(60.0))
                     .feed_loss(0.3.db())
-                    .antenna_noise_temperature(Temperature::kelvin(60.0))
                     .build()
                     .unwrap(),
             )
@@ -1761,10 +1744,10 @@ mod tests {
             Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
             AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
             NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
+            Temperature::kelvin(150.0),
         )
         .tx_feed_loss(1.0.db())
         .rx_feed_loss(0.5.db())
-        .antenna_noise_temperature(Temperature::kelvin(150.0))
         .band(ka_band())
         .build()
         .unwrap();
@@ -1858,8 +1841,7 @@ mod tests {
             .unwrap();
         let rx_port = payload
             .add_rx_port(
-                RxPort::builder("rx leg", antenna, receiver)
-                    .antenna_noise_temperature(Temperature::kelvin(60.0))
+                RxPort::builder("rx leg", antenna, receiver, Temperature::kelvin(60.0))
                     .build()
                     .unwrap(),
             )
@@ -1987,9 +1969,9 @@ mod tests {
             "rx",
             Antenna::Constant(ConstantAntenna::new(30.0.db()).unwrap()),
             NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
+            Temperature::kelvin(60.0),
         )
         .feed_loss(0.3.db())
-        .antenna_noise_temperature(Temperature::kelvin(60.0))
         .band(ka_band())
         .build()
         .unwrap();

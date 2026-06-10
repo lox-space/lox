@@ -66,8 +66,8 @@ def noise_temp_link_stats(t_sys_k, bandwidth_hz, rx_gain_db=30.0):
         lox.NoiseTempReceiver(
             band=WIDE_BAND, noise_temperature=t_sys_k * lox.K
         ),
-        feed_loss=0.0 * lox.dB,
         antenna_noise_temperature=0.0 * lox.K,
+        feed_loss=0.0 * lox.dB,
     )
     return lox.LinkStats.for_link(
         tx_payload,
@@ -420,8 +420,8 @@ def test_friis_cascade_feed_loss():
         "rx",
         lox.ConstantAntenna(gain=30.0 * lox.dB),
         chain,
-        feed_loss=feed_loss_db * lox.dB,
         antenna_noise_temperature=t_ant * lox.K,
+        feed_loss=feed_loss_db * lox.dB,
     )
     stats = lox.LinkStats.for_link(
         tx_payload,
@@ -503,8 +503,8 @@ def test_tdrs_ka_band_return_link():
         "geo relay",
         rx_antenna,
         rx,
-        feed_loss=0.0 * lox.dB,
         antenna_noise_temperature=t_ant * lox.K,
+        feed_loss=0.0 * lox.dB,
     )
 
     # Cross-check RX antenna gain against spacelink

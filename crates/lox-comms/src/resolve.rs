@@ -916,7 +916,7 @@ mod tests {
         let disjoint = FrequencyRange::new(2.0.ghz(), 4.0.ghz()).unwrap();
         let port = payload
             .add_rx_port(
-                RxPort::builder("feed", antenna, receiver)
+                RxPort::builder("feed", antenna, receiver, Temperature::kelvin(0.0))
                     .band(disjoint)
                     .build()
                     .unwrap(),
