@@ -3025,8 +3025,8 @@ class LinkStats:
 class InterferenceStats:
     """Interference statistics for a link with a given interferer power."""
     @property
-    def interference_power_w(self) -> float:
-        """Interference power in watts."""
+    def interference_power(self) -> Power:
+        """Interference power."""
         ...
     @property
     def c_n0i0(self) -> Decibel:
@@ -3068,7 +3068,7 @@ class ModulatedLinkStats:
     def margin(self) -> Decibel:
         """Link margin in dB."""
         ...
-    def with_interference(self, interference_power_w: float) -> InterferenceStats:
+    def with_interference(self, interference_power: Power) -> InterferenceStats:
         """Computes interference statistics for a given interferer power."""
         ...
     def __repr__(self) -> str: ...

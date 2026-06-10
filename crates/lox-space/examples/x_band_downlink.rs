@@ -30,7 +30,9 @@ use lox_space::comms::pointing::Pointing;
 use lox_space::comms::receiver::{CascadeReceiver, NoiseStage, Receiver};
 use lox_space::comms::transmitter::AmplifierTransmitter;
 use lox_space::comms::utils::slant_range;
-use lox_space::units::{Angle, Decibel, DecibelUnits, Distance, Frequency, FrequencyUnits};
+use lox_space::units::{
+    Angle, Decibel, DecibelUnits, Distance, Frequency, FrequencyUnits, Power, Temperature,
+};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // ------------------------------------------------------------------
@@ -66,7 +68,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     let amplifier = spacecraft.add_transmitter(
         "x-band sspa",
-        AmplifierTransmitter::new(eess_band, 2.0, 0.5.db())?,
+        AmplifierTransmitter::new(eess_band, Power::watts(2.0), 0.5.db())?,
     );
     let tx_port = spacecraft.add_tx_port(TxPort::new(
         "tx feed",
@@ -86,8 +88,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // clear-sky antenna noise temperature at low elevation. The single-
     // chain convenience constructor wires the same structure in one call.
     // ------------------------------------------------------------------
-    let lna = NoiseStage::new(35.0.db(), 50.0)?;
-    let downconverter = NoiseStage::new(0.0.db(), 1540.0)?; // NF ≈ 8 dB
+    let lna = NoiseStage::new(35.0.db(), Temperature::kelvin(50.0))?;
+    let downconverter = NoiseStage::new(0.0.db(), Temperature::kelvin(1540.0))?; // NF ≈ 8 dB
     let front_end = CascadeReceiver::new(
         eess_band,
         vec![lna, downconverter],
@@ -102,7 +104,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }),
         Receiver::Cascade(front_end),
         0.3.db(),
-        60.0,
+        Temperature::kelvin(60.0),
         Some(eess_band),
     )?;
 
@@ -132,7 +134,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     println!(
         "Station T_sys:       {:.0} K (flange-referred)",
-        rx.system_noise_temperature().expect("component chain")
+        rx.system_noise_temperature()
+            .expect("component chain")
+            .to_kelvin()
     );
 
     // ------------------------------------------------------------------

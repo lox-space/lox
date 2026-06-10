@@ -13,7 +13,7 @@
 //! Endpoints are cheap to construct but meant to be resolved once per pass
 //! and reused across time steps.
 
-use lox_core::units::{Angle, Decibel, Frequency, Kelvin};
+use lox_core::units::{Angle, Decibel, Frequency, Temperature};
 use thiserror::Error;
 
 use crate::LinkBudgetError;
@@ -70,8 +70,8 @@ pub enum RxEndpointKind<'a> {
         receiver: &'a Receiver,
         /// Feed loss between antenna and receiver input.
         feed_loss: Decibel,
-        /// Clear-sky antenna noise temperature at this port, in Kelvin.
-        antenna_noise_temperature: Kelvin,
+        /// Clear-sky antenna noise temperature at this port.
+        antenna_noise_temperature: Temperature,
         /// Effective frequency range: receiver band ∩ port band.
         band: FrequencyRange,
     },
@@ -214,11 +214,10 @@ impl<'a> TxEndpoint<'a> {
                 ..
             } => {
                 let (theta, phi) = self.pattern_angles(pointing)?;
-                Ok(
-                    antenna.gain(carrier, theta, phi) + Decibel::from_linear(transmitter.power_w())
-                        - transmitter.output_back_off()
-                        - *feed_loss,
-                )
+                Ok(antenna.gain(carrier, theta, phi)
+                    + Decibel::from_linear(transmitter.power().to_watts())
+                    - transmitter.output_back_off()
+                    - *feed_loss)
             }
         }
     }
@@ -257,8 +256,8 @@ impl<'a> RxEndpoint<'a> {
         resolve_pointing(self.antenna(), pointing)
     }
 
-    /// Returns the system noise temperature in Kelvin, referred to the
-    /// antenna flange, when the chain exposes one.
+    /// Returns the system noise temperature referred to the antenna flange,
+    /// when the chain exposes one.
     ///
     /// The port feed loss is synthesized as a passive attenuator at 290 K
     /// ahead of the receiver and the Friis formula referred back to the
@@ -268,7 +267,7 @@ impl<'a> RxEndpoint<'a> {
     ///
     /// where `T_rx` is the receiver's input-referred (chain) noise
     /// temperature. Lumped G/T endpoints return `None`.
-    pub fn system_noise_temperature(&self) -> Option<Kelvin> {
+    pub fn system_noise_temperature(&self) -> Option<Temperature> {
         match &self.kind {
             RxEndpointKind::Lumped(_) => None,
             RxEndpointKind::Component {
@@ -292,7 +291,7 @@ impl<'a> RxEndpoint<'a> {
 
     /// Returns the clear-sky antenna noise temperature at this endpoint's
     /// port, when the chain exposes one.
-    pub fn antenna_noise_temperature(&self) -> Option<Kelvin> {
+    pub fn antenna_noise_temperature(&self) -> Option<Temperature> {
         match &self.kind {
             RxEndpointKind::Component {
                 antenna_noise_temperature,
@@ -328,7 +327,7 @@ impl<'a> RxEndpoint<'a> {
                 let t_sys = self
                     .system_noise_temperature()
                     .expect("component endpoints expose a system noise temperature");
-                Ok(gain - Decibel::from_linear(t_sys))
+                Ok(gain - Decibel::from_linear(t_sys.to_kelvin()))
             }
         }
     }
@@ -378,13 +377,17 @@ impl<'a> RxEndpoint<'a> {
 /// T_sys = T_ant + T_feed + T_rx / G_feed, with T_feed = 290·(L − 1) and
 /// G_feed = 1/L.
 fn flange_noise_temperature(
-    antenna_noise_temperature: Kelvin,
+    antenna_noise_temperature: Temperature,
     feed_loss: Decibel,
-    chain_temperature: Kelvin,
-) -> Kelvin {
+    chain_temperature: Temperature,
+) -> Temperature {
     let loss_linear = feed_loss.to_linear();
-    let feed_temperature = ROOM_TEMPERATURE * (loss_linear - 1.0);
-    antenna_noise_temperature + feed_temperature + chain_temperature * loss_linear
+    let feed_temperature = ROOM_TEMPERATURE.to_kelvin() * (loss_linear - 1.0);
+    Temperature::kelvin(
+        antenna_noise_temperature.to_kelvin()
+            + feed_temperature
+            + chain_temperature.to_kelvin() * loss_linear,
+    )
 }
 
 /// Intersects a radio band with an optional port narrowing.
@@ -457,7 +460,7 @@ pub enum ResolveError {
 
 #[cfg(test)]
 mod tests {
-    use lox_core::units::{DecibelUnits, FrequencyUnits};
+    use lox_core::units::{DecibelUnits, FrequencyUnits, Power, Temperature};
     use lox_test_utils::assert_approx_eq;
 
     use crate::antenna::ConstantAntenna;
@@ -486,17 +489,29 @@ mod tests {
         );
         let pa = payload.add_transmitter(
             "pa",
-            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+            AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
         );
         let rx = payload.add_receiver(
             "receiver",
-            Receiver::NoiseTemperature(NoiseTempReceiver::new(ka_band(), 500.0).unwrap()),
+            Receiver::NoiseTemperature(
+                NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
+            ),
         );
         let tx_port = payload
             .add_tx_port(TxPort::new("tx feed", dish, pa, 1.0.db(), None).unwrap())
             .unwrap();
         let rx_port = payload
-            .add_rx_port(RxPort::new("rx feed", rx_antenna, rx, 0.0.db(), 0.0, None).unwrap())
+            .add_rx_port(
+                RxPort::new(
+                    "rx feed",
+                    rx_antenna,
+                    rx,
+                    0.0.db(),
+                    Temperature::kelvin(0.0),
+                    None,
+                )
+                .unwrap(),
+            )
             .unwrap();
         let terminal = payload
             .add_terminal(Terminal {
@@ -529,8 +544,16 @@ mod tests {
         // G/T = 30 − 10·log10(500) = 3.0103 dB/K
         let gt = rx.gt_at(29.0.ghz(), Pointing::Boresight).unwrap();
         assert_approx_eq!(gt.as_f64(), 3.0103, atol <= 1e-3);
-        assert_approx_eq!(rx.system_noise_temperature().unwrap(), 500.0, atol <= 1e-12);
-        assert_approx_eq!(rx.antenna_noise_temperature().unwrap(), 0.0, atol <= 1e-12);
+        assert_approx_eq!(
+            rx.system_noise_temperature().unwrap().to_kelvin(),
+            500.0,
+            atol <= 1e-12
+        );
+        assert_approx_eq!(
+            rx.antenna_noise_temperature().unwrap().to_kelvin(),
+            0.0,
+            atol <= 1e-12
+        );
     }
 
     #[test]
@@ -545,10 +568,22 @@ mod tests {
         );
         let rx = payload.add_receiver(
             "receiver",
-            Receiver::NoiseTemperature(NoiseTempReceiver::new(ka_band(), 500.0).unwrap()),
+            Receiver::NoiseTemperature(
+                NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
+            ),
         );
         let port = payload
-            .add_rx_port(RxPort::new("feed", antenna, rx, 3.0.db(), 150.0, None).unwrap())
+            .add_rx_port(
+                RxPort::new(
+                    "feed",
+                    antenna,
+                    rx,
+                    3.0.db(),
+                    Temperature::kelvin(150.0),
+                    None,
+                )
+                .unwrap(),
+            )
             .unwrap();
         let terminal = payload
             .add_terminal(Terminal {
@@ -561,7 +596,7 @@ mod tests {
         let loss_linear = 10.0_f64.powf(3.0 / 10.0);
         let expected_t_sys = 150.0 + 290.0 * (loss_linear - 1.0) + 500.0 * loss_linear;
         assert_approx_eq!(
-            endpoint.system_noise_temperature().unwrap(),
+            endpoint.system_noise_temperature().unwrap().to_kelvin(),
             expected_t_sys,
             rtol <= 1e-12
         );
@@ -599,7 +634,17 @@ mod tests {
         );
         let rx = payload.add_receiver("receiver", Receiver::Cascade(chain));
         let port = payload
-            .add_rx_port(RxPort::new("feed", antenna, rx, 3.0.db(), 265.0, None).unwrap())
+            .add_rx_port(
+                RxPort::new(
+                    "feed",
+                    antenna,
+                    rx,
+                    3.0.db(),
+                    Temperature::kelvin(265.0),
+                    None,
+                )
+                .unwrap(),
+            )
             .unwrap();
         let terminal = payload
             .add_terminal(Terminal {
@@ -612,9 +657,9 @@ mod tests {
         let feed_linear = 10.0_f64.powf(-3.0 / 10.0);
         let t_feed = 290.0 * (10.0_f64.powf(3.0 / 10.0) - 1.0);
         let t_rx = noise_figure_to_temperature(5.0.db());
-        let expected = 265.0 + t_feed + t_rx / feed_linear;
+        let expected = 265.0 + t_feed + t_rx.to_kelvin() / feed_linear;
         assert_approx_eq!(
-            endpoint.system_noise_temperature().unwrap(),
+            endpoint.system_noise_temperature().unwrap().to_kelvin(),
             expected,
             rtol <= 1e-12
         );
@@ -662,7 +707,7 @@ mod tests {
         );
         let pa = payload.add_transmitter(
             "pa",
-            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+            AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
         );
         let narrow = FrequencyRange::new(28.0.ghz(), 29.5.ghz()).unwrap();
         let port = payload
@@ -688,7 +733,7 @@ mod tests {
         );
         let pa = payload.add_transmitter(
             "pa",
-            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+            AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
         );
         let disjoint = FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap();
         let port = payload

@@ -17,7 +17,7 @@
 
 use std::fmt;
 
-use lox_core::units::{Decibel, Kelvin};
+use lox_core::units::{Decibel, Temperature};
 use slotmap::{SlotMap, new_key_type};
 use thiserror::Error;
 
@@ -310,7 +310,7 @@ pub struct RxPort {
     antenna: AntennaId,
     receiver: ReceiverId,
     feed_loss: Decibel,
-    antenna_noise_temperature: Kelvin,
+    antenna_noise_temperature: Temperature,
     band: Option<FrequencyRange>,
 }
 
@@ -323,7 +323,7 @@ struct RxPortRepr {
     antenna: AntennaId,
     receiver: ReceiverId,
     feed_loss: Decibel,
-    antenna_noise_temperature: Kelvin,
+    antenna_noise_temperature: Temperature,
     band: Option<FrequencyRange>,
 }
 
@@ -353,13 +353,13 @@ impl RxPort {
         antenna: AntennaId,
         receiver: ReceiverId,
         feed_loss: Decibel,
-        antenna_noise_temperature: Kelvin,
+        antenna_noise_temperature: Temperature,
         band: Option<FrequencyRange>,
     ) -> Result<Self, NonPhysicalError> {
         NonPhysicalError::check_non_negative("feed loss [dB]", feed_loss.as_f64())?;
         NonPhysicalError::check_non_negative(
             "antenna noise temperature [K]",
-            antenna_noise_temperature,
+            antenna_noise_temperature.to_kelvin(),
         )?;
         Ok(Self {
             name: name.into(),
@@ -391,8 +391,8 @@ impl RxPort {
         self.feed_loss
     }
 
-    /// Returns the clear-sky antenna noise temperature at this port, in Kelvin.
-    pub fn antenna_noise_temperature(&self) -> Kelvin {
+    /// Returns the clear-sky antenna noise temperature at this port.
+    pub fn antenna_noise_temperature(&self) -> Temperature {
         self.antenna_noise_temperature
     }
 
@@ -558,7 +558,7 @@ impl CommsPayload {
         antenna: Antenna,
         receiver: Receiver,
         feed_loss: Decibel,
-        antenna_noise_temperature: Kelvin,
+        antenna_noise_temperature: Temperature,
         band: Option<FrequencyRange>,
     ) -> Result<(Self, TerminalId), PayloadError> {
         let name = name.into();
@@ -596,7 +596,7 @@ impl CommsPayload {
         receiver: Receiver,
         tx_feed_loss: Decibel,
         rx_feed_loss: Decibel,
-        antenna_noise_temperature: Kelvin,
+        antenna_noise_temperature: Temperature,
         band: Option<FrequencyRange>,
     ) -> Result<(Self, TerminalId), PayloadError> {
         let name = name.into();
@@ -914,7 +914,7 @@ impl CommsPayload {
                         "port '{}': antenna '{antenna}' → receiver '{receiver}', feed {} dB, T_ant {} K",
                         port.name,
                         port.feed_loss.as_f64(),
-                        port.antenna_noise_temperature
+                        port.antenna_noise_temperature.to_kelvin()
                     )?;
                     match port.band {
                         Some(band) => write!(f, ", band {band}"),
@@ -999,7 +999,7 @@ pub enum PayloadError {
 
 #[cfg(test)]
 mod tests {
-    use lox_core::units::{DecibelUnits, FrequencyUnits};
+    use lox_core::units::{DecibelUnits, FrequencyUnits, Power, Temperature};
 
     use crate::antenna::ConstantAntenna;
     use crate::receiver::NoiseTempReceiver;
@@ -1020,11 +1020,13 @@ mod tests {
         );
         let tx = payload.add_transmitter(
             "pa",
-            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+            AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
         );
         let rx = payload.add_receiver(
             "lnb",
-            Receiver::NoiseTemperature(NoiseTempReceiver::new(ka_band(), 500.0).unwrap()),
+            Receiver::NoiseTemperature(
+                NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
+            ),
         );
         let tx_port = payload
             .add_tx_port(TxPort {
@@ -1041,7 +1043,7 @@ mod tests {
                 antenna: dish,
                 receiver: rx,
                 feed_loss: 0.5.db(),
-                antenna_noise_temperature: 150.0,
+                antenna_noise_temperature: Temperature::kelvin(150.0),
                 band: None,
             })
             .unwrap();
@@ -1089,7 +1091,7 @@ mod tests {
         );
         let tx = payload.add_transmitter(
             "pa",
-            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+            AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
         );
         let high_port = payload
             .add_tx_port(TxPort {
@@ -1156,7 +1158,7 @@ mod tests {
         let mut payload = CommsPayload::new();
         let tx = payload.add_transmitter(
             "pa",
-            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+            AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
         );
         let err = payload
             .add_tx_port(TxPort {
@@ -1195,11 +1197,13 @@ mod tests {
         let (payload, terminal) = CommsPayload::transceiver(
             "ka terminal",
             Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
-            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
-            Receiver::NoiseTemperature(NoiseTempReceiver::new(ka_band(), 500.0).unwrap()),
+            AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
+            Receiver::NoiseTemperature(
+                NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
+            ),
             1.0.db(),
             0.5.db(),
-            150.0,
+            Temperature::kelvin(150.0),
             Some(ka_band()),
         )
         .unwrap();
@@ -1238,9 +1242,9 @@ mod tests {
         // Component types are valid by construction; the payload cannot
         // receive invalid values.
         for power in [0.0, -10.0, f64::NAN, f64::INFINITY] {
-            assert!(AmplifierTransmitter::new(ka_band(), power, 0.0.db()).is_err());
+            assert!(AmplifierTransmitter::new(ka_band(), Power::watts(power), 0.0.db()).is_err());
         }
-        assert!(NoiseTempReceiver::new(ka_band(), -10.0).is_err());
+        assert!(NoiseTempReceiver::new(ka_band(), Temperature::kelvin(-10.0)).is_err());
         let antenna = AntennaId::default();
         let transmitter = TransmitterId::default();
         assert!(TxPort::new("feed", antenna, transmitter, (-1.0).db(), None).is_err());
@@ -1250,7 +1254,7 @@ mod tests {
                 antenna,
                 ReceiverId::default(),
                 0.0.db(),
-                -150.0,
+                Temperature::kelvin(-150.0),
                 None
             )
             .is_err()
@@ -1274,7 +1278,7 @@ mod tests {
         let json = serde_json::to_string(&payload).unwrap();
 
         // Negative transmit power
-        let bad = json.replace("\"power_w\":10.0", "\"power_w\":-10.0");
+        let bad = json.replace("\"power\":10.0", "\"power\":-10.0");
         assert_ne!(bad, json);
         let err = serde_json::from_str::<CommsPayload>(&bad).unwrap_err();
         assert!(err.to_string().contains("transmit power"));

@@ -1187,7 +1187,7 @@ def test_lumped_link_interference_requires_absolute_power():
     modulated = channel.apply(link)
 
     with pytest.raises(ValueError, match="absolute carrier and noise powers"):
-        modulated.with_interference(1e-12)
+        modulated.with_interference(1e-12 * lox.W)
 
 
 # --- ModulatedLinkStats.with_interference happy path ---
@@ -1206,11 +1206,11 @@ def test_modulated_with_interference_component_tier():
         make_tx_payload(), make_rx_payload(), bandwidth=channel.bandwidth()
     )
     modulated = channel.apply(link)
-    interference = modulated.with_interference(1e-12)
+    interference = modulated.with_interference(1e-12 * lox.W)
 
     assert float(interference.margin_with_interference) < float(modulated.margin)
     assert float(interference.eb_n0i0) < float(modulated.eb_n0)
-    assert interference.interference_power_w == 1e-12
+    assert float(interference.interference_power) == 1e-12
 
 
 # --- NoiseTempReceiver repr ---
@@ -1330,7 +1330,7 @@ def test_interference_stats_c_n0i0_and_repr():
         make_tx_payload(), make_rx_payload(), bandwidth=channel.bandwidth()
     )
     modulated = channel.apply(link)
-    interference = modulated.with_interference(1e-12)
+    interference = modulated.with_interference(1e-12 * lox.W)
 
     assert math.isfinite(float(interference.c_n0i0))
     r = repr(interference)

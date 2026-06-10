@@ -4,7 +4,7 @@
 
 //! Link budget types: environmental losses, interference, and link statistics.
 
-use lox_core::units::{Angle, Decibel, Distance, Frequency};
+use lox_core::units::{Angle, Decibel, Distance, Frequency, Power};
 
 use crate::channel::{Channel, LinkDirection};
 use crate::endpoint::{RxEndpoint, TxEndpoint};
@@ -19,8 +19,8 @@ pub use lox_itur::EnvironmentalLosses;
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InterferenceStats {
-    /// Interference power in watts.
-    pub interference_power_w: f64,
+    /// Interference power.
+    pub interference_power: Power,
     /// Carrier-to-noise-plus-interference density ratio.
     pub c_n0i0: Decibel,
     /// Eb/(N0+I0).
@@ -139,9 +139,9 @@ impl LinkStats {
         let carrier_rx_power = rx
             .total_gain(carrier, rx_angles)?
             .map(|g_rx| eirp - fspl - env_loss + g_rx);
-        let noise_power = rx
-            .system_noise_temperature()
-            .map(|t_sys| Decibel::from_linear(t_sys * BOLTZMANN_CONSTANT * bandwidth.to_hertz()));
+        let noise_power = rx.system_noise_temperature().map(|t_sys| {
+            Decibel::from_linear(t_sys.to_kelvin() * BOLTZMANN_CONSTANT * bandwidth.to_hertz())
+        });
 
         Ok(Self {
             slant_range: range,
@@ -189,9 +189,12 @@ impl ModulatedLinkStats {
     /// (for example for lumped-G/T links).
     pub fn with_interference(
         &self,
-        interference_power_w: f64,
+        interference_power: Power,
     ) -> Result<InterferenceStats, LinkBudgetError> {
-        NonPhysicalError::check_non_negative("interference power [W]", interference_power_w)?;
+        NonPhysicalError::check_non_negative(
+            "interference power [W]",
+            interference_power.to_watts(),
+        )?;
         let noise_linear = self
             .link
             .noise_power
@@ -202,7 +205,7 @@ impl ModulatedLinkStats {
             .carrier_rx_power
             .ok_or(LinkBudgetError::AbsolutePowerUnavailable)?;
 
-        let total_ni = noise_linear + interference_power_w;
+        let total_ni = noise_linear + interference_power.to_watts();
         let c_n0i0 = carrier - Decibel::from_linear(total_ni)
             + Decibel::from_linear(self.link.bandwidth.to_hertz());
         let c_n0_to_eb_n0 = self.eb_n0 - self.link.c_n0;
@@ -212,7 +215,7 @@ impl ModulatedLinkStats {
         let margin_with_interference = eb_n0i0 - threshold;
 
         Ok(InterferenceStats {
-            interference_power_w,
+            interference_power,
             c_n0i0,
             eb_n0i0,
             margin_with_interference,
@@ -245,7 +248,7 @@ pub fn frequency_overlap_factor(
 
 #[cfg(test)]
 mod tests {
-    use lox_core::units::{DecibelUnits, FrequencyUnits};
+    use lox_core::units::{DecibelUnits, FrequencyUnits, Power, Temperature};
     use lox_test_utils::assert_approx_eq;
 
     use crate::antenna::{Antenna, ConstantAntenna};
@@ -267,7 +270,7 @@ mod tests {
         let (tx_payload, tx_terminal) = CommsPayload::transmitter_only(
             "tx",
             Antenna::Constant(ConstantAntenna::new(46.0.db()).unwrap()),
-            AmplifierTransmitter::new(ka_band(), 10.0, 0.0.db()).unwrap(),
+            AmplifierTransmitter::new(ka_band(), Power::watts(10.0), 0.0.db()).unwrap(),
             1.0.db(),
             None,
         )
@@ -275,9 +278,11 @@ mod tests {
         let (rx_payload, rx_terminal) = CommsPayload::receiver_only(
             "rx",
             Antenna::Constant(ConstantAntenna::new(30.0.db()).unwrap()),
-            Receiver::NoiseTemperature(NoiseTempReceiver::new(ka_band(), 500.0).unwrap()),
+            Receiver::NoiseTemperature(
+                NoiseTempReceiver::new(ka_band(), Temperature::kelvin(500.0)).unwrap(),
+            ),
             0.0.db(),
-            0.0,
+            Temperature::kelvin(0.0),
             None,
         )
         .unwrap();
@@ -464,7 +469,7 @@ mod tests {
     #[test]
     fn test_modulated_with_interference_reduces_margin() {
         let m = channel().apply(component_stats());
-        let interference = m.with_interference(1e-12).unwrap();
+        let interference = m.with_interference(Power::watts(1e-12)).unwrap();
         assert!(interference.margin_with_interference.as_f64() <= m.margin.as_f64());
         assert!(interference.eb_n0i0.as_f64() <= m.eb_n0.as_f64());
     }
@@ -473,11 +478,11 @@ mod tests {
     fn test_with_interference_rejects_non_physical_power() {
         let m = channel().apply(component_stats());
         for power in [-1e-12, f64::NAN, f64::INFINITY] {
-            let err = m.with_interference(power).unwrap_err();
+            let err = m.with_interference(Power::watts(power)).unwrap_err();
             assert!(matches!(err, LinkBudgetError::NonPhysical { .. }));
         }
         // Zero interference is valid and must not change the margin.
-        let interference = m.with_interference(0.0).unwrap();
+        let interference = m.with_interference(Power::watts(0.0)).unwrap();
         assert_approx_eq!(
             interference.margin_with_interference.as_f64(),
             m.margin.as_f64(),
@@ -501,7 +506,10 @@ mod tests {
             LinkDirection::Downlink,
         )
         .unwrap();
-        let err = ch.apply(stats).with_interference(1e-12).unwrap_err();
+        let err = ch
+            .apply(stats)
+            .with_interference(Power::watts(1e-12))
+            .unwrap_err();
         assert_eq!(err, LinkBudgetError::AbsolutePowerUnavailable);
     }
 

@@ -645,7 +645,7 @@ impl PyAmplifierTransmitter {
     ) -> PyResult<Self> {
         AmplifierTransmitter::new(
             band.0,
-            f64::from(power.0),
+            power.0,
             output_back_off.map_or(Decibel::new(0.0), |d| d.0),
         )
         .map(Self)
@@ -661,7 +661,7 @@ impl PyAmplifierTransmitter {
     /// Transmit power.
     #[getter]
     fn power(&self) -> PyPower {
-        PyPower::new(self.0.power_w())
+        PyPower(self.0.power())
     }
 
     /// Output back-off.
@@ -672,14 +672,14 @@ impl PyAmplifierTransmitter {
 
     fn __eq__(&self, other: &PyAmplifierTransmitter) -> bool {
         self.0.band() == other.0.band()
-            && self.0.power_w() == other.0.power_w()
+            && self.0.power().to_watts() == other.0.power().to_watts()
             && self.0.output_back_off().as_f64() == other.0.output_back_off().as_f64()
     }
 
     fn __getnewargs__(&self) -> (PyFrequencyRange, PyPower, Option<PyDecibel>) {
         (
             PyFrequencyRange(self.0.band()),
-            PyPower::new(self.0.power_w()),
+            PyPower(self.0.power()),
             Some(PyDecibel(self.0.output_back_off())),
         )
     }
@@ -688,7 +688,7 @@ impl PyAmplifierTransmitter {
         format!(
             "AmplifierTransmitter(band={}, power={}, output_back_off={})",
             PyFrequencyRange(self.0.band()).__repr__(),
-            PyPower::new(self.0.power_w()).__repr__(),
+            PyPower(self.0.power()).__repr__(),
             PyDecibel(self.0.output_back_off()).__repr__(),
         )
     }
@@ -714,7 +714,7 @@ pub struct PyNoiseTempReceiver(pub NoiseTempReceiver);
 impl PyNoiseTempReceiver {
     #[new]
     fn new(band: PyFrequencyRange, noise_temperature: PyTemperature) -> PyResult<Self> {
-        NoiseTempReceiver::new(band.0, f64::from(noise_temperature.0))
+        NoiseTempReceiver::new(band.0, noise_temperature.0)
             .map(Self)
             .map_err(|err| PyValueError::new_err(err.to_string()))
     }
@@ -728,17 +728,18 @@ impl PyNoiseTempReceiver {
     /// System noise temperature.
     #[getter]
     fn noise_temperature(&self) -> PyTemperature {
-        PyTemperature::new(self.0.noise_temperature())
+        PyTemperature(self.0.noise_temperature())
     }
 
     fn __eq__(&self, other: &PyNoiseTempReceiver) -> bool {
-        self.0.band() == other.0.band() && self.0.noise_temperature() == other.0.noise_temperature()
+        self.0.band() == other.0.band()
+            && self.0.noise_temperature().to_kelvin() == other.0.noise_temperature().to_kelvin()
     }
 
     fn __getnewargs__(&self) -> (PyFrequencyRange, PyTemperature) {
         (
             PyFrequencyRange(self.0.band()),
-            PyTemperature::new(self.0.noise_temperature()),
+            PyTemperature(self.0.noise_temperature()),
         )
     }
 
@@ -746,7 +747,7 @@ impl PyNoiseTempReceiver {
         format!(
             "NoiseTempReceiver(band={}, noise_temperature={})",
             PyFrequencyRange(self.0.band()).__repr__(),
-            PyTemperature::new(self.0.noise_temperature()).__repr__(),
+            PyTemperature(self.0.noise_temperature()).__repr__(),
         )
     }
 }
@@ -766,7 +767,7 @@ pub struct PyNoiseStage(pub NoiseStage);
 impl PyNoiseStage {
     #[new]
     fn new(gain: PyDecibel, noise_temperature: PyTemperature) -> PyResult<Self> {
-        NoiseStage::new(gain.0, f64::from(noise_temperature.0))
+        NoiseStage::new(gain.0, noise_temperature.0)
             .map(Self)
             .map_err(|err| PyValueError::new_err(err.to_string()))
     }
@@ -774,7 +775,7 @@ impl PyNoiseStage {
     fn __getnewargs__(&self) -> (PyDecibel, PyTemperature) {
         (
             PyDecibel(self.0.gain()),
-            PyTemperature::new(self.0.noise_temperature()),
+            PyTemperature(self.0.noise_temperature()),
         )
     }
 
@@ -782,7 +783,7 @@ impl PyNoiseStage {
         format!(
             "NoiseStage(gain={}, noise_temperature={})",
             PyDecibel(self.0.gain()).__repr__(),
-            PyTemperature::new(self.0.noise_temperature()).__repr__(),
+            PyTemperature(self.0.noise_temperature()).__repr__(),
         )
     }
 }
@@ -834,7 +835,7 @@ impl PyCascadeReceiver {
         CascadeReceiver::from_lna_and_noise_figure(
             band.0,
             lna_gain.0,
-            f64::from(lna_noise_temperature.0),
+            lna_noise_temperature.0,
             receiver_noise_figure.0,
             demodulator_loss.map_or(Decibel::new(0.0), |d| d.0),
             implementation_loss.map_or(Decibel::new(0.0), |d| d.0),
@@ -846,7 +847,7 @@ impl PyCascadeReceiver {
     /// Returns the chain's equivalent noise temperature referred to its
     /// input connector, via the Friis formula.
     fn chain_noise_temperature(&self) -> PyTemperature {
-        PyTemperature::new(self.0.chain_noise_temperature())
+        PyTemperature(self.0.chain_noise_temperature())
     }
 
     /// Returns the total RF chain gain in dB.
@@ -905,7 +906,7 @@ impl PyCascadeReceiver {
                 format!(
                     "NoiseStage(gain={}, noise_temperature={})",
                     PyDecibel(s.gain()).__repr__(),
-                    PyTemperature::new(s.noise_temperature()).__repr__(),
+                    PyTemperature(s.noise_temperature()).__repr__(),
                 )
             })
             .collect();
@@ -1292,10 +1293,10 @@ pub struct PyInterferenceStats(pub InterferenceStats);
 
 #[pymethods]
 impl PyInterferenceStats {
-    /// Interference power in watts.
+    /// Interference power.
     #[getter]
-    fn interference_power_w(&self) -> f64 {
-        self.0.interference_power_w
+    fn interference_power(&self) -> PyPower {
+        PyPower(self.0.interference_power)
     }
 
     /// Carrier-to-noise-plus-interference density ratio in dB·Hz.
@@ -1318,8 +1319,8 @@ impl PyInterferenceStats {
 
     fn __repr__(&self) -> String {
         format!(
-            "InterferenceStats(interference_power_w={}, c_n0i0={:.2} dB·Hz, eb_n0i0={:.2} dB, margin_with_interference={:.2} dB)",
-            repr_f64(self.0.interference_power_w),
+            "InterferenceStats(interference_power={} W, c_n0i0={:.2} dB·Hz, eb_n0i0={:.2} dB, margin_with_interference={:.2} dB)",
+            repr_f64(self.0.interference_power.to_watts()),
             self.0.c_n0i0.as_f64(),
             self.0.eb_n0i0.as_f64(),
             self.0.margin_with_interference.as_f64(),
@@ -1378,9 +1379,9 @@ impl PyModulatedLinkStats {
     }
 
     /// Computes interference statistics for a given interferer power.
-    fn with_interference(&self, interference_power_w: f64) -> PyResult<PyInterferenceStats> {
+    fn with_interference(&self, interference_power: PyPower) -> PyResult<PyInterferenceStats> {
         self.0
-            .with_interference(interference_power_w)
+            .with_interference(interference_power.0)
             .map(PyInterferenceStats)
             .map_err(|e| PyValueError::new_err(e.to_string()))
     }
@@ -1805,7 +1806,7 @@ impl PyCommsPayload {
             antenna.0,
             receiver.0,
             feed_loss.0,
-            f64::from(antenna_noise_temperature.0),
+            antenna_noise_temperature.0,
             band.map(|b| b.0),
         )
         .map_err(|err| PyValueError::new_err(err.to_string()))?;
@@ -2000,7 +2001,7 @@ impl PyCommsPayload {
             build_antenna(antenna)?,
             build_receiver_any(receiver)?,
             feed_loss.0,
-            f64::from(antenna_noise_temperature.0),
+            antenna_noise_temperature.0,
             band.map(|b| b.0),
         )
         .map_err(|err| PyValueError::new_err(err.to_string()))?;
@@ -2028,7 +2029,7 @@ impl PyCommsPayload {
             build_receiver_any(receiver)?,
             tx_feed_loss.0,
             rx_feed_loss.0,
-            f64::from(antenna_noise_temperature.0),
+            antenna_noise_temperature.0,
             band.map(|b| b.0),
         )
         .map_err(|err| PyValueError::new_err(err.to_string()))?;
