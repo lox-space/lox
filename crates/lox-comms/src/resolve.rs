@@ -436,13 +436,19 @@ fn resolve_pointing(
     antenna: Option<&Antenna>,
     pointing: Pointing,
 ) -> Result<(Angle, Angle), LinkBudgetError> {
+    if antenna.is_none() {
+        return Ok((Angle::ZERO, Angle::ZERO));
+    }
+
     match pointing {
         Pointing::Boresight => Ok((Angle::ZERO, Angle::ZERO)),
         Pointing::Angles { theta, phi } => Ok((theta, phi)),
-        Pointing::Direction(direction) => match antenna {
-            None => Ok((Angle::ZERO, Angle::ZERO)),
-            Some(antenna) => Ok(antenna.pattern_angles(direction)?),
-        },
+        Pointing::Direction(direction) => {
+            let Some(antenna) = antenna else {
+                unreachable!("lumped chains return zero angles above")
+            };
+            Ok(antenna.pattern_angles(direction)?)
+        }
     }
 }
 
@@ -786,6 +792,14 @@ mod tests {
         assert!(rx.system_noise_temperature().is_none());
         assert!(rx.antenna_noise_temperature().is_none());
         assert!(tx.band().contains(29.0.ghz()));
+        assert_eq!(
+            tx.pattern_angles(pointing).unwrap(),
+            (Angle::ZERO, Angle::ZERO)
+        );
+        assert_eq!(
+            rx.pattern_angles(pointing).unwrap(),
+            (Angle::ZERO, Angle::ZERO)
+        );
     }
 
     #[test]
