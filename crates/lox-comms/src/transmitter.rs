@@ -102,7 +102,7 @@ mod tests {
     fn test_eirp_simple() {
         let antenna = ConstantAntenna { gain: 10.0.db() };
         let tx = AmplifierTransmitter::new(29.0.ghz(), 5.0, 1.0.db(), 0.0.db());
-        let eirp = tx.eirp(&antenna, Angle::radians(0.0), Angle::radians(0.0));
+        let eirp = tx.eirp(&antenna, Angle::ZERO, Angle::ZERO);
         assert_approx_eq!(eirp.as_f64(), 15.9897, atol <= 0.001);
     }
 
@@ -110,7 +110,7 @@ mod tests {
     fn test_eirp_with_obo() {
         let antenna = ConstantAntenna { gain: 20.0.db() };
         let tx = AmplifierTransmitter::new(29.0.ghz(), 10.0, 2.0.db(), 3.0.db());
-        let eirp = tx.eirp(&antenna, Angle::radians(0.0), Angle::radians(0.0));
+        let eirp = tx.eirp(&antenna, Angle::ZERO, Angle::ZERO);
         assert_approx_eq!(eirp.as_f64(), 25.0, atol <= 1e-10);
     }
 
@@ -123,7 +123,7 @@ mod tests {
             1.0.db(),
             0.0.db(),
         ));
-        let eirp = tx.eirp(&antenna, Angle::radians(0.0), Angle::radians(0.0));
+        let eirp = tx.eirp(&antenna, Angle::ZERO, Angle::ZERO);
         assert_approx_eq!(eirp.as_f64(), 15.9897, atol <= 0.001);
         assert_eq!(tx.frequency().to_hertz(), 29e9);
     }
@@ -138,7 +138,7 @@ mod tests {
             eirp: 55.0.db(),
         });
         // For Eirp, antenna gain and angle are ignored — the stored figure is returned verbatim.
-        let eirp = tx.eirp(&antenna, Angle::radians(0.0), Angle::radians(0.0));
+        let eirp = tx.eirp(&antenna, Angle::ZERO, Angle::ZERO);
         assert_approx_eq!(eirp.as_f64(), 55.0, atol <= 1e-10);
         // Same at any pattern angles
         let eirp_off = tx.eirp(&antenna, Angle::radians(1.0), Angle::radians(2.0));
