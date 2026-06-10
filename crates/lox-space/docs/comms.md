@@ -29,6 +29,45 @@ RF link budget analysis for space communication systems.
 | `GaussianPattern` | Gaussian roll-off approximation |
 | `DipolePattern` | Short and general dipole radiation patterns |
 
+Pattern gain is evaluated at two angles: `theta`, the polar angle from
+boresight, and `phi`, the azimuth about boresight measured from the
+antenna-frame `+X` axis toward `+Y`. All built-in patterns are axially
+symmetric and ignore `phi`, so it can be omitted:
+
+```python
+import lox_space as lox
+
+pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
+gain = pattern.gain(29 * lox.GHz, theta=1.0 * lox.deg)
+```
+
+## Antenna Frames
+
+An `AntennaFrame` orients an antenna pattern in a parent frame as a
+right-handed orthonormal basis: `+Z` is the boresight (`theta = 0`) and `+X`
+is the `phi = 0` reference direction. Construct it from a boresight and a
+reference direction, or use `AntennaFrame.identity()` for a frame aligned
+with the parent frame (boresight along `+Z`):
+
+```python
+import lox_space as lox
+
+frame = lox.AntennaFrame.from_boresight_and_reference(
+    boresight=[1.0, 0.0, 0.0], reference=[0.0, 0.0, 1.0]
+)
+theta, phi = frame.angles_for([0.0, 0.0, 1.0])
+```
+
+A `PatternedAntenna` combines a pattern with a frame (identity by default)
+and can evaluate its gain directly toward a parent-frame direction vector
+via `gain_toward`:
+
+```python
+pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
+antenna = lox.PatternedAntenna(pattern=pattern, frame=frame)
+gain = antenna.gain_toward(29 * lox.GHz, [1.0, 0.0, 0.0])  # on boresight
+```
+
 ## Lumped EIRP and G/T
 
 For early-phase mission studies — where manufacturer datasheets typically
@@ -94,7 +133,7 @@ frequency = 29 * lox.GHz
 
 # Transmitter: satellite with parabolic antenna
 tx_pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
-tx_antenna = lox.PatternedAntenna(pattern=tx_pattern, boresight=[0.0, 0.0, 1.0])
+tx_antenna = lox.PatternedAntenna(pattern=tx_pattern)
 tx = lox.AmplifierTransmitter(frequency=frequency, power=10 * lox.W, line_loss=1.0 * lox.dB)
 tx_system = lox.CommunicationSystem(antenna=tx_antenna, transmitter=tx)
 
@@ -217,6 +256,12 @@ link = lox.LinkStats.calculate(
 ---
 
 ::: lox_space.ConstantAntenna
+    options:
+      show_source: false
+
+---
+
+::: lox_space.AntennaFrame
     options:
       show_source: false
 

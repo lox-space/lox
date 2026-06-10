@@ -2430,17 +2430,51 @@ class ConstantAntenna:
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
+class AntennaFrame:
+    """Right-handed antenna coordinate frame expressed in a parent frame.
+
+    Args:
+        boresight: Antenna +Z axis as [x, y, z].
+        reference: Direction used to define the antenna +X axis after projection
+            into the plane perpendicular to boresight.
+    """
+    def __new__(cls, boresight: list[float], reference: list[float]) -> Self: ...
+    @staticmethod
+    def identity() -> AntennaFrame:
+        """Creates an antenna frame aligned with the parent frame."""
+        ...
+    @staticmethod
+    def from_boresight_and_reference(
+        boresight: list[float], reference: list[float]
+    ) -> AntennaFrame:
+        """Creates an antenna frame from boresight and reference directions."""
+        ...
+    def x(self) -> list[float]:
+        """Returns the antenna-frame +X axis in the parent frame."""
+        ...
+    def y(self) -> list[float]:
+        """Returns the antenna-frame +Y axis in the parent frame."""
+        ...
+    def z(self) -> list[float]:
+        """Returns the antenna-frame +Z axis in the parent frame."""
+        ...
+    def angles_for(self, direction: list[float]) -> tuple[Angle, Angle]:
+        """Returns the pattern angles for a parent-frame direction vector."""
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
 class PatternedAntenna:
-    """An antenna with a physics-based gain pattern and boresight vector.
+    """An antenna with a physics-based gain pattern and antenna frame.
 
     Args:
         pattern: An antenna pattern (ParabolicPattern, GaussianPattern, or DipolePattern).
-        boresight: Boresight direction as [x, y, z].
+        frame: Antenna frame defining the pattern orientation. Defaults to identity.
     """
     def __new__(
         cls,
         pattern: ParabolicPattern | GaussianPattern | DipolePattern,
-        boresight: list[float],
+        frame: AntennaFrame | None = None,
     ) -> Self: ...
     def gain(
         self, frequency: Frequency, theta: Angle, phi: Angle | None = None
@@ -2449,6 +2483,9 @@ class PatternedAntenna:
         ...
     def peak_gain(self, frequency: Frequency) -> Decibel:
         """Returns the peak gain in dBi."""
+        ...
+    def gain_toward(self, frequency: Frequency, direction: list[float]) -> Decibel:
+        """Returns the gain in dBi toward a parent-frame direction vector."""
         ...
     def beamwidth(self, frequency: Frequency) -> Angle | None:
         """Returns the half-power beamwidth, or ``None`` when the underlying

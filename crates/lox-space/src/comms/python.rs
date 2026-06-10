@@ -8,7 +8,7 @@ use lox_core::glam::DVec3;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use lox_comms::antenna::{Antenna, AntennaGain, ConstantAntenna, PatternedAntenna};
+use lox_comms::antenna::{Antenna, AntennaFrame, AntennaGain, ConstantAntenna, PatternedAntenna};
 use lox_comms::channel::{Channel, LinkDirection, Modulation};
 use lox_comms::link_budget::{
     InterferenceStats, LinkStats, ModulatedLinkStats, frequency_overlap_factor,
@@ -383,11 +383,91 @@ impl PyConstantAntenna {
     }
 }
 
-/// An antenna with a physics-based gain pattern and boresight vector.
+/// Right-handed antenna coordinate frame expressed in a parent frame.
+///
+/// Args:
+///     boresight: Antenna +Z axis as [x, y, z].
+///     reference: Direction used to define the antenna +X axis after projection
+///         into the plane perpendicular to boresight.
+#[pyclass(name = "AntennaFrame", module = "lox_space", frozen, from_py_object)]
+#[derive(Debug, Clone, Copy)]
+pub struct PyAntennaFrame(pub AntennaFrame);
+
+#[pymethods]
+impl PyAntennaFrame {
+    #[new]
+    fn new(boresight: [f64; 3], reference: [f64; 3]) -> PyResult<Self> {
+        Self::from_boresight_and_reference(boresight, reference)
+    }
+
+    /// Creates an antenna frame aligned with the parent frame.
+    #[staticmethod]
+    fn identity() -> Self {
+        Self(AntennaFrame::identity())
+    }
+
+    /// Creates an antenna frame from boresight and reference directions.
+    #[staticmethod]
+    fn from_boresight_and_reference(boresight: [f64; 3], reference: [f64; 3]) -> PyResult<Self> {
+        AntennaFrame::from_boresight_and_reference(
+            DVec3::from_array(boresight),
+            DVec3::from_array(reference),
+        )
+        .map(Self)
+        .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Returns the antenna-frame +X axis in the parent frame.
+    fn x(&self) -> [f64; 3] {
+        self.0.x().to_array()
+    }
+
+    /// Returns the antenna-frame +Y axis in the parent frame.
+    fn y(&self) -> [f64; 3] {
+        self.0.y().to_array()
+    }
+
+    /// Returns the antenna-frame +Z axis in the parent frame.
+    fn z(&self) -> [f64; 3] {
+        self.0.z().to_array()
+    }
+
+    /// Returns the pattern angles for a parent-frame direction vector.
+    fn angles_for(&self, direction: [f64; 3]) -> PyResult<(PyAngle, PyAngle)> {
+        self.0
+            .angles_for(DVec3::from_array(direction))
+            .map(|(theta, phi)| (PyAngle(theta), PyAngle(phi)))
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    fn __eq__(&self, other: &PyAntennaFrame) -> bool {
+        self.0 == other.0
+    }
+
+    fn __getnewargs__(&self) -> ([f64; 3], [f64; 3]) {
+        (self.0.z().to_array(), self.0.x().to_array())
+    }
+
+    fn __repr__(&self) -> String {
+        let z = self.0.z();
+        let x = self.0.x();
+        format!(
+            "AntennaFrame(boresight=[{}, {}, {}], reference=[{}, {}, {}])",
+            repr_f64(z.x),
+            repr_f64(z.y),
+            repr_f64(z.z),
+            repr_f64(x.x),
+            repr_f64(x.y),
+            repr_f64(x.z),
+        )
+    }
+}
+
+/// An antenna with a physics-based gain pattern and antenna frame.
 ///
 /// Args:
 ///     pattern: An antenna pattern (ParabolicPattern, GaussianPattern, or DipolePattern).
-///     boresight: Boresight direction as [x, y, z].
+///     frame: Antenna frame defining the pattern orientation. Defaults to identity.
 #[pyclass(
     name = "PatternedAntenna",
     module = "lox_space",
@@ -400,11 +480,12 @@ pub struct PyPatternedAntenna(pub PatternedAntenna);
 #[pymethods]
 impl PyPatternedAntenna {
     #[new]
-    fn new(pattern: &Bound<'_, PyAny>, boresight: [f64; 3]) -> PyResult<Self> {
+    #[pyo3(signature = (pattern, frame=None))]
+    fn new(pattern: &Bound<'_, PyAny>, frame: Option<&PyAntennaFrame>) -> PyResult<Self> {
         let pattern = extract_antenna_pattern(pattern)?;
         Ok(Self(PatternedAntenna {
             pattern,
-            boresight: DVec3::from_array(boresight),
+            frame: frame.map_or_else(AntennaFrame::identity, |f| f.0),
         }))
     }
 
@@ -423,6 +504,14 @@ impl PyPatternedAntenna {
         PyDecibel(self.0.peak_gain(frequency.0))
     }
 
+    /// Returns the gain in dBi toward a parent-frame direction vector.
+    fn gain_toward(&self, frequency: PyFrequency, direction: [f64; 3]) -> PyResult<PyDecibel> {
+        self.0
+            .gain_toward(frequency.0, DVec3::from_array(direction))
+            .map(PyDecibel)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
     /// Returns the half-power beamwidth, or ``None`` when the underlying
     /// pattern does not define one (e.g. ``DipolePattern``, or a
     /// ``ParabolicPattern`` whose diameter is below ~0.51 wavelengths).
@@ -430,10 +519,9 @@ impl PyPatternedAntenna {
         self.0.pattern.beamwidth(frequency.0).map(PyAngle)
     }
 
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> (Bound<'py, PyAny>, [f64; 3]) {
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> (Bound<'py, PyAny>, PyAntennaFrame) {
         let pattern = pattern_to_py(py, &self.0.pattern);
-        let b = self.0.boresight;
-        (pattern, [b.x, b.y, b.z])
+        (pattern, PyAntennaFrame(self.0.frame))
     }
 
     fn __repr__(&self) -> String {
@@ -453,12 +541,9 @@ impl PyPatternedAntenna {
             }
             &_ => unreachable!("unknown antenna variant"),
         };
-        let b = self.0.boresight;
         format!(
-            "PatternedAntenna(pattern={pattern_repr}, boresight=[{}, {}, {}])",
-            repr_f64(b.x),
-            repr_f64(b.y),
-            repr_f64(b.z),
+            "PatternedAntenna(pattern={pattern_repr}, frame={})",
+            PyAntennaFrame(self.0.frame).__repr__(),
         )
     }
 }
@@ -529,7 +614,7 @@ fn antenna_to_py<'py>(py: Python<'py>, antenna: &Antenna) -> Bound<'py, PyAny> {
                 py,
                 PyPatternedAntenna(PatternedAntenna {
                     pattern,
-                    boresight: a.boresight,
+                    frame: a.frame,
                 }),
             )
             .unwrap()
@@ -582,7 +667,7 @@ fn build_antenna(obj: &Bound<'_, PyAny>) -> PyResult<Antenna> {
         };
         Ok(Antenna::Patterned(PatternedAntenna {
             pattern,
-            boresight: a.0.boresight,
+            frame: a.0.frame,
         }))
     } else {
         Err(PyValueError::new_err(
@@ -1395,12 +1480,9 @@ impl PyCommunicationSystem {
                     }
                     _ => unreachable!("unknown antenna variant"),
                 };
-                let b = a.boresight;
                 format!(
-                    "PatternedAntenna(pattern={pattern_repr}, boresight=[{}, {}, {}])",
-                    repr_f64(b.x),
-                    repr_f64(b.y),
-                    repr_f64(b.z),
+                    "PatternedAntenna(pattern={pattern_repr}, frame={})",
+                    PyAntennaFrame(a.frame).__repr__(),
                 )
             }
             Some(_) => unreachable!("unknown antenna variant"),
