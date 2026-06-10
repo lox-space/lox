@@ -304,7 +304,7 @@ mod tests {
             frequency: 29.0.ghz(),
             system_noise_temperature: 500.0,
         });
-        let gt = rx.gain_to_noise_temperature(&antenna, Angle::radians(0.0), Angle::radians(0.0));
+        let gt = rx.gain_to_noise_temperature(&antenna, Angle::ZERO, Angle::ZERO);
         assert_approx_eq!(gt.as_f64(), 3.0103, atol <= 0.001);
     }
 
@@ -378,7 +378,7 @@ mod tests {
             0.5.db(),
         ));
         // Just verify G/T computes without panicking and is reasonable
-        let gt = rx.gain_to_noise_temperature(&antenna, Angle::radians(0.0), Angle::radians(0.0));
+        let gt = rx.gain_to_noise_temperature(&antenna, Angle::ZERO, Angle::ZERO);
         assert!(gt.as_f64() > 0.0);
     }
 
@@ -404,7 +404,7 @@ mod tests {
             demodulator_loss: 1.0.db(),
             implementation_loss: 0.5.db(),
         });
-        let g_total = rx.total_gain(&antenna, Angle::radians(0.0), Angle::radians(0.0));
+        let g_total = rx.total_gain(&antenna, Angle::ZERO, Angle::ZERO);
         assert_approx_eq!(g_total.as_f64(), 28.5, atol <= 1e-10);
     }
 
@@ -419,12 +419,12 @@ mod tests {
         // Sentinel values for the component-tier paths
         assert_eq!(rx.system_noise_temperature(), 0.0);
         let antenna = ConstantAntenna { gain: 30.0.db() };
-        let total = rx.total_gain(&antenna, Angle::radians(0.0), Angle::radians(0.0));
+        let total = rx.total_gain(&antenna, Angle::ZERO, Angle::ZERO);
         assert_eq!(total.as_f64(), 0.0);
         // Frequency accessor returns the stored frequency
         assert_eq!(rx.frequency().to_hertz(), 29e9);
         // gain_to_noise_temperature returns the stored G/T figure directly
-        let gt = rx.gain_to_noise_temperature(&antenna, Angle::radians(0.0), Angle::radians(0.0));
+        let gt = rx.gain_to_noise_temperature(&antenna, Angle::ZERO, Angle::ZERO);
         assert_approx_eq!(gt.as_f64(), 3.01, atol <= 1e-10);
     }
 }

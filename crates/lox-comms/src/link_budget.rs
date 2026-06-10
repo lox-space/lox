@@ -254,8 +254,8 @@ mod tests {
             Distance::kilometers(1000.0),
             channel.bandwidth(),
             EnvironmentalLosses::none(),
-            Angle::radians(0.0),
-            Angle::radians(0.0),
+            Angle::ZERO,
+            Angle::ZERO,
         )
         .unwrap();
 
@@ -308,8 +308,8 @@ mod tests {
             Distance::kilometers(1000.0),
             channel.bandwidth(),
             EnvironmentalLosses::none(),
-            Angle::radians(0.0),
-            Angle::radians(0.0),
+            Angle::ZERO,
+            Angle::ZERO,
         )
         .unwrap();
         let m = channel.apply(link);
@@ -328,8 +328,8 @@ mod tests {
             Distance::kilometers(1000.0),
             channel.bandwidth(),
             EnvironmentalLosses::none(),
-            Angle::radians(0.0),
-            Angle::radians(0.0),
+            Angle::ZERO,
+            Angle::ZERO,
         )
         .unwrap();
         let m = channel.apply(link);
@@ -357,8 +357,8 @@ mod tests {
             Distance::kilometers(1000.0),
             5.0.mhz(),
             EnvironmentalLosses::none(),
-            Angle::radians(0.0),
-            Angle::radians(0.0),
+            Angle::ZERO,
+            Angle::ZERO,
         )
         .unwrap();
         assert!(stats.carrier_rx_power.is_none());
@@ -395,8 +395,8 @@ mod tests {
             Distance::kilometers(1000.0),
             channel.bandwidth(),
             EnvironmentalLosses::none(),
-            Angle::radians(0.0),
-            Angle::radians(0.0),
+            Angle::ZERO,
+            Angle::ZERO,
         )
         .unwrap();
         let err = channel.apply(link).with_interference(1e-12).unwrap_err();

@@ -64,7 +64,7 @@ impl AntennaPattern {
 
 #[cfg(test)]
 mod tests {
-    use lox_core::units::{Distance, FrequencyUnits};
+    use lox_core::units::{Angle, Distance, FrequencyUnits};
     use lox_test_utils::assert_approx_eq;
 
     use crate::antenna::AntennaGain;
@@ -79,11 +79,7 @@ mod tests {
     fn test_pattern_enum_parabolic_dispatch() {
         let p = AntennaPattern::Parabolic(ParabolicPattern::new(Distance::meters(0.98), 0.45));
         let f = test_frequency();
-        let gain = p.gain(
-            f,
-            lox_core::units::Angle::radians(0.0),
-            lox_core::units::Angle::radians(0.0),
-        );
+        let gain = p.gain(f, Angle::ZERO, Angle::ZERO);
         let peak = p.peak_gain(f);
         assert_approx_eq!(gain.as_f64(), peak.as_f64(), atol <= 1e-10);
     }
@@ -92,11 +88,7 @@ mod tests {
     fn test_pattern_enum_gaussian_dispatch() {
         let p = AntennaPattern::Gaussian(GaussianPattern::new(Distance::meters(0.98), 0.45));
         let f = test_frequency();
-        let gain = p.gain(
-            f,
-            lox_core::units::Angle::radians(0.0),
-            lox_core::units::Angle::radians(0.0),
-        );
+        let gain = p.gain(f, Angle::ZERO, Angle::ZERO);
         let peak = p.peak_gain(f);
         assert_approx_eq!(gain.as_f64(), peak.as_f64(), atol <= 1e-10);
     }
@@ -110,7 +102,7 @@ mod tests {
         let gain = p.gain(
             f,
             lox_core::units::Angle::radians(std::f64::consts::PI / 2.0),
-            lox_core::units::Angle::radians(0.0),
+            Angle::ZERO,
         );
         assert_approx_eq!(gain.as_f64(), 2.15, atol <= 0.01);
         let peak = p.peak_gain(f);

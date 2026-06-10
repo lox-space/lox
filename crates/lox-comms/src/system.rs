@@ -102,7 +102,7 @@ impl CommunicationSystem {
             });
         }
 
-        let phi = Angle::radians(0.0);
+        let phi = Angle::ZERO;
         let eirp = tx_eirp(tx, &self.antenna, tx_angle, phi)?;
         let gt = rx_gt(receiver, &rx.antenna, rx_angle, phi)?;
         let fspl = free_space_path_loss(range, tx.frequency());
@@ -150,7 +150,7 @@ impl CommunicationSystem {
         }
 
         let antenna = rx.antenna.as_ref().ok_or(LinkBudgetError::MissingAntenna)?;
-        let phi = Angle::radians(0.0);
+        let phi = Angle::ZERO;
         let eirp = tx_eirp(tx, &self.antenna, tx_angle, phi)?;
         let fspl = free_space_path_loss(range, tx.frequency());
         let g_rx = receiver.total_gain(antenna, rx_angle, phi);
@@ -188,7 +188,7 @@ impl CommunicationSystem {
             .transmitter
             .as_ref()
             .ok_or(LinkBudgetError::MissingTransmitter)?;
-        tx_eirp(tx, &self.antenna, angle, Angle::radians(0.0))
+        tx_eirp(tx, &self.antenna, angle, Angle::ZERO)
     }
 
     /// Returns the G/T at the given off-boresight angle.
@@ -199,7 +199,7 @@ impl CommunicationSystem {
             .receiver
             .as_ref()
             .ok_or(LinkBudgetError::MissingReceiver)?;
-        rx_gt(rx, &self.antenna, angle, Angle::radians(0.0))
+        rx_gt(rx, &self.antenna, angle, Angle::ZERO)
     }
 
     /// Returns the transmit frequency, if this system has a transmitter.
@@ -302,8 +302,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap();
         // Verify within reasonable tolerance (some rounding in intermediate values)
@@ -321,8 +321,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap()
             .expect("component receiver produces carrier_power");
@@ -351,22 +351,10 @@ mod tests {
         let bw = 1e6;
 
         let c_n0 = tx
-            .carrier_to_noise_density(
-                &rx,
-                0.0.db(),
-                range,
-                Angle::radians(0.0),
-                Angle::radians(0.0),
-            )
+            .carrier_to_noise_density(&rx, 0.0.db(), range, Angle::ZERO, Angle::ZERO)
             .unwrap();
         let p_rx = tx
-            .carrier_power(
-                &rx,
-                0.0.db(),
-                range,
-                Angle::radians(0.0),
-                Angle::radians(0.0),
-            )
+            .carrier_power(&rx, 0.0.db(), range, Angle::ZERO, Angle::ZERO)
             .unwrap()
             .expect("component receiver produces carrier_power");
         let p_noise = rx
@@ -397,8 +385,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap();
         // EIRP=55, G/T=3.01, FSPL≈181.696, losses=0, k_dB≈-228.599
@@ -424,8 +412,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap();
         assert!(p.is_none());
@@ -450,8 +438,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::UnexpectedAntenna);
@@ -477,8 +465,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingAntenna);
@@ -502,8 +490,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap_err();
         assert!(matches!(err, LinkBudgetError::FrequencyMismatch { .. }));
@@ -522,8 +510,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingTransmitter);
@@ -542,8 +530,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingReceiver);
@@ -578,8 +566,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap_err();
         assert!(matches!(err, LinkBudgetError::FrequencyMismatch { .. }));
@@ -621,8 +609,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingTransmitter);
@@ -641,8 +629,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingReceiver);
@@ -665,8 +653,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingAntenna);
@@ -679,7 +667,7 @@ mod tests {
             receiver: None,
             transmitter: None,
         };
-        let err = sys.eirp_at(Angle::radians(0.0)).unwrap_err();
+        let err = sys.eirp_at(Angle::ZERO).unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingTransmitter);
     }
 
@@ -691,7 +679,7 @@ mod tests {
             frequency: 29.0.ghz(),
             eirp: 55.0.db(),
         });
-        let e = sys.eirp_at(Angle::radians(0.0)).unwrap();
+        let e = sys.eirp_at(Angle::ZERO).unwrap();
         assert_approx_eq!(e.as_f64(), 55.0, atol <= 1e-10);
         // Angle is ignored for the lumped Eirp variant
         let e_off = sys.eirp_at(Angle::radians(1.0)).unwrap();
@@ -705,7 +693,7 @@ mod tests {
             receiver: None,
             transmitter: None,
         };
-        let err = sys.gt_at(Angle::radians(0.0)).unwrap_err();
+        let err = sys.gt_at(Angle::ZERO).unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingReceiver);
     }
 
@@ -717,7 +705,7 @@ mod tests {
             frequency: 29.0.ghz(),
             gt: 3.01.db(),
         });
-        let g = sys.gt_at(Angle::radians(0.0)).unwrap();
+        let g = sys.gt_at(Angle::ZERO).unwrap();
         assert_approx_eq!(g.as_f64(), 3.01, atol <= 1e-10);
     }
 
@@ -762,8 +750,8 @@ mod tests {
                 &rx,
                 0.0.db(),
                 Distance::kilometers(1000.0),
-                Angle::radians(0.0),
-                Angle::radians(0.0),
+                Angle::ZERO,
+                Angle::ZERO,
             )
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::MissingAntenna);

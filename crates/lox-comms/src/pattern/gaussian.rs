@@ -85,7 +85,7 @@ mod tests {
     #[test]
     fn test_gaussian_on_axis_equals_peak() {
         let p = test_pattern();
-        let gain = p.gain(test_frequency(), Angle::radians(0.0), Angle::radians(0.0));
+        let gain = p.gain(test_frequency(), Angle::ZERO, Angle::ZERO);
         let peak = p.peak_gain(test_frequency());
         assert_approx_eq!(gain.as_f64(), peak.as_f64(), atol <= 1e-10);
     }
@@ -97,7 +97,7 @@ mod tests {
         let f = test_frequency();
         let half_bw = Angle::radians(p.beamwidth(f).to_radians() / 2.0);
         let peak = p.peak_gain(f);
-        let gain_at_half_bw = p.gain(f, half_bw, Angle::radians(0.0));
+        let gain_at_half_bw = p.gain(f, half_bw, Angle::ZERO);
         let diff = peak.as_f64() - gain_at_half_bw.as_f64();
         assert_approx_eq!(diff, 3.0103, atol <= 0.01);
     }
@@ -107,8 +107,8 @@ mod tests {
         let p = test_pattern();
         let f = test_frequency();
         let angle = Angle::degrees(1.0);
-        let gain_pos = p.gain(f, angle, Angle::radians(0.0));
-        let gain_neg = p.gain(f, Angle::degrees(-1.0), Angle::radians(0.0));
+        let gain_pos = p.gain(f, angle, Angle::ZERO);
+        let gain_neg = p.gain(f, Angle::degrees(-1.0), Angle::ZERO);
         assert_approx_eq!(gain_pos.as_f64(), gain_neg.as_f64(), atol <= 1e-10);
     }
 
@@ -116,10 +116,10 @@ mod tests {
     fn test_gaussian_monotonic_decrease() {
         let p = test_pattern();
         let f = test_frequency();
-        let g0 = p.gain(f, Angle::degrees(0.0), Angle::radians(0.0));
-        let g1 = p.gain(f, Angle::degrees(0.5), Angle::radians(0.0));
-        let g2 = p.gain(f, Angle::degrees(1.0), Angle::radians(0.0));
-        let g3 = p.gain(f, Angle::degrees(2.0), Angle::radians(0.0));
+        let g0 = p.gain(f, Angle::degrees(0.0), Angle::ZERO);
+        let g1 = p.gain(f, Angle::degrees(0.5), Angle::ZERO);
+        let g2 = p.gain(f, Angle::degrees(1.0), Angle::ZERO);
+        let g3 = p.gain(f, Angle::degrees(2.0), Angle::ZERO);
         assert!(g0.as_f64() > g1.as_f64());
         assert!(g1.as_f64() > g2.as_f64());
         assert!(g2.as_f64() > g3.as_f64());
