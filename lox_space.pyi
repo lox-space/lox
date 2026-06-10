@@ -2857,6 +2857,37 @@ class CommsPayload:
     def find_terminal(self, name: str) -> TerminalId | None:
         """Returns the first terminal with the given name, if any."""
         ...
+    def terminals(self) -> list[tuple[TerminalId, str, str]]:
+        """Lists all terminals as (id, name, kind) with kind "tx", "rx", or "transceiver"."""
+        ...
+    def describe(self) -> str:
+        """Returns a multi-line wiring summary for inspection."""
+        ...
+    def tx_band(self, terminal: TerminalId) -> FrequencyRange:
+        """Returns the effective transmit frequency range of a terminal."""
+        ...
+    def rx_band(self, terminal: TerminalId) -> FrequencyRange:
+        """Returns the effective receive frequency range of a terminal."""
+        ...
+    def eirp_at(
+        self,
+        terminal: TerminalId,
+        carrier: Frequency,
+        angle: Angle | None = None,
+        direction: list[float] | None = None,
+    ) -> Decibel:
+        """Returns the EIRP in dBW of a terminal at the given carrier and pointing."""
+        ...
+    def gt_at(
+        self,
+        terminal: TerminalId,
+        carrier: Frequency,
+        angle: Angle | None = None,
+        direction: list[float] | None = None,
+    ) -> Decibel:
+        """Returns the G/T in dB/K of a terminal at the given carrier and pointing."""
+        ...
+    def __str__(self) -> str: ...
     @staticmethod
     def transmitter_only(
         name: str,

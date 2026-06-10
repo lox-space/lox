@@ -15,6 +15,8 @@
 //! construction. Names are display-only and not required to be unique;
 //! addressing is always by key.
 
+use std::fmt;
+
 use lox_core::units::{Decibel, Kelvin};
 use slotmap::{SlotMap, new_key_type};
 use thiserror::Error;
@@ -538,6 +540,111 @@ impl CommsPayload {
             .iter()
             .find(|(_, antenna)| antenna.name == name)
             .map(|(id, _)| id)
+    }
+}
+
+impl CommsPayload {
+    fn describe_tx_chain(&self, f: &mut fmt::Formatter<'_>, chain: TxChain) -> fmt::Result {
+        match chain {
+            TxChain::Component(port_id) => match self.tx_port(port_id) {
+                Some(port) => {
+                    let antenna = self
+                        .antenna(port.antenna)
+                        .map_or("<missing>", |a| a.name.as_str());
+                    let transmitter = self
+                        .transmitter(port.transmitter)
+                        .map_or("<missing>", |t| t.name.as_str());
+                    write!(
+                        f,
+                        "port '{}': antenna '{antenna}' ← transmitter '{transmitter}', feed {} dB",
+                        port.name,
+                        port.feed_loss.as_f64()
+                    )?;
+                    match port.band {
+                        Some(band) => write!(f, ", band {band}"),
+                        None => Ok(()),
+                    }
+                }
+                None => write!(f, "port <missing>"),
+            },
+            TxChain::Lumped(model_id) => match self.eirp_model(model_id) {
+                Some(model) => write!(
+                    f,
+                    "EIRP model '{}': {} dBW, band {}",
+                    model.name,
+                    model.eirp.as_f64(),
+                    model.band
+                ),
+                None => write!(f, "EIRP model <missing>"),
+            },
+        }
+    }
+
+    fn describe_rx_chain(&self, f: &mut fmt::Formatter<'_>, chain: RxChain) -> fmt::Result {
+        match chain {
+            RxChain::Component(port_id) => match self.rx_port(port_id) {
+                Some(port) => {
+                    let antenna = self
+                        .antenna(port.antenna)
+                        .map_or("<missing>", |a| a.name.as_str());
+                    let receiver = self
+                        .receiver(port.receiver)
+                        .map_or("<missing>", |r| r.name.as_str());
+                    write!(
+                        f,
+                        "port '{}': antenna '{antenna}' → receiver '{receiver}', feed {} dB, T_ant {} K",
+                        port.name,
+                        port.feed_loss.as_f64(),
+                        port.antenna_noise_temperature
+                    )?;
+                    match port.band {
+                        Some(band) => write!(f, ", band {band}"),
+                        None => Ok(()),
+                    }
+                }
+                None => write!(f, "port <missing>"),
+            },
+            RxChain::Lumped(model_id) => match self.gt_model(model_id) {
+                Some(model) => write!(
+                    f,
+                    "G/T model '{}': {} dB/K, band {}",
+                    model.name,
+                    model.gt.as_f64(),
+                    model.band
+                ),
+                None => write!(f, "G/T model <missing>"),
+            },
+        }
+    }
+}
+
+impl fmt::Display for CommsPayload {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "CommsPayload")?;
+        for (_, terminal) in self.terminals() {
+            match terminal.role {
+                TerminalRole::Tx(tx) => {
+                    write!(f, "└─ terminal '{}' (tx): ", terminal.name)?;
+                    self.describe_tx_chain(f, tx)?;
+                    writeln!(f)?;
+                }
+                TerminalRole::Rx(rx) => {
+                    write!(f, "└─ terminal '{}' (rx): ", terminal.name)?;
+                    self.describe_rx_chain(f, rx)?;
+                    writeln!(f)?;
+                }
+                TerminalRole::Transceiver { tx, rx } => {
+                    writeln!(f, "└─ terminal '{}' (transceiver)", terminal.name)?;
+                    write!(f, "   ├─ tx: ")?;
+                    self.describe_tx_chain(f, tx)?;
+                    writeln!(f)?;
+                    write!(f, "   └─ rx: ")?;
+                    self.describe_rx_chain(f, rx)?;
+                    writeln!(f)?;
+                }
+            }
+        }
+        Ok(())
     }
 }
 

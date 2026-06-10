@@ -1503,3 +1503,50 @@ def test_comms_payload_rejects_non_physical_inputs():
             "rx",
             lox.NoiseTempReceiver(band=KA_BAND, noise_temperature=-10.0 * lox.K),
         )
+
+
+def test_comms_payload_introspection():
+    payload = lox.CommsPayload()
+    dish = payload.add_antenna("dish", lox.ConstantAntenna(gain=46.0 * lox.dB))
+    pa = payload.add_transmitter(
+        "pa", lox.AmplifierTransmitter(band=KA_BAND, power=10.0 * lox.W)
+    )
+    lnb = payload.add_receiver(
+        "lnb", lox.NoiseTempReceiver(band=KA_BAND, noise_temperature=500.0 * lox.K)
+    )
+    tx_port = payload.add_tx_port("tx leg", dish, pa, 1.0 * lox.dB)
+    rx_port = payload.add_rx_port(
+        "rx leg", dish, lnb, 0.5 * lox.dB, antenna_noise_temperature=0.0 * lox.K
+    )
+    terminal = payload.add_transceiver_terminal(
+        "ka transceiver", tx_port=tx_port, rx_port=rx_port
+    )
+
+    terminals = payload.terminals()
+    assert len(terminals) == 1
+    terminal_id, name, kind = terminals[0]
+    assert terminal_id == terminal
+    assert name == "ka transceiver"
+    assert kind == "transceiver"
+
+    assert payload.tx_band(terminal).contains(29.0 * lox.GHz)
+    assert payload.rx_band(terminal).contains(29.0 * lox.GHz)
+
+    # EIRP = 46 + 10 − 1 = 55 dBW; G/T = 30 − 26.99... but RX antenna is the
+    # 46 dBi dish here: G/T = 46 − 10·log10(500 · 10^(0.05)) with 0.5 dB feed.
+    eirp = payload.eirp_at(terminal, 29.0 * lox.GHz)
+    assert float(eirp) == pytest.approx(55.0, abs=1e-9)
+    gt = payload.gt_at(terminal, 29.0 * lox.GHz)
+    expected_t_sys = 290.0 * (10 ** (0.5 / 10.0) - 1.0) + 500.0 * 10 ** (0.5 / 10.0)
+    assert float(gt) == pytest.approx(46.0 - 10.0 * math.log10(expected_t_sys), abs=1e-9)
+
+    description = payload.describe()
+    assert "ka transceiver" in description
+    assert "dish" in description
+    assert "transceiver" in description
+    assert str(payload) == description
+
+    with pytest.raises(ValueError, match="angle or direction"):
+        payload.eirp_at(
+            terminal, 29.0 * lox.GHz, angle=1.0 * lox.deg, direction=[1.0, 0.0, 0.0]
+        )

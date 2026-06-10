@@ -1085,9 +1085,16 @@ fn build_pointing(
     endpoint: &str,
 ) -> PyResult<Pointing> {
     match (angle, direction) {
-        (Some(_), Some(_)) => Err(PyValueError::new_err(format!(
-            "specify either {endpoint}_angle or {endpoint}_direction, not both"
-        ))),
+        (Some(_), Some(_)) => {
+            let (angle_kwarg, direction_kwarg) = if endpoint.is_empty() {
+                ("angle".to_owned(), "direction".to_owned())
+            } else {
+                (format!("{endpoint}_angle"), format!("{endpoint}_direction"))
+            };
+            Err(PyValueError::new_err(format!(
+                "specify either {angle_kwarg} or {direction_kwarg}, not both"
+            )))
+        }
         (Some(angle), None) => Ok(Pointing::off_boresight(angle.0)),
         (None, Some(direction)) => Ok(Pointing::Direction(DVec3::from_array(direction))),
         (None, None) => Ok(Pointing::Boresight),
@@ -1871,6 +1878,93 @@ impl PyCommsPayload {
     /// Returns the first terminal with the given name, if any.
     fn find_terminal(&self, name: &str) -> Option<PyTerminalId> {
         self.0.find_terminal(name).map(PyTerminalId)
+    }
+
+    /// Lists all terminals as (id, name, kind) with kind one of
+    /// "tx", "rx", or "transceiver".
+    fn terminals(&self) -> Vec<(PyTerminalId, String, &'static str)> {
+        self.0
+            .terminals()
+            .map(|(id, terminal)| {
+                let kind = match terminal.role {
+                    TerminalRole::Tx(_) => "tx",
+                    TerminalRole::Rx(_) => "rx",
+                    TerminalRole::Transceiver { .. } => "transceiver",
+                };
+                (PyTerminalId(id), terminal.name.clone(), kind)
+            })
+            .collect()
+    }
+
+    /// Returns a multi-line wiring summary for inspection.
+    fn describe(&self) -> String {
+        self.0.to_string()
+    }
+
+    /// Returns the effective transmit frequency range of a terminal.
+    fn tx_band(&self, terminal: PyTerminalId) -> PyResult<PyFrequencyRange> {
+        self.0
+            .tx_endpoint(terminal.0)
+            .map(|endpoint| PyFrequencyRange(endpoint.band()))
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Returns the effective receive frequency range of a terminal.
+    fn rx_band(&self, terminal: PyTerminalId) -> PyResult<PyFrequencyRange> {
+        self.0
+            .rx_endpoint(terminal.0)
+            .map(|endpoint| PyFrequencyRange(endpoint.band()))
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Returns the EIRP in dBW of a terminal at the given carrier and pointing.
+    ///
+    /// Pointing is given as an off-boresight angle or a line-of-sight
+    /// direction vector; omitting both assumes boresight.
+    #[pyo3(signature = (terminal, carrier, angle=None, direction=None))]
+    fn eirp_at(
+        &self,
+        terminal: PyTerminalId,
+        carrier: PyFrequency,
+        angle: Option<PyAngle>,
+        direction: Option<[f64; 3]>,
+    ) -> PyResult<PyDecibel> {
+        let pointing = build_pointing(angle, direction, "")?;
+        let endpoint = self
+            .0
+            .tx_endpoint(terminal.0)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        endpoint
+            .eirp_at(carrier.0, pointing)
+            .map(PyDecibel)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Returns the G/T in dB/K of a terminal at the given carrier and pointing.
+    ///
+    /// Pointing is given as an off-boresight angle or a line-of-sight
+    /// direction vector; omitting both assumes boresight.
+    #[pyo3(signature = (terminal, carrier, angle=None, direction=None))]
+    fn gt_at(
+        &self,
+        terminal: PyTerminalId,
+        carrier: PyFrequency,
+        angle: Option<PyAngle>,
+        direction: Option<[f64; 3]>,
+    ) -> PyResult<PyDecibel> {
+        let pointing = build_pointing(angle, direction, "")?;
+        let endpoint = self
+            .0
+            .rx_endpoint(terminal.0)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        endpoint
+            .gt_at(carrier.0, pointing)
+            .map(PyDecibel)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    fn __str__(&self) -> String {
+        self.0.to_string()
     }
 
     /// Creates a single-terminal transmit-only payload.
