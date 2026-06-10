@@ -10,6 +10,7 @@
 #![warn(missing_docs)]
 
 pub mod antenna;
+pub mod band;
 pub mod channel;
 pub mod error;
 pub mod link_budget;
