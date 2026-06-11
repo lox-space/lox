@@ -49,3 +49,4 @@ serde = ["dep:serde", "glam/serde"]
 [dev-dependencies]
 rstest.workspace = true
 proptest.workspace = true
+serde_json.workspace = true
