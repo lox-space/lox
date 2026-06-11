@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+#[cfg(feature = "comms")]
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt;
 
@@ -22,7 +24,7 @@ use lox_time::time_scales::{DynTimeScale, Tai};
 use rayon::prelude::*;
 
 #[cfg(feature = "comms")]
-use lox_comms::system::CommunicationSystem;
+use lox_comms::terminal::{RxTerminal, TxTerminal};
 
 use crate::visibility::ElevationMask;
 use lox_orbits::constellations::{ConstellationPropagator, DynConstellation};
@@ -113,7 +115,9 @@ pub struct GroundStation {
     body_fixed_frame: DynFrame,
     network: Option<NetworkId>,
     #[cfg(feature = "comms")]
-    communication_systems: Vec<CommunicationSystem>,
+    tx_terminals: BTreeMap<String, TxTerminal>,
+    #[cfg(feature = "comms")]
+    rx_terminals: BTreeMap<String, RxTerminal>,
 }
 
 impl GroundStation {
@@ -127,7 +131,9 @@ impl GroundStation {
             body_fixed_frame,
             network: None,
             #[cfg(feature = "comms")]
-            communication_systems: Vec::new(),
+            tx_terminals: BTreeMap::new(),
+            #[cfg(feature = "comms")]
+            rx_terminals: BTreeMap::new(),
         }
     }
 
@@ -143,10 +149,29 @@ impl GroundStation {
         self
     }
 
-    /// Adds a communication system to this ground station.
+    /// Adds a named transmit terminal to this ground station.
+    ///
+    /// An existing terminal with the same name is replaced.
     #[cfg(feature = "comms")]
-    pub fn with_communication_system(mut self, system: CommunicationSystem) -> Self {
-        self.communication_systems.push(system);
+    pub fn with_tx_terminal(
+        mut self,
+        name: impl Into<String>,
+        terminal: impl Into<TxTerminal>,
+    ) -> Self {
+        self.tx_terminals.insert(name.into(), terminal.into());
+        self
+    }
+
+    /// Adds a named receive terminal to this ground station.
+    ///
+    /// An existing terminal with the same name is replaced.
+    #[cfg(feature = "comms")]
+    pub fn with_rx_terminal(
+        mut self,
+        name: impl Into<String>,
+        terminal: impl Into<RxTerminal>,
+    ) -> Self {
+        self.rx_terminals.insert(name.into(), terminal.into());
         self
     }
 
@@ -175,10 +200,28 @@ impl GroundStation {
         self.body_fixed_frame
     }
 
-    /// Returns the communication systems attached to this ground station.
+    /// Returns the named transmit terminals of this ground station.
     #[cfg(feature = "comms")]
-    pub fn communication_systems(&self) -> &[CommunicationSystem] {
-        &self.communication_systems
+    pub fn tx_terminals(&self) -> &BTreeMap<String, TxTerminal> {
+        &self.tx_terminals
+    }
+
+    /// Returns the named receive terminals of this ground station.
+    #[cfg(feature = "comms")]
+    pub fn rx_terminals(&self) -> &BTreeMap<String, RxTerminal> {
+        &self.rx_terminals
+    }
+
+    /// Returns the transmit terminal with the given name, if any.
+    #[cfg(feature = "comms")]
+    pub fn tx_terminal(&self, name: &str) -> Option<&TxTerminal> {
+        self.tx_terminals.get(name)
+    }
+
+    /// Returns the receive terminal with the given name, if any.
+    #[cfg(feature = "comms")]
+    pub fn rx_terminal(&self, name: &str) -> Option<&RxTerminal> {
+        self.rx_terminals.get(name)
     }
 }
 
@@ -195,7 +238,9 @@ pub struct Spacecraft {
     #[cfg(feature = "imaging")]
     sar_payload: Option<SarPayload>,
     #[cfg(feature = "comms")]
-    communication_systems: Vec<CommunicationSystem>,
+    tx_terminals: BTreeMap<String, TxTerminal>,
+    #[cfg(feature = "comms")]
+    rx_terminals: BTreeMap<String, RxTerminal>,
 }
 
 impl Spacecraft {
@@ -211,7 +256,9 @@ impl Spacecraft {
             #[cfg(feature = "imaging")]
             sar_payload: None,
             #[cfg(feature = "comms")]
-            communication_systems: Vec::new(),
+            tx_terminals: BTreeMap::new(),
+            #[cfg(feature = "comms")]
+            rx_terminals: BTreeMap::new(),
         }
     }
 
@@ -241,10 +288,29 @@ impl Spacecraft {
         self
     }
 
-    /// Adds a communication system to this spacecraft.
+    /// Adds a named transmit terminal to this spacecraft.
+    ///
+    /// An existing terminal with the same name is replaced.
     #[cfg(feature = "comms")]
-    pub fn with_communication_system(mut self, system: CommunicationSystem) -> Self {
-        self.communication_systems.push(system);
+    pub fn with_tx_terminal(
+        mut self,
+        name: impl Into<String>,
+        terminal: impl Into<TxTerminal>,
+    ) -> Self {
+        self.tx_terminals.insert(name.into(), terminal.into());
+        self
+    }
+
+    /// Adds a named receive terminal to this spacecraft.
+    ///
+    /// An existing terminal with the same name is replaced.
+    #[cfg(feature = "comms")]
+    pub fn with_rx_terminal(
+        mut self,
+        name: impl Into<String>,
+        terminal: impl Into<RxTerminal>,
+    ) -> Self {
+        self.rx_terminals.insert(name.into(), terminal.into());
         self
     }
 
@@ -280,10 +346,28 @@ impl Spacecraft {
         self.sar_payload
     }
 
-    /// Returns the communication systems attached to this spacecraft.
+    /// Returns the named transmit terminals of this spacecraft.
     #[cfg(feature = "comms")]
-    pub fn communication_systems(&self) -> &[CommunicationSystem] {
-        &self.communication_systems
+    pub fn tx_terminals(&self) -> &BTreeMap<String, TxTerminal> {
+        &self.tx_terminals
+    }
+
+    /// Returns the named receive terminals of this spacecraft.
+    #[cfg(feature = "comms")]
+    pub fn rx_terminals(&self) -> &BTreeMap<String, RxTerminal> {
+        &self.rx_terminals
+    }
+
+    /// Returns the transmit terminal with the given name, if any.
+    #[cfg(feature = "comms")]
+    pub fn tx_terminal(&self, name: &str) -> Option<&TxTerminal> {
+        self.tx_terminals.get(name)
+    }
+
+    /// Returns the receive terminal with the given name, if any.
+    #[cfg(feature = "comms")]
+    pub fn rx_terminal(&self, name: &str) -> Option<&RxTerminal> {
+        self.rx_terminals.get(name)
     }
 }
 
@@ -554,7 +638,11 @@ impl PayloadAccessor<SarPayload> for Spacecraft {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "comms")]
+    use lox_comms::terminal::{EirpModel, GtModel};
     use lox_core::coords::LonLatAlt;
+    #[cfg(feature = "comms")]
+    use lox_core::units::{DecibelUnits, FrequencyBand};
     use lox_frames::DynFrame;
     use lox_orbits::ground::GroundLocation;
     use lox_time::deltas::TimeDelta;
@@ -566,6 +654,78 @@ mod tests {
 
     fn dummy_mask() -> ElevationMask {
         ElevationMask::with_fixed_elevation(0.0)
+    }
+
+    #[cfg(feature = "comms")]
+    fn eirp_terminal(eirp_dbw: f64) -> TxTerminal {
+        EirpModel::new(FrequencyBand::Ka, eirp_dbw.db())
+            .unwrap()
+            .into()
+    }
+
+    #[cfg(feature = "comms")]
+    fn gt_terminal(gt_db_k: f64) -> RxTerminal {
+        GtModel::new(FrequencyBand::Ka, gt_db_k.db())
+            .unwrap()
+            .into()
+    }
+
+    #[cfg(feature = "comms")]
+    #[test]
+    fn test_ground_station_terminals() {
+        let gs = GroundStation::new("gs1", dummy_location(), dummy_mask())
+            .with_tx_terminal("beacon", eirp_terminal(40.0))
+            .with_rx_terminal("main", gt_terminal(30.0))
+            .with_rx_terminal("backup", gt_terminal(25.0));
+        assert_eq!(gs.tx_terminals().len(), 1);
+        assert_eq!(gs.rx_terminals().len(), 2);
+        assert!(gs.tx_terminal("beacon").is_some());
+        assert!(gs.rx_terminal("main").is_some());
+        assert!(gs.tx_terminal("nonexistent").is_none());
+        assert!(gs.rx_terminal("nonexistent").is_none());
+
+        let bare = GroundStation::new("bare", dummy_location(), dummy_mask());
+        assert!(bare.tx_terminals().is_empty());
+        assert!(bare.rx_terminals().is_empty());
+    }
+
+    #[cfg(feature = "comms")]
+    #[test]
+    fn test_ground_station_terminal_names_are_unique() {
+        // Re-adding under the same name replaces the terminal.
+        let gs = GroundStation::new("gs1", dummy_location(), dummy_mask())
+            .with_rx_terminal("main", gt_terminal(30.0))
+            .with_rx_terminal("main", gt_terminal(25.0));
+        assert_eq!(gs.rx_terminals().len(), 1);
+        let RxTerminal::Lumped(model) = gs.rx_terminal("main").unwrap() else {
+            panic!("expected lumped terminal");
+        };
+        assert_eq!(model.gt().as_f64(), 25.0);
+    }
+
+    #[cfg(feature = "comms")]
+    #[test]
+    fn test_spacecraft_terminals() {
+        let traj = lox_orbits::orbits::DynTrajectory::from_csv_dyn(
+            &lox_test_utils::read_data_file("trajectory_lunar.csv"),
+            DynOrigin::Earth,
+            DynFrame::Icrf,
+        )
+        .unwrap();
+        let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(traj.clone()))
+            .with_tx_terminal("downlink", eirp_terminal(20.0))
+            .with_tx_terminal("beacon", eirp_terminal(10.0))
+            .with_rx_terminal("uplink", gt_terminal(-5.0));
+        assert_eq!(sc.tx_terminals().len(), 2);
+        assert_eq!(sc.rx_terminals().len(), 1);
+        assert!(sc.tx_terminal("downlink").is_some());
+        assert!(sc.rx_terminal("uplink").is_some());
+        assert!(sc.tx_terminal("nonexistent").is_none());
+        assert!(sc.rx_terminal("nonexistent").is_none());
+
+        let bare = Spacecraft::new("bare", OrbitSource::Trajectory(traj));
+        assert!(bare.tx_terminals().is_empty());
+        assert!(bare.rx_terminals().is_empty());
     }
 
     // --- ID types ---
