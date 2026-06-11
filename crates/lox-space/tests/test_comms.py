@@ -9,6 +9,40 @@ import pytest
 import lox_space as lox
 
 
+KA_BAND = lox.FrequencyRange(27.0 * lox.GHz, 31.0 * lox.GHz)
+
+
+def make_tx(gain=46.0, power=10.0, feed_loss=1.0, antenna=None):
+    """Standard transmit chain: constant-gain antenna + Ka-band amplifier."""
+    if antenna is None:
+        antenna = lox.ConstantAntenna(gain=gain * lox.dB)
+    return lox.TxChain(
+        antenna,
+        lox.AmplifierTransmitter(power=power * lox.W),
+        band=KA_BAND,
+        feed_loss=feed_loss * lox.dB,
+    )
+
+
+def make_rx(gain=30.0, noise_temperature=500.0, feed_loss=0.0):
+    """Standard receive chain: constant-gain antenna + 500 K receiver."""
+    return lox.RxChain(
+        lox.ConstantAntenna(gain=gain * lox.dB),
+        lox.NoiseTempReceiver(noise_temperature=noise_temperature * lox.K),
+        band=KA_BAND,
+        antenna_noise_temperature=0.0 * lox.K,
+        feed_loss=feed_loss * lox.dB,
+    )
+
+
+def link_stats(tx, rx, **kwargs):
+    """Evaluates the standard 29 GHz downlink between two terminals."""
+    kwargs.setdefault("carrier", 29.0 * lox.GHz)
+    kwargs.setdefault("bandwidth", 5.0 * lox.MHz)
+    kwargs.setdefault("range", 1000.0 * lox.km)
+    return lox.LinkStats.for_link(tx, rx, **kwargs)
+
+
 # --- Decibel ---
 
 
@@ -409,42 +443,35 @@ def test_complex_antenna_gain_toward_rejects_invalid_direction():
 
 
 def test_transmitter_eirp():
-    # 10 dBi antenna, 5 W power, 1 dB line loss, 0 dB OBO
+    # 10 dBi antenna, 5 W power, 1 dB feed loss, 0 dB OBO
     # EIRP = 10 + 10*log10(5) - 1 = 15.99 dBW
-    a = lox.ConstantAntenna(gain=10.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=5.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    eirp = tx.eirp(a, theta=0.0 * lox.deg)
-    assert float(eirp) == pytest.approx(15.99, abs=0.01)
+    tx = make_tx(gain=10.0, power=5.0, feed_loss=1.0)
+    stats = link_stats(tx, make_rx())
+    assert float(stats.eirp) == pytest.approx(15.99, abs=0.01)
+
+
+def test_transmitter_getters():
+    tx = lox.AmplifierTransmitter(power=10.0 * lox.W, output_back_off=0.5 * lox.dB)
+    assert tx.power.to_watts() == pytest.approx(10.0, abs=1e-12)
+    assert float(tx.output_back_off) == pytest.approx(0.5, abs=1e-12)
 
 
 def test_transmitter_default_obo():
-    tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=0.0 * lox.dB
-    )
+    tx = lox.AmplifierTransmitter(power=10.0 * lox.W)
     assert repr(tx).endswith("output_back_off=Decibel(0.0))")
 
 
 def test_transmitter_eq():
-    a = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    b = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    c = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=5.0 * lox.W, line_loss=1.0 * lox.dB
-    )
+    a = lox.AmplifierTransmitter(power=10.0 * lox.W)
+    b = lox.AmplifierTransmitter(power=10.0 * lox.W)
+    c = lox.AmplifierTransmitter(power=5.0 * lox.W)
     assert a == b
     assert not (a == c)
 
 
 def test_transmitter_pickle():
     tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz,
         power=10.0 * lox.W,
-        line_loss=1.0 * lox.dB,
         output_back_off=0.5 * lox.dB,
     )
     assert pickle.loads(pickle.dumps(tx)) == tx
@@ -452,9 +479,7 @@ def test_transmitter_pickle():
 
 def test_transmitter_repr_roundtrip():
     tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz,
         power=10.0 * lox.W,
-        line_loss=1.0 * lox.dB,
         output_back_off=0.5 * lox.dB,
     )
     assert (
@@ -462,6 +487,7 @@ def test_transmitter_repr_roundtrip():
             repr(tx),
             {
                 "AmplifierTransmitter": lox.AmplifierTransmitter,
+                "FrequencyRange": lox.FrequencyRange,
                 "Frequency": lox.Frequency,
                 "Power": lox.Power,
                 "Decibel": lox.Decibel,
@@ -475,65 +501,42 @@ def test_transmitter_repr_roundtrip():
 
 
 def test_complex_receiver_from_lna_and_noise_figure():
-    # Gateway link: T_ant=290K, LNA(G=20dB, T=175K), Rx(NF=2dB)
-    # T_sys = 290 + 175 + 169.619/100 = 466.696 K
+    # LNA(G=20dB, T=175K), Rx(NF=2dB)
+    # T_chain = 175 + 169.619/100 = 176.696 K
     rx = lox.CascadeReceiver.from_lna_and_noise_figure(
-        frequency=26.5 * lox.GHz,
-        antenna_noise_temperature=290.0 * lox.K,
         lna_gain=20.0 * lox.dB,
         lna_noise_temperature=175.0 * lox.K,
         receiver_noise_figure=2.0 * lox.dB,
     )
-    assert rx.system_noise_temperature().to_kelvin() == pytest.approx(466.696, abs=0.01)
-
-
-def test_complex_receiver_from_feed_loss_and_noise_figure():
-    # Feed loss=3dB, NF=5dB, T_ant=265K, receiver_gain=20dB
-    rx = lox.CascadeReceiver.from_feed_loss_and_noise_figure(
-        frequency=29 * lox.GHz,
-        antenna_noise_temperature=265.0 * lox.K,
-        feed_loss=3.0 * lox.dB,
-        receiver_noise_figure=5.0 * lox.dB,
-        receiver_gain=20.0 * lox.dB,
-    )
-    # Friis input-referred T_sys = old output-referred / L
-    old_t_sys_output = 904.53
-    loss_linear = 10 ** (-3.0 / 10)
-    assert rx.system_noise_temperature().to_kelvin() == pytest.approx(
-        old_t_sys_output / loss_linear, rel=1e-3
-    )
+    assert rx.chain_noise_temperature().to_kelvin() == pytest.approx(176.696, abs=0.01)
 
 
 def test_simple_receiver_eq():
-    a = lox.NoiseTempReceiver(
-        frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
-    )
-    b = lox.NoiseTempReceiver(
-        frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
-    )
-    c = lox.NoiseTempReceiver(
-        frequency=29e9 * lox.Hz, system_noise_temperature=600.0 * lox.K
-    )
+    a = lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K)
+    b = lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K)
+    c = lox.NoiseTempReceiver(noise_temperature=600.0 * lox.K)
     assert a == b
     assert not (a == c)
 
 
+def test_simple_receiver_getters():
+    rx = lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K)
+    assert rx.noise_temperature.to_kelvin() == pytest.approx(500.0, abs=1e-12)
+
+
 def test_simple_receiver_pickle():
-    rx = lox.NoiseTempReceiver(
-        frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
-    )
+    rx = lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K)
     assert pickle.loads(pickle.dumps(rx)) == rx
 
 
 def test_simple_receiver_repr_roundtrip():
-    rx = lox.NoiseTempReceiver(
-        frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
-    )
+    rx = lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K)
     assert (
         eval(
             repr(rx),
             {
                 "NoiseTempReceiver": lox.NoiseTempReceiver,
+                "FrequencyRange": lox.FrequencyRange,
                 "Frequency": lox.Frequency,
                 "Temperature": lox.Temperature,
             },
@@ -542,24 +545,20 @@ def test_simple_receiver_repr_roundtrip():
     )
 
 
-def test_complex_receiver_system_noise_temperature():
+def test_complex_receiver_chain_noise_temperature():
     # Direct stage construction
     rx = lox.CascadeReceiver(
-        frequency=29 * lox.GHz,
-        antenna_noise_temperature=100.0 * lox.K,
         stages=[
             lox.NoiseStage(gain=20.0 * lox.dB, noise_temperature=50.0 * lox.K),
             lox.NoiseStage(gain=10.0 * lox.dB, noise_temperature=500.0 * lox.K),
         ],
     )
-    # T_sys = 100 + 50 + 500/100 = 155 K
-    assert rx.system_noise_temperature().to_kelvin() == pytest.approx(155.0, abs=0.01)
+    # T_chain = 50 + 500/100 = 55 K
+    assert rx.chain_noise_temperature().to_kelvin() == pytest.approx(55.0, abs=0.01)
 
 
 def test_complex_receiver_eq():
     kwargs = dict(
-        frequency=29 * lox.GHz,
-        antenna_noise_temperature=100.0 * lox.K,
         stages=[
             lox.NoiseStage(gain=20.0 * lox.dB, noise_temperature=50.0 * lox.K),
         ],
@@ -567,10 +566,8 @@ def test_complex_receiver_eq():
     a = lox.CascadeReceiver(**kwargs)
     b = lox.CascadeReceiver(**kwargs)
     c = lox.CascadeReceiver(
-        frequency=29 * lox.GHz,
-        antenna_noise_temperature=200.0 * lox.K,
         stages=[
-            lox.NoiseStage(gain=20.0 * lox.dB, noise_temperature=50.0 * lox.K),
+            lox.NoiseStage(gain=20.0 * lox.dB, noise_temperature=100.0 * lox.K),
         ],
     )
     assert a == b
@@ -579,8 +576,6 @@ def test_complex_receiver_eq():
 
 def test_complex_receiver_pickle():
     rx = lox.CascadeReceiver(
-        frequency=29 * lox.GHz,
-        antenna_noise_temperature=100.0 * lox.K,
         stages=[
             lox.NoiseStage(gain=20.0 * lox.dB, noise_temperature=50.0 * lox.K),
             lox.NoiseStage(gain=10.0 * lox.dB, noise_temperature=500.0 * lox.K),
@@ -593,8 +588,6 @@ def test_complex_receiver_pickle():
 
 def test_complex_receiver_repr_roundtrip():
     rx = lox.CascadeReceiver(
-        frequency=29 * lox.GHz,
-        antenna_noise_temperature=100.0 * lox.K,
         stages=[
             lox.NoiseStage(gain=20.0 * lox.dB, noise_temperature=50.0 * lox.K),
         ],
@@ -605,6 +598,7 @@ def test_complex_receiver_repr_roundtrip():
             {
                 "CascadeReceiver": lox.CascadeReceiver,
                 "NoiseStage": lox.NoiseStage,
+                "FrequencyRange": lox.FrequencyRange,
                 "Frequency": lox.Frequency,
                 "Temperature": lox.Temperature,
                 "Decibel": lox.Decibel,
@@ -759,83 +753,15 @@ def test_freq_overlap_partial():
     ) == pytest.approx(0.5, abs=1e-10)
 
 
-# --- Communication System ---
-
-
-def test_communication_system_c_n0():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
-
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(
-        frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
-    )
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-
-    c_n0 = tx_sys.carrier_to_noise_density(
-        rx_system=rx_sys,
-        losses=0.0 * lox.dB,
-        range=1000.0 * lox.km,
-        tx_angle=0.0 * lox.deg,
-        rx_angle=0.0 * lox.deg,
-    )
-    assert float(c_n0) == pytest.approx(104.9, abs=0.2)
-
-
-def test_communication_system_noise_power():
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(
-        frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
-    )
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-
-    p_noise = rx_sys.noise_power(bandwidth=1e6 * lox.Hz)
-    assert float(p_noise) == pytest.approx(-141.61, abs=0.01)
-
-
-def test_communication_system_pickle():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
-    restored = pickle.loads(pickle.dumps(tx_sys))
-    # CommunicationSystem doesn't have __eq__, verify repr matches
-    assert repr(restored) == repr(tx_sys)
-
-
-def test_communication_system_pickle_with_receiver():
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(
-        frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
-    )
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-    restored = pickle.loads(pickle.dumps(rx_sys))
-    # Verify via noise_power computation
-    assert float(restored.noise_power(1e6 * lox.Hz)) == pytest.approx(
-        float(rx_sys.noise_power(1e6 * lox.Hz)), abs=1e-10
-    )
-
-
 # --- Link Stats ---
 
 
+def test_link_stats_noise_power():
+    stats = link_stats(make_tx(), make_rx(), bandwidth=1.0 * lox.MHz)
+    assert float(stats.noise_power) == pytest.approx(-141.61, abs=0.01)
+
+
 def test_link_stats_end_to_end():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
-
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(
-        frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
-    )
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-
     ch = lox.Channel(
         link_type="downlink",
         symbol_rate=5 * lox.MHz,
@@ -846,10 +772,9 @@ def test_link_stats_end_to_end():
         fec=0.5,
     )
 
-    stats = lox.LinkStats.calculate(
-        tx_system=tx_sys,
-        rx_system=rx_sys,
-        range=1000.0 * lox.km,
+    stats = link_stats(
+        make_tx(),
+        make_rx(),
         bandwidth=ch.bandwidth(),
         tx_angle=0.0 * lox.deg,
         rx_angle=0.0 * lox.deg,
@@ -875,18 +800,6 @@ def test_link_stats_end_to_end():
 
 
 def test_link_stats_with_losses():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
-
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(
-        frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
-    )
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-
     ch = lox.Channel(
         link_type="downlink",
         symbol_rate=5 * lox.MHz,
@@ -899,11 +812,11 @@ def test_link_stats_with_losses():
 
     losses = lox.EnvironmentalLosses.from_values(rain=2.0 * lox.dB, atmospheric=1.0 * lox.dB)
 
-    stats_no_loss = lox.LinkStats.calculate(
-        tx_sys, rx_sys, 1000 * lox.km, ch.bandwidth(), 0 * lox.deg, 0 * lox.deg
+    stats_no_loss = link_stats(
+        make_tx(), make_rx(), bandwidth=ch.bandwidth()
     )
-    stats_loss = lox.LinkStats.calculate(
-        tx_sys, rx_sys, 1000 * lox.km, ch.bandwidth(), 0 * lox.deg, 0 * lox.deg, losses=losses
+    stats_loss = link_stats(
+        make_tx(), make_rx(), bandwidth=ch.bandwidth(), losses=losses
     )
     modulated_no_loss = ch.apply(stats_no_loss)
     modulated_loss = ch.apply(stats_loss)
@@ -1019,74 +932,29 @@ def test_channel_repr_with_chip_rate():
     assert "chip_rate=" in repr(ch)
 
 
-# --- CommunicationSystem additional methods ---
+# --- LinkStats additional outputs ---
 
 
-def test_communication_system_carrier_power():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
-
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(
-        frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
-    )
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-
-    p_rx = tx_sys.carrier_power(
-        rx_system=rx_sys,
-        losses=0.0 * lox.dB,
-        range=1000.0 * lox.km,
-        tx_angle=0.0 * lox.deg,
-        rx_angle=0.0 * lox.deg,
-    )
-    # carrier_power should be finite
-    assert math.isfinite(float(p_rx))
+def test_link_stats_carrier_power():
+    stats = link_stats(make_tx(), make_rx())
+    # carrier_rx_power should be finite for component-tier links
+    assert math.isfinite(float(stats.carrier_rx_power))
 
 
-def test_communication_system_with_complex_antenna():
-    p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
-    ant = lox.PatternedAntenna(pattern=p)
-    tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    sys = lox.CommunicationSystem(antenna=ant, transmitter=tx)
-    r = repr(sys)
-    assert "PatternedAntenna" in r
-    assert "ParabolicPattern" in r
-    # Pickle roundtrip
-    restored = pickle.loads(pickle.dumps(sys))
-    assert repr(restored) == repr(sys)
-
-
-def test_communication_system_with_complex_receiver():
-    ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.CascadeReceiver(
-        frequency=29 * lox.GHz,
-        antenna_noise_temperature=100.0 * lox.K,
-        stages=[
-            lox.NoiseStage(gain=20.0 * lox.dB, noise_temperature=50.0 * lox.K),
-        ],
-    )
-    sys = lox.CommunicationSystem(antenna=ant, receiver=rx)
-    r = repr(sys)
-    assert "CascadeReceiver" in r
-    # Pickle roundtrip
-    restored = pickle.loads(pickle.dumps(sys))
-    assert repr(restored) == repr(sys)
-
-
-def test_communication_system_invalid_antenna():
+def test_tx_chain_invalid_antenna():
+    tx = lox.AmplifierTransmitter(power=10.0 * lox.W)
     with pytest.raises(ValueError, match="expected a ConstantAntenna or PatternedAntenna"):
-        lox.CommunicationSystem(antenna="not an antenna")
+        lox.TxChain("not an antenna", tx, KA_BAND)
 
 
-def test_communication_system_invalid_receiver():
-    ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    with pytest.raises(ValueError, match="expected NoiseTempReceiver, CascadeReceiver, or GtReceiver"):
-        lox.CommunicationSystem(antenna=ant, receiver="not a receiver")
+def test_rx_chain_invalid_receiver():
+    with pytest.raises(ValueError, match="expected NoiseTempReceiver or CascadeReceiver"):
+        lox.RxChain(
+            lox.ConstantAntenna(gain=30.0 * lox.dB),
+            "not a receiver",
+            band=KA_BAND,
+            antenna_noise_temperature=0.0 * lox.K,
+        )
 
 
 # --- PatternedAntenna additional patterns ---
@@ -1134,8 +1002,6 @@ def test_complex_antenna_peak_gain():
 
 def test_complex_receiver_chain_gain():
     rx = lox.CascadeReceiver(
-        frequency=29 * lox.GHz,
-        antenna_noise_temperature=100.0 * lox.K,
         stages=[
             lox.NoiseStage(gain=20.0 * lox.dB, noise_temperature=50.0 * lox.K),
             lox.NoiseStage(gain=10.0 * lox.dB, noise_temperature=500.0 * lox.K),
@@ -1166,18 +1032,6 @@ def test_noise_stage_pickle():
 
 
 def test_link_stats_all_getters():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
-
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(
-        frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
-    )
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-
     ch = lox.Channel(
         link_type="downlink",
         symbol_rate=5 * lox.MHz,
@@ -1188,9 +1042,7 @@ def test_link_stats_all_getters():
         fec=0.5,
     )
 
-    stats = lox.LinkStats.calculate(
-        tx_sys, rx_sys, 1000 * lox.km, ch.bandwidth(), 0 * lox.deg, 0 * lox.deg
-    )
+    stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth())
 
     # Test getters not covered in test_link_stats_end_to_end
     assert math.isfinite(float(stats.c_n))
@@ -1203,18 +1055,6 @@ def test_link_stats_all_getters():
 
 
 def test_link_stats_repr():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
-
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(
-        frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K
-    )
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-
     ch = lox.Channel(
         link_type="downlink",
         symbol_rate=5 * lox.MHz,
@@ -1223,9 +1063,7 @@ def test_link_stats_repr():
         modulation=lox.Modulation("QPSK"),
     )
 
-    stats = lox.LinkStats.calculate(
-        tx_sys, rx_sys, 1000 * lox.km, ch.bandwidth(), 0 * lox.deg, 0 * lox.deg
-    )
+    stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth())
     modulated = ch.apply(stats)
     r = repr(stats)
     assert "LinkStats" in r
@@ -1303,82 +1141,27 @@ def test_pfd_mask_eq_and_pickle():
 def test_transmitter_eirp_complex_antenna():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
     a = lox.PatternedAntenna(pattern=p)
-    tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    eirp = tx.eirp(a, theta=0.0 * lox.deg)
-    assert math.isfinite(float(eirp))
+    stats = link_stats(make_tx(antenna=a), make_rx())
+    assert math.isfinite(float(stats.eirp))
 
 
-def test_transmitter_eirp_invalid_antenna():
-    tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    with pytest.raises(ValueError, match="expected a ConstantAntenna or PatternedAntenna"):
-        tx.eirp("not an antenna", theta=0.0 * lox.deg)
-
-
-# --- CommunicationSystem repr with no receiver/transmitter ---
-
-
-def test_communication_system_repr_minimal():
-    ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    sys = lox.CommunicationSystem(antenna=ant)
-    r = repr(sys)
-    assert "CommunicationSystem" in r
-    assert "ConstantAntenna" in r
-    assert "receiver=" not in r
-    assert "transmitter=" not in r
-
-
-def test_communication_system_repr_with_transmitter():
-    ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(
-        frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB
-    )
-    sys = lox.CommunicationSystem(antenna=ant, transmitter=tx)
-    r = repr(sys)
-    assert "transmitter=AmplifierTransmitter" in r
+def test_tx_chain_rejects_negative_feed_loss():
+    tx = lox.AmplifierTransmitter(power=10.0 * lox.W)
+    with pytest.raises(ValueError, match="feed loss"):
+        lox.TxChain(
+            lox.ConstantAntenna(gain=46.0 * lox.dB),
+            tx,
+            band=KA_BAND,
+            feed_loss=-1.0 * lox.dB,
+        )
 
 
 # --- Lumped-tier smoke test ---
 
 
-def test_eirp_gt_lumped_link():
-    tx = lox.CommunicationSystem.eirp_only(
-        lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
-    )
-    rx = lox.CommunicationSystem.gt_only(
-        lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
-    )
-    link = lox.LinkStats.calculate(
-        tx,
-        rx,
-        1000.0 * lox.km,
-        5.0 * lox.MHz,
-        0.0 * lox.rad,
-        0.0 * lox.rad,
-    )
-    assert link.carrier_rx_power is None
-    assert link.noise_power is None
-    assert abs(float(link.c_n0) - 104.913) < 0.2
-
-
-def test_lumped_transmitter_receiver_pickle():
-    tx = lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
-    rx = lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
-
-    assert pickle.loads(pickle.dumps(tx)) == tx
-    assert pickle.loads(pickle.dumps(rx)) == rx
-
-
 def test_lumped_link_interference_requires_absolute_power():
-    tx = lox.CommunicationSystem.eirp_only(
-        lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
-    )
-    rx = lox.CommunicationSystem.gt_only(
-        lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
-    )
+    tx = lox.EirpModel(KA_BAND, 55.0 * lox.dB)
+    rx = lox.GtModel(KA_BAND, 3.01 * lox.dB)
     channel = lox.Channel(
         link_type="downlink",
         symbol_rate=5.0 * lox.MHz,
@@ -1386,111 +1169,17 @@ def test_lumped_link_interference_requires_absolute_power():
         margin=3.0 * lox.dB,
         modulation=lox.Modulation("QPSK"),
     )
-    link = lox.LinkStats.calculate(
-        tx,
-        rx,
-        1000.0 * lox.km,
-        channel.bandwidth(),
-        0.0 * lox.rad,
-        0.0 * lox.rad,
-    )
+    link = link_stats(tx, rx, bandwidth=channel.bandwidth())
     modulated = channel.apply(link)
 
     with pytest.raises(ValueError, match="absolute carrier and noise powers"):
-        modulated.with_interference(1e-12)
-
-
-# --- Error mapping tests ---
-
-
-def test_missing_transmitter_raises_value_error():
-    antenna = lox.ConstantAntenna(0.0 * lox.dB)
-    rx_antenna = lox.ConstantAntenna(0.0 * lox.dB)
-    rx_receiver = lox.NoiseTempReceiver(29.0 * lox.GHz, 500.0 * lox.K)
-    tx = lox.CommunicationSystem(antenna=antenna)
-    rx = lox.CommunicationSystem(antenna=rx_antenna, receiver=rx_receiver)
-    with pytest.raises(ValueError, match="transmitter"):
-        tx.carrier_to_noise_density(
-            rx, 0.0 * lox.dB, 1000.0 * lox.km,
-            0.0 * lox.rad, 0.0 * lox.rad,
-        )
-
-
-def test_missing_receiver_raises_value_error():
-    tx_antenna = lox.ConstantAntenna(0.0 * lox.dB)
-    tx_transmitter = lox.AmplifierTransmitter(
-        frequency=29.0 * lox.GHz, power=10.0 * lox.W, line_loss=0.0 * lox.dB,
-    )
-    tx = lox.CommunicationSystem(antenna=tx_antenna, transmitter=tx_transmitter)
-    rx_antenna = lox.ConstantAntenna(0.0 * lox.dB)
-    rx = lox.CommunicationSystem(antenna=rx_antenna)
-    with pytest.raises(ValueError, match="receiver"):
-        tx.carrier_to_noise_density(
-            rx, 0.0 * lox.dB, 1000.0 * lox.km,
-            0.0 * lox.rad, 0.0 * lox.rad,
-        )
-
-
-def test_frequency_mismatch_raises_value_error():
-    tx = lox.CommunicationSystem.eirp_only(
-        lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
-    )
-    rx = lox.CommunicationSystem.gt_only(
-        lox.GtReceiver(30.0 * lox.GHz, 3.01 * lox.dB)
-    )
-    with pytest.raises(ValueError, match="frequency"):
-        tx.carrier_to_noise_density(
-            rx, 0.0 * lox.dB, 1000.0 * lox.km,
-            0.0 * lox.rad, 0.0 * lox.rad,
-        )
-
-
-def test_unexpected_antenna_raises_value_error():
-    antenna = lox.ConstantAntenna(46.0 * lox.dB)
-    tx_transmitter = lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
-    with pytest.raises(ValueError, match="EirpTransmitter must not be paired"):
-        lox.CommunicationSystem(antenna=antenna, transmitter=tx_transmitter)
-
-
-# --- Pickle round-trip tests for lumped CommunicationSystem ---
-
-
-def test_lumped_communication_system_pickle():
-    tx_system = lox.CommunicationSystem.eirp_only(
-        lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
-    )
-    rx_system = lox.CommunicationSystem.gt_only(
-        lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
-    )
-    assert pickle.loads(pickle.dumps(tx_system)) == tx_system
-    assert pickle.loads(pickle.dumps(rx_system)) == rx_system
-
-
-def test_lumped_communication_system_via_constructor_pickle():
-    tx_system = lox.CommunicationSystem(
-        transmitter=lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
-    )
-    rx_system = lox.CommunicationSystem(
-        receiver=lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
-    )
-    assert pickle.loads(pickle.dumps(tx_system)) == tx_system
-    assert pickle.loads(pickle.dumps(rx_system)) == rx_system
+        modulated.with_interference(1e-12 * lox.W)
 
 
 # --- ModulatedLinkStats.with_interference happy path ---
 
 
 def test_modulated_with_interference_component_tier():
-    tx_antenna = lox.ConstantAntenna(46.0 * lox.dB)
-    tx_transmitter = lox.AmplifierTransmitter(
-        frequency=29.0 * lox.GHz, power=10.0 * lox.W, line_loss=1.0 * lox.dB,
-    )
-    tx = lox.CommunicationSystem(antenna=tx_antenna, transmitter=tx_transmitter)
-
-    rx_antenna = lox.ConstantAntenna(30.0 * lox.dB)
-    rx_receiver = lox.NoiseTempReceiver(29.0 * lox.GHz, 500.0 * lox.K)
-    rx = lox.CommunicationSystem(antenna=rx_antenna, receiver=rx_receiver)
-
     channel = lox.Channel(
         link_type="downlink",
         symbol_rate=5.0 * lox.MHz,
@@ -1499,125 +1188,25 @@ def test_modulated_with_interference_component_tier():
         modulation=lox.Modulation("QPSK"),
     )
 
-    link = lox.LinkStats.calculate(
-        tx, rx, 1000.0 * lox.km, channel.bandwidth(),
-        0.0 * lox.rad, 0.0 * lox.rad,
+    link = link_stats(
+        make_tx(), make_rx(), bandwidth=channel.bandwidth()
     )
     modulated = channel.apply(link)
-    interference = modulated.with_interference(1e-12)
+    interference = modulated.with_interference(1e-12 * lox.W)
 
     assert float(interference.margin_with_interference) < float(modulated.margin)
     assert float(interference.eb_n0i0) < float(modulated.eb_n0)
-    assert interference.interference_power_w == 1e-12
-
-
-# --- CommunicationSystem __new__ validation error paths ---
-
-
-def test_build_transmitter_rejects_non_transmitter():
-    antenna = lox.ConstantAntenna(0.0 * lox.dB)
-    with pytest.raises(ValueError, match="EirpTransmitter or AmplifierTransmitter"):
-        lox.CommunicationSystem(antenna=antenna, transmitter="not a transmitter")
-
-
-def test_amplifier_without_antenna_rejected():
-    tx = lox.AmplifierTransmitter(29.0 * lox.GHz, 10.0 * lox.W, 1.0 * lox.dB)
-    with pytest.raises(ValueError, match="AmplifierTransmitter requires an antenna"):
-        lox.CommunicationSystem(transmitter=tx)
-
-
-def test_gt_receiver_with_antenna_rejected():
-    antenna = lox.ConstantAntenna(30.0 * lox.dB)
-    rx = lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
-    with pytest.raises(ValueError, match="GtReceiver must not be paired"):
-        lox.CommunicationSystem(antenna=antenna, receiver=rx)
-
-
-def test_component_receiver_without_antenna_rejected():
-    rx = lox.NoiseTempReceiver(29.0 * lox.GHz, 500.0 * lox.K)
-    with pytest.raises(ValueError, match="component-tier receiver requires"):
-        lox.CommunicationSystem(receiver=rx)
-
-
-def test_cascade_receiver_without_antenna_rejected():
-    rx = lox.CascadeReceiver(
-        frequency=29 * lox.GHz,
-        antenna_noise_temperature=100.0 * lox.K,
-        stages=[lox.NoiseStage(gain=20.0 * lox.dB, noise_temperature=50.0 * lox.K)],
-    )
-    with pytest.raises(ValueError, match="component-tier receiver requires"):
-        lox.CommunicationSystem(receiver=rx)
-
-
-# --- EirpTransmitter getters and repr ---
-
-
-def test_eirp_transmitter_getters():
-    tx = lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
-    assert tx.frequency.to_hertz() == pytest.approx(29e9, abs=1.0)
-    assert float(tx.eirp) == pytest.approx(55.0, abs=1e-10)
-
-
-def test_eirp_transmitter_repr():
-    tx = lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
-    r = repr(tx)
-    assert "EirpTransmitter" in r
-    assert "55.0" in r
-
-
-def test_eirp_transmitter_eq():
-    a = lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
-    b = lox.EirpTransmitter(29.0 * lox.GHz, 55.0 * lox.dB)
-    c = lox.EirpTransmitter(29.0 * lox.GHz, 50.0 * lox.dB)
-    assert a == b
-    assert not (a == c)
-
-
-# --- GtReceiver getters and repr ---
-
-
-def test_gt_receiver_getters():
-    rx = lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
-    assert rx.frequency.to_hertz() == pytest.approx(29e9, abs=1.0)
-    assert float(rx.gt) == pytest.approx(3.01, abs=1e-10)
-
-
-def test_gt_receiver_repr():
-    rx = lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
-    r = repr(rx)
-    assert "GtReceiver" in r
-    assert "3.01" in r
-
-
-def test_gt_receiver_eq():
-    a = lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
-    b = lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB)
-    c = lox.GtReceiver(29.0 * lox.GHz, 5.0 * lox.dB)
-    assert a == b
-    assert not (a == c)
+    assert float(interference.interference_power) == 1e-12
 
 
 # --- NoiseTempReceiver repr ---
 
 
 def test_simple_receiver_repr():
-    rx = lox.NoiseTempReceiver(frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K)
+    rx = lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K)
     r = repr(rx)
     assert "NoiseTempReceiver" in r
     assert "500" in r
-
-
-# --- CommunicationSystem __eq__ ---
-
-
-def test_communication_system_eq():
-    ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
-    a = lox.CommunicationSystem(antenna=ant, transmitter=tx)
-    b = lox.CommunicationSystem(antenna=ant, transmitter=tx)
-    c = lox.CommunicationSystem(antenna=ant)
-    assert a == b
-    assert not (a == c)
 
 
 # --- Channel DSSS pickle ---
@@ -1640,36 +1229,16 @@ def test_channel_dsss_pickle():
 # --- LinkStats pattern-angle getters and pointing arguments ---
 
 
-def test_link_stats_pattern_angle_getters():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
-    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
-
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K)
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-
-    stats = lox.LinkStats.calculate(
-        tx_sys, rx_sys, 1000.0 * lox.km, 5.0 * lox.MHz, 2.0 * lox.deg, 1.0 * lox.deg
-    )
-    assert stats.tx_theta.to_degrees() == pytest.approx(2.0, abs=1e-10)
-    assert stats.tx_phi.to_degrees() == pytest.approx(0.0, abs=1e-10)
-    assert stats.rx_theta.to_degrees() == pytest.approx(1.0, abs=1e-10)
-    assert stats.rx_phi.to_degrees() == pytest.approx(0.0, abs=1e-10)
+def test_link_stats_off_boresight_angle_reduces_eirp():
+    pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
+    tx_ant = lox.PatternedAntenna(pattern=pattern)
+    boresight = link_stats(make_tx(antenna=tx_ant), make_rx())
+    off = link_stats(make_tx(antenna=tx_ant), make_rx(), tx_angle=2.0 * lox.deg)
+    assert float(off.eirp) < float(boresight.eirp)
 
 
 def test_link_stats_defaults_to_boresight():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
-    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
-
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K)
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-
-    stats = lox.LinkStats.calculate(tx_sys, rx_sys, 1000.0 * lox.km, 5.0 * lox.MHz)
-    assert stats.tx_theta.to_degrees() == pytest.approx(0.0, abs=1e-10)
-    assert stats.rx_theta.to_degrees() == pytest.approx(0.0, abs=1e-10)
+    stats = link_stats(make_tx(), make_rx())
     assert float(stats.c_n0) == pytest.approx(104.913, abs=0.1)
 
 
@@ -1678,57 +1247,35 @@ def test_link_stats_direction_pointing():
     frame = lox.AntennaFrame(boresight=[1.0, 0.0, 0.0], reference=[0.0, 0.0, 1.0])
     pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
     tx_ant = lox.PatternedAntenna(pattern=pattern, frame=frame)
-    tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
-    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
 
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K)
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-
-    on_axis = lox.LinkStats.calculate(
-        tx_sys, rx_sys, 1000.0 * lox.km, 5.0 * lox.MHz, tx_direction=[1.0, 0.0, 0.0]
+    on_axis = link_stats(
+        make_tx(antenna=tx_ant),
+        make_rx(),
+        tx_direction=[1.0, 0.0, 0.0],
     )
-    off_axis = lox.LinkStats.calculate(
-        tx_sys, rx_sys, 1000.0 * lox.km, 5.0 * lox.MHz, tx_direction=[0.0, 0.0, 1.0]
+    off_axis = link_stats(
+        make_tx(antenna=tx_ant),
+        make_rx(),
+        tx_direction=[0.0, 0.0, 1.0],
     )
 
-    assert on_axis.tx_theta.to_degrees() == pytest.approx(0.0, abs=1e-10)
-    assert off_axis.tx_theta.to_degrees() == pytest.approx(90.0, abs=1e-10)
     assert float(off_axis.eirp) < float(on_axis.eirp)
 
 
 def test_link_stats_rejects_angle_and_direction():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
-    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
-
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K)
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-
     with pytest.raises(ValueError, match="tx_angle or tx_direction"):
-        lox.LinkStats.calculate(
-            tx_sys,
-            rx_sys,
-            1000.0 * lox.km,
-            5.0 * lox.MHz,
+        link_stats(
+            make_tx(),
+            make_rx(),
             tx_angle=1.0 * lox.deg,
             tx_direction=[1.0, 0.0, 0.0],
         )
 
 
-# --- ModulatedLinkStats link, channel, interference getters ---
+# --- ModulatedLinkStats link and channel getters ---
 
 
 def test_modulated_link_stats_link_and_channel_getters():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
-    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
-
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K)
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-
     ch = lox.Channel(
         link_type="downlink",
         symbol_rate=5 * lox.MHz,
@@ -1736,33 +1283,19 @@ def test_modulated_link_stats_link_and_channel_getters():
         margin=3.0 * lox.dB,
         modulation=lox.Modulation("QPSK"),
     )
-    stats = lox.LinkStats.calculate(
-        tx_sys, rx_sys, 1000.0 * lox.km, ch.bandwidth(), 0.0 * lox.deg, 0.0 * lox.deg
-    )
+    stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth())
     modulated = ch.apply(stats)
 
     # link getter returns the underlying PyLinkStats
     assert modulated.link.c_n0 == stats.c_n0
     # channel getter returns the PyChannel
     assert "QPSK" in repr(modulated.channel)
-    # interference getter is None when no interference was applied
-    assert modulated.interference is None
 
 
 # --- InterferenceStats c_n0i0 and repr ---
 
 
 def test_interference_stats_c_n0i0_and_repr():
-    tx_antenna = lox.ConstantAntenna(46.0 * lox.dB)
-    tx_transmitter = lox.AmplifierTransmitter(
-        frequency=29.0 * lox.GHz, power=10.0 * lox.W, line_loss=1.0 * lox.dB,
-    )
-    tx = lox.CommunicationSystem(antenna=tx_antenna, transmitter=tx_transmitter)
-
-    rx_antenna = lox.ConstantAntenna(30.0 * lox.dB)
-    rx_receiver = lox.NoiseTempReceiver(29.0 * lox.GHz, 500.0 * lox.K)
-    rx = lox.CommunicationSystem(antenna=rx_antenna, receiver=rx_receiver)
-
     channel = lox.Channel(
         link_type="downlink",
         symbol_rate=5.0 * lox.MHz,
@@ -1770,11 +1303,11 @@ def test_interference_stats_c_n0i0_and_repr():
         margin=3.0 * lox.dB,
         modulation=lox.Modulation("QPSK"),
     )
-    link = lox.LinkStats.calculate(
-        tx, rx, 1000.0 * lox.km, channel.bandwidth(), 0.0 * lox.rad, 0.0 * lox.rad,
+    link = link_stats(
+        make_tx(), make_rx(), bandwidth=channel.bandwidth()
     )
     modulated = channel.apply(link)
-    interference = modulated.with_interference(1e-12)
+    interference = modulated.with_interference(1e-12 * lox.W)
 
     assert math.isfinite(float(interference.c_n0i0))
     r = repr(interference)
@@ -1786,14 +1319,6 @@ def test_interference_stats_c_n0i0_and_repr():
 
 
 def test_modulated_link_stats_repr():
-    tx_ant = lox.ConstantAntenna(gain=46.0 * lox.dB)
-    tx = lox.AmplifierTransmitter(frequency=29e9 * lox.Hz, power=10.0 * lox.W, line_loss=1.0 * lox.dB)
-    tx_sys = lox.CommunicationSystem(antenna=tx_ant, transmitter=tx)
-
-    rx_ant = lox.ConstantAntenna(gain=30.0 * lox.dB)
-    rx = lox.NoiseTempReceiver(frequency=29e9 * lox.Hz, system_noise_temperature=500.0 * lox.K)
-    rx_sys = lox.CommunicationSystem(antenna=rx_ant, receiver=rx)
-
     ch = lox.Channel(
         link_type="downlink",
         symbol_rate=5 * lox.MHz,
@@ -1801,24 +1326,12 @@ def test_modulated_link_stats_repr():
         margin=3.0 * lox.dB,
         modulation=lox.Modulation("QPSK"),
     )
-    stats = lox.LinkStats.calculate(
-        tx_sys, rx_sys, 1000.0 * lox.km, ch.bandwidth(), 0.0 * lox.deg, 0.0 * lox.deg
-    )
+    stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth())
     modulated = ch.apply(stats)
     r = repr(modulated)
     assert "ModulatedLinkStats" in r
     assert "eb_n0=" in r
     assert "margin=" in r
-
-
-# --- CommunicationSystem repr with GtReceiver (lumped rx side) ---
-
-
-def test_communication_system_repr_gt_receiver():
-    rx_sys = lox.CommunicationSystem.gt_only(lox.GtReceiver(29.0 * lox.GHz, 3.01 * lox.dB))
-    r = repr(rx_sys)
-    assert "GtReceiver" in r
-    assert "3.01" in r
 
 
 # --- Decibel arithmetic: __mul__ with scalar on left side ---
@@ -1846,3 +1359,446 @@ def test_modulation_repr_all_variants():
     }
     for name, expected_repr in expected.items():
         assert repr(lox.Modulation(name)) == expected_repr
+
+
+# --- Link terminals ---
+
+
+def test_frequency_range():
+    assert KA_BAND.contains(29.0 * lox.GHz)
+    assert not KA_BAND.contains(45.0 * lox.GHz)
+    assert KA_BAND.min().to_gigahertz() == pytest.approx(27.0)
+    assert str(KA_BAND) == "27.000\u201331.000 GHz"
+    optical = lox.FrequencyRange.from_wavelengths(1530e-9 * lox.m, 1565e-9 * lox.m)
+    assert optical.contains(193.4 * lox.THz)
+    with pytest.raises(ValueError):
+        lox.FrequencyRange(31.0 * lox.GHz, 27.0 * lox.GHz)
+    assert pickle.loads(pickle.dumps(KA_BAND)) == KA_BAND
+
+
+def test_for_link_reference_values():
+    # 46 dBi + 10 W \u2212 1 dB feed loss \u2192 EIRP 55 dBW;
+    # 30 dBi / 500 K \u2192 G/T 3.0103 dB/K; C/N0 104.913 dB\u00b7Hz at 1000 km.
+    stats = link_stats(make_tx(), make_rx())
+
+    assert float(stats.eirp) == pytest.approx(55.0, abs=0.01)
+    assert float(stats.gt) == pytest.approx(3.0103, abs=0.01)
+    assert float(stats.c_n0) == pytest.approx(104.913, abs=0.01)
+    assert math.isfinite(float(stats.carrier_rx_power))
+
+
+def test_lumped_link():
+    stats = lox.LinkStats.for_link(
+        lox.EirpModel(KA_BAND, 55.0 * lox.dB),
+        lox.GtModel(KA_BAND, 3.01 * lox.dB),
+        carrier=29.0 * lox.GHz,
+        bandwidth=5.0 * lox.MHz,
+        range=1000.0 * lox.km,
+    )
+    assert float(stats.c_n0) == pytest.approx(104.913, abs=0.1)
+    assert stats.carrier_rx_power is None
+    assert stats.noise_power is None
+
+
+def test_for_link_carrier_out_of_band():
+    rx_band = lox.FrequencyRange(17.0 * lox.GHz, 21.0 * lox.GHz)
+    with pytest.raises(ValueError, match="outside the supported range"):
+        lox.LinkStats.for_link(
+            lox.EirpModel(KA_BAND, 55.0 * lox.dB),
+            lox.GtModel(rx_band, 3.01 * lox.dB),
+            carrier=29.0 * lox.GHz,
+            bandwidth=5.0 * lox.MHz,
+            range=1000.0 * lox.km,
+        )
+
+
+def test_tx_chain_accessors_and_eirp():
+    tx = make_tx()
+    assert tx.band == KA_BAND
+    assert float(tx.feed_loss) == pytest.approx(1.0, abs=1e-12)
+    assert tx.antenna == lox.ConstantAntenna(gain=46.0 * lox.dB)
+    assert tx.transmitter == lox.AmplifierTransmitter(power=10.0 * lox.W)
+    # EIRP = 46 + 10\u00b7log10(10) \u2212 1 = 55 dBW
+    assert float(tx.eirp_at(29.0 * lox.GHz)) == pytest.approx(55.0, abs=1e-9)
+    with pytest.raises(ValueError, match="angle or direction"):
+        tx.eirp_at(29.0 * lox.GHz, angle=1.0 * lox.deg, direction=[1.0, 0.0, 0.0])
+
+
+def test_rx_chain_accessors_gt_and_noise():
+    rx = lox.RxChain(
+        lox.ConstantAntenna(gain=46.0 * lox.dB),
+        lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K),
+        band=KA_BAND,
+        antenna_noise_temperature=0.0 * lox.K,
+        feed_loss=0.5 * lox.dB,
+    )
+    assert rx.band == KA_BAND
+    assert float(rx.feed_loss) == pytest.approx(0.5, abs=1e-12)
+    assert rx.antenna_noise_temperature.to_kelvin() == pytest.approx(0.0, abs=1e-12)
+    # T_sys = 290\u00b7(L \u2212 1) + 500\u00b7L with L = 10^0.05
+    expected_t_sys = 290.0 * (10 ** (0.5 / 10.0) - 1.0) + 500.0 * 10 ** (0.5 / 10.0)
+    assert rx.system_noise_temperature().to_kelvin() == pytest.approx(
+        expected_t_sys, rel=1e-12
+    )
+    gt = rx.gt_at(29.0 * lox.GHz)
+    assert float(gt) == pytest.approx(46.0 - 10.0 * math.log10(expected_t_sys), abs=1e-9)
+
+
+def test_shared_antenna_transceiver():
+    # A diplexer-style transceiver is a TX and an RX chain sharing one dish.
+    dish = lox.ConstantAntenna(gain=46.0 * lox.dB)
+    tx = lox.TxChain(
+        dish,
+        lox.AmplifierTransmitter(power=10.0 * lox.W),
+        band=KA_BAND,
+        feed_loss=1.0 * lox.dB,
+    )
+    rx = lox.RxChain(
+        dish,
+        lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K),
+        band=KA_BAND,
+        antenna_noise_temperature=150.0 * lox.K,
+        feed_loss=0.5 * lox.dB,
+    )
+    assert tx.antenna == rx.antenna
+    link = lox.LinkStats.for_link(
+        tx,
+        lox.GtModel(KA_BAND, 30.0 * lox.dB),
+        carrier=29.0 * lox.GHz,
+        bandwidth=5.0 * lox.MHz,
+        range=1000.0 * lox.km,
+        rx_angle=0.0 * lox.deg,
+    )
+    assert float(link.eirp) == pytest.approx(46.0 + 10.0 - 1.0, abs=1e-9)
+    assert math.isfinite(float(rx.gt_at(29.0 * lox.GHz)))
+
+
+def test_eirp_model_accessors():
+    model = lox.EirpModel(KA_BAND, 55.0 * lox.dB)
+    assert model.band == KA_BAND
+    assert float(model.eirp) == pytest.approx(55.0, abs=1e-12)
+    # The pointing is ignored for lumped figures.
+    assert float(model.eirp_at(29.0 * lox.GHz, angle=10.0 * lox.deg)) == pytest.approx(
+        55.0, abs=1e-12
+    )
+    assert "EirpModel" in repr(model)
+
+
+def test_band_accepts_letter_band_names():
+    # An IEEE letter-band name is shorthand for the full band range.
+    gt = lox.GtModel("Ka", 3.0 * lox.dB)
+    assert gt.band.contains(29.0 * lox.GHz)
+    assert not gt.band.contains(12.0 * lox.GHz)
+    assert gt.band == lox.GtModel("ka", 3.0 * lox.dB).band  # case-insensitive
+    eirp = lox.EirpModel("X", 55.0 * lox.dB)
+    assert eirp.band.contains(8.2 * lox.GHz)
+    tx = lox.TxChain(
+        lox.ConstantAntenna(gain=46.0 * lox.dB),
+        lox.AmplifierTransmitter(power=10.0 * lox.W),
+        band="Ka",
+    )
+    assert tx.band.contains(29.0 * lox.GHz)
+    rx = lox.RxChain(
+        lox.ConstantAntenna(gain=30.0 * lox.dB),
+        lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K),
+        band="Ka",
+        antenna_noise_temperature=0.0 * lox.K,
+    )
+    assert rx.band.contains(29.0 * lox.GHz)
+    with pytest.raises(ValueError, match="unknown frequency band"):
+        lox.GtModel("Q", 3.0 * lox.dB)
+    with pytest.raises(ValueError, match="FrequencyRange or a band name"):
+        lox.GtModel(42, 3.0 * lox.dB)
+
+
+def test_gt_model_accessors():
+    model = lox.GtModel(KA_BAND, 3.01 * lox.dB)
+    assert model.band == KA_BAND
+    assert float(model.gt) == pytest.approx(3.01, abs=1e-12)
+    assert float(model.gt_at(29.0 * lox.GHz, angle=10.0 * lox.deg)) == pytest.approx(
+        3.01, abs=1e-12
+    )
+    assert "GtModel" in repr(model)
+
+
+def test_ground_station_terminals():
+    rx = lox.GtModel(KA_BAND, 30.0 * lox.dB)
+    location = lox.GroundLocation(
+        lox.Origin("Earth"), 13.4 * lox.deg, 52.5 * lox.deg, 0.1 * lox.km
+    )
+    mask = lox.ElevationMask.fixed(5.0 * lox.deg)
+    gs = lox.GroundStation("berlin", location, mask, rx_terminals={"ka": rx})
+    assert gs.rx_terminals()["ka"] == rx
+    assert gs.tx_terminals() == {}
+
+    bare = lox.GroundStation("bare", location, mask)
+    assert bare.rx_terminals() == {}
+
+
+def test_asset_terminals_round_trip_both_tiers():
+    # Component chains and lumped models survive the asset dict round trip.
+    location = lox.GroundLocation(
+        lox.Origin("Earth"), 13.4 * lox.deg, 52.5 * lox.deg, 0.1 * lox.km
+    )
+    mask = lox.ElevationMask.fixed(5.0 * lox.deg)
+    tx_terminals = {"hga": make_tx(), "beacon": lox.EirpModel(KA_BAND, 40.0 * lox.dB)}
+    rx_terminals = {"main": make_rx(), "lumped": lox.GtModel(KA_BAND, 30.0 * lox.dB)}
+    gs = lox.GroundStation(
+        "berlin", location, mask, tx_terminals=tx_terminals, rx_terminals=rx_terminals
+    )
+    assert gs.tx_terminals() == tx_terminals
+    assert gs.rx_terminals() == rx_terminals
+
+    tle = """ISS (ZARYA)
+1 25544U 98067A   24170.37528350  .00016566  00000+0  30244-3 0  9996
+2 25544  51.6410 309.3890 0010444 339.5369 107.8830 15.49495945458731
+"""
+    sc = lox.Spacecraft(
+        "iss", lox.SGP4(tle), tx_terminals=tx_terminals, rx_terminals=rx_terminals
+    )
+    assert sc.tx_terminals() == tx_terminals
+    assert sc.rx_terminals() == rx_terminals
+    with pytest.raises(ValueError, match="expected a TxChain or EirpModel"):
+        lox.Spacecraft("bad", lox.SGP4(tle), tx_terminals={"x": "not a terminal"})
+
+
+def test_antenna_patterns_reject_non_physical_parameters():
+    with pytest.raises(ValueError, match="diameter"):
+        lox.ParabolicPattern(diameter=-0.5 * lox.m, efficiency=0.45)
+    with pytest.raises(ValueError, match="efficiency"):
+        lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=1.5)
+    with pytest.raises(ValueError, match="efficiency"):
+        lox.GaussianPattern(diameter=0.98 * lox.m, efficiency=0.0)
+    with pytest.raises(ValueError, match="length"):
+        lox.DipolePattern(length=0.0 * lox.m)
+    with pytest.raises(ValueError, match="beamwidth"):
+        lox.ParabolicPattern.from_beamwidth(0.0 * lox.deg, 29.0 * lox.GHz, 0.45)
+    with pytest.raises(ValueError, match="gain"):
+        lox.ConstantAntenna(gain=float("nan") * lox.dB)
+
+
+# --- Coverage: binding error paths, reprs, and pickles ---
+
+
+def test_amplifier_transmitter_accessors_repr_pickle():
+    tx = lox.AmplifierTransmitter( power=10.0 * lox.W, output_back_off=0.5 * lox.dB
+    )
+    assert float(tx.power) == pytest.approx(10.0)
+    assert float(tx.output_back_off) == pytest.approx(0.5)
+    assert "AmplifierTransmitter" in repr(tx)
+    restored = pickle.loads(pickle.dumps(tx))
+    assert restored == tx
+    assert tx != lox.AmplifierTransmitter(power=5.0 * lox.W)
+    with pytest.raises(ValueError, match="transmit power"):
+        lox.AmplifierTransmitter(power=-1.0 * lox.W)
+
+
+def test_cascade_receiver_accessors_and_validation():
+    rx = lox.CascadeReceiver(
+        stages=[lox.NoiseStage(35.0 * lox.dB, 50.0 * lox.K)],
+        demodulator_loss=0.5 * lox.dB,
+    )
+    assert rx.chain_noise_temperature().to_kelvin() == pytest.approx(50.0)
+    assert float(rx.chain_gain()) == pytest.approx(35.0)
+    assert "CascadeReceiver" in repr(rx)
+    restored = pickle.loads(pickle.dumps(rx))
+    assert restored == rx
+    with pytest.raises(ValueError, match="demodulator loss"):
+        lox.CascadeReceiver( stages=[], demodulator_loss=-0.5 * lox.dB
+        )
+    with pytest.raises(ValueError, match="stage count"):
+        lox.CascadeReceiver(stages=[])
+    with pytest.raises(ValueError, match="stage noise temperature"):
+        lox.NoiseStage(35.0 * lox.dB, -50.0 * lox.K)
+    lna = lox.CascadeReceiver.from_lna_and_noise_figure(
+        lna_gain=20.0 * lox.dB,
+        lna_noise_temperature=175.0 * lox.K,
+        receiver_noise_figure=2.0 * lox.dB,
+    )
+    assert lna.chain_noise_temperature().to_kelvin() == pytest.approx(176.696, abs=0.01)
+
+
+def test_terminal_error_paths():
+    # Negative feed loss and antenna noise temperature are non-physical.
+    with pytest.raises(ValueError, match="antenna noise temperature"):
+        lox.RxChain(
+            lox.ConstantAntenna(gain=30.0 * lox.dB),
+            lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K),
+            band=KA_BAND,
+            antenna_noise_temperature=-1.0 * lox.K,
+        )
+    # Non-finite lumped figures are rejected.
+    with pytest.raises(ValueError, match="EIRP"):
+        lox.EirpModel(KA_BAND, float("nan") * lox.dB)
+    with pytest.raises(ValueError, match="G/T"):
+        lox.GtModel(KA_BAND, float("inf") * lox.dB)
+
+
+def test_for_link_error_paths():
+    tx = lox.EirpModel(KA_BAND, 55.0 * lox.dB)
+    rx = lox.GtModel(KA_BAND, 3.01 * lox.dB)
+    # Wrong terminal types
+    with pytest.raises(ValueError, match="expected a TxChain or EirpModel"):
+        lox.LinkStats.for_link(
+            rx, rx,
+            carrier=29.0 * lox.GHz, bandwidth=5.0 * lox.MHz,
+            range=1000.0 * lox.km,
+        )
+    with pytest.raises(ValueError, match="expected an RxChain or GtModel"):
+        lox.LinkStats.for_link(
+            tx, tx,
+            carrier=29.0 * lox.GHz, bandwidth=5.0 * lox.MHz,
+            range=1000.0 * lox.km,
+        )
+    # Non-physical link inputs
+    with pytest.raises(ValueError, match="non-physical"):
+        lox.LinkStats.for_link(
+            tx, rx,
+            carrier=29.0 * lox.GHz, bandwidth=0.0 * lox.MHz,
+            range=1000.0 * lox.km,
+        )
+
+
+def test_out_of_band_terminal_figures_are_rejected():
+    # eirp_at/gt_at enforce the same carrier-in-band check as for_link
+    # instead of extrapolating the hardware figures out of band.
+    with pytest.raises(ValueError, match="outside the supported range"):
+        lox.EirpModel(KA_BAND, 55.0 * lox.dB).eirp_at(2.4 * lox.GHz)
+    with pytest.raises(ValueError, match="outside the supported range"):
+        lox.GtModel(KA_BAND, 3.0 * lox.dB).gt_at(2.4 * lox.GHz)
+
+
+def test_terminal_pickle_round_trips():
+    tx = make_tx()
+    assert pickle.loads(pickle.dumps(tx)) == tx
+    rx = make_rx()
+    assert pickle.loads(pickle.dumps(rx)) == rx
+    eirp = lox.EirpModel(KA_BAND, 55.0 * lox.dB)
+    assert pickle.loads(pickle.dumps(eirp)) == eirp
+    gt = lox.GtModel(KA_BAND, 3.01 * lox.dB)
+    assert pickle.loads(pickle.dumps(gt)) == gt
+
+
+def test_chains_with_patterned_antenna_and_cascade_receiver():
+    # Exercises the Patterned/Cascade arms of the Python bridge: getters,
+    # reprs, and pickling.
+    antenna = lox.PatternedAntenna(
+        pattern=lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
+    )
+    cascade = lox.CascadeReceiver(
+        stages=[lox.NoiseStage(20.0 * lox.dB, 50.0 * lox.K)],
+        demodulator_loss=0.5 * lox.dB,
+    )
+    tx = lox.TxChain(
+        antenna,
+        lox.AmplifierTransmitter(power=10.0 * lox.W),
+        band=KA_BAND,
+        feed_loss=1.0 * lox.dB,
+    )
+    rx = lox.RxChain(
+        antenna,
+        cascade,
+        band=KA_BAND,
+        antenna_noise_temperature=100.0 * lox.K,
+    )
+
+    assert isinstance(tx.antenna, lox.PatternedAntenna)
+    assert isinstance(rx.antenna, lox.PatternedAntenna)
+    assert isinstance(rx.receiver, lox.CascadeReceiver)
+    assert "PatternedAntenna" in repr(tx)
+    assert "CascadeReceiver" in repr(rx)
+    assert pickle.loads(pickle.dumps(tx)) == tx
+    assert pickle.loads(pickle.dumps(rx)) == rx
+    # T_sys = 100 + 50 = 150 K
+    assert rx.system_noise_temperature().to_kelvin() == pytest.approx(150.0)
+
+
+def test_chain_direction_pointing_methods():
+    # eirp_at/gt_at accept line-of-sight direction vectors directly.
+    frame = lox.AntennaFrame(boresight=[1.0, 0.0, 0.0], reference=[0.0, 0.0, 1.0])
+    antenna = lox.PatternedAntenna(
+        pattern=lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45),
+        frame=frame,
+    )
+    tx = lox.TxChain(
+        antenna, lox.AmplifierTransmitter(power=10.0 * lox.W), band=KA_BAND
+    )
+    on = tx.eirp_at(29.0 * lox.GHz, direction=[1.0, 0.0, 0.0])
+    off = tx.eirp_at(29.0 * lox.GHz, direction=[0.0, 0.0, 1.0])
+    assert float(off) < float(on)
+
+    rx = lox.RxChain(
+        antenna,
+        lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K),
+        band=KA_BAND,
+        antenna_noise_temperature=0.0 * lox.K,
+    )
+    on = rx.gt_at(29.0 * lox.GHz, direction=[1.0, 0.0, 0.0])
+    off = rx.gt_at(29.0 * lox.GHz, direction=[0.0, 0.0, 1.0])
+    assert float(off) < float(on)
+    with pytest.raises(ValueError, match="angle or direction"):
+        rx.gt_at(29.0 * lox.GHz, angle=1.0 * lox.deg, direction=[1.0, 0.0, 0.0])
+
+
+def test_model_direction_pointing_is_ignored():
+    eirp = lox.EirpModel(KA_BAND, 55.0 * lox.dB)
+    assert float(
+        eirp.eirp_at(29.0 * lox.GHz, direction=[0.0, 0.0, 1.0])
+    ) == pytest.approx(55.0)
+    gt = lox.GtModel(KA_BAND, 3.0 * lox.dB)
+    assert float(
+        gt.gt_at(29.0 * lox.GHz, direction=[0.0, 0.0, 1.0])
+    ) == pytest.approx(3.0)
+    with pytest.raises(ValueError, match="angle or direction"):
+        eirp.eirp_at(29.0 * lox.GHz, angle=1.0 * lox.deg, direction=[1.0, 0.0, 0.0])
+
+
+def test_terminal_inequality():
+    assert not (make_tx() == make_tx(gain=30.0))
+    assert not (make_rx() == make_rx(gain=20.0))
+    assert not (
+        lox.EirpModel(KA_BAND, 55.0 * lox.dB) == lox.EirpModel(KA_BAND, 50.0 * lox.dB)
+    )
+    assert not (
+        lox.GtModel(KA_BAND, 3.0 * lox.dB) == lox.GtModel(KA_BAND, 5.0 * lox.dB)
+    )
+
+
+def test_terminal_reprs():
+    assert repr(make_tx()).startswith("TxChain(antenna=ConstantAntenna(")
+    assert repr(make_rx()).startswith("RxChain(antenna=ConstantAntenna(")
+    assert "receiver=NoiseTempReceiver(" in repr(make_rx())
+
+
+def test_spacecraft_terminals():
+    tx = lox.EirpModel(KA_BAND, 30.0 * lox.dB)
+    tle = """ISS (ZARYA)
+1 25544U 98067A   24170.37528350  .00016566  00000+0  30244-3 0  9996
+2 25544  51.6410 309.3890 0010444 339.5369 107.8830 15.49495945458731
+"""
+    sc = lox.Spacecraft("iss", lox.SGP4(tle), tx_terminals={"beacon": tx})
+    assert sc.tx_terminals()["beacon"] == tx
+    assert sc.rx_terminals() == {}
+
+
+def test_antenna_and_pattern_pickle_round_trips():
+    parabolic = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
+    gaussian = lox.GaussianPattern(diameter=0.98 * lox.m, efficiency=0.45)
+    dipole = lox.DipolePattern(length=0.0185 * lox.m)
+    for pattern in [parabolic, gaussian, dipole]:
+        restored = pickle.loads(pickle.dumps(pattern))
+        assert restored == pattern
+
+    frame = lox.AntennaFrame(boresight=[1.0, 0.0, 0.0], reference=[0.0, 0.0, 1.0])
+    antenna = lox.PatternedAntenna(pattern=parabolic, frame=frame)
+    restored = pickle.loads(pickle.dumps(antenna))
+    assert restored == antenna
+
+    constant = lox.ConstantAntenna(gain=46.0 * lox.dB)
+    restored = pickle.loads(pickle.dumps(constant))
+    assert restored == constant
+    assert constant != lox.ConstantAntenna(gain=30.0 * lox.dB)
+
+    receiver = lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K)
+    restored = pickle.loads(pickle.dumps(receiver))
+    assert restored == receiver

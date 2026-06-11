@@ -19,7 +19,9 @@ use crate::analysis::visibility::{
 };
 use crate::bodies::DynOrigin;
 use crate::bodies::python::PyOrigin;
-use crate::comms::python::PyCommunicationSystem;
+use crate::comms::python::{
+    build_rx_terminal, build_tx_terminal, rx_terminal_to_py, tx_terminal_to_py,
+};
 use crate::ephem::python::PySpk;
 use crate::ephem::spk::parser::Spk;
 use crate::frames::python::PyFrame;
@@ -72,7 +74,8 @@ impl From<PyElevationMaskError> for PyErr {
 ///     id: Unique identifier for this ground station.
 ///     location: Ground station location.
 ///     mask: Elevation mask defining minimum elevation constraints.
-///     communication_systems: Optional list of communication systems.
+///     tx_terminals: Optional dict of named transmit terminals (TxChain or EirpModel).
+///     rx_terminals: Optional dict of named receive terminals (RxChain or GtModel).
 #[pyclass(name = "GroundStation", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyGroundStation(pub GroundStation);
@@ -80,15 +83,16 @@ pub struct PyGroundStation(pub GroundStation);
 #[pymethods]
 impl PyGroundStation {
     #[new]
-    #[pyo3(signature = (id, location, mask, body_fixed_frame=None, network_id=None, communication_systems=None))]
+    #[pyo3(signature = (id, location, mask, body_fixed_frame=None, network_id=None, tx_terminals=None, rx_terminals=None))]
     fn new(
         id: String,
         location: PyGroundLocation,
         mask: PyElevationMask,
         body_fixed_frame: Option<PyFrame>,
         network_id: Option<String>,
-        communication_systems: Option<Vec<PyCommunicationSystem>>,
-    ) -> Self {
+        tx_terminals: Option<HashMap<String, Bound<'_, PyAny>>>,
+        rx_terminals: Option<HashMap<String, Bound<'_, PyAny>>>,
+    ) -> PyResult<Self> {
         let mut gs = GroundStation::new(id, location.0, mask.0);
         if let Some(frame) = body_fixed_frame {
             gs = gs.with_body_fixed_frame(frame.0);
@@ -96,12 +100,13 @@ impl PyGroundStation {
         if let Some(nid) = network_id {
             gs = gs.with_network_id(nid);
         }
-        if let Some(systems) = communication_systems {
-            for system in systems {
-                gs = gs.with_communication_system(system.0);
-            }
+        for (name, terminal) in tx_terminals.unwrap_or_default() {
+            gs = gs.with_tx_terminal(name, build_tx_terminal(&terminal)?);
         }
-        PyGroundStation(gs)
+        for (name, terminal) in rx_terminals.unwrap_or_default() {
+            gs = gs.with_rx_terminal(name, build_rx_terminal(&terminal)?);
+        }
+        Ok(PyGroundStation(gs))
     }
 
     /// Return the asset identifier.
@@ -129,12 +134,21 @@ impl PyGroundStation {
         PyFrame(self.0.body_fixed_frame())
     }
 
-    /// Return the communication systems.
-    fn communication_systems(&self) -> Vec<PyCommunicationSystem> {
+    /// Return the named transmit terminals as a dict.
+    fn tx_terminals<'py>(&self, py: Python<'py>) -> HashMap<String, Bound<'py, PyAny>> {
         self.0
-            .communication_systems()
+            .tx_terminals()
             .iter()
-            .map(|s| PyCommunicationSystem(s.clone()))
+            .map(|(name, terminal)| (name.clone(), tx_terminal_to_py(py, terminal)))
+            .collect()
+    }
+
+    /// Return the named receive terminals as a dict.
+    fn rx_terminals<'py>(&self, py: Python<'py>) -> HashMap<String, Bound<'py, PyAny>> {
+        self.0
+            .rx_terminals()
+            .iter()
+            .map(|(name, terminal)| (name.clone(), rx_terminal_to_py(py, terminal)))
             .collect()
     }
 
@@ -184,7 +198,8 @@ fn extract_orbit_source(obj: &Bound<'_, PyAny>) -> PyResult<OrbitSource> {
 ///         pre-computed Trajectory.
 ///     max_slew_rate: Optional maximum slew rate (angular rate) for this
 ///         spacecraft's antenna/gimbal.
-///     communication_systems: Optional list of communication systems.
+///     tx_terminals: Optional dict of named transmit terminals (TxChain or EirpModel).
+///     rx_terminals: Optional dict of named receive terminals (RxChain or GtModel).
 #[pyclass(name = "Spacecraft", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PySpacecraft(pub Spacecraft);
@@ -192,7 +207,7 @@ pub struct PySpacecraft(pub Spacecraft);
 #[pymethods]
 impl PySpacecraft {
     #[new]
-    #[pyo3(signature = (id, orbit, max_slew_rate=None, constellation_id=None, optical_payload=None, sar_payload=None, communication_systems=None))]
+    #[pyo3(signature = (id, orbit, max_slew_rate=None, constellation_id=None, optical_payload=None, sar_payload=None, tx_terminals=None, rx_terminals=None))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         id: String,
@@ -201,7 +216,8 @@ impl PySpacecraft {
         constellation_id: Option<String>,
         optical_payload: Option<PyOpticalPayload>,
         sar_payload: Option<PySarPayload>,
-        communication_systems: Option<Vec<PyCommunicationSystem>>,
+        tx_terminals: Option<HashMap<String, Bound<'_, PyAny>>>,
+        rx_terminals: Option<HashMap<String, Bound<'_, PyAny>>>,
     ) -> PyResult<Self> {
         let orbit_source = extract_orbit_source(orbit)?;
         let mut asset = Spacecraft::new(id, orbit_source);
@@ -217,10 +233,11 @@ impl PySpacecraft {
         if let Some(payload) = sar_payload {
             asset = asset.with_sar_payload(payload.0);
         }
-        if let Some(systems) = communication_systems {
-            for system in systems {
-                asset = asset.with_communication_system(system.0);
-            }
+        for (name, terminal) in tx_terminals.unwrap_or_default() {
+            asset = asset.with_tx_terminal(name, build_tx_terminal(&terminal)?);
+        }
+        for (name, terminal) in rx_terminals.unwrap_or_default() {
+            asset = asset.with_rx_terminal(name, build_rx_terminal(&terminal)?);
         }
         Ok(PySpacecraft(asset))
     }
@@ -250,12 +267,21 @@ impl PySpacecraft {
         self.0.sar_payload().map(PySarPayload)
     }
 
-    /// Return the communication systems.
-    fn communication_systems(&self) -> Vec<PyCommunicationSystem> {
+    /// Return the named transmit terminals as a dict.
+    fn tx_terminals<'py>(&self, py: Python<'py>) -> HashMap<String, Bound<'py, PyAny>> {
         self.0
-            .communication_systems()
+            .tx_terminals()
             .iter()
-            .map(|s| PyCommunicationSystem(s.clone()))
+            .map(|(name, terminal)| (name.clone(), tx_terminal_to_py(py, terminal)))
+            .collect()
+    }
+
+    /// Return the named receive terminals as a dict.
+    fn rx_terminals<'py>(&self, py: Python<'py>) -> HashMap<String, Bound<'py, PyAny>> {
+        self.0
+            .rx_terminals()
+            .iter()
+            .map(|(name, terminal)| (name.clone(), rx_terminal_to_py(py, terminal)))
             .collect()
     }
 

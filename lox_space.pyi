@@ -315,7 +315,8 @@ class GroundStation:
         id: Unique identifier for this ground station.
         location: Ground station location.
         mask: Elevation mask defining minimum elevation constraints.
-        communication_systems: Optional list of communication systems.
+        tx_terminals: Optional dict of named transmit terminals (TxChain or EirpModel).
+        rx_terminals: Optional dict of named receive terminals (RxChain or GtModel).
 
     Examples:
         >>> gs = lox.GroundStation("ESOC", ground_location, elevation_mask)
@@ -327,7 +328,8 @@ class GroundStation:
         mask: ElevationMask,
         body_fixed_frame: Frame | None = None,
         network_id: str | None = None,
-        communication_systems: list[CommunicationSystem] | None = None,
+        tx_terminals: dict[str, TxTerminal] | None = None,
+        rx_terminals: dict[str, RxTerminal] | None = None,
     ) -> Self: ...
     def id(self) -> str:
         """Return the asset identifier."""
@@ -344,8 +346,11 @@ class GroundStation:
     def body_fixed_frame(self) -> Frame:
         """Return the body-fixed frame."""
         ...
-    def communication_systems(self) -> list[CommunicationSystem]:
-        """Return the communication systems."""
+    def tx_terminals(self) -> dict[str, TxTerminal]:
+        """Return the named transmit terminals as a dict."""
+        ...
+    def rx_terminals(self) -> dict[str, RxTerminal]:
+        """Return the named receive terminals as a dict."""
         ...
 
 class Spacecraft:
@@ -359,7 +364,8 @@ class Spacecraft:
         orbit: Orbit source — an SGP4, Vallado, J2, J4, Numerical
             propagator, or a pre-computed Trajectory.
         max_slew_rate: Optional maximum slew rate.
-        communication_systems: Optional list of communication systems.
+        tx_terminals: Optional dict of named transmit terminals (TxChain or EirpModel).
+        rx_terminals: Optional dict of named receive terminals (RxChain or GtModel).
 
     Examples:
         >>> sc = lox.Spacecraft("ISS", lox.SGP4(tle))
@@ -373,7 +379,8 @@ class Spacecraft:
         constellation_id: str | None = None,
         optical_payload: "OpticalPayload | None" = None,
         sar_payload: "SarPayload | None" = None,
-        communication_systems: list[CommunicationSystem] | None = None,
+        tx_terminals: dict[str, TxTerminal] | None = None,
+        rx_terminals: dict[str, RxTerminal] | None = None,
     ) -> Self: ...
     def id(self) -> str:
         """Return the asset identifier."""
@@ -390,8 +397,11 @@ class Spacecraft:
     def sar_payload(self) -> "SarPayload | None":
         """Return the SAR payload, if set."""
         ...
-    def communication_systems(self) -> list[CommunicationSystem]:
-        """Return the communication systems."""
+    def tx_terminals(self) -> dict[str, TxTerminal]:
+        """Return the named transmit terminals as a dict."""
+        ...
+    def rx_terminals(self) -> dict[str, RxTerminal]:
+        """Return the named receive terminals as a dict."""
         ...
 
 class Scenario:
@@ -2372,7 +2382,7 @@ class ParabolicPattern:
         ...
     def beamwidth(self, frequency: Frequency) -> Angle | None:
         """Returns the half-power beamwidth, or ``None`` when the
-        antenna diameter is smaller than ~1.22 wavelengths at this frequency."""
+        antenna diameter is smaller than ~0.51 wavelengths at this frequency."""
         ...
     def peak_gain(self, frequency: Frequency) -> Decibel:
         """Returns the peak gain in dBi."""
@@ -2497,71 +2507,44 @@ class AmplifierTransmitter:
     """A radio transmitter with an RF power amplifier.
 
     Args:
-        frequency: Transmit frequency.
         power: Transmit power.
-        line_loss: Feed/line loss as Decibel.
         output_back_off: Output back-off as Decibel (default Decibel(0)).
     """
     def __new__(
         cls,
-        frequency: Frequency,
         power: Power,
-        line_loss: Decibel,
         output_back_off: Decibel | None = None,
     ) -> Self: ...
-    def eirp(
-        self,
-        antenna: ConstantAntenna | PatternedAntenna,
-        theta: Angle,
-        phi: Angle | None = None,
-    ) -> Decibel:
-        """Returns the EIRP in dBW for the given antenna and pattern angles."""
+    @property
+    def power(self) -> Power:
+        """Transmit power."""
+        ...
+    @property
+    def output_back_off(self) -> Decibel:
+        """Output back-off."""
         ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
-class EirpTransmitter:
-    """A lumped transmitter defined by a frequency and aggregate EIRP.
-
-    Args:
-        frequency: Transmit frequency.
-        eirp: Effective isotropic radiated power in dBW.
-    """
-    def __new__(cls, frequency: Frequency, eirp: Decibel) -> Self: ...
-    @property
-    def frequency(self) -> Frequency: ...
-    @property
-    def eirp(self) -> Decibel: ...
-    def __repr__(self) -> str: ...
-    def __eq__(self, other: object) -> bool: ...
-
 class NoiseTempReceiver:
-    """A receiver with a known system noise temperature.
+    """A receiver characterised by a single equivalent noise temperature.
+
+    The figure is referred to the receiver's input connector; the system
+    noise temperature at the antenna flange is assembled at link-budget
+    setup from the chain's antenna noise temperature and feed loss. For a
+    datasheet figure that already includes antenna and feed contributions,
+    set both chain values to zero.
 
     Args:
-        frequency: Receive frequency.
-        system_noise_temperature: System noise temperature.
+        noise_temperature: Equivalent noise temperature at the input connector.
     """
-    def __new__(
-        cls, frequency: Frequency, system_noise_temperature: Temperature
-    ) -> Self: ...
+    def __new__(cls, noise_temperature: Temperature) -> Self: ...
+    @property
+    def noise_temperature(self) -> Temperature:
+        """Equivalent noise temperature referred to the receiver's input connector."""
+        ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
-
-class GtReceiver:
-    """A lumped receiver defined by a frequency and aggregate G/T.
-
-    Args:
-        frequency: Receive frequency.
-        gt: Gain-to-noise-temperature ratio in dB/K.
-    """
-    def __new__(cls, frequency: Frequency, gt: Decibel) -> Self: ...
-    @property
-    def frequency(self) -> Frequency: ...
-    @property
-    def gt(self) -> Decibel: ...
-    def __repr__(self) -> str: ...
-    def __eq__(self, other: object) -> bool: ...
 
 class NoiseStage:
     """A single stage in an RF receiver chain.
@@ -2577,36 +2560,18 @@ class CascadeReceiver:
     """An N-stage cascade receiver using the Friis noise formula.
 
     Args:
-        frequency: Receive frequency.
-        antenna_noise_temperature: Antenna noise temperature.
-        stages: List of NoiseStage (ordered: LNA first, then downstream).
+        stages: Non-empty list of NoiseStage (ordered: LNA first, then downstream).
         demodulator_loss: Demodulator loss as Decibel (default Decibel(0)).
         implementation_loss: Other implementation losses as Decibel (default Decibel(0)).
     """
     def __new__(
         cls,
-        frequency: Frequency,
-        antenna_noise_temperature: Temperature,
         stages: list[NoiseStage],
         demodulator_loss: Decibel | None = None,
         implementation_loss: Decibel | None = None,
     ) -> Self: ...
     @staticmethod
-    def from_feed_loss_and_noise_figure(
-        frequency: Frequency,
-        antenna_noise_temperature: Temperature,
-        feed_loss: Decibel,
-        receiver_noise_figure: Decibel,
-        receiver_gain: Decibel,
-        demodulator_loss: Decibel | None = None,
-        implementation_loss: Decibel | None = None,
-    ) -> CascadeReceiver:
-        """Creates a two-stage model: lossy feed line at room temperature followed by a receiver."""
-        ...
-    @staticmethod
     def from_lna_and_noise_figure(
-        frequency: Frequency,
-        antenna_noise_temperature: Temperature,
         lna_gain: Decibel,
         lna_noise_temperature: Temperature,
         receiver_noise_figure: Decibel,
@@ -2615,12 +2580,13 @@ class CascadeReceiver:
     ) -> CascadeReceiver:
         """Creates a two-stage model: LNA followed by a receiver characterised by noise figure."""
         ...
-    def system_noise_temperature(self) -> Temperature:
-        """Returns the system noise temperature via the Friis formula."""
+    def chain_noise_temperature(self) -> Temperature:
+        """Returns the chain's equivalent noise temperature referred to its input connector, via the Friis formula."""
         ...
     def chain_gain(self) -> Decibel:
         """Returns the total RF chain gain in dB."""
         ...
+    def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
 class Channel:
@@ -2706,6 +2672,21 @@ class EnvironmentalLosses:
         diameter: Distance,
         polarisation_tilt: Angle | None = None,
     ) -> Self: ...
+    @staticmethod
+    def none() -> EnvironmentalLosses:
+        """Returns zero environmental losses."""
+        ...
+    @staticmethod
+    def from_values(
+        rain: Decibel | None = None,
+        gaseous: Decibel | None = None,
+        scintillation: Decibel | None = None,
+        atmospheric: Decibel | None = None,
+        cloud: Decibel | None = None,
+        depolarization: Decibel | None = None,
+    ) -> EnvironmentalLosses:
+        """Creates environmental losses from individual values."""
+        ...
     @property
     def rain(self) -> Decibel:
         """Rain attenuation."""
@@ -2736,106 +2717,235 @@ class EnvironmentalLosses:
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
-class CommunicationSystem:
-    """A communication system combining an antenna with optional transmitter and receiver.
+class FrequencyRange:
+    """A contiguous frequency range with inclusive bounds.
 
     Args:
-        antenna: A ConstantAntenna or PatternedAntenna (optional; omit for lumped systems).
-        receiver: A NoiseTempReceiver, CascadeReceiver, or GtReceiver (optional).
-        transmitter: An AmplifierTransmitter or EirpTransmitter (optional).
+        min: Lower frequency bound.
+        max: Upper frequency bound.
+    """
+    def __new__(cls, min: Frequency, max: Frequency) -> Self: ...
+    @staticmethod
+    def from_wavelengths(
+        min_wavelength: Distance, max_wavelength: Distance
+    ) -> FrequencyRange:
+        """Creates a frequency range from wavelength bounds (e.g. optical bands)."""
+        ...
+    def min(self) -> Frequency:
+        """Returns the lower frequency bound."""
+        ...
+    def max(self) -> Frequency:
+        """Returns the upper frequency bound."""
+        ...
+    def contains(self, frequency: Frequency) -> bool:
+        """Returns whether the frequency lies within the range (bounds inclusive)."""
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+TxTerminal = TxChain | EirpModel
+"""A transmit terminal: a component-tier chain or a lumped EIRP figure."""
+
+RxTerminal = RxChain | GtModel
+"""A receive terminal: a component-tier chain or a lumped G/T figure."""
+
+class TxChain:
+    """A transmit chain: an antenna fed by a transmitter.
+
+    The feed loss between transmitter output and antenna subtracts from EIRP.
+
+    Args:
+        antenna: ConstantAntenna or PatternedAntenna.
+        transmitter: AmplifierTransmitter.
+        band: Supported frequency range, as a FrequencyRange or an IEEE
+            letter-band name like "Ka".
+        feed_loss: Feed loss as Decibel (default Decibel(0)).
     """
     def __new__(
         cls,
-        antenna: ConstantAntenna | PatternedAntenna | None = None,
-        receiver: NoiseTempReceiver | CascadeReceiver | GtReceiver | None = None,
-        transmitter: AmplifierTransmitter | EirpTransmitter | None = None,
+        antenna: ConstantAntenna | PatternedAntenna,
+        transmitter: AmplifierTransmitter,
+        band: FrequencyRange | str,
+        feed_loss: Decibel | None = None,
     ) -> Self: ...
-    @classmethod
-    def eirp_only(cls, tx: EirpTransmitter) -> CommunicationSystem:
-        """Creates a lumped transmit-only system from a known EIRP."""
+    @property
+    def band(self) -> FrequencyRange:
+        """Supported frequency range of this chain."""
         ...
-    @classmethod
-    def gt_only(cls, rx: GtReceiver) -> CommunicationSystem:
-        """Creates a lumped receive-only system from a known G/T."""
+    @property
+    def antenna(self) -> ConstantAntenna | PatternedAntenna:
+        """The antenna radiating this chain."""
         ...
-    def carrier_to_noise_density(
+    @property
+    def transmitter(self) -> AmplifierTransmitter:
+        """The transmitter driving this chain."""
+        ...
+    @property
+    def feed_loss(self) -> Decibel:
+        """Feed loss between transmitter output and antenna."""
+        ...
+    def eirp_at(
         self,
-        rx_system: CommunicationSystem,
-        losses: Decibel,
-        range: Distance,
-        tx_angle: Angle | None = None,
-        rx_angle: Angle | None = None,
-        tx_direction: list[float] | None = None,
-        rx_direction: list[float] | None = None,
+        carrier: Frequency,
+        angle: Angle | None = None,
+        direction: list[float] | None = None,
     ) -> Decibel:
-        """Computes the carrier-to-noise density ratio (C/N0) in dB·Hz.
+        """Returns the EIRP in dBW at the given carrier and pointing.
 
-        Each endpoint's pointing is given either as an off-boresight angle or
-        as a line-of-sight direction vector in the antenna's parent frame;
-        omitting both assumes ideal (boresight) pointing.
-
-        Args:
-            rx_system: The receiving CommunicationSystem.
-            losses: Additional losses as Decibel.
-            range: Slant range as Distance.
-            tx_angle: Off-boresight angle at transmitter as Angle (optional).
-            rx_angle: Off-boresight angle at receiver as Angle (optional).
-            tx_direction: Line-of-sight direction at transmitter as [x, y, z] (optional).
-            rx_direction: Line-of-sight direction at receiver as [x, y, z] (optional).
+        Raises ValueError when the carrier lies outside the chain's band.
         """
         ...
-    def carrier_power(
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class RxChain:
+    """A receive chain: a receiver fed by an antenna.
+
+    The feed loss between antenna and receiver input is a noise contribution:
+    it is synthesized as a passive attenuator at 290 K ahead of the receiver
+    and referred back to the antenna flange.
+
+    Args:
+        antenna: ConstantAntenna or PatternedAntenna.
+        receiver: NoiseTempReceiver or CascadeReceiver.
+        band: Supported frequency range, as a FrequencyRange or an IEEE
+            letter-band name like "Ka".
+        antenna_noise_temperature: Clear-sky antenna noise temperature at the flange.
+        feed_loss: Feed loss as Decibel (default Decibel(0)).
+    """
+    def __new__(
+        cls,
+        antenna: ConstantAntenna | PatternedAntenna,
+        receiver: NoiseTempReceiver | CascadeReceiver,
+        band: FrequencyRange | str,
+        antenna_noise_temperature: Temperature,
+        feed_loss: Decibel | None = None,
+    ) -> Self: ...
+    @property
+    def band(self) -> FrequencyRange:
+        """Supported frequency range of this chain."""
+        ...
+    @property
+    def antenna(self) -> ConstantAntenna | PatternedAntenna:
+        """The antenna feeding this chain."""
+        ...
+    @property
+    def receiver(self) -> NoiseTempReceiver | CascadeReceiver:
+        """The receiver terminating this chain."""
+        ...
+    @property
+    def feed_loss(self) -> Decibel:
+        """Feed loss between antenna and receiver input."""
+        ...
+    @property
+    def antenna_noise_temperature(self) -> Temperature:
+        """Clear-sky antenna noise temperature at the flange."""
+        ...
+    def system_noise_temperature(self) -> Temperature:
+        """Returns the system noise temperature referred to the antenna flange."""
+        ...
+    def gt_at(
         self,
-        rx_system: CommunicationSystem,
-        losses: Decibel,
-        range: Distance,
-        tx_angle: Angle | None = None,
-        rx_angle: Angle | None = None,
-        tx_direction: list[float] | None = None,
-        rx_direction: list[float] | None = None,
-    ) -> Decibel | None:
-        """Computes the received carrier power in dBW.
+        carrier: Frequency,
+        angle: Angle | None = None,
+        direction: list[float] | None = None,
+    ) -> Decibel:
+        """Returns the G/T in dB/K at the given carrier and pointing.
 
-        Accepts the same pointing arguments as ``carrier_to_noise_density``.
-        Returns ``None`` for lumped G/T receivers.
+        Raises ValueError when the carrier lies outside the chain's band.
         """
         ...
-    def noise_power(self, bandwidth: Frequency) -> Decibel | None:
-        """Computes the noise power in dBW for a given bandwidth. Returns ``None`` for lumped G/T receivers."""
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class EirpModel:
+    """A lumped transmit terminal: an aggregate EIRP figure over a band.
+
+    Args:
+        band: Frequency range over which the figure applies, as a
+            FrequencyRange or an IEEE letter-band name like "Ka".
+        eirp: Effective isotropic radiated power as Decibel (dBW).
+    """
+    def __new__(cls, band: FrequencyRange | str, eirp: Decibel) -> Self: ...
+    @property
+    def band(self) -> FrequencyRange:
+        """Frequency range over which the figure applies."""
         ...
+    @property
+    def eirp(self) -> Decibel:
+        """Effective isotropic radiated power in dBW."""
+        ...
+    def eirp_at(
+        self,
+        carrier: Frequency,
+        angle: Angle | None = None,
+        direction: list[float] | None = None,
+    ) -> Decibel:
+        """Returns the EIRP in dBW at the given carrier; the pointing is ignored.
+
+        Raises ValueError when the carrier lies outside the band.
+        """
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class GtModel:
+    """A lumped receive terminal: an aggregate G/T figure over a band.
+
+    The absolute gain and noise temperature are not recoverable from a G/T
+    figure, so links using a GtModel carry no absolute carrier or noise
+    powers.
+
+    Args:
+        band: Frequency range over which the figure applies, as a
+            FrequencyRange or an IEEE letter-band name like "Ka".
+        gt: Gain-to-noise-temperature ratio as Decibel (dB/K).
+    """
+    def __new__(cls, band: FrequencyRange | str, gt: Decibel) -> Self: ...
+    @property
+    def band(self) -> FrequencyRange:
+        """Frequency range over which the figure applies."""
+        ...
+    @property
+    def gt(self) -> Decibel:
+        """Gain-to-noise-temperature ratio in dB/K."""
+        ...
+    def gt_at(
+        self,
+        carrier: Frequency,
+        angle: Angle | None = None,
+        direction: list[float] | None = None,
+    ) -> Decibel:
+        """Returns the G/T in dB/K at the given carrier; the pointing is ignored.
+
+        Raises ValueError when the carrier lies outside the band.
+        """
+        ...
+    def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
 class LinkStats:
     """Modulation-agnostic link budget statistics."""
     @staticmethod
-    def calculate(
-        tx_system: CommunicationSystem,
-        rx_system: CommunicationSystem,
-        range: Distance,
+    def for_link(
+        tx: TxTerminal,
+        rx: RxTerminal,
+        carrier: Frequency,
         bandwidth: Frequency,
+        range: Distance,
         tx_angle: Angle | None = None,
         rx_angle: Angle | None = None,
         tx_direction: list[float] | None = None,
         rx_direction: list[float] | None = None,
         losses: EnvironmentalLosses | None = None,
     ) -> LinkStats:
-        """Computes a modulation-agnostic link budget.
+        """Computes a modulation-agnostic link budget between two link terminals.
 
-        Each endpoint's pointing is given either as an off-boresight angle or
-        as a line-of-sight direction vector in the antenna's parent frame;
-        omitting both assumes ideal (boresight) pointing. The pattern angles
-        derived from the pointing are reported on the result.
-
-        Args:
-            tx_system: The transmitting CommunicationSystem.
-            rx_system: The receiving CommunicationSystem.
-            range: Slant range as Distance.
-            bandwidth: Noise bandwidth as Frequency.
-            tx_angle: Off-boresight angle at transmitter as Angle (optional).
-            rx_angle: Off-boresight angle at receiver as Angle (optional).
-            tx_direction: Line-of-sight direction at transmitter as [x, y, z] (optional).
-            rx_direction: Line-of-sight direction at receiver as [x, y, z] (optional).
-            losses: EnvironmentalLosses (optional, defaults to none).
+        The carrier must lie inside both terminals' frequency ranges. Each
+        terminal's pointing is given either as an off-boresight angle or as a
+        line-of-sight direction vector in the antenna's parent frame; omitting
+        both assumes ideal (boresight) pointing.
         """
         ...
     @property
@@ -2878,29 +2988,13 @@ class LinkStats:
     def frequency(self) -> Frequency:
         """Link frequency."""
         ...
-    @property
-    def tx_theta(self) -> Angle:
-        """Derived TX pattern polar angle from boresight."""
-        ...
-    @property
-    def tx_phi(self) -> Angle:
-        """Derived TX pattern azimuth about boresight."""
-        ...
-    @property
-    def rx_theta(self) -> Angle:
-        """Derived RX pattern polar angle from boresight."""
-        ...
-    @property
-    def rx_phi(self) -> Angle:
-        """Derived RX pattern azimuth about boresight."""
-        ...
     def __repr__(self) -> str: ...
 
 class InterferenceStats:
     """Interference statistics for a link with a given interferer power."""
     @property
-    def interference_power_w(self) -> float:
-        """Interference power in watts."""
+    def interference_power(self) -> Power:
+        """Interference power."""
         ...
     @property
     def c_n0i0(self) -> Decibel:
@@ -2942,11 +3036,7 @@ class ModulatedLinkStats:
     def margin(self) -> Decibel:
         """Link margin in dB."""
         ...
-    @property
-    def interference(self) -> InterferenceStats | None:
-        """Interference statistics, if computed."""
-        ...
-    def with_interference(self, interference_power_w: float) -> InterferenceStats:
+    def with_interference(self, interference_power: Power) -> InterferenceStats:
         """Computes interference statistics for a given interferer power."""
         ...
     def __repr__(self) -> str: ...

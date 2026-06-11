@@ -12,10 +12,10 @@ use crate::analysis::python::{
 };
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
-    PyAmplifierTransmitter, PyAntennaFrame, PyCascadeReceiver, PyChannel, PyCommunicationSystem,
-    PyConstantAntenna, PyDecibel, PyDipolePattern, PyEirpTransmitter, PyGaussianPattern,
-    PyGtReceiver, PyInterferenceStats, PyLinkStats, PyModulatedLinkStats, PyModulation,
-    PyNoiseStage, PyNoiseTempReceiver, PyParabolicPattern, PyPatternedAntenna, PyPfdMask,
+    PyAmplifierTransmitter, PyAntennaFrame, PyCascadeReceiver, PyChannel, PyConstantAntenna,
+    PyDecibel, PyDipolePattern, PyEirpModel, PyFrequencyRange, PyGaussianPattern, PyGtModel,
+    PyInterferenceStats, PyLinkStats, PyModulatedLinkStats, PyModulation, PyNoiseStage,
+    PyNoiseTempReceiver, PyParabolicPattern, PyPatternedAntenna, PyPfdMask, PyRxChain, PyTxChain,
     freq_overlap, fspl, power_flux_density, slant_range,
 };
 use crate::constellations::python::{PyConstellation, PyConstellationSatellite};
@@ -67,19 +67,21 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyConstantAntenna>()?;
     m.add_class::<PyPatternedAntenna>()?;
     m.add_class::<PyAmplifierTransmitter>()?;
-    m.add_class::<PyEirpTransmitter>()?;
     m.add_class::<PyNoiseTempReceiver>()?;
     m.add_class::<PyCascadeReceiver>()?;
-    m.add_class::<PyGtReceiver>()?;
     m.add_class::<PyNoiseStage>()?;
     m.add_class::<PyChannel>()?;
     m.add_class::<PyItuProvider>()?;
     m.add_class::<PyEnvironmentalLosses>()?;
-    m.add_class::<PyCommunicationSystem>()?;
     m.add_class::<PyLinkStats>()?;
     m.add_class::<PyInterferenceStats>()?;
     m.add_class::<PyModulatedLinkStats>()?;
     m.add_class::<PyPfdMask>()?;
+    m.add_class::<PyFrequencyRange>()?;
+    m.add_class::<PyTxChain>()?;
+    m.add_class::<PyRxChain>()?;
+    m.add_class::<PyEirpModel>()?;
+    m.add_class::<PyGtModel>()?;
     m.add_function(wrap_pyfunction!(fspl, m)?)?;
     m.add_function(wrap_pyfunction!(freq_overlap, m)?)?;
     m.add_function(wrap_pyfunction!(power_flux_density, m)?)?;
