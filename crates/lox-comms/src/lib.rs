@@ -15,14 +15,15 @@ pub mod error;
 pub mod link_budget;
 pub mod pattern;
 pub mod pfd;
+pub mod pointing;
 pub mod receiver;
-pub mod system;
+pub mod terminal;
 pub mod transmitter;
 pub mod utils;
 
 pub use error::LinkBudgetError;
 
-use lox_core::units::Kelvin;
+use lox_core::units::Temperature;
 
 /// Boltzmann constant in J/K.
 ///
@@ -31,5 +32,5 @@ use lox_core::units::Kelvin;
 /// BIPM SI Brochure (2019), Table 1 of exact defining constants: k = 1.380 649 × 10⁻²³ J K⁻¹.
 pub const BOLTZMANN_CONSTANT: f64 = 1.380_649e-23;
 
-/// Reference room temperature in Kelvin (per ITU-R).
-pub const ROOM_TEMPERATURE: Kelvin = 290.0;
+/// Reference room temperature (per ITU-R).
+pub const ROOM_TEMPERATURE: Temperature = Temperature::kelvin(290.0);

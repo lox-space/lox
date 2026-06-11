@@ -5,10 +5,10 @@
 //! Antenna types and the [`AntennaGain`] trait.
 
 use lox_core::glam::DVec3;
-use lox_core::units::{Angle, Decibel, Frequency};
+use lox_core::units::{Angle, Decibel, Distance, Frequency};
 use thiserror::Error;
 
-use crate::pattern::AntennaPattern;
+use crate::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
 
 /// Right-handed antenna coordinate frame expressed in a parent frame.
 ///
@@ -205,10 +205,45 @@ pub trait AntennaGain {
 
 /// Antenna with angle-independent gain.
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "ConstantAntennaRepr")
+)]
 pub struct ConstantAntenna {
-    /// Peak gain in dBi.
-    pub gain: Decibel,
+    gain: Decibel,
+}
+
+/// Serde wire format for [`ConstantAntenna`]: forces deserialization through
+/// the validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct ConstantAntennaRepr {
+    gain: Decibel,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<ConstantAntennaRepr> for ConstantAntenna {
+    type Error = crate::error::NonPhysicalError;
+
+    fn try_from(repr: ConstantAntennaRepr) -> Result<Self, Self::Error> {
+        ConstantAntenna::new(repr.gain)
+    }
+}
+
+impl ConstantAntenna {
+    /// Creates a new constant-gain antenna.
+    ///
+    /// Rejects a non-finite gain.
+    pub fn new(gain: Decibel) -> Result<Self, crate::error::NonPhysicalError> {
+        crate::error::NonPhysicalError::check_finite("antenna gain [dBi]", gain.as_f64())?;
+        Ok(Self { gain })
+    }
+
+    /// Returns the peak gain in dBi.
+    pub fn peak_gain(&self) -> Decibel {
+        self.gain
+    }
 }
 
 impl AntennaGain for ConstantAntenna {
@@ -225,6 +260,22 @@ pub struct PatternedAntenna {
     pub pattern: AntennaPattern,
     /// Orientation of the antenna pattern in its parent frame.
     pub frame: AntennaFrame,
+}
+
+impl PatternedAntenna {
+    /// Creates a patterned antenna with an identity frame.
+    pub fn new(pattern: impl Into<AntennaPattern>) -> Self {
+        Self {
+            pattern: pattern.into(),
+            frame: AntennaFrame::identity(),
+        }
+    }
+
+    /// Sets the orientation of the antenna pattern in its parent frame.
+    pub fn with_frame(mut self, frame: AntennaFrame) -> Self {
+        self.frame = frame;
+        self
+    }
 }
 
 impl AntennaGain for PatternedAntenna {
@@ -264,6 +315,57 @@ pub enum Antenna {
     Patterned(PatternedAntenna),
 }
 
+impl From<ConstantAntenna> for Antenna {
+    fn from(antenna: ConstantAntenna) -> Self {
+        Antenna::Constant(antenna)
+    }
+}
+
+impl From<PatternedAntenna> for Antenna {
+    fn from(antenna: PatternedAntenna) -> Self {
+        Antenna::Patterned(antenna)
+    }
+}
+
+impl Antenna {
+    /// Creates a constant-gain antenna.
+    ///
+    /// Rejects a non-finite gain.
+    pub fn constant(gain: Decibel) -> Result<Self, crate::error::NonPhysicalError> {
+        Ok(ConstantAntenna::new(gain)?.into())
+    }
+
+    /// Creates a parabolic-dish antenna with an identity frame.
+    ///
+    /// Rejects a non-finite or non-positive diameter and an aperture
+    /// efficiency outside (0, 1]. Use
+    /// [`PatternedAntenna::with_frame`] to orient the pattern.
+    pub fn parabolic(
+        diameter: Distance,
+        efficiency: f64,
+    ) -> Result<Self, crate::error::NonPhysicalError> {
+        Ok(PatternedAntenna::new(ParabolicPattern::new(diameter, efficiency)?).into())
+    }
+
+    /// Creates a Gaussian-pattern antenna with an identity frame.
+    ///
+    /// Rejects a non-finite or non-positive diameter and an aperture
+    /// efficiency outside (0, 1].
+    pub fn gaussian(
+        diameter: Distance,
+        efficiency: f64,
+    ) -> Result<Self, crate::error::NonPhysicalError> {
+        Ok(PatternedAntenna::new(GaussianPattern::new(diameter, efficiency)?).into())
+    }
+
+    /// Creates a dipole antenna with an identity frame.
+    ///
+    /// Rejects a non-finite or non-positive length.
+    pub fn dipole(length: Distance) -> Result<Self, crate::error::NonPhysicalError> {
+        Ok(PatternedAntenna::new(DipolePattern::new(length)?).into())
+    }
+}
+
 impl AntennaGain for Antenna {
     fn gain(&self, frequency: Frequency, theta: Angle, phi: Angle) -> Decibel {
         match self {
@@ -276,18 +378,16 @@ impl AntennaGain for Antenna {
 impl Antenna {
     /// Returns the gain in dBi toward a parent-frame direction vector.
     ///
-    /// For [`Antenna::Constant`] the direction is ignored and the constant
-    /// gain is returned. For [`Antenna::Patterned`] the direction is converted
-    /// into pattern angles using the antenna frame.
+    /// The direction is converted into pattern angles via
+    /// [`Self::pattern_angles`]; for [`Antenna::Constant`] the resulting
+    /// angles do not affect the gain but the direction is still validated.
     pub fn gain_toward(
         &self,
         frequency: Frequency,
         direction: DVec3,
     ) -> Result<Decibel, AntennaFrameError> {
-        match self {
-            Antenna::Constant(a) => Ok(a.gain),
-            Antenna::Patterned(a) => a.gain_toward(frequency, direction),
-        }
+        let (theta, phi) = self.pattern_angles(direction)?;
+        Ok(self.gain(frequency, theta, phi))
     }
 
     /// Returns the pattern angles for a parent-frame direction vector.
@@ -315,15 +415,45 @@ mod tests {
     use lox_core::units::{Angle, Decibel, DecibelUnits, Distance, FrequencyUnits};
     use lox_test_utils::assert_approx_eq;
 
-    use crate::pattern::{AntennaPattern, ParabolicPattern};
+    use crate::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
 
     use super::*;
 
     fn parabolic() -> PatternedAntenna {
         PatternedAntenna {
-            pattern: AntennaPattern::Parabolic(ParabolicPattern::new(Distance::meters(0.98), 0.45)),
+            pattern: AntennaPattern::Parabolic(
+                ParabolicPattern::new(Distance::meters(0.98), 0.45).unwrap(),
+            ),
             frame: AntennaFrame::identity(),
         }
+    }
+
+    #[test]
+    fn test_frame_local_round_trip() {
+        let frame = AntennaFrame::from_boresight_and_reference(DVec3::X, DVec3::Z).unwrap();
+        let v = DVec3::new(0.3, -0.4, 0.5);
+        // to_local/from_local are inverse rotations.
+        assert_approx_eq!(frame.from_local(frame.to_local(v)), v, atol <= 1e-12);
+        // The boresight maps onto the local +Z axis.
+        assert_approx_eq!(frame.to_local(DVec3::X), DVec3::Z, atol <= 1e-12);
+        // The default frame is the identity.
+        assert_approx_eq!(AntennaFrame::default().z(), DVec3::Z, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_antenna_gain_toward_constant_validates_direction() {
+        let antenna = Antenna::constant(Decibel::new(30.0)).unwrap();
+        // Constant gain is direction-independent...
+        let gain = antenna
+            .gain_toward(Frequency::hertz(29e9), DVec3::new(0.0, 1.0, 0.0))
+            .unwrap();
+        assert_approx_eq!(gain.as_f64(), 30.0, atol <= 1e-12);
+        // ...but the direction is still validated.
+        assert!(
+            antenna
+                .gain_toward(Frequency::hertz(29e9), DVec3::ZERO)
+                .is_err()
+        );
     }
 
     #[test]
@@ -509,8 +639,59 @@ mod tests {
     }
 
     #[test]
+    fn test_antenna_smart_constructors() {
+        // One-liners replace the nested enum/struct construction.
+        let dish = Antenna::parabolic(Distance::meters(0.98), 0.45).unwrap();
+        assert!(matches!(dish, Antenna::Patterned(_)));
+        let constant = Antenna::constant(46.0.db()).unwrap();
+        assert!(matches!(constant, Antenna::Constant(_)));
+        assert!(Antenna::gaussian(Distance::meters(0.98), 0.45).is_ok());
+        assert!(Antenna::dipole(Distance::meters(0.0185)).is_ok());
+        // Validation flows through unchanged.
+        assert!(Antenna::parabolic(Distance::meters(-1.0), 0.45).is_err());
+
+        // Oriented patterns: builder + From conversions.
+        let frame = AntennaFrame::from_boresight_and_reference(DVec3::X, DVec3::Z).unwrap();
+        let oriented: Antenna =
+            PatternedAntenna::new(ParabolicPattern::new(Distance::meters(0.98), 0.45).unwrap())
+                .with_frame(frame)
+                .into();
+        let Antenna::Patterned(antenna) = oriented else {
+            panic!("expected patterned antenna");
+        };
+        assert_eq!(antenna.frame, frame);
+    }
+
+    #[test]
+    fn test_antenna_from_conversions_and_constant_paths() {
+        let constant: Antenna = ConstantAntenna::new(20.0.db()).unwrap().into();
+        assert!(matches!(constant, Antenna::Constant(_)));
+        // gain_toward ignores the direction for constant antennas...
+        let gain = constant.gain_toward(29.0.ghz(), DVec3::Y).unwrap();
+        assert_approx_eq!(gain.as_f64(), 20.0, atol <= 1e-12);
+        // ...but still validates it.
+        assert!(constant.gain_toward(29.0.ghz(), DVec3::ZERO).is_err());
+        assert!(constant.pattern_angles(DVec3::ZERO).is_err());
+
+        let patterned: Antenna =
+            PatternedAntenna::new(GaussianPattern::new(Distance::meters(0.98), 0.45).unwrap())
+                .into();
+        assert!(matches!(patterned, Antenna::Patterned(_)));
+        let dipole: AntennaPattern = DipolePattern::new(Distance::meters(0.0185)).unwrap().into();
+        assert!(matches!(dipole, AntennaPattern::Dipole(_)));
+
+        // Smart constructors evaluate to working gain models.
+        let gaussian = Antenna::gaussian(Distance::meters(0.98), 0.45).unwrap();
+        let on_axis = gaussian.gain_toward(29.0.ghz(), DVec3::Z).unwrap();
+        assert!(on_axis.as_f64() > 40.0);
+        assert!(Antenna::constant(Decibel::new(f64::NAN)).is_err());
+        assert!(Antenna::gaussian(Distance::meters(0.98), 1.5).is_err());
+        assert!(Antenna::dipole(Distance::meters(-1.0)).is_err());
+    }
+
+    #[test]
     fn test_constant_antenna_gain_dispatch() {
-        let a = ConstantAntenna { gain: 10.0.db() };
+        let a = ConstantAntenna::new(10.0.db()).unwrap();
         let g = a.gain(29.0.ghz(), Angle::ZERO, Angle::ZERO);
         assert_approx_eq!(g.as_f64(), 10.0, atol <= 1e-10);
     }
@@ -528,7 +709,9 @@ mod tests {
     #[test]
     fn test_patterned_antenna_gain_toward_uses_frame() {
         let a = PatternedAntenna {
-            pattern: AntennaPattern::Parabolic(ParabolicPattern::new(Distance::meters(0.98), 0.45)),
+            pattern: AntennaPattern::Parabolic(
+                ParabolicPattern::new(Distance::meters(0.98), 0.45).unwrap(),
+            ),
             frame: AntennaFrame::from_boresight_and_reference(DVec3::X, DVec3::Z).unwrap(),
         };
         let f = 29.0.ghz();
@@ -542,9 +725,7 @@ mod tests {
 
     #[test]
     fn test_antenna_enum_constant_dispatch() {
-        let a = Antenna::Constant(ConstantAntenna {
-            gain: Decibel::new(20.0),
-        });
+        let a = Antenna::Constant(ConstantAntenna::new(Decibel::new(20.0)).unwrap());
         let g = a.gain(29.0.ghz(), Angle::ZERO, Angle::ZERO);
         assert_approx_eq!(g.as_f64(), 20.0, atol <= 1e-10);
     }
@@ -559,7 +740,7 @@ mod tests {
 
     #[test]
     fn test_antenna_enum_gain_toward_constant_ignores_direction() {
-        let a = Antenna::Constant(ConstantAntenna { gain: 20.0.db() });
+        let a = Antenna::Constant(ConstantAntenna::new(20.0.db()).unwrap());
         let g = a.gain_toward(29.0.ghz(), DVec3::Y).unwrap();
         assert_approx_eq!(g.as_f64(), 20.0, atol <= 1e-10);
     }

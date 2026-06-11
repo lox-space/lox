@@ -200,7 +200,6 @@ impl Channel {
             es_n0,
             eb_n0,
             margin,
-            interference: None,
         }
     }
 }
