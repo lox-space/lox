@@ -24,8 +24,6 @@ const SHORT_DIPOLE_LIMIT: f64 = 0.1;
 const EULER_GAMMA: f64 = 0.577_215_664_901_532_9;
 
 /// Dipole antenna gain pattern.
-///
-/// Valid by construction: the length is finite and positive.
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",

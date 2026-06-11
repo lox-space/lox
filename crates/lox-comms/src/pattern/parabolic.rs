@@ -24,9 +24,6 @@ const BESSEL_J1_HPBW: f64 = 1.616_330_8;
 const DIV_BY_ZERO_LIMIT: f64 = 1e-6;
 
 /// Parabolic antenna gain pattern (uniform illuminated aperture).
-///
-/// Valid by construction: the diameter is finite and positive, the aperture
-/// efficiency in (0, 1].
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",

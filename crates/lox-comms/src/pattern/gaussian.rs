@@ -15,9 +15,6 @@ use crate::error::NonPhysicalError;
 use crate::pattern::GAIN_FLOOR_LINEAR;
 
 /// Gaussian antenna gain pattern.
-///
-/// Valid by construction: the diameter is finite and positive, the aperture
-/// efficiency in (0, 1].
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",

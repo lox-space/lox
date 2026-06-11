@@ -14,9 +14,6 @@ use crate::error::NonPhysicalError;
 /// Describes the RF output stage only. Feed/line losses belong to the
 /// [`TxPort`](crate::payload::TxPort) wiring the transmitter to an antenna,
 /// and lumped EIRP figures to [`EirpModel`](crate::payload::EirpModel).
-///
-/// Valid by construction: transmit power is finite and positive, output
-/// back-off finite and non-negative.
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",

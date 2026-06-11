@@ -127,8 +127,6 @@ pub struct Named<T> {
 ///
 /// Inventory citizen of the lumped tier; the component tier uses
 /// [`AmplifierTransmitter`] wired to an antenna through a [`TxPort`].
-///
-/// Valid by construction: the EIRP figure is finite.
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",
@@ -194,8 +192,6 @@ impl EirpModel {
 }
 
 /// Lumped receiver model: an aggregate G/T figure over a band.
-///
-/// Valid by construction: the G/T figure is finite.
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",
@@ -264,9 +260,6 @@ impl GtModel {
 ///
 /// TX feed loss subtracts from EIRP. Multiple ports may reference the same
 /// antenna (diplexer) or the same transmitter (switchable antennas).
-///
-/// Valid by construction: the feed loss is finite and non-negative. Whether
-/// the referenced IDs exist is validated by [`CommsPayload::add_tx_port`].
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",
@@ -414,10 +407,6 @@ impl TxPort {
 ///
 /// RX feed loss is a noise contribution: link-budget setup synthesizes a
 /// passive 290 K attenuator stage from it ahead of the receiver chain.
-///
-/// Valid by construction: the feed loss and antenna noise temperature are
-/// finite and non-negative. Whether the referenced IDs exist is validated by
-/// [`CommsPayload::add_rx_port`].
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",

@@ -30,8 +30,6 @@ pub fn noise_figure_to_temperature(nf: Decibel) -> Temperature {
 /// `T_sys = T_ant + T_feed + T_rx / G_feed` from the port's antenna noise
 /// temperature and feed loss. For a datasheet figure that already includes
 /// the antenna and feed contributions, set both port values to zero.
-///
-/// Valid by construction: the noise temperature is finite and positive.
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",
@@ -92,9 +90,6 @@ impl NoiseTempReceiver {
 }
 
 /// A single stage in an RF receiver chain.
-///
-/// Valid by construction: the noise temperature is finite and non-negative,
-/// the gain finite.
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",
@@ -157,9 +152,6 @@ impl NoiseStage {
 /// The chain is described strictly from the receiver's input connector
 /// onward; the antenna noise temperature and feed loss are supplied by the
 /// port at link-budget setup.
-///
-/// Valid by construction: stages uphold [`NoiseStage`]'s invariants and the
-/// demodulator/implementation losses are finite and non-negative.
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",

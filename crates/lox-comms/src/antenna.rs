@@ -204,8 +204,6 @@ pub trait AntennaGain {
 }
 
 /// Antenna with angle-independent gain.
-///
-/// Valid by construction: the gain is finite.
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",
