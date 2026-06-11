@@ -4,145 +4,101 @@
 
 //! Radio transmitter models.
 
-use lox_core::units::{Angle, Decibel, Frequency};
+use lox_core::units::{Decibel, Power};
 
-use crate::antenna::AntennaGain;
+use crate::error::NonPhysicalError;
 
-/// Transmitter characterised by output power, line loss, and back-off; combined with
-/// an antenna on the [`CommunicationSystem`](crate::system::CommunicationSystem).
+/// Transmitter output stage: amplifier power and back-off.
+///
+/// Describes the RF output stage only. Feed/line losses and the supported
+/// frequency range belong to the [`TxChain`](crate::terminal::TxChain)
+/// wiring the transmitter to an antenna, and lumped EIRP figures to
+/// [`EirpModel`](crate::terminal::EirpModel).
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "AmplifierTransmitterRepr")
+)]
 pub struct AmplifierTransmitter {
-    /// Transmit frequency.
-    pub frequency: Frequency,
-    /// Transmit power in watts.
-    pub power_w: f64,
-    /// Feed/line loss.
-    pub line_loss: Decibel,
-    /// Output back-off.
-    pub output_back_off: Decibel,
+    power: Power,
+    output_back_off: Decibel,
+}
+
+/// Serde wire format for [`AmplifierTransmitter`]: forces deserialization
+/// through the validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct AmplifierTransmitterRepr {
+    power: Power,
+    output_back_off: Decibel,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<AmplifierTransmitterRepr> for AmplifierTransmitter {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: AmplifierTransmitterRepr) -> Result<Self, Self::Error> {
+        AmplifierTransmitter::new(repr.power, repr.output_back_off)
+    }
 }
 
 impl AmplifierTransmitter {
     /// Creates a new amplifier transmitter.
-    pub fn new(
-        frequency: Frequency,
-        power_w: f64,
-        line_loss: Decibel,
-        output_back_off: Decibel,
-    ) -> Self {
-        Self {
-            frequency,
-            power_w,
-            line_loss,
-            output_back_off,
-        }
-    }
-
-    /// Returns the Effective Isotropic Radiated Power (EIRP) in dBW.
-    pub fn eirp(&self, antenna: &impl AntennaGain, theta: Angle, phi: Angle) -> Decibel {
-        antenna.gain(self.frequency, theta, phi) + Decibel::from_linear(self.power_w)
-            - self.line_loss
-            - self.output_back_off
-    }
-}
-
-/// Lumped transmitter specified by a single EIRP figure.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct EirpTransmitter {
-    /// Transmit frequency.
-    pub frequency: Frequency,
-    /// Effective isotropic radiated power in dBW.
-    pub eirp: Decibel,
-}
-
-/// A transmitter.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(tag = "type"))]
-#[non_exhaustive]
-pub enum Transmitter {
-    /// Lumped transmitter with aggregate EIRP.
-    Eirp(EirpTransmitter),
-    /// Power-amplifier transmitter (combined with an external antenna).
-    Amplifier(AmplifierTransmitter),
-}
-
-impl Transmitter {
-    /// Returns the transmit frequency.
-    pub fn frequency(&self) -> Frequency {
-        match self {
-            Transmitter::Eirp(t) => t.frequency,
-            Transmitter::Amplifier(t) => t.frequency,
-        }
-    }
-
-    /// Returns the EIRP in dBW for the given antenna at the given pattern angles.
     ///
-    /// For the lumped `Eirp` variant, `antenna`, `theta`, and `phi` are ignored.
-    pub fn eirp(&self, antenna: &impl AntennaGain, theta: Angle, phi: Angle) -> Decibel {
-        match self {
-            Transmitter::Eirp(t) => t.eirp,
-            Transmitter::Amplifier(t) => t.eirp(antenna, theta, phi),
-        }
+    /// Rejects non-physical parameters: transmit power must be finite and
+    /// positive, output back-off finite and non-negative.
+    pub fn new(power: Power, output_back_off: Decibel) -> Result<Self, NonPhysicalError> {
+        NonPhysicalError::check_positive("transmit power [W]", power.to_watts())?;
+        NonPhysicalError::check_non_negative("output back-off [dB]", output_back_off.as_f64())?;
+        Ok(Self {
+            power,
+            output_back_off,
+        })
+    }
+
+    /// Returns the transmit power.
+    pub fn power(&self) -> Power {
+        self.power
+    }
+
+    /// Returns the output back-off.
+    pub fn output_back_off(&self) -> Decibel {
+        self.output_back_off
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use lox_core::units::{DecibelUnits, FrequencyUnits};
+    use lox_core::units::DecibelUnits;
     use lox_test_utils::assert_approx_eq;
-
-    use crate::antenna::ConstantAntenna;
 
     use super::*;
 
     #[test]
-    fn test_eirp_simple() {
-        let antenna = ConstantAntenna { gain: 10.0.db() };
-        let tx = AmplifierTransmitter::new(29.0.ghz(), 5.0, 1.0.db(), 0.0.db());
-        let eirp = tx.eirp(&antenna, Angle::ZERO, Angle::ZERO);
-        assert_approx_eq!(eirp.as_f64(), 15.9897, atol <= 0.001);
+    fn test_amplifier_transmitter() {
+        let tx = AmplifierTransmitter::new(Power::watts(10.0), 3.0.db()).unwrap();
+        assert_approx_eq!(tx.power().to_watts(), 10.0, atol <= 1e-15);
+        assert_approx_eq!(tx.output_back_off().as_f64(), 3.0, atol <= 1e-15);
     }
 
     #[test]
-    fn test_eirp_with_obo() {
-        let antenna = ConstantAntenna { gain: 20.0.db() };
-        let tx = AmplifierTransmitter::new(29.0.ghz(), 10.0, 2.0.db(), 3.0.db());
-        let eirp = tx.eirp(&antenna, Angle::ZERO, Angle::ZERO);
-        assert_approx_eq!(eirp.as_f64(), 25.0, atol <= 1e-10);
+    fn test_amplifier_transmitter_rejects_non_physical() {
+        for power in [0.0, -10.0, f64::NAN, f64::INFINITY] {
+            assert!(AmplifierTransmitter::new(Power::watts(power), 0.0.db()).is_err());
+        }
+        assert!(AmplifierTransmitter::new(Power::watts(10.0), (-1.0).db()).is_err());
     }
 
+    #[cfg(feature = "serde")]
     #[test]
-    fn test_enum_dispatch_amplifier() {
-        let antenna = ConstantAntenna { gain: 10.0.db() };
-        let tx = Transmitter::Amplifier(AmplifierTransmitter::new(
-            29.0.ghz(),
-            5.0,
-            1.0.db(),
-            0.0.db(),
-        ));
-        let eirp = tx.eirp(&antenna, Angle::ZERO, Angle::ZERO);
-        assert_approx_eq!(eirp.as_f64(), 15.9897, atol <= 0.001);
-        assert_eq!(tx.frequency().to_hertz(), 29e9);
-    }
+    fn test_amplifier_transmitter_serde_rejects_invalid() {
+        let tx = AmplifierTransmitter::new(Power::watts(10.0), 0.0.db()).unwrap();
+        let json = serde_json::to_string(&tx).unwrap();
+        let round_trip: AmplifierTransmitter = serde_json::from_str(&json).unwrap();
+        assert_approx_eq!(round_trip.power().to_watts(), 10.0, atol <= 1e-15);
 
-    #[test]
-    fn test_enum_dispatch_eirp_ignores_antenna_and_angle() {
-        let antenna = ConstantAntenna {
-            gain: 1000.0.db(), // Deliberately absurd value
-        };
-        let tx = Transmitter::Eirp(EirpTransmitter {
-            frequency: 29.0.ghz(),
-            eirp: 55.0.db(),
-        });
-        // For Eirp, antenna gain and angle are ignored — the stored figure is returned verbatim.
-        let eirp = tx.eirp(&antenna, Angle::ZERO, Angle::ZERO);
-        assert_approx_eq!(eirp.as_f64(), 55.0, atol <= 1e-10);
-        // Same at any pattern angles
-        let eirp_off = tx.eirp(&antenna, Angle::radians(1.0), Angle::radians(2.0));
-        assert_approx_eq!(eirp_off.as_f64(), 55.0, atol <= 1e-10);
-        assert_eq!(tx.frequency().to_hertz(), 29e9);
+        let bad = json.replace("\"power\":10.0", "\"power\":-10.0");
+        assert!(serde_json::from_str::<AmplifierTransmitter>(&bad).is_err());
     }
 }

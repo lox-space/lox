@@ -8,40 +8,72 @@ use lox_core::units::Frequency;
 use thiserror::Error;
 
 use crate::antenna::AntennaFrameError;
+use lox_core::units::FrequencyRange;
+
+/// A physical quantity is outside its valid domain.
+#[derive(Debug, Clone, PartialEq, Error)]
+#[error("non-physical {quantity}: {value}")]
+pub struct NonPhysicalError {
+    /// Name of the offending quantity.
+    pub quantity: &'static str,
+    /// The rejected value.
+    pub value: f64,
+}
+
+impl NonPhysicalError {
+    /// Validates that a quantity is finite.
+    pub(crate) fn check_finite(quantity: &'static str, value: f64) -> Result<(), Self> {
+        if !value.is_finite() {
+            return Err(Self { quantity, value });
+        }
+        Ok(())
+    }
+
+    /// Validates that a quantity is finite and strictly positive.
+    pub(crate) fn check_positive(quantity: &'static str, value: f64) -> Result<(), Self> {
+        if !value.is_finite() || value <= 0.0 {
+            return Err(Self { quantity, value });
+        }
+        Ok(())
+    }
+
+    /// Validates that a quantity is finite and non-negative.
+    pub(crate) fn check_non_negative(quantity: &'static str, value: f64) -> Result<(), Self> {
+        if !value.is_finite() || value < 0.0 {
+            return Err(Self { quantity, value });
+        }
+        Ok(())
+    }
+
+    /// Validates that a quantity lies in the half-open unit interval (0, 1].
+    pub(crate) fn check_unit_interval(quantity: &'static str, value: f64) -> Result<(), Self> {
+        if !(value > 0.0 && value <= 1.0) {
+            return Err(Self { quantity, value });
+        }
+        Ok(())
+    }
+}
 
 /// Errors that can arise when computing a link budget.
 #[derive(Debug, Clone, PartialEq, Error)]
 #[non_exhaustive]
 pub enum LinkBudgetError {
-    /// The transmitting system has no transmitter configured.
-    #[error("transmitting system has no transmitter configured")]
-    MissingTransmitter,
-    /// The receiving system has no receiver configured.
-    #[error("receiving system has no receiver configured")]
-    MissingReceiver,
-    /// A component-tier transmitter/receiver requires an antenna but none was provided.
-    #[error("component-tier transmitter/receiver requires an antenna")]
-    MissingAntenna,
-    /// A lumped (`Eirp`/`Gt`) transmitter/receiver must not be paired with an antenna.
-    #[error("lumped (Eirp/Gt) transmitter/receiver must not be paired with an antenna")]
-    UnexpectedAntenna,
     /// Absolute carrier and noise powers are required but are unavailable.
     #[error("absolute carrier and noise powers are unavailable for this link")]
     AbsolutePowerUnavailable,
     /// A line-of-sight direction could not be converted to pattern angles.
     #[error("invalid pointing: {0}")]
     InvalidPointing(#[from] AntennaFrameError),
-    /// Transmitter and receiver frequencies disagree.
-    #[error(
-        "transmitter frequency {} Hz differs from receiver frequency {} Hz",
-        tx.to_hertz(),
-        rx.to_hertz()
-    )]
-    FrequencyMismatch {
-        /// Transmitter frequency.
-        tx: Frequency,
-        /// Receiver frequency.
-        rx: Frequency,
+    /// A physical quantity is outside its valid domain.
+    #[error(transparent)]
+    NonPhysical(#[from] NonPhysicalError),
+    /// The carrier frequency lies outside a link end's frequency range.
+    #[error("carrier {} Hz outside the supported range {band}", carrier.to_hertz())]
+    CarrierOutOfBand {
+        /// The requested carrier frequency.
+        carrier: Frequency,
+        /// The link end's frequency range.
+        band: FrequencyRange,
     },
 }
 
@@ -49,42 +81,20 @@ pub enum LinkBudgetError {
 mod tests {
     use lox_core::units::FrequencyUnits;
 
+    use lox_core::units::FrequencyRange;
+
     use super::*;
 
     #[test]
-    fn test_display_missing_transmitter() {
-        let s = LinkBudgetError::MissingTransmitter.to_string();
-        assert!(s.contains("transmitter"));
-    }
-
-    #[test]
-    fn test_display_frequency_mismatch() {
-        let err = LinkBudgetError::FrequencyMismatch {
-            tx: 29.0.ghz(),
-            rx: 30.0.ghz(),
+    fn test_display_carrier_out_of_band() {
+        let err = LinkBudgetError::CarrierOutOfBand {
+            carrier: 29.0.ghz(),
+            band: FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap(),
         };
         assert_eq!(
             err.to_string(),
-            "transmitter frequency 29000000000 Hz differs from receiver frequency 30000000000 Hz"
+            "carrier 29000000000 Hz outside the supported range 17.000–21.000 GHz"
         );
-    }
-
-    #[test]
-    fn test_display_missing_receiver() {
-        let s = LinkBudgetError::MissingReceiver.to_string();
-        assert!(s.contains("receiver"));
-    }
-
-    #[test]
-    fn test_display_missing_antenna() {
-        let s = LinkBudgetError::MissingAntenna.to_string();
-        assert!(s.contains("antenna"));
-    }
-
-    #[test]
-    fn test_display_unexpected_antenna() {
-        let s = LinkBudgetError::UnexpectedAntenna.to_string();
-        assert!(s.contains("antenna"));
     }
 
     #[test]
@@ -96,6 +106,6 @@ mod tests {
     #[test]
     fn test_is_error() {
         fn assert_is_error<E: std::error::Error>(_: &E) {}
-        assert_is_error(&LinkBudgetError::MissingReceiver);
+        assert_is_error(&LinkBudgetError::AbsolutePowerUnavailable);
     }
 }
