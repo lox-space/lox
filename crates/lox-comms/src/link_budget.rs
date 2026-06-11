@@ -2,23 +2,126 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Link budget types: environmental losses, interference, and link statistics.
+//! Link budget calculations and the contracts they consume.
+//!
+//! [`LinkStats::for_link`] computes a modulation-agnostic budget between any
+//! transmit end implementing [`Eirp`] and any receive end implementing
+//! [`GOverT`]. The built-in implementors live in
+//! [`terminal`](crate::terminal); custom ends only need to answer the trait
+//! questions.
 
-use lox_core::units::{Angle, Decibel, Distance, Frequency};
+use lox_core::units::{Decibel, Distance, Frequency, Power, Temperature};
 
-use crate::LinkBudgetError;
 use crate::channel::Channel;
-use crate::system::{CommunicationSystem, Pointing, resolve_pointing};
+use crate::error::NonPhysicalError;
+use crate::pointing::Pointing;
 use crate::utils::free_space_path_loss;
+use crate::{BOLTZMANN_CONSTANT, LinkBudgetError};
+use lox_core::units::FrequencyRange;
 
 pub use lox_itur::EnvironmentalLosses;
+
+/// Boltzmann constant in dB(W/Hz/K).
+const BOLTZMANN_CONSTANT_DB: Decibel = Decibel::new(-228.599_167_173_217_67);
+
+/// The transmit end of a radio link.
+///
+/// Answers the only transmit-side question a link budget asks: the EIRP
+/// toward a pointing at a carrier frequency.
+pub trait Eirp {
+    /// Returns the supported frequency range; carriers outside it are
+    /// rejected.
+    fn band(&self) -> FrequencyRange;
+
+    /// Returns the EIRP in dBW at the given carrier and pointing.
+    ///
+    /// Errors when the carrier lies outside [`Self::band`].
+    fn eirp_at(&self, carrier: Frequency, pointing: Pointing) -> Result<Decibel, LinkBudgetError>;
+}
+
+/// Absolute receive-side terms, both referred to the antenna flange.
+///
+/// Available when the receive end is more than an aggregate figure; they
+/// allow absolute carrier and noise powers (and thus interference analysis).
+#[derive(Debug, Clone, Copy)]
+pub struct RxTerms {
+    gain: Decibel,
+    system_noise_temperature: Temperature,
+}
+
+impl RxTerms {
+    /// Creates new receive terms.
+    ///
+    /// Rejects a non-finite gain and a non-finite or non-positive system
+    /// noise temperature.
+    pub fn new(
+        gain: Decibel,
+        system_noise_temperature: Temperature,
+    ) -> Result<Self, NonPhysicalError> {
+        NonPhysicalError::check_finite("receive system gain [dB]", gain.as_f64())?;
+        NonPhysicalError::check_positive(
+            "system noise temperature [K]",
+            system_noise_temperature.to_kelvin(),
+        )?;
+        Ok(Self {
+            gain,
+            system_noise_temperature,
+        })
+    }
+
+    /// Returns the receive system gain in dB at the antenna flange.
+    pub fn gain(&self) -> Decibel {
+        self.gain
+    }
+
+    /// Returns the system noise temperature at the antenna flange.
+    pub fn system_noise_temperature(&self) -> Temperature {
+        self.system_noise_temperature
+    }
+
+    /// Returns G/T = gain − 10·log₁₀(T_sys) in dB/K.
+    pub fn gt(&self) -> Decibel {
+        self.gain - Decibel::from_linear(self.system_noise_temperature.to_kelvin())
+    }
+}
+
+/// The receive end of a radio link.
+///
+/// Answers the receive-side question a link budget asks — G/T toward a
+/// pointing at a carrier frequency — and optionally decomposes it into
+/// absolute [`RxTerms`].
+pub trait GOverT {
+    /// Returns the supported frequency range; carriers outside it are
+    /// rejected.
+    fn band(&self) -> FrequencyRange;
+
+    /// Returns the gain-to-noise-temperature ratio (G/T) in dB/K at the
+    /// given carrier and pointing.
+    ///
+    /// Errors when the carrier lies outside [`Self::band`].
+    fn gt_at(&self, carrier: Frequency, pointing: Pointing) -> Result<Decibel, LinkBudgetError>;
+
+    /// Returns the absolute receive terms when this end exposes them.
+    ///
+    /// `None` for ends characterised only by an aggregate G/T figure — the
+    /// absolute gain and noise temperature are not recoverable from the
+    /// ratio. Defaults to `None`.
+    fn rx_terms(
+        &self,
+        carrier: Frequency,
+        pointing: Pointing,
+    ) -> Result<Option<RxTerms>, LinkBudgetError> {
+        let _ = (carrier, pointing);
+        Ok(None)
+    }
+}
 
 /// Interference statistics for a link.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InterferenceStats {
-    /// Interference power in watts.
-    pub interference_power_w: f64,
+    /// Interference power.
+    pub interference_power: Power,
     /// Carrier-to-noise-plus-interference density ratio.
     pub c_n0i0: Decibel,
     /// Eb/(N0+I0).
@@ -33,7 +136,7 @@ pub struct InterferenceStats {
 pub struct LinkStats {
     /// Slant range between TX and RX.
     pub slant_range: Distance,
-    /// Link frequency.
+    /// Carrier frequency.
     pub frequency: Frequency,
     /// Free-space path loss.
     pub fspl: Decibel,
@@ -43,9 +146,10 @@ pub struct LinkStats {
     pub gt: Decibel,
     /// Environmental losses.
     pub losses: EnvironmentalLosses,
-    /// Received carrier power. `None` for lumped-`Gt` receivers.
+    /// Received carrier power. `None` for receive ends without [`RxTerms`].
     pub carrier_rx_power: Option<Decibel>,
-    /// Noise power in the channel bandwidth. `None` for lumped-`Gt` receivers.
+    /// Noise power in the channel bandwidth. `None` for receive ends without
+    /// [`RxTerms`].
     pub noise_power: Option<Decibel>,
     /// Channel noise bandwidth.
     pub bandwidth: Frequency,
@@ -53,71 +157,58 @@ pub struct LinkStats {
     pub c_n0: Decibel,
     /// Carrier-to-noise ratio (C/N).
     pub c_n: Decibel,
-    /// Derived TX pattern polar angle from boresight (zero for lumped or
-    /// constant-gain endpoints).
-    pub tx_theta: Angle,
-    /// Derived TX pattern azimuth about boresight (zero for lumped or
-    /// constant-gain endpoints).
-    pub tx_phi: Angle,
-    /// Derived RX pattern polar angle from boresight (zero for lumped or
-    /// constant-gain endpoints).
-    pub rx_theta: Angle,
-    /// Derived RX pattern azimuth about boresight (zero for lumped or
-    /// constant-gain endpoints).
-    pub rx_phi: Angle,
 }
 
 impl LinkStats {
-    /// Computes a modulation-agnostic link budget.
+    /// Computes a modulation-agnostic link budget between two link ends.
     ///
-    /// `bandwidth` is the noise bandwidth used to compute `noise_power` and `C/N` from
-    /// `C/N₀`. It is independent of any modulation scheme.
-    ///
-    /// The pointings are resolved into pattern angles against each endpoint's
-    /// antenna frame once and reported in the result for traceability.
-    pub fn calculate(
-        tx_system: &CommunicationSystem,
-        rx_system: &CommunicationSystem,
-        range: Distance,
+    /// The carrier must lie inside both ends' frequency ranges. `bandwidth`
+    /// is the noise bandwidth used to compute `noise_power` and `C/N` from
+    /// `C/N₀`. Each end resolves its own pointing against its antenna.
+    #[allow(clippy::too_many_arguments)]
+    pub fn for_link(
+        tx: &impl Eirp,
+        rx: &impl GOverT,
+        carrier: Frequency,
         bandwidth: Frequency,
+        range: Distance,
         losses: EnvironmentalLosses,
         tx_pointing: Pointing,
         rx_pointing: Pointing,
     ) -> Result<Self, LinkBudgetError> {
+        for (quantity, value) in [
+            ("noise bandwidth [Hz]", bandwidth.to_hertz()),
+            ("slant range [m]", range.to_meters()),
+        ] {
+            NonPhysicalError::check_positive(quantity, value)?;
+        }
+
+        let eirp = tx.eirp_at(carrier, tx_pointing)?;
+        let rx_terms = rx.rx_terms(carrier, rx_pointing)?;
+        let gt = match &rx_terms {
+            Some(terms) => terms.gt(),
+            None => rx.gt_at(carrier, rx_pointing)?,
+        };
+        let fspl = free_space_path_loss(range, carrier);
         let env_loss = losses.total();
 
-        let (tx_theta, tx_phi) = resolve_pointing(&tx_system.antenna, tx_pointing)?;
-        let (rx_theta, rx_phi) = resolve_pointing(&rx_system.antenna, rx_pointing)?;
-        let tx_angles = Pointing::Angles {
-            theta: tx_theta,
-            phi: tx_phi,
-        };
-        let rx_angles = Pointing::Angles {
-            theta: rx_theta,
-            phi: rx_phi,
-        };
-
-        let c_n0 =
-            tx_system.carrier_to_noise_density(rx_system, env_loss, range, tx_angles, rx_angles)?;
-        let carrier_rx_power =
-            tx_system.carrier_power(rx_system, env_loss, range, tx_angles, rx_angles)?;
-        let noise_power = rx_system.noise_power(bandwidth.to_hertz())?;
-
-        let tx = tx_system
-            .transmitter
-            .as_ref()
-            .ok_or(LinkBudgetError::MissingTransmitter)?;
-        let frequency = tx.frequency();
-        let fspl = free_space_path_loss(range, frequency);
-
-        let eirp = tx_system.eirp_at(tx_angles)?;
-        let gt = rx_system.gt_at(rx_angles)?;
-
+        let c_n0 = eirp + gt - fspl - env_loss - BOLTZMANN_CONSTANT_DB;
         let c_n = c_n0 - Decibel::from_linear(bandwidth.to_hertz());
+
+        let carrier_rx_power = rx_terms
+            .as_ref()
+            .map(|terms| eirp - fspl - env_loss + terms.gain());
+        let noise_power = rx_terms.as_ref().map(|terms| {
+            Decibel::from_linear(
+                terms.system_noise_temperature().to_kelvin()
+                    * BOLTZMANN_CONSTANT
+                    * bandwidth.to_hertz(),
+            )
+        });
 
         Ok(Self {
             slant_range: range,
-            frequency,
+            frequency: carrier,
             fspl,
             eirp,
             gt,
@@ -127,10 +218,6 @@ impl LinkStats {
             bandwidth,
             c_n0,
             c_n,
-            tx_theta,
-            tx_phi,
-            rx_theta,
-            rx_phi,
         })
     }
 }
@@ -151,19 +238,21 @@ pub struct ModulatedLinkStats {
     pub eb_n0: Decibel,
     /// Link margin.
     pub margin: Decibel,
-    /// Interference statistics (if applicable).
-    pub interference: Option<InterferenceStats>,
 }
 
 impl ModulatedLinkStats {
     /// Returns interference statistics for the given interferer power.
     ///
     /// Returns an error when absolute carrier or noise power is unavailable
-    /// (for example for lumped-`Gt` links).
+    /// (for example for lumped-G/T links).
     pub fn with_interference(
         &self,
-        interference_power_w: f64,
+        interference_power: Power,
     ) -> Result<InterferenceStats, LinkBudgetError> {
+        NonPhysicalError::check_non_negative(
+            "interference power [W]",
+            interference_power.to_watts(),
+        )?;
         let noise_linear = self
             .link
             .noise_power
@@ -174,7 +263,7 @@ impl ModulatedLinkStats {
             .carrier_rx_power
             .ok_or(LinkBudgetError::AbsolutePowerUnavailable)?;
 
-        let total_ni = noise_linear + interference_power_w;
+        let total_ni = noise_linear + interference_power.to_watts();
         let c_n0i0 = carrier - Decibel::from_linear(total_ni)
             + Decibel::from_linear(self.link.bandwidth.to_hertz());
         let c_n0_to_eb_n0 = self.eb_n0 - self.link.c_n0;
@@ -184,7 +273,7 @@ impl ModulatedLinkStats {
         let margin_with_interference = eb_n0i0 - threshold;
 
         Ok(InterferenceStats {
-            interference_power_w,
+            interference_power,
             c_n0i0,
             eb_n0i0,
             margin_with_interference,
@@ -196,7 +285,16 @@ impl ModulatedLinkStats {
 ///
 /// Returns a value in [0, 1] representing the fraction of the interferer's bandwidth
 /// that falls within the receiver's passband.
-pub fn frequency_overlap_factor(rx_freq: f64, rx_bw: f64, tx_freq: f64, tx_bw: f64) -> f64 {
+pub fn frequency_overlap_factor(
+    rx_frequency: Frequency,
+    rx_bandwidth: Frequency,
+    tx_frequency: Frequency,
+    tx_bandwidth: Frequency,
+) -> f64 {
+    let rx_freq = rx_frequency.to_hertz();
+    let rx_bw = rx_bandwidth.to_hertz();
+    let tx_freq = tx_frequency.to_hertz();
+    let tx_bw = tx_bandwidth.to_hertz();
     let rx_lo = rx_freq - rx_bw / 2.0;
     let rx_hi = rx_freq + rx_bw / 2.0;
     let tx_lo = tx_freq - tx_bw / 2.0;
@@ -208,36 +306,46 @@ pub fn frequency_overlap_factor(rx_freq: f64, rx_bw: f64, tx_freq: f64, tx_bw: f
 
 #[cfg(test)]
 mod tests {
-    use lox_core::units::{DecibelUnits, FrequencyUnits};
+    use lox_core::units::{DecibelUnits, FrequencyUnits, Power, Temperature};
     use lox_test_utils::assert_approx_eq;
 
-    use crate::antenna::{Antenna, ConstantAntenna};
+    use crate::antenna::ConstantAntenna;
     use crate::channel::{LinkDirection, Modulation};
-    use crate::receiver::{NoiseTempReceiver, Receiver};
-    use crate::transmitter::{AmplifierTransmitter, Transmitter};
+    use crate::receiver::NoiseTempReceiver;
+    use crate::terminal::{EirpModel, GtModel, RxChain, TxChain};
+    use crate::transmitter::AmplifierTransmitter;
 
     use super::*;
 
-    fn test_link() -> (CommunicationSystem, CommunicationSystem, Channel) {
-        let tx_sys = CommunicationSystem {
-            antenna: Some(Antenna::Constant(ConstantAntenna { gain: 46.0.db() })),
-            receiver: None,
-            transmitter: Some(Transmitter::Amplifier(AmplifierTransmitter::new(
-                29.0.ghz(),
-                10.0,
-                1.0.db(),
-                0.0.db(),
-            ))),
-        };
-        let rx_sys = CommunicationSystem {
-            antenna: Some(Antenna::Constant(ConstantAntenna { gain: 30.0.db() })),
-            receiver: Some(Receiver::NoiseTemperature(NoiseTempReceiver {
-                frequency: 29.0.ghz(),
-                system_noise_temperature: 500.0,
-            })),
-            transmitter: None,
-        };
-        let channel = Channel {
+    fn ka_band() -> FrequencyRange {
+        FrequencyRange::new(27.0.ghz(), 31.0.ghz()).unwrap()
+    }
+
+    /// 46 dBi antenna, 10 W, 1 dB feed loss → EIRP = 55 dBW.
+    fn tx_chain() -> TxChain {
+        TxChain::new(
+            ConstantAntenna::new(46.0.db()).unwrap(),
+            AmplifierTransmitter::new(Power::watts(10.0), 0.0.db()).unwrap(),
+            1.0.db(),
+            ka_band(),
+        )
+        .unwrap()
+    }
+
+    /// 30 dBi antenna, T_sys = 500 K → G/T = 3.01 dB/K.
+    fn rx_chain() -> RxChain {
+        RxChain::new(
+            ConstantAntenna::new(30.0.db()).unwrap(),
+            NoiseTempReceiver::new(Temperature::kelvin(500.0)).unwrap(),
+            0.0.db(),
+            Temperature::kelvin(0.0),
+            ka_band(),
+        )
+        .unwrap()
+    }
+
+    fn channel() -> Channel {
+        Channel {
             link_type: LinkDirection::Downlink,
             symbol_rate: 5.0.mhz(),
             required_eb_n0: 10.0.db(),
@@ -246,8 +354,35 @@ mod tests {
             roll_off: 0.35,
             fec: 0.5,
             chip_rate: None,
-        };
-        (tx_sys, rx_sys, channel)
+        }
+    }
+
+    fn component_stats() -> LinkStats {
+        LinkStats::for_link(
+            &tx_chain(),
+            &rx_chain(),
+            29.0.ghz(),
+            channel().bandwidth(),
+            Distance::kilometers(1000.0),
+            EnvironmentalLosses::none(),
+            Pointing::Boresight,
+            Pointing::Boresight,
+        )
+        .unwrap()
+    }
+
+    fn lumped_stats() -> LinkStats {
+        LinkStats::for_link(
+            &EirpModel::new(ka_band(), 55.0.db()).unwrap(),
+            &GtModel::new(ka_band(), 3.01.db()).unwrap(),
+            29.0.ghz(),
+            5.0.mhz(),
+            Distance::kilometers(1000.0),
+            EnvironmentalLosses::none(),
+            Pointing::Boresight,
+            Pointing::Boresight,
+        )
+        .unwrap()
     }
 
     #[test]
@@ -269,214 +404,273 @@ mod tests {
         assert_approx_eq!(losses.total().as_f64(), 4.1, atol <= 1e-10);
     }
 
-    #[test]
-    fn test_link_stats_calculate() {
-        let (tx_sys, rx_sys, channel) = test_link();
-        let stats = LinkStats::calculate(
-            &tx_sys,
-            &rx_sys,
-            Distance::kilometers(1000.0),
-            channel.bandwidth(),
-            EnvironmentalLosses::none(),
-            Pointing::Boresight,
-            Pointing::Boresight,
-        )
-        .unwrap();
+    /// Custom link ends only need the trait surface: a fixed-EIRP transmitter
+    /// and a fixed-G/T receiver relying on the default `rx_terms`.
+    struct FixedTx;
 
-        // EIRP = 46 + 10 - 1 = 55 dBW
-        assert_approx_eq!(stats.eirp.as_f64(), 55.0, atol <= 0.01);
-        // FSPL at 1000 km, 29 GHz ≈ 181.696 dB
-        assert_approx_eq!(stats.fspl.as_f64(), 181.696, atol <= 0.1);
-        // C/N0 ≈ 104.9 dB·Hz
-        assert_approx_eq!(stats.c_n0.as_f64(), 104.9, atol <= 0.2);
-        // carrier_rx_power should be Some for component-tier
-        assert!(stats.carrier_rx_power.is_some());
-        // noise_power should be Some for component-tier
-        assert!(stats.noise_power.is_some());
-        // Boresight pointing resolves to zero pattern angles
-        assert_approx_eq!(stats.tx_theta.to_radians(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(stats.tx_phi.to_radians(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(stats.rx_theta.to_radians(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(stats.rx_phi.to_radians(), 0.0, atol <= 1e-15);
+    impl Eirp for FixedTx {
+        fn band(&self) -> FrequencyRange {
+            ka_band()
+        }
+
+        fn eirp_at(&self, _: Frequency, _: Pointing) -> Result<Decibel, LinkBudgetError> {
+            Ok(55.0.db())
+        }
+    }
+
+    struct FixedRx;
+
+    impl GOverT for FixedRx {
+        fn band(&self) -> FrequencyRange {
+            ka_band()
+        }
+
+        fn gt_at(&self, _: Frequency, _: Pointing) -> Result<Decibel, LinkBudgetError> {
+            Ok(3.01.db())
+        }
     }
 
     #[test]
-    fn test_link_stats_reports_derived_pattern_angles() {
-        use lox_core::glam::DVec3;
+    fn test_for_link_accepts_custom_implementors() {
+        // The traits are dyn-compatible.
+        let tx: &dyn Eirp = &FixedTx;
+        let rx: &dyn GOverT = &FixedRx;
+        assert!(tx.band().contains(29.0.ghz()));
+        assert!(rx.band().contains(29.0.ghz()));
 
-        use crate::antenna::{AntennaFrame, PatternedAntenna};
-        use crate::pattern::{AntennaPattern, ParabolicPattern};
-
-        // Dish boresight along +X; the line of sight along +Z is 90° off
-        // boresight in the φ = 0 plane, and must be reported as such.
-        let tx_sys = CommunicationSystem {
-            antenna: Some(Antenna::Patterned(PatternedAntenna {
-                pattern: AntennaPattern::Parabolic(ParabolicPattern::new(
-                    Distance::meters(0.98),
-                    0.45,
-                )),
-                frame: AntennaFrame::from_boresight_and_reference(DVec3::X, DVec3::Z).unwrap(),
-            })),
-            receiver: None,
-            transmitter: Some(Transmitter::Amplifier(AmplifierTransmitter::new(
-                29.0.ghz(),
-                10.0,
-                1.0.db(),
-                0.0.db(),
-            ))),
-        };
-        let (_, rx_sys, channel) = test_link();
-
-        let stats = LinkStats::calculate(
-            &tx_sys,
-            &rx_sys,
+        let stats = LinkStats::for_link(
+            &FixedTx,
+            &FixedRx,
+            29.0.ghz(),
+            5.0.mhz(),
             Distance::kilometers(1000.0),
-            channel.bandwidth(),
             EnvironmentalLosses::none(),
-            Pointing::Direction(DVec3::Z),
+            Pointing::Boresight,
             Pointing::Boresight,
         )
         .unwrap();
+        assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
+        // The default rx_terms is None: no absolute powers.
+        assert!(stats.carrier_rx_power.is_none());
+        assert!(stats.noise_power.is_none());
+    }
 
+    #[test]
+    fn test_rx_terms_are_valid_by_construction() {
+        let terms = RxTerms::new(30.0.db(), Temperature::kelvin(500.0)).unwrap();
         assert_approx_eq!(
-            stats.tx_theta.to_radians(),
-            std::f64::consts::FRAC_PI_2,
+            terms.gt().as_f64(),
+            30.0 - 10.0 * 500.0_f64.log10(),
             atol <= 1e-12
         );
-        assert_approx_eq!(stats.tx_phi.to_radians(), 0.0, atol <= 1e-12);
-        // The EIRP must reflect the off-axis gain, far below the 55 dBW peak.
-        assert!(stats.eirp.as_f64() < 0.0);
+        // Custom GOverT implementors cannot smuggle non-physical terms past
+        // the budget: zero, negative, and non-finite values are rejected.
+        assert!(RxTerms::new(30.0.db(), Temperature::kelvin(0.0)).is_err());
+        assert!(RxTerms::new(30.0.db(), Temperature::kelvin(-10.0)).is_err());
+        assert!(RxTerms::new(30.0.db(), Temperature::kelvin(f64::NAN)).is_err());
+        assert!(RxTerms::new(Decibel::new(f64::INFINITY), Temperature::kelvin(500.0)).is_err());
+    }
+
+    #[test]
+    fn test_for_link_component_budget() {
+        let stats = component_stats();
+        // EIRP = 46 + 10·log10(10) − 1 = 55 dBW
+        assert_approx_eq!(stats.eirp.as_f64(), 55.0, atol <= 1e-10);
+        // G/T = 30 − 10·log10(500) = 3.0103 dB/K
+        assert_approx_eq!(stats.gt.as_f64(), 3.0103, atol <= 1e-3);
+        // FSPL at 1000 km, 29 GHz ≈ 181.696 dB
+        assert_approx_eq!(stats.fspl.as_f64(), 181.696, atol <= 0.01);
+        // C/N0 = 55 + 3.01 − 181.696 + 228.599 ≈ 104.913 dB·Hz
+        assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
+        // P_rx = 55 − 181.696 + 30 = −96.696 dBW
+        assert_approx_eq!(
+            stats.carrier_rx_power.unwrap().as_f64(),
+            -96.696,
+            atol <= 0.01
+        );
+        assert!(stats.noise_power.is_some());
+    }
+
+    #[test]
+    fn test_for_link_c_n0_consistency() {
+        // C/N0 must equal P_rx − P_noise + 10·log10(BW).
+        let stats = component_stats();
+        let c_n0_from_power = stats.carrier_rx_power.unwrap() - stats.noise_power.unwrap()
+            + Decibel::from_linear(stats.bandwidth.to_hertz());
+        assert_approx_eq!(stats.c_n0.as_f64(), c_n0_from_power.as_f64(), atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_for_link_lumped_budget() {
+        let stats = lumped_stats();
+        assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
+        assert!(stats.carrier_rx_power.is_none());
+        assert!(stats.noise_power.is_none());
+    }
+
+    #[test]
+    fn test_for_link_rejects_carrier_out_of_band() {
+        // 29 GHz fits the TX band but not the RX band.
+        let err = LinkStats::for_link(
+            &EirpModel::new(ka_band(), 55.0.db()).unwrap(),
+            &GtModel::new(
+                FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap(),
+                3.01.db(),
+            )
+            .unwrap(),
+            29.0.ghz(),
+            5.0.mhz(),
+            Distance::kilometers(1000.0),
+            EnvironmentalLosses::none(),
+            Pointing::Boresight,
+            Pointing::Boresight,
+        )
+        .unwrap_err();
+
+        assert!(matches!(err, LinkBudgetError::CarrierOutOfBand { .. }));
+        assert!(err.to_string().contains("17.000–21.000 GHz"));
+    }
+
+    #[test]
+    fn test_for_link_rejects_carrier_out_of_band_on_tx_side() {
+        let err = LinkStats::for_link(
+            &EirpModel::new(
+                FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap(),
+                55.0.db(),
+            )
+            .unwrap(),
+            &GtModel::new(ka_band(), 3.01.db()).unwrap(),
+            29.0.ghz(),
+            5.0.mhz(),
+            Distance::kilometers(1000.0),
+            EnvironmentalLosses::none(),
+            Pointing::Boresight,
+            Pointing::Boresight,
+        )
+        .unwrap_err();
+        assert!(matches!(err, LinkBudgetError::CarrierOutOfBand { .. }));
+    }
+
+    #[test]
+    fn test_for_link_rejects_non_physical_inputs() {
+        for (bandwidth, range) in [
+            (Frequency::hertz(0.0), Distance::kilometers(1000.0)),
+            (Frequency::hertz(-5e6), Distance::kilometers(1000.0)),
+            (5.0.mhz(), Distance::kilometers(0.0)),
+            (5.0.mhz(), Distance::kilometers(-1.0)),
+        ] {
+            let err = LinkStats::for_link(
+                &EirpModel::new(ka_band(), 55.0.db()).unwrap(),
+                &GtModel::new(ka_band(), 3.01.db()).unwrap(),
+                29.0.ghz(),
+                bandwidth,
+                range,
+                EnvironmentalLosses::none(),
+                Pointing::Boresight,
+                Pointing::Boresight,
+            )
+            .unwrap_err();
+            assert!(matches!(err, LinkBudgetError::NonPhysical { .. }));
+        }
+    }
+
+    #[test]
+    fn test_for_link_applies_environmental_losses() {
+        let losses = EnvironmentalLosses {
+            rain: 2.0.db(),
+            gaseous: 0.5.db(),
+            scintillation: 0.3.db(),
+            atmospheric: 1.0.db(),
+            cloud: 0.2.db(),
+            depolarization: 0.1.db(),
+        };
+        let clear = lumped_stats();
+        let faded = LinkStats::for_link(
+            &EirpModel::new(ka_band(), 55.0.db()).unwrap(),
+            &GtModel::new(ka_band(), 3.01.db()).unwrap(),
+            29.0.ghz(),
+            5.0.mhz(),
+            Distance::kilometers(1000.0),
+            losses,
+            Pointing::Boresight,
+            Pointing::Boresight,
+        )
+        .unwrap();
+        assert_approx_eq!(
+            clear.c_n0.as_f64() - faded.c_n0.as_f64(),
+            4.1,
+            atol <= 1e-10
+        );
+    }
+
+    #[test]
+    fn test_channel_apply_produces_modulated_stats() {
+        let stats = component_stats();
+        let m = channel().apply(stats);
+        // Eb/N0 ≈ 37.91 (QPSK, fec=0.5, C/N0 ≈ 104.91 dB·Hz)
+        assert_approx_eq!(m.eb_n0.as_f64(), 37.91, atol <= 0.02);
+        // required_eb_n0 = 10, margin field = 3 → link_margin ≈ 24.91
+        assert_approx_eq!(m.margin.as_f64(), 24.91, atol <= 0.02);
+    }
+
+    #[test]
+    fn test_modulated_with_interference_reduces_margin() {
+        let m = channel().apply(component_stats());
+        let interference = m.with_interference(Power::watts(1e-12)).unwrap();
+        assert!(interference.margin_with_interference.as_f64() <= m.margin.as_f64());
+        assert!(interference.eb_n0i0.as_f64() <= m.eb_n0.as_f64());
+    }
+
+    #[test]
+    fn test_with_interference_rejects_non_physical_power() {
+        let m = channel().apply(component_stats());
+        for power in [-1e-12, f64::NAN, f64::INFINITY] {
+            let err = m.with_interference(Power::watts(power)).unwrap_err();
+            assert!(matches!(err, LinkBudgetError::NonPhysical { .. }));
+        }
+        // Zero interference is valid and must not change the margin.
+        let interference = m.with_interference(Power::watts(0.0)).unwrap();
+        assert_approx_eq!(
+            interference.margin_with_interference.as_f64(),
+            m.margin.as_f64(),
+            atol <= 1e-10
+        );
+    }
+
+    #[test]
+    fn test_lumped_modulated_with_interference_is_error() {
+        let err = channel()
+            .apply(lumped_stats())
+            .with_interference(Power::watts(1e-12))
+            .unwrap_err();
+        assert_eq!(err, LinkBudgetError::AbsolutePowerUnavailable);
     }
 
     #[test]
     fn test_frequency_overlap_full() {
         // Identical bands → full overlap
-        let factor = frequency_overlap_factor(10e9, 1e6, 10e9, 1e6);
+        let factor = frequency_overlap_factor(10.0.ghz(), 1.0.mhz(), 10.0.ghz(), 1.0.mhz());
         assert_approx_eq!(factor, 1.0, atol <= 1e-10);
     }
 
     #[test]
     fn test_frequency_overlap_none() {
         // Completely separated → no overlap
-        let factor = frequency_overlap_factor(10e9, 1e6, 12e9, 1e6);
+        let factor = frequency_overlap_factor(10.0.ghz(), 1.0.mhz(), 12.0.ghz(), 1.0.mhz());
         assert_approx_eq!(factor, 0.0, atol <= 1e-10);
     }
 
     #[test]
     fn test_frequency_overlap_partial() {
         // RX: [9.5, 10.5] GHz, TX: [10.0, 11.0] GHz → 0.5 GHz overlap out of 1 GHz TX BW
-        let factor = frequency_overlap_factor(10e9, 1e9, 10.5e9, 1e9);
+        let factor = frequency_overlap_factor(10.0.ghz(), 1.0.ghz(), 10.5.ghz(), 1.0.ghz());
         assert_approx_eq!(factor, 0.5, atol <= 1e-10);
     }
 
     #[test]
     fn test_frequency_overlap_rx_contains_tx() {
         // RX band fully contains TX band → full overlap
-        let factor = frequency_overlap_factor(10e9, 2e9, 10e9, 0.5e9);
+        let factor = frequency_overlap_factor(10.0.ghz(), 2.0.ghz(), 10.0.ghz(), 0.5.ghz());
         assert_approx_eq!(factor, 1.0, atol <= 1e-10);
-    }
-
-    #[test]
-    fn test_channel_apply_produces_modulated_stats() {
-        let (tx_sys, rx_sys, channel) = test_link();
-        let link = LinkStats::calculate(
-            &tx_sys,
-            &rx_sys,
-            Distance::kilometers(1000.0),
-            channel.bandwidth(),
-            EnvironmentalLosses::none(),
-            Pointing::Boresight,
-            Pointing::Boresight,
-        )
-        .unwrap();
-        let m = channel.apply(link);
-        // Eb/N0 ≈ 37.91 (from existing test_link fixtures: QPSK, fec=0.5, C/N0≈104.9 dBHz)
-        assert_approx_eq!(m.eb_n0.as_f64(), 37.91, atol <= 0.2);
-        // required_eb_n0 = 10, margin field = 3 → link_margin ≈ 24.91
-        assert_approx_eq!(m.margin.as_f64(), 24.91, atol <= 0.2);
-    }
-
-    #[test]
-    fn test_modulated_with_interference_reduces_margin() {
-        let (tx_sys, rx_sys, channel) = test_link();
-        let link = LinkStats::calculate(
-            &tx_sys,
-            &rx_sys,
-            Distance::kilometers(1000.0),
-            channel.bandwidth(),
-            EnvironmentalLosses::none(),
-            Pointing::Boresight,
-            Pointing::Boresight,
-        )
-        .unwrap();
-        let m = channel.apply(link);
-        let interference = m.with_interference(1e-12).unwrap();
-        assert!(interference.margin_with_interference.as_f64() <= m.margin.as_f64());
-        assert!(interference.eb_n0i0.as_f64() <= m.eb_n0.as_f64());
-    }
-
-    #[test]
-    fn test_lumped_link_stats_carrier_and_noise_are_none() {
-        use crate::receiver::GtReceiver;
-        use crate::transmitter::EirpTransmitter;
-
-        let tx = CommunicationSystem::eirp_only(EirpTransmitter {
-            frequency: 29.0.ghz(),
-            eirp: 55.0.db(),
-        });
-        let rx = CommunicationSystem::gt_only(GtReceiver {
-            frequency: 29.0.ghz(),
-            gt: 3.01.db(),
-        });
-        let stats = LinkStats::calculate(
-            &tx,
-            &rx,
-            Distance::kilometers(1000.0),
-            5.0.mhz(),
-            EnvironmentalLosses::none(),
-            Pointing::Boresight,
-            Pointing::Boresight,
-        )
-        .unwrap();
-        assert!(stats.carrier_rx_power.is_none());
-        assert!(stats.noise_power.is_none());
-        assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.2);
-    }
-
-    #[test]
-    fn test_lumped_modulated_with_interference_is_error() {
-        use crate::receiver::GtReceiver;
-        use crate::transmitter::EirpTransmitter;
-
-        let tx = CommunicationSystem::eirp_only(EirpTransmitter {
-            frequency: 29.0.ghz(),
-            eirp: 55.0.db(),
-        });
-        let rx = CommunicationSystem::gt_only(GtReceiver {
-            frequency: 29.0.ghz(),
-            gt: 3.01.db(),
-        });
-        let channel = Channel {
-            link_type: LinkDirection::Downlink,
-            symbol_rate: 5.0.mhz(),
-            required_eb_n0: 10.0.db(),
-            margin: 3.0.db(),
-            modulation: Modulation::Qpsk,
-            roll_off: 0.0,
-            fec: 0.5,
-            chip_rate: None,
-        };
-        let link = LinkStats::calculate(
-            &tx,
-            &rx,
-            Distance::kilometers(1000.0),
-            channel.bandwidth(),
-            EnvironmentalLosses::none(),
-            Pointing::Boresight,
-            Pointing::Boresight,
-        )
-        .unwrap();
-        let err = channel.apply(link).with_interference(1e-12).unwrap_err();
-        assert_eq!(err, LinkBudgetError::AbsolutePowerUnavailable);
     }
 }
