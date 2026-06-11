@@ -67,7 +67,7 @@ losses = lox.EnvironmentalLosses.from_values(rain=2.0 * lox.dB, gaseous=0.5 * lo
 losses = lox.EnvironmentalLosses.none()
 ```
 
-The result plugs directly into `LinkStats.calculate` for link budget analysis.
+The result plugs directly into `LinkStats.for_link` for link budget analysis.
 
 ## Individual Models
 
@@ -164,7 +164,9 @@ print(f"Rain height: {h.to_kilometers():.1f} km")
 
 ## Link Budget Integration
 
-`EnvironmentalLosses` can be passed directly to `LinkStats.calculate`:
+`EnvironmentalLosses` can be passed directly to `LinkStats.for_link`, where
+`tx` is a `TxChain` or `EirpModel` and `rx` is an `RxChain` or `GtModel` (see
+[Communications](comms.md)):
 
 ```python
 losses = lox.EnvironmentalLosses(
@@ -177,13 +179,12 @@ losses = lox.EnvironmentalLosses(
     diameter=0.6 * lox.m,
 )
 
-stats = lox.LinkStats.calculate(
-    tx_system=tx,
-    rx_system=rx,
-    channel=channel,
+stats = lox.LinkStats.for_link(
+    tx,
+    rx,
+    carrier=29.0 * lox.GHz,
+    bandwidth=5.0 * lox.MHz,
     range=1000.0 * lox.km,
-    tx_angle=0.0 * lox.rad,
-    rx_angle=0.0 * lox.rad,
     losses=losses,
 )
 ```
