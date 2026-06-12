@@ -45,7 +45,7 @@ divan = { package = "codspeed-divan-compat", version = "4.3.0" }
 fast_polynomial = { version = "0.3.0", default-features = false }
 geo = "0.29"
 geojson = "0.24"
-glam = { version = "0.30.9", default-features = false }
+glam = { version = "0.33.1", default-features = false, features = ["f64", "std"] }
 itertools = "0.14.0"
 libm = "0.2.15"
 nalgebra = "0.35.0"
