@@ -12,7 +12,7 @@ use lox_comms::antenna::{Antenna, AntennaFrame, AntennaGain, ConstantAntenna, Pa
 
 use lox_comms::channel::{Channel, LinkDirection, Modulation};
 use lox_comms::link_budget::{
-    InterferenceStats, LinkStats, ModulatedLinkStats, frequency_overlap_factor,
+    InterferenceStats, LinkParameters, LinkStats, ModulatedLinkStats, frequency_overlap_factor,
 };
 use lox_itur::EnvironmentalLosses;
 
@@ -1093,18 +1093,15 @@ impl PyLinkStats {
             .map(|l| l.0.clone())
             .unwrap_or_else(EnvironmentalLosses::none);
 
-        LinkStats::for_link(
-            &tx,
-            &rx,
-            carrier.0,
-            bandwidth.0,
-            range.0,
-            env_losses,
-            tx_pointing,
-            rx_pointing,
-        )
-        .map(Self)
-        .map_err(|err| PyValueError::new_err(err.to_string()))
+        let params = LinkParameters::builder(carrier.0, bandwidth.0, range.0)
+            .losses(env_losses)
+            .tx_pointing(tx_pointing)
+            .rx_pointing(rx_pointing)
+            .build()
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        LinkStats::for_link(&tx, &rx, &params)
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Slant range.

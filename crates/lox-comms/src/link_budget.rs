@@ -6,9 +6,9 @@
 //!
 //! [`LinkStats::for_link`] computes a modulation-agnostic budget between any
 //! transmit end implementing [`Eirp`] and any receive end implementing
-//! [`GOverT`]. The built-in implementors live in
-//! [`terminal`](crate::terminal); custom ends only need to answer the trait
-//! questions.
+//! [`GOverT`], under the conditions captured in [`LinkParameters`]. The
+//! built-in implementors live in [`terminal`](crate::terminal); custom ends
+//! only need to answer the trait questions.
 
 use lox_core::units::{Decibel, Distance, Frequency, Power, Temperature};
 
@@ -130,6 +130,164 @@ pub struct InterferenceStats {
     pub margin_with_interference: Decibel,
 }
 
+/// The conditions a link budget is evaluated under: carrier, noise
+/// bandwidth, slant range, environmental losses, and the pointing at each
+/// end.
+///
+/// Valid by construction — [`LinkParameters::builder`] validates the
+/// physical inputs, so [`LinkStats::for_link`] only fails on physics (a
+/// carrier outside a terminal's band or an unresolvable pointing).
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "LinkParametersRepr")
+)]
+pub struct LinkParameters {
+    carrier: Frequency,
+    bandwidth: Frequency,
+    range: Distance,
+    losses: EnvironmentalLosses,
+    tx_pointing: Pointing,
+    rx_pointing: Pointing,
+}
+
+/// Serde wire format for [`LinkParameters`]: forces deserialization through
+/// the validated builder.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct LinkParametersRepr {
+    carrier: Frequency,
+    bandwidth: Frequency,
+    range: Distance,
+    #[serde(default = "EnvironmentalLosses::none")]
+    losses: EnvironmentalLosses,
+    #[serde(default)]
+    tx_pointing: Pointing,
+    #[serde(default)]
+    rx_pointing: Pointing,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<LinkParametersRepr> for LinkParameters {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: LinkParametersRepr) -> Result<Self, Self::Error> {
+        LinkParameters::builder(repr.carrier, repr.bandwidth, repr.range)
+            .losses(repr.losses)
+            .tx_pointing(repr.tx_pointing)
+            .rx_pointing(repr.rx_pointing)
+            .build()
+    }
+}
+
+impl LinkParameters {
+    /// Starts building link parameters for the given carrier, noise
+    /// bandwidth, and slant range.
+    ///
+    /// Losses default to none and both pointings to boresight.
+    pub fn builder(
+        carrier: Frequency,
+        bandwidth: Frequency,
+        range: Distance,
+    ) -> LinkParametersBuilder {
+        LinkParametersBuilder {
+            carrier,
+            bandwidth,
+            range,
+            losses: EnvironmentalLosses::none(),
+            tx_pointing: Pointing::Boresight,
+            rx_pointing: Pointing::Boresight,
+        }
+    }
+
+    /// Returns the carrier frequency.
+    pub fn carrier(&self) -> Frequency {
+        self.carrier
+    }
+
+    /// Returns the noise bandwidth.
+    pub fn bandwidth(&self) -> Frequency {
+        self.bandwidth
+    }
+
+    /// Returns the slant range between TX and RX.
+    pub fn range(&self) -> Distance {
+        self.range
+    }
+
+    /// Returns the environmental losses.
+    pub fn losses(&self) -> &EnvironmentalLosses {
+        &self.losses
+    }
+
+    /// Returns the pointing at the transmit end.
+    pub fn tx_pointing(&self) -> Pointing {
+        self.tx_pointing
+    }
+
+    /// Returns the pointing at the receive end.
+    pub fn rx_pointing(&self) -> Pointing {
+        self.rx_pointing
+    }
+}
+
+/// Builder for [`LinkParameters`].
+///
+/// Created via [`LinkParameters::builder`]. Inputs are validated at
+/// [`LinkParametersBuilder::build`].
+#[derive(Debug, Clone)]
+pub struct LinkParametersBuilder {
+    carrier: Frequency,
+    bandwidth: Frequency,
+    range: Distance,
+    losses: EnvironmentalLosses,
+    tx_pointing: Pointing,
+    rx_pointing: Pointing,
+}
+
+impl LinkParametersBuilder {
+    /// Sets the environmental losses.
+    pub fn losses(mut self, losses: EnvironmentalLosses) -> Self {
+        self.losses = losses;
+        self
+    }
+
+    /// Sets the pointing at the transmit end.
+    pub fn tx_pointing(mut self, pointing: Pointing) -> Self {
+        self.tx_pointing = pointing;
+        self
+    }
+
+    /// Sets the pointing at the receive end.
+    pub fn rx_pointing(mut self, pointing: Pointing) -> Self {
+        self.rx_pointing = pointing;
+        self
+    }
+
+    /// Builds the link parameters, validating all physical inputs.
+    ///
+    /// Rejects a non-finite or non-positive carrier frequency, noise
+    /// bandwidth, or slant range.
+    pub fn build(self) -> Result<LinkParameters, NonPhysicalError> {
+        for (quantity, value) in [
+            ("carrier frequency [Hz]", self.carrier.to_hertz()),
+            ("noise bandwidth [Hz]", self.bandwidth.to_hertz()),
+            ("slant range [m]", self.range.to_meters()),
+        ] {
+            NonPhysicalError::check_positive(quantity, value)?;
+        }
+        Ok(LinkParameters {
+            carrier: self.carrier,
+            bandwidth: self.bandwidth,
+            range: self.range,
+            losses: self.losses,
+            tx_pointing: self.tx_pointing,
+            rx_pointing: self.rx_pointing,
+        })
+    }
+}
+
 /// Modulation-agnostic link budget output.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -160,37 +318,27 @@ pub struct LinkStats {
 }
 
 impl LinkStats {
-    /// Computes a modulation-agnostic link budget between two link ends.
+    /// Computes a modulation-agnostic link budget between two link ends
+    /// under the given conditions.
     ///
-    /// The carrier must lie inside both ends' frequency ranges. `bandwidth`
-    /// is the noise bandwidth used to compute `noise_power` and `C/N` from
-    /// `C/N₀`. Each end resolves its own pointing against its antenna.
-    #[allow(clippy::too_many_arguments)]
+    /// The carrier must lie inside both ends' frequency ranges. Each end
+    /// resolves its own pointing against its antenna.
     pub fn for_link(
         tx: &impl Eirp,
         rx: &impl GOverT,
-        carrier: Frequency,
-        bandwidth: Frequency,
-        range: Distance,
-        losses: EnvironmentalLosses,
-        tx_pointing: Pointing,
-        rx_pointing: Pointing,
+        params: &LinkParameters,
     ) -> Result<Self, LinkBudgetError> {
-        for (quantity, value) in [
-            ("noise bandwidth [Hz]", bandwidth.to_hertz()),
-            ("slant range [m]", range.to_meters()),
-        ] {
-            NonPhysicalError::check_positive(quantity, value)?;
-        }
+        let carrier = params.carrier;
+        let bandwidth = params.bandwidth;
 
-        let eirp = tx.eirp_at(carrier, tx_pointing)?;
-        let rx_terms = rx.rx_terms(carrier, rx_pointing)?;
+        let eirp = tx.eirp_at(carrier, params.tx_pointing)?;
+        let rx_terms = rx.rx_terms(carrier, params.rx_pointing)?;
         let gt = match &rx_terms {
             Some(terms) => terms.gt(),
-            None => rx.gt_at(carrier, rx_pointing)?,
+            None => rx.gt_at(carrier, params.rx_pointing)?,
         };
-        let fspl = free_space_path_loss(range, carrier);
-        let env_loss = losses.total();
+        let fspl = free_space_path_loss(params.range, carrier);
+        let env_loss = params.losses.total();
 
         let c_n0 = eirp + gt - fspl - env_loss - BOLTZMANN_CONSTANT_DB;
         let c_n = c_n0 - Decibel::from_linear(bandwidth.to_hertz());
@@ -207,12 +355,12 @@ impl LinkStats {
         });
 
         Ok(Self {
-            slant_range: range,
+            slant_range: params.range,
             frequency: carrier,
             fspl,
             eirp,
             gt,
-            losses,
+            losses: params.losses.clone(),
             carrier_rx_power,
             noise_power,
             bandwidth,
@@ -357,16 +505,17 @@ mod tests {
         }
     }
 
+    fn link_params(bandwidth: Frequency) -> LinkParameters {
+        LinkParameters::builder(29.0.ghz(), bandwidth, Distance::kilometers(1000.0))
+            .build()
+            .unwrap()
+    }
+
     fn component_stats() -> LinkStats {
         LinkStats::for_link(
             &tx_chain(),
             &rx_chain(),
-            29.0.ghz(),
-            channel().bandwidth(),
-            Distance::kilometers(1000.0),
-            EnvironmentalLosses::none(),
-            Pointing::Boresight,
-            Pointing::Boresight,
+            &link_params(channel().bandwidth()),
         )
         .unwrap()
     }
@@ -375,12 +524,7 @@ mod tests {
         LinkStats::for_link(
             &EirpModel::new(ka_band(), 55.0.db()).unwrap(),
             &GtModel::new(ka_band(), 3.01.db()).unwrap(),
-            29.0.ghz(),
-            5.0.mhz(),
-            Distance::kilometers(1000.0),
-            EnvironmentalLosses::none(),
-            Pointing::Boresight,
-            Pointing::Boresight,
+            &link_params(5.0.mhz()),
         )
         .unwrap()
     }
@@ -438,17 +582,7 @@ mod tests {
         assert!(tx.band().contains(29.0.ghz()));
         assert!(rx.band().contains(29.0.ghz()));
 
-        let stats = LinkStats::for_link(
-            &FixedTx,
-            &FixedRx,
-            29.0.ghz(),
-            5.0.mhz(),
-            Distance::kilometers(1000.0),
-            EnvironmentalLosses::none(),
-            Pointing::Boresight,
-            Pointing::Boresight,
-        )
-        .unwrap();
+        let stats = LinkStats::for_link(&FixedTx, &FixedRx, &link_params(5.0.mhz())).unwrap();
         assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
         // The default rx_terms is None: no absolute powers.
         assert!(stats.carrier_rx_power.is_none());
@@ -518,12 +652,7 @@ mod tests {
                 3.01.db(),
             )
             .unwrap(),
-            29.0.ghz(),
-            5.0.mhz(),
-            Distance::kilometers(1000.0),
-            EnvironmentalLosses::none(),
-            Pointing::Boresight,
-            Pointing::Boresight,
+            &link_params(5.0.mhz()),
         )
         .unwrap_err();
 
@@ -540,38 +669,55 @@ mod tests {
             )
             .unwrap(),
             &GtModel::new(ka_band(), 3.01.db()).unwrap(),
-            29.0.ghz(),
-            5.0.mhz(),
-            Distance::kilometers(1000.0),
-            EnvironmentalLosses::none(),
-            Pointing::Boresight,
-            Pointing::Boresight,
+            &link_params(5.0.mhz()),
         )
         .unwrap_err();
         assert!(matches!(err, LinkBudgetError::CarrierOutOfBand { .. }));
     }
 
     #[test]
-    fn test_for_link_rejects_non_physical_inputs() {
-        for (bandwidth, range) in [
-            (Frequency::hertz(0.0), Distance::kilometers(1000.0)),
-            (Frequency::hertz(-5e6), Distance::kilometers(1000.0)),
-            (5.0.mhz(), Distance::kilometers(0.0)),
-            (5.0.mhz(), Distance::kilometers(-1.0)),
-        ] {
-            let err = LinkStats::for_link(
-                &EirpModel::new(ka_band(), 55.0.db()).unwrap(),
-                &GtModel::new(ka_band(), 3.01.db()).unwrap(),
+    fn test_link_parameters_reject_non_physical_inputs() {
+        for (carrier, bandwidth, range) in [
+            (
+                Frequency::hertz(0.0),
+                5.0.mhz(),
+                Distance::kilometers(1000.0),
+            ),
+            (
+                Frequency::hertz(f64::NAN),
+                5.0.mhz(),
+                Distance::kilometers(1000.0),
+            ),
+            (
                 29.0.ghz(),
-                bandwidth,
-                range,
-                EnvironmentalLosses::none(),
-                Pointing::Boresight,
-                Pointing::Boresight,
-            )
-            .unwrap_err();
-            assert!(matches!(err, LinkBudgetError::NonPhysical { .. }));
+                Frequency::hertz(0.0),
+                Distance::kilometers(1000.0),
+            ),
+            (
+                29.0.ghz(),
+                Frequency::hertz(-5e6),
+                Distance::kilometers(1000.0),
+            ),
+            (29.0.ghz(), 5.0.mhz(), Distance::kilometers(0.0)),
+            (29.0.ghz(), 5.0.mhz(), Distance::kilometers(-1.0)),
+        ] {
+            assert!(
+                LinkParameters::builder(carrier, bandwidth, range)
+                    .build()
+                    .is_err()
+            );
         }
+    }
+
+    #[test]
+    fn test_link_parameters_defaults() {
+        let params = link_params(5.0.mhz());
+        assert_approx_eq!(params.losses().total().as_f64(), 0.0, atol <= 1e-15);
+        assert_eq!(params.tx_pointing(), Pointing::Boresight);
+        assert_eq!(params.rx_pointing(), Pointing::Boresight);
+        assert_approx_eq!(params.carrier().to_gigahertz(), 29.0, rtol <= 1e-12);
+        assert_approx_eq!(params.bandwidth().to_megahertz(), 5.0, rtol <= 1e-12);
+        assert_approx_eq!(params.range().to_meters(), 1e6, rtol <= 1e-12);
     }
 
     #[test]
@@ -585,15 +731,14 @@ mod tests {
             depolarization: 0.1.db(),
         };
         let clear = lumped_stats();
+        let params = LinkParameters::builder(29.0.ghz(), 5.0.mhz(), Distance::kilometers(1000.0))
+            .losses(losses)
+            .build()
+            .unwrap();
         let faded = LinkStats::for_link(
             &EirpModel::new(ka_band(), 55.0.db()).unwrap(),
             &GtModel::new(ka_band(), 3.01.db()).unwrap(),
-            29.0.ghz(),
-            5.0.mhz(),
-            Distance::kilometers(1000.0),
-            losses,
-            Pointing::Boresight,
-            Pointing::Boresight,
+            &params,
         )
         .unwrap();
         assert_approx_eq!(
