@@ -11,13 +11,10 @@ use pyo3::prelude::*;
 use lox_comms::antenna::{Antenna, AntennaFrame, AntennaGain, ConstantAntenna, PatternedAntenna};
 
 use lox_comms::channel::{Channel, LinkDirection, Modulation};
+use lox_comms::link_budget::{Eirp, GOverT};
 use lox_comms::link_budget::{
     InterferenceStats, LinkParameters, LinkStats, ModulatedLinkStats, frequency_overlap_factor,
 };
-use lox_itur::EnvironmentalLosses;
-
-use crate::itur::python::PyEnvironmentalLosses;
-use lox_comms::link_budget::{Eirp, GOverT};
 use lox_comms::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
 use lox_comms::pfd;
 use lox_comms::pointing::Pointing;
@@ -25,7 +22,7 @@ use lox_comms::receiver::{CascadeReceiver, NoiseStage, NoiseTempReceiver, Receiv
 use lox_comms::terminal::{EirpModel, GtModel, RxChain, RxTerminal, TxChain, TxTerminal};
 use lox_comms::transmitter::AmplifierTransmitter;
 use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
-use lox_core::comms::{FrequencyBand, FrequencyRange};
+use lox_core::comms::{FrequencyBand, FrequencyRange, PropagationLosses};
 use lox_core::units::{Angle, Decibel};
 
 use crate::units::python::{PyAngle, PyDistance, PyFrequency, PyPower, PyTemperature};
@@ -1044,6 +1041,124 @@ fn build_pointing(
     }
 }
 
+// --- Propagation Losses ---
+
+/// Itemized excess propagation losses along a link path, beyond free-space
+/// path loss.
+#[pyclass(
+    name = "PropagationLosses",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
+#[derive(Debug, Clone)]
+pub struct PyPropagationLosses(pub PropagationLosses);
+
+#[pymethods]
+impl PyPropagationLosses {
+    /// Creates propagation losses from per-kind values and custom lines.
+    ///
+    /// Args:
+    ///     rain: Rain attenuation as Decibel (optional).
+    ///     gaseous: Gaseous absorption as Decibel (optional).
+    ///     cloud: Cloud attenuation as Decibel (optional).
+    ///     scintillation: Scintillation loss as Decibel (optional).
+    ///     depolarization: Depolarization loss as Decibel (optional).
+    ///     other: Custom lines as (label, value, absorptive) tuples (optional).
+    #[new]
+    #[pyo3(signature = (rain=None, gaseous=None, cloud=None, scintillation=None, depolarization=None, other=None))]
+    fn new(
+        rain: Option<PyDecibel>,
+        gaseous: Option<PyDecibel>,
+        cloud: Option<PyDecibel>,
+        scintillation: Option<PyDecibel>,
+        depolarization: Option<PyDecibel>,
+        other: Option<Vec<(String, PyDecibel, bool)>>,
+    ) -> PyResult<Self> {
+        let mut builder = PropagationLosses::builder();
+        if let Some(value) = rain {
+            builder = builder.rain(value.0);
+        }
+        if let Some(value) = gaseous {
+            builder = builder.gaseous(value.0);
+        }
+        if let Some(value) = cloud {
+            builder = builder.cloud(value.0);
+        }
+        if let Some(value) = scintillation {
+            builder = builder.scintillation(value.0);
+        }
+        if let Some(value) = depolarization {
+            builder = builder.depolarization(value.0);
+        }
+        for (label, value, absorptive) in other.into_iter().flatten() {
+            builder = builder.other(label, value.0, absorptive);
+        }
+        builder
+            .build()
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Returns zero propagation losses.
+    #[staticmethod]
+    fn none() -> Self {
+        Self(PropagationLosses::none())
+    }
+
+    /// Returns the total excess loss.
+    fn total(&self) -> PyDecibel {
+        PyDecibel(self.0.total())
+    }
+
+    /// Returns the absorptive part of the loss — the attenuation that also
+    /// raises the receive antenna noise temperature.
+    fn absorptive(&self) -> PyDecibel {
+        PyDecibel(self.0.absorptive())
+    }
+
+    /// The loss lines as (label, value, absorptive) tuples, in insertion order.
+    #[getter]
+    fn lines(&self) -> Vec<(String, PyDecibel, bool)> {
+        self.0
+            .lines()
+            .iter()
+            .map(|line| {
+                (
+                    line.kind().label().to_owned(),
+                    PyDecibel(line.value()),
+                    line.kind().is_absorptive(),
+                )
+            })
+            .collect()
+    }
+
+    fn __eq__(&self, other: &PyPropagationLosses) -> bool {
+        self.0 == other.0
+    }
+
+    fn __repr__(&self) -> String {
+        let lines: Vec<String> = self
+            .0
+            .lines()
+            .iter()
+            .map(|line| {
+                format!(
+                    "({:?}, {}, {})",
+                    line.kind().label(),
+                    PyDecibel(line.value()).__repr__(),
+                    if line.kind().is_absorptive() {
+                        "True"
+                    } else {
+                        "False"
+                    }
+                )
+            })
+            .collect();
+        format!("PropagationLosses([{}])", lines.join(", "))
+    }
+}
+
 // --- Link Stats ---
 
 /// Modulation-agnostic link budget statistics.
@@ -1070,7 +1185,7 @@ impl PyLinkStats {
     ///     rx_angle: Off-boresight angle at receiver as Angle (optional).
     ///     tx_direction: Line-of-sight direction at transmitter as [x, y, z] (optional).
     ///     rx_direction: Line-of-sight direction at receiver as [x, y, z] (optional).
-    ///     losses: EnvironmentalLosses (optional, defaults to none).
+    ///     losses: PropagationLosses (optional, defaults to none).
     #[staticmethod]
     #[pyo3(signature = (tx, rx, carrier, bandwidth, range, tx_angle=None, rx_angle=None, tx_direction=None, rx_direction=None, losses=None))]
     #[allow(clippy::too_many_arguments)]
@@ -1084,7 +1199,7 @@ impl PyLinkStats {
         rx_angle: Option<PyAngle>,
         tx_direction: Option<[f64; 3]>,
         rx_direction: Option<[f64; 3]>,
-        losses: Option<&PyEnvironmentalLosses>,
+        losses: Option<&PyPropagationLosses>,
     ) -> PyResult<Self> {
         let tx = build_tx_terminal(tx)?;
         let rx = build_rx_terminal(rx)?;
@@ -1092,7 +1207,7 @@ impl PyLinkStats {
         let rx_pointing = build_pointing(rx_angle, rx_direction, "rx")?;
         let env_losses = losses
             .map(|l| l.0.clone())
-            .unwrap_or_else(EnvironmentalLosses::none);
+            .unwrap_or_else(PropagationLosses::none);
 
         let params = LinkParameters::builder(carrier.0, bandwidth.0, range.0)
             .losses(env_losses)
