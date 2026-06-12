@@ -2,8 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Baseline benchmarks for event detection (docs/superpowers/specs/
-//! signal-event-detection.md).
+//! Baseline benchmarks for event detection.
 //!
 //! The scenario mimics ground-station visibility: an elevation-like signal
 //! (orbital-period sinusoid above a mask) intersected with an
@@ -91,5 +90,32 @@ fn intersection_windows(bencher: Bencher) {
             TimeDelta::from_seconds(10),
         ));
         a.intersect(b).detect(interval).unwrap()
+    });
+}
+
+#[divan::bench]
+fn signal_windows(bencher: Bencher) {
+    use lox_orbits::signals::{Detector, SignalFn, UniformSampler};
+
+    let interval = horizon();
+    let f = elevation(interval.start());
+    bencher.bench(|| {
+        Detector::new(SignalFn(f))
+            .windows(interval, &UniformSampler::new(TimeDelta::from_seconds(10)))
+            .unwrap()
+    });
+}
+
+#[divan::bench]
+fn signal_min_windows(bencher: Bencher) {
+    use lox_orbits::signals::{Detector, SignalExt, SignalFn, UniformSampler};
+
+    let interval = horizon();
+    let f = elevation(interval.start());
+    let g = occultation(interval.start());
+    bencher.bench(|| {
+        Detector::new(SignalFn(f).min(SignalFn(g)))
+            .windows(interval, &UniformSampler::new(TimeDelta::from_seconds(10)))
+            .unwrap()
     });
 }
