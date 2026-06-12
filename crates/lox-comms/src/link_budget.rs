@@ -416,10 +416,12 @@ impl LinkStats {
             None => rx.gt_at(carrier, params.rx_pointing)?,
         };
 
-        // Rain→noise coupling: only a downlink receiver sits behind the
-        // absorbing atmosphere. Uplink antennas already look at warm Earth
-        // through their configured clear-sky T_ant; crosslinks see no
-        // atmosphere.
+        // Rain raises the receive noise temperature only on downlinks,
+        // where the antenna looks up through the absorbing atmosphere and
+        // picks up its thermal re-radiation. An uplink receiver is a
+        // spacecraft antenna pointed at Earth: its configured T_ant already
+        // reflects the ~290 K warm-Earth background, which dwarfs any extra
+        // atmospheric emission. A crosslink has no atmosphere in its path.
         let degraded_terms = if params.direction == Some(LinkDirection::Downlink) {
             rx.rx_terms_degraded(carrier, params.rx_pointing, params.losses.absorptive())?
         } else {

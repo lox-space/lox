@@ -2906,13 +2906,16 @@ class LinkStats:
         tx_direction: list[float] | None = None,
         rx_direction: list[float] | None = None,
         losses: PropagationLosses | None = None,
+        link_type: str | None = None,
     ) -> LinkStats:
         """Computes a modulation-agnostic link budget between two link terminals.
 
         The carrier must lie inside both terminals' frequency ranges. Each
         terminal's pointing is given either as an off-boresight angle or as a
         line-of-sight direction vector in the antenna's parent frame; omitting
-        both assumes ideal (boresight) pointing.
+        both assumes ideal (boresight) pointing. On downlinks
+        (``link_type="downlink"``) the budget uses the rain-degraded G/T
+        (ITU-R P.618 §8.2).
         """
         ...
     @property
@@ -2929,7 +2932,16 @@ class LinkStats:
         ...
     @property
     def gt(self) -> Decibel:
-        """Receiver G/T in dB/K."""
+        """Receiver G/T in dB/K under clear-sky conditions."""
+        ...
+    @property
+    def gt_degraded(self) -> Decibel | None:
+        """Rain-degraded receiver G/T in dB/K. ``None`` unless the link is a
+        downlink with a component receive chain."""
+        ...
+    @property
+    def link_type(self) -> str | None:
+        """Link direction ("uplink", "downlink", or "crosslink"), if specified."""
         ...
     @property
     def c_n0(self) -> Decibel:
