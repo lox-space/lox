@@ -19,7 +19,7 @@ use crate::utils::free_space_path_loss;
 use crate::{BOLTZMANN_CONSTANT, LinkBudgetError};
 use lox_core::comms::FrequencyRange;
 
-pub use lox_itur::EnvironmentalLosses;
+pub use lox_core::comms::PropagationLosses;
 
 /// Boltzmann constant in dB(W/Hz/K).
 const BOLTZMANN_CONSTANT_DB: Decibel = Decibel::new(-228.599_167_173_217_67);
@@ -147,7 +147,7 @@ pub struct LinkParameters {
     carrier: Frequency,
     bandwidth: Frequency,
     range: Distance,
-    losses: EnvironmentalLosses,
+    losses: PropagationLosses,
     tx_pointing: Pointing,
     rx_pointing: Pointing,
 }
@@ -160,8 +160,8 @@ struct LinkParametersRepr {
     carrier: Frequency,
     bandwidth: Frequency,
     range: Distance,
-    #[serde(default = "EnvironmentalLosses::none")]
-    losses: EnvironmentalLosses,
+    #[serde(default = "PropagationLosses::none")]
+    losses: PropagationLosses,
     #[serde(default)]
     tx_pointing: Pointing,
     #[serde(default)]
@@ -195,7 +195,7 @@ impl LinkParameters {
             carrier,
             bandwidth,
             range,
-            losses: EnvironmentalLosses::none(),
+            losses: PropagationLosses::none(),
             tx_pointing: Pointing::Boresight,
             rx_pointing: Pointing::Boresight,
         }
@@ -217,7 +217,7 @@ impl LinkParameters {
     }
 
     /// Returns the environmental losses.
-    pub fn losses(&self) -> &EnvironmentalLosses {
+    pub fn losses(&self) -> &PropagationLosses {
         &self.losses
     }
 
@@ -241,14 +241,14 @@ pub struct LinkParametersBuilder {
     carrier: Frequency,
     bandwidth: Frequency,
     range: Distance,
-    losses: EnvironmentalLosses,
+    losses: PropagationLosses,
     tx_pointing: Pointing,
     rx_pointing: Pointing,
 }
 
 impl LinkParametersBuilder {
     /// Sets the environmental losses.
-    pub fn losses(mut self, losses: EnvironmentalLosses) -> Self {
+    pub fn losses(mut self, losses: PropagationLosses) -> Self {
         self.losses = losses;
         self
     }
@@ -303,7 +303,7 @@ pub struct LinkStats {
     /// Receiver G/T.
     pub gt: Decibel,
     /// Environmental losses.
-    pub losses: EnvironmentalLosses,
+    pub losses: PropagationLosses,
     /// Received carrier power. `None` for receive ends without [`RxTerms`].
     pub carrier_rx_power: Option<Decibel>,
     /// Noise power in the channel bandwidth. `None` for receive ends without
@@ -529,25 +529,6 @@ mod tests {
         .unwrap()
     }
 
-    #[test]
-    fn test_environmental_losses_none() {
-        let losses = EnvironmentalLosses::none();
-        assert_approx_eq!(losses.total().as_f64(), 0.0, atol <= 1e-15);
-    }
-
-    #[test]
-    fn test_environmental_losses_total() {
-        let losses = EnvironmentalLosses {
-            rain: 2.0.db(),
-            gaseous: 0.5.db(),
-            scintillation: 0.3.db(),
-            atmospheric: 1.0.db(),
-            cloud: 0.2.db(),
-            depolarization: 0.1.db(),
-        };
-        assert_approx_eq!(losses.total().as_f64(), 4.1, atol <= 1e-10);
-    }
-
     /// Custom link ends only need the trait surface: a fixed-EIRP transmitter
     /// and a fixed-G/T receiver relying on the default `rx_terms`.
     struct FixedTx;
@@ -721,15 +702,15 @@ mod tests {
     }
 
     #[test]
-    fn test_for_link_applies_environmental_losses() {
-        let losses = EnvironmentalLosses {
-            rain: 2.0.db(),
-            gaseous: 0.5.db(),
-            scintillation: 0.3.db(),
-            atmospheric: 1.0.db(),
-            cloud: 0.2.db(),
-            depolarization: 0.1.db(),
-        };
+    fn test_for_link_applies_propagation_losses() {
+        let losses = PropagationLosses::builder()
+            .rain(2.0.db())
+            .gaseous(0.5.db())
+            .scintillation(0.3.db())
+            .cloud(0.2.db())
+            .depolarization(0.1.db())
+            .build()
+            .unwrap();
         let clear = lumped_stats();
         let params = LinkParameters::builder(29.0.ghz(), 5.0.mhz(), Distance::kilometers(1000.0))
             .losses(losses)
@@ -743,7 +724,7 @@ mod tests {
         .unwrap();
         assert_approx_eq!(
             clear.c_n0.as_f64() - faded.c_n0.as_f64(),
-            4.1,
+            3.1,
             atol <= 1e-10
         );
     }
