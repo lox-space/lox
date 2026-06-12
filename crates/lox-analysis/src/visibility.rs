@@ -23,12 +23,10 @@ use thiserror::Error;
 use lox_core::units::{AngularRate, Distance};
 
 use crate::assets::{AssetId, GroundStation, Scenario, Spacecraft};
-use lox_orbits::events::{
-    DetectError, DetectFn, EventsToIntervals, IntervalDetector, IntervalDetectorExt,
-    RootFindingDetector,
-};
+use lox_orbits::events::{DetectError, DetectFn};
 use lox_orbits::ground::{DynGroundLocation, Observables};
 use lox_orbits::orbits::{Ensemble, Trajectory};
+use lox_orbits::signals::{ConstraintId, DetectSignal, Detector, MinOf, Signal, UniformSampler};
 
 // ---------------------------------------------------------------------------
 // Line-of-sight geometry
@@ -559,6 +557,180 @@ where
 }
 
 // ---------------------------------------------------------------------------
+// Composed-signal detection
+// ---------------------------------------------------------------------------
+
+/// Names the constraint that binds a visibility window boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum Constraint {
+    /// Elevation above the ground station's mask.
+    Elevation,
+    /// Line of sight past an occulting body.
+    LineOfSight(DynOrigin),
+    /// Inter-satellite range below the maximum.
+    MaxRange,
+    /// Inter-satellite range above the minimum.
+    MinRange,
+    /// Inter-satellite angular rate within the slew limit.
+    SlewRate,
+}
+
+impl std::fmt::Display for Constraint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Constraint::Elevation => write!(f, "elevation"),
+            Constraint::LineOfSight(body) => write!(f, "line-of-sight({})", body.name()),
+            Constraint::MaxRange => write!(f, "max-range"),
+            Constraint::MinRange => write!(f, "min-range"),
+            Constraint::SlewRate => write!(f, "slew-rate"),
+        }
+    }
+}
+
+/// The binding constraints that opened and closed a visibility window.
+pub type WindowDiagnostics = (Constraint, Constraint);
+
+type BoxedSignal<'a> = Box<dyn Signal<Tai, Error = EvalError> + 'a>;
+type ConstraintSignal<'a> = (Constraint, BoxedSignal<'a>);
+type PairWindows = (
+    (AssetId, AssetId),
+    (Vec<TimeInterval<Tai>>, Vec<WindowDiagnostics>),
+);
+
+/// Two-stage detection on the composed signal (AND of all constraints).
+///
+/// The first `n_cheap` constraints form the pruning stage: their combined
+/// windows bound the full signal's windows (`min` over more constraints can
+/// only shrink them), so the expensive constraints are evaluated only inside
+/// those candidates, at the fine `step`. The candidate sweep runs at
+/// `coarse_step` when given (derived from `min_pass_duration`).
+fn detect_pair(
+    constraints: &[ConstraintSignal<'_>],
+    n_cheap: usize,
+    interval: TimeInterval<Tai>,
+    step: TimeDelta,
+    coarse_step: Option<TimeDelta>,
+) -> Result<(Vec<TimeInterval<Tai>>, Vec<WindowDiagnostics>), VisibilityError> {
+    let cheap: Vec<_> = constraints[..n_cheap].iter().map(|(_, s)| s).collect();
+    let candidate_sampler = UniformSampler::new(coarse_step.unwrap_or(step));
+    let candidates = Detector::new(MinOf::new(cheap)).windows(interval, &candidate_sampler)?;
+
+    let windows = if n_cheap == constraints.len() && coarse_step.is_none() {
+        candidates
+    } else {
+        let candidates: Vec<_> = candidates.iter().map(|w| w.interval()).collect();
+        let all: Vec<_> = constraints.iter().map(|(_, s)| s).collect();
+        Detector::new(MinOf::new(all)).windows_within(&candidates, &UniformSampler::new(step))?
+    };
+
+    // Each boxed constraint is a single leaf, so leaf ids index `constraints`.
+    let label = |id: ConstraintId| constraints[id.0].0;
+    Ok(windows
+        .iter()
+        .map(|w| (w.interval(), (label(w.opened_by()), label(w.closed_by()))))
+        .unzip())
+}
+
+/// Assembles per-pair detection output into a [`VisibilityResults`].
+fn collect_results(results: Vec<PairWindows>, pair_type: PairType) -> VisibilityResults {
+    let mut intervals = HashMap::with_capacity(results.len());
+    let mut pair_types = HashMap::with_capacity(results.len());
+    let mut diagnostics = HashMap::with_capacity(results.len());
+    for (key, (windows, diags)) in results {
+        pair_types.insert(key.clone(), pair_type);
+        diagnostics.insert(key.clone(), diags);
+        intervals.insert(key, windows);
+    }
+    VisibilityResults {
+        intervals,
+        pair_types,
+        diagnostics,
+    }
+}
+
+/// Per-pair slew rate limit: the tighter of both assets' limits.
+fn effective_slew_rate(sc1: &Spacecraft, sc2: &Spacecraft) -> Option<AngularRate> {
+    match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
+        (Some(a), Some(b)) => Some(if a.to_radians_per_second() < b.to_radians_per_second() {
+            a
+        } else {
+            b
+        }),
+        (a, b) => a.or(b),
+    }
+}
+
+/// Ephemeris-free inter-satellite constraints: range band and slew rate
+/// (position/velocity only), then central-body line of sight.
+///
+/// Returns the constraint list and the size of its cheap (pruning) prefix:
+/// the range/slew constraints when present, otherwise the central-body
+/// line of sight itself.
+fn inter_satellite_signals<'a, O, R>(
+    sc1: &Spacecraft,
+    sc2: &Spacecraft,
+    traj1: &'a Trajectory<Tai, O, R>,
+    traj2: &'a Trajectory<Tai, O, R>,
+    central_body: DynOrigin,
+    min_range: Option<Distance>,
+    max_range: Option<Distance>,
+) -> (Vec<ConstraintSignal<'a>>, usize)
+where
+    O: Origin + Copy,
+    R: ReferenceFrame + Copy,
+{
+    let mut constraints: Vec<ConstraintSignal<'a>> = Vec::new();
+    if let Some(threshold) = max_range {
+        constraints.push((
+            Constraint::MaxRange,
+            Box::new(DetectSignal(InterSatelliteRangeDetectFn {
+                sc1: traj1,
+                sc2: traj2,
+                threshold,
+                direction: RangeDirection::Max,
+            })),
+        ));
+    }
+    if let Some(threshold) = min_range {
+        constraints.push((
+            Constraint::MinRange,
+            Box::new(DetectSignal(InterSatelliteRangeDetectFn {
+                sc1: traj1,
+                sc2: traj2,
+                threshold,
+                direction: RangeDirection::Min,
+            })),
+        ));
+    }
+    if let Some(threshold) = effective_slew_rate(sc1, sc2) {
+        constraints.push((
+            Constraint::SlewRate,
+            Box::new(DetectSignal(InterSatelliteSlewRateDetectFn {
+                sc1: traj1,
+                sc2: traj2,
+                threshold,
+            })),
+        ));
+    }
+    let n_cheap = constraints.len();
+    constraints.push((
+        Constraint::LineOfSight(central_body),
+        Box::new(DetectSignal(InterSatLosCentralBodyDetectFn {
+            sc1: traj1,
+            sc2: traj2,
+            body: central_body,
+        })),
+    ));
+    let n_cheap = if n_cheap == 0 {
+        constraints.len()
+    } else {
+        n_cheap
+    };
+    (constraints, n_cheap)
+}
+
+// ---------------------------------------------------------------------------
 // VisibilityResults
 // ---------------------------------------------------------------------------
 
@@ -573,6 +745,7 @@ pub enum PairType {
 
 type IntervalMap = HashMap<(AssetId, AssetId), Vec<TimeInterval<Tai>>>;
 type PairTypeMap = HashMap<(AssetId, AssetId), PairType>;
+type DiagnosticsMap = HashMap<(AssetId, AssetId), Vec<WindowDiagnostics>>;
 type GroundSpaceFilter<'a> = Box<dyn Fn(&GroundStation, &Spacecraft) -> bool + 'a>;
 type InterSatelliteFilter<'a> = Box<dyn Fn(&Spacecraft, &Spacecraft) -> bool + 'a>;
 
@@ -602,71 +775,52 @@ where
     <DefaultRotationProvider as TryRotation<DynFrame, R, Tai>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
-    /// Apply `min_pass_duration` → `coarse_step` conversion to a detector.
-    fn apply_coarse_step<F>(&self, det: RootFindingDetector<F>) -> RootFindingDetector<F> {
-        match self.min_pass_duration {
-            Some(d) => {
-                let coarse = TimeDelta::from_seconds_f64(d.to_seconds().to_f64() / 2.0);
-                if coarse > self.step {
-                    det.with_coarse_step(coarse)
-                } else {
-                    det
-                }
-            }
-            None => det,
-        }
+    /// Derives the candidate-stage (coarse) step from `min_pass_duration`.
+    fn coarse_step(&self) -> Option<TimeDelta> {
+        self.min_pass_duration.and_then(|d| {
+            let coarse = TimeDelta::from_seconds_f64(d.to_seconds().to_f64() / 2.0);
+            (coarse > self.step).then_some(coarse)
+        })
     }
 
-    /// Compute visibility intervals for a single (ground, space) pair.
+    /// Compute visibility windows for a single (ground, space) pair from the
+    /// composed signal `elevation ∧ los(body₁) ∧ los(body₂) ∧ …`, with the
+    /// elevation constraint pruning the line-of-sight evaluations.
     fn compute_ground_space_pair(
         &self,
         gs: &GroundStation,
         sc_traj: &Trajectory<Tai, O, R>,
         interval: TimeInterval<Tai>,
-    ) -> Result<Vec<TimeInterval<Tai>>, VisibilityError> {
+    ) -> Result<(Vec<TimeInterval<Tai>>, Vec<WindowDiagnostics>), VisibilityError> {
         let body_fixed_frame = gs.body_fixed_frame();
-
-        let make_elev = || {
-            let det = RootFindingDetector::new(
-                ElevationDetectFn {
-                    gs: gs.location(),
-                    mask: gs.mask(),
-                    sc: sc_traj,
-                    body_fixed_frame,
-                },
-                self.step,
-            );
-            EventsToIntervals::new(self.apply_coarse_step(det))
-        };
-
-        if self.occulting_bodies.is_empty() {
-            return Ok(make_elev().detect(interval)?);
-        }
-
-        let make_los = |body: DynOrigin| {
-            EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
-                LineOfSightDetectFn {
+        let mut constraints: Vec<ConstraintSignal<'_>> = vec![(
+            Constraint::Elevation,
+            Box::new(DetectSignal(ElevationDetectFn {
+                gs: gs.location(),
+                mask: gs.mask(),
+                sc: sc_traj,
+                body_fixed_frame,
+            })),
+        )];
+        for &body in self.occulting_bodies {
+            constraints.push((
+                Constraint::LineOfSight(body),
+                Box::new(DetectSignal(LineOfSightDetectFn {
                     gs: gs.location(),
                     sc: sc_traj,
                     body,
                     ephemeris: self.ephemeris,
                     body_fixed_frame,
-                },
-                self.step,
-            )))
-        };
-
-        let mut los: Box<dyn IntervalDetector<Tai> + '_> =
-            Box::new(make_los(self.occulting_bodies[0]));
-        for &body in &self.occulting_bodies[1..] {
-            los = Box::new(los.intersect(make_los(body)));
+                })),
+            ));
         }
-
-        Ok(make_elev().chain(los).detect(interval)?)
+        detect_pair(&constraints, 1, interval, self.step, self.coarse_step())
     }
 
-    /// Compute LOS intervals for a single inter-satellite pair,
-    /// optionally filtered by min/max range constraints.
+    /// Compute visibility windows for a single inter-satellite pair from the
+    /// composed signal of range band, slew rate, and line-of-sight
+    /// constraints, with the cheap (position/velocity-only) constraints
+    /// pruning the line-of-sight evaluations.
     ///
     /// The scenario's central body is always checked for occultation.
     /// Any additional occulting bodies are checked as well.
@@ -677,102 +831,34 @@ where
         traj1: &Trajectory<Tai, O, R>,
         traj2: &Trajectory<Tai, O, R>,
         interval: TimeInterval<Tai>,
-    ) -> Result<Vec<TimeInterval<Tai>>, VisibilityError> {
-        // Resolve per-pair slew rate limit: min of both assets' limits.
-        let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
-            (Some(a), Some(b)) => Some(if a.to_radians_per_second() < b.to_radians_per_second() {
-                a
-            } else {
-                b
-            }),
-            (Some(a), None) => Some(a),
-            (None, Some(b)) => Some(b),
-            (None, None) => None,
-        };
-
-        let make_range = |threshold: Distance, direction: RangeDirection| {
-            EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
-                InterSatelliteRangeDetectFn {
-                    sc1: traj1,
-                    sc2: traj2,
-                    threshold,
-                    direction,
-                },
-                self.step,
-            )))
-        };
-
-        let make_los_central_body = || {
-            EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
-                InterSatLosCentralBodyDetectFn {
-                    sc1: traj1,
-                    sc2: traj2,
-                    body: self.scenario.origin().into(),
-                },
-                self.step,
-            )))
-        };
-
-        let make_los = |body: DynOrigin| {
-            EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
-                InterSatLosOccluderDetectFn {
+    ) -> Result<(Vec<TimeInterval<Tai>>, Vec<WindowDiagnostics>), VisibilityError> {
+        let (mut constraints, n_cheap) = inter_satellite_signals(
+            sc1,
+            sc2,
+            traj1,
+            traj2,
+            self.scenario.origin().into(),
+            self.min_range,
+            self.max_range,
+        );
+        for &body in self.occulting_bodies {
+            constraints.push((
+                Constraint::LineOfSight(body),
+                Box::new(DetectSignal(InterSatLosOccluderDetectFn {
                     sc1: traj1,
                     sc2: traj2,
                     body,
                     ephemeris: self.ephemeris,
-                },
-                self.step,
-            )))
-        };
-
-        // Start with range constraints (cheapest: position-only).
-        let mut detector: Option<Box<dyn IntervalDetector<Tai> + '_>> = None;
-
-        if let Some(max) = self.max_range {
-            detector = Some(Box::new(make_range(max, RangeDirection::Max)));
+                })),
+            ));
         }
-        if let Some(min) = self.min_range {
-            let min_det = make_range(min, RangeDirection::Min);
-            detector = Some(match detector {
-                Some(d) => Box::new(d.intersect(min_det)),
-                None => Box::new(min_det),
-            });
-        }
-
-        // Slew rate constraint (medium cost: position + velocity).
-        if let Some(threshold) = effective_slew_rate {
-            let slew = EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
-                InterSatelliteSlewRateDetectFn {
-                    sc1: traj1,
-                    sc2: traj2,
-                    threshold,
-                },
-                self.step,
-            )));
-            detector = Some(match detector {
-                Some(d) => Box::new(d.chain(slew)),
-                None => Box::new(slew),
-            });
-        }
-
-        // Chain LOS detectors onto previous windows (most expensive: requires ephemeris).
-        // Always check the central body first, then any additional occulting bodies.
-        // Central body LOS — use ephemeris-free variant:
-        let los = make_los_central_body();
-        detector = Some(match detector {
-            Some(d) => Box::new(d.chain(los)),
-            None => Box::new(los),
-        });
-        // Additional occulting bodies — still uses ephemeris:
-        for &body in self.occulting_bodies {
-            let los = make_los(body);
-            detector = Some(match detector {
-                Some(d) => Box::new(d.chain(los)),
-                None => Box::new(los),
-            });
-        }
-
-        Ok(detector.unwrap().detect(interval)?)
+        detect_pair(
+            &constraints,
+            n_cheap,
+            interval,
+            self.step,
+            self.coarse_step(),
+        )
     }
 }
 
@@ -780,10 +866,12 @@ where
 ///
 /// This is the primary result type for visibility analysis. Intervals are
 /// cheap to compute; conversion to [`Pass`] (with observables) happens
-/// separately and on demand.
+/// separately and on demand. Each interval carries [`WindowDiagnostics`]
+/// naming the constraint that opened and closed it.
 pub struct VisibilityResults {
     intervals: IntervalMap,
     pair_types: PairTypeMap,
+    diagnostics: DiagnosticsMap,
 }
 
 impl VisibilityResults {
@@ -791,6 +879,13 @@ impl VisibilityResults {
     pub fn intervals_for(&self, id1: &AssetId, id2: &AssetId) -> Option<&[TimeInterval<Tai>]> {
         let key = (id1.clone(), id2.clone());
         self.intervals.get(&key).map(|v| v.as_slice())
+    }
+
+    /// Return the binding-constraint diagnostics for a specific pair, one
+    /// `(opened_by, closed_by)` entry per interval.
+    pub fn diagnostics_for(&self, id1: &AssetId, id2: &AssetId) -> Option<&[WindowDiagnostics]> {
+        let key = (id1.clone(), id2.clone());
+        self.diagnostics.get(&key).map(|v| v.as_slice())
     }
 
     /// Return all intervals keyed by pair ids.
@@ -841,9 +936,10 @@ impl VisibilityResults {
         self.intervals.values().map(|v| v.len()).sum()
     }
 
-    /// Consume self and return the inner intervals and pair types maps.
-    pub fn into_parts(self) -> (IntervalMap, PairTypeMap) {
-        (self.intervals, self.pair_types)
+    /// Consume self and return the inner intervals, pair types, and
+    /// diagnostics maps.
+    pub fn into_parts(self) -> (IntervalMap, PairTypeMap, DiagnosticsMap) {
+        (self.intervals, self.pair_types, self.diagnostics)
     }
 
     /// Convert intervals for a specific ground-space pair to visibility passes.
@@ -1139,22 +1235,26 @@ where
 
         let mut intervals = HashMap::new();
         let mut pair_types = HashMap::new();
+        let mut diagnostics = HashMap::new();
 
         if !self.scenario.ground_stations().is_empty() {
             let gs_results = self.compute_ground_space_no_eph(interval)?;
-            let (gs_intervals, gs_pair_types) = gs_results.into_parts();
+            let (gs_intervals, gs_pair_types, gs_diagnostics) = gs_results.into_parts();
             intervals.extend(gs_intervals);
             pair_types.extend(gs_pair_types);
+            diagnostics.extend(gs_diagnostics);
         }
         if self.inter_satellite {
             let is_results = self.compute_inter_satellite_no_eph(interval)?;
-            let (is_intervals, is_pair_types) = is_results.into_parts();
+            let (is_intervals, is_pair_types, is_diagnostics) = is_results.into_parts();
             intervals.extend(is_intervals);
             pair_types.extend(is_pair_types);
+            diagnostics.extend(is_diagnostics);
         }
         Ok(VisibilityResults {
             intervals,
             pair_types,
+            diagnostics,
         })
     }
 
@@ -1177,33 +1277,26 @@ where
         // Extract references needed in the parallel closure without borrowing self.
         let ensemble = self.ensemble;
 
+        let coarse_step = min_pass_duration.and_then(|d| {
+            let coarse = TimeDelta::from_seconds_f64(d.to_seconds().to_f64() / 2.0);
+            (coarse > step).then_some(coarse)
+        });
+
         let compute_one = |(gs, sc): &(&GroundStation, &Spacecraft)| {
             let key = (gs.id().clone(), sc.id().clone());
             let sc_traj = ensemble.get(sc.id()).expect(
                 "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
             );
-            let body_fixed_frame = gs.body_fixed_frame();
-            let det = RootFindingDetector::new(
-                ElevationDetectFn {
+            let constraints: Vec<ConstraintSignal<'_>> = vec![(
+                Constraint::Elevation,
+                Box::new(DetectSignal(ElevationDetectFn {
                     gs: gs.location(),
                     mask: gs.mask(),
                     sc: sc_traj,
-                    body_fixed_frame,
-                },
-                step,
-            );
-            let det = match min_pass_duration {
-                Some(d) => {
-                    let coarse = TimeDelta::from_seconds_f64(d.to_seconds().to_f64() / 2.0);
-                    if coarse > step {
-                        det.with_coarse_step(coarse)
-                    } else {
-                        det
-                    }
-                }
-                None => det,
-            };
-            let windows = EventsToIntervals::new(det).detect(interval)?;
+                    body_fixed_frame: gs.body_fixed_frame(),
+                })),
+            )];
+            let windows = detect_pair(&constraints, 1, interval, step, coarse_step)?;
             Ok((key, windows))
         };
 
@@ -1215,15 +1308,7 @@ where
             pairs.iter().map(compute_one).collect()
         };
 
-        let intervals: HashMap<_, _> = results?.into_iter().collect();
-        let pair_types = intervals
-            .keys()
-            .map(|k| (k.clone(), PairType::GroundSpace))
-            .collect();
-        Ok(VisibilityResults {
-            intervals,
-            pair_types,
-        })
+        Ok(collect_results(results?, PairType::GroundSpace))
     }
 
     /// Compute inter-satellite visibility against the central body only.
@@ -1248,30 +1333,14 @@ where
         }
 
         let step = self.step;
-        let min_pass_duration = self.min_pass_duration;
         let central_body: DynOrigin = self.scenario.origin().into();
         let min_range = self.min_range;
         let max_range = self.max_range;
         let ensemble = self.ensemble;
-
-        // Inline coarse-step helper: avoids closure type-inference lock-in
-        // when the same RootFindingDetector::new generic is called with
-        // different F types below.
-        macro_rules! apply_coarse {
-            ($det:expr) => {
-                match min_pass_duration {
-                    Some(d) => {
-                        let coarse = TimeDelta::from_seconds_f64(d.to_seconds().to_f64() / 2.0);
-                        if coarse > step {
-                            $det.with_coarse_step(coarse)
-                        } else {
-                            $det
-                        }
-                    }
-                    None => $det,
-                }
-            };
-        }
+        let coarse_step = self.min_pass_duration.and_then(|d| {
+            let coarse = TimeDelta::from_seconds_f64(d.to_seconds().to_f64() / 2.0);
+            (coarse > step).then_some(coarse)
+        });
 
         let results: Result<Vec<_>, VisibilityError> = pairs
             .par_iter()
@@ -1286,92 +1355,21 @@ where
                     .get(sc2.id())
                     .expect("trajectory not found in ensemble");
 
-                let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
-                    (Some(a), Some(b)) => {
-                        Some(if a.to_radians_per_second() < b.to_radians_per_second() {
-                            a
-                        } else {
-                            b
-                        })
-                    }
-                    (Some(a), None) => Some(a),
-                    (None, Some(b)) => Some(b),
-                    (None, None) => None,
-                };
-
-                let mut detector: Option<Box<dyn IntervalDetector<Tai> + '_>> = None;
-
-                if let Some(max) = max_range {
-                    let det = apply_coarse!(RootFindingDetector::new(
-                        InterSatelliteRangeDetectFn {
-                            sc1: traj1,
-                            sc2: traj2,
-                            threshold: max,
-                            direction: RangeDirection::Max,
-                        },
-                        step,
-                    ));
-                    detector = Some(Box::new(EventsToIntervals::new(det)));
-                }
-                if let Some(min) = min_range {
-                    let det = apply_coarse!(RootFindingDetector::new(
-                        InterSatelliteRangeDetectFn {
-                            sc1: traj1,
-                            sc2: traj2,
-                            threshold: min,
-                            direction: RangeDirection::Min,
-                        },
-                        step,
-                    ));
-                    let min_det = EventsToIntervals::new(det);
-                    detector = Some(match detector {
-                        Some(d) => Box::new(d.intersect(min_det)),
-                        None => Box::new(min_det),
-                    });
-                }
-                if let Some(threshold) = effective_slew_rate {
-                    let det = apply_coarse!(RootFindingDetector::new(
-                        InterSatelliteSlewRateDetectFn {
-                            sc1: traj1,
-                            sc2: traj2,
-                            threshold,
-                        },
-                        step,
-                    ));
-                    let slew = EventsToIntervals::new(det);
-                    detector = Some(match detector {
-                        Some(d) => Box::new(d.chain(slew)),
-                        None => Box::new(slew),
-                    });
-                }
-
-                let los = EventsToIntervals::new(apply_coarse!(RootFindingDetector::new(
-                    InterSatLosCentralBodyDetectFn {
-                        sc1: traj1,
-                        sc2: traj2,
-                        body: central_body,
-                    },
-                    step,
-                )));
-                detector = Some(match detector {
-                    Some(d) => Box::new(d.chain(los)),
-                    None => Box::new(los),
-                });
-
-                let windows = detector.unwrap().detect(interval)?;
+                let (constraints, n_cheap) = inter_satellite_signals(
+                    sc1,
+                    sc2,
+                    traj1,
+                    traj2,
+                    central_body,
+                    min_range,
+                    max_range,
+                );
+                let windows = detect_pair(&constraints, n_cheap, interval, step, coarse_step)?;
                 Ok((key, windows))
             })
             .collect();
 
-        let intervals: HashMap<_, _> = results?.into_iter().collect();
-        let pair_types = intervals
-            .keys()
-            .map(|k| (k.clone(), PairType::InterSatellite))
-            .collect();
-        Ok(VisibilityResults {
-            intervals,
-            pair_types,
-        })
+        Ok(collect_results(results?, PairType::InterSatellite))
     }
 }
 
@@ -1398,24 +1396,28 @@ where
 
         let mut intervals = HashMap::new();
         let mut pair_types = HashMap::new();
+        let mut diagnostics = HashMap::new();
 
         if !self.scenario.ground_stations().is_empty() {
             let gs_results = self.compute_ground_space(interval)?;
-            let (gs_intervals, gs_pair_types) = gs_results.into_parts();
+            let (gs_intervals, gs_pair_types, gs_diagnostics) = gs_results.into_parts();
             intervals.extend(gs_intervals);
             pair_types.extend(gs_pair_types);
+            diagnostics.extend(gs_diagnostics);
         }
 
         if self.inter_satellite {
             let is_results = self.compute_inter_satellite(interval)?;
-            let (is_intervals, is_pair_types) = is_results.into_parts();
+            let (is_intervals, is_pair_types, is_diagnostics) = is_results.into_parts();
             intervals.extend(is_intervals);
             pair_types.extend(is_pair_types);
+            diagnostics.extend(is_diagnostics);
         }
 
         Ok(VisibilityResults {
             intervals,
             pair_types,
+            diagnostics,
         })
     }
 
@@ -1465,15 +1467,7 @@ where
             pairs.iter().map(compute_one).collect()
         };
 
-        let intervals: HashMap<_, _> = results?.into_iter().collect();
-        let pair_types = intervals
-            .keys()
-            .map(|k| (k.clone(), PairType::GroundSpace))
-            .collect();
-        Ok(VisibilityResults {
-            intervals,
-            pair_types,
-        })
+        Ok(collect_results(results?, PairType::GroundSpace))
     }
 
     /// Compute LOS visibility for all unique spacecraft pairs (i, j) where i < j.
@@ -1530,15 +1524,7 @@ where
             })
             .collect();
 
-        let intervals: HashMap<_, _> = results?.into_iter().collect();
-        let pair_types = intervals
-            .keys()
-            .map(|k| (k.clone(), PairType::InterSatellite))
-            .collect();
-        Ok(VisibilityResults {
-            intervals,
-            pair_types,
-        })
+        Ok(collect_results(results?, PairType::InterSatellite))
     }
 }
 
@@ -1754,6 +1740,54 @@ mod tests {
             assert_approx_eq!(actual.interval().start(), expected.start(), rtol <= 1e-4);
             assert_approx_eq!(actual.interval().end(), expected.end(), rtol <= 1e-4);
         }
+    }
+
+    /// Boundary diagnostics name the binding constraint: pure elevation
+    /// passes are bound by the mask, and adding the Moon as an occulter
+    /// produces boundaries bound by line of sight.
+    #[test]
+    fn test_window_diagnostics() {
+        let gs_loc = location_dyn();
+        let mask = ElevationMask::with_fixed_elevation(0.0);
+        let sc_traj = spacecraft_trajectory_dyn();
+        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
+        let ground_assets = [gs.clone()];
+        let space_assets = [sc.clone()];
+        let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
+        let (scenario, ensemble) =
+            make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
+
+        // Elevation-only: every boundary is bound by the mask.
+        let results = VisibilityAnalysis::new(&scenario, &ensemble)
+            .compute()
+            .unwrap();
+        let intervals = results.intervals_for(gs.id(), sc.id()).unwrap();
+        let diagnostics = results.diagnostics_for(gs.id(), sc.id()).unwrap();
+        assert_eq!(diagnostics.len(), intervals.len());
+        assert!(
+            diagnostics
+                .iter()
+                .all(|&(opened, closed)| opened == Constraint::Elevation
+                    && closed == Constraint::Elevation)
+        );
+
+        // With the Moon as an occulter, occultations split windows: some
+        // boundaries are bound by line of sight.
+        let results = VisibilityAnalysis::new(&scenario, &ensemble)
+            .with_occulting_bodies(ephemeris(), vec![DynOrigin::Moon])
+            .compute()
+            .unwrap();
+        let intervals = results.intervals_for(gs.id(), sc.id()).unwrap();
+        let diagnostics = results.diagnostics_for(gs.id(), sc.id()).unwrap();
+        assert_eq!(diagnostics.len(), intervals.len());
+        let moon_los = Constraint::LineOfSight(DynOrigin::Moon);
+        assert!(
+            diagnostics
+                .iter()
+                .any(|&(opened, closed)| opened == moon_los || closed == moon_los)
+        );
+        assert_eq!(format!("{moon_los}"), "line-of-sight(Moon)");
     }
 
     #[test]
