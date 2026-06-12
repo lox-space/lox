@@ -1096,7 +1096,6 @@ name = "lox-comms"
 version = "0.1.0-alpha.15"
 dependencies = [
  "lox-core",
- "lox-itur",
  "lox-test-utils",
  "serde",
  "serde_json",

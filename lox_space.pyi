@@ -2645,74 +2645,41 @@ class Channel:
         ...
     def __repr__(self) -> str: ...
 
-class EnvironmentalLosses:
-    """Atmospheric environmental losses computed from ITU-R models.
-
-    Computes rain, gaseous, cloud, scintillation, and depolarization
-    attenuation for a slant path.
+class PropagationLosses:
+    """Itemized excess propagation losses along a link path, beyond
+    free-space path loss.
 
     Args:
-        provider: Open ItuProvider supplying the gridded reference data.
-        lat: Latitude.
-        lon: Longitude.
-        frequency: Frequency.
-        elevation: Elevation angle (clamped to >= 5 deg).
-        probability: Exceedance probability (% of average year).
-        diameter: Physical antenna diameter.
-        polarisation_tilt: Polarisation tilt angle (default 45 deg for circular).
+        rain: Rain attenuation (optional).
+        gaseous: Gaseous absorption (optional).
+        cloud: Cloud attenuation (optional).
+        scintillation: Scintillation loss (optional).
+        depolarization: Depolarization loss (optional).
+        other: Custom lines as (label, value, absorptive) tuples (optional).
     """
     def __new__(
         cls,
-        provider: ItuProvider,
-        lat: Angle,
-        lon: Angle,
-        frequency: Frequency,
-        elevation: Angle,
-        probability: float,
-        diameter: Distance,
-        polarisation_tilt: Angle | None = None,
-    ) -> Self: ...
-    @staticmethod
-    def none() -> EnvironmentalLosses:
-        """Returns zero environmental losses."""
-        ...
-    @staticmethod
-    def from_values(
         rain: Decibel | None = None,
         gaseous: Decibel | None = None,
-        scintillation: Decibel | None = None,
-        atmospheric: Decibel | None = None,
         cloud: Decibel | None = None,
+        scintillation: Decibel | None = None,
         depolarization: Decibel | None = None,
-    ) -> EnvironmentalLosses:
-        """Creates environmental losses from individual values."""
-        ...
-    @property
-    def rain(self) -> Decibel:
-        """Rain attenuation."""
-        ...
-    @property
-    def gaseous(self) -> Decibel:
-        """Gaseous absorption."""
-        ...
-    @property
-    def scintillation(self) -> Decibel:
-        """Scintillation loss."""
-        ...
-    @property
-    def atmospheric(self) -> Decibel:
-        """General atmospheric loss (combined total)."""
-        ...
-    @property
-    def cloud(self) -> Decibel:
-        """Cloud attenuation."""
-        ...
-    @property
-    def depolarization(self) -> Decibel:
-        """Depolarization loss."""
+        other: list[tuple[str, Decibel, bool]] | None = None,
+    ) -> Self: ...
+    @staticmethod
+    def none() -> PropagationLosses:
+        """Returns zero propagation losses."""
         ...
     def total(self) -> Decibel:
-        """Returns the total environmental loss in dB."""
+        """Returns the total excess loss."""
+        ...
+    def absorptive(self) -> Decibel:
+        """Returns the absorptive part of the loss — the attenuation that
+        also raises the receive antenna noise temperature."""
+        ...
+    @property
+    def lines(self) -> list[tuple[str, Decibel, bool]]:
+        """The loss lines as (label, value, absorptive) tuples, in insertion order."""
         ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
@@ -2938,7 +2905,7 @@ class LinkStats:
         rx_angle: Angle | None = None,
         tx_direction: list[float] | None = None,
         rx_direction: list[float] | None = None,
-        losses: EnvironmentalLosses | None = None,
+        losses: PropagationLosses | None = None,
     ) -> LinkStats:
         """Computes a modulation-agnostic link budget between two link terminals.
 
@@ -3398,7 +3365,7 @@ class ItuProvider:
     ) -> Decibel:
         """Compute tropospheric scintillation fade depth (P.618-13)."""
         ...
-    def atmospheric_attenuation_slant_path(
+    def propagation_losses(
         self,
         lat: Angle,
         lon: Angle,
@@ -3407,11 +3374,12 @@ class ItuProvider:
         probability: float,
         diameter: Distance,
         polarisation_tilt: Angle | None = None,
-    ) -> EnvironmentalLosses:
-        """Compute atmospheric attenuation on a slant path.
+    ) -> PropagationLosses:
+        """Compute excess propagation losses on a slant path.
 
         Combines rain (P.618), gaseous (P.676), cloud (P.840), and
-        scintillation (P.618) attenuation per ITU-R recommendations.
+        scintillation (P.618) attenuation per ITU-R recommendations; the
+        combination residual is booked on the scintillation line.
         """
         ...
 

@@ -21,10 +21,9 @@ def itur_provider() -> lox.ItuProvider:
     return lox.ItuProvider(path)
 
 
-def test_environmental_losses_constructor(itur_provider):
-    """Test EnvironmentalLosses constructor."""
-    losses = lox.EnvironmentalLosses(
-        itur_provider,
+def test_propagation_losses_from_provider(itur_provider):
+    """End-to-end test for the provider orchestrator."""
+    losses = itur_provider.propagation_losses(
         lat=40.4 * lox.deg,
         lon=-3.7 * lox.deg,
         frequency=14.25 * lox.GHz,
@@ -32,13 +31,13 @@ def test_environmental_losses_constructor(itur_provider):
         probability=0.01,
         diameter=1.2 * lox.m,
     )
-    assert float(losses.rain) >= 0.0
-    assert 0.0 < float(losses.atmospheric) < 30.0
+    assert 0.0 < float(losses.total()) < 30.0
+    assert 0.0 < float(losses.absorptive()) <= float(losses.total())
 
 
-def test_atmospheric_attenuation_slant_path(itur_provider):
-    """End-to-end test for the provider method."""
-    losses = itur_provider.atmospheric_attenuation_slant_path(
+def test_propagation_losses_lines(itur_provider):
+    """The provider emits rain, gaseous, cloud, and scintillation lines."""
+    losses = itur_provider.propagation_losses(
         lat=40.4 * lox.deg,
         lon=-3.7 * lox.deg,
         frequency=14.25 * lox.GHz,
@@ -46,18 +45,22 @@ def test_atmospheric_attenuation_slant_path(itur_provider):
         probability=0.01,
         diameter=1.2 * lox.m,
     )
-    # All components should be non-negative
-    assert float(losses.rain) >= 0.0
-    assert float(losses.gaseous) >= 0.0
-    assert float(losses.cloud) >= 0.0
-    assert float(losses.scintillation) >= 0.0
-    # Total should be reasonable (< 30 dB for Ku-band at 30 deg)
-    assert 0.0 < float(losses.atmospheric) < 30.0
+    labels = [label for label, _, _ in losses.lines]
+    assert labels == [
+        "Rain attenuation",
+        "Gaseous absorption",
+        "Cloud attenuation",
+        "Scintillation",
+    ]
+    assert all(float(value) >= 0.0 for _, value, _ in losses.lines)
+    # Scintillation does not contribute to the absorptive part.
+    absorptive = [absorptive for _, _, absorptive in losses.lines]
+    assert absorptive == [True, True, True, False]
 
 
-def test_atmospheric_attenuation_with_custom_tilt(itur_provider):
+def test_propagation_losses_with_custom_tilt(itur_provider):
     """Test with explicit polarisation tilt angle."""
-    losses = itur_provider.atmospheric_attenuation_slant_path(
+    losses = itur_provider.propagation_losses(
         lat=51.5 * lox.deg,
         lon=-0.1 * lox.deg,
         frequency=29.0 * lox.GHz,
@@ -66,7 +69,7 @@ def test_atmospheric_attenuation_with_custom_tilt(itur_provider):
         diameter=0.6 * lox.m,
         polarisation_tilt=0.0 * lox.deg,
     )
-    assert float(losses.atmospheric) > 0.0
+    assert float(losses.total()) > 0.0
 
 
 def test_rain_attenuation(itur_provider):
@@ -179,9 +182,9 @@ def test_rain_height(itur_provider):
     assert 1.0 < h.to_kilometers() < 6.0
 
 
-def test_environmental_losses_properties(itur_provider):
-    """Test that EnvironmentalLosses fields are accessible."""
-    losses = itur_provider.atmospheric_attenuation_slant_path(
+def test_propagation_losses_total_is_combined(itur_provider):
+    """total() counts each contribution once; absorptive() excludes scintillation."""
+    losses = itur_provider.propagation_losses(
         lat=40.4 * lox.deg,
         lon=-3.7 * lox.deg,
         frequency=14.25 * lox.GHz,
@@ -189,20 +192,15 @@ def test_environmental_losses_properties(itur_provider):
         probability=0.01,
         diameter=1.2 * lox.m,
     )
-    # All properties should return Decibel
-    assert float(losses.rain) >= 0.0
-    assert float(losses.gaseous) >= 0.0
-    assert float(losses.cloud) >= 0.0
-    assert float(losses.scintillation) >= 0.0
-    # depolarization stores the XPD (negative = discrimination, not a loss)
-    assert isinstance(float(losses.depolarization), float)
-    # atmospheric field has the ITU-R combined total
-    assert float(losses.atmospheric) > 0.0
+    total = sum(float(value) for _, value, _ in losses.lines)
+    assert float(losses.total()) == pytest.approx(total, abs=1e-12)
+    absorptive = sum(float(value) for _, value, flag in losses.lines if flag)
+    assert float(losses.absorptive()) == pytest.approx(absorptive, abs=1e-12)
 
 
 def test_high_frequency_ka_band(itur_provider):
     """Test at Ka-band (30 GHz) which exercises different code paths."""
-    losses = itur_provider.atmospheric_attenuation_slant_path(
+    losses = itur_provider.propagation_losses(
         lat=51.5 * lox.deg,
         lon=-0.1 * lox.deg,
         frequency=30.0 * lox.GHz,
@@ -210,9 +208,9 @@ def test_high_frequency_ka_band(itur_provider):
         probability=0.01,
         diameter=0.6 * lox.m,
     )
-    assert float(losses.atmospheric) > 0.0
+    assert float(losses.total()) > 0.0
     # Ka-band should have higher attenuation than Ku-band
-    losses_ku = itur_provider.atmospheric_attenuation_slant_path(
+    losses_ku = itur_provider.propagation_losses(
         lat=51.5 * lox.deg,
         lon=-0.1 * lox.deg,
         frequency=14.25 * lox.GHz,
@@ -220,12 +218,12 @@ def test_high_frequency_ka_band(itur_provider):
         probability=0.01,
         diameter=0.6 * lox.m,
     )
-    assert float(losses.atmospheric) > float(losses_ku.atmospheric)
+    assert float(losses.total()) > float(losses_ku.total())
 
 
 def test_equatorial_location(itur_provider):
     """Test at equatorial location (different climate profile)."""
-    losses = itur_provider.atmospheric_attenuation_slant_path(
+    losses = itur_provider.propagation_losses(
         lat=0.0 * lox.deg,
         lon=30.0 * lox.deg,
         frequency=14.25 * lox.GHz,
@@ -233,7 +231,7 @@ def test_equatorial_location(itur_provider):
         probability=0.01,
         diameter=1.2 * lox.m,
     )
-    assert float(losses.atmospheric) > 0.0
+    assert float(losses.total()) > 0.0
 
 
 def test_pressure_unit():

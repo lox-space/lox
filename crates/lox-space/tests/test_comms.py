@@ -694,36 +694,52 @@ def test_channel_repr():
     assert "modulation=Modulation('QPSK')" in r
 
 
-# --- Environmental Losses ---
+# --- Propagation Losses ---
 
 
-def test_environmental_losses_none():
-    losses = lox.EnvironmentalLosses.none()
+def test_propagation_losses_none():
+    losses = lox.PropagationLosses.none()
     assert float(losses.total()) == pytest.approx(0.0, abs=1e-15)
+    assert losses.lines == []
 
 
-def test_environmental_losses_from_values():
-    losses = lox.EnvironmentalLosses.from_values(
-        rain=2.0 * lox.dB, gaseous=0.5 * lox.dB, atmospheric=1.0 * lox.dB
+def test_propagation_losses_total_and_absorptive():
+    losses = lox.PropagationLosses(
+        rain=2.0 * lox.dB, gaseous=0.5 * lox.dB, scintillation=0.3 * lox.dB
     )
-    assert float(losses.total()) == pytest.approx(3.5, abs=1e-10)
+    assert float(losses.total()) == pytest.approx(2.8, abs=1e-10)
+    # Scintillation is non-absorptive.
+    assert float(losses.absorptive()) == pytest.approx(2.5, abs=1e-10)
 
 
-def test_environmental_losses_eq():
-    a = lox.EnvironmentalLosses.from_values(rain=2.0 * lox.dB)
-    b = lox.EnvironmentalLosses.from_values(rain=2.0 * lox.dB)
-    c = lox.EnvironmentalLosses.from_values(rain=3.0 * lox.dB)
+def test_propagation_losses_other_lines():
+    losses = lox.PropagationLosses(other=[("Radome wetting", 0.5 * lox.dB, True)])
+    assert float(losses.total()) == pytest.approx(0.5, abs=1e-10)
+    assert float(losses.absorptive()) == pytest.approx(0.5, abs=1e-10)
+    label, value, absorptive = losses.lines[0]
+    assert label == "Radome wetting"
+    assert float(value) == pytest.approx(0.5, abs=1e-10)
+    assert absorptive
+
+
+def test_propagation_losses_rejects_negative():
+    with pytest.raises(ValueError):
+        lox.PropagationLosses(rain=-1.0 * lox.dB)
+
+
+def test_propagation_losses_eq():
+    a = lox.PropagationLosses(rain=2.0 * lox.dB)
+    b = lox.PropagationLosses(rain=2.0 * lox.dB)
+    c = lox.PropagationLosses(rain=3.0 * lox.dB)
     assert a == b
     assert not (a == c)
 
 
-def test_environmental_losses_repr():
-    losses = lox.EnvironmentalLosses.from_values(
-        rain=2.0 * lox.dB, gaseous=0.5 * lox.dB, atmospheric=1.0 * lox.dB
-    )
+def test_propagation_losses_repr():
+    losses = lox.PropagationLosses(rain=2.0 * lox.dB, gaseous=0.5 * lox.dB)
     r = repr(losses)
-    assert "rain" in r
-    assert "gaseous" in r
+    assert "Rain attenuation" in r
+    assert "Gaseous absorption" in r
 
 
 # --- Free functions ---
@@ -810,7 +826,7 @@ def test_link_stats_with_losses():
         fec=0.5,
     )
 
-    losses = lox.EnvironmentalLosses.from_values(rain=2.0 * lox.dB, atmospheric=1.0 * lox.dB)
+    losses = lox.PropagationLosses(rain=2.0 * lox.dB, other=[("Atmospheric", 1.0 * lox.dB, True)])
 
     stats_no_loss = link_stats(
         make_tx(), make_rx(), bandwidth=ch.bandwidth()
