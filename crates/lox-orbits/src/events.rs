@@ -6,7 +6,7 @@ use std::collections::VecDeque;
 use std::fmt::Display;
 
 use itertools::Itertools;
-use lox_math::roots::{BoxedError, Callback, CallbackError, FindBracketedRoot, RootFinderError};
+use lox_math::roots::{Callback, FindBracketedRoot, RootFinderError};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
@@ -103,6 +103,14 @@ pub trait DetectFn<T: TimeScale> {
     fn eval(&self, time: Time<T>) -> Result<f64, Self::Error>;
 }
 
+impl<T: TimeScale, F: DetectFn<T>> DetectFn<T> for &F {
+    type Error = F::Error;
+
+    fn eval(&self, time: Time<T>) -> Result<f64, Self::Error> {
+        (**self).eval(time)
+    }
+}
+
 /// Detects instantaneous events (zero-crossings) within a time interval.
 pub trait EventDetector<T: TimeScale> {
     /// Detects all zero-crossing events within the given time interval.
@@ -119,40 +127,12 @@ pub trait IntervalDetector<T: TimeScale> {
 // Callback wrapper for DetectFn → root finder bridge
 // ---------------------------------------------------------------------------
 
-/// A `Callback`-compatible wrapper that bridges `DetectFn` to the root-finder
-/// interface.
-pub(crate) struct DetectCallback<'a, T: TimeScale, F: DetectFn<T>> {
-    func: &'a F,
-    start: Time<T>,
-}
-
-impl<T: TimeScale + Copy, F: DetectFn<T>> Clone for DetectCallback<'_, T, F> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<T: TimeScale + Copy, F: DetectFn<T>> Copy for DetectCallback<'_, T, F> {}
-
-impl<'a, T: TimeScale + Copy, F: DetectFn<T>> DetectCallback<'a, T, F> {
-    fn new(func: &'a F, start: Time<T>) -> Self {
-        Self { func, start }
-    }
-}
-
-impl<T: TimeScale + Copy, F: DetectFn<T>> Callback for DetectCallback<'_, T, F> {
-    fn call(&self, v: f64) -> Result<f64, CallbackError> {
-        let time = self.start + TimeDelta::from_seconds_f64(v);
-        self.func
-            .eval(time)
-            .map_err(|e| CallbackError::from(Box::new(e) as BoxedError))
-    }
-}
-
 // ---------------------------------------------------------------------------
 // RootFindingDetector — wraps DetectFn + root finder → EventDetector
 // ---------------------------------------------------------------------------
 
+use crate::signals::{DetectSignal, SignalCallback, UniformSampler, detect_grid};
+use lox_math::optim::BrentMinimizer;
 use lox_math::roots::Brent;
 
 /// Wraps a `DetectFn` with a root finder to produce an `EventDetector`.
@@ -221,72 +201,38 @@ impl<F, R> RootFindingDetector<F, R> {
     where
         T: TimeScale + Copy,
         F: DetectFn<T>,
-        for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
+        for<'a, 'b> R: FindBracketedRoot<SignalCallback<'a, T, DetectSignal<&'b F>>>,
     {
         let start = interval.start();
         let end = interval.end();
         let total_seconds = (end - start).to_seconds().to_f64();
         let step_seconds = self.step.to_seconds().to_f64();
-        let callback = DetectCallback::new(&self.func, start);
+        let signal = DetectSignal(&self.func);
 
         match self.coarse_step {
             Some(coarse_step) => {
                 let coarse_seconds = coarse_step.to_seconds().to_f64();
+                let callback = SignalCallback::new(&signal, start);
                 self.detect_two_level(callback, start, total_seconds, step_seconds, coarse_seconds)
             }
-            None => self.detect_single_level(callback, start, total_seconds, step_seconds),
-        }
-    }
-
-    /// Single-level detection: evaluate at every fine step then root-find.
-    fn detect_single_level<T>(
-        &self,
-        callback: DetectCallback<'_, T, F>,
-        start: Time<T>,
-        total_seconds: f64,
-        step_seconds: f64,
-    ) -> Result<(Vec<Event<T>>, f64), DetectError>
-    where
-        T: TimeScale + Copy,
-        F: DetectFn<T>,
-        for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
-    {
-        let steps = build_time_grid(total_seconds, step_seconds);
-
-        let mut signs = Vec::with_capacity(steps.len());
-        for &t in &steps {
-            let v = callback
-                .call(t)
-                .map_err(|e| DetectError::RootFinder(RootFinderError::Callback(e)))?;
-            signs.push(v.signum());
-        }
-
-        let start_sign = signs[0];
-
-        if signs.iter().all(|&s| s < 0.0) || signs.iter().all(|&s| s > 0.0) {
-            return Ok((vec![], start_sign));
-        }
-
-        let mut events = Vec::new();
-        for ((&t0, &s0), (&t1, &s1)) in std::iter::zip(&steps, &signs).tuple_windows() {
-            if let Some(crossing) = ZeroCrossing::new(s0, s1) {
-                let t = self
-                    .root_finder
-                    .find_in_bracket(callback, (t0, t1))
-                    .map_err(DetectError::RootFinder)?;
-                let time = start + TimeDelta::from_seconds_f64(t);
-                events.push(Event { crossing, time });
+            None => {
+                let (events, start_value) = detect_grid(
+                    &signal,
+                    &self.root_finder,
+                    &BrentMinimizer::default(),
+                    interval,
+                    &UniformSampler::new(self.step),
+                )?;
+                Ok((events, start_value.signum()))
             }
         }
-
-        Ok((events, start_sign))
     }
 
     /// Two-level detection: coarse grid to find sign-change brackets, then
     /// fine grid within each bracket to locate precise crossings.
-    fn detect_two_level<T>(
+    fn detect_two_level<'b, T>(
         &self,
-        callback: DetectCallback<'_, T, F>,
+        callback: SignalCallback<'_, T, DetectSignal<&'b F>>,
         start: Time<T>,
         total_seconds: f64,
         step_seconds: f64,
@@ -295,7 +241,7 @@ impl<F, R> RootFindingDetector<F, R> {
     where
         T: TimeScale + Copy,
         F: DetectFn<T>,
-        for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
+        for<'a> R: FindBracketedRoot<SignalCallback<'a, T, DetectSignal<&'b F>>>,
     {
         // 1. Build coarse grid and evaluate signs.
         let coarse_grid = build_time_grid(total_seconds, coarse_seconds);
@@ -362,7 +308,7 @@ impl<T, F, R> EventDetector<T> for RootFindingDetector<F, R>
 where
     T: TimeScale + Copy,
     F: DetectFn<T>,
-    for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
+    for<'a, 'b> R: FindBracketedRoot<SignalCallback<'a, T, DetectSignal<&'b F>>>,
 {
     fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<Event<T>>, DetectError> {
         self.detect_with_start_sign(interval)
@@ -402,7 +348,7 @@ impl<T, F, R> IntervalDetector<T> for EventsToIntervals<F, R>
 where
     T: TimeScale + Copy,
     F: DetectFn<T>,
-    for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
+    for<'a, 'b> R: FindBracketedRoot<SignalCallback<'a, T, DetectSignal<&'b F>>>,
 {
     fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
         let start = interval.start();
