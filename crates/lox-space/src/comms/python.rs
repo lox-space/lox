@@ -1404,8 +1404,11 @@ impl PyLinkBudget {
     }
 
     /// Returns C/N in dB for the given noise bandwidth.
-    fn c_n(&self, bandwidth: PyFrequency) -> PyDecibel {
-        PyDecibel(self.0.c_n(bandwidth.0))
+    fn c_n(&self, bandwidth: PyFrequency) -> PyResult<PyDecibel> {
+        self.0
+            .c_n(bandwidth.0)
+            .map(PyDecibel)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
     /// Received carrier power in dBW. ``None`` for lumped G/T receivers.
@@ -1416,8 +1419,11 @@ impl PyLinkBudget {
 
     /// Returns the noise power in dBW for the given bandwidth. ``None`` for
     /// lumped G/T receivers.
-    fn noise_power(&self, bandwidth: PyFrequency) -> Option<PyDecibel> {
-        self.0.noise_power(bandwidth.0).map(PyDecibel)
+    fn noise_power(&self, bandwidth: PyFrequency) -> PyResult<Option<PyDecibel>> {
+        self.0
+            .noise_power(bandwidth.0)
+            .map(|p| p.map(PyDecibel))
+            .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
     /// Link frequency.
