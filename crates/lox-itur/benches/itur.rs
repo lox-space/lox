@@ -17,7 +17,7 @@ use std::sync::OnceLock;
 
 use divan::Bencher;
 use lox_core::units::{Angle, Distance, Frequency};
-use lox_itur::{EnvironmentalLosses, ItuProvider};
+use lox_itur::ItuProvider;
 
 fn main() {
     divan::main();
@@ -50,8 +50,7 @@ fn provider() -> &'static ItuProvider {
 // Warm the grid caches once so we measure steady-state (cached lookup +
 // bilinear interpolation), not first-load (decompress + parse).
 fn warmup() {
-    let _ = EnvironmentalLosses::new(
-        provider(),
+    let _ = provider().propagation_losses(
         Angle::degrees(LAT_DEG),
         Angle::degrees(LON_DEG),
         Frequency::gigahertz(20.0),
@@ -63,12 +62,11 @@ fn warmup() {
 }
 
 #[divan::bench]
-fn environmental_losses_madrid(bencher: Bencher) {
+fn propagation_losses_madrid(bencher: Bencher) {
     let p = provider();
     warmup();
     bencher.bench(|| {
-        EnvironmentalLosses::new(
-            p,
+        p.propagation_losses(
             Angle::degrees(LAT_DEG),
             Angle::degrees(LON_DEG),
             Frequency::gigahertz(20.0),
