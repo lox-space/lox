@@ -661,10 +661,6 @@ name = "glam"
 version = "0.30.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19fc433e8437a212d1b6f1e68c7824af3aed907da60afa994e7f542d18d12aa9"
-dependencies = [
- "libm",
- "serde_core",
-]
 
 [[package]]
 name = "glam"
@@ -683,6 +679,10 @@ name = "glam"
 version = "0.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "898f5a568a84989b6c0f8caa50a93074b97dbdc58fc6d9543157bb4562758933"
+dependencies = [
+ "libm",
+ "serde_core",
+]
 
 [[package]]
 name = "glob"
@@ -1008,7 +1008,7 @@ version = "0.1.0-alpha.14"
 dependencies = [
  "chrono",
  "fast_polynomial",
- "glam 0.30.10",
+ "glam 0.33.1",
  "libm",
  "lox-test-utils",
  "nom",
@@ -1184,7 +1184,7 @@ name = "lox-test-utils"
 version = "0.1.0-alpha.9"
 dependencies = [
  "codspeed-divan-compat",
- "glam 0.30.10",
+ "glam 0.33.1",
  "libm",
  "lox-derive",
 ]
