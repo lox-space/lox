@@ -413,7 +413,7 @@ impl State<f64> for CartesianState {
     }
 
     fn scale_mut(&mut self, alpha: f64) {
-        self.0 = self.0 * alpha;
+        self.0 *= alpha;
     }
 }
 

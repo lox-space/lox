@@ -311,7 +311,7 @@ mod tests {
         let a = point!(x: 11.0, y: 45.5); // on polygon edge
         let b = point!(x: 12.0, y: 45.5); // 1° east
 
-        let geodesic = Geodesic::distance(a, b);
+        let geodesic = Geodesic.distance(a, b);
         let haversine = haversine_distance(a, b, earth_mean_radius_m());
 
         // Haversine on a sphere vs Vincenty on WGS-84 ellipsoid: expect < 0.5% error
