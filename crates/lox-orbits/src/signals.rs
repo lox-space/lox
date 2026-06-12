@@ -380,6 +380,62 @@ impl<T: TimeScale + Copy> Sampler<T> for UniformSampler {
     }
 }
 
+/// Samples at caller-provided knot times — e.g. the knots of a trajectory's
+/// Hermite spline, which bound how fast any signal derived from it can vary.
+/// Knots are clipped to the interval, both endpoints are always included,
+/// and each gap can be uniformly refined.
+pub struct KnotSampler<T: TimeScale> {
+    knots: Vec<Time<T>>,
+    refinement: usize,
+}
+
+impl<T: TimeScale + Copy> KnotSampler<T> {
+    /// Creates a sampler over the given (monotonically increasing) knots.
+    pub fn new(knots: Vec<Time<T>>) -> Self {
+        Self {
+            knots,
+            refinement: 1,
+        }
+    }
+
+    /// Subdivides each gap between samples into `refinement` equal parts.
+    pub fn with_refinement(mut self, refinement: usize) -> Self {
+        self.refinement = refinement.max(1);
+        self
+    }
+}
+
+impl<T: TimeScale + Copy> Sampler<T> for KnotSampler<T> {
+    fn sample(&self, interval: TimeInterval<T>) -> Vec<Time<T>> {
+        let start = interval.start();
+        let end = interval.end();
+        let inside = |t: &&Time<T>| {
+            let s = (**t - start).to_seconds().to_f64();
+            let e = (end - **t).to_seconds().to_f64();
+            s > 0.0 && e > 0.0
+        };
+        let mut base = Vec::with_capacity(self.knots.len() + 2);
+        base.push(start);
+        base.extend(self.knots.iter().filter(inside).copied());
+        base.push(end);
+
+        if self.refinement == 1 {
+            return base;
+        }
+        let mut times = Vec::with_capacity(base.len() * self.refinement);
+        for pair in base.windows(2) {
+            let gap = (pair[1] - pair[0]).to_seconds().to_f64();
+            times.push(pair[0]);
+            for k in 1..self.refinement {
+                let dt = gap * k as f64 / self.refinement as f64;
+                times.push(pair[0] + TimeDelta::from_seconds_f64(dt));
+            }
+        }
+        times.push(end);
+        times
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Windows and diagnostics
 // ---------------------------------------------------------------------------
@@ -1013,6 +1069,43 @@ mod tests {
                 atol <= 1e-6
             );
         }
+    }
+
+    #[test]
+    fn test_knot_sampler_clips_and_refines() {
+        let interval = horizon(100.0);
+        let start = interval.start();
+        let knots: Vec<_> = [-10.0, 0.0, 25.0, 50.0, 75.0, 100.0, 120.0]
+            .iter()
+            .map(|s| start + TimeDelta::from_seconds_f64(*s))
+            .collect();
+
+        let times = KnotSampler::new(knots.clone()).sample(interval);
+        // Outside and boundary-coincident knots are dropped; endpoints added.
+        let offsets: Vec<f64> = times.iter().map(|t| elapsed(interval, *t)).collect();
+        assert_eq!(offsets, vec![0.0, 25.0, 50.0, 75.0, 100.0]);
+
+        let times = KnotSampler::new(knots).with_refinement(2).sample(interval);
+        assert_eq!(times.len(), 9);
+        assert_approx_eq!(elapsed(interval, times[1]), 12.5, atol <= 1e-9);
+    }
+
+    /// A signal varying at the knot rate is fully resolved by the knot
+    /// sampler where a coarse uniform grid misses windows.
+    #[test]
+    fn test_knot_sampler_resolves_knot_rate_signal() {
+        let interval = horizon(100.0);
+        let start = interval.start();
+        // Period 10 s: positive on 5 s half-cycles.
+        let f =
+            SignalFn(move |t: Time<Tai>| ((t - start).to_seconds().to_f64() * TAU / 10.0).sin());
+        let knots: Vec<_> = (0..=50)
+            .map(|k| start + TimeDelta::from_seconds_f64(k as f64 * 2.0))
+            .collect();
+        let windows = Detector::new(f)
+            .windows(interval, &KnotSampler::new(knots))
+            .unwrap();
+        assert_eq!(windows.len(), 10);
     }
 
     /// `offset` shifts the level: elevation above a mask.
