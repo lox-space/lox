@@ -594,6 +594,11 @@ impl<T: TimeScale + Copy> Window<T> {
 /// fraction of the local sample magnitude to be worth refining.
 const GRAZING_REL_MARGIN: f64 = 1e-12;
 
+/// A grazing probe at the predicted extremum must shrink the residual to
+/// below this fraction of the middle sample's magnitude before the full
+/// minimization is attempted; otherwise the candidate is dismissed.
+const GRAZING_PROBE_IMPROVEMENT: f64 = 0.5;
+
 /// Bridges a [`Signal`] to the root-finder [`Callback`] interface, mapping
 /// seconds-since-start to signal values. Public because it appears in the
 /// root-finder bounds of [`Detector`]'s methods.
@@ -742,39 +747,55 @@ where
         // underestimates tent-shaped extrema at combinator kinks, where
         // a near-zero sample between much larger neighbors is the
         // telltale instead).
-        let parabola_crossing =
-            parabola_vertex((offsets[i - 1], v0), (offsets[i], v1), (offsets[i + 1], v2))
-                .is_some_and(|(tv, vv)| {
-                    let scale = v1.abs().max(f64::MIN_POSITIVE);
-                    vv.signum() != v1.signum()
-                        && vv.abs() > GRAZING_REL_MARGIN * scale
-                        && tv > offsets[i - 1]
-                        && tv < offsets[i + 1]
-                });
+        let vertex = parabola_vertex((offsets[i - 1], v0), (offsets[i], v1), (offsets[i + 1], v2))
+            .filter(|(tv, _)| *tv > offsets[i - 1] && *tv < offsets[i + 1]);
+        let parabola_crossing = vertex.is_some_and(|(_, vv)| {
+            let scale = v1.abs().max(f64::MIN_POSITIVE);
+            vv.signum() != v1.signum() && vv.abs() > GRAZING_REL_MARGIN * scale
+        });
         let near_zero = v1.abs() < 0.5 * v0.abs().max(v2.abs());
         if !(parabola_crossing || near_zero) {
             continue;
         }
-        // ③ REFINE the extremum (minimize f for a dip, -f for a bump).
-        let sign = if is_min { 1.0 } else { -1.0 };
-        let objective = move |x: f64| -> Result<f64, BoxedError> {
-            callback
-                .call(x)
-                .map(|v| sign * v)
-                .map_err(|e| BoxedError::from(e.to_string()))
-        };
-        let bracket = (offsets[i - 1], offsets[i + 1]);
-        let x_star = minimizer
-            .find_minimum_in_bracket(objective, bracket)
-            .map_err(DetectError::RootFinder)?;
-        let v_star = callback
-            .call(x_star)
+        // ③ REFINE, cheapest test first: a single probe at the predicted
+        // extremum. A sign change there yields the two brackets directly;
+        // otherwise the derivative-free minimizer runs only when the probe
+        // moved markedly toward zero (sharp kink extrema the parabola fit
+        // underestimates) — smooth non-crossing extrema are dismissed for
+        // one evaluation instead of a full minimization.
+        let probe_t = vertex
+            .map(|(tv, _)| tv)
+            .unwrap_or(0.5 * (offsets[i - 1] + offsets[i + 1]));
+        let v_probe = callback
+            .call(probe_t)
             .map_err(|e| DetectError::RootFinder(e.into()))?;
-        if v_star.signum() == v1.signum() || v_star == 0.0 {
-            // The extremum does not actually cross: a touching root with
-            // empty interior, or a false candidate.
+        let (x_star, v_star) = if v_probe.signum() != v1.signum() && v_probe != 0.0 {
+            (probe_t, v_probe)
+        } else if v_probe.abs() < GRAZING_PROBE_IMPROVEMENT * v1.abs() {
+            // Minimize f for a dip, -f for a bump.
+            let sign = if is_min { 1.0 } else { -1.0 };
+            let objective = move |x: f64| -> Result<f64, BoxedError> {
+                callback
+                    .call(x)
+                    .map(|v| sign * v)
+                    .map_err(|e| BoxedError::from(e.to_string()))
+            };
+            let bracket = (offsets[i - 1], offsets[i + 1]);
+            let x_star = minimizer
+                .find_minimum_in_bracket(objective, bracket)
+                .map_err(DetectError::RootFinder)?;
+            let v_star = callback
+                .call(x_star)
+                .map_err(|e| DetectError::RootFinder(e.into()))?;
+            if v_star.signum() == v1.signum() || v_star == 0.0 {
+                // The extremum does not actually cross: a touching root
+                // with empty interior, or a false candidate.
+                continue;
+            }
+            (x_star, v_star)
+        } else {
             continue;
-        }
+        };
         // Two new brackets around the extremum → two events.
         for (a, b, fa, fb) in [
             (offsets[i - 1], x_star, v0, v_star),
@@ -1022,7 +1043,13 @@ impl<S, R> Detector<S, R> {
         T: TimeScale + Copy,
         S: Signal<T>,
     {
+        // A single-leaf signal is trivially its own binding constraint —
+        // skip the two boundary evaluations per window.
+        let single_leaf = self.signal.leaf_count() == 1;
         let binding = |time: Time<T>| -> Result<ConstraintId, DetectError> {
+            if single_leaf {
+                return Ok(ConstraintId(0));
+            }
             self.signal
                 .eval_binding(time)
                 .map(|(_, id)| ConstraintId(id))
