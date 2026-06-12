@@ -15,6 +15,7 @@ use lox_comms::link_budget::{Eirp, GOverT};
 use lox_comms::link_budget::{
     InterferenceStats, LinkParameters, LinkStats, ModulatedLinkStats, frequency_overlap_factor,
 };
+use lox_comms::modcod::{self, ErrorMetric, ModCod};
 use lox_comms::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
 use lox_comms::pfd;
 use lox_comms::pointing::Pointing;
@@ -34,20 +35,6 @@ fn repr_f64(v: f64) -> String {
         format!("{s}.0")
     } else {
         s
-    }
-}
-
-fn modulation_name(m: Modulation) -> &'static str {
-    match m {
-        Modulation::Bpsk => "BPSK",
-        Modulation::Qpsk => "QPSK",
-        Modulation::Psk8 => "8PSK",
-        Modulation::Qam16 => "16QAM",
-        Modulation::Qam32 => "32QAM",
-        Modulation::Qam64 => "64QAM",
-        Modulation::Qam128 => "128QAM",
-        Modulation::Qam256 => "256QAM",
-        _ => unreachable!("unknown modulation variant"),
     }
 }
 
@@ -137,18 +124,11 @@ pub struct PyModulation(pub Modulation);
 impl PyModulation {
     #[new]
     fn new(name: &str) -> PyResult<Self> {
-        let m = match name {
-            "BPSK" => Modulation::Bpsk,
-            "QPSK" => Modulation::Qpsk,
-            "8PSK" => Modulation::Psk8,
-            "16QAM" => Modulation::Qam16,
-            "32QAM" => Modulation::Qam32,
-            "64QAM" => Modulation::Qam64,
-            "128QAM" => Modulation::Qam128,
-            "256QAM" => Modulation::Qam256,
-            _ => return Err(PyValueError::new_err(format!("unknown modulation: {name}"))),
-        };
-        Ok(Self(m))
+        name.parse()
+            .map(Self)
+            .map_err(|e: lox_comms::channel::ParseModulationError| {
+                PyValueError::new_err(e.to_string())
+            })
     }
 
     /// Returns the number of bits per symbol.
@@ -161,11 +141,11 @@ impl PyModulation {
     }
 
     fn __getnewargs__(&self) -> (&str,) {
-        (modulation_name(self.0),)
+        (self.0.name(),)
     }
 
     fn __repr__(&self) -> String {
-        format!("Modulation('{}')", modulation_name(self.0))
+        format!("Modulation('{}')", self.0.name())
     }
 }
 
@@ -868,16 +848,11 @@ impl PyCascadeReceiver {
 
 // --- Channel ---
 
-/// A communication channel.
+/// A communication channel: the waveform's occupancy of spectrum.
 ///
 /// Args:
-///     link_type: "uplink", "downlink", or "crosslink".
 ///     symbol_rate: Symbol rate in symbols per second.
-///     required_eb_n0: Required Eb/N0 as Decibel.
-///     margin: Required link margin as Decibel.
-///     modulation: Modulation scheme.
-///     roll_off: Roll-off factor (default 0.35).
-///     fec: Forward error correction code rate (default 0.5).
+///     roll_off: Pulse-shaping roll-off factor (default 0.35).
 ///     chip_rate: Chip rate for DSSS in chips per second (optional).
 #[pyclass(name = "Channel", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
@@ -890,39 +865,38 @@ fn parse_link_direction(s: &str) -> PyResult<LinkDirection> {
 #[pymethods]
 impl PyChannel {
     #[new]
-    #[pyo3(signature = (link_type, symbol_rate, required_eb_n0, margin, modulation, roll_off=0.35, fec=0.5, chip_rate=None))]
-    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (symbol_rate, roll_off=0.35, chip_rate=None))]
     fn new(
-        link_type: &str,
         symbol_rate: PyFrequency,
-        required_eb_n0: PyDecibel,
-        margin: PyDecibel,
-        modulation: &PyModulation,
         roll_off: f64,
-        fec: f64,
         chip_rate: Option<PyFrequency>,
     ) -> PyResult<Self> {
-        let lt = parse_link_direction(link_type)?;
-        Ok(Self(Channel {
-            link_type: lt,
-            symbol_rate: symbol_rate.0,
-            required_eb_n0: required_eb_n0.0,
-            margin: margin.0,
-            modulation: modulation.0,
-            roll_off,
-            fec,
-            chip_rate: chip_rate.map(|cr| cr.0),
-        }))
+        let mut builder = Channel::builder(symbol_rate.0).roll_off(roll_off);
+        if let Some(chip_rate) = chip_rate {
+            builder = builder.chip_rate(chip_rate.0);
+        }
+        builder
+            .build()
+            .map(Self)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
-    /// Returns the raw bit rate.
-    fn data_rate(&self) -> PyFrequency {
-        PyFrequency(self.0.data_rate())
+    /// Symbol rate.
+    #[getter]
+    fn symbol_rate(&self) -> PyFrequency {
+        PyFrequency(self.0.symbol_rate())
     }
 
-    /// Returns the information (post-FEC) bit rate.
-    fn information_rate(&self) -> PyFrequency {
-        PyFrequency(self.0.information_rate())
+    /// Pulse-shaping roll-off factor.
+    #[getter]
+    fn roll_off(&self) -> f64 {
+        self.0.roll_off()
+    }
+
+    /// DSSS chip rate, or None for narrowband.
+    #[getter]
+    fn chip_rate(&self) -> Option<PyFrequency> {
+        self.0.chip_rate().map(PyFrequency)
     }
 
     /// Returns the occupied channel bandwidth.
@@ -935,19 +909,9 @@ impl PyChannel {
         PyDecibel(self.0.es_n0(c_n0.0))
     }
 
-    /// Computes Eb/N0 from a given C/N0.
-    fn eb_n0(&self, c_n0: &PyDecibel) -> PyDecibel {
-        PyDecibel(self.0.eb_n0(c_n0.0))
-    }
-
     /// Computes C/N from a given C/N0.
     fn c_n(&self, c_n0: &PyDecibel) -> PyDecibel {
         PyDecibel(self.0.c_n(c_n0.0))
-    }
-
-    /// Computes the link margin from a given Eb/N0.
-    fn link_margin(&self, eb_n0: &PyDecibel) -> PyDecibel {
-        PyDecibel(self.0.link_margin(eb_n0.0))
     }
 
     /// Returns the DSSS spreading factor, or None for narrowband.
@@ -960,60 +924,204 @@ impl PyChannel {
         self.0.processing_gain().map(PyDecibel)
     }
 
-    /// Layers modulation/FEC figures onto a modulation-agnostic link budget.
-    fn apply(&self, link: PyLinkStats) -> PyModulatedLinkStats {
-        PyModulatedLinkStats(self.0.apply(link.0))
+    fn __eq__(&self, other: &PyChannel) -> bool {
+        self.0 == other.0
     }
 
-    #[allow(clippy::type_complexity)]
-    fn __getnewargs__<'py>(
-        &self,
-        py: Python<'py>,
-    ) -> (
-        &str,
-        PyFrequency,
-        PyDecibel,
-        PyDecibel,
-        Bound<'py, PyAny>,
-        f64,
-        f64,
-        Option<PyFrequency>,
-    ) {
-        let lt = match self.0.link_type {
-            LinkDirection::Uplink => "uplink",
-            LinkDirection::Downlink => "downlink",
-            LinkDirection::Crosslink => "crosslink",
-            _ => unreachable!("unknown link direction variant"),
-        };
-        let modulation = Bound::new(py, PyModulation(self.0.modulation))
-            .unwrap()
-            .into_any();
+    fn __getnewargs__(&self) -> (PyFrequency, f64, Option<PyFrequency>) {
         (
-            lt,
-            PyFrequency(self.0.symbol_rate),
-            PyDecibel(self.0.required_eb_n0),
-            PyDecibel(self.0.margin),
-            modulation,
-            self.0.roll_off,
-            self.0.fec,
-            self.0.chip_rate.map(PyFrequency),
+            PyFrequency(self.0.symbol_rate()),
+            self.0.roll_off(),
+            self.0.chip_rate().map(PyFrequency),
         )
     }
 
     fn __repr__(&self) -> String {
-        let chip = self.0.chip_rate.map_or(String::new(), |cr| {
+        let chip = self.0.chip_rate().map_or(String::new(), |cr| {
             format!(", chip_rate={}", PyFrequency(cr).__repr__())
         });
         format!(
-            "Channel(link_type='{}', symbol_rate={}, required_eb_n0={}, margin={}, modulation=Modulation('{}'), roll_off={}, fec={}{})",
-            self.0.link_type,
-            PyFrequency(self.0.symbol_rate).__repr__(),
-            PyDecibel(self.0.required_eb_n0).__repr__(),
-            PyDecibel(self.0.margin).__repr__(),
-            modulation_name(self.0.modulation),
-            repr_f64(self.0.roll_off),
-            repr_f64(self.0.fec),
-            chip,
+            "Channel(symbol_rate={}, roll_off={}{})",
+            PyFrequency(self.0.symbol_rate()).__repr__(),
+            repr_f64(self.0.roll_off()),
+            chip
+        )
+    }
+}
+
+// --- ModCod ---
+
+/// A modulation and coding scheme with its performance threshold.
+///
+/// Constructed from the classic hand-rolled specification — a modulation,
+/// an aggregate code rate, and the Eb/N0 required for a target error rate —
+/// or taken from a built-in table such as ``ModCod.dvb_s2()``.
+///
+/// Args:
+///     name: Name of the scheme.
+///     modulation: Modulation scheme.
+///     code_rate: Aggregate code rate in (0, 1].
+///     required_eb_n0: Eb/N0 threshold as Decibel.
+///     metric: Error metric ("BER", "WER", "FER", or "PER"; default "BER").
+///     error_rate: Error rate at the threshold (default 1e-6).
+#[pyclass(name = "ModCod", module = "lox_space", frozen, from_py_object)]
+#[derive(Debug, Clone)]
+pub struct PyModCod(pub ModCod);
+
+fn parse_error_metric(s: &str) -> PyResult<ErrorMetric> {
+    match s.to_ascii_uppercase().as_str() {
+        "BER" => Ok(ErrorMetric::Ber),
+        "WER" => Ok(ErrorMetric::Wer),
+        "FER" => Ok(ErrorMetric::Fer),
+        "PER" => Ok(ErrorMetric::Per),
+        _ => Err(PyValueError::new_err(format!(
+            "unknown error metric: '{s}', expected 'BER', 'WER', 'FER', or 'PER'"
+        ))),
+    }
+}
+
+#[pymethods]
+impl PyModCod {
+    #[new]
+    #[pyo3(signature = (name, modulation, code_rate, required_eb_n0, metric="BER", error_rate=1e-6))]
+    fn new(
+        name: &str,
+        modulation: &PyModulation,
+        code_rate: f64,
+        required_eb_n0: PyDecibel,
+        metric: &str,
+        error_rate: f64,
+    ) -> PyResult<Self> {
+        ModCod::from_required_eb_n0(
+            name,
+            modulation.0,
+            code_rate,
+            required_eb_n0.0,
+            parse_error_metric(metric)?,
+            error_rate,
+        )
+        .map(Self)
+        .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
+    /// Returns the DVB-S2 MODCOD table (normal FECFRAME, no pilots).
+    ///
+    /// 28 modes from QPSK 1/4 through 32APSK 9/10 with quasi-error-free
+    /// thresholds per ETSI EN 302 307-1 Table 13.
+    #[staticmethod]
+    fn dvb_s2() -> Vec<PyModCod> {
+        modcod::dvb_s2().iter().cloned().map(PyModCod).collect()
+    }
+
+    /// Selects the highest-efficiency MODCOD that closes at the given Es/N0
+    /// with the given margin, or None when none does.
+    #[staticmethod]
+    fn select(es_n0: PyDecibel, margin: PyDecibel, table: Vec<PyModCod>) -> Option<PyModCod> {
+        let table: Vec<ModCod> = table.into_iter().map(|mc| mc.0).collect();
+        ModCod::select(es_n0.0, margin.0, &table)
+            .cloned()
+            .map(PyModCod)
+    }
+
+    /// Name of the scheme.
+    #[getter]
+    fn name(&self) -> String {
+        self.0.mode().name().to_owned()
+    }
+
+    /// Modulation scheme.
+    #[getter]
+    fn modulation(&self) -> PyModulation {
+        PyModulation(self.0.mode().modulation())
+    }
+
+    /// Overall code rate: the product of the coding chain's rates.
+    #[getter]
+    fn code_rate(&self) -> f64 {
+        self.0.mode().code_rate()
+    }
+
+    /// The coding chain as (name, rate) tuples in encoding order.
+    #[getter]
+    fn codes(&self) -> Vec<(String, f64)> {
+        self.0
+            .mode()
+            .codes()
+            .iter()
+            .map(|c| (c.name().to_owned(), c.rate()))
+            .collect()
+    }
+
+    /// Information bits per symbol including all coding and framing overhead.
+    #[getter]
+    fn info_bits_per_symbol(&self) -> f64 {
+        self.0.mode().info_bits_per_symbol()
+    }
+
+    /// Required Eb/N0 threshold.
+    #[getter]
+    fn required_eb_n0(&self) -> PyDecibel {
+        PyDecibel(self.0.required_eb_n0())
+    }
+
+    /// Required Es/N0 threshold.
+    #[getter]
+    fn required_es_n0(&self) -> PyDecibel {
+        PyDecibel(self.0.required_es_n0())
+    }
+
+    /// Error metric of the threshold ("BER", "WER", "FER", or "PER").
+    #[getter]
+    fn metric(&self) -> String {
+        self.0.performance().metric().to_string()
+    }
+
+    /// Error rate at the threshold.
+    #[getter]
+    fn error_rate(&self) -> f64 {
+        self.0.performance().error_rate()
+    }
+
+    /// Source of the mode definition.
+    #[getter]
+    fn reference(&self) -> String {
+        self.0.mode().reference().to_owned()
+    }
+
+    /// Returns the information bit rate at the given symbol rate.
+    fn information_rate(&self, symbol_rate: PyFrequency) -> PyFrequency {
+        PyFrequency(self.0.mode().information_rate(symbol_rate.0))
+    }
+
+    /// Evaluates a link budget on a channel against this MODCOD.
+    ///
+    /// Args:
+    ///     link: The modulation-agnostic link budget.
+    ///     channel: The waveform the link runs on.
+    ///     design_margin: Margin applied on top of the threshold (default 0 dB).
+    #[pyo3(signature = (link, channel, design_margin=None))]
+    fn evaluate(
+        &self,
+        link: PyLinkStats,
+        channel: &PyChannel,
+        design_margin: Option<PyDecibel>,
+    ) -> PyModulatedLinkStats {
+        let margin = design_margin.map(|m| m.0).unwrap_or(Decibel::new(0.0));
+        PyModulatedLinkStats(ModulatedLinkStats::evaluate(
+            link.0, &channel.0, &self.0, margin,
+        ))
+    }
+
+    fn __eq__(&self, other: &PyModCod) -> bool {
+        self.0 == other.0
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "ModCod('{}', required_eb_n0={:.2} dB, info_bits_per_symbol={:.3})",
+            self.0.mode().name(),
+            self.0.required_eb_n0().as_f64(),
+            self.0.mode().info_bits_per_symbol(),
         )
     }
 }
@@ -1382,16 +1490,33 @@ impl PyModulatedLinkStats {
         PyLinkStats(self.0.link.clone())
     }
 
-    /// The channel (modulation, FEC, required Eb/N0, margin) applied.
+    /// The waveform the link was evaluated on.
     #[getter]
     fn channel(&self) -> PyChannel {
         PyChannel(self.0.channel.clone())
     }
 
+    /// The modulation and coding scheme the link was evaluated against.
+    #[getter]
+    fn modcod(&self) -> PyModCod {
+        PyModCod(self.0.modcod.clone())
+    }
+
+    /// Design margin applied on top of the MODCOD threshold.
+    #[getter]
+    fn design_margin(&self) -> PyDecibel {
+        PyDecibel(self.0.design_margin)
+    }
+
     /// Symbol rate from the channel.
     #[getter]
     fn symbol_rate(&self) -> PyFrequency {
-        PyFrequency(self.0.symbol_rate)
+        PyFrequency(self.0.symbol_rate())
+    }
+
+    /// Information bit rate: symbol rate × info bits per symbol.
+    fn information_rate(&self) -> PyFrequency {
+        PyFrequency(self.0.information_rate())
     }
 
     /// Es/N0 (energy per symbol to noise spectral density) in dB.

@@ -612,86 +612,103 @@ def test_complex_receiver_repr_roundtrip():
 
 
 def test_channel_bandwidth():
-    # BPSK, 1 Msps, roll-off=0.5 -> BW = 1.5 MHz
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=1 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("BPSK"),
-        roll_off=0.5,
-        fec=0.5,
-    )
+    # 1 Msps, roll-off=0.5 -> BW = 1.5 MHz
+    ch = lox.Channel(symbol_rate=1 * lox.MHz, roll_off=0.5)
     assert ch.bandwidth().to_hertz() == pytest.approx(1.5e6, rel=1e-10)
 
 
-def test_channel_eb_n0():
-    # QPSK, 500 ksps, fec=0.5 -> data_rate=1 Mbps (=symbol_rate * bps * fec for Eb/N0)
-    # Es/N0 = 80 - 10*log10(500e3) = 80 - 56.99 = 23.01
-    # Eb/N0 = 23.01 - 10*log10(2*0.5) = 23.01
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=500 * lox.kHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-    )
-    eb_n0 = ch.eb_n0(80.0 * lox.dB)
-    expected = 80.0 - 10.0 * math.log10(500e3) - 10.0 * math.log10(2 * 0.5)
-    assert float(eb_n0) == pytest.approx(expected, abs=1e-6)
+def test_channel_es_n0():
+    # Es/N0 = 80 - 10*log10(500e3) = 23.01
+    ch = lox.Channel(symbol_rate=500 * lox.kHz)
+    es_n0 = ch.es_n0(80.0 * lox.dB)
+    expected = 80.0 - 10.0 * math.log10(500e3)
+    assert float(es_n0) == pytest.approx(expected, abs=1e-6)
 
 
-def test_channel_link_margin():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=500 * lox.kHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-    )
-    margin = ch.link_margin(15.0 * lox.dB)
-    assert float(margin) == pytest.approx(2.0, abs=1e-10)
+def test_channel_rejects_invalid():
+    with pytest.raises(ValueError):
+        lox.Channel(symbol_rate=0 * lox.Hz)
+    with pytest.raises(ValueError):
+        lox.Channel(symbol_rate=1 * lox.MHz, roll_off=-0.1)
+    with pytest.raises(ValueError):
+        lox.Channel(symbol_rate=5 * lox.MHz, chip_rate=1 * lox.MHz)
 
 
-def test_channel_invalid_link_type():
-    with pytest.raises(ValueError, match="unknown link direction"):
-        lox.Channel(
-            link_type="invalid",
-            symbol_rate=1 * lox.MHz,
-            required_eb_n0=10.0 * lox.dB,
-            margin=3.0 * lox.dB,
-            modulation=lox.Modulation("BPSK"),
-        )
+def test_channel_dsss():
+    ch = lox.Channel(symbol_rate=10 * lox.kHz, chip_rate=4 * lox.MHz)
+    assert ch.spreading_factor() == pytest.approx(400.0, rel=1e-10)
+    assert float(ch.processing_gain()) == pytest.approx(26.02, abs=0.01)
 
 
 def test_channel_pickle():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=1 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-        roll_off=0.35,
-        fec=0.5,
-    )
+    ch = lox.Channel(symbol_rate=1 * lox.MHz, roll_off=0.25)
     restored = pickle.loads(pickle.dumps(ch))
-    # Channel doesn't have __eq__, verify via bandwidth
-    assert restored.bandwidth().to_hertz() == pytest.approx(
-        ch.bandwidth().to_hertz(), abs=1e-10
-    )
+    assert restored == ch
 
 
 def test_channel_repr():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=1 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-    )
+    ch = lox.Channel(symbol_rate=1 * lox.MHz)
     r = repr(ch)
-    assert "link_type='downlink'" in r
-    assert "modulation=Modulation('QPSK')" in r
+    assert "symbol_rate=" in r
+    assert "roll_off=0.35" in r
+
+
+# --- ModCod ---
+
+
+def test_modcod_from_required_eb_n0():
+    mc = lox.ModCod(
+        "my downlink", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB
+    )
+    assert mc.name == "my downlink"
+    assert mc.info_bits_per_symbol == pytest.approx(1.0, abs=1e-12)
+    assert float(mc.required_eb_n0) == pytest.approx(10.0, abs=1e-12)
+    assert float(mc.required_es_n0) == pytest.approx(10.0, abs=1e-9)
+    assert mc.metric == "BER"
+    assert mc.error_rate == pytest.approx(1e-6)
+
+
+def test_modcod_rejects_invalid():
+    with pytest.raises(ValueError):
+        lox.ModCod("bad", lox.Modulation("QPSK"), 1.5, 10.0 * lox.dB)
+    with pytest.raises(ValueError, match="unknown error metric"):
+        lox.ModCod("bad", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB, metric="XYZ")
+
+
+def test_modcod_dvb_s2_table():
+    table = lox.ModCod.dvb_s2()
+    assert len(table) == 28
+    qpsk12 = next(mc for mc in table if mc.name == "QPSK 1/2")
+    # ETSI EN 302 307-1 Table 13: efficiency 0.988858, Es/N0 = 1.0 dB.
+    assert qpsk12.info_bits_per_symbol == pytest.approx(0.988858, abs=5e-7)
+    assert float(qpsk12.required_es_n0) == pytest.approx(1.0, abs=1e-9)
+    assert qpsk12.reference.startswith("ETSI")
+    # The coding chain is exposed.
+    names = [name for name, _ in qpsk12.codes]
+    assert any("LDPC" in n for n in names)
+
+
+def test_modcod_select():
+    table = lox.ModCod.dvb_s2()
+    best = lox.ModCod.select(20.0 * lox.dB, 0.0 * lox.dB, table)
+    assert best.name == "32APSK 9/10"
+    assert lox.ModCod.select(-3.0 * lox.dB, 0.0 * lox.dB, table) is None
+
+
+def test_modcod_evaluate():
+    losses = lox.PropagationLosses(rain=2.0 * lox.dB)
+    ch = lox.Channel(symbol_rate=5 * lox.MHz)
+    mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
+    stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth(), losses=losses)
+    m = mc.evaluate(stats, ch, design_margin=3.0 * lox.dB)
+    # Es/N0 = C/N0 - 10*log10(5e6); Eb/N0 = Es/N0 (1 info bit/symbol)
+    assert float(m.es_n0) == pytest.approx(float(stats.c_n0) - 10 * math.log10(5e6), abs=1e-9)
+    assert float(m.eb_n0) == pytest.approx(float(m.es_n0), abs=1e-9)
+    assert float(m.margin) == pytest.approx(float(m.eb_n0) - 10.0 - 3.0, abs=1e-9)
+    assert m.information_rate().to_hertz() == pytest.approx(5e6, rel=1e-10)
+    assert m.modcod == mc
+    assert m.channel == ch
+    assert float(m.design_margin) == pytest.approx(3.0)
 
 
 # --- Propagation Losses ---
@@ -778,15 +795,8 @@ def test_link_stats_noise_power():
 
 
 def test_link_stats_end_to_end():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=5 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-        roll_off=0.35,
-        fec=0.5,
-    )
+    ch = lox.Channel(symbol_rate=5 * lox.MHz)
+    mc = lox.ModCod("QPSK 1/2 test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
 
     stats = link_stats(
         make_tx(),
@@ -795,7 +805,7 @@ def test_link_stats_end_to_end():
         tx_angle=0.0 * lox.deg,
         rx_angle=0.0 * lox.deg,
     )
-    modulated = ch.apply(stats)
+    modulated = mc.evaluate(stats, ch, design_margin=3.0 * lox.dB)
 
     # EIRP = 46 + 10 - 1 = 55 dBW
     assert float(stats.eirp) == pytest.approx(55.0, abs=0.01)
@@ -812,6 +822,7 @@ def test_link_stats_end_to_end():
     # Properties
     assert stats.slant_range.to_kilometers() == pytest.approx(1000.0, abs=1e-6)
     assert modulated.symbol_rate.to_hertz() == pytest.approx(5e6, abs=1e-6)
+    assert modulated.information_rate().to_hertz() == pytest.approx(5e6, abs=1e-6)
     assert stats.frequency.to_hertz() == pytest.approx(29e9, abs=1.0)
 
 
@@ -848,15 +859,8 @@ def test_link_stats_rejects_unknown_link_type():
 
 
 def test_link_stats_with_losses():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=5 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-        roll_off=0.35,
-        fec=0.5,
-    )
+    ch = lox.Channel(symbol_rate=5 * lox.MHz)
+    mc = lox.ModCod("QPSK 1/2 test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
 
     losses = lox.PropagationLosses(rain=2.0 * lox.dB, other=[("Atmospheric", 1.0 * lox.dB, True)])
 
@@ -866,8 +870,8 @@ def test_link_stats_with_losses():
     stats_loss = link_stats(
         make_tx(), make_rx(), bandwidth=ch.bandwidth(), losses=losses
     )
-    modulated_no_loss = ch.apply(stats_no_loss)
-    modulated_loss = ch.apply(stats_loss)
+    modulated_no_loss = mc.evaluate(stats_no_loss, ch, design_margin=3.0 * lox.dB)
+    modulated_loss = mc.evaluate(stats_loss, ch, design_margin=3.0 * lox.dB)
 
     # 3 dB of environmental losses should reduce margin by 3 dB
     margin_diff = float(modulated_no_loss.margin) - float(modulated_loss.margin)
@@ -877,53 +881,8 @@ def test_link_stats_with_losses():
 # --- Channel additional methods ---
 
 
-def test_channel_data_rate():
-    # QPSK (2 bps), 5 Msps -> data_rate = 10 Mbps
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=5 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-    )
-    assert ch.data_rate().to_hertz() == pytest.approx(10e6, rel=1e-10)
-
-
-def test_channel_information_rate():
-    # data_rate=10 Mbps, fec=0.5 -> info_rate=5 Mbps
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=5 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-        fec=0.5,
-    )
-    assert ch.information_rate().to_hertz() == pytest.approx(5e6, rel=1e-10)
-
-
-def test_channel_es_n0():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=5 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-    )
-    es_n0 = ch.es_n0(80.0 * lox.dB)
-    expected = 80.0 - 10.0 * math.log10(5e6)
-    assert float(es_n0) == pytest.approx(expected, abs=1e-3)
-
-
 def test_channel_c_n():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=5 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-        roll_off=0.35,
-    )
+    ch = lox.Channel(symbol_rate=5 * lox.MHz)
     c_n = ch.c_n(80.0 * lox.dB)
     bw = 5e6 * 1.35
     expected = 80.0 - 10.0 * math.log10(bw)
@@ -931,53 +890,15 @@ def test_channel_c_n():
 
 
 def test_channel_spreading_factor_narrowband():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=1 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("BPSK"),
-    )
+    ch = lox.Channel(symbol_rate=1 * lox.MHz)
     assert ch.spreading_factor() is None
     assert ch.processing_gain() is None
 
 
-def test_channel_spreading_factor_dsss():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=10 * lox.kHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("BPSK"),
-        chip_rate=4 * lox.MHz,
-    )
-    assert ch.spreading_factor() == pytest.approx(400.0, rel=1e-10)
-    pg = ch.processing_gain()
-    assert float(pg) == pytest.approx(10.0 * math.log10(400.0), abs=1e-3)
-
-
-def test_channel_uplink_and_crosslink():
-    for lt in ("uplink", "crosslink"):
-        ch = lox.Channel(
-            link_type=lt,
-            symbol_rate=1 * lox.MHz,
-            required_eb_n0=10.0 * lox.dB,
-            margin=3.0 * lox.dB,
-            modulation=lox.Modulation("BPSK"),
-        )
-        assert lt in repr(ch)
-
-
-def test_channel_repr_with_chip_rate():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=10 * lox.kHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("BPSK"),
-        chip_rate=4 * lox.MHz,
-    )
-    assert "chip_rate=" in repr(ch)
+def test_modcod_information_rate():
+    # QPSK rate 1/2 at 5 Msps: 5 Mbit/s information rate.
+    mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
+    assert mc.information_rate(5 * lox.MHz).to_hertz() == pytest.approx(5e6, rel=1e-10)
 
 
 # --- LinkStats additional outputs ---
@@ -1080,15 +1001,7 @@ def test_noise_stage_pickle():
 
 
 def test_link_stats_all_getters():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=5 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-        roll_off=0.35,
-        fec=0.5,
-    )
+    ch = lox.Channel(symbol_rate=5 * lox.MHz)
 
     stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth())
 
@@ -1103,16 +1016,11 @@ def test_link_stats_all_getters():
 
 
 def test_link_stats_repr():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=5 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-    )
+    ch = lox.Channel(symbol_rate=5 * lox.MHz)
 
+    mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
     stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth())
-    modulated = ch.apply(stats)
+    modulated = mc.evaluate(stats, ch, design_margin=3.0 * lox.dB)
     r = repr(stats)
     assert "LinkStats" in r
     assert "c_n0=" in r
@@ -1210,15 +1118,10 @@ def test_tx_chain_rejects_negative_feed_loss():
 def test_lumped_link_interference_requires_absolute_power():
     tx = lox.EirpModel(KA_BAND, 55.0 * lox.dB)
     rx = lox.GtModel(KA_BAND, 3.01 * lox.dB)
-    channel = lox.Channel(
-        link_type="downlink",
-        symbol_rate=5.0 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-    )
+    channel = lox.Channel(symbol_rate=5.0 * lox.MHz)
+    mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
     link = link_stats(tx, rx, bandwidth=channel.bandwidth())
-    modulated = channel.apply(link)
+    modulated = mc.evaluate(link, channel, design_margin=3.0 * lox.dB)
 
     with pytest.raises(ValueError, match="absolute carrier and noise powers"):
         modulated.with_interference(1e-12 * lox.W)
@@ -1228,18 +1131,13 @@ def test_lumped_link_interference_requires_absolute_power():
 
 
 def test_modulated_with_interference_component_tier():
-    channel = lox.Channel(
-        link_type="downlink",
-        symbol_rate=5.0 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-    )
+    channel = lox.Channel(symbol_rate=5.0 * lox.MHz)
 
+    mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
     link = link_stats(
         make_tx(), make_rx(), bandwidth=channel.bandwidth()
     )
-    modulated = channel.apply(link)
+    modulated = mc.evaluate(link, channel, design_margin=3.0 * lox.dB)
     interference = modulated.with_interference(1e-12 * lox.W)
 
     assert float(interference.margin_with_interference) < float(modulated.margin)
@@ -1261,14 +1159,7 @@ def test_simple_receiver_repr():
 
 
 def test_channel_dsss_pickle():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=10 * lox.kHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("BPSK"),
-        chip_rate=4 * lox.MHz,
-    )
+    ch = lox.Channel(symbol_rate=10 * lox.kHz, chip_rate=4 * lox.MHz)
     restored = pickle.loads(pickle.dumps(ch))
     assert restored.spreading_factor() == pytest.approx(ch.spreading_factor(), rel=1e-10)
     assert float(restored.processing_gain()) == pytest.approx(float(ch.processing_gain()), abs=1e-10)
@@ -1324,37 +1215,29 @@ def test_link_stats_rejects_angle_and_direction():
 
 
 def test_modulated_link_stats_link_and_channel_getters():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=5 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-    )
+    ch = lox.Channel(symbol_rate=5 * lox.MHz)
+    mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
     stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth())
-    modulated = ch.apply(stats)
+    modulated = mc.evaluate(stats, ch)
 
     # link getter returns the underlying PyLinkStats
     assert modulated.link.c_n0 == stats.c_n0
-    # channel getter returns the PyChannel
-    assert "QPSK" in repr(modulated.channel)
+    # channel and modcod getters round-trip
+    assert modulated.channel == ch
+    assert modulated.modcod == mc
+    assert float(modulated.design_margin) == pytest.approx(0.0)
 
 
 # --- InterferenceStats c_n0i0 and repr ---
 
 
 def test_interference_stats_c_n0i0_and_repr():
-    channel = lox.Channel(
-        link_type="downlink",
-        symbol_rate=5.0 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-    )
+    channel = lox.Channel(symbol_rate=5.0 * lox.MHz)
+    mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
     link = link_stats(
         make_tx(), make_rx(), bandwidth=channel.bandwidth()
     )
-    modulated = channel.apply(link)
+    modulated = mc.evaluate(link, channel, design_margin=3.0 * lox.dB)
     interference = modulated.with_interference(1e-12 * lox.W)
 
     assert math.isfinite(float(interference.c_n0i0))
@@ -1367,15 +1250,10 @@ def test_interference_stats_c_n0i0_and_repr():
 
 
 def test_modulated_link_stats_repr():
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=5 * lox.MHz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-    )
+    ch = lox.Channel(symbol_rate=5 * lox.MHz)
+    mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
     stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth())
-    modulated = ch.apply(stats)
+    modulated = mc.evaluate(stats, ch)
     r = repr(modulated)
     assert "ModulatedLinkStats" in r
     assert "eb_n0=" in r
@@ -1404,6 +1282,14 @@ def test_modulation_repr_all_variants():
         "64QAM": "Modulation('64QAM')",
         "128QAM": "Modulation('128QAM')",
         "256QAM": "Modulation('256QAM')",
+        "OQPSK": "Modulation('OQPSK')",
+        "8APSK": "Modulation('8APSK')",
+        "16APSK": "Modulation('16APSK')",
+        "32APSK": "Modulation('32APSK')",
+        "64APSK": "Modulation('64APSK')",
+        "GMSK": "Modulation('GMSK')",
+        "2FSK": "Modulation('2FSK')",
+        "4FSK": "Modulation('4FSK')",
     }
     for name, expected_repr in expected.items():
         assert repr(lox.Modulation(name)) == expected_repr

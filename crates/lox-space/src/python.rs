@@ -14,7 +14,7 @@ use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
     PyAmplifierTransmitter, PyAntennaFrame, PyCascadeReceiver, PyChannel, PyConstantAntenna,
     PyDecibel, PyDipolePattern, PyEirpModel, PyFrequencyRange, PyGaussianPattern, PyGtModel,
-    PyInterferenceStats, PyLinkStats, PyModulatedLinkStats, PyModulation, PyNoiseStage,
+    PyInterferenceStats, PyLinkStats, PyModCod, PyModulatedLinkStats, PyModulation, PyNoiseStage,
     PyNoiseTempReceiver, PyParabolicPattern, PyPatternedAntenna, PyPfdMask, PyPropagationLosses,
     PyRxChain, PyTxChain, freq_overlap, fspl, power_flux_density, slant_range,
 };
@@ -70,6 +70,7 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyCascadeReceiver>()?;
     m.add_class::<PyNoiseStage>()?;
     m.add_class::<PyChannel>()?;
+    m.add_class::<PyModCod>()?;
     m.add_class::<PyItuProvider>()?;
     m.add_class::<PyPropagationLosses>()?;
     m.add_class::<PyLinkStats>()?;
