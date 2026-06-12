@@ -13,6 +13,7 @@ pub mod antenna;
 pub mod channel;
 pub mod error;
 pub mod link_budget;
+pub mod modcod;
 pub mod pattern;
 pub mod pfd;
 pub mod pointing;
