@@ -23,7 +23,8 @@ pub mod utils;
 
 pub use error::LinkBudgetError;
 pub use lox_core::comms::{
-    FrequencyBand, FrequencyRange, FrequencyRangeError, ParseFrequencyBandError,
+    FrequencyBand, FrequencyRange, FrequencyRangeError, LossKind, LossLine,
+    ParseFrequencyBandError, PropagationLossError, PropagationLosses,
 };
 
 use lox_core::units::Temperature;
