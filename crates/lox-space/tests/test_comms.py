@@ -895,6 +895,16 @@ def test_channel_spreading_factor_narrowband():
     assert ch.processing_gain() is None
 
 
+def test_modcod_evaluate_rejects_bandwidth_mismatch():
+    # The link was computed with a 5 MHz noise bandwidth, not the channel's
+    # 6.75 MHz occupied bandwidth.
+    ch = lox.Channel(symbol_rate=5 * lox.MHz)
+    mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
+    stats = link_stats(make_tx(), make_rx(), bandwidth=5 * lox.MHz)
+    with pytest.raises(ValueError, match="does not match"):
+        mc.evaluate(stats, ch)
+
+
 def test_modcod_information_rate():
     # QPSK rate 1/2 at 5 Msps: 5 Mbit/s information rate.
     mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
