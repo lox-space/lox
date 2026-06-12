@@ -28,7 +28,7 @@ pub enum ZeroCrossing {
 }
 
 impl ZeroCrossing {
-    fn new(s0: f64, s1: f64) -> Option<ZeroCrossing> {
+    pub(crate) fn new(s0: f64, s1: f64) -> Option<ZeroCrossing> {
         if s0 < 0.0 && s1 > 0.0 {
             Some(ZeroCrossing::Up)
         } else if s0 > 0.0 && s1 < 0.0 {
