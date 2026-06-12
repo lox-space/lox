@@ -17,7 +17,7 @@ use crate::error::NonPhysicalError;
 use crate::pointing::Pointing;
 use crate::utils::free_space_path_loss;
 use crate::{BOLTZMANN_CONSTANT, LinkBudgetError};
-use lox_core::units::FrequencyRange;
+use lox_core::comms::FrequencyRange;
 
 pub use lox_itur::EnvironmentalLosses;
 

@@ -640,9 +640,10 @@ mod tests {
     use super::*;
     #[cfg(feature = "comms")]
     use lox_comms::terminal::{EirpModel, GtModel};
-    use lox_core::coords::LonLatAlt;
     #[cfg(feature = "comms")]
-    use lox_core::units::{DecibelUnits, FrequencyBand};
+    use lox_core::comms::FrequencyBand;
+    use lox_core::coords::LonLatAlt;
+    use lox_core::units::DecibelUnits;
     use lox_frames::DynFrame;
     use lox_orbits::ground::GroundLocation;
     use lox_time::deltas::TimeDelta;

@@ -25,7 +25,8 @@ use lox_comms::receiver::{CascadeReceiver, NoiseStage, NoiseTempReceiver, Receiv
 use lox_comms::terminal::{EirpModel, GtModel, RxChain, RxTerminal, TxChain, TxTerminal};
 use lox_comms::transmitter::AmplifierTransmitter;
 use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
-use lox_core::units::{Angle, Decibel, FrequencyBand, FrequencyRange};
+use lox_core::comms::{FrequencyBand, FrequencyRange};
+use lox_core::units::{Angle, Decibel};
 
 use crate::units::python::{PyAngle, PyDistance, PyFrequency, PyPower, PyTemperature};
 

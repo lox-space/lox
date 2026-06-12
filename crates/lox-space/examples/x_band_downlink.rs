@@ -19,6 +19,7 @@
 
 use std::error::Error;
 
+use lox_space::comms::FrequencyRange;
 use lox_space::comms::antenna::Antenna;
 use lox_space::comms::channel::{Channel, LinkDirection, Modulation};
 use lox_space::comms::link_budget::{Eirp, EnvironmentalLosses, GOverT, LinkParameters, LinkStats};
@@ -28,7 +29,6 @@ use lox_space::comms::receiver::CascadeReceiver;
 use lox_space::comms::terminal::{RxChain, TxChain};
 use lox_space::comms::transmitter::AmplifierTransmitter;
 use lox_space::comms::utils::slant_range;
-use lox_space::units::FrequencyRange;
 use lox_space::units::{
     AngleUnits, DecibelUnits, DistanceUnits, FrequencyUnits, PowerUnits, TemperatureUnits,
 };
