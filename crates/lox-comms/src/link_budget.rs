@@ -493,16 +493,31 @@ impl ModulatedLinkStats {
     /// Computes Es/N0 from the channel's symbol rate, Eb/N0 through the
     /// MODCOD's exact information bits per symbol, and the link margin
     /// against the MODCOD's threshold plus the design margin.
+    ///
+    /// The link's noise bandwidth must match the channel's occupied
+    /// bandwidth (within 1 ppm) — the link's noise power and C/N were
+    /// computed with it, and a mismatch would silently skew interference
+    /// margins. Compute the budget with
+    /// [`Channel::bandwidth`](crate::channel::Channel::bandwidth).
     pub fn evaluate(
         link: LinkStats,
         channel: &Channel,
         modcod: &ModCod,
         design_margin: Decibel,
-    ) -> Self {
+    ) -> Result<Self, LinkBudgetError> {
+        let link_bw = link.bandwidth.to_hertz();
+        let channel_bw = channel.bandwidth().to_hertz();
+        if (link_bw - channel_bw).abs() > 1e-6 * channel_bw {
+            return Err(LinkBudgetError::BandwidthMismatch {
+                link: link.bandwidth,
+                channel: channel.bandwidth(),
+            });
+        }
+
         let es_n0 = channel.es_n0(link.c_n0);
         let eb_n0 = es_n0 - Decibel::from_linear(modcod.mode().info_bits_per_symbol());
         let margin = eb_n0 - modcod.required_eb_n0() - design_margin;
-        Self {
+        Ok(Self {
             link,
             channel: channel.clone(),
             modcod: modcod.clone(),
@@ -510,7 +525,7 @@ impl ModulatedLinkStats {
             es_n0,
             eb_n0,
             margin,
-        }
+        })
     }
 
     /// Returns the symbol rate of the underlying channel.
@@ -668,6 +683,25 @@ mod tests {
             &link_params(5.0.mhz()),
         )
         .unwrap()
+    }
+
+    fn lumped_stats_with_channel_bandwidth() -> LinkStats {
+        LinkStats::for_link(
+            &EirpModel::new(ka_band(), 55.0.db()).unwrap(),
+            &GtModel::new(ka_band(), 3.01.db()).unwrap(),
+            &link_params(channel().bandwidth()),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn test_evaluate_rejects_bandwidth_mismatch() {
+        // The lumped fixture was computed with a 5 MHz noise bandwidth, not
+        // the channel's 6.75 MHz occupied bandwidth.
+        let err = ModulatedLinkStats::evaluate(lumped_stats(), &channel(), &modcod(), 0.0.db())
+            .unwrap_err();
+        assert!(matches!(err, LinkBudgetError::BandwidthMismatch { .. }));
+        assert!(err.to_string().contains("does not match"));
     }
 
     /// Custom link ends only need the trait surface: a fixed-EIRP transmitter
@@ -1025,7 +1059,7 @@ mod tests {
     #[test]
     fn test_evaluate_produces_modulated_stats() {
         let stats = component_stats();
-        let m = ModulatedLinkStats::evaluate(stats, &channel(), &modcod(), 3.0.db());
+        let m = ModulatedLinkStats::evaluate(stats, &channel(), &modcod(), 3.0.db()).unwrap();
         // Eb/N0 ≈ 37.91 (QPSK 1/2 → 1 info bit/symbol, C/N0 ≈ 104.91 dB·Hz)
         assert_approx_eq!(m.eb_n0.as_f64(), 37.91, atol <= 0.02);
         // required_eb_n0 = 10, design margin = 3 → margin ≈ 24.91
@@ -1037,7 +1071,8 @@ mod tests {
 
     #[test]
     fn test_modulated_with_interference_reduces_margin() {
-        let m = ModulatedLinkStats::evaluate(component_stats(), &channel(), &modcod(), 3.0.db());
+        let m = ModulatedLinkStats::evaluate(component_stats(), &channel(), &modcod(), 3.0.db())
+            .unwrap();
         let interference = m.with_interference(Power::watts(1e-12)).unwrap();
         assert!(interference.margin_with_interference.as_f64() <= m.margin.as_f64());
         assert!(interference.eb_n0i0.as_f64() <= m.eb_n0.as_f64());
@@ -1045,7 +1080,8 @@ mod tests {
 
     #[test]
     fn test_with_interference_rejects_non_physical_power() {
-        let m = ModulatedLinkStats::evaluate(component_stats(), &channel(), &modcod(), 3.0.db());
+        let m = ModulatedLinkStats::evaluate(component_stats(), &channel(), &modcod(), 3.0.db())
+            .unwrap();
         for power in [-1e-12, f64::NAN, f64::INFINITY] {
             let err = m.with_interference(Power::watts(power)).unwrap_err();
             assert!(matches!(err, LinkBudgetError::NonPhysical { .. }));
@@ -1061,9 +1097,15 @@ mod tests {
 
     #[test]
     fn test_lumped_modulated_with_interference_is_error() {
-        let err = ModulatedLinkStats::evaluate(lumped_stats(), &channel(), &modcod(), 3.0.db())
-            .with_interference(Power::watts(1e-12))
-            .unwrap_err();
+        let err = ModulatedLinkStats::evaluate(
+            lumped_stats_with_channel_bandwidth(),
+            &channel(),
+            &modcod(),
+            3.0.db(),
+        )
+        .unwrap()
+        .with_interference(Power::watts(1e-12))
+        .unwrap_err();
         assert_eq!(err, LinkBudgetError::AbsolutePowerUnavailable);
     }
 

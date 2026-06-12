@@ -1105,11 +1105,11 @@ impl PyModCod {
         link: PyLinkStats,
         channel: &PyChannel,
         design_margin: Option<PyDecibel>,
-    ) -> PyModulatedLinkStats {
+    ) -> PyResult<PyModulatedLinkStats> {
         let margin = design_margin.map(|m| m.0).unwrap_or(Decibel::new(0.0));
-        PyModulatedLinkStats(ModulatedLinkStats::evaluate(
-            link.0, &channel.0, &self.0, margin,
-        ))
+        ModulatedLinkStats::evaluate(link.0, &channel.0, &self.0, margin)
+            .map(PyModulatedLinkStats)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
     fn __eq__(&self, other: &PyModCod) -> bool {
