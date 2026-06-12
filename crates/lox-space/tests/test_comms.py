@@ -922,6 +922,19 @@ def test_propagation_losses_repr_non_absorptive():
     assert "False" in r
 
 
+def test_modulate_best_acm():
+    ch = lox.Channel(symbol_rate=5 * lox.MHz)
+    budget = link_budget(make_tx(), make_rx())
+    table = lox.ModCod.dvb_s2()
+    m = budget.modulate_best(ch, table, design_margin=3.0 * lox.dB)
+    # Some always closes, and matches manual selection.
+    assert m.closes()
+    best = lox.ModCod.select(ch.es_n0(budget.c_n0), 3.0 * lox.dB, table)
+    assert m.modcod == best
+    # Nothing closes with an absurd margin.
+    assert budget.modulate_best(ch, table, design_margin=100.0 * lox.dB) is None
+
+
 def test_modcod_information_rate():
     # QPSK rate 1/2 at 5 Msps: 5 Mbit/s information rate.
     mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)

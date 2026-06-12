@@ -187,8 +187,10 @@ table = lox.ModCod.dvb_s2()
 modcod = next(mc for mc in table if mc.name == "QPSK 3/4")
 modulated = link.modulate(channel, modcod, design_margin=3.0 * lox.dB)
 
-# The highest-efficiency mode that closes at this Es/N0:
-best = lox.ModCod.select(modulated.es_n0, 3.0 * lox.dB, table)
+# Adaptive coding and modulation: the highest-efficiency mode that closes,
+# selected and evaluated in one step (the result always closes):
+best = link.modulate_best(channel, table, design_margin=3.0 * lox.dB)
+print(f"{best.modcod.name}: {float(best.information_rate()) / 1e6:.1f} Mbit/s")
 ```
 
 Use the component tier (configure antennas, amplifiers, receiver noise) when

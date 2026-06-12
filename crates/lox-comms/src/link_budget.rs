@@ -483,6 +483,24 @@ impl LinkBudget {
         })
     }
 
+    /// Selects and applies the best MODCOD from a table: the
+    /// highest-efficiency mode that closes on this channel with the given
+    /// design margin (adaptive coding and modulation).
+    ///
+    /// Selection and evaluation use the same channel and margin, so the
+    /// returned result always [`closes`](ModulatedLinkBudget::closes);
+    /// `None` means no mode in the table closes.
+    pub fn modulate_best(
+        &self,
+        channel: &Channel,
+        table: &[ModCod],
+        design_margin: Decibel,
+    ) -> Option<ModulatedLinkBudget> {
+        let es_n0 = channel.es_n0(self.c_n0);
+        let modcod = ModCod::select(es_n0, design_margin, table)?;
+        Some(self.modulate(channel, modcod, design_margin))
+    }
+
     /// Applies a waveform and a modulation and coding scheme to this budget.
     ///
     /// Everything bandwidth-dependent derives from the channel: Es/N0 from
@@ -1044,6 +1062,39 @@ mod tests {
         );
         // The link closes comfortably.
         assert!(m.closes());
+    }
+
+    #[test]
+    fn test_modulate_best_selects_and_closes() {
+        use crate::modcod::dvb_s2;
+
+        let budget = component_stats();
+        let m = budget
+            .modulate_best(&channel(), dvb_s2(), 3.0.db())
+            .unwrap();
+        // The integrated path agrees with manual selection + modulation.
+        let es_n0 = channel().es_n0(budget.c_n0);
+        let expected = ModCod::select(es_n0, 3.0.db(), dvb_s2()).unwrap();
+        assert_eq!(&m.modcod, expected);
+        assert_approx_eq!(
+            m.margin.as_f64(),
+            budget
+                .modulate(&channel(), expected, 3.0.db())
+                .margin
+                .as_f64(),
+            atol <= 1e-12
+        );
+        // Some always closes — that is the invariant.
+        assert!(m.closes());
+        // C/N0 ≈ 104.9 dB·Hz at 5 Msps → Es/N0 ≈ 37.9 dB: the top mode closes.
+        assert_eq!(m.modcod.mode().name(), "32APSK 9/10");
+
+        // An impossible margin closes nothing.
+        assert!(
+            budget
+                .modulate_best(&channel(), dvb_s2(), 100.0.db())
+                .is_none()
+        );
     }
 
     #[test]

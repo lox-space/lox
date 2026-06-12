@@ -2988,6 +2988,15 @@ class LinkBudget:
         losses: PropagationLosses | None = None,
         link_type: str | None = None,
     ) -> Self: ...
+    def modulate_best(
+        self,
+        channel: Channel,
+        table: list[ModCod],
+        design_margin: Decibel | None = None,
+    ) -> ModulatedLinkBudget | None:
+        """Selects and applies the best MODCOD from a table (ACM). The
+        result always closes; ``None`` means no mode in the table closes."""
+        ...
     def modulate(
         self,
         channel: Channel,
