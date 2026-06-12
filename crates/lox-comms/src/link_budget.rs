@@ -474,20 +474,23 @@ impl LinkBudget {
         Ok(self.c_n0 - Decibel::from_linear(bandwidth.to_hertz()))
     }
 
-    /// Returns the noise power in the given bandwidth, when the receive end
-    /// exposes absolute terms: N = k·T_sys·BW.
+    /// Returns the noise power in the given bandwidth: N = k·T_sys·BW.
     ///
-    /// `Ok(None)` for aggregate-figure ends; rejects a non-finite or
-    /// non-positive bandwidth.
-    pub fn noise_power(&self, bandwidth: Frequency) -> Result<Option<Decibel>, LinkBudgetError> {
+    /// Rejects a non-finite or non-positive bandwidth, and returns
+    /// [`LinkBudgetError::AbsolutePowerUnavailable`] for aggregate-figure
+    /// ends (check [`Self::rx_terms`] to probe availability without an
+    /// error).
+    pub fn noise_power(&self, bandwidth: Frequency) -> Result<Decibel, LinkBudgetError> {
         NonPhysicalError::check_positive("noise bandwidth [Hz]", bandwidth.to_hertz())?;
-        Ok(self.rx_terms.as_ref().map(|terms| {
-            Decibel::from_linear(
-                terms.system_noise_temperature().to_kelvin()
-                    * BOLTZMANN_CONSTANT
-                    * bandwidth.to_hertz(),
-            )
-        }))
+        let terms = self
+            .rx_terms
+            .as_ref()
+            .ok_or(LinkBudgetError::AbsolutePowerUnavailable)?;
+        Ok(Decibel::from_linear(
+            terms.system_noise_temperature().to_kelvin()
+                * BOLTZMANN_CONSTANT
+                * bandwidth.to_hertz(),
+        ))
     }
 
     /// Selects and applies the best MODCOD from a table: the
@@ -590,11 +593,7 @@ impl ModulatedLinkBudget {
             interference_power.to_watts(),
         )?;
         let bandwidth = self.channel.bandwidth();
-        let noise_linear = self
-            .budget
-            .noise_power(bandwidth)?
-            .ok_or(LinkBudgetError::AbsolutePowerUnavailable)?
-            .to_linear();
+        let noise_linear = self.budget.noise_power(bandwidth)?.to_linear();
         let carrier = self
             .budget
             .carrier_rx_power
@@ -757,7 +756,10 @@ mod tests {
         // The default rx_terms is None: no absolute powers.
         assert!(stats.carrier_rx_power.is_none());
         assert!(stats.rx_terms.is_none());
-        assert!(stats.noise_power(5.0.mhz()).unwrap().is_none());
+        assert!(matches!(
+            stats.noise_power(5.0.mhz()),
+            Err(LinkBudgetError::AbsolutePowerUnavailable)
+        ));
     }
 
     #[test]
@@ -794,7 +796,7 @@ mod tests {
             atol <= 0.01
         );
         assert!(stats.rx_terms.is_some());
-        assert!(stats.noise_power(5.0.mhz()).unwrap().is_some());
+        assert!(stats.noise_power(5.0.mhz()).is_ok());
     }
 
     #[test]
@@ -803,7 +805,7 @@ mod tests {
         let stats = component_stats();
         let bandwidth = 5.0.mhz();
         let c_n0_from_power = stats.carrier_rx_power.unwrap()
-            - stats.noise_power(bandwidth).unwrap().unwrap()
+            - stats.noise_power(bandwidth).unwrap()
             + Decibel::from_linear(bandwidth.to_hertz());
         assert_approx_eq!(stats.c_n0.as_f64(), c_n0_from_power.as_f64(), atol <= 1e-10);
     }
@@ -814,7 +816,10 @@ mod tests {
         assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
         assert!(stats.carrier_rx_power.is_none());
         assert!(stats.rx_terms.is_none());
-        assert!(stats.noise_power(5.0.mhz()).unwrap().is_none());
+        assert!(matches!(
+            stats.noise_power(5.0.mhz()),
+            Err(LinkBudgetError::AbsolutePowerUnavailable)
+        ));
     }
 
     #[test]
@@ -940,7 +945,7 @@ mod tests {
         // C/N0 consistency holds with the degraded noise power.
         let bandwidth = 5.0.mhz();
         let c_n0_from_power = faded.carrier_rx_power.unwrap()
-            - faded.noise_power(bandwidth).unwrap().unwrap()
+            - faded.noise_power(bandwidth).unwrap()
             + Decibel::from_linear(bandwidth.to_hertz());
         assert_approx_eq!(faded.c_n0.as_f64(), c_n0_from_power.as_f64(), atol <= 1e-10);
     }
