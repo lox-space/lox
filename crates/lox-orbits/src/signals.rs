@@ -123,6 +123,37 @@ impl<T: TimeScale, S: Signal<T>> Signal<T> for &S {
     }
 }
 
+impl<T, E> Signal<T> for Box<dyn Signal<T, Error = E> + '_>
+where
+    T: TimeScale,
+    E: StdError + Send + Sync + 'static,
+{
+    type Error = E;
+
+    fn eval(&self, time: Time<T>) -> Result<f64, Self::Error> {
+        (**self).eval(time)
+    }
+
+    fn eval_grid(&self, times: &[Time<T>], out: &mut [f64]) -> Result<(), Self::Error>
+    where
+        T: Copy,
+    {
+        (**self).eval_grid(times, out)
+    }
+
+    fn deriv(&self, time: Time<T>) -> Option<f64> {
+        (**self).deriv(time)
+    }
+
+    fn leaf_count(&self) -> usize {
+        (**self).leaf_count()
+    }
+
+    fn eval_binding(&self, time: Time<T>) -> Result<(f64, usize), Self::Error> {
+        (**self).eval_binding(time)
+    }
+}
+
 /// Adapts any [`DetectFn`] into a [`Signal`] (migration bridge).
 pub struct DetectSignal<F>(pub F);
 
@@ -303,6 +334,89 @@ where
     fn eval_binding(&self, time: Time<T>) -> Result<(f64, usize), Self::Error> {
         let (value, id) = self.inner.eval_binding(time)?;
         Ok((value + self.offset, id))
+    }
+}
+
+/// AND over a homogeneous list of signals (n-ary [`Min`]): positive where
+/// every signal in the list is positive. Box the elements
+/// (`Box<dyn Signal<…>>`) to compose differently-typed constraints whose
+/// number is only known at runtime.
+pub struct MinOf<S> {
+    signals: Vec<S>,
+}
+
+impl<S> MinOf<S> {
+    /// Creates the combinator from a non-empty list of signals.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `signals` is empty.
+    pub fn new(signals: Vec<S>) -> Self {
+        assert!(!signals.is_empty(), "MinOf requires at least one signal");
+        Self { signals }
+    }
+}
+
+impl<T, S> Signal<T> for MinOf<S>
+where
+    T: TimeScale + Copy,
+    S: Signal<T>,
+{
+    type Error = S::Error;
+
+    fn eval(&self, time: Time<T>) -> Result<f64, Self::Error> {
+        let mut value = f64::INFINITY;
+        for signal in &self.signals {
+            value = value.min(signal.eval(time)?);
+        }
+        Ok(value)
+    }
+
+    fn eval_grid(&self, times: &[Time<T>], out: &mut [f64]) -> Result<(), Self::Error> {
+        self.signals[0].eval_grid(times, out)?;
+        if self.signals.len() == 1 {
+            return Ok(());
+        }
+        let mut scratch = vec![0.0; times.len()];
+        for signal in &self.signals[1..] {
+            signal.eval_grid(times, &mut scratch)?;
+            for (value, other) in out.iter_mut().zip(&scratch) {
+                *value = value.min(*other);
+            }
+        }
+        Ok(())
+    }
+
+    fn deriv(&self, time: Time<T>) -> Option<f64> {
+        let mut min = f64::INFINITY;
+        let mut active = None;
+        for signal in &self.signals {
+            let value = signal.eval(time).ok()?;
+            if value < min {
+                min = value;
+                active = Some(signal);
+            }
+        }
+        active?.deriv(time)
+    }
+
+    fn leaf_count(&self) -> usize {
+        self.signals.iter().map(Signal::leaf_count).sum()
+    }
+
+    fn eval_binding(&self, time: Time<T>) -> Result<(f64, usize), Self::Error> {
+        let mut min = f64::INFINITY;
+        let mut binding = 0;
+        let mut offset = 0;
+        for signal in &self.signals {
+            let (value, id) = signal.eval_binding(time)?;
+            if value < min {
+                min = value;
+                binding = offset + id;
+            }
+            offset += signal.leaf_count();
+        }
+        Ok((min, binding))
     }
 }
 
@@ -767,6 +881,30 @@ impl<S, R> Detector<S, R> {
         }
         Ok(windows)
     }
+
+    /// Detects windows inside the given candidate intervals only.
+    ///
+    /// Hierarchical pruning: `min(f_cheap, f_rest) ≤ f_cheap` pointwise, so
+    /// when this detector's signal is `cheap.min(rest)` and `candidates` are
+    /// the cheap signal's windows, every window of the combined signal lies
+    /// inside a candidate — the expensive constraints are only evaluated
+    /// where the cheap one already holds.
+    pub fn windows_within<T>(
+        &self,
+        candidates: &[TimeInterval<T>],
+        sampler: &impl Sampler<T>,
+    ) -> Result<Vec<Window<T>>, DetectError>
+    where
+        T: TimeScale + Copy,
+        S: Signal<T>,
+        for<'a> R: FindBracketedRoot<SignalCallback<'a, T, S>>,
+    {
+        let mut windows = Vec::new();
+        for candidate in candidates {
+            windows.extend(self.windows(*candidate, sampler)?);
+        }
+        Ok(windows)
+    }
 }
 
 /// Vertex of the parabola through three points, or `None` when degenerate.
@@ -1106,6 +1244,91 @@ mod tests {
             .windows(interval, &KnotSampler::new(knots))
             .unwrap();
         assert_eq!(windows.len(), 10);
+    }
+
+    /// `MinOf` over boxed signals matches nested binary `min`, including
+    /// the binding-constraint diagnostics.
+    #[test]
+    fn test_min_of_matches_nested_min() {
+        let interval = horizon(7.0);
+        let start = interval.start();
+        let sampler = UniformSampler::new(TimeDelta::from_seconds_f64(0.1));
+        let phase = move |t: Time<Tai>| (t - start).to_seconds().to_f64();
+
+        let boxed: Vec<Box<dyn Signal<Tai, Error = std::convert::Infallible>>> = vec![
+            Box::new(SignalFn(move |t| phase(t).sin())),
+            Box::new(SignalFn(move |t| phase(t).cos())),
+            Box::new(SignalFn(move |t| 1.0 - 0.1 * phase(t))),
+        ];
+        let n_ary = Detector::new(MinOf::new(boxed))
+            .windows(interval, &sampler)
+            .unwrap();
+
+        let sin = SignalFn(move |t: Time<Tai>| phase(t).sin());
+        let cos = SignalFn(move |t: Time<Tai>| phase(t).cos());
+        let line = SignalFn(move |t: Time<Tai>| 1.0 - 0.1 * phase(t));
+        let nested = Detector::new(sin.min(cos).min(line))
+            .windows(interval, &sampler)
+            .unwrap();
+
+        assert_eq!(n_ary.len(), nested.len());
+        for (a, b) in n_ary.iter().zip(&nested) {
+            assert_eq!(a.interval(), b.interval());
+            assert_eq!(a.opened_by(), b.opened_by());
+            assert_eq!(a.closed_by(), b.closed_by());
+        }
+    }
+
+    /// Pruned detection inside the cheap signal's windows finds the same
+    /// windows as a full sweep of the combined signal, without evaluating
+    /// the expensive constraint outside the candidates.
+    #[test]
+    fn test_windows_within_prunes_expensive_evals() {
+        let interval = horizon(100.0);
+        let start = interval.start();
+        let sampler = UniformSampler::new(TimeDelta::from_seconds(1));
+        let phase = move |t: Time<Tai>| (t - start).to_seconds().to_f64();
+        // Cheap: positive on (20, 30) ∪ (70, 80) — 20% of the horizon;
+        // expensive: positive on (0, 25) ∪ (50, 75).
+        let cheap_fn =
+            move |t: Time<Tai>| 5.0 - (phase(t) - 25.0).abs().min((phase(t) - 75.0).abs());
+        let count = AtomicUsize::new(0);
+        let expensive = SignalFn(|t: Time<Tai>| {
+            count.fetch_add(1, Ordering::Relaxed);
+            (phase(t) * TAU / 50.0).sin()
+        });
+
+        let candidates: Vec<_> = Detector::new(SignalFn(cheap_fn))
+            .windows(interval, &sampler)
+            .unwrap()
+            .iter()
+            .map(|w| w.interval())
+            .collect();
+        assert_eq!(candidates.len(), 2);
+
+        let combined = Detector::new(SignalFn(cheap_fn).min(&expensive));
+        let pruned = combined.windows_within(&candidates, &sampler).unwrap();
+        let pruned_evals = count.swap(0, Ordering::Relaxed);
+        let full = combined.windows(interval, &sampler).unwrap();
+        let full_evals = count.load(Ordering::Relaxed);
+
+        assert_eq!(pruned.len(), full.len());
+        for (a, b) in pruned.iter().zip(&full) {
+            assert_approx_eq!(
+                elapsed(interval, a.interval().start()),
+                elapsed(interval, b.interval().start()),
+                atol <= 1e-6
+            );
+            assert_approx_eq!(
+                elapsed(interval, a.interval().end()),
+                elapsed(interval, b.interval().end()),
+                atol <= 1e-6
+            );
+        }
+        assert!(
+            pruned_evals < full_evals / 2,
+            "pruning should skip most expensive evals ({pruned_evals} vs {full_evals})"
+        );
     }
 
     /// `offset` shifts the level: elevation above a mask.
