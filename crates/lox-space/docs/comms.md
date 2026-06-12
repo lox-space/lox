@@ -159,10 +159,10 @@ link = lox.LinkBudget(
 print(f"C/N0 = {float(link.c_n0):.2f} dB·Hz")
 ```
 
-For lumped links, `link.carrier_rx_power` and `link.noise_power` are `None` —
-the absolute carrier and noise power are not recoverable from EIRP and G/T
-alone. The carrier-to-noise density ratio (`c_n0`) and carrier-to-noise ratio
-(`c_n`) remain available.
+For lumped links, `link.carrier_rx_power` and `link.noise_power(bandwidth)`
+are `None` — the absolute carrier and noise power are not recoverable from
+EIRP and G/T alone. The carrier-to-noise density ratio (`c_n0`) and the
+carrier-to-noise ratio view (`c_n(bandwidth)`) remain available.
 
 To compute modulation-aware figures (`Es/N0`, `Eb/N0`, link margin, data
 rate), modulate the budget with a `Channel` (the waveform: symbol rate,

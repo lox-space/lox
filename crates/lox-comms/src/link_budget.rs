@@ -467,20 +467,27 @@ impl LinkBudget {
 
     /// Returns the carrier-to-noise ratio in the given noise bandwidth:
     /// C/N = C/N₀ − 10·log₁₀(BW).
-    pub fn c_n(&self, bandwidth: Frequency) -> Decibel {
-        self.c_n0 - Decibel::from_linear(bandwidth.to_hertz())
+    ///
+    /// Rejects a non-finite or non-positive bandwidth.
+    pub fn c_n(&self, bandwidth: Frequency) -> Result<Decibel, LinkBudgetError> {
+        NonPhysicalError::check_positive("noise bandwidth [Hz]", bandwidth.to_hertz())?;
+        Ok(self.c_n0 - Decibel::from_linear(bandwidth.to_hertz()))
     }
 
     /// Returns the noise power in the given bandwidth, when the receive end
     /// exposes absolute terms: N = k·T_sys·BW.
-    pub fn noise_power(&self, bandwidth: Frequency) -> Option<Decibel> {
-        self.rx_terms.as_ref().map(|terms| {
+    ///
+    /// `Ok(None)` for aggregate-figure ends; rejects a non-finite or
+    /// non-positive bandwidth.
+    pub fn noise_power(&self, bandwidth: Frequency) -> Result<Option<Decibel>, LinkBudgetError> {
+        NonPhysicalError::check_positive("noise bandwidth [Hz]", bandwidth.to_hertz())?;
+        Ok(self.rx_terms.as_ref().map(|terms| {
             Decibel::from_linear(
                 terms.system_noise_temperature().to_kelvin()
                     * BOLTZMANN_CONSTANT
                     * bandwidth.to_hertz(),
             )
-        })
+        }))
     }
 
     /// Selects and applies the best MODCOD from a table: the
@@ -585,7 +592,7 @@ impl ModulatedLinkBudget {
         let bandwidth = self.channel.bandwidth();
         let noise_linear = self
             .budget
-            .noise_power(bandwidth)
+            .noise_power(bandwidth)?
             .ok_or(LinkBudgetError::AbsolutePowerUnavailable)?
             .to_linear();
         let carrier = self
@@ -750,7 +757,7 @@ mod tests {
         // The default rx_terms is None: no absolute powers.
         assert!(stats.carrier_rx_power.is_none());
         assert!(stats.rx_terms.is_none());
-        assert!(stats.noise_power(5.0.mhz()).is_none());
+        assert!(stats.noise_power(5.0.mhz()).unwrap().is_none());
     }
 
     #[test]
@@ -787,7 +794,7 @@ mod tests {
             atol <= 0.01
         );
         assert!(stats.rx_terms.is_some());
-        assert!(stats.noise_power(5.0.mhz()).is_some());
+        assert!(stats.noise_power(5.0.mhz()).unwrap().is_some());
     }
 
     #[test]
@@ -796,7 +803,7 @@ mod tests {
         let stats = component_stats();
         let bandwidth = 5.0.mhz();
         let c_n0_from_power = stats.carrier_rx_power.unwrap()
-            - stats.noise_power(bandwidth).unwrap()
+            - stats.noise_power(bandwidth).unwrap().unwrap()
             + Decibel::from_linear(bandwidth.to_hertz());
         assert_approx_eq!(stats.c_n0.as_f64(), c_n0_from_power.as_f64(), atol <= 1e-10);
     }
@@ -807,7 +814,7 @@ mod tests {
         assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
         assert!(stats.carrier_rx_power.is_none());
         assert!(stats.rx_terms.is_none());
-        assert!(stats.noise_power(5.0.mhz()).is_none());
+        assert!(stats.noise_power(5.0.mhz()).unwrap().is_none());
     }
 
     #[test]
@@ -933,7 +940,7 @@ mod tests {
         // C/N0 consistency holds with the degraded noise power.
         let bandwidth = 5.0.mhz();
         let c_n0_from_power = faded.carrier_rx_power.unwrap()
-            - faded.noise_power(bandwidth).unwrap()
+            - faded.noise_power(bandwidth).unwrap().unwrap()
             + Decibel::from_linear(bandwidth.to_hertz());
         assert_approx_eq!(faded.c_n0.as_f64(), c_n0_from_power.as_f64(), atol <= 1e-10);
     }
@@ -1057,11 +1064,31 @@ mod tests {
         // C/N derives from the channel's occupied bandwidth.
         assert_approx_eq!(
             m.c_n.as_f64(),
-            m.budget.c_n(channel().bandwidth()).as_f64(),
+            m.budget.c_n(channel().bandwidth()).unwrap().as_f64(),
             atol <= 1e-12
         );
         // The link closes comfortably.
         assert!(m.closes());
+    }
+
+    #[test]
+    fn test_views_reject_non_physical_bandwidth() {
+        let budget = component_stats();
+        for bandwidth in [
+            Frequency::hertz(0.0),
+            Frequency::hertz(-5e6),
+            Frequency::hertz(f64::NAN),
+            Frequency::hertz(f64::INFINITY),
+        ] {
+            assert!(matches!(
+                budget.c_n(bandwidth),
+                Err(LinkBudgetError::NonPhysical { .. })
+            ));
+            assert!(matches!(
+                budget.noise_power(bandwidth),
+                Err(LinkBudgetError::NonPhysical { .. })
+            ));
+        }
     }
 
     #[test]
