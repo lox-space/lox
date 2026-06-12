@@ -10,6 +10,7 @@ use pyo3::prelude::*;
 
 use lox_comms::antenna::{Antenna, AntennaFrame, AntennaGain, ConstantAntenna, PatternedAntenna};
 
+use lox_comms::LinkBudgetError;
 use lox_comms::channel::{Channel, LinkDirection, Modulation};
 use lox_comms::link_budget::{Eirp, GOverT};
 use lox_comms::link_budget::{
@@ -1420,10 +1421,11 @@ impl PyLinkBudget {
     /// Returns the noise power in dBW for the given bandwidth. ``None`` for
     /// lumped G/T receivers.
     fn noise_power(&self, bandwidth: PyFrequency) -> PyResult<Option<PyDecibel>> {
-        self.0
-            .noise_power(bandwidth.0)
-            .map(|p| p.map(PyDecibel))
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+        match self.0.noise_power(bandwidth.0) {
+            Ok(power) => Ok(Some(PyDecibel(power))),
+            Err(LinkBudgetError::AbsolutePowerUnavailable) => Ok(None),
+            Err(e) => Err(PyValueError::new_err(e.to_string())),
+        }
     }
 
     /// Link frequency.
