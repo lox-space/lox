@@ -43,8 +43,8 @@ csv = "1.4.0"
 differential-equations = "0.6.1"
 divan = { package = "codspeed-divan-compat", version = "4.3.0" }
 fast_polynomial = { version = "0.3.0", default-features = false }
-geo = "0.29"
-geojson = "0.24"
+geo = "0.33"
+geojson = "1.0"
 glam = { version = "0.33.1", default-features = false, features = ["f64", "std"] }
 itertools = "0.14.0"
 libm = "0.2.15"
