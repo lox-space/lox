@@ -4,3 +4,12 @@
 
 [advisories]
 unmaintained = "workspace"
+ignore = [
+    # Fixed in pyo3 >= 0.29, but rust-numpy has no pyo3-0.29-compatible
+    # release yet (numpy 0.28 pins pyo3 0.28). lox-space does not use the
+    # affected APIs: no nth/nth_back on PyList/PyTuple iterators
+    # (RUSTSEC-2026-0176) and no PyCFunction::new_closure
+    # (RUSTSEC-2026-0177). Remove when bumping pyo3/numpy to 0.29.
+    "RUSTSEC-2026-0176",
+    "RUSTSEC-2026-0177",
+]
