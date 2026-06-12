@@ -12,7 +12,7 @@ import lox_space as lox
 
 def test_stub_covers_all_exports():
     stub = pathlib.Path(__file__).parents[3] / "lox_space.pyi"
-    tree = ast.parse(stub.read_text())
+    tree = ast.parse(stub.read_text(encoding="utf-8"))
     stub_names = {
         node.name
         for node in tree.body
