@@ -32,8 +32,7 @@ Compute the total atmospheric attenuation for a ground station in Madrid
 receiving at 14.25 GHz from a satellite at 30° elevation:
 
 ```python
-losses = lox.EnvironmentalLosses(
-    provider,
+losses = provider.propagation_losses(
     lat=40.4 * lox.deg,
     lon=-3.7 * lox.deg,
     frequency=14.25 * lox.GHz,
@@ -42,29 +41,24 @@ losses = lox.EnvironmentalLosses(
     diameter=1.2 * lox.m,   # antenna diameter
 )
 
-print(f"Rain:          {losses.rain}")
-print(f"Gaseous:       {losses.gaseous}")
-print(f"Cloud:         {losses.cloud}")
-print(f"Scintillation: {losses.scintillation}")
-print(f"Total:         {losses.atmospheric}")
+for label, value, absorptive in losses.lines:
+    print(f"{label}: {value}")
+print(f"Total:      {losses.total()}")
+print(f"Absorptive: {losses.absorptive()}")
 ```
 
-The same computation is also available as a provider method:
+The rain, gaseous, and cloud lines carry the raw model outputs; the
+combination residual of the ITU-R P.618 total is booked on the
+scintillation line, so `total()` equals the combined attenuation and
+`absorptive()` is exactly the part that raises the antenna noise
+temperature (used for the rain-degraded G/T on downlinks).
+
+For link budgets with known loss values, build `PropagationLosses`
+directly:
 
 ```python
-losses = provider.atmospheric_attenuation_slant_path(
-    lat=40.4 * lox.deg, lon=-3.7 * lox.deg,
-    frequency=14.25 * lox.GHz, elevation=30.0 * lox.deg,
-    probability=0.01, diameter=1.2 * lox.m,
-)
-```
-
-For link budgets with known loss values, use `EnvironmentalLosses.from_values`
-or `EnvironmentalLosses.none`:
-
-```python
-losses = lox.EnvironmentalLosses.from_values(rain=2.0 * lox.dB, gaseous=0.5 * lox.dB)
-losses = lox.EnvironmentalLosses.none()
+losses = lox.PropagationLosses(rain=2.0 * lox.dB, gaseous=0.5 * lox.dB)
+losses = lox.PropagationLosses.none()
 ```
 
 The result plugs directly into `LinkStats.for_link` for link budget analysis.
@@ -164,13 +158,12 @@ print(f"Rain height: {h.to_kilometers():.1f} km")
 
 ## Link Budget Integration
 
-`EnvironmentalLosses` can be passed directly to `LinkStats.for_link`, where
+`PropagationLosses` can be passed directly to `LinkStats.for_link`, where
 `tx` is a `TxChain` or `EirpModel` and `rx` is an `RxChain` or `GtModel` (see
 [Communications](comms.md)):
 
 ```python
-losses = lox.EnvironmentalLosses(
-    provider,
+losses = provider.propagation_losses(
     lat=40.4 * lox.deg,
     lon=-3.7 * lox.deg,
     frequency=29.0 * lox.GHz,
@@ -222,7 +215,7 @@ for the packaging workflow.
 
 ---
 
-::: lox_space.EnvironmentalLosses
+::: lox_space.PropagationLosses
     options:
       show_source: false
 

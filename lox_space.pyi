@@ -2712,12 +2712,17 @@ class ModCod:
         channel: Channel,
         design_margin: Decibel | None = None,
     ) -> ModulatedLinkStats:
-        """Evaluates a link budget on a channel against this MODCOD."""
+        """Evaluates a link budget on a channel against this MODCOD.
+
+        Raises:
+            ValueError: if the link's noise bandwidth does not match the
+                channel's occupied bandwidth.
+        """
         ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
-class PropagationLosses:class PropagationLosses:
+class PropagationLosses:
     """Itemized excess propagation losses along a link path, beyond
     free-space path loss.
 

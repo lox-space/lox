@@ -131,7 +131,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .direction(LinkDirection::Downlink)
         .build()?;
     let link = LinkStats::for_link(&tx, &rx, &params)?;
-    let modulated = ModulatedLinkStats::evaluate(link, &channel, modcod, design_margin);
+    let modulated = ModulatedLinkStats::evaluate(link, &channel, modcod, design_margin)?;
 
     println!("\n--- Link budget at {} GHz ---", carrier.to_gigahertz());
     println!("EIRP:            {:>8.2} dBW", modulated.link.eirp.as_f64());

@@ -12,12 +12,12 @@ RF link budget analysis for space communication systems.
 
 | Name | Bits per Symbol |
 |------|-----------------|
-| `BPSK` | 1 |
-| `QPSK` | 2 |
-| `8PSK` | 3 |
-| `16QAM` | 4 |
-| `32QAM` | 5 |
-| `64QAM` | 6 |
+| `BPSK`, `GMSK`, `2FSK` | 1 |
+| `QPSK`, `OQPSK`, `4FSK` | 2 |
+| `8PSK`, `8APSK` | 3 |
+| `16QAM`, `16APSK` | 4 |
+| `32QAM`, `32APSK` | 5 |
+| `64QAM`, `64APSK` | 6 |
 | `128QAM` | 7 |
 | `256QAM` | 8 |
 
@@ -165,21 +165,31 @@ the absolute carrier and noise power are not recoverable from EIRP and G/T
 alone. The carrier-to-noise density ratio (`c_n0`) and carrier-to-noise ratio
 (`c_n`) remain available.
 
-To compute modulation-aware figures (`Es/N0`, `Eb/N0`, link margin), apply a
-`Channel`:
+To compute modulation-aware figures (`Es/N0`, `Eb/N0`, link margin),
+evaluate the link on a `Channel` (the waveform: symbol rate, roll-off,
+optional DSSS chip rate) against a `ModCod` (the modulation and coding
+scheme with its Eb/N0 threshold). The design margin is an input to the
+evaluation:
 
 ```python
-channel = lox.Channel(
-    link_type="downlink",
-    symbol_rate=5 * lox.MHz,
-    required_eb_n0=10.0 * lox.dB,
-    margin=3.0 * lox.dB,
-    modulation=lox.Modulation("QPSK"),
-    roll_off=0.35,
-    fec=0.5,
-)
-modulated = channel.apply(link)
+channel = lox.Channel(symbol_rate=5 * lox.MHz)
+modcod = lox.ModCod("QPSK 1/2", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
+modulated = modcod.evaluate(link, channel, design_margin=3.0 * lox.dB)
 print(f"Margin = {float(modulated.margin):.2f} dB")
+```
+
+For standards-based links, use the built-in DVB-S2 table — 28 modes whose
+coding chains (BBFRAME, BCH, LDPC, PLFRAME) reproduce the spectral
+efficiencies and quasi-error-free thresholds of ETSI EN 302 307-1 Table 13
+exactly — and `ModCod.select` for adaptive coding and modulation:
+
+```python
+table = lox.ModCod.dvb_s2()
+modcod = next(mc for mc in table if mc.name == "QPSK 3/4")
+modulated = modcod.evaluate(link, channel, design_margin=3.0 * lox.dB)
+
+# The highest-efficiency mode that closes at this Es/N0:
+best = lox.ModCod.select(modulated.es_n0, 3.0 * lox.dB, table)
 ```
 
 Use the component tier (configure antennas, amplifiers, receiver noise) when
@@ -229,26 +239,21 @@ ground_station = lox.RxChain(
 
 # Atmospherics at X-band, 5° elevation (static values; lox-itur computes
 # them from the ITU-R P-series maps)
-losses = lox.EnvironmentalLosses.from_values(
+losses = lox.PropagationLosses(
     rain=1.2 * lox.dB,
     gaseous=0.4 * lox.dB,
     scintillation=0.3 * lox.dB,
     cloud=0.1 * lox.dB,
 )
 
-# DVB-S2-style channel: QPSK 3/4 at 150 Msps → 225 Mbit/s net
-channel = lox.Channel(
-    link_type="downlink",
-    symbol_rate=150 * lox.MHz,
-    required_eb_n0=4.5 * lox.dB,
-    margin=3.0 * lox.dB,
-    modulation=lox.Modulation("QPSK"),
-    roll_off=0.25,
-    fec=0.75,
-)
+# DVB-S2 QPSK 3/4 at 150 Msps; the table carries the exact Table 13
+# thresholds and coding chains.
+channel = lox.Channel(symbol_rate=150 * lox.MHz, roll_off=0.25)
+modcod = next(mc for mc in lox.ModCod.dvb_s2() if mc.name == "QPSK 3/4")
 
 # 2° residual pointing error on the spacecraft gimbal; the station
-# autotracks on boresight.
+# autotracks on boresight. On downlinks the budget uses the rain-degraded
+# G/T (ITU-R P.618 §8.2).
 link = lox.LinkStats.for_link(
     spacecraft,
     ground_station,
@@ -257,15 +262,17 @@ link = lox.LinkStats.for_link(
     range=slant_range,
     tx_angle=2.0 * lox.deg,
     losses=losses,
+    link_type="downlink",
 )
-modulated = channel.apply(link)
+modulated = modcod.evaluate(link, channel, design_margin=3.0 * lox.dB)
 
 print(f"EIRP:        {float(link.eirp):.2f} dBW")
 print(f"FSPL:        {float(link.fspl):.2f} dB")
-print(f"G/T:         {float(link.gt):.2f} dB/K")
+print(f"G/T:         {float(link.gt):.2f} dB/K (clear sky)")
+print(f"G/T:         {float(link.gt_degraded):.2f} dB/K (rain)")
 print(f"C/N0:        {float(link.c_n0):.2f} dB·Hz")
 print(f"Eb/N0:       {float(modulated.eb_n0):.2f} dB")
-print(f"Data rate:   {float(channel.information_rate()) / 1e6:.1f} Mbit/s")
+print(f"Data rate:   {float(modulated.information_rate()) / 1e6:.1f} Mbit/s")
 print(f"Link margin: {float(modulated.margin):.2f} dB")
 
 # Regulatory check: PFD on the ground vs. the RR Art. 21.16 mask
@@ -332,17 +339,23 @@ loss = lox.fspl(distance=1000 * lox.km, frequency=29 * lox.GHz)
 print(f"FSPL: {float(loss):.1f} dB")
 ```
 
-### Environmental Losses
+### Propagation Losses
+
+`PropagationLosses` holds itemized excess-path losses as labelled lines.
+`total()` is the carrier attenuation; `absorptive()` is the part that also
+heats the receive antenna (rain, gaseous, cloud — used for the rain-degraded
+G/T on downlinks):
 
 ```python
 import lox_space as lox
 
-losses = lox.EnvironmentalLosses.from_values(
+losses = lox.PropagationLosses(
     rain=2.0 * lox.dB,
     gaseous=0.3 * lox.dB,
-    atmospheric=0.5 * lox.dB,
+    other=[("Radome wetting", 0.5 * lox.dB, True)],
 )
 print(f"Total: {float(losses.total()):.1f} dB")
+print(f"Absorptive: {float(losses.absorptive()):.1f} dB")
 
 # Pass to LinkStats.for_link via the losses parameter
 link = lox.LinkStats.for_link(
@@ -435,7 +448,13 @@ link = lox.LinkStats.for_link(
 
 ---
 
-::: lox_space.EnvironmentalLosses
+::: lox_space.ModCod
+    options:
+      show_source: false
+
+---
+
+::: lox_space.PropagationLosses
     options:
       show_source: false
 
