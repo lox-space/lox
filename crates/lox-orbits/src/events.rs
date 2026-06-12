@@ -6,7 +6,7 @@ use std::collections::VecDeque;
 use std::fmt::Display;
 
 use itertools::Itertools;
-use lox_math::roots::{Callback, FindBracketedRoot, RootFinderError};
+use lox_math::roots::{FindBracketedRoot, RootFinderError};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
@@ -131,7 +131,9 @@ pub trait IntervalDetector<T: TimeScale> {
 // RootFindingDetector — wraps DetectFn + root finder → EventDetector
 // ---------------------------------------------------------------------------
 
-use crate::signals::{DetectSignal, SignalCallback, UniformSampler, detect_grid};
+use crate::signals::{
+    DetectSignal, SignalCallback, UniformSampler, detect_grid, detect_grid_two_level,
+};
 use lox_math::optim::BrentMinimizer;
 use lox_math::roots::Brent;
 
@@ -173,21 +175,6 @@ impl<F, R> RootFindingDetector<F, R> {
     }
 }
 
-/// Build a uniform time grid from 0 to `total` with the given `step`,
-/// always including the endpoint.
-fn build_time_grid(total: f64, step: f64) -> Vec<f64> {
-    let mut grid = Vec::new();
-    let mut t = 0.0;
-    while t <= total {
-        grid.push(t);
-        t += step;
-    }
-    if grid.last().is_none_or(|&last| last < total) {
-        grid.push(total);
-    }
-    grid
-}
-
 impl<F, R> RootFindingDetector<F, R> {
     /// Core detection returning events and the sign at the interval start.
     ///
@@ -203,104 +190,26 @@ impl<F, R> RootFindingDetector<F, R> {
         F: DetectFn<T>,
         for<'a, 'b> R: FindBracketedRoot<SignalCallback<'a, T, DetectSignal<&'b F>>>,
     {
-        let start = interval.start();
-        let end = interval.end();
-        let total_seconds = (end - start).to_seconds().to_f64();
-        let step_seconds = self.step.to_seconds().to_f64();
         let signal = DetectSignal(&self.func);
-
-        match self.coarse_step {
-            Some(coarse_step) => {
-                let coarse_seconds = coarse_step.to_seconds().to_f64();
-                let callback = SignalCallback::new(&signal, start);
-                self.detect_two_level(callback, start, total_seconds, step_seconds, coarse_seconds)
-            }
-            None => {
-                let (events, start_value) = detect_grid(
-                    &signal,
-                    &self.root_finder,
-                    &BrentMinimizer::default(),
-                    interval,
-                    &UniformSampler::new(self.step),
-                )?;
-                Ok((events, start_value.signum()))
-            }
-        }
-    }
-
-    /// Two-level detection: coarse grid to find sign-change brackets, then
-    /// fine grid within each bracket to locate precise crossings.
-    fn detect_two_level<'b, T>(
-        &self,
-        callback: SignalCallback<'_, T, DetectSignal<&'b F>>,
-        start: Time<T>,
-        total_seconds: f64,
-        step_seconds: f64,
-        coarse_seconds: f64,
-    ) -> Result<(Vec<Event<T>>, f64), DetectError>
-    where
-        T: TimeScale + Copy,
-        F: DetectFn<T>,
-        for<'a> R: FindBracketedRoot<SignalCallback<'a, T, DetectSignal<&'b F>>>,
-    {
-        // 1. Build coarse grid and evaluate signs.
-        let coarse_grid = build_time_grid(total_seconds, coarse_seconds);
-        let mut coarse_signs = Vec::with_capacity(coarse_grid.len());
-        for &t in &coarse_grid {
-            let v = callback
-                .call(t)
-                .map_err(|e| DetectError::RootFinder(RootFinderError::Callback(e)))?;
-            coarse_signs.push(v.signum());
-        }
-
-        let start_sign = coarse_signs[0];
-
-        // 2. For each coarse bracket with a sign change, subdivide with fine steps.
-        let mut events = Vec::new();
-        for ((&tc0, &sc0), (&tc1, &sc1)) in
-            std::iter::zip(&coarse_grid, &coarse_signs).tuple_windows()
-        {
-            if ZeroCrossing::new(sc0, sc1).is_none() {
-                continue;
-            }
-
-            // Build fine grid within this coarse bracket.
-            // Reuse the known sign at tc0 to avoid a redundant evaluation.
-            let bracket_len = tc1 - tc0;
-            let fine_grid = build_time_grid(bracket_len, step_seconds);
-
-            let mut fine_times = Vec::with_capacity(fine_grid.len());
-            let mut fine_signs = Vec::with_capacity(fine_grid.len());
-
-            // First point: reuse coarse sign.
-            fine_times.push(tc0);
-            fine_signs.push(sc0);
-
-            // Interior and last points: evaluate.
-            for &ft in &fine_grid[1..] {
-                let abs_t = tc0 + ft;
-                fine_times.push(abs_t);
-                let v = callback
-                    .call(abs_t)
-                    .map_err(|e| DetectError::RootFinder(RootFinderError::Callback(e)))?;
-                fine_signs.push(v.signum());
-            }
-
-            // Root-find on fine-level sign changes.
-            for ((&t0, &s0), (&t1, &s1)) in std::iter::zip(&fine_times, &fine_signs).tuple_windows()
-            {
-                if let Some(crossing) = ZeroCrossing::new(s0, s1) {
-                    let t = self
-                        .root_finder
-                        .find_in_bracket(callback, (t0, t1))
-                        .map_err(DetectError::RootFinder)?;
-                    let time = start + TimeDelta::from_seconds_f64(t);
-                    events.push(Event { crossing, time });
-                }
-            }
-        }
-
-        Ok((events, start_sign))
+        let minimizer = BrentMinimizer::default();
+        let (events, start_value) = match self.coarse_step {
+            Some(coarse_step) => detect_grid_two_level(
+                &signal,
+                &self.root_finder,
+                &minimizer,
+                interval,
+                coarse_step,
+                self.step,
+            )?,
+            None => detect_grid(
+                &signal,
+                &self.root_finder,
+                &minimizer,
+                interval,
+                &UniformSampler::new(self.step),
+            )?,
+        };
+        Ok((events, start_value.signum()))
     }
 }
 
