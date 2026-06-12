@@ -602,9 +602,12 @@ type PairWindows = (
 ///
 /// The first `n_cheap` constraints form the pruning stage: their combined
 /// windows bound the full signal's windows (`min` over more constraints can
-/// only shrink them), so the expensive constraints are evaluated only inside
-/// those candidates, at the fine `step`. The candidate sweep runs at
-/// `coarse_step` when given (derived from `min_pass_duration`).
+/// only shrink them). Inside those candidate windows the cheap signal is
+/// positive by construction, so `{all > 0} ∩ window = {expensive > 0} ∩
+/// window` — the second stage detects only the remaining constraints, yet
+/// the result is the exact window set of the full conjunction. Both stages
+/// use two-level coarse/fine sampling when `coarse_step` is given (derived
+/// from `min_pass_duration`).
 fn detect_pair(
     constraints: &[ConstraintSignal<'_>],
     n_cheap: usize,
@@ -612,24 +615,58 @@ fn detect_pair(
     step: TimeDelta,
     coarse_step: Option<TimeDelta>,
 ) -> Result<(Vec<TimeInterval<Tai>>, Vec<WindowDiagnostics>), VisibilityError> {
-    let cheap: Vec<_> = constraints[..n_cheap].iter().map(|(_, s)| s).collect();
-    let candidate_sampler = UniformSampler::new(coarse_step.unwrap_or(step));
-    let candidates = Detector::new(MinOf::new(cheap)).windows(interval, &candidate_sampler)?;
+    // Each boxed constraint is a single leaf, so leaf ids index `constraints`.
+    let cheap_label = |id: ConstraintId| constraints[id.0].0;
+    let expensive_label = |id: ConstraintId| constraints[n_cheap + id.0].0;
 
-    let windows = if n_cheap == constraints.len() && coarse_step.is_none() {
-        candidates
-    } else {
-        let candidates: Vec<_> = candidates.iter().map(|w| w.interval()).collect();
-        let all: Vec<_> = constraints.iter().map(|(_, s)| s).collect();
-        Detector::new(MinOf::new(all)).windows_within(&candidates, &UniformSampler::new(step))?
+    let cheap: Vec<_> = constraints[..n_cheap].iter().map(|(_, s)| s).collect();
+    let cheap_detector = Detector::new(MinOf::new(cheap));
+    let candidates = match coarse_step {
+        Some(coarse) => cheap_detector.windows_two_level(interval, coarse, step)?,
+        None => cheap_detector.windows(interval, &UniformSampler::new(step))?,
     };
 
-    // Each boxed constraint is a single leaf, so leaf ids index `constraints`.
-    let label = |id: ConstraintId| constraints[id.0].0;
-    Ok(windows
-        .iter()
-        .map(|w| (w.interval(), (label(w.opened_by()), label(w.closed_by()))))
-        .unzip())
+    if n_cheap == constraints.len() {
+        return Ok(candidates
+            .iter()
+            .map(|w| {
+                (
+                    w.interval(),
+                    (cheap_label(w.opened_by()), cheap_label(w.closed_by())),
+                )
+            })
+            .unzip());
+    }
+
+    let expensive: Vec<_> = constraints[n_cheap..].iter().map(|(_, s)| s).collect();
+    let detector = Detector::new(MinOf::new(expensive));
+    let sampler = UniformSampler::new(step);
+
+    let mut intervals = Vec::new();
+    let mut diagnostics = Vec::new();
+    for candidate in &candidates {
+        let windows = match coarse_step {
+            Some(coarse) => detector.windows_two_level(candidate.interval(), coarse, step)?,
+            None => detector.windows(candidate.interval(), &sampler)?,
+        };
+        for window in windows {
+            // A boundary coinciding with the candidate's is bound by the
+            // cheap stage; an interior boundary by the expensive stage.
+            let opened_by = if window.interval().start() == candidate.interval().start() {
+                cheap_label(candidate.opened_by())
+            } else {
+                expensive_label(window.opened_by())
+            };
+            let closed_by = if window.interval().end() == candidate.interval().end() {
+                cheap_label(candidate.closed_by())
+            } else {
+                expensive_label(window.closed_by())
+            };
+            intervals.push(window.interval());
+            diagnostics.push((opened_by, closed_by));
+        }
+    }
+    Ok((intervals, diagnostics))
 }
 
 /// Assembles per-pair detection output into a [`VisibilityResults`].

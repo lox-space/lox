@@ -602,12 +602,6 @@ pub struct SignalCallback<'a, T: TimeScale, S> {
     start: Time<T>,
 }
 
-impl<'a, T: TimeScale + Copy, S> SignalCallback<'a, T, S> {
-    pub(crate) fn new(signal: &'a S, start: Time<T>) -> Self {
-        Self { signal, start }
-    }
-}
-
 impl<T: TimeScale + Copy, S> Clone for SignalCallback<'_, T, S> {
     fn clone(&self) -> Self {
         *self
@@ -687,6 +681,124 @@ impl<S, R> Detector<S, R> {
     }
 }
 
+/// ② BRACKET / ③ REFINE: sign changes between adjacent grid samples,
+/// refined with the known endpoint values.
+fn scan_crossings<T, S, R>(
+    callback: SignalCallback<'_, T, S>,
+    root_finder: &R,
+    offsets: &[f64],
+    values: &[f64],
+    start: Time<T>,
+    events: &mut Vec<Event<T>>,
+) -> Result<(), DetectError>
+where
+    T: TimeScale + Copy,
+    S: Signal<T>,
+    for<'a> R: FindBracketedRoot<SignalCallback<'a, T, S>>,
+{
+    for i in 1..offsets.len() {
+        let (v0, v1) = (values[i - 1], values[i]);
+        if let Some(crossing) = ZeroCrossing::new(v0.signum(), v1.signum()) {
+            let t = root_finder
+                .find_in_bracket_with_values(callback, (offsets[i - 1], offsets[i]), (v0, v1))
+                .map_err(DetectError::RootFinder)?;
+            events.push(Event::new(start + TimeDelta::from_seconds_f64(t), crossing));
+        }
+    }
+    Ok(())
+}
+
+/// ② BRACKET / ③ REFINE: grazing candidates — near-zero local extrema whose
+/// parabola fit predicts a crossing the grid did not sample. A confirmed dip
+/// across zero yields two new brackets and two events.
+fn scan_grazing<T, S, R>(
+    callback: SignalCallback<'_, T, S>,
+    root_finder: &R,
+    minimizer: &BrentMinimizer,
+    offsets: &[f64],
+    values: &[f64],
+    start: Time<T>,
+    events: &mut Vec<Event<T>>,
+) -> Result<(), DetectError>
+where
+    T: TimeScale + Copy,
+    S: Signal<T>,
+    for<'a> R: FindBracketedRoot<SignalCallback<'a, T, S>>,
+{
+    for i in 1..offsets.len().saturating_sub(1) {
+        let (v0, v1, v2) = (values[i - 1], values[i], values[i + 1]);
+        // Only same-sign triples (a sign change is already handled).
+        if v0.signum() != v1.signum() || v1.signum() != v2.signum() {
+            continue;
+        }
+        let is_min = v1 < v0 && v1 < v2;
+        let is_max = v1 > v0 && v1 > v2;
+        if !(is_min && v1 > 0.0 || is_max && v1 < 0.0) {
+            continue;
+        }
+        // Two complementary candidate filters, both costing zero extra
+        // evaluations: a parabola fit through the triple (tight for
+        // smooth extrema), and a relative-magnitude check (the parabola
+        // underestimates tent-shaped extrema at combinator kinks, where
+        // a near-zero sample between much larger neighbors is the
+        // telltale instead).
+        let parabola_crossing =
+            parabola_vertex((offsets[i - 1], v0), (offsets[i], v1), (offsets[i + 1], v2))
+                .is_some_and(|(tv, vv)| {
+                    let scale = v1.abs().max(f64::MIN_POSITIVE);
+                    vv.signum() != v1.signum()
+                        && vv.abs() > GRAZING_REL_MARGIN * scale
+                        && tv > offsets[i - 1]
+                        && tv < offsets[i + 1]
+                });
+        let near_zero = v1.abs() < 0.5 * v0.abs().max(v2.abs());
+        if !(parabola_crossing || near_zero) {
+            continue;
+        }
+        // ③ REFINE the extremum (minimize f for a dip, -f for a bump).
+        let sign = if is_min { 1.0 } else { -1.0 };
+        let objective = move |x: f64| -> Result<f64, BoxedError> {
+            callback
+                .call(x)
+                .map(|v| sign * v)
+                .map_err(|e| BoxedError::from(e.to_string()))
+        };
+        let bracket = (offsets[i - 1], offsets[i + 1]);
+        let x_star = minimizer
+            .find_minimum_in_bracket(objective, bracket)
+            .map_err(DetectError::RootFinder)?;
+        let v_star = callback
+            .call(x_star)
+            .map_err(|e| DetectError::RootFinder(e.into()))?;
+        if v_star.signum() == v1.signum() || v_star == 0.0 {
+            // The extremum does not actually cross: a touching root with
+            // empty interior, or a false candidate.
+            continue;
+        }
+        // Two new brackets around the extremum → two events.
+        for (a, b, fa, fb) in [
+            (offsets[i - 1], x_star, v0, v_star),
+            (x_star, offsets[i + 1], v_star, v2),
+        ] {
+            if let Some(crossing) = ZeroCrossing::new(fa.signum(), fb.signum()) {
+                let t = root_finder
+                    .find_in_bracket_with_values(callback, (a, b), (fa, fb))
+                    .map_err(DetectError::RootFinder)?;
+                events.push(Event::new(start + TimeDelta::from_seconds_f64(t), crossing));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn sort_events<T: TimeScale + Copy>(events: &mut [Event<T>], start: Time<T>) {
+    events.sort_by(|a, b| {
+        let ta = (a.time() - start).to_seconds().to_f64();
+        let tb = (b.time() - start).to_seconds().to_f64();
+        ta.total_cmp(&tb)
+    });
+}
+
 /// Sample → bracket → refine over a borrowed signal (shared by [`Detector`]
 /// and the legacy detector in [`crate::events`]).
 pub(crate) fn detect_grid<T, S, R>(
@@ -701,106 +813,120 @@ where
     S: Signal<T>,
     for<'a> R: FindBracketedRoot<SignalCallback<'a, T, S>>,
 {
-    {
-        let start = interval.start();
-        let times = sampler.sample(interval);
-        let mut values = vec![0.0; times.len()];
-        signal
-            .eval_grid(&times, &mut values)
-            .map_err(|e| DetectError::Callback(Box::new(e)))?;
+    let start = interval.start();
+    let times = sampler.sample(interval);
+    let mut values = vec![0.0; times.len()];
+    signal
+        .eval_grid(&times, &mut values)
+        .map_err(|e| DetectError::Callback(Box::new(e)))?;
 
-        let offsets: Vec<f64> = times
-            .iter()
-            .map(|t| (*t - start).to_seconds().to_f64())
-            .collect();
-        let callback = SignalCallback { signal, start };
+    let offsets: Vec<f64> = times
+        .iter()
+        .map(|t| (*t - start).to_seconds().to_f64())
+        .collect();
+    let callback = SignalCallback { signal, start };
 
-        let mut events = Vec::new();
+    let mut events = Vec::new();
+    scan_crossings(callback, root_finder, &offsets, &values, start, &mut events)?;
+    scan_grazing(
+        callback,
+        root_finder,
+        minimizer,
+        &offsets,
+        &values,
+        start,
+        &mut events,
+    )?;
+    sort_events(&mut events, start);
+    Ok((events, values[0]))
+}
 
-        // ② BRACKET: sign changes, refined with known endpoint values.
-        for i in 1..offsets.len() {
-            let (v0, v1) = (values[i - 1], values[i]);
-            if let Some(crossing) = ZeroCrossing::new(v0.signum(), v1.signum()) {
-                let t = root_finder
-                    .find_in_bracket_with_values(callback, (offsets[i - 1], offsets[i]), (v0, v1))
-                    .map_err(DetectError::RootFinder)?;
-                events.push(Event::new(start + TimeDelta::from_seconds_f64(t), crossing));
-            }
+/// Two-level sample → bracket → refine: a coarse sweep brackets the
+/// crossings and only sign-changing coarse brackets are re-sampled at the
+/// fine step — the legacy coarse/fine scheme, with grazing recovery on the
+/// coarse grid so near-zero extrema between coarse samples are still found.
+pub(crate) fn detect_grid_two_level<T, S, R>(
+    signal: &S,
+    root_finder: &R,
+    minimizer: &BrentMinimizer,
+    interval: TimeInterval<T>,
+    coarse_step: TimeDelta,
+    fine_step: TimeDelta,
+) -> Result<(Vec<Event<T>>, f64), DetectError>
+where
+    T: TimeScale + Copy,
+    S: Signal<T>,
+    for<'a> R: FindBracketedRoot<SignalCallback<'a, T, S>>,
+{
+    let start = interval.start();
+    let times = UniformSampler::new(coarse_step).sample(interval);
+    let mut values = vec![0.0; times.len()];
+    signal
+        .eval_grid(&times, &mut values)
+        .map_err(|e| DetectError::Callback(Box::new(e)))?;
+
+    let offsets: Vec<f64> = times
+        .iter()
+        .map(|t| (*t - start).to_seconds().to_f64())
+        .collect();
+    let callback = SignalCallback { signal, start };
+    let fine = fine_step.to_seconds().to_f64();
+
+    let mut events = Vec::new();
+    for i in 1..offsets.len() {
+        if ZeroCrossing::new(values[i - 1].signum(), values[i].signum()).is_none() {
+            continue;
         }
-
-        // ② BRACKET: grazing candidates — near-zero local extrema whose
-        // parabola fit predicts a crossing the grid did not sample.
-        for i in 1..offsets.len().saturating_sub(1) {
-            let (v0, v1, v2) = (values[i - 1], values[i], values[i + 1]);
-            // Only same-sign triples (a sign change is already handled).
-            if v0.signum() != v1.signum() || v1.signum() != v2.signum() {
-                continue;
-            }
-            let is_min = v1 < v0 && v1 < v2;
-            let is_max = v1 > v0 && v1 > v2;
-            if !(is_min && v1 > 0.0 || is_max && v1 < 0.0) {
-                continue;
-            }
-            // Two complementary candidate filters, both costing zero extra
-            // evaluations: a parabola fit through the triple (tight for
-            // smooth extrema), and a relative-magnitude check (the parabola
-            // underestimates tent-shaped extrema at combinator kinks, where
-            // a near-zero sample between much larger neighbors is the
-            // telltale instead).
-            let parabola_crossing =
-                parabola_vertex((offsets[i - 1], v0), (offsets[i], v1), (offsets[i + 1], v2))
-                    .is_some_and(|(tv, vv)| {
-                        let scale = v1.abs().max(f64::MIN_POSITIVE);
-                        vv.signum() != v1.signum()
-                            && vv.abs() > GRAZING_REL_MARGIN * scale
-                            && tv > offsets[i - 1]
-                            && tv < offsets[i + 1]
-                    });
-            let near_zero = v1.abs() < 0.5 * v0.abs().max(v2.abs());
-            if !(parabola_crossing || near_zero) {
-                continue;
-            }
-            // ③ REFINE the extremum (minimize f for a dip, -f for a bump).
-            let sign = if is_min { 1.0 } else { -1.0 };
-            let objective = move |x: f64| -> Result<f64, BoxedError> {
-                callback
-                    .call(x)
-                    .map(|v| sign * v)
-                    .map_err(|e| BoxedError::from(e.to_string()))
-            };
-            let bracket = (offsets[i - 1], offsets[i + 1]);
-            let x_star = minimizer
-                .find_minimum_in_bracket(objective, bracket)
-                .map_err(DetectError::RootFinder)?;
-            let v_star = callback
-                .call(x_star)
-                .map_err(|e| DetectError::RootFinder(e.into()))?;
-            if v_star.signum() == v1.signum() || v_star == 0.0 {
-                // The extremum does not actually cross: a touching root with
-                // empty interior, or a false candidate.
-                continue;
-            }
-            // Two new brackets around the extremum → two events.
-            for (a, b, fa, fb) in [
-                (offsets[i - 1], x_star, v0, v_star),
-                (x_star, offsets[i + 1], v_star, v2),
-            ] {
-                if let Some(crossing) = ZeroCrossing::new(fa.signum(), fb.signum()) {
-                    let t = root_finder
-                        .find_in_bracket_with_values(callback, (a, b), (fa, fb))
-                        .map_err(DetectError::RootFinder)?;
-                    events.push(Event::new(start + TimeDelta::from_seconds_f64(t), crossing));
-                }
-            }
+        // Subdivide the sign-changing coarse bracket at the fine step; the
+        // endpoint values are already known, the interior is one batch eval.
+        let (o0, o1) = (offsets[i - 1], offsets[i]);
+        let segments = ((o1 - o0) / fine).ceil().max(1.0) as usize;
+        let mut fine_offsets = Vec::with_capacity(segments + 1);
+        let mut interior_times = Vec::with_capacity(segments.saturating_sub(1));
+        fine_offsets.push(o0);
+        for k in 1..segments {
+            let o = o0 + k as f64 * fine;
+            fine_offsets.push(o);
+            interior_times.push(start + TimeDelta::from_seconds_f64(o));
         }
-
-        events.sort_by(|a, b| {
-            let ta = (a.time() - start).to_seconds().to_f64();
-            let tb = (b.time() - start).to_seconds().to_f64();
-            ta.total_cmp(&tb)
-        });
-        Ok((events, values[0]))
+        fine_offsets.push(o1);
+        let mut fine_values = vec![0.0; fine_offsets.len()];
+        fine_values[0] = values[i - 1];
+        *fine_values.last_mut().unwrap() = values[i];
+        if !interior_times.is_empty() {
+            signal
+                .eval_grid(&interior_times, &mut fine_values[1..segments])
+                .map_err(|e| DetectError::Callback(Box::new(e)))?;
+        }
+        scan_crossings(
+            callback,
+            root_finder,
+            &fine_offsets,
+            &fine_values,
+            start,
+            &mut events,
+        )?;
+        scan_grazing(
+            callback,
+            root_finder,
+            minimizer,
+            &fine_offsets,
+            &fine_values,
+            start,
+            &mut events,
+        )?;
     }
+    scan_grazing(
+        callback,
+        root_finder,
+        minimizer,
+        &offsets,
+        &values,
+        start,
+        &mut events,
+    )?;
+    sort_events(&mut events, start);
+    Ok((events, values[0]))
 }
 
 impl<S, R> Detector<S, R> {
@@ -819,6 +945,31 @@ impl<S, R> Detector<S, R> {
             .map(|(events, _)| events)
     }
 
+    /// Detects events with two-level sampling: a coarse sweep brackets the
+    /// crossings and only sign-changing coarse brackets are re-sampled at
+    /// the fine step. Grazing recovery runs on the coarse grid.
+    pub fn events_two_level<T>(
+        &self,
+        interval: TimeInterval<T>,
+        coarse_step: TimeDelta,
+        fine_step: TimeDelta,
+    ) -> Result<Vec<Event<T>>, DetectError>
+    where
+        T: TimeScale + Copy,
+        S: Signal<T>,
+        for<'a> R: FindBracketedRoot<SignalCallback<'a, T, S>>,
+    {
+        detect_grid_two_level(
+            &self.signal,
+            &self.root_finder,
+            &self.minimizer,
+            interval,
+            coarse_step,
+            fine_step,
+        )
+        .map(|(events, _)| events)
+    }
+
     /// Detects all windows where the signal is positive, with the binding
     /// constraint at each boundary as a diagnostic.
     pub fn windows<T>(
@@ -832,7 +983,45 @@ impl<S, R> Detector<S, R> {
         for<'a> R: FindBracketedRoot<SignalCallback<'a, T, S>>,
     {
         let (events, start_value) = self.events_with_start_value(interval, sampler)?;
+        self.windows_from(interval, events, start_value)
+    }
 
+    /// Two-level variant of [`windows`](Self::windows).
+    pub fn windows_two_level<T>(
+        &self,
+        interval: TimeInterval<T>,
+        coarse_step: TimeDelta,
+        fine_step: TimeDelta,
+    ) -> Result<Vec<Window<T>>, DetectError>
+    where
+        T: TimeScale + Copy,
+        S: Signal<T>,
+        for<'a> R: FindBracketedRoot<SignalCallback<'a, T, S>>,
+    {
+        let (events, start_value) = detect_grid_two_level(
+            &self.signal,
+            &self.root_finder,
+            &self.minimizer,
+            interval,
+            coarse_step,
+            fine_step,
+        )?;
+        self.windows_from(interval, events, start_value)
+    }
+
+    /// Pairs Up/Down events into windows with binding-constraint
+    /// diagnostics, synthesizing boundaries at the horizon edges
+    /// (start-sign logic kept from the interval design).
+    fn windows_from<T>(
+        &self,
+        interval: TimeInterval<T>,
+        events: Vec<Event<T>>,
+        start_value: f64,
+    ) -> Result<Vec<Window<T>>, DetectError>
+    where
+        T: TimeScale + Copy,
+        S: Signal<T>,
+    {
         let binding = |time: Time<T>| -> Result<ConstraintId, DetectError> {
             self.signal
                 .eval_binding(time)
@@ -852,8 +1041,6 @@ impl<S, R> Detector<S, R> {
             };
         }
 
-        // Pair Up/Down events into windows, synthesizing boundaries at the
-        // horizon edges (start-sign logic kept from the interval design).
         let mut boundaries: Vec<(Time<T>, ZeroCrossing)> = Vec::with_capacity(events.len() + 2);
         if events[0].crossing() == ZeroCrossing::Down {
             boundaries.push((interval.start(), ZeroCrossing::Up));
@@ -1244,6 +1431,58 @@ mod tests {
             .windows(interval, &KnotSampler::new(knots))
             .unwrap();
         assert_eq!(windows.len(), 10);
+    }
+
+    /// Two-level detection matches the single-level fine sweep — including
+    /// multiple crossings inside one coarse bracket and grazing windows
+    /// between coarse samples — while evaluating far less.
+    #[test]
+    fn test_windows_two_level_matches_single_level() {
+        let interval = horizon(1_000.0);
+        let start = interval.start();
+        let count = AtomicUsize::new(0);
+        // Three crossings within [0, 1000]: passes at (100, 130) and
+        // (600, 800), the first much shorter than the coarse step.
+        let f = move |t: Time<Tai>| {
+            let s = (t - start).to_seconds().to_f64();
+            let pass1 = 15.0 - (s - 115.0).abs();
+            let pass2 = 100.0 - (s - 700.0).abs();
+            pass1.max(pass2)
+        };
+        let counted = SignalFn(|t: Time<Tai>| {
+            count.fetch_add(1, Ordering::Relaxed);
+            f(t)
+        });
+
+        let fine = TimeDelta::from_seconds(5);
+        let single = Detector::new(SignalFn(f))
+            .windows(interval, &UniformSampler::new(fine))
+            .unwrap();
+        let two_level = Detector::new(&counted)
+            .windows_two_level(interval, TimeDelta::from_seconds(150), fine)
+            .unwrap();
+        let two_level_evals = count.load(Ordering::Relaxed);
+
+        assert_eq!(single.len(), 2);
+        assert_eq!(single.len(), two_level.len());
+        for (a, b) in single.iter().zip(&two_level) {
+            assert_approx_eq!(
+                elapsed(interval, a.interval().start()),
+                elapsed(interval, b.interval().start()),
+                atol <= 1e-6
+            );
+            assert_approx_eq!(
+                elapsed(interval, a.interval().end()),
+                elapsed(interval, b.interval().end()),
+                atol <= 1e-6
+            );
+        }
+        // Coarse sweep (~7 samples) + fine subdivision of the sign-changing
+        // brackets only — far fewer than the ~200 single-level samples.
+        assert!(
+            two_level_evals < 150,
+            "two-level should evaluate sparsely ({two_level_evals} evals)"
+        );
     }
 
     /// `MinOf` over boxed signals matches nested binary `min`, including
