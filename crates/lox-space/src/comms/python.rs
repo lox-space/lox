@@ -1317,6 +1317,29 @@ impl PyLinkBudget {
             .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
+    /// Selects and applies the best MODCOD from a table: the
+    /// highest-efficiency mode that closes on this channel with the given
+    /// design margin (adaptive coding and modulation). The result always
+    /// closes; ``None`` means no mode in the table closes.
+    ///
+    /// Args:
+    ///     channel: The waveform the link runs on.
+    ///     table: Candidate MODCODs, e.g. ``ModCod.dvb_s2()``.
+    ///     design_margin: Margin applied on top of the threshold (default 0 dB).
+    #[pyo3(signature = (channel, table, design_margin=None))]
+    fn modulate_best(
+        &self,
+        channel: &PyChannel,
+        table: Vec<PyModCod>,
+        design_margin: Option<PyDecibel>,
+    ) -> Option<PyModulatedLinkBudget> {
+        let margin = design_margin.map(|m| m.0).unwrap_or(Decibel::new(0.0));
+        let table: Vec<ModCod> = table.into_iter().map(|mc| mc.0).collect();
+        self.0
+            .modulate_best(&channel.0, &table, margin)
+            .map(PyModulatedLinkBudget)
+    }
+
     /// Applies a waveform and a MODCOD to this budget.
     ///
     /// Everything bandwidth-dependent derives from the channel.
