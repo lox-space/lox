@@ -6,7 +6,8 @@ use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
 use differential_equations::{
     interpolate::Interpolation,
-    ode::{ODE, ODEProblem, OrdinaryNumericalMethod},
+    ivp::IVP,
+    ode::{ODE, OrdinaryNumericalMethod},
     prelude::ExplicitRungeKutta,
     traits::State,
 };
@@ -246,11 +247,9 @@ where
         let t1 = (time - epoch).to_seconds().to_f64();
         let s0 = CartesianState::from(*self.initial_state());
 
-        let mut solver = self.solver();
-
-        let problem = ODEProblem::new(self, t0, t1, s0);
-        let solution = problem
-            .solve(&mut solver)
+        let solution = IVP::ode(self, t0, t1, s0)
+            .method(self.solver())
+            .solve()
             .map_err(|e| NumericalError::Solver(format!("{:?}", e)))?;
 
         let (_, final_state) = solution
@@ -276,11 +275,9 @@ where
 
         let t1 = (interval.end() - start).to_seconds().to_f64();
 
-        let mut solver = self.solver();
-
-        let problem = ODEProblem::new(self, 0.0, t1, s0);
-        let solution = problem
-            .solve(&mut solver)
+        let solution = IVP::ode(self, 0.0, t1, s0)
+            .method(self.solver())
+            .solve()
             .map_err(|e| NumericalError::Solver(format!("{:?}", e)))?;
 
         let origin = self.initial_state.origin();
@@ -318,12 +315,10 @@ where
         }
         .into();
 
-        let mut solver = self.solver();
-
-        let problem = ODEProblem::new(self, 0.0, t1, s0);
-        let solution = problem
+        let solution = IVP::ode(self, 0.0, t1, s0)
+            .method(self.solver())
             .t_eval(steps)
-            .solve(&mut solver)
+            .solve()
             .map_err(|e| NumericalError::Solver(format!("{:?}", e)))?;
 
         let origin = self.initial_state.origin();
@@ -358,7 +353,7 @@ impl State<f64> for CartesianState {
         6
     }
 
-    fn get(&self, i: usize) -> f64 {
+    fn get_component(&self, i: usize) -> f64 {
         match i {
             0 => self.0.position().x,
             1 => self.0.position().y,
@@ -370,7 +365,7 @@ impl State<f64> for CartesianState {
         }
     }
 
-    fn set(&mut self, i: usize, value: f64) {
+    fn set_component(&mut self, i: usize, value: f64) {
         match i {
             0 => {
                 self.0.set::<0>(value);
@@ -394,8 +389,31 @@ impl State<f64> for CartesianState {
         };
     }
 
+    fn map_components_mut<F>(&mut self, mut f: F)
+    where
+        F: FnMut(usize, &mut f64),
+    {
+        for i in 0..6 {
+            let mut value = self.get_component(i);
+            f(i, &mut value);
+            self.set_component(i, value);
+        }
+    }
+
+    fn zeros_like(&self) -> Self {
+        Self::default()
+    }
+
     fn zeros() -> Self {
         Self::default()
+    }
+
+    fn mul_add_assign(&mut self, alpha: f64, other: &Self) {
+        self.0 += other.0 * alpha;
+    }
+
+    fn scale_mut(&mut self, alpha: f64) {
+        self.0 = self.0 * alpha;
     }
 }
 
