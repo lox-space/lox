@@ -22,6 +22,9 @@ pub mod transmitter;
 pub mod utils;
 
 pub use error::LinkBudgetError;
+pub use lox_core::comms::{
+    FrequencyBand, FrequencyRange, FrequencyRangeError, ParseFrequencyBandError,
+};
 
 use lox_core::units::Temperature;
 

@@ -8,7 +8,7 @@ use lox_core::units::Frequency;
 use thiserror::Error;
 
 use crate::antenna::AntennaFrameError;
-use lox_core::units::FrequencyRange;
+use lox_core::comms::FrequencyRange;
 
 /// A physical quantity is outside its valid domain.
 #[derive(Debug, Clone, PartialEq, Error)]
@@ -81,7 +81,7 @@ pub enum LinkBudgetError {
 mod tests {
     use lox_core::units::FrequencyUnits;
 
-    use lox_core::units::FrequencyRange;
+    use lox_core::comms::FrequencyRange;
 
     use super::*;
 
