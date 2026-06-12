@@ -21,8 +21,11 @@ use std::error::Error;
 
 use lox_space::comms::FrequencyRange;
 use lox_space::comms::antenna::Antenna;
-use lox_space::comms::channel::{Channel, LinkDirection, Modulation};
-use lox_space::comms::link_budget::{Eirp, GOverT, LinkParameters, LinkStats, PropagationLosses};
+use lox_space::comms::channel::{Channel, LinkDirection};
+use lox_space::comms::link_budget::{
+    Eirp, GOverT, LinkParameters, LinkStats, ModulatedLinkStats, PropagationLosses,
+};
+use lox_space::comms::modcod::{ModCod, dvb_s2};
 use lox_space::comms::pfd::{PfdMask, power_flux_density};
 use lox_space::comms::pointing::Pointing;
 use lox_space::comms::receiver::CascadeReceiver;
@@ -111,18 +114,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         .build()?;
 
     // ------------------------------------------------------------------
-    // DVB-S2-style channel: QPSK 3/4 at 150 Msps → 225 Mbit/s net.
+    // DVB-S2 QPSK 3/4 at 150 Msps; the MODCOD table carries the exact
+    // Table 13 thresholds and coding chains (BBFRAME, BCH, LDPC, PLFRAME).
     // ------------------------------------------------------------------
-    let channel = Channel {
-        link_type: LinkDirection::Downlink,
-        symbol_rate: 150.0.mhz(),
-        required_eb_n0: 4.5.db(),
-        margin: 3.0.db(),
-        modulation: Modulation::Qpsk,
-        roll_off: 0.25,
-        fec: 0.75,
-        chip_rate: None,
-    };
+    let channel = Channel::builder(150.0.mhz()).roll_off(0.25).build()?;
+    let modcod = dvb_s2()
+        .iter()
+        .find(|mc| mc.mode().name() == "QPSK 3/4")
+        .expect("table mode");
+    let design_margin = 3.0.db();
 
     let params = LinkParameters::builder(carrier, channel.bandwidth(), range)
         .losses(losses)
@@ -131,7 +131,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .direction(LinkDirection::Downlink)
         .build()?;
     let link = LinkStats::for_link(&tx, &rx, &params)?;
-    let modulated = channel.apply(link);
+    let modulated = ModulatedLinkStats::evaluate(link, &channel, modcod, design_margin);
 
     println!("\n--- Link budget at {} GHz ---", carrier.to_gigahertz());
     println!("EIRP:            {:>8.2} dBW", modulated.link.eirp.as_f64());
@@ -156,12 +156,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Eb/N0:           {:>8.2} dB", modulated.eb_n0.as_f64());
     println!(
         "Data rate:       {:>8.1} Mbit/s",
-        channel.information_rate().to_megahertz()
+        modulated.information_rate().to_megahertz()
     );
     println!("Link margin:     {:>8.2} dB", modulated.margin.as_f64());
     assert!(
         modulated.margin.as_f64() > 0.0,
         "the downlink should close at worst-case geometry"
+    );
+
+    // ------------------------------------------------------------------
+    // ACM: the best DVB-S2 mode that closes at this Es/N0 with the same
+    // design margin.
+    // ------------------------------------------------------------------
+    let best = ModCod::select(modulated.es_n0, design_margin, dvb_s2()).expect("a mode closes");
+    println!(
+        "\nBest ACM mode:   {} ({:.1} Mbit/s, +{:.0} %)",
+        best.mode().name(),
+        best.mode()
+            .information_rate(channel.symbol_rate())
+            .to_megahertz(),
+        (best.mode().info_bits_per_symbol() / modcod.mode().info_bits_per_symbol() - 1.0) * 100.0
     );
 
     // ------------------------------------------------------------------

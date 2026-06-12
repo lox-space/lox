@@ -2590,34 +2590,30 @@ class CascadeReceiver:
     def __repr__(self) -> str: ...
 
 class Channel:
-    """A communication channel.
+    """A communication channel: the waveform's occupancy of spectrum.
 
     Args:
-        link_type: "uplink", "downlink", or "crosslink".
         symbol_rate: Symbol rate as Frequency.
-        required_eb_n0: Required Eb/N0 as Decibel.
-        margin: Required link margin as Decibel.
-        modulation: Modulation scheme.
-        roll_off: Roll-off factor (default 0.35).
-        fec: Forward error correction code rate (default 0.5).
+        roll_off: Pulse-shaping roll-off factor (default 0.35).
         chip_rate: Chip rate for DSSS as Frequency (optional).
     """
     def __new__(
         cls,
-        link_type: str,
         symbol_rate: Frequency,
-        required_eb_n0: Decibel,
-        margin: Decibel,
-        modulation: Modulation,
         roll_off: float = 0.35,
-        fec: float = 0.5,
         chip_rate: Frequency | None = None,
     ) -> Self: ...
-    def data_rate(self) -> Frequency:
-        """Returns the raw bit rate."""
+    @property
+    def symbol_rate(self) -> Frequency:
+        """Symbol rate."""
         ...
-    def information_rate(self) -> Frequency:
-        """Returns the information (post-FEC) bit rate."""
+    @property
+    def roll_off(self) -> float:
+        """Pulse-shaping roll-off factor."""
+        ...
+    @property
+    def chip_rate(self) -> Frequency | None:
+        """DSSS chip rate, or None for narrowband."""
         ...
     def bandwidth(self) -> Frequency:
         """Returns the occupied channel bandwidth."""
@@ -2625,14 +2621,8 @@ class Channel:
     def es_n0(self, c_n0: Decibel) -> Decibel:
         """Computes Es/N0 from a given C/N0."""
         ...
-    def eb_n0(self, c_n0: Decibel) -> Decibel:
-        """Computes Eb/N0 from a given C/N0."""
-        ...
     def c_n(self, c_n0: Decibel) -> Decibel:
         """Computes C/N from a given C/N0."""
-        ...
-    def link_margin(self, eb_n0: Decibel) -> Decibel:
-        """Computes the link margin from a given Eb/N0."""
         ...
     def spreading_factor(self) -> float | None:
         """Returns the DSSS spreading factor, or None for narrowband."""
@@ -2640,12 +2630,94 @@ class Channel:
     def processing_gain(self) -> Decibel | None:
         """Returns the DSSS processing gain in dB, or None for narrowband."""
         ...
-    def apply(self, link: LinkStats) -> ModulatedLinkStats:
-        """Layers modulation/FEC figures onto a modulation-agnostic link budget."""
-        ...
+    def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
-class PropagationLosses:
+class ModCod:
+    """A modulation and coding scheme with its performance threshold.
+
+    Args:
+        name: Name of the scheme.
+        modulation: Modulation scheme.
+        code_rate: Aggregate code rate in (0, 1].
+        required_eb_n0: Eb/N0 threshold as Decibel.
+        metric: Error metric ("BER", "WER", "FER", or "PER"; default "BER").
+        error_rate: Error rate at the threshold (default 1e-6).
+    """
+    def __new__(
+        cls,
+        name: str,
+        modulation: Modulation,
+        code_rate: float,
+        required_eb_n0: Decibel,
+        metric: str = "BER",
+        error_rate: float = 1e-6,
+    ) -> Self: ...
+    @staticmethod
+    def dvb_s2() -> list[ModCod]:
+        """Returns the DVB-S2 MODCOD table (normal FECFRAME, no pilots),
+        per ETSI EN 302 307-1 Table 13."""
+        ...
+    @staticmethod
+    def select(es_n0: Decibel, margin: Decibel, table: list[ModCod]) -> ModCod | None:
+        """Selects the highest-efficiency MODCOD that closes at the given
+        Es/N0 with the given margin, or None when none does."""
+        ...
+    @property
+    def name(self) -> str:
+        """Name of the scheme."""
+        ...
+    @property
+    def modulation(self) -> Modulation:
+        """Modulation scheme."""
+        ...
+    @property
+    def code_rate(self) -> float:
+        """Overall code rate: the product of the coding chain's rates."""
+        ...
+    @property
+    def codes(self) -> list[tuple[str, float]]:
+        """The coding chain as (name, rate) tuples in encoding order."""
+        ...
+    @property
+    def info_bits_per_symbol(self) -> float:
+        """Information bits per symbol including all coding and framing overhead."""
+        ...
+    @property
+    def required_eb_n0(self) -> Decibel:
+        """Required Eb/N0 threshold."""
+        ...
+    @property
+    def required_es_n0(self) -> Decibel:
+        """Required Es/N0 threshold."""
+        ...
+    @property
+    def metric(self) -> str:
+        """Error metric of the threshold."""
+        ...
+    @property
+    def error_rate(self) -> float:
+        """Error rate at the threshold."""
+        ...
+    @property
+    def reference(self) -> str:
+        """Source of the mode definition."""
+        ...
+    def information_rate(self, symbol_rate: Frequency) -> Frequency:
+        """Returns the information bit rate at the given symbol rate."""
+        ...
+    def evaluate(
+        self,
+        link: LinkStats,
+        channel: Channel,
+        design_margin: Decibel | None = None,
+    ) -> ModulatedLinkStats:
+        """Evaluates a link budget on a channel against this MODCOD."""
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+
+class PropagationLosses:class PropagationLosses:
     """Itemized excess propagation losses along a link path, beyond
     free-space path loss.
 
@@ -2990,18 +3062,29 @@ class InterferenceStats:
     def __repr__(self) -> str: ...
 
 class ModulatedLinkStats:
-    """Link-budget output with modulation/coding figures applied."""
+    """Link-budget output with a modulation and coding scheme applied."""
     @property
     def link(self) -> LinkStats:
         """The underlying modulation-agnostic link budget."""
         ...
     @property
     def channel(self) -> Channel:
-        """The channel (modulation, FEC, required Eb/N0, margin) applied."""
+        """The waveform the link was evaluated on."""
+        ...
+    @property
+    def modcod(self) -> ModCod:
+        """The modulation and coding scheme the link was evaluated against."""
+        ...
+    @property
+    def design_margin(self) -> Decibel:
+        """Design margin applied on top of the MODCOD threshold."""
         ...
     @property
     def symbol_rate(self) -> Frequency:
         """Symbol rate from the channel."""
+        ...
+    def information_rate(self) -> Frequency:
+        """Information bit rate: symbol rate × info bits per symbol."""
         ...
     @property
     def es_n0(self) -> Decibel:

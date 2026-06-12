@@ -224,8 +224,10 @@ def test_chain_noise_temperature_degenerate(noise_figure_db):
 # ---------------------------------------------------------------------------
 # Test 7: C/N0 → Eb/N0
 #
-# lox.Channel.eb_n0(cn0) computes Eb/N0 = C/N0 − 10·log10(R).
-# spacelink.core.noise.cn0_to_ebn0() implements the same relation.
+# A BPSK rate-1 ModCod evaluated on a Channel computes
+# Eb/N0 = C/N0 − 10·log10(R); spacelink.core.noise.cn0_to_ebn0() implements
+# the same relation. Es/N0 == Eb/N0 at 1 info bit/symbol, so Channel.es_n0
+# is compared directly.
 # ---------------------------------------------------------------------------
 
 # (cn0_dbhz, data_rate_hz)
@@ -241,15 +243,9 @@ CN0_CASES = [
 
 @pytest.mark.parametrize("cn0_dbhz,data_rate_hz", CN0_CASES)
 def test_cn0_to_ebn0(cn0_dbhz, data_rate_hz):
-    ch = lox.Channel(
-        link_type="downlink",
-        symbol_rate=lox.Frequency(data_rate_hz),
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("BPSK"),
-        fec=1.0,
-    )
-    lox_ebn0 = float(ch.eb_n0(cn0_dbhz * lox.dB))
+    # BPSK uncoded: 1 info bit/symbol, so Es/N0 == Eb/N0.
+    ch = lox.Channel(symbol_rate=lox.Frequency(data_rate_hz))
+    lox_ebn0 = float(ch.es_n0(cn0_dbhz * lox.dB))
     sl_ebn0 = float(
         sl_cn0_to_ebn0(
             u.LogQuantity(cn0_dbhz, unit=u.dB(u.Hz)),
@@ -506,16 +502,9 @@ def test_tdrs_ka_band_return_link():
     sl_t_rx = float(sl_nf_to_temp(rx_nf_db * u.dB).value)
     assert t_rx == pytest.approx(sl_t_rx, abs=0.01)
 
-    # --- Channel ---
-    channel = lox.Channel(
-        link_type="downlink",
-        symbol_rate=25e6 * lox.Hz,
-        required_eb_n0=10.0 * lox.dB,
-        margin=3.0 * lox.dB,
-        modulation=lox.Modulation("QPSK"),
-        fec=0.5,
-        roll_off=0.35,
-    )
+    # --- Channel and MODCOD ---
+    channel = lox.Channel(symbol_rate=25e6 * lox.Hz)
+    modcod = lox.ModCod("QPSK 1/2", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
 
     # --- Link budget ---
     range_km = 40000.0
@@ -527,7 +516,7 @@ def test_tdrs_ka_band_return_link():
         bandwidth=channel.bandwidth(),
         range=range_km * lox.km,
     )
-    modulated = channel.apply(stats)
+    modulated = modcod.evaluate(stats, channel, design_margin=3.0 * lox.dB)
 
     # Verify T_sys via Friis: T_ant + T_LNA + T_rx/G_LNA (zero feed loss)
     g_lna = 10.0 ** (lna_gain_db / 10.0)
