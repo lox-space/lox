@@ -27,7 +27,7 @@ serde = ["dep:serde", "lox-core/serde"]
 
 [dev-dependencies]
 lox-test-utils = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
+serde_json = { workspace = true, features = ["float_roundtrip"] }
 
 [lib]
 doctest = false
