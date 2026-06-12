@@ -577,6 +577,53 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_accessors_round_trip() {
+        let code = Code::new("LDPC", 0.5).unwrap();
+        assert_eq!(code.name(), "LDPC");
+        assert_approx_eq!(code.rate(), 0.5, atol <= 1e-15);
+
+        let mode = LinkMode::new("test", Modulation::Qpsk, vec![code.clone()], "a ref");
+        assert_eq!(mode.name(), "test");
+        assert_eq!(mode.modulation(), Modulation::Qpsk);
+        assert_eq!(mode.codes(), &[code]);
+        assert_eq!(mode.reference(), "a ref");
+
+        let perf = ModePerformance::new(ErrorMetric::Wer, 1e-5, 4.0.db(), "b ref").unwrap();
+        assert_eq!(perf.metric(), ErrorMetric::Wer);
+        assert_approx_eq!(perf.error_rate(), 1e-5, atol <= 1e-20);
+        assert_approx_eq!(perf.eb_n0().as_f64(), 4.0, atol <= 1e-15);
+        assert_eq!(perf.reference(), "b ref");
+
+        let mc = ModCod::new(mode.clone(), perf.clone());
+        assert_eq!(mc.mode(), &mode);
+        assert_eq!(mc.performance(), &perf);
+    }
+
+    #[test]
+    fn test_error_metric_display() {
+        assert_eq!(ErrorMetric::Ber.to_string(), "BER");
+        assert_eq!(ErrorMetric::Wer.to_string(), "WER");
+        assert_eq!(ErrorMetric::Fer.to_string(), "FER");
+        assert_eq!(ErrorMetric::Per.to_string(), "PER");
+    }
+
+    #[test]
+    fn test_from_required_eb_n0_uncoded() {
+        // A unity code rate yields an empty coding chain.
+        let mc = ModCod::from_required_eb_n0(
+            "uncoded",
+            Modulation::Bpsk,
+            1.0,
+            9.6.db(),
+            ErrorMetric::Ber,
+            1e-5,
+        )
+        .unwrap();
+        assert!(mc.mode().codes().is_empty());
+        assert_approx_eq!(mc.mode().info_bits_per_symbol(), 1.0, atol <= 1e-15);
+    }
+
     #[cfg(feature = "serde")]
     #[test]
     fn test_modcod_serde_round_trip_and_validation() {

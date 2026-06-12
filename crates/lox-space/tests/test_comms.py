@@ -905,6 +905,39 @@ def test_modcod_evaluate_rejects_bandwidth_mismatch():
         mc.evaluate(stats, ch)
 
 
+def test_modcod_getters_and_repr():
+    mc = lox.ModCod("my link", lox.Modulation("8PSK"), 0.75, 6.0 * lox.dB)
+    assert mc.modulation == lox.Modulation("8PSK")
+    assert mc.code_rate == pytest.approx(0.75)
+    assert mc.codes == [("FEC", 0.75)]
+    r = repr(mc)
+    assert "my link" in r
+    assert "required_eb_n0=6.00 dB" in r
+
+
+@pytest.mark.parametrize("metric", ["WER", "FER", "PER", "wer"])
+def test_modcod_metric_variants(metric):
+    mc = lox.ModCod(
+        "m", lox.Modulation("QPSK"), 0.5, 4.0 * lox.dB, metric=metric, error_rate=1e-7
+    )
+    assert mc.metric == metric.upper()
+    assert mc.error_rate == pytest.approx(1e-7)
+
+
+def test_channel_chip_rate_getter_and_repr():
+    ch = lox.Channel(symbol_rate=10 * lox.kHz, chip_rate=4 * lox.MHz)
+    assert ch.chip_rate.to_hertz() == pytest.approx(4e6, rel=1e-12)
+    assert "chip_rate=" in repr(ch)
+    assert lox.Channel(symbol_rate=10 * lox.kHz).chip_rate is None
+
+
+def test_propagation_losses_repr_non_absorptive():
+    losses = lox.PropagationLosses(other=[("Pointing margin", 0.4 * lox.dB, False)])
+    r = repr(losses)
+    assert "Pointing margin" in r
+    assert "False" in r
+
+
 def test_modcod_information_rate():
     # QPSK rate 1/2 at 5 Msps: 5 Mbit/s information rate.
     mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
