@@ -4,7 +4,10 @@
 
 use std::collections::HashMap;
 
-use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid, UndefinedOriginPropertyError};
+use lox_bodies::{
+    DynOrigin, Origin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid,
+    UndefinedOriginPropertyError,
+};
 use lox_core::glam::DVec3;
 use lox_ephem::Ephemeris;
 use lox_frames::providers::DefaultRotationProvider;
@@ -686,6 +689,60 @@ fn collect_results(results: Vec<PairWindows>, pair_type: PairType) -> Visibility
     }
 }
 
+/// Divisor applied to the bounding period when auto-deriving the coarse
+/// candidate-sampling step: a LEO pass spans up to roughly a tenth of the
+/// orbital period, so a thirty-second of the period guarantees multiple
+/// samples inside every regular pass.
+const AUTO_COARSE_DIVISOR: f64 = 32.0;
+
+/// Auto-derives a coarse candidate-sampling step for ground-space passes
+/// from the orbital period, making two-level detection the default instead
+/// of requiring `min_pass_duration`.
+///
+/// Pass geometry cannot produce features much narrower than a fraction of
+/// the bounding period — the spacecraft's orbital period or the ground
+/// body's rotation period, whichever is shorter. Grazing passes below that
+/// scale are recovered by the detector's near-zero-extremum path. Returns
+/// `None` for non-elliptical orbits, undefined gravitational parameters,
+/// or when the derived step would not beat `step`.
+fn auto_coarse_step<O, R>(
+    traj: &Trajectory<Tai, O, R>,
+    ground_body: DynOrigin,
+    step: TimeDelta,
+) -> Option<TimeDelta>
+where
+    O: Origin + Copy + Into<DynOrigin>,
+    R: ReferenceFrame + Copy,
+{
+    let state = traj.interpolate_at(traj.start_time());
+    let origin: DynOrigin = traj.origin().into();
+    let mu = origin.try_gravitational_parameter().ok()?.as_f64();
+    let r = state.position().length();
+    let v2 = state.velocity().length_squared();
+    let a = 1.0 / (2.0 / r - v2 / mu);
+    if a <= 0.0 {
+        return None;
+    }
+    let orbit_period = std::f64::consts::TAU * (a.powi(3) / mu).sqrt();
+    let rotation_period = ground_body
+        .try_rotational_element_rates(0.0)
+        .ok()
+        .map(|(_, _, w_dot)| std::f64::consts::TAU / w_dot.abs())
+        .filter(|p| p.is_finite());
+    let bound = rotation_period.map_or(orbit_period, |p| orbit_period.min(p));
+    let coarse = bound / AUTO_COARSE_DIVISOR;
+    (coarse > step.to_seconds().to_f64()).then(|| TimeDelta::from_seconds_f64(coarse))
+}
+
+/// The coarser of the explicit `min_pass_duration` bound and the
+/// period-derived bound.
+fn combine_coarse_steps(a: Option<TimeDelta>, b: Option<TimeDelta>) -> Option<TimeDelta> {
+    match (a, b) {
+        (Some(a), Some(b)) => Some(if a > b { a } else { b }),
+        (a, b) => a.or(b),
+    }
+}
+
 /// Per-pair slew rate limit: the tighter of both assets' limits.
 fn effective_slew_rate(sc1: &Spacecraft, sc2: &Spacecraft) -> Option<AngularRate> {
     match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
@@ -851,7 +908,11 @@ where
                 })),
             ));
         }
-        detect_pair(&constraints, 1, interval, self.step, self.coarse_step())
+        let coarse = combine_coarse_steps(
+            self.coarse_step(),
+            auto_coarse_step(sc_traj, gs.location().origin(), self.step),
+        );
+        detect_pair(&constraints, 1, interval, self.step, coarse)
     }
 
     /// Compute visibility windows for a single inter-satellite pair from the
@@ -1333,7 +1394,11 @@ where
                     body_fixed_frame: gs.body_fixed_frame(),
                 })),
             )];
-            let windows = detect_pair(&constraints, 1, interval, step, coarse_step)?;
+            let coarse = combine_coarse_steps(
+                coarse_step,
+                auto_coarse_step(sc_traj, gs.location().origin(), step),
+            );
+            let windows = detect_pair(&constraints, 1, interval, step, coarse)?;
             Ok((key, windows))
         };
 
@@ -1825,6 +1890,172 @@ mod tests {
                 .any(|&(opened, closed)| opened == moon_los || closed == moon_los)
         );
         assert_eq!(format!("{moon_los}"), "line-of-sight(Moon)");
+    }
+
+    /// The auto-derived coarse step is bounded by the shorter of the
+    /// orbital period and the ground body's rotation period.
+    #[test]
+    fn test_auto_coarse_step() {
+        let sc_traj = spacecraft_trajectory_dyn();
+        let (epoch, o, f, data) = sc_traj.into_parts();
+        let typed = Trajectory::from_parts(epoch.with_scale(Tai), o, f, data);
+        let step = TimeDelta::from_seconds(60);
+
+        // Translunar orbit: period of days, so the Earth rotation period
+        // (~86164 s) binds → coarse ≈ 86164 / 32 ≈ 2693 s.
+        let coarse = auto_coarse_step(&typed, DynOrigin::Earth, step)
+            .unwrap()
+            .to_seconds()
+            .to_f64();
+        assert_approx_eq!(coarse, 86_164.0 / 32.0, rtol <= 1e-2);
+
+        // A step coarser than the bound disables the two-level path.
+        assert!(auto_coarse_step(&typed, DynOrigin::Earth, TimeDelta::from_hours(1)).is_none());
+    }
+
+    /// Auto-coarse two-level detection reproduces the plain fine sweep for
+    /// a LEO spacecraft — the tightest case for period-derived sampling
+    /// (passes span only a few coarse steps).
+    #[test]
+    fn test_auto_coarse_matches_fine_sweep_for_leo() {
+        use lox_orbits::propagators::Propagator;
+        use lox_orbits::propagators::sgp4::{Elements, Sgp4};
+        use lox_time::intervals::Interval;
+
+        let tle = Elements::from_tle(
+            Some("ONEWEB-0012".to_string()),
+            b"1 44057U 19010A   24322.58825131  .00000088  00000+0  19693-3 0  9993",
+            b"2 44057  87.9092 343.6767 0002420  76.7970 283.3431 13.16592150275693",
+        )
+        .unwrap();
+        let sgp4 = Sgp4::new(tle).unwrap();
+        let t0 = sgp4.time();
+        let t1 = t0 + TimeDelta::from_hours(24);
+        let traj = sgp4
+            .with_step(TimeDelta::from_seconds(60))
+            .propagate(Interval::new(t0, t1))
+            .unwrap()
+            .into_dyn();
+
+        let gs_loc = location_dyn();
+        let mask = ElevationMask::with_fixed_elevation(5.0_f64.to_radians());
+        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
+        let sc = Spacecraft::new("ow12", OrbitSource::Trajectory(traj));
+        let (scenario, ensemble) = make_scenario_and_ensemble(
+            std::slice::from_ref(&gs),
+            std::slice::from_ref(&sc),
+            interval,
+        );
+
+        // Auto-coarse path (the default).
+        let results = VisibilityAnalysis::new(&scenario, &ensemble)
+            .compute()
+            .unwrap();
+        let auto = results.intervals_for(gs.id(), sc.id()).unwrap();
+
+        // Reference: single-level fine sweep of the same elevation signal.
+        let step = TimeDelta::from_seconds(60);
+        let typed = ensemble.get(sc.id()).unwrap();
+        let constraints: Vec<ConstraintSignal<'_>> = vec![(
+            Constraint::Elevation,
+            Box::new(DetectSignal(ElevationDetectFn {
+                gs: gs.location(),
+                mask: gs.mask(),
+                sc: typed,
+                body_fixed_frame: gs.body_fixed_frame(),
+            })),
+        )];
+        let tai_interval =
+            TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
+        let (fine, _) = detect_pair(&constraints, 1, tai_interval, step, None).unwrap();
+
+        assert!(
+            fine.len() >= 4,
+            "expected several passes, got {}",
+            fine.len()
+        );
+        assert_eq!(auto.len(), fine.len());
+        for (a, f) in auto.iter().zip(&fine) {
+            assert_approx_eq!(
+                (a.start() - f.start()).to_seconds().to_f64(),
+                0.0,
+                atol <= 1e-3
+            );
+            assert_approx_eq!((a.end() - f.end()).to_seconds().to_f64(), 0.0, atol <= 1e-3);
+        }
+    }
+
+    /// One-off diagnostic: per-eval cost breakdown (run with --release,
+    /// --ignored, --nocapture).
+    #[test]
+    #[ignore]
+    fn measure_eval_breakdown() {
+        use std::hint::black_box;
+        use std::time::Instant;
+
+        let sc_traj = spacecraft_trajectory_dyn();
+        let (epoch, o, f, data) = sc_traj.into_parts();
+        let typed = Trajectory::from_parts(epoch.with_scale(Tai), o, f, data);
+        let gs = location_dyn();
+        let mask = ElevationMask::with_fixed_elevation(0.0);
+        let body_fixed_frame = DynFrame::Iau(DynOrigin::Earth);
+
+        let n = 20_000usize;
+        let span = (typed.end_time() - typed.start_time())
+            .to_seconds()
+            .to_f64();
+        let times: Vec<_> = (0..n)
+            .map(|k| typed.start_time() + TimeDelta::from_seconds_f64(span * k as f64 / n as f64))
+            .collect();
+
+        let t0 = Instant::now();
+        for &t in &times {
+            black_box(typed.interpolate_at(t));
+        }
+        let interp = t0.elapsed();
+
+        let t0 = Instant::now();
+        for &t in &times {
+            let s = typed.interpolate_at(t);
+            black_box(
+                s.try_to_frame(body_fixed_frame, &DefaultRotationProvider)
+                    .unwrap(),
+            );
+        }
+        let interp_rot = t0.elapsed();
+
+        let elev_fn = ElevationDetectFn {
+            gs: &gs,
+            mask: &mask,
+            sc: &typed,
+            body_fixed_frame,
+        };
+        let t0 = Instant::now();
+        for &t in &times {
+            black_box(elev_fn.eval(t).unwrap());
+        }
+        let elev = t0.elapsed();
+
+        let spk = ephemeris();
+        let los_fn = LineOfSightDetectFn {
+            gs: &gs,
+            sc: &typed,
+            body: DynOrigin::Moon,
+            ephemeris: spk,
+            body_fixed_frame,
+        };
+        let t0 = Instant::now();
+        for &t in &times {
+            black_box(los_fn.eval(t).unwrap());
+        }
+        let los = t0.elapsed();
+
+        let per = |d: std::time::Duration| d.as_nanos() as f64 / n as f64;
+        println!("interpolate_at      {:8.0} ns", per(interp));
+        println!("  + rotation        {:8.0} ns", per(interp_rot));
+        println!("elevation eval      {:8.0} ns", per(elev));
+        println!("los eval            {:8.0} ns", per(los));
     }
 
     #[test]
