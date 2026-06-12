@@ -1129,6 +1129,7 @@ name = "lox-orbits"
 version = "0.1.0-alpha.39"
 dependencies = [
  "chrono",
+ "codspeed-divan-compat",
  "csv",
  "differential-equations",
  "itertools",

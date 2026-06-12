@@ -90,6 +90,20 @@ where
 {
     /// Finds a root of `f` within the given `bracket`.
     fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError>;
+
+    /// Finds a root of `f` within `bracket` when the function values at both
+    /// bracket endpoints are already known, saving two evaluations.
+    ///
+    /// The default implementation ignores the known values.
+    fn find_in_bracket_with_values(
+        &self,
+        f: F,
+        bracket: (f64, f64),
+        values: (f64, f64),
+    ) -> Result<f64, RootFinderError> {
+        let _ = values;
+        self.find_in_bracket(f, bracket)
+    }
 }
 
 /// Steffensen's method for root-finding (derivative-free).
@@ -191,14 +205,24 @@ where
     F: Callback,
 {
     fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError> {
+        let fpre = f.call(bracket.0).map_err(RootFinderError::Callback)?;
+        let fcur = f.call(bracket.1).map_err(RootFinderError::Callback)?;
+        self.find_in_bracket_with_values(f, bracket, (fpre, fcur))
+    }
+
+    fn find_in_bracket_with_values(
+        &self,
+        f: F,
+        bracket: (f64, f64),
+        values: (f64, f64),
+    ) -> Result<f64, RootFinderError> {
         let mut fblk = 0.0;
         let mut xblk = 0.0;
         let (mut xpre, mut xcur) = bracket;
         let mut spre = 0.0;
         let mut scur = 0.0;
 
-        let mut fpre = f.call(xpre).map_err(RootFinderError::Callback)?;
-        let mut fcur = f.call(xcur).map_err(RootFinderError::Callback)?;
+        let (mut fpre, mut fcur) = values;
 
         if fpre * fcur > 0.0 {
             return Err(RootFinderError::NotInBracket);
