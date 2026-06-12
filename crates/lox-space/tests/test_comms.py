@@ -815,6 +815,38 @@ def test_link_stats_end_to_end():
     assert stats.frequency.to_hertz() == pytest.approx(29e9, abs=1.0)
 
 
+def test_link_stats_downlink_degrades_gt():
+    losses = lox.PropagationLosses(
+        rain=2.0 * lox.dB, gaseous=0.5 * lox.dB, cloud=0.2 * lox.dB,
+        scintillation=0.3 * lox.dB,
+    )
+    clear = link_stats(make_tx(), make_rx(), losses=losses)
+    faded = link_stats(make_tx(), make_rx(), losses=losses, link_type="downlink")
+
+    assert clear.gt_degraded is None
+    assert clear.link_type is None
+    assert faded.link_type == "downlink"
+    assert float(faded.gt) == pytest.approx(float(clear.gt), abs=1e-12)
+    assert float(faded.gt_degraded) < float(faded.gt)
+    # The budget uses the degraded G/T.
+    assert float(clear.c_n0) - float(faded.c_n0) == pytest.approx(
+        float(faded.gt) - float(faded.gt_degraded), abs=1e-10
+    )
+
+
+def test_link_stats_uplink_stays_clear_sky():
+    losses = lox.PropagationLosses(rain=2.0 * lox.dB)
+    clear = link_stats(make_tx(), make_rx(), losses=losses)
+    uplink = link_stats(make_tx(), make_rx(), losses=losses, link_type="uplink")
+    assert uplink.gt_degraded is None
+    assert float(uplink.c_n0) == pytest.approx(float(clear.c_n0), abs=1e-12)
+
+
+def test_link_stats_rejects_unknown_link_type():
+    with pytest.raises(ValueError):
+        link_stats(make_tx(), make_rx(), link_type="sideways")
+
+
 def test_link_stats_with_losses():
     ch = lox.Channel(
         link_type="downlink",
