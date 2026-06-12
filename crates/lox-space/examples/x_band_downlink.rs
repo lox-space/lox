@@ -23,7 +23,7 @@ use lox_space::comms::FrequencyRange;
 use lox_space::comms::antenna::Antenna;
 use lox_space::comms::channel::{Channel, LinkDirection};
 use lox_space::comms::link_budget::{Eirp, GOverT, LinkBudget, LinkConditions, PropagationLosses};
-use lox_space::comms::modcod::{ModCod, dvb_s2};
+use lox_space::comms::modcod::dvb_s2;
 use lox_space::comms::pfd::{PfdMask, power_flux_density};
 use lox_space::comms::pointing::Pointing;
 use lox_space::comms::receiver::CascadeReceiver;
@@ -178,14 +178,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     // ACM: the best DVB-S2 mode that closes at this Es/N0 with the same
     // design margin.
     // ------------------------------------------------------------------
-    let best = ModCod::select(modulated.es_n0, design_margin, dvb_s2()).expect("a mode closes");
+    let best = budget
+        .modulate_best(&channel, dvb_s2(), design_margin)
+        .expect("a mode closes");
     println!(
         "\nBest ACM mode:   {} ({:.1} Mbit/s, +{:.0} %)",
-        best.mode().name(),
-        best.mode()
-            .information_rate(channel.symbol_rate())
-            .to_megahertz(),
-        (best.mode().info_bits_per_symbol() / modcod.mode().info_bits_per_symbol() - 1.0) * 100.0
+        best.modcod.mode().name(),
+        best.information_rate().to_megahertz(),
+        (best.modcod.mode().info_bits_per_symbol() / modcod.mode().info_bits_per_symbol() - 1.0)
+            * 100.0
     );
 
     // ------------------------------------------------------------------
