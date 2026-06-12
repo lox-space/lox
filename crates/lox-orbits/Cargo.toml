@@ -49,5 +49,12 @@ serde = [
   "sgp4/serde",
 ]
 
+[dev-dependencies]
+divan.workspace = true
+
 [lib]
 doctest = false
+
+[[bench]]
+name = "events"
+harness = false
