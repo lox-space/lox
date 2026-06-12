@@ -16,6 +16,12 @@ type Unit = Literal["seconds", "days", "centuries"]
 class NonFiniteTimeDeltaError(Exception):
     """Raised when a TimeDelta operation produces a non-finite result."""
 
+class EopParserError(Exception):
+    """Raised when Earth orientation parameter data cannot be parsed."""
+
+class EopProviderError(Exception):
+    """Raised when Earth orientation parameters cannot be provided."""
+
     ...
 
 # Unit classes
@@ -3036,7 +3042,11 @@ class LinkBudget:
         """Carrier-to-noise density ratio in dB·Hz."""
         ...
     def c_n(self, bandwidth: Frequency) -> Decibel:
-        """Returns C/N in dB for the given noise bandwidth."""
+        """Returns C/N in dB for the given noise bandwidth.
+
+        Raises:
+            ValueError: if the bandwidth is not finite and positive.
+        """
         ...
     @property
     def carrier_rx_power(self) -> Decibel | None:
@@ -3044,11 +3054,35 @@ class LinkBudget:
         ...
     def noise_power(self, bandwidth: Frequency) -> Decibel | None:
         """Returns the noise power in dBW for the given bandwidth. ``None``
-        for lumped G/T receivers."""
+        for lumped G/T receivers.
+
+        Raises:
+            ValueError: if the bandwidth is not finite and positive.
+        """
         ...
     @property
     def frequency(self) -> Frequency:
         """Link frequency."""
+        ...
+    def __repr__(self) -> str: ...
+
+class InterferenceStats:
+    """Interference statistics for a link with a given interferer power."""
+    @property
+    def interference_power(self) -> Power:
+        """Interference power."""
+        ...
+    @property
+    def c_n0i0(self) -> Decibel:
+        """Carrier-to-noise-plus-interference density ratio in dB·Hz."""
+        ...
+    @property
+    def eb_n0i0(self) -> Decibel:
+        """Eb/(N0+I0) in dB."""
+        ...
+    @property
+    def margin_with_interference(self) -> Decibel:
+        """Link margin with interference in dB."""
         ...
     def __repr__(self) -> str: ...
 
