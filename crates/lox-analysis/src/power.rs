@@ -26,8 +26,9 @@ use thiserror::Error;
 use crate::assets::{AssetId, ConstellationId, Scenario, Spacecraft};
 use crate::visibility::{EvalError, LineOfSight};
 use lox_frames::ReferenceFrame;
-use lox_orbits::events::{DetectFn, EventsToIntervals, IntervalDetector, RootFindingDetector};
+use lox_orbits::events::DetectFn;
 use lox_orbits::orbits::{Ensemble, Trajectory};
+use lox_orbits::signals::{DetectSignal, Detector, UniformSampler};
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -286,10 +287,13 @@ where
             sc: sc_traj,
             ephemeris: self.ephemeris,
         };
-        let detector = RootFindingDetector::new(eclipse_fn, self.step);
-        // EventsToIntervals gives intervals where the function is positive
-        // (sunlit). We need the complement → eclipse intervals.
-        let sunlit_intervals = EventsToIntervals::new(detector).detect(interval)?;
+        // Windows where the signal is positive are sunlit; we need the
+        // complement → eclipse intervals.
+        let sunlit_intervals: Vec<_> = Detector::new(DetectSignal(eclipse_fn))
+            .windows(interval, &UniformSampler::new(self.step))?
+            .iter()
+            .map(|w| w.interval())
+            .collect();
 
         // Complement sunlit intervals to get eclipse intervals
         let eclipse_intervals = intervals::complement_intervals(&sunlit_intervals, interval);
