@@ -132,43 +132,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let modulated = budget.modulate(&channel, modcod, design_margin);
 
     println!("\n--- Link budget at {} GHz ---", carrier.to_gigahertz());
-    println!(
-        "EIRP:            {:>8.2} dBW",
-        modulated.budget.eirp.as_f64()
-    );
-    println!(
-        "FSPL:            {:>8.2} dB",
-        modulated.budget.fspl.as_f64()
-    );
-    println!(
-        "Env. losses:     {:>8.2} dB",
-        modulated.budget.losses.total().as_f64()
-    );
-    println!(
-        "G/T (clear-sky): {:>8.2} dB/K",
-        modulated.budget.gt.as_f64()
-    );
-    let gt_degraded = modulated
-        .budget
-        .gt_degraded
-        .expect("downlink with RX chain");
-    println!(
-        "G/T (rain):      {:>8.2} dB/K ({:+.2} dB)",
-        gt_degraded.as_f64(),
-        gt_degraded.as_f64() - modulated.budget.gt.as_f64()
-    );
-    println!(
-        "C/N0:            {:>8.2} dB·Hz",
-        modulated.budget.c_n0.as_f64()
-    );
-    println!("C/N:             {:>8.2} dB", modulated.c_n.as_f64());
-    println!("Es/N0:           {:>8.2} dB", modulated.es_n0.as_f64());
-    println!("Eb/N0:           {:>8.2} dB", modulated.eb_n0.as_f64());
+    print!("{modulated}");
     println!(
         "Data rate:       {:>8.1} Mbit/s",
         modulated.information_rate().to_megahertz()
     );
-    println!("Link margin:     {:>8.2} dB", modulated.margin.as_f64());
     assert!(
         modulated.closes(),
         "the downlink should close at worst-case geometry"

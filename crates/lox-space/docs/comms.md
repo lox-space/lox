@@ -193,6 +193,37 @@ best = link.modulate_best(channel, table, design_margin=3.0 * lox.dB)
 print(f"{best.modcod.name}: {float(best.information_rate()) / 1e6:.1f} Mbit/s")
 ```
 
+### Budget Report
+
+Both budget stages render as the line-item table engineers exchange —
+`budget_lines()` returns the data as `(label, value, kind)` tuples and
+`str()` renders it, with gains minus losses reproducing the C/N₀ total
+exactly:
+
+```python
+print(modulated)
+# + EIRP                            55.00 dB
+# - Free-space path loss           181.70 dB
+# - Rain attenuation                 2.00 dB
+# + G/T                              3.01 dB
+# - G/T degradation due to rain      0.99 dB
+# + Boltzmann constant             228.60 dB
+# = C/N0                           101.93 dB
+# = C/N (occupied bandwidth)        93.64 dB
+# = Es/N0                           34.94 dB
+# = Eb/N0                           34.94 dB
+# - Required Eb/N0 (QPSK 1/2)       10.00 dB
+# - Design margin                    3.00 dB
+# = Link margin                     21.94 dB
+```
+
+For bent-pipe/relay budgets, combine per-hop C/N contributions in the
+linear domain with `combine_carrier_to_noise`:
+
+```python
+total = lox.combine_carrier_to_noise([uplink_c_n, downlink_c_n])
+```
+
 Use the component tier (configure antennas, amplifiers, receiver noise) when
 you need the full breakdown — for example for noise-budget allocation or
 detailed component trade studies.
