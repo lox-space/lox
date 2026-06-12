@@ -40,7 +40,7 @@ lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.15" }
 arrayvec = "0.7.6"
 chrono = "0.4.43"
 csv = "1.4.0"
-differential-equations = "0.5.2"
+differential-equations = "0.6.1"
 divan = { package = "codspeed-divan-compat", version = "4.3.0" }
 fast_polynomial = { version = "0.3.0", default-features = false }
 geo = "0.29"
@@ -48,12 +48,12 @@ geojson = "0.24"
 glam = { version = "0.30.9", default-features = false }
 itertools = "0.14.0"
 libm = "0.2.15"
-nalgebra = "0.34.1"
+nalgebra = "0.35.0"
 nom = { version = "8.0.0", default-features = false }
 numpy = "0.28.0"
 proptest = "1.9.0"
 pyo3 = "0.28.2"
-quick-xml = { version = "0.38.3", features = ["serde", "serialize"] }
+quick-xml = { version = "0.40.1", features = ["serde", "serialize"] }
 rayon = "1.11.0"
 rstest = "0.26.1"
 serde = { version = "1.0.228", features = ["derive", "rc"] }
