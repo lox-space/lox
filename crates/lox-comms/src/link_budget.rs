@@ -4,9 +4,9 @@
 
 //! Link budget calculations and the contracts they consume.
 //!
-//! [`LinkStats::for_link`] computes a modulation-agnostic budget between any
+//! [`LinkBudget::new`] computes a modulation-agnostic budget between any
 //! transmit end implementing [`Eirp`] and any receive end implementing
-//! [`GOverT`], under the conditions captured in [`LinkParameters`]. The
+//! [`GOverT`], under the conditions captured in [`LinkConditions`]. The
 //! built-in implementors live in [`terminal`](crate::terminal); custom ends
 //! only need to answer the trait questions.
 
@@ -72,9 +72,32 @@ pub trait Eirp {
 /// Available when the receive end is more than an aggregate figure; they
 /// allow absolute carrier and noise powers (and thus interference analysis).
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "RxTermsRepr")
+)]
 pub struct RxTerms {
     gain: Decibel,
     system_noise_temperature: Temperature,
+}
+
+/// Serde wire format for [`RxTerms`]: forces deserialization through the
+/// validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct RxTermsRepr {
+    gain: Decibel,
+    system_noise_temperature: Temperature,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<RxTermsRepr> for RxTerms {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: RxTermsRepr) -> Result<Self, Self::Error> {
+        RxTerms::new(repr.gain, repr.system_noise_temperature)
+    }
 }
 
 impl RxTerms {
@@ -174,22 +197,20 @@ pub struct InterferenceStats {
     pub margin_with_interference: Decibel,
 }
 
-/// The conditions a link budget is evaluated under: carrier, noise
-/// bandwidth, slant range, environmental losses, and the pointing at each
-/// end.
+/// The conditions a link budget is evaluated under: carrier, slant range,
+/// environmental losses, link direction, and the pointing at each end.
 ///
-/// Valid by construction — [`LinkParameters::builder`] validates the
-/// physical inputs, so [`LinkStats::for_link`] only fails on physics (a
+/// Valid by construction — [`LinkConditions::builder`] validates the
+/// physical inputs, so [`LinkBudget::new`] only fails on physics (a
 /// carrier outside a terminal's band or an unresolvable pointing).
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize, serde::Deserialize),
-    serde(try_from = "LinkParametersRepr")
+    serde(try_from = "LinkConditionsRepr")
 )]
-pub struct LinkParameters {
+pub struct LinkConditions {
     carrier: Frequency,
-    bandwidth: Frequency,
     range: Distance,
     losses: PropagationLosses,
     tx_pointing: Pointing,
@@ -197,13 +218,12 @@ pub struct LinkParameters {
     direction: Option<LinkDirection>,
 }
 
-/// Serde wire format for [`LinkParameters`]: forces deserialization through
+/// Serde wire format for [`LinkConditions`]: forces deserialization through
 /// the validated builder.
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
-struct LinkParametersRepr {
+struct LinkConditionsRepr {
     carrier: Frequency,
-    bandwidth: Frequency,
     range: Distance,
     #[serde(default = "PropagationLosses::none")]
     losses: PropagationLosses,
@@ -216,11 +236,11 @@ struct LinkParametersRepr {
 }
 
 #[cfg(feature = "serde")]
-impl TryFrom<LinkParametersRepr> for LinkParameters {
+impl TryFrom<LinkConditionsRepr> for LinkConditions {
     type Error = NonPhysicalError;
 
-    fn try_from(repr: LinkParametersRepr) -> Result<Self, Self::Error> {
-        let mut builder = LinkParameters::builder(repr.carrier, repr.bandwidth, repr.range)
+    fn try_from(repr: LinkConditionsRepr) -> Result<Self, Self::Error> {
+        let mut builder = LinkConditions::builder(repr.carrier, repr.range)
             .losses(repr.losses)
             .tx_pointing(repr.tx_pointing)
             .rx_pointing(repr.rx_pointing);
@@ -231,19 +251,15 @@ impl TryFrom<LinkParametersRepr> for LinkParameters {
     }
 }
 
-impl LinkParameters {
-    /// Starts building link parameters for the given carrier, noise
-    /// bandwidth, and slant range.
+impl LinkConditions {
+    /// Starts building link conditions for the given carrier and slant
+    /// range.
     ///
-    /// Losses default to none and both pointings to boresight.
-    pub fn builder(
-        carrier: Frequency,
-        bandwidth: Frequency,
-        range: Distance,
-    ) -> LinkParametersBuilder {
-        LinkParametersBuilder {
+    /// Losses default to none, both pointings to boresight, and the
+    /// direction to unspecified.
+    pub fn builder(carrier: Frequency, range: Distance) -> LinkConditionsBuilder {
+        LinkConditionsBuilder {
             carrier,
-            bandwidth,
             range,
             losses: PropagationLosses::none(),
             tx_pointing: Pointing::Boresight,
@@ -255,11 +271,6 @@ impl LinkParameters {
     /// Returns the carrier frequency.
     pub fn carrier(&self) -> Frequency {
         self.carrier
-    }
-
-    /// Returns the noise bandwidth.
-    pub fn bandwidth(&self) -> Frequency {
-        self.bandwidth
     }
 
     /// Returns the slant range between TX and RX.
@@ -288,14 +299,13 @@ impl LinkParameters {
     }
 }
 
-/// Builder for [`LinkParameters`].
+/// Builder for [`LinkConditions`].
 ///
-/// Created via [`LinkParameters::builder`]. Inputs are validated at
-/// [`LinkParametersBuilder::build`].
+/// Created via [`LinkConditions::builder`]. Inputs are validated at
+/// [`LinkConditionsBuilder::build`].
 #[derive(Debug, Clone)]
-pub struct LinkParametersBuilder {
+pub struct LinkConditionsBuilder {
     carrier: Frequency,
-    bandwidth: Frequency,
     range: Distance,
     losses: PropagationLosses,
     tx_pointing: Pointing,
@@ -303,7 +313,7 @@ pub struct LinkParametersBuilder {
     direction: Option<LinkDirection>,
 }
 
-impl LinkParametersBuilder {
+impl LinkConditionsBuilder {
     /// Sets the environmental losses.
     pub fn losses(mut self, losses: PropagationLosses) -> Self {
         self.losses = losses;
@@ -334,21 +344,19 @@ impl LinkParametersBuilder {
         self
     }
 
-    /// Builds the link parameters, validating all physical inputs.
+    /// Builds the link conditions, validating all physical inputs.
     ///
-    /// Rejects a non-finite or non-positive carrier frequency, noise
-    /// bandwidth, or slant range.
-    pub fn build(self) -> Result<LinkParameters, NonPhysicalError> {
+    /// Rejects a non-finite or non-positive carrier frequency or slant
+    /// range.
+    pub fn build(self) -> Result<LinkConditions, NonPhysicalError> {
         for (quantity, value) in [
             ("carrier frequency [Hz]", self.carrier.to_hertz()),
-            ("noise bandwidth [Hz]", self.bandwidth.to_hertz()),
             ("slant range [m]", self.range.to_meters()),
         ] {
             NonPhysicalError::check_positive(quantity, value)?;
         }
-        Ok(LinkParameters {
+        Ok(LinkConditions {
             carrier: self.carrier,
-            bandwidth: self.bandwidth,
             range: self.range,
             losses: self.losses,
             tx_pointing: self.tx_pointing,
@@ -361,7 +369,7 @@ impl LinkParametersBuilder {
 /// Modulation-agnostic link budget output.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct LinkStats {
+pub struct LinkBudget {
     /// Slant range between TX and RX.
     pub slant_range: Distance,
     /// Carrier frequency.
@@ -382,18 +390,14 @@ pub struct LinkStats {
     pub losses: PropagationLosses,
     /// Received carrier power. `None` for receive ends without [`RxTerms`].
     pub carrier_rx_power: Option<Decibel>,
-    /// Noise power in the channel bandwidth. `None` for receive ends without
-    /// [`RxTerms`].
-    pub noise_power: Option<Decibel>,
-    /// Channel noise bandwidth.
-    pub bandwidth: Frequency,
+    /// Effective receive terms the budget was computed with (rain-degraded
+    /// on downlinks). `None` for aggregate-figure ends.
+    pub rx_terms: Option<RxTerms>,
     /// Carrier-to-noise density ratio (C/N₀).
     pub c_n0: Decibel,
-    /// Carrier-to-noise ratio (C/N).
-    pub c_n: Decibel,
 }
 
-impl LinkStats {
+impl LinkBudget {
     /// Computes a modulation-agnostic link budget between two link ends
     /// under the given conditions.
     ///
@@ -402,13 +406,18 @@ impl LinkStats {
     /// budget uses the rain-degraded G/T when the receive end exposes
     /// degradable terms (see [`GOverT::rx_terms_degraded`]); aggregate G/T
     /// figures stay at their clear-sky value.
-    pub fn for_link(
+    ///
+    /// All outputs are bandwidth-free; carrier-to-noise ratio and noise
+    /// power are derived views ([`Self::c_n`], [`Self::noise_power`]), and
+    /// [`Self::modulate`] takes everything bandwidth-dependent from the
+    /// channel.
+    pub fn new(
         tx: &impl Eirp,
         rx: &impl GOverT,
-        params: &LinkParameters,
+        conditions: &LinkConditions,
     ) -> Result<Self, LinkBudgetError> {
+        let params = conditions;
         let carrier = params.carrier;
-        let bandwidth = params.bandwidth;
 
         let eirp = tx.eirp_at(carrier, params.tx_pointing)?;
         let rx_terms = rx.rx_terms(carrier, params.rx_pointing)?;
@@ -436,18 +445,10 @@ impl LinkStats {
         let env_loss = params.losses.total();
 
         let c_n0 = eirp + effective_gt - fspl - env_loss - BOLTZMANN_CONSTANT_DB;
-        let c_n = c_n0 - Decibel::from_linear(bandwidth.to_hertz());
 
         let carrier_rx_power = effective_terms
             .as_ref()
             .map(|terms| eirp - fspl - env_loss + terms.gain());
-        let noise_power = effective_terms.as_ref().map(|terms| {
-            Decibel::from_linear(
-                terms.system_noise_temperature().to_kelvin()
-                    * BOLTZMANN_CONSTANT
-                    * bandwidth.to_hertz(),
-            )
-        });
 
         Ok(Self {
             slant_range: params.range,
@@ -459,20 +460,64 @@ impl LinkStats {
             direction: params.direction,
             losses: params.losses.clone(),
             carrier_rx_power,
-            noise_power,
-            bandwidth,
+            rx_terms: effective_terms,
             c_n0,
-            c_n,
         })
+    }
+
+    /// Returns the carrier-to-noise ratio in the given noise bandwidth:
+    /// C/N = C/N₀ − 10·log₁₀(BW).
+    pub fn c_n(&self, bandwidth: Frequency) -> Decibel {
+        self.c_n0 - Decibel::from_linear(bandwidth.to_hertz())
+    }
+
+    /// Returns the noise power in the given bandwidth, when the receive end
+    /// exposes absolute terms: N = k·T_sys·BW.
+    pub fn noise_power(&self, bandwidth: Frequency) -> Option<Decibel> {
+        self.rx_terms.as_ref().map(|terms| {
+            Decibel::from_linear(
+                terms.system_noise_temperature().to_kelvin()
+                    * BOLTZMANN_CONSTANT
+                    * bandwidth.to_hertz(),
+            )
+        })
+    }
+
+    /// Applies a waveform and a modulation and coding scheme to this budget.
+    ///
+    /// Everything bandwidth-dependent derives from the channel: Es/N0 from
+    /// its symbol rate, C/N from its occupied bandwidth, Eb/N0 through the
+    /// MODCOD's exact information bits per symbol, and the link margin
+    /// against the MODCOD's threshold plus the design margin.
+    pub fn modulate(
+        &self,
+        channel: &Channel,
+        modcod: &ModCod,
+        design_margin: Decibel,
+    ) -> ModulatedLinkBudget {
+        let es_n0 = channel.es_n0(self.c_n0);
+        let c_n = channel.c_n(self.c_n0);
+        let eb_n0 = es_n0 - Decibel::from_linear(modcod.mode().info_bits_per_symbol());
+        let margin = eb_n0 - modcod.required_eb_n0() - design_margin;
+        ModulatedLinkBudget {
+            budget: self.clone(),
+            channel: channel.clone(),
+            modcod: modcod.clone(),
+            design_margin,
+            es_n0,
+            eb_n0,
+            c_n,
+            margin,
+        }
     }
 }
 
 /// Link-budget output with a modulation and coding scheme applied.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ModulatedLinkStats {
+pub struct ModulatedLinkBudget {
     /// The modulation-agnostic link budget.
-    pub link: LinkStats,
+    pub budget: LinkBudget,
     /// The waveform the link is evaluated on.
     pub channel: Channel,
     /// The modulation and coding scheme the link is evaluated against.
@@ -483,49 +528,16 @@ pub struct ModulatedLinkStats {
     pub es_n0: Decibel,
     /// Eb/N0 (energy per information bit to noise spectral density).
     pub eb_n0: Decibel,
+    /// Carrier-to-noise ratio in the channel's occupied bandwidth.
+    pub c_n: Decibel,
     /// Link margin: Eb/N0 − required Eb/N0 − design margin.
     pub margin: Decibel,
 }
 
-impl ModulatedLinkStats {
-    /// Evaluates a link budget against a waveform and a MODCOD.
-    ///
-    /// Computes Es/N0 from the channel's symbol rate, Eb/N0 through the
-    /// MODCOD's exact information bits per symbol, and the link margin
-    /// against the MODCOD's threshold plus the design margin.
-    ///
-    /// The link's noise bandwidth must match the channel's occupied
-    /// bandwidth (within 1 ppm) — the link's noise power and C/N were
-    /// computed with it, and a mismatch would silently skew interference
-    /// margins. Compute the budget with
-    /// [`Channel::bandwidth`](crate::channel::Channel::bandwidth).
-    pub fn evaluate(
-        link: LinkStats,
-        channel: &Channel,
-        modcod: &ModCod,
-        design_margin: Decibel,
-    ) -> Result<Self, LinkBudgetError> {
-        let link_bw = link.bandwidth.to_hertz();
-        let channel_bw = channel.bandwidth().to_hertz();
-        if (link_bw - channel_bw).abs() > 1e-6 * channel_bw {
-            return Err(LinkBudgetError::BandwidthMismatch {
-                link: link.bandwidth,
-                channel: channel.bandwidth(),
-            });
-        }
-
-        let es_n0 = channel.es_n0(link.c_n0);
-        let eb_n0 = es_n0 - Decibel::from_linear(modcod.mode().info_bits_per_symbol());
-        let margin = eb_n0 - modcod.required_eb_n0() - design_margin;
-        Ok(Self {
-            link,
-            channel: channel.clone(),
-            modcod: modcod.clone(),
-            design_margin,
-            es_n0,
-            eb_n0,
-            margin,
-        })
+impl ModulatedLinkBudget {
+    /// Returns whether the link closes: margin ≥ 0.
+    pub fn closes(&self) -> bool {
+        self.margin.as_f64() >= 0.0
     }
 
     /// Returns the symbol rate of the underlying channel.
@@ -552,20 +564,21 @@ impl ModulatedLinkStats {
             "interference power [W]",
             interference_power.to_watts(),
         )?;
+        let bandwidth = self.channel.bandwidth();
         let noise_linear = self
-            .link
-            .noise_power
+            .budget
+            .noise_power(bandwidth)
             .ok_or(LinkBudgetError::AbsolutePowerUnavailable)?
             .to_linear();
         let carrier = self
-            .link
+            .budget
             .carrier_rx_power
             .ok_or(LinkBudgetError::AbsolutePowerUnavailable)?;
 
         let total_ni = noise_linear + interference_power.to_watts();
-        let c_n0i0 = carrier - Decibel::from_linear(total_ni)
-            + Decibel::from_linear(self.link.bandwidth.to_hertz());
-        let c_n0_to_eb_n0 = self.eb_n0 - self.link.c_n0;
+        let c_n0i0 =
+            carrier - Decibel::from_linear(total_ni) + Decibel::from_linear(bandwidth.to_hertz());
+        let c_n0_to_eb_n0 = self.eb_n0 - self.budget.c_n0;
         let eb_n0i0 = c_n0i0 + c_n0_to_eb_n0;
 
         let threshold = self.eb_n0 - self.margin;
@@ -661,47 +674,23 @@ mod tests {
         .unwrap()
     }
 
-    fn link_params(bandwidth: Frequency) -> LinkParameters {
-        LinkParameters::builder(29.0.ghz(), bandwidth, Distance::kilometers(1000.0))
+    fn link_conditions() -> LinkConditions {
+        LinkConditions::builder(29.0.ghz(), Distance::kilometers(1000.0))
             .build()
             .unwrap()
     }
 
-    fn component_stats() -> LinkStats {
-        LinkStats::for_link(
-            &tx_chain(),
-            &rx_chain(),
-            &link_params(channel().bandwidth()),
-        )
-        .unwrap()
+    fn component_stats() -> LinkBudget {
+        LinkBudget::new(&tx_chain(), &rx_chain(), &link_conditions()).unwrap()
     }
 
-    fn lumped_stats() -> LinkStats {
-        LinkStats::for_link(
+    fn lumped_stats() -> LinkBudget {
+        LinkBudget::new(
             &EirpModel::new(ka_band(), 55.0.db()).unwrap(),
             &GtModel::new(ka_band(), 3.01.db()).unwrap(),
-            &link_params(5.0.mhz()),
+            &link_conditions(),
         )
         .unwrap()
-    }
-
-    fn lumped_stats_with_channel_bandwidth() -> LinkStats {
-        LinkStats::for_link(
-            &EirpModel::new(ka_band(), 55.0.db()).unwrap(),
-            &GtModel::new(ka_band(), 3.01.db()).unwrap(),
-            &link_params(channel().bandwidth()),
-        )
-        .unwrap()
-    }
-
-    #[test]
-    fn test_evaluate_rejects_bandwidth_mismatch() {
-        // The lumped fixture was computed with a 5 MHz noise bandwidth, not
-        // the channel's 6.75 MHz occupied bandwidth.
-        let err = ModulatedLinkStats::evaluate(lumped_stats(), &channel(), &modcod(), 0.0.db())
-            .unwrap_err();
-        assert!(matches!(err, LinkBudgetError::BandwidthMismatch { .. }));
-        assert!(err.to_string().contains("does not match"));
     }
 
     /// Custom link ends only need the trait surface: a fixed-EIRP transmitter
@@ -738,11 +727,12 @@ mod tests {
         assert!(tx.band().contains(29.0.ghz()));
         assert!(rx.band().contains(29.0.ghz()));
 
-        let stats = LinkStats::for_link(&FixedTx, &FixedRx, &link_params(5.0.mhz())).unwrap();
+        let stats = LinkBudget::new(&FixedTx, &FixedRx, &link_conditions()).unwrap();
         assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
         // The default rx_terms is None: no absolute powers.
         assert!(stats.carrier_rx_power.is_none());
-        assert!(stats.noise_power.is_none());
+        assert!(stats.rx_terms.is_none());
+        assert!(stats.noise_power(5.0.mhz()).is_none());
     }
 
     #[test]
@@ -778,15 +768,18 @@ mod tests {
             -96.696,
             atol <= 0.01
         );
-        assert!(stats.noise_power.is_some());
+        assert!(stats.rx_terms.is_some());
+        assert!(stats.noise_power(5.0.mhz()).is_some());
     }
 
     #[test]
     fn test_for_link_c_n0_consistency() {
         // C/N0 must equal P_rx − P_noise + 10·log10(BW).
         let stats = component_stats();
-        let c_n0_from_power = stats.carrier_rx_power.unwrap() - stats.noise_power.unwrap()
-            + Decibel::from_linear(stats.bandwidth.to_hertz());
+        let bandwidth = 5.0.mhz();
+        let c_n0_from_power = stats.carrier_rx_power.unwrap()
+            - stats.noise_power(bandwidth).unwrap()
+            + Decibel::from_linear(bandwidth.to_hertz());
         assert_approx_eq!(stats.c_n0.as_f64(), c_n0_from_power.as_f64(), atol <= 1e-10);
     }
 
@@ -795,20 +788,21 @@ mod tests {
         let stats = lumped_stats();
         assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
         assert!(stats.carrier_rx_power.is_none());
-        assert!(stats.noise_power.is_none());
+        assert!(stats.rx_terms.is_none());
+        assert!(stats.noise_power(5.0.mhz()).is_none());
     }
 
     #[test]
     fn test_for_link_rejects_carrier_out_of_band() {
         // 29 GHz fits the TX band but not the RX band.
-        let err = LinkStats::for_link(
+        let err = LinkBudget::new(
             &EirpModel::new(ka_band(), 55.0.db()).unwrap(),
             &GtModel::new(
                 FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap(),
                 3.01.db(),
             )
             .unwrap(),
-            &link_params(5.0.mhz()),
+            &link_conditions(),
         )
         .unwrap_err();
 
@@ -818,61 +812,38 @@ mod tests {
 
     #[test]
     fn test_for_link_rejects_carrier_out_of_band_on_tx_side() {
-        let err = LinkStats::for_link(
+        let err = LinkBudget::new(
             &EirpModel::new(
                 FrequencyRange::new(17.0.ghz(), 21.0.ghz()).unwrap(),
                 55.0.db(),
             )
             .unwrap(),
             &GtModel::new(ka_band(), 3.01.db()).unwrap(),
-            &link_params(5.0.mhz()),
+            &link_conditions(),
         )
         .unwrap_err();
         assert!(matches!(err, LinkBudgetError::CarrierOutOfBand { .. }));
     }
 
     #[test]
-    fn test_link_parameters_reject_non_physical_inputs() {
-        for (carrier, bandwidth, range) in [
-            (
-                Frequency::hertz(0.0),
-                5.0.mhz(),
-                Distance::kilometers(1000.0),
-            ),
-            (
-                Frequency::hertz(f64::NAN),
-                5.0.mhz(),
-                Distance::kilometers(1000.0),
-            ),
-            (
-                29.0.ghz(),
-                Frequency::hertz(0.0),
-                Distance::kilometers(1000.0),
-            ),
-            (
-                29.0.ghz(),
-                Frequency::hertz(-5e6),
-                Distance::kilometers(1000.0),
-            ),
-            (29.0.ghz(), 5.0.mhz(), Distance::kilometers(0.0)),
-            (29.0.ghz(), 5.0.mhz(), Distance::kilometers(-1.0)),
+    fn test_link_conditions_reject_non_physical_inputs() {
+        for (carrier, range) in [
+            (Frequency::hertz(0.0), Distance::kilometers(1000.0)),
+            (Frequency::hertz(f64::NAN), Distance::kilometers(1000.0)),
+            (29.0.ghz(), Distance::kilometers(0.0)),
+            (29.0.ghz(), Distance::kilometers(-1.0)),
         ] {
-            assert!(
-                LinkParameters::builder(carrier, bandwidth, range)
-                    .build()
-                    .is_err()
-            );
+            assert!(LinkConditions::builder(carrier, range).build().is_err());
         }
     }
 
     #[test]
     fn test_link_parameters_defaults() {
-        let params = link_params(5.0.mhz());
+        let params = link_conditions();
         assert_approx_eq!(params.losses().total().as_f64(), 0.0, atol <= 1e-15);
         assert_eq!(params.tx_pointing(), Pointing::Boresight);
         assert_eq!(params.rx_pointing(), Pointing::Boresight);
         assert_approx_eq!(params.carrier().to_gigahertz(), 29.0, rtol <= 1e-12);
-        assert_approx_eq!(params.bandwidth().to_megahertz(), 5.0, rtol <= 1e-12);
         assert_approx_eq!(params.range().to_meters(), 1e6, rtol <= 1e-12);
     }
 
@@ -887,10 +858,9 @@ mod tests {
             .unwrap()
     }
 
-    fn faded_params(direction: Option<LinkDirection>) -> LinkParameters {
+    fn faded_params(direction: Option<LinkDirection>) -> LinkConditions {
         let mut builder =
-            LinkParameters::builder(29.0.ghz(), 5.0.mhz(), Distance::kilometers(1000.0))
-                .losses(p618_losses());
+            LinkConditions::builder(29.0.ghz(), Distance::kilometers(1000.0)).losses(p618_losses());
         if let Some(direction) = direction {
             builder = builder.direction(direction);
         }
@@ -917,8 +887,8 @@ mod tests {
 
     #[test]
     fn test_for_link_downlink_degrades_gt() {
-        let clear = LinkStats::for_link(&tx_chain(), &rx_chain(), &faded_params(None)).unwrap();
-        let faded = LinkStats::for_link(
+        let clear = LinkBudget::new(&tx_chain(), &rx_chain(), &faded_params(None)).unwrap();
+        let faded = LinkBudget::new(
             &tx_chain(),
             &rx_chain(),
             &faded_params(Some(LinkDirection::Downlink)),
@@ -943,18 +913,19 @@ mod tests {
         );
 
         // C/N0 consistency holds with the degraded noise power.
-        let c_n0_from_power = faded.carrier_rx_power.unwrap() - faded.noise_power.unwrap()
-            + Decibel::from_linear(faded.bandwidth.to_hertz());
+        let bandwidth = 5.0.mhz();
+        let c_n0_from_power = faded.carrier_rx_power.unwrap()
+            - faded.noise_power(bandwidth).unwrap()
+            + Decibel::from_linear(bandwidth.to_hertz());
         assert_approx_eq!(faded.c_n0.as_f64(), c_n0_from_power.as_f64(), atol <= 1e-10);
     }
 
     #[test]
     fn test_for_link_uplink_and_crosslink_stay_clear_sky() {
-        let clear = LinkStats::for_link(&tx_chain(), &rx_chain(), &faded_params(None)).unwrap();
+        let clear = LinkBudget::new(&tx_chain(), &rx_chain(), &faded_params(None)).unwrap();
         for direction in [LinkDirection::Uplink, LinkDirection::Crosslink] {
             let stats =
-                LinkStats::for_link(&tx_chain(), &rx_chain(), &faded_params(Some(direction)))
-                    .unwrap();
+                LinkBudget::new(&tx_chain(), &rx_chain(), &faded_params(Some(direction))).unwrap();
             assert!(stats.gt_degraded.is_none());
             assert_eq!(stats.direction, Some(direction));
             assert_approx_eq!(stats.c_n0.as_f64(), clear.c_n0.as_f64(), atol <= 1e-12);
@@ -966,20 +937,20 @@ mod tests {
         // An aggregate G/T figure cannot be degraded — documented caveat.
         let tx = EirpModel::new(ka_band(), 55.0.db()).unwrap();
         let rx = GtModel::new(ka_band(), 3.01.db()).unwrap();
-        let clear = LinkStats::for_link(&tx, &rx, &faded_params(None)).unwrap();
+        let clear = LinkBudget::new(&tx, &rx, &faded_params(None)).unwrap();
         let faded =
-            LinkStats::for_link(&tx, &rx, &faded_params(Some(LinkDirection::Downlink))).unwrap();
+            LinkBudget::new(&tx, &rx, &faded_params(Some(LinkDirection::Downlink))).unwrap();
         assert!(faded.gt_degraded.is_none());
         assert_approx_eq!(faded.c_n0.as_f64(), clear.c_n0.as_f64(), atol <= 1e-12);
     }
 
     #[test]
     fn test_for_link_downlink_without_absorption_is_a_no_op() {
-        let params = LinkParameters::builder(29.0.ghz(), 5.0.mhz(), Distance::kilometers(1000.0))
+        let params = LinkConditions::builder(29.0.ghz(), Distance::kilometers(1000.0))
             .direction(LinkDirection::Downlink)
             .build()
             .unwrap();
-        let stats = LinkStats::for_link(&tx_chain(), &rx_chain(), &params).unwrap();
+        let stats = LinkBudget::new(&tx_chain(), &rx_chain(), &params).unwrap();
         // L_abs = 1: degraded equals clear-sky.
         assert_approx_eq!(
             stats.gt_degraded.unwrap().as_f64(),
@@ -992,7 +963,7 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn test_link_parameters_serde_round_trip_and_validation() {
-        let params = LinkParameters::builder(29.0.ghz(), 5.0.mhz(), Distance::kilometers(1000.0))
+        let params = LinkConditions::builder(29.0.ghz(), Distance::kilometers(1000.0))
             .losses(p618_losses())
             .tx_pointing(Pointing::off_boresight(lox_core::units::Angle::degrees(
                 2.0,
@@ -1001,9 +972,8 @@ mod tests {
             .build()
             .unwrap();
         let json = serde_json::to_string(&params).unwrap();
-        let round_trip: LinkParameters = serde_json::from_str(&json).unwrap();
+        let round_trip: LinkConditions = serde_json::from_str(&json).unwrap();
         assert_eq!(round_trip.carrier(), params.carrier());
-        assert_eq!(round_trip.bandwidth(), params.bandwidth());
         assert_eq!(round_trip.range(), params.range());
         assert_eq!(round_trip.losses(), params.losses());
         assert_eq!(round_trip.tx_pointing(), params.tx_pointing());
@@ -1011,8 +981,8 @@ mod tests {
         assert_eq!(round_trip.direction(), params.direction());
 
         // Optional fields default: no losses, boresight, no direction.
-        let minimal: LinkParameters =
-            serde_json::from_str(r#"{"carrier":29.0e9,"bandwidth":5.0e6,"range":1.0e6}"#).unwrap();
+        let minimal: LinkConditions =
+            serde_json::from_str(r#"{"carrier":29.0e9,"range":1.0e6}"#).unwrap();
         assert_approx_eq!(minimal.losses().total().as_f64(), 0.0, atol <= 1e-15);
         assert_eq!(minimal.tx_pointing(), Pointing::Boresight);
         assert_eq!(minimal.rx_pointing(), Pointing::Boresight);
@@ -1020,11 +990,10 @@ mod tests {
 
         // Non-physical inputs are rejected at deserialization time.
         for bad in [
-            r#"{"carrier":0.0,"bandwidth":5.0e6,"range":1.0e6}"#,
-            r#"{"carrier":29.0e9,"bandwidth":-5.0e6,"range":1.0e6}"#,
-            r#"{"carrier":29.0e9,"bandwidth":5.0e6,"range":0.0}"#,
+            r#"{"carrier":0.0,"range":1.0e6}"#,
+            r#"{"carrier":29.0e9,"range":0.0}"#,
         ] {
-            assert!(serde_json::from_str::<LinkParameters>(bad).is_err());
+            assert!(serde_json::from_str::<LinkConditions>(bad).is_err());
         }
     }
 
@@ -1039,11 +1008,11 @@ mod tests {
             .build()
             .unwrap();
         let clear = lumped_stats();
-        let params = LinkParameters::builder(29.0.ghz(), 5.0.mhz(), Distance::kilometers(1000.0))
+        let params = LinkConditions::builder(29.0.ghz(), Distance::kilometers(1000.0))
             .losses(losses)
             .build()
             .unwrap();
-        let faded = LinkStats::for_link(
+        let faded = LinkBudget::new(
             &EirpModel::new(ka_band(), 55.0.db()).unwrap(),
             &GtModel::new(ka_band(), 3.01.db()).unwrap(),
             &params,
@@ -1057,9 +1026,9 @@ mod tests {
     }
 
     #[test]
-    fn test_evaluate_produces_modulated_stats() {
+    fn test_modulate_produces_modulated_budget() {
         let stats = component_stats();
-        let m = ModulatedLinkStats::evaluate(stats, &channel(), &modcod(), 3.0.db()).unwrap();
+        let m = stats.modulate(&channel(), &modcod(), 3.0.db());
         // Eb/N0 ≈ 37.91 (QPSK 1/2 → 1 info bit/symbol, C/N0 ≈ 104.91 dB·Hz)
         assert_approx_eq!(m.eb_n0.as_f64(), 37.91, atol <= 0.02);
         // required_eb_n0 = 10, design margin = 3 → margin ≈ 24.91
@@ -1067,12 +1036,47 @@ mod tests {
         // Information rate: 5 Msps × 1 info bit/symbol.
         assert_approx_eq!(m.information_rate().to_hertz(), 5e6, rtol <= 1e-12);
         assert_approx_eq!(m.symbol_rate().to_hertz(), 5e6, rtol <= 1e-12);
+        // C/N derives from the channel's occupied bandwidth.
+        assert_approx_eq!(
+            m.c_n.as_f64(),
+            m.budget.c_n(channel().bandwidth()).as_f64(),
+            atol <= 1e-12
+        );
+        // The link closes comfortably.
+        assert!(m.closes());
+    }
+
+    #[test]
+    fn test_modulate_closes_boundary() {
+        // A MODCOD whose threshold sits exactly at the achieved Eb/N0 closes;
+        // one requiring more does not.
+        let stats = component_stats();
+        let m = stats.modulate(&channel(), &modcod(), 0.0.db());
+        let exact = ModCod::from_required_eb_n0(
+            "exact",
+            Modulation::Qpsk,
+            0.5,
+            m.eb_n0,
+            ErrorMetric::Ber,
+            1e-6,
+        )
+        .unwrap();
+        assert!(stats.modulate(&channel(), &exact, 0.0.db()).closes());
+        let too_hungry = ModCod::from_required_eb_n0(
+            "too hungry",
+            Modulation::Qpsk,
+            0.5,
+            m.eb_n0 + Decibel::new(0.1),
+            ErrorMetric::Ber,
+            1e-6,
+        )
+        .unwrap();
+        assert!(!stats.modulate(&channel(), &too_hungry, 0.0.db()).closes());
     }
 
     #[test]
     fn test_modulated_with_interference_reduces_margin() {
-        let m = ModulatedLinkStats::evaluate(component_stats(), &channel(), &modcod(), 3.0.db())
-            .unwrap();
+        let m = component_stats().modulate(&channel(), &modcod(), 3.0.db());
         let interference = m.with_interference(Power::watts(1e-12)).unwrap();
         assert!(interference.margin_with_interference.as_f64() <= m.margin.as_f64());
         assert!(interference.eb_n0i0.as_f64() <= m.eb_n0.as_f64());
@@ -1080,8 +1084,7 @@ mod tests {
 
     #[test]
     fn test_with_interference_rejects_non_physical_power() {
-        let m = ModulatedLinkStats::evaluate(component_stats(), &channel(), &modcod(), 3.0.db())
-            .unwrap();
+        let m = component_stats().modulate(&channel(), &modcod(), 3.0.db());
         for power in [-1e-12, f64::NAN, f64::INFINITY] {
             let err = m.with_interference(Power::watts(power)).unwrap_err();
             assert!(matches!(err, LinkBudgetError::NonPhysical { .. }));
@@ -1097,15 +1100,10 @@ mod tests {
 
     #[test]
     fn test_lumped_modulated_with_interference_is_error() {
-        let err = ModulatedLinkStats::evaluate(
-            lumped_stats_with_channel_bandwidth(),
-            &channel(),
-            &modcod(),
-            3.0.db(),
-        )
-        .unwrap()
-        .with_interference(Power::watts(1e-12))
-        .unwrap_err();
+        let err = lumped_stats()
+            .modulate(&channel(), &modcod(), 3.0.db())
+            .with_interference(Power::watts(1e-12))
+            .unwrap_err();
         assert_eq!(err, LinkBudgetError::AbsolutePowerUnavailable);
     }
 

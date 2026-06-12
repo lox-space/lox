@@ -8,7 +8,7 @@
 //! shaping, and optional DSSS spreading — and nothing else. What is
 //! transmitted on it (modulation and coding) is a
 //! [`ModCod`](crate::modcod::ModCod); link direction lives on
-//! [`LinkParameters`](crate::link_budget::LinkParameters); acceptance
+//! [`LinkConditions`](crate::link_budget::LinkConditions); acceptance
 //! criteria (required Eb/N0, design margin) are evaluation inputs.
 
 use core::fmt;

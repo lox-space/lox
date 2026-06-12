@@ -10,7 +10,7 @@
 //! ([`EirpModel`], [`GtModel`]). [`TxTerminal`] and [`RxTerminal`] are the
 //! storable either-tier types; all of them implement the link-end contracts
 //! [`Eirp`] and [`GOverT`] consumed by
-//! [`LinkStats::for_link`](crate::link_budget::LinkStats::for_link).
+//! [`LinkBudget::new`](crate::link_budget::LinkBudget::new).
 //!
 //! Terminals are anonymous values: naming, selection, and grouping (e.g. a
 //! transceiver sharing one dish, or a transmitter switchable between

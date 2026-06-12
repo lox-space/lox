@@ -18,13 +18,13 @@ spacelink function mapping:
     | lox.ParabolicPattern.peak_gain()                   | spacelink.core.antenna.dish_gain()                      |
     | lox.GaussianPattern.peak_gain()                    | spacelink.core.antenna.dish_gain()                      |
     | lox.CascadeReceiver.chain_noise_temperature()      | spacelink.core.noise.noise_factor_to_temperature()      |
-    | lox.LinkStats.for_link() noise_power               | spacelink.core.noise.noise_power()                      |
+    | lox.LinkBudget noise_power()                       | spacelink.core.noise.noise_power()                      |
     | lox.Channel.eb_n0()                                | spacelink.core.noise.cn0_to_ebn0()                      |
     | lox noise_figure round-trip                        | spacelink.core.noise.temperature_to_noise_figure()      |
     | lox noise_power_density (via k_B constant)         | spacelink.core.noise.noise_power_density()              |
     | lox G/T decomposition                              | spacelink.core.antenna.gain_from_g_over_t()             |
     | lox.DipolePattern.peak_gain()                      | (no spacelink equivalent — see internal unit tests)     |
-    | lox.LinkStats.for_link() C/N0                      | (no spacelink equivalent)                               |
+    | lox.LinkBudget C/N0                                | (no spacelink equivalent)                               |
 """
 
 import math
@@ -52,8 +52,8 @@ BOLTZMANN_CONSTANT = 1.380649e-23
 WIDE_BAND = lox.FrequencyRange(1.0 * lox.GHz, 31.0 * lox.GHz)
 
 
-def noise_temp_link_stats(t_sys_k, bandwidth_hz, rx_gain_db=30.0):
-    """Evaluates a 10 GHz link against a known-T_sys receiver and returns LinkStats."""
+def noise_temp_link_budget(t_sys_k, rx_gain_db=30.0):
+    """Computes a 10 GHz link budget against a known-T_sys receiver."""
     tx = lox.TxChain(
         lox.ConstantAntenna(gain=30.0 * lox.dB),
         lox.AmplifierTransmitter(power=10.0 * lox.W),
@@ -65,11 +65,10 @@ def noise_temp_link_stats(t_sys_k, bandwidth_hz, rx_gain_db=30.0):
         band=WIDE_BAND,
         antenna_noise_temperature=0.0 * lox.K,
     )
-    return lox.LinkStats.for_link(
+    return lox.LinkBudget(
         tx,
         rx,
         carrier=10.0 * lox.GHz,
-        bandwidth=bandwidth_hz * lox.Hz,
         range=1000.0 * lox.km,
     )
 
@@ -256,10 +255,10 @@ def test_cn0_to_ebn0(cn0_dbhz, data_rate_hz):
 
 
 # ---------------------------------------------------------------------------
-# Test 8: LinkStats.for_link() noise_power vs spacelink
+# Test 8: LinkBudget.noise_power() vs spacelink
 #
 # spacelink.core.noise.noise_power(bandwidth, temperature) computes k_B·T·BW
-# in watts. LinkStats.noise_power is the same quantity in dBW as
+# in watts. LinkBudget.noise_power(bw) is the same quantity in dBW as
 # 10·log₁₀(T_sys · k_B · BW).
 # ---------------------------------------------------------------------------
 
@@ -272,17 +271,17 @@ NOISE_POWER_CASES = [
 
 
 def t_sys_from_stats(stats, bandwidth_hz):
-    """Recovers T_sys in Kelvin from the noise power reported by LinkStats."""
-    return 10.0 ** (float(stats.noise_power) / 10.0) / (
+    """Recovers T_sys in Kelvin from the noise power reported by LinkBudget."""
+    return 10.0 ** (float(stats.noise_power(bandwidth_hz * lox.Hz)) / 10.0) / (
         BOLTZMANN_CONSTANT * bandwidth_hz
     )
 
 
 @pytest.mark.parametrize("t_sys_k,bandwidth_hz", NOISE_POWER_CASES)
 def test_noise_power(t_sys_k, bandwidth_hz):
-    """LinkStats.noise_power should agree with spacelink to 0.001 dBW."""
-    stats = noise_temp_link_stats(t_sys_k, bandwidth_hz)
-    lox_dbw = float(stats.noise_power)
+    """LinkBudget.noise_power should agree with spacelink to 0.001 dBW."""
+    stats = noise_temp_link_budget(t_sys_k)
+    lox_dbw = float(stats.noise_power(bandwidth_hz * lox.Hz))
     sl_w = float(sl_noise_power(bandwidth_hz * u.Hz, t_sys_k * u.K).to(u.W).value)
     sl_dbw = 10.0 * math.log10(sl_w)
     assert lox_dbw == pytest.approx(sl_dbw, abs=1e-3)
@@ -325,9 +324,9 @@ NPD_CASES = [150.0, 290.0, 500.0, 1000.0]
 @pytest.mark.parametrize("t_sys_k", NPD_CASES)
 def test_noise_power_density(t_sys_k):
     """k_B · T should agree between lox and spacelink to 0.001 dB."""
-    stats = noise_temp_link_stats(t_sys_k, 1.0)
+    stats = noise_temp_link_budget(t_sys_k)
     # noise_power(BW=1Hz) = 10·log₁₀(k_B · T · 1) = noise power density in dBW/Hz
-    lox_dbw_hz = float(stats.noise_power)
+    lox_dbw_hz = float(stats.noise_power(1.0 * lox.Hz))
     sl_w_hz = float(sl_npd(t_sys_k * u.K).to(u.W / u.Hz).value)
     sl_dbw_hz = 10.0 * math.log10(sl_w_hz)
     assert lox_dbw_hz == pytest.approx(sl_dbw_hz, abs=1e-3)
@@ -336,7 +335,7 @@ def test_noise_power_density(t_sys_k):
 # ---------------------------------------------------------------------------
 # Test 11: G/T decomposition
 #
-# Compute G/T in lox (via LinkStats), then use spacelink gain_from_g_over_t
+# Compute G/T in lox (via LinkBudget), then use spacelink gain_from_g_over_t
 # to recover the antenna gain from G/T and T_sys. This validates that lox's
 # G/T formula is consistent with the standard definition.
 # ---------------------------------------------------------------------------
@@ -352,7 +351,7 @@ GT_CASES = [
 @pytest.mark.parametrize("gain_db,t_sys_k", GT_CASES)
 def test_gt_decomposition(gain_db, t_sys_k):
     """G/T computed by lox should decompose correctly via spacelink."""
-    stats = noise_temp_link_stats(t_sys_k, 1e6, rx_gain_db=gain_db)
+    stats = noise_temp_link_budget(t_sys_k, rx_gain_db=gain_db)
     lox_gt = float(stats.gt)
     # Use spacelink to recover gain from G/T and T_sys
     recovered_gain = float(
@@ -407,11 +406,10 @@ def test_friis_cascade_feed_loss():
         antenna_noise_temperature=t_ant * lox.K,
         feed_loss=feed_loss_db * lox.dB,
     )
-    stats = lox.LinkStats.for_link(
+    stats = lox.LinkBudget(
         tx,
         rx,
         carrier=10.0 * lox.GHz,
-        bandwidth=bandwidth_hz * lox.Hz,
         range=1000.0 * lox.km,
     )
     lox_t_sys = t_sys_from_stats(stats, bandwidth_hz)
@@ -509,14 +507,13 @@ def test_tdrs_ka_band_return_link():
     # --- Link budget ---
     range_km = 40000.0
     bandwidth_hz = float(channel.bandwidth())
-    stats = lox.LinkStats.for_link(
+    stats = lox.LinkBudget(
         tx,
         rx,
         carrier=freq,
-        bandwidth=channel.bandwidth(),
         range=range_km * lox.km,
     )
-    modulated = modcod.evaluate(stats, channel, design_margin=3.0 * lox.dB)
+    modulated = stats.modulate(channel, modcod, design_margin=3.0 * lox.dB)
 
     # Verify T_sys via Friis: T_ant + T_LNA + T_rx/G_LNA (zero feed loss)
     g_lna = 10.0 ** (lna_gain_db / 10.0)

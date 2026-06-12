@@ -120,16 +120,16 @@ gt = rx.gt_at(29.0 * lox.GHz, angle=1.0 * lox.deg)
 t_sys = rx.system_noise_temperature()
 ```
 
-`LinkStats.for_link` computes a link budget between two terminals. The
-carrier is a link-level input and must lie inside both terminals'
-frequency ranges:
+`LinkBudget` computes a link budget between two terminals. The carrier is
+a link-level input and must lie inside both terminals' frequency ranges;
+all outputs are bandwidth-free (C/N and noise power are derived views that
+take an explicit bandwidth):
 
 ```python
-link = lox.LinkStats.for_link(
+link = lox.LinkBudget(
     tx,
     rx,
     carrier=29.0 * lox.GHz,
-    bandwidth=5.0 * lox.MHz,
     range=1000.0 * lox.km,
 )
 print(f"C/N0 = {float(link.c_n0):.2f} dB·Hz")
@@ -150,11 +150,10 @@ lumped `EirpModel` and `GtModel` terminals:
 ```python
 import lox_space as lox
 
-link = lox.LinkStats.for_link(
+link = lox.LinkBudget(
     lox.EirpModel("Ka", 55.0 * lox.dB),
     lox.GtModel("Ka", 3.01 * lox.dB),
     carrier=29.0 * lox.GHz,
-    bandwidth=5.0 * lox.MHz,
     range=1000.0 * lox.km,
 )
 print(f"C/N0 = {float(link.c_n0):.2f} dB·Hz")
@@ -165,17 +164,17 @@ the absolute carrier and noise power are not recoverable from EIRP and G/T
 alone. The carrier-to-noise density ratio (`c_n0`) and carrier-to-noise ratio
 (`c_n`) remain available.
 
-To compute modulation-aware figures (`Es/N0`, `Eb/N0`, link margin),
-evaluate the link on a `Channel` (the waveform: symbol rate, roll-off,
-optional DSSS chip rate) against a `ModCod` (the modulation and coding
-scheme with its Eb/N0 threshold). The design margin is an input to the
-evaluation:
+To compute modulation-aware figures (`Es/N0`, `Eb/N0`, link margin, data
+rate), modulate the budget with a `Channel` (the waveform: symbol rate,
+roll-off, optional DSSS chip rate) and a `ModCod` (the modulation and
+coding scheme with its Eb/N0 threshold). Everything bandwidth-dependent
+derives from the channel; the design margin is an input:
 
 ```python
 channel = lox.Channel(symbol_rate=5 * lox.MHz)
 modcod = lox.ModCod("QPSK 1/2", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
-modulated = modcod.evaluate(link, channel, design_margin=3.0 * lox.dB)
-print(f"Margin = {float(modulated.margin):.2f} dB")
+modulated = link.modulate(channel, modcod, design_margin=3.0 * lox.dB)
+print(f"Closes: {modulated.closes()}, margin = {float(modulated.margin):.2f} dB")
 ```
 
 For standards-based links, use the built-in DVB-S2 table — 28 modes whose
@@ -186,7 +185,7 @@ exactly — and `ModCod.select` for adaptive coding and modulation:
 ```python
 table = lox.ModCod.dvb_s2()
 modcod = next(mc for mc in table if mc.name == "QPSK 3/4")
-modulated = modcod.evaluate(link, channel, design_margin=3.0 * lox.dB)
+modulated = link.modulate(channel, modcod, design_margin=3.0 * lox.dB)
 
 # The highest-efficiency mode that closes at this Es/N0:
 best = lox.ModCod.select(modulated.es_n0, 3.0 * lox.dB, table)
@@ -254,17 +253,16 @@ modcod = next(mc for mc in lox.ModCod.dvb_s2() if mc.name == "QPSK 3/4")
 # 2° residual pointing error on the spacecraft gimbal; the station
 # autotracks on boresight. On downlinks the budget uses the rain-degraded
 # G/T (ITU-R P.618 §8.2).
-link = lox.LinkStats.for_link(
+link = lox.LinkBudget(
     spacecraft,
     ground_station,
     carrier=carrier,
-    bandwidth=channel.bandwidth(),
     range=slant_range,
     tx_angle=2.0 * lox.deg,
     losses=losses,
     link_type="downlink",
 )
-modulated = modcod.evaluate(link, channel, design_margin=3.0 * lox.dB)
+modulated = link.modulate(channel, modcod, design_margin=3.0 * lox.dB)
 
 print(f"EIRP:        {float(link.eirp):.2f} dBW")
 print(f"FSPL:        {float(link.fspl):.2f} dB")
@@ -302,11 +300,10 @@ spacecraft = lox.TxChain(
     feed_loss=0.8 * lox.dB,
 )
 
-link = lox.LinkStats.for_link(
+link = lox.LinkBudget(
     spacecraft,
     ground_station,
     carrier=carrier,
-    bandwidth=channel.bandwidth(),
     range=slant_range,
     tx_direction=[0.9, 0.1, 0.0],  # line of sight in the TX parent frame
 )
@@ -357,12 +354,11 @@ losses = lox.PropagationLosses(
 print(f"Total: {float(losses.total()):.1f} dB")
 print(f"Absorptive: {float(losses.absorptive()):.1f} dB")
 
-# Pass to LinkStats.for_link via the losses parameter
-link = lox.LinkStats.for_link(
+# Pass to LinkBudget via the losses parameter
+link = lox.LinkBudget(
     spacecraft,
     ground_station,
     carrier=carrier,
-    bandwidth=channel.bandwidth(),
     range=slant_range,
     losses=losses,
 )
@@ -460,13 +456,13 @@ link = lox.LinkStats.for_link(
 
 ---
 
-::: lox_space.LinkStats
+::: lox_space.LinkBudget
     options:
       show_source: false
 
 ---
 
-::: lox_space.ModulatedLinkStats
+::: lox_space.ModulatedLinkBudget
     options:
       show_source: false
 
