@@ -910,6 +910,45 @@ mod tests {
         assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
     }
 
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_link_parameters_serde_round_trip_and_validation() {
+        let params = LinkParameters::builder(29.0.ghz(), 5.0.mhz(), Distance::kilometers(1000.0))
+            .losses(p618_losses())
+            .tx_pointing(Pointing::off_boresight(lox_core::units::Angle::degrees(
+                2.0,
+            )))
+            .direction(LinkDirection::Downlink)
+            .build()
+            .unwrap();
+        let json = serde_json::to_string(&params).unwrap();
+        let round_trip: LinkParameters = serde_json::from_str(&json).unwrap();
+        assert_eq!(round_trip.carrier(), params.carrier());
+        assert_eq!(round_trip.bandwidth(), params.bandwidth());
+        assert_eq!(round_trip.range(), params.range());
+        assert_eq!(round_trip.losses(), params.losses());
+        assert_eq!(round_trip.tx_pointing(), params.tx_pointing());
+        assert_eq!(round_trip.rx_pointing(), params.rx_pointing());
+        assert_eq!(round_trip.direction(), params.direction());
+
+        // Optional fields default: no losses, boresight, no direction.
+        let minimal: LinkParameters =
+            serde_json::from_str(r#"{"carrier":29.0e9,"bandwidth":5.0e6,"range":1.0e6}"#).unwrap();
+        assert_approx_eq!(minimal.losses().total().as_f64(), 0.0, atol <= 1e-15);
+        assert_eq!(minimal.tx_pointing(), Pointing::Boresight);
+        assert_eq!(minimal.rx_pointing(), Pointing::Boresight);
+        assert_eq!(minimal.direction(), None);
+
+        // Non-physical inputs are rejected at deserialization time.
+        for bad in [
+            r#"{"carrier":0.0,"bandwidth":5.0e6,"range":1.0e6}"#,
+            r#"{"carrier":29.0e9,"bandwidth":-5.0e6,"range":1.0e6}"#,
+            r#"{"carrier":29.0e9,"bandwidth":5.0e6,"range":0.0}"#,
+        ] {
+            assert!(serde_json::from_str::<LinkParameters>(bad).is_err());
+        }
+    }
+
     #[test]
     fn test_for_link_applies_propagation_losses() {
         let losses = PropagationLosses::builder()
