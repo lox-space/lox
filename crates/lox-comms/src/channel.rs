@@ -431,6 +431,8 @@ mod tests {
     #[test]
     fn test_dsss_spreading_factor_and_processing_gain() {
         let ch = dsss_channel();
+        assert_approx_eq!(ch.chip_rate().unwrap().to_hertz(), 4e6, rtol <= 1e-12);
+        assert_approx_eq!(ch.symbol_rate().to_hertz(), 1e4, rtol <= 1e-12);
         assert_approx_eq!(ch.spreading_factor().unwrap(), 400.0, rtol <= 1e-10);
         // PG = 10*log10(400) = 26.02 dB
         assert_approx_eq!(
