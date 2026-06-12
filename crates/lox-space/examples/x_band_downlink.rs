@@ -128,6 +128,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .losses(losses)
         .tx_pointing(tx_pointing)
         .rx_pointing(rx_pointing)
+        .direction(LinkDirection::Downlink)
         .build()?;
     let link = LinkStats::for_link(&tx, &rx, &params)?;
     let modulated = channel.apply(link);
@@ -139,7 +140,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Env. losses:     {:>8.2} dB",
         modulated.link.losses.total().as_f64()
     );
-    println!("G/T:             {:>8.2} dB/K", modulated.link.gt.as_f64());
+    println!("G/T (clear-sky): {:>8.2} dB/K", modulated.link.gt.as_f64());
+    let gt_degraded = modulated.link.gt_degraded.expect("downlink with RX chain");
+    println!(
+        "G/T (rain):      {:>8.2} dB/K ({:+.2} dB)",
+        gt_degraded.as_f64(),
+        gt_degraded.as_f64() - modulated.link.gt.as_f64()
+    );
     println!(
         "C/N0:            {:>8.2} dB·Hz",
         modulated.link.c_n0.as_f64()

@@ -547,6 +547,18 @@ impl GOverT for RxTerminal {
             RxTerminal::Lumped(model) => model.rx_terms(carrier, pointing),
         }
     }
+
+    fn rx_terms_degraded(
+        &self,
+        carrier: Frequency,
+        pointing: Pointing,
+        absorptive: Decibel,
+    ) -> Result<Option<RxTerms>, LinkBudgetError> {
+        match self {
+            RxTerminal::Component(chain) => chain.rx_terms_degraded(carrier, pointing, absorptive),
+            RxTerminal::Lumped(model) => model.rx_terms_degraded(carrier, pointing, absorptive),
+        }
+    }
 }
 
 /// Rejects a carrier outside a terminal's frequency range.
@@ -956,6 +968,12 @@ mod tests {
         assert!(rx.band().contains(29.0.ghz()));
         assert!(
             rx.rx_terms(29.0.ghz(), Pointing::Boresight)
+                .unwrap()
+                .is_some()
+        );
+        // The degraded terms delegate through the enum as well.
+        assert!(
+            rx.rx_terms_degraded(29.0.ghz(), Pointing::Boresight, 3.0.db())
                 .unwrap()
                 .is_some()
         );

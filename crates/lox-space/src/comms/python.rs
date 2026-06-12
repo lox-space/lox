@@ -1186,8 +1186,11 @@ impl PyLinkStats {
     ///     tx_direction: Line-of-sight direction at transmitter as [x, y, z] (optional).
     ///     rx_direction: Line-of-sight direction at receiver as [x, y, z] (optional).
     ///     losses: PropagationLosses (optional, defaults to none).
+    ///     link_type: "uplink", "downlink", or "crosslink" (optional). On
+    ///         downlinks the budget uses the rain-degraded G/T
+    ///         (ITU-R P.618 §8.2).
     #[staticmethod]
-    #[pyo3(signature = (tx, rx, carrier, bandwidth, range, tx_angle=None, rx_angle=None, tx_direction=None, rx_direction=None, losses=None))]
+    #[pyo3(signature = (tx, rx, carrier, bandwidth, range, tx_angle=None, rx_angle=None, tx_direction=None, rx_direction=None, losses=None, link_type=None))]
     #[allow(clippy::too_many_arguments)]
     fn for_link(
         tx: &Bound<'_, PyAny>,
@@ -1200,6 +1203,7 @@ impl PyLinkStats {
         tx_direction: Option<[f64; 3]>,
         rx_direction: Option<[f64; 3]>,
         losses: Option<&PyPropagationLosses>,
+        link_type: Option<&str>,
     ) -> PyResult<Self> {
         let tx = build_tx_terminal(tx)?;
         let rx = build_rx_terminal(rx)?;
@@ -1209,10 +1213,14 @@ impl PyLinkStats {
             .map(|l| l.0.clone())
             .unwrap_or_else(PropagationLosses::none);
 
-        let params = LinkParameters::builder(carrier.0, bandwidth.0, range.0)
+        let mut builder = LinkParameters::builder(carrier.0, bandwidth.0, range.0)
             .losses(env_losses)
             .tx_pointing(tx_pointing)
-            .rx_pointing(rx_pointing)
+            .rx_pointing(rx_pointing);
+        if let Some(link_type) = link_type {
+            builder = builder.direction(parse_link_direction(link_type)?);
+        }
+        let params = builder
             .build()
             .map_err(|err| PyValueError::new_err(err.to_string()))?;
         LinkStats::for_link(&tx, &rx, &params)
@@ -1238,10 +1246,24 @@ impl PyLinkStats {
         PyDecibel(self.0.eirp)
     }
 
-    /// Receiver G/T in dB/K.
+    /// Receiver G/T in dB/K under clear-sky conditions.
     #[getter]
     fn gt(&self) -> PyDecibel {
         PyDecibel(self.0.gt)
+    }
+
+    /// Rain-degraded receiver G/T in dB/K. ``None`` unless the link is a
+    /// downlink with a component receive chain; when present, this is the
+    /// value the budget used.
+    #[getter]
+    fn gt_degraded(&self) -> Option<PyDecibel> {
+        self.0.gt_degraded.map(PyDecibel)
+    }
+
+    /// Link direction ("uplink", "downlink", or "crosslink"), if specified.
+    #[getter]
+    fn link_type(&self) -> Option<String> {
+        self.0.direction.map(|d| d.to_string())
     }
 
     /// Carrier-to-noise density ratio in dB·Hz.
