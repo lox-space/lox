@@ -12,7 +12,7 @@
 
 use lox_core::units::{Decibel, Distance, Frequency, Power, Temperature};
 
-use crate::channel::Channel;
+use crate::channel::{Channel, LinkDirection};
 use crate::error::NonPhysicalError;
 use crate::pointing::Pointing;
 use crate::utils::free_space_path_loss;
@@ -23,6 +23,33 @@ pub use lox_core::comms::PropagationLosses;
 
 /// Boltzmann constant in dB(W/Hz/K).
 const BOLTZMANN_CONSTANT_DB: Decibel = Decibel::new(-228.599_167_173_217_67);
+
+/// Effective mean radiating temperature of the absorbing atmosphere
+/// (ITU-R P.618 §8.2).
+pub const MEDIUM_TEMPERATURE: Temperature = Temperature::kelvin(275.0);
+
+/// Returns the sky-noise temperature seen by an antenna behind an absorbing
+/// atmosphere (ITU-R P.618 §8.2).
+///
+/// An absorptive medium with linear loss `L ≥ 1` attenuates the clear-sky
+/// contribution and re-radiates thermally at the mean medium temperature
+/// `t_m`:
+///
+/// ```text
+/// T_sky = T_clear / L + t_m · (1 − 1/L)
+/// ```
+///
+/// Only absorptive loss terms apply (rain, gaseous, cloud — see
+/// [`PropagationLosses::absorptive`]); scintillation and depolarization do
+/// not heat the antenna.
+pub fn degraded_sky_temperature(
+    t_clear: Temperature,
+    absorptive: Decibel,
+    t_m: Temperature,
+) -> Temperature {
+    let l = absorptive.to_linear();
+    Temperature::kelvin(t_clear.to_kelvin() / l + t_m.to_kelvin() * (1.0 - 1.0 / l))
+}
 
 /// The transmit end of a radio link.
 ///
@@ -114,6 +141,22 @@ pub trait GOverT {
         let _ = (carrier, pointing);
         Ok(None)
     }
+
+    /// Returns the receive terms with the antenna noise temperature degraded
+    /// by the absorptive part of the atmospheric loss (ITU-R P.618 §8.2).
+    ///
+    /// `None` for ends that cannot recompute their noise budget — aggregate
+    /// G/T figures are clear-sky values and stay undegraded. Defaults to
+    /// `None`.
+    fn rx_terms_degraded(
+        &self,
+        carrier: Frequency,
+        pointing: Pointing,
+        absorptive: Decibel,
+    ) -> Result<Option<RxTerms>, LinkBudgetError> {
+        let _ = (carrier, pointing, absorptive);
+        Ok(None)
+    }
 }
 
 /// Interference statistics for a link.
@@ -150,6 +193,7 @@ pub struct LinkParameters {
     losses: PropagationLosses,
     tx_pointing: Pointing,
     rx_pointing: Pointing,
+    direction: Option<LinkDirection>,
 }
 
 /// Serde wire format for [`LinkParameters`]: forces deserialization through
@@ -166,6 +210,8 @@ struct LinkParametersRepr {
     tx_pointing: Pointing,
     #[serde(default)]
     rx_pointing: Pointing,
+    #[serde(default)]
+    direction: Option<LinkDirection>,
 }
 
 #[cfg(feature = "serde")]
@@ -173,11 +219,14 @@ impl TryFrom<LinkParametersRepr> for LinkParameters {
     type Error = NonPhysicalError;
 
     fn try_from(repr: LinkParametersRepr) -> Result<Self, Self::Error> {
-        LinkParameters::builder(repr.carrier, repr.bandwidth, repr.range)
+        let mut builder = LinkParameters::builder(repr.carrier, repr.bandwidth, repr.range)
             .losses(repr.losses)
             .tx_pointing(repr.tx_pointing)
-            .rx_pointing(repr.rx_pointing)
-            .build()
+            .rx_pointing(repr.rx_pointing);
+        if let Some(direction) = repr.direction {
+            builder = builder.direction(direction);
+        }
+        builder.build()
     }
 }
 
@@ -198,6 +247,7 @@ impl LinkParameters {
             losses: PropagationLosses::none(),
             tx_pointing: Pointing::Boresight,
             rx_pointing: Pointing::Boresight,
+            direction: None,
         }
     }
 
@@ -230,6 +280,11 @@ impl LinkParameters {
     pub fn rx_pointing(&self) -> Pointing {
         self.rx_pointing
     }
+
+    /// Returns the link direction, when specified.
+    pub fn direction(&self) -> Option<LinkDirection> {
+        self.direction
+    }
 }
 
 /// Builder for [`LinkParameters`].
@@ -244,6 +299,7 @@ pub struct LinkParametersBuilder {
     losses: PropagationLosses,
     tx_pointing: Pointing,
     rx_pointing: Pointing,
+    direction: Option<LinkDirection>,
 }
 
 impl LinkParametersBuilder {
@@ -262,6 +318,18 @@ impl LinkParametersBuilder {
     /// Sets the pointing at the receive end.
     pub fn rx_pointing(mut self, pointing: Pointing) -> Self {
         self.rx_pointing = pointing;
+        self
+    }
+
+    /// Sets the link direction.
+    ///
+    /// On downlinks the receive antenna sits behind the absorbing
+    /// atmosphere, so the budget recomputes the system noise temperature
+    /// with the rain-degraded sky temperature (ITU-R P.618 §8.2). Uplink
+    /// and crosslink receivers are unaffected, as is an unspecified
+    /// direction.
+    pub fn direction(mut self, direction: LinkDirection) -> Self {
+        self.direction = Some(direction);
         self
     }
 
@@ -284,6 +352,7 @@ impl LinkParametersBuilder {
             losses: self.losses,
             tx_pointing: self.tx_pointing,
             rx_pointing: self.rx_pointing,
+            direction: self.direction,
         })
     }
 }
@@ -300,8 +369,14 @@ pub struct LinkStats {
     pub fspl: Decibel,
     /// EIRP of the transmitter.
     pub eirp: Decibel,
-    /// Receiver G/T.
+    /// Receiver G/T under clear-sky conditions.
     pub gt: Decibel,
+    /// Receiver G/T with the antenna noise temperature degraded by
+    /// absorptive atmospheric loss. `Some` only on downlinks with a receive
+    /// end that exposes degradable terms; this is the value the budget uses.
+    pub gt_degraded: Option<Decibel>,
+    /// Link direction, when specified.
+    pub direction: Option<LinkDirection>,
     /// Environmental losses.
     pub losses: PropagationLosses,
     /// Received carrier power. `None` for receive ends without [`RxTerms`].
@@ -322,7 +397,10 @@ impl LinkStats {
     /// under the given conditions.
     ///
     /// The carrier must lie inside both ends' frequency ranges. Each end
-    /// resolves its own pointing against its antenna.
+    /// resolves its own pointing against its antenna. On downlinks the
+    /// budget uses the rain-degraded G/T when the receive end exposes
+    /// degradable terms (see [`GOverT::rx_terms_degraded`]); aggregate G/T
+    /// figures stay at their clear-sky value.
     pub fn for_link(
         tx: &impl Eirp,
         rx: &impl GOverT,
@@ -337,16 +415,30 @@ impl LinkStats {
             Some(terms) => terms.gt(),
             None => rx.gt_at(carrier, params.rx_pointing)?,
         };
+
+        // Rain→noise coupling: only a downlink receiver sits behind the
+        // absorbing atmosphere. Uplink antennas already look at warm Earth
+        // through their configured clear-sky T_ant; crosslinks see no
+        // atmosphere.
+        let degraded_terms = if params.direction == Some(LinkDirection::Downlink) {
+            rx.rx_terms_degraded(carrier, params.rx_pointing, params.losses.absorptive())?
+        } else {
+            None
+        };
+        let gt_degraded = degraded_terms.as_ref().map(RxTerms::gt);
+        let effective_terms = degraded_terms.or(rx_terms);
+        let effective_gt = gt_degraded.unwrap_or(gt);
+
         let fspl = free_space_path_loss(params.range, carrier);
         let env_loss = params.losses.total();
 
-        let c_n0 = eirp + gt - fspl - env_loss - BOLTZMANN_CONSTANT_DB;
+        let c_n0 = eirp + effective_gt - fspl - env_loss - BOLTZMANN_CONSTANT_DB;
         let c_n = c_n0 - Decibel::from_linear(bandwidth.to_hertz());
 
-        let carrier_rx_power = rx_terms
+        let carrier_rx_power = effective_terms
             .as_ref()
             .map(|terms| eirp - fspl - env_loss + terms.gain());
-        let noise_power = rx_terms.as_ref().map(|terms| {
+        let noise_power = effective_terms.as_ref().map(|terms| {
             Decibel::from_linear(
                 terms.system_noise_temperature().to_kelvin()
                     * BOLTZMANN_CONSTANT
@@ -360,6 +452,8 @@ impl LinkStats {
             fspl,
             eirp,
             gt,
+            gt_degraded,
+            direction: params.direction,
             losses: params.losses.clone(),
             carrier_rx_power,
             noise_power,
@@ -699,6 +793,119 @@ mod tests {
         assert_approx_eq!(params.carrier().to_gigahertz(), 29.0, rtol <= 1e-12);
         assert_approx_eq!(params.bandwidth().to_megahertz(), 5.0, rtol <= 1e-12);
         assert_approx_eq!(params.range().to_meters(), 1e6, rtol <= 1e-12);
+    }
+
+    fn p618_losses() -> PropagationLosses {
+        // absorptive = 2.7 dB (rain + gaseous + cloud), total = 3.0 dB
+        PropagationLosses::builder()
+            .rain(2.0.db())
+            .gaseous(0.5.db())
+            .cloud(0.2.db())
+            .scintillation(0.3.db())
+            .build()
+            .unwrap()
+    }
+
+    fn faded_params(direction: Option<LinkDirection>) -> LinkParameters {
+        let mut builder =
+            LinkParameters::builder(29.0.ghz(), 5.0.mhz(), Distance::kilometers(1000.0))
+                .losses(p618_losses());
+        if let Some(direction) = direction {
+            builder = builder.direction(direction);
+        }
+        builder.build().unwrap()
+    }
+
+    #[test]
+    fn test_degraded_sky_temperature() {
+        // No absorption: the clear-sky temperature passes through.
+        let t = degraded_sky_temperature(Temperature::kelvin(50.0), 0.0.db(), MEDIUM_TEMPERATURE);
+        assert_approx_eq!(t.to_kelvin(), 50.0, rtol <= 1e-12);
+        // Opaque atmosphere: the antenna sees the medium itself.
+        let t = degraded_sky_temperature(Temperature::kelvin(50.0), 60.0.db(), MEDIUM_TEMPERATURE);
+        assert_approx_eq!(t.to_kelvin(), 275.0, rtol <= 1e-5);
+        // 3 dB of absorption: T = 50/L + 275·(1 − 1/L), L = 10^0.3.
+        let t = degraded_sky_temperature(Temperature::kelvin(50.0), 3.0.db(), MEDIUM_TEMPERATURE);
+        let l = 10.0_f64.powf(0.3);
+        assert_approx_eq!(
+            t.to_kelvin(),
+            50.0 / l + 275.0 * (1.0 - 1.0 / l),
+            rtol <= 1e-12
+        );
+    }
+
+    #[test]
+    fn test_for_link_downlink_degrades_gt() {
+        let clear = LinkStats::for_link(&tx_chain(), &rx_chain(), &faded_params(None)).unwrap();
+        let faded = LinkStats::for_link(
+            &tx_chain(),
+            &rx_chain(),
+            &faded_params(Some(LinkDirection::Downlink)),
+        )
+        .unwrap();
+
+        // T_sys: 500 K clear → 500 + 275·(1 − 1/L_abs) K degraded (T_ant = 0 K).
+        let l_abs = 10.0_f64.powf(0.27);
+        let t_sys_degraded = 500.0 + 275.0 * (1.0 - 1.0 / l_abs);
+        let gt_degraded_exp = 30.0 - 10.0 * t_sys_degraded.log10();
+
+        assert_approx_eq!(faded.gt.as_f64(), clear.gt.as_f64(), atol <= 1e-12);
+        let gt_degraded = faded.gt_degraded.unwrap();
+        assert_approx_eq!(gt_degraded.as_f64(), gt_degraded_exp, atol <= 1e-10);
+        assert!(gt_degraded.as_f64() < faded.gt.as_f64());
+
+        // The budget uses the degraded G/T.
+        assert_approx_eq!(
+            clear.c_n0.as_f64() - faded.c_n0.as_f64(),
+            clear.gt.as_f64() - gt_degraded.as_f64(),
+            atol <= 1e-10
+        );
+
+        // C/N0 consistency holds with the degraded noise power.
+        let c_n0_from_power = faded.carrier_rx_power.unwrap() - faded.noise_power.unwrap()
+            + Decibel::from_linear(faded.bandwidth.to_hertz());
+        assert_approx_eq!(faded.c_n0.as_f64(), c_n0_from_power.as_f64(), atol <= 1e-10);
+    }
+
+    #[test]
+    fn test_for_link_uplink_and_crosslink_stay_clear_sky() {
+        let clear = LinkStats::for_link(&tx_chain(), &rx_chain(), &faded_params(None)).unwrap();
+        for direction in [LinkDirection::Uplink, LinkDirection::Crosslink] {
+            let stats =
+                LinkStats::for_link(&tx_chain(), &rx_chain(), &faded_params(Some(direction)))
+                    .unwrap();
+            assert!(stats.gt_degraded.is_none());
+            assert_eq!(stats.direction, Some(direction));
+            assert_approx_eq!(stats.c_n0.as_f64(), clear.c_n0.as_f64(), atol <= 1e-12);
+        }
+    }
+
+    #[test]
+    fn test_for_link_lumped_downlink_stays_clear_sky() {
+        // An aggregate G/T figure cannot be degraded — documented caveat.
+        let tx = EirpModel::new(ka_band(), 55.0.db()).unwrap();
+        let rx = GtModel::new(ka_band(), 3.01.db()).unwrap();
+        let clear = LinkStats::for_link(&tx, &rx, &faded_params(None)).unwrap();
+        let faded =
+            LinkStats::for_link(&tx, &rx, &faded_params(Some(LinkDirection::Downlink))).unwrap();
+        assert!(faded.gt_degraded.is_none());
+        assert_approx_eq!(faded.c_n0.as_f64(), clear.c_n0.as_f64(), atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_for_link_downlink_without_absorption_is_a_no_op() {
+        let params = LinkParameters::builder(29.0.ghz(), 5.0.mhz(), Distance::kilometers(1000.0))
+            .direction(LinkDirection::Downlink)
+            .build()
+            .unwrap();
+        let stats = LinkStats::for_link(&tx_chain(), &rx_chain(), &params).unwrap();
+        // L_abs = 1: degraded equals clear-sky.
+        assert_approx_eq!(
+            stats.gt_degraded.unwrap().as_f64(),
+            stats.gt.as_f64(),
+            atol <= 1e-12
+        );
+        assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
     }
 
     #[test]

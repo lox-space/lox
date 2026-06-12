@@ -21,7 +21,7 @@ use lox_core::units::{Angle, Decibel, Frequency, Temperature};
 
 use crate::antenna::{Antenna, AntennaGain};
 use crate::error::NonPhysicalError;
-use crate::link_budget::{Eirp, GOverT, RxTerms};
+use crate::link_budget::{Eirp, GOverT, MEDIUM_TEMPERATURE, RxTerms, degraded_sky_temperature};
 use crate::pointing::Pointing;
 use crate::receiver::Receiver;
 use crate::transmitter::AmplifierTransmitter;
@@ -233,6 +233,23 @@ impl RxChain {
     /// where `T_rx` is the receiver's input-referred (chain) noise
     /// temperature, T_feed = 290·(L − 1), and G_feed = 1/L.
     pub fn system_noise_temperature(&self) -> Temperature {
+        self.system_noise_temperature_with(self.antenna_noise_temperature)
+    }
+
+    /// Returns the system noise temperature with the antenna noise
+    /// temperature degraded by absorptive atmospheric loss
+    /// (see [`degraded_sky_temperature`]).
+    pub fn degraded_system_noise_temperature(&self, absorptive: Decibel) -> Temperature {
+        self.system_noise_temperature_with(degraded_sky_temperature(
+            self.antenna_noise_temperature,
+            absorptive,
+            MEDIUM_TEMPERATURE,
+        ))
+    }
+
+    /// Flange-referred system noise temperature for a given antenna noise
+    /// temperature (see [`Self::system_noise_temperature`] for the formula).
+    fn system_noise_temperature_with(&self, antenna_noise_temperature: Temperature) -> Temperature {
         let chain_temperature = match &self.receiver {
             Receiver::NoiseTemperature(rx) => rx.noise_temperature(),
             Receiver::Cascade(rx) => rx.chain_noise_temperature(),
@@ -240,7 +257,7 @@ impl RxChain {
         let loss_linear = self.feed_loss.to_linear();
         let feed_temperature = ROOM_TEMPERATURE.to_kelvin() * (loss_linear - 1.0);
         Temperature::kelvin(
-            self.antenna_noise_temperature.to_kelvin()
+            antenna_noise_temperature.to_kelvin()
                 + feed_temperature
                 + chain_temperature.to_kelvin() * loss_linear,
         )
@@ -277,16 +294,42 @@ impl GOverT for RxChain {
         carrier: Frequency,
         pointing: Pointing,
     ) -> Result<Option<RxTerms>, LinkBudgetError> {
-        check_carrier(carrier, self.band())?;
+        let gain = self.flange_gain(carrier, pointing)?;
+        Ok(Some(RxTerms::new(gain, self.system_noise_temperature())?))
+    }
+
+    /// Returns the receive terms with the antenna noise temperature degraded
+    /// by absorptive atmospheric loss; the signal gain is unaffected.
+    fn rx_terms_degraded(
+        &self,
+        carrier: Frequency,
+        pointing: Pointing,
+        absorptive: Decibel,
+    ) -> Result<Option<RxTerms>, LinkBudgetError> {
+        let gain = self.flange_gain(carrier, pointing)?;
+        Ok(Some(RxTerms::new(
+            gain,
+            self.degraded_system_noise_temperature(absorptive),
+        )?))
+    }
+}
+
+impl RxChain {
+    /// Flange-referred receive system gain toward a pointing.
+    fn flange_gain(
+        &self,
+        carrier: Frequency,
+        pointing: Pointing,
+    ) -> Result<Decibel, LinkBudgetError> {
+        check_carrier(carrier, self.band)?;
         let (theta, phi) = self.pattern_angles(pointing)?;
         let antenna_gain = self.antenna.gain(carrier, theta, phi);
-        let gain = match &self.receiver {
+        Ok(match &self.receiver {
             Receiver::NoiseTemperature(_) => antenna_gain,
             Receiver::Cascade(rx) => {
                 antenna_gain - rx.demodulator_loss() - rx.implementation_loss()
             }
-        };
-        Ok(Some(RxTerms::new(gain, self.system_noise_temperature())?))
+        })
     }
 }
 
@@ -611,6 +654,47 @@ mod tests {
         assert_approx_eq!(terms.gain().as_f64(), 30.0, atol <= 1e-12);
         let gt = rx.gt_at(29.0.ghz(), Pointing::Boresight).unwrap();
         assert_approx_eq!(gt.as_f64(), 30.0 - 10.0 * expected.log10(), atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_degraded_system_noise_temperature() {
+        // Same chain as the flange-referral test; 3 dB of absorption first
+        // degrades T_ant: T_ant' = 150/L_abs + 275·(1 − 1/L_abs), then the
+        // identical referral applies.
+        let rx = RxChain::new(
+            ConstantAntenna::new(30.0.db()).unwrap(),
+            NoiseTempReceiver::new(Temperature::kelvin(500.0)).unwrap(),
+            2.0.db(),
+            Temperature::kelvin(150.0),
+            ka_band(),
+        )
+        .unwrap();
+        let l_abs = 10f64.powf(0.3);
+        let t_ant = 150.0 / l_abs + 275.0 * (1.0 - 1.0 / l_abs);
+        let l_feed = 10f64.powf(0.2);
+        let expected = t_ant + 290.0 * (l_feed - 1.0) + 500.0 * l_feed;
+        assert_approx_eq!(
+            rx.degraded_system_noise_temperature(3.0.db()).to_kelvin(),
+            expected,
+            rtol <= 1e-12
+        );
+        // Zero absorption reproduces the clear-sky figure.
+        assert_approx_eq!(
+            rx.degraded_system_noise_temperature(0.0.db()).to_kelvin(),
+            rx.system_noise_temperature().to_kelvin(),
+            rtol <= 1e-12
+        );
+        // The signal gain is unaffected by the noise degradation.
+        let degraded = rx
+            .rx_terms_degraded(29.0.ghz(), Pointing::Boresight, 3.0.db())
+            .unwrap()
+            .unwrap();
+        assert_approx_eq!(degraded.gain().as_f64(), 30.0, atol <= 1e-12);
+        assert_approx_eq!(
+            degraded.system_noise_temperature().to_kelvin(),
+            expected,
+            rtol <= 1e-12
+        );
     }
 
     #[test]
