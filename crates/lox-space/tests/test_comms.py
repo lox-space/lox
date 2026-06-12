@@ -922,6 +922,39 @@ def test_propagation_losses_repr_non_absorptive():
     assert "False" in r
 
 
+def test_budget_lines_and_table():
+    ch = lox.Channel(symbol_rate=5 * lox.MHz)
+    mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
+    losses = lox.PropagationLosses(rain=2.0 * lox.dB)
+    budget = link_budget(make_tx(), make_rx(), losses=losses, link_type="downlink")
+    m = budget.modulate(ch, mc, design_margin=3.0 * lox.dB)
+
+    lines = m.budget_lines()
+    labels = [label for label, _, _ in lines]
+    assert labels[0] == "EIRP"
+    assert "Rain attenuation" in labels
+    assert "G/T degradation due to rain" in labels
+    assert labels[-1] == "Link margin"
+    # Gains minus losses reproduce the C/N0 total on the agnostic stage.
+    link_lines = budget.budget_lines()
+    total = sum(
+        float(v) if kind == "gain" else -float(v) if kind == "loss" else 0.0
+        for _, v, kind in link_lines
+    )
+    c_n0 = next(float(v) for label, v, _ in link_lines if label == "C/N0")
+    assert total == pytest.approx(c_n0, abs=1e-9)
+    # The rendered table is the same data.
+    table = str(m)
+    assert "+ EIRP" in table
+    assert "= Link margin" in table
+
+
+def test_combine_carrier_to_noise():
+    combined = lox.combine_carrier_to_noise([10.0 * lox.dB, 10.0 * lox.dB])
+    assert float(combined) == pytest.approx(10.0 - 3.0103, abs=1e-3)
+    assert float(lox.combine_carrier_to_noise([])) == math.inf
+
+
 def test_modulate_best_acm():
     ch = lox.Channel(symbol_rate=5 * lox.MHz)
     budget = link_budget(make_tx(), make_rx())

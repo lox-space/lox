@@ -16,7 +16,8 @@ use crate::comms::python::{
     PyDecibel, PyDipolePattern, PyEirpModel, PyFrequencyRange, PyGaussianPattern, PyGtModel,
     PyInterferenceStats, PyLinkBudget, PyModCod, PyModulatedLinkBudget, PyModulation, PyNoiseStage,
     PyNoiseTempReceiver, PyParabolicPattern, PyPatternedAntenna, PyPfdMask, PyPropagationLosses,
-    PyRxChain, PyTxChain, freq_overlap, fspl, power_flux_density, slant_range,
+    PyRxChain, PyTxChain, combine_carrier_to_noise, freq_overlap, fspl, power_flux_density,
+    slant_range,
 };
 use crate::constellations::python::{PyConstellation, PyConstellationSatellite};
 use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
@@ -83,6 +84,7 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyEirpModel>()?;
     m.add_class::<PyGtModel>()?;
     m.add_function(wrap_pyfunction!(fspl, m)?)?;
+    m.add_function(wrap_pyfunction!(combine_carrier_to_noise, m)?)?;
     m.add_function(wrap_pyfunction!(freq_overlap, m)?)?;
     m.add_function(wrap_pyfunction!(power_flux_density, m)?)?;
     m.add_function(wrap_pyfunction!(slant_range, m)?)?;

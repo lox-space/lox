@@ -197,6 +197,62 @@ pub struct InterferenceStats {
     pub margin_with_interference: Decibel,
 }
 
+/// The role a line plays in a budget table.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[non_exhaustive]
+pub enum LineKind {
+    /// A contribution that increases the link quality (EIRP, G/T, ...).
+    Gain,
+    /// A contribution that decreases the link quality (FSPL, rain, ...).
+    Loss,
+    /// An intermediate result (C/N, Es/N0, Eb/N0).
+    Subtotal,
+    /// A final result (C/N0, link margin).
+    Total,
+}
+
+/// One line of a link-budget report.
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct BudgetLine {
+    /// Human-readable label, e.g. `"Free-space path loss"`.
+    pub label: String,
+    /// Value in decibels (gains and losses are both positive).
+    pub value: Decibel,
+    /// The role of this line.
+    pub kind: LineKind,
+}
+
+impl BudgetLine {
+    fn new(label: impl Into<String>, value: Decibel, kind: LineKind) -> Self {
+        Self {
+            label: label.into(),
+            value,
+            kind,
+        }
+    }
+}
+
+/// Renders budget lines as an aligned table.
+fn render_budget(f: &mut core::fmt::Formatter<'_>, lines: &[BudgetLine]) -> core::fmt::Result {
+    let width = lines.iter().map(|l| l.label.len()).max().unwrap_or(0);
+    for line in lines {
+        let sign = match line.kind {
+            LineKind::Gain => "+",
+            LineKind::Loss => "-",
+            LineKind::Subtotal | LineKind::Total => "=",
+        };
+        writeln!(
+            f,
+            "{sign} {:width$}  {:>10.2} dB",
+            line.label,
+            line.value.as_f64(),
+        )?;
+    }
+    Ok(())
+}
+
 /// The conditions a link budget is evaluated under: carrier, slant range,
 /// environmental losses, link direction, and the pointing at each end.
 ///
@@ -493,6 +549,41 @@ impl LinkBudget {
         ))
     }
 
+    /// Returns the budget as ordered report lines:
+    /// EIRP → FSPL → propagation losses (itemized) → G/T (+ rain
+    /// degradation) → Boltzmann constant → C/N₀.
+    ///
+    /// Gains minus losses equal the C/N₀ total exactly; the Boltzmann line
+    /// carries the +228.6 dB(Hz·K/W) term that makes the column sum.
+    pub fn budget_lines(&self) -> Vec<BudgetLine> {
+        let mut lines = vec![
+            BudgetLine::new("EIRP", self.eirp, LineKind::Gain),
+            BudgetLine::new("Free-space path loss", self.fspl, LineKind::Loss),
+        ];
+        for loss in self.losses.lines() {
+            lines.push(BudgetLine::new(
+                loss.kind().label(),
+                loss.value(),
+                LineKind::Loss,
+            ));
+        }
+        lines.push(BudgetLine::new("G/T", self.gt, LineKind::Gain));
+        if let Some(gt_degraded) = self.gt_degraded {
+            lines.push(BudgetLine::new(
+                "G/T degradation due to rain",
+                self.gt - gt_degraded,
+                LineKind::Loss,
+            ));
+        }
+        lines.push(BudgetLine::new(
+            "Boltzmann constant",
+            -BOLTZMANN_CONSTANT_DB,
+            LineKind::Gain,
+        ));
+        lines.push(BudgetLine::new("C/N0", self.c_n0, LineKind::Total));
+        lines
+    }
+
     /// Selects and applies the best MODCOD from a table: the
     /// highest-efficiency mode that closes on this channel with the given
     /// design margin (adaptive coding and modulation).
@@ -540,6 +631,12 @@ impl LinkBudget {
     }
 }
 
+impl core::fmt::Display for LinkBudget {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        render_budget(f, &self.budget_lines())
+    }
+}
+
 /// Link-budget output with a modulation and coding scheme applied.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -580,6 +677,32 @@ impl ModulatedLinkBudget {
             .information_rate(self.channel.symbol_rate())
     }
 
+    /// Returns the budget as ordered report lines: the underlying link
+    /// budget extended with C/N, Es/N0, Eb/N0, the MODCOD threshold, the
+    /// design margin, and the link margin.
+    pub fn budget_lines(&self) -> Vec<BudgetLine> {
+        let mut lines = self.budget.budget_lines();
+        lines.push(BudgetLine::new(
+            "C/N (occupied bandwidth)",
+            self.c_n,
+            LineKind::Subtotal,
+        ));
+        lines.push(BudgetLine::new("Es/N0", self.es_n0, LineKind::Subtotal));
+        lines.push(BudgetLine::new("Eb/N0", self.eb_n0, LineKind::Subtotal));
+        lines.push(BudgetLine::new(
+            format!("Required Eb/N0 ({})", self.modcod.mode().name()),
+            self.modcod.required_eb_n0(),
+            LineKind::Loss,
+        ));
+        lines.push(BudgetLine::new(
+            "Design margin",
+            self.design_margin,
+            LineKind::Loss,
+        ));
+        lines.push(BudgetLine::new("Link margin", self.margin, LineKind::Total));
+        lines
+    }
+
     /// Returns interference statistics for the given interferer power.
     ///
     /// Returns an error when absolute carrier or noise power is unavailable
@@ -615,6 +738,30 @@ impl ModulatedLinkBudget {
             margin_with_interference,
         })
     }
+}
+
+impl core::fmt::Display for ModulatedLinkBudget {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        render_budget(f, &self.budget_lines())
+    }
+}
+
+/// Combines carrier-to-noise contributions in the linear domain:
+/// 1/(C/N)_total = Σ 1/(C/N)_i.
+///
+/// The standard composition for bent-pipe/relay budgets (uplink + downlink
+/// transponder) and C/(N+I+IM) pooling. An empty slice yields +∞ dB — no
+/// contribution degrades the link.
+pub fn combine_c_n(contributions: &[Decibel]) -> Decibel {
+    if contributions.is_empty() {
+        return Decibel::new(f64::INFINITY);
+    }
+    Decibel::from_linear(
+        1.0 / contributions
+            .iter()
+            .map(|c| 1.0 / c.to_linear())
+            .sum::<f64>(),
+    )
 }
 
 /// Computes the frequency overlap factor between a receiver and an interfering transmitter.
@@ -1188,6 +1335,95 @@ mod tests {
             .with_interference(Power::watts(1e-12))
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::AbsolutePowerUnavailable);
+    }
+
+    #[test]
+    fn test_budget_lines_sum_to_c_n0() {
+        let budget = LinkBudget::new(
+            &tx_chain(),
+            &rx_chain(),
+            &faded_params(Some(LinkDirection::Downlink)),
+        )
+        .unwrap();
+        let lines = budget.budget_lines();
+        // Gains minus losses must reproduce the C/N0 total exactly.
+        let sum: f64 = lines
+            .iter()
+            .map(|l| match l.kind {
+                LineKind::Gain => l.value.as_f64(),
+                LineKind::Loss => -l.value.as_f64(),
+                LineKind::Subtotal | LineKind::Total => 0.0,
+            })
+            .sum();
+        let total = lines.last().unwrap();
+        assert_eq!(total.label, "C/N0");
+        assert_eq!(total.kind, LineKind::Total);
+        assert_approx_eq!(sum, total.value.as_f64(), atol <= 1e-10);
+        // The rain degradation appears as its own line on downlinks.
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.label == "G/T degradation due to rain")
+        );
+        // Itemized propagation losses are present.
+        assert!(lines.iter().any(|l| l.label == "Rain attenuation"));
+    }
+
+    #[test]
+    fn test_budget_lines_clear_sky_has_no_degradation_line() {
+        let lines = component_stats().budget_lines();
+        assert!(
+            !lines
+                .iter()
+                .any(|l| l.label == "G/T degradation due to rain")
+        );
+    }
+
+    #[test]
+    fn test_modulated_budget_lines_extend_to_margin() {
+        let m = component_stats().modulate(&channel(), &modcod(), 3.0.db());
+        let lines = m.budget_lines();
+        let total = lines.last().unwrap();
+        assert_eq!(total.label, "Link margin");
+        assert_approx_eq!(total.value.as_f64(), m.margin.as_f64(), atol <= 1e-12);
+        // Margin = Eb/N0 − required − design margin, reconstructable from lines.
+        let get = |label: &str| {
+            lines
+                .iter()
+                .find(|l| l.label.starts_with(label))
+                .unwrap()
+                .value
+                .as_f64()
+        };
+        assert_approx_eq!(
+            get("Eb/N0") - get("Required Eb/N0") - get("Design margin"),
+            total.value.as_f64(),
+            atol <= 1e-10
+        );
+    }
+
+    #[test]
+    fn test_budget_display_renders_table() {
+        let m = component_stats().modulate(&channel(), &modcod(), 3.0.db());
+        let table = m.to_string();
+        assert!(table.contains("+ EIRP"));
+        assert!(table.contains("- Free-space path loss"));
+        assert!(table.contains("= Link margin"));
+    }
+
+    #[test]
+    fn test_combine_c_n() {
+        // Two equal contributions halve the linear C/N: −3.01 dB.
+        let combined = combine_c_n(&[10.0.db(), 10.0.db()]);
+        assert_approx_eq!(combined.as_f64(), 10.0 - 3.0103, atol <= 1e-3);
+        // A single contribution passes through.
+        assert_approx_eq!(combine_c_n(&[7.5.db()]).as_f64(), 7.5, atol <= 1e-12);
+        // A dominant weak link controls the total.
+        let combined = combine_c_n(&[30.0.db(), 3.0.db()]);
+        assert!(combined.as_f64() < 3.0);
+        assert!(combined.as_f64() > 2.9);
+        // No contributions: nothing degrades the link.
+        assert!(combine_c_n(&[]).as_f64().is_infinite());
     }
 
     #[test]
