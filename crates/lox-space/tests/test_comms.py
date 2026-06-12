@@ -35,12 +35,11 @@ def make_rx(gain=30.0, noise_temperature=500.0, feed_loss=0.0):
     )
 
 
-def link_stats(tx, rx, **kwargs):
-    """Evaluates the standard 29 GHz downlink between two terminals."""
+def link_budget(tx, rx, **kwargs):
+    """Computes the standard 29 GHz link budget between two terminals."""
     kwargs.setdefault("carrier", 29.0 * lox.GHz)
-    kwargs.setdefault("bandwidth", 5.0 * lox.MHz)
     kwargs.setdefault("range", 1000.0 * lox.km)
-    return lox.LinkStats.for_link(tx, rx, **kwargs)
+    return lox.LinkBudget(tx, rx, **kwargs)
 
 
 # --- Decibel ---
@@ -446,7 +445,7 @@ def test_transmitter_eirp():
     # 10 dBi antenna, 5 W power, 1 dB feed loss, 0 dB OBO
     # EIRP = 10 + 10*log10(5) - 1 = 15.99 dBW
     tx = make_tx(gain=10.0, power=5.0, feed_loss=1.0)
-    stats = link_stats(tx, make_rx())
+    stats = link_budget(tx, make_rx())
     assert float(stats.eirp) == pytest.approx(15.99, abs=0.01)
 
 
@@ -699,8 +698,8 @@ def test_modcod_evaluate():
     losses = lox.PropagationLosses(rain=2.0 * lox.dB)
     ch = lox.Channel(symbol_rate=5 * lox.MHz)
     mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
-    stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth(), losses=losses)
-    m = mc.evaluate(stats, ch, design_margin=3.0 * lox.dB)
+    stats = link_budget(make_tx(), make_rx(), losses=losses)
+    m = stats.modulate(ch, mc, design_margin=3.0 * lox.dB)
     # Es/N0 = C/N0 - 10*log10(5e6); Eb/N0 = Es/N0 (1 info bit/symbol)
     assert float(m.es_n0) == pytest.approx(float(stats.c_n0) - 10 * math.log10(5e6), abs=1e-9)
     assert float(m.eb_n0) == pytest.approx(float(m.es_n0), abs=1e-9)
@@ -789,23 +788,22 @@ def test_freq_overlap_partial():
 # --- Link Stats ---
 
 
-def test_link_stats_noise_power():
-    stats = link_stats(make_tx(), make_rx(), bandwidth=1.0 * lox.MHz)
-    assert float(stats.noise_power) == pytest.approx(-141.61, abs=0.01)
+def test_link_budget_noise_power():
+    budget = link_budget(make_tx(), make_rx())
+    assert float(budget.noise_power(1.0 * lox.MHz)) == pytest.approx(-141.61, abs=0.01)
 
 
 def test_link_stats_end_to_end():
     ch = lox.Channel(symbol_rate=5 * lox.MHz)
     mc = lox.ModCod("QPSK 1/2 test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
 
-    stats = link_stats(
+    stats = link_budget(
         make_tx(),
         make_rx(),
-        bandwidth=ch.bandwidth(),
         tx_angle=0.0 * lox.deg,
         rx_angle=0.0 * lox.deg,
     )
-    modulated = mc.evaluate(stats, ch, design_margin=3.0 * lox.dB)
+    modulated = stats.modulate(ch, mc, design_margin=3.0 * lox.dB)
 
     # EIRP = 46 + 10 - 1 = 55 dBW
     assert float(stats.eirp) == pytest.approx(55.0, abs=0.01)
@@ -831,8 +829,8 @@ def test_link_stats_downlink_degrades_gt():
         rain=2.0 * lox.dB, gaseous=0.5 * lox.dB, cloud=0.2 * lox.dB,
         scintillation=0.3 * lox.dB,
     )
-    clear = link_stats(make_tx(), make_rx(), losses=losses)
-    faded = link_stats(make_tx(), make_rx(), losses=losses, link_type="downlink")
+    clear = link_budget(make_tx(), make_rx(), losses=losses)
+    faded = link_budget(make_tx(), make_rx(), losses=losses, link_type="downlink")
 
     assert clear.gt_degraded is None
     assert clear.link_type is None
@@ -847,15 +845,15 @@ def test_link_stats_downlink_degrades_gt():
 
 def test_link_stats_uplink_stays_clear_sky():
     losses = lox.PropagationLosses(rain=2.0 * lox.dB)
-    clear = link_stats(make_tx(), make_rx(), losses=losses)
-    uplink = link_stats(make_tx(), make_rx(), losses=losses, link_type="uplink")
+    clear = link_budget(make_tx(), make_rx(), losses=losses)
+    uplink = link_budget(make_tx(), make_rx(), losses=losses, link_type="uplink")
     assert uplink.gt_degraded is None
     assert float(uplink.c_n0) == pytest.approx(float(clear.c_n0), abs=1e-12)
 
 
 def test_link_stats_rejects_unknown_link_type():
     with pytest.raises(ValueError):
-        link_stats(make_tx(), make_rx(), link_type="sideways")
+        link_budget(make_tx(), make_rx(), link_type="sideways")
 
 
 def test_link_stats_with_losses():
@@ -864,14 +862,10 @@ def test_link_stats_with_losses():
 
     losses = lox.PropagationLosses(rain=2.0 * lox.dB, other=[("Atmospheric", 1.0 * lox.dB, True)])
 
-    stats_no_loss = link_stats(
-        make_tx(), make_rx(), bandwidth=ch.bandwidth()
-    )
-    stats_loss = link_stats(
-        make_tx(), make_rx(), bandwidth=ch.bandwidth(), losses=losses
-    )
-    modulated_no_loss = mc.evaluate(stats_no_loss, ch, design_margin=3.0 * lox.dB)
-    modulated_loss = mc.evaluate(stats_loss, ch, design_margin=3.0 * lox.dB)
+    stats_no_loss = link_budget(make_tx(), make_rx())
+    stats_loss = link_budget(make_tx(), make_rx(), losses=losses)
+    modulated_no_loss = stats_no_loss.modulate(ch, mc, design_margin=3.0 * lox.dB)
+    modulated_loss = stats_loss.modulate(ch, mc, design_margin=3.0 * lox.dB)
 
     # 3 dB of environmental losses should reduce margin by 3 dB
     margin_diff = float(modulated_no_loss.margin) - float(modulated_loss.margin)
@@ -893,16 +887,6 @@ def test_channel_spreading_factor_narrowband():
     ch = lox.Channel(symbol_rate=1 * lox.MHz)
     assert ch.spreading_factor() is None
     assert ch.processing_gain() is None
-
-
-def test_modcod_evaluate_rejects_bandwidth_mismatch():
-    # The link was computed with a 5 MHz noise bandwidth, not the channel's
-    # 6.75 MHz occupied bandwidth.
-    ch = lox.Channel(symbol_rate=5 * lox.MHz)
-    mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
-    stats = link_stats(make_tx(), make_rx(), bandwidth=5 * lox.MHz)
-    with pytest.raises(ValueError, match="does not match"):
-        mc.evaluate(stats, ch)
 
 
 def test_modcod_getters_and_repr():
@@ -944,11 +928,11 @@ def test_modcod_information_rate():
     assert mc.information_rate(5 * lox.MHz).to_hertz() == pytest.approx(5e6, rel=1e-10)
 
 
-# --- LinkStats additional outputs ---
+# --- LinkBudget additional outputs ---
 
 
 def test_link_stats_carrier_power():
-    stats = link_stats(make_tx(), make_rx())
+    stats = link_budget(make_tx(), make_rx())
     # carrier_rx_power should be finite for component-tier links
     assert math.isfinite(float(stats.carrier_rx_power))
 
@@ -1040,32 +1024,35 @@ def test_noise_stage_pickle():
     assert repr(restored) == repr(ns)
 
 
-# --- LinkStats additional getters ---
+# --- LinkBudget additional getters ---
 
 
 def test_link_stats_all_getters():
     ch = lox.Channel(symbol_rate=5 * lox.MHz)
 
-    stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth())
+    stats = link_budget(make_tx(), make_rx())
 
-    # Test getters not covered in test_link_stats_end_to_end
-    assert math.isfinite(float(stats.c_n))
+    # Derived views take the bandwidth explicitly.
+    assert math.isfinite(float(stats.c_n(ch.bandwidth())))
     assert stats.carrier_rx_power is not None
     assert math.isfinite(float(stats.carrier_rx_power))
-    assert stats.noise_power is not None
-    assert math.isfinite(float(stats.noise_power))
-    assert stats.bandwidth.to_hertz() == pytest.approx(5e6 * 1.35, rel=1e-6)
+    assert stats.noise_power(ch.bandwidth()) is not None
+    assert math.isfinite(float(stats.noise_power(ch.bandwidth())))
     assert math.isfinite(float(stats.gt))
+    # C/N0 consistency through the views.
+    bw = ch.bandwidth()
+    c_n0 = float(stats.carrier_rx_power) - float(stats.noise_power(bw)) + 10 * math.log10(float(bw))
+    assert float(stats.c_n0) == pytest.approx(c_n0, abs=1e-9)
 
 
 def test_link_stats_repr():
     ch = lox.Channel(symbol_rate=5 * lox.MHz)
 
     mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
-    stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth())
-    modulated = mc.evaluate(stats, ch, design_margin=3.0 * lox.dB)
+    stats = link_budget(make_tx(), make_rx())
+    modulated = stats.modulate(ch, mc, design_margin=3.0 * lox.dB)
     r = repr(stats)
-    assert "LinkStats" in r
+    assert "LinkBudget" in r
     assert "c_n0=" in r
     assert "margin=" in repr(modulated)
 
@@ -1140,7 +1127,7 @@ def test_pfd_mask_eq_and_pickle():
 def test_transmitter_eirp_complex_antenna():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
     a = lox.PatternedAntenna(pattern=p)
-    stats = link_stats(make_tx(antenna=a), make_rx())
+    stats = link_budget(make_tx(antenna=a), make_rx())
     assert math.isfinite(float(stats.eirp))
 
 
@@ -1163,24 +1150,22 @@ def test_lumped_link_interference_requires_absolute_power():
     rx = lox.GtModel(KA_BAND, 3.01 * lox.dB)
     channel = lox.Channel(symbol_rate=5.0 * lox.MHz)
     mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
-    link = link_stats(tx, rx, bandwidth=channel.bandwidth())
-    modulated = mc.evaluate(link, channel, design_margin=3.0 * lox.dB)
+    link = link_budget(tx, rx)
+    modulated = link.modulate(channel, mc, design_margin=3.0 * lox.dB)
 
     with pytest.raises(ValueError, match="absolute carrier and noise powers"):
         modulated.with_interference(1e-12 * lox.W)
 
 
-# --- ModulatedLinkStats.with_interference happy path ---
+# --- ModulatedLinkBudget.with_interference happy path ---
 
 
 def test_modulated_with_interference_component_tier():
     channel = lox.Channel(symbol_rate=5.0 * lox.MHz)
 
     mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
-    link = link_stats(
-        make_tx(), make_rx(), bandwidth=channel.bandwidth()
-    )
-    modulated = mc.evaluate(link, channel, design_margin=3.0 * lox.dB)
+    link = link_budget(make_tx(), make_rx())
+    modulated = link.modulate(channel, mc, design_margin=3.0 * lox.dB)
     interference = modulated.with_interference(1e-12 * lox.W)
 
     assert float(interference.margin_with_interference) < float(modulated.margin)
@@ -1208,19 +1193,19 @@ def test_channel_dsss_pickle():
     assert float(restored.processing_gain()) == pytest.approx(float(ch.processing_gain()), abs=1e-10)
 
 
-# --- LinkStats pattern-angle getters and pointing arguments ---
+# --- LinkBudget pattern-angle getters and pointing arguments ---
 
 
 def test_link_stats_off_boresight_angle_reduces_eirp():
     pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
     tx_ant = lox.PatternedAntenna(pattern=pattern)
-    boresight = link_stats(make_tx(antenna=tx_ant), make_rx())
-    off = link_stats(make_tx(antenna=tx_ant), make_rx(), tx_angle=2.0 * lox.deg)
+    boresight = link_budget(make_tx(antenna=tx_ant), make_rx())
+    off = link_budget(make_tx(antenna=tx_ant), make_rx(), tx_angle=2.0 * lox.deg)
     assert float(off.eirp) < float(boresight.eirp)
 
 
 def test_link_stats_defaults_to_boresight():
-    stats = link_stats(make_tx(), make_rx())
+    stats = link_budget(make_tx(), make_rx())
     assert float(stats.c_n0) == pytest.approx(104.913, abs=0.1)
 
 
@@ -1230,12 +1215,12 @@ def test_link_stats_direction_pointing():
     pattern = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
     tx_ant = lox.PatternedAntenna(pattern=pattern, frame=frame)
 
-    on_axis = link_stats(
+    on_axis = link_budget(
         make_tx(antenna=tx_ant),
         make_rx(),
         tx_direction=[1.0, 0.0, 0.0],
     )
-    off_axis = link_stats(
+    off_axis = link_budget(
         make_tx(antenna=tx_ant),
         make_rx(),
         tx_direction=[0.0, 0.0, 1.0],
@@ -1246,7 +1231,7 @@ def test_link_stats_direction_pointing():
 
 def test_link_stats_rejects_angle_and_direction():
     with pytest.raises(ValueError, match="tx_angle or tx_direction"):
-        link_stats(
+        link_budget(
             make_tx(),
             make_rx(),
             tx_angle=1.0 * lox.deg,
@@ -1254,17 +1239,19 @@ def test_link_stats_rejects_angle_and_direction():
         )
 
 
-# --- ModulatedLinkStats link and channel getters ---
+# --- ModulatedLinkBudget budget and channel getters ---
 
 
 def test_modulated_link_stats_link_and_channel_getters():
     ch = lox.Channel(symbol_rate=5 * lox.MHz)
     mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
-    stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth())
-    modulated = mc.evaluate(stats, ch)
+    stats = link_budget(make_tx(), make_rx())
+    modulated = stats.modulate(ch, mc)
 
-    # link getter returns the underlying PyLinkStats
-    assert modulated.link.c_n0 == stats.c_n0
+    # budget getter returns the underlying LinkBudget
+    assert modulated.budget.c_n0 == stats.c_n0
+    assert math.isfinite(float(modulated.c_n))
+    assert modulated.closes()
     # channel and modcod getters round-trip
     assert modulated.channel == ch
     assert modulated.modcod == mc
@@ -1277,10 +1264,8 @@ def test_modulated_link_stats_link_and_channel_getters():
 def test_interference_stats_c_n0i0_and_repr():
     channel = lox.Channel(symbol_rate=5.0 * lox.MHz)
     mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
-    link = link_stats(
-        make_tx(), make_rx(), bandwidth=channel.bandwidth()
-    )
-    modulated = mc.evaluate(link, channel, design_margin=3.0 * lox.dB)
+    link = link_budget(make_tx(), make_rx())
+    modulated = link.modulate(channel, mc, design_margin=3.0 * lox.dB)
     interference = modulated.with_interference(1e-12 * lox.W)
 
     assert math.isfinite(float(interference.c_n0i0))
@@ -1289,16 +1274,16 @@ def test_interference_stats_c_n0i0_and_repr():
     assert "c_n0i0" in r
 
 
-# --- ModulatedLinkStats repr ---
+# --- ModulatedLinkBudget repr ---
 
 
 def test_modulated_link_stats_repr():
     ch = lox.Channel(symbol_rate=5 * lox.MHz)
     mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
-    stats = link_stats(make_tx(), make_rx(), bandwidth=ch.bandwidth())
-    modulated = mc.evaluate(stats, ch)
+    stats = link_budget(make_tx(), make_rx())
+    modulated = stats.modulate(ch, mc)
     r = repr(modulated)
-    assert "ModulatedLinkStats" in r
+    assert "ModulatedLinkBudget" in r
     assert "eb_n0=" in r
     assert "margin=" in r
 
@@ -1356,7 +1341,7 @@ def test_frequency_range():
 def test_for_link_reference_values():
     # 46 dBi + 10 W \u2212 1 dB feed loss \u2192 EIRP 55 dBW;
     # 30 dBi / 500 K \u2192 G/T 3.0103 dB/K; C/N0 104.913 dB\u00b7Hz at 1000 km.
-    stats = link_stats(make_tx(), make_rx())
+    stats = link_budget(make_tx(), make_rx())
 
     assert float(stats.eirp) == pytest.approx(55.0, abs=0.01)
     assert float(stats.gt) == pytest.approx(3.0103, abs=0.01)
@@ -1365,26 +1350,24 @@ def test_for_link_reference_values():
 
 
 def test_lumped_link():
-    stats = lox.LinkStats.for_link(
+    stats = lox.LinkBudget(
         lox.EirpModel(KA_BAND, 55.0 * lox.dB),
         lox.GtModel(KA_BAND, 3.01 * lox.dB),
         carrier=29.0 * lox.GHz,
-        bandwidth=5.0 * lox.MHz,
         range=1000.0 * lox.km,
     )
     assert float(stats.c_n0) == pytest.approx(104.913, abs=0.1)
     assert stats.carrier_rx_power is None
-    assert stats.noise_power is None
+    assert stats.noise_power(5.0 * lox.MHz) is None
 
 
 def test_for_link_carrier_out_of_band():
     rx_band = lox.FrequencyRange(17.0 * lox.GHz, 21.0 * lox.GHz)
     with pytest.raises(ValueError, match="outside the supported range"):
-        lox.LinkStats.for_link(
+        lox.LinkBudget(
             lox.EirpModel(KA_BAND, 55.0 * lox.dB),
             lox.GtModel(rx_band, 3.01 * lox.dB),
             carrier=29.0 * lox.GHz,
-            bandwidth=5.0 * lox.MHz,
             range=1000.0 * lox.km,
         )
 
@@ -1438,11 +1421,10 @@ def test_shared_antenna_transceiver():
         feed_loss=0.5 * lox.dB,
     )
     assert tx.antenna == rx.antenna
-    link = lox.LinkStats.for_link(
+    link = lox.LinkBudget(
         tx,
         lox.GtModel(KA_BAND, 30.0 * lox.dB),
         carrier=29.0 * lox.GHz,
-        bandwidth=5.0 * lox.MHz,
         range=1000.0 * lox.km,
         rx_angle=0.0 * lox.deg,
     )
@@ -1616,23 +1598,20 @@ def test_for_link_error_paths():
     rx = lox.GtModel(KA_BAND, 3.01 * lox.dB)
     # Wrong terminal types
     with pytest.raises(ValueError, match="expected a TxChain or EirpModel"):
-        lox.LinkStats.for_link(
+        lox.LinkBudget(
             rx, rx,
-            carrier=29.0 * lox.GHz, bandwidth=5.0 * lox.MHz,
-            range=1000.0 * lox.km,
+            carrier=29.0 * lox.GHz, range=1000.0 * lox.km,
         )
     with pytest.raises(ValueError, match="expected an RxChain or GtModel"):
-        lox.LinkStats.for_link(
+        lox.LinkBudget(
             tx, tx,
-            carrier=29.0 * lox.GHz, bandwidth=5.0 * lox.MHz,
-            range=1000.0 * lox.km,
+            carrier=29.0 * lox.GHz, range=1000.0 * lox.km,
         )
     # Non-physical link inputs
     with pytest.raises(ValueError, match="non-physical"):
-        lox.LinkStats.for_link(
+        lox.LinkBudget(
             tx, rx,
-            carrier=29.0 * lox.GHz, bandwidth=0.0 * lox.MHz,
-            range=1000.0 * lox.km,
+            carrier=29.0 * lox.GHz, range=0.0 * lox.km,
         )
 
 

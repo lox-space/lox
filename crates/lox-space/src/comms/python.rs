@@ -13,7 +13,7 @@ use lox_comms::antenna::{Antenna, AntennaFrame, AntennaGain, ConstantAntenna, Pa
 use lox_comms::channel::{Channel, LinkDirection, Modulation};
 use lox_comms::link_budget::{Eirp, GOverT};
 use lox_comms::link_budget::{
-    InterferenceStats, LinkParameters, LinkStats, ModulatedLinkStats, frequency_overlap_factor,
+    InterferenceStats, LinkBudget, LinkConditions, ModulatedLinkBudget, frequency_overlap_factor,
 };
 use lox_comms::modcod::{self, ErrorMetric, ModCod};
 use lox_comms::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
@@ -1093,25 +1093,6 @@ impl PyModCod {
         PyFrequency(self.0.mode().information_rate(symbol_rate.0))
     }
 
-    /// Evaluates a link budget on a channel against this MODCOD.
-    ///
-    /// Args:
-    ///     link: The modulation-agnostic link budget.
-    ///     channel: The waveform the link runs on.
-    ///     design_margin: Margin applied on top of the threshold (default 0 dB).
-    #[pyo3(signature = (link, channel, design_margin=None))]
-    fn evaluate(
-        &self,
-        link: PyLinkStats,
-        channel: &PyChannel,
-        design_margin: Option<PyDecibel>,
-    ) -> PyResult<PyModulatedLinkStats> {
-        let margin = design_margin.map(|m| m.0).unwrap_or(Decibel::new(0.0));
-        ModulatedLinkStats::evaluate(link.0, &channel.0, &self.0, margin)
-            .map(PyModulatedLinkStats)
-            .map_err(|e| PyValueError::new_err(e.to_string()))
-    }
-
     fn __eq__(&self, other: &PyModCod) -> bool {
         self.0 == other.0
     }
@@ -1267,27 +1248,28 @@ impl PyPropagationLosses {
     }
 }
 
-// --- Link Stats ---
+// --- Link Budget ---
 
-/// Modulation-agnostic link budget statistics.
-#[pyclass(name = "LinkStats", module = "lox_space", frozen, from_py_object)]
+/// A modulation-agnostic link budget between two link terminals.
+#[pyclass(name = "LinkBudget", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
-pub struct PyLinkStats(pub LinkStats);
+pub struct PyLinkBudget(pub LinkBudget);
 
 #[pymethods]
-impl PyLinkStats {
+impl PyLinkBudget {
     /// Computes a modulation-agnostic link budget between two link terminals.
     ///
     /// The carrier must lie inside both terminals' frequency ranges. Each
     /// terminal's pointing is given either as an off-boresight angle or as a
     /// line-of-sight direction vector in the antenna's parent frame; omitting
-    /// both assumes ideal (boresight) pointing.
+    /// both assumes ideal (boresight) pointing. All outputs are
+    /// bandwidth-free; use ``modulate`` to apply a waveform and MODCOD, or
+    /// the ``c_n``/``noise_power`` methods for ad-hoc bandwidths.
     ///
     /// Args:
     ///     tx: The transmit terminal (TxChain or EirpModel).
     ///     rx: The receive terminal (RxChain or GtModel).
     ///     carrier: Carrier frequency.
-    ///     bandwidth: Noise bandwidth as Frequency.
     ///     range: Slant range as Distance.
     ///     tx_angle: Off-boresight angle at transmitter as Angle (optional).
     ///     rx_angle: Off-boresight angle at receiver as Angle (optional).
@@ -1297,14 +1279,13 @@ impl PyLinkStats {
     ///     link_type: "uplink", "downlink", or "crosslink" (optional). On
     ///         downlinks the budget uses the rain-degraded G/T
     ///         (ITU-R P.618 §8.2).
-    #[staticmethod]
-    #[pyo3(signature = (tx, rx, carrier, bandwidth, range, tx_angle=None, rx_angle=None, tx_direction=None, rx_direction=None, losses=None, link_type=None))]
+    #[new]
+    #[pyo3(signature = (tx, rx, carrier, range, tx_angle=None, rx_angle=None, tx_direction=None, rx_direction=None, losses=None, link_type=None))]
     #[allow(clippy::too_many_arguments)]
-    fn for_link(
+    fn new(
         tx: &Bound<'_, PyAny>,
         rx: &Bound<'_, PyAny>,
         carrier: PyFrequency,
-        bandwidth: PyFrequency,
         range: PyDistance,
         tx_angle: Option<PyAngle>,
         rx_angle: Option<PyAngle>,
@@ -1321,19 +1302,38 @@ impl PyLinkStats {
             .map(|l| l.0.clone())
             .unwrap_or_else(PropagationLosses::none);
 
-        let mut builder = LinkParameters::builder(carrier.0, bandwidth.0, range.0)
+        let mut builder = LinkConditions::builder(carrier.0, range.0)
             .losses(env_losses)
             .tx_pointing(tx_pointing)
             .rx_pointing(rx_pointing);
         if let Some(link_type) = link_type {
             builder = builder.direction(parse_link_direction(link_type)?);
         }
-        let params = builder
+        let conditions = builder
             .build()
             .map_err(|err| PyValueError::new_err(err.to_string()))?;
-        LinkStats::for_link(&tx, &rx, &params)
+        LinkBudget::new(&tx, &rx, &conditions)
             .map(Self)
             .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Applies a waveform and a MODCOD to this budget.
+    ///
+    /// Everything bandwidth-dependent derives from the channel.
+    ///
+    /// Args:
+    ///     channel: The waveform the link runs on.
+    ///     modcod: The modulation and coding scheme.
+    ///     design_margin: Margin applied on top of the threshold (default 0 dB).
+    #[pyo3(signature = (channel, modcod, design_margin=None))]
+    fn modulate(
+        &self,
+        channel: &PyChannel,
+        modcod: &PyModCod,
+        design_margin: Option<PyDecibel>,
+    ) -> PyModulatedLinkBudget {
+        let margin = design_margin.map(|m| m.0).unwrap_or(Decibel::new(0.0));
+        PyModulatedLinkBudget(self.0.modulate(&channel.0, &modcod.0, margin))
     }
 
     /// Slant range.
@@ -1380,10 +1380,9 @@ impl PyLinkStats {
         PyDecibel(self.0.c_n0)
     }
 
-    /// C/N in dB.
-    #[getter]
-    fn c_n(&self) -> PyDecibel {
-        PyDecibel(self.0.c_n)
+    /// Returns C/N in dB for the given noise bandwidth.
+    fn c_n(&self, bandwidth: PyFrequency) -> PyDecibel {
+        PyDecibel(self.0.c_n(bandwidth.0))
     }
 
     /// Received carrier power in dBW. ``None`` for lumped G/T receivers.
@@ -1392,16 +1391,10 @@ impl PyLinkStats {
         self.0.carrier_rx_power.map(PyDecibel)
     }
 
-    /// Noise power in dBW. ``None`` for lumped G/T receivers.
-    #[getter]
-    fn noise_power(&self) -> Option<PyDecibel> {
-        self.0.noise_power.map(PyDecibel)
-    }
-
-    /// Channel noise bandwidth.
-    #[getter]
-    fn bandwidth(&self) -> PyFrequency {
-        PyFrequency(self.0.bandwidth)
+    /// Returns the noise power in dBW for the given bandwidth. ``None`` for
+    /// lumped G/T receivers.
+    fn noise_power(&self, bandwidth: PyFrequency) -> Option<PyDecibel> {
+        self.0.noise_power(bandwidth.0).map(PyDecibel)
     }
 
     /// Link frequency.
@@ -1412,9 +1405,8 @@ impl PyLinkStats {
 
     fn __repr__(&self) -> String {
         format!(
-            "LinkStats(c_n0={:.2} dB·Hz, c_n={:.2} dB, eirp={:.2} dBW, gt={:.2} dB/K)",
+            "LinkBudget(c_n0={:.2} dB·Hz, eirp={:.2} dBW, gt={:.2} dB/K)",
             self.0.c_n0.as_f64(),
-            self.0.c_n.as_f64(),
             self.0.eirp.as_f64(),
             self.0.gt.as_f64(),
         )
@@ -1470,24 +1462,35 @@ impl PyInterferenceStats {
     }
 }
 
-// --- Modulated Link Stats ---
+// --- Modulated Link Budget ---
 
-/// Link-budget output with modulation/coding figures applied.
+/// Link-budget output with a modulation and coding scheme applied.
 #[pyclass(
-    name = "ModulatedLinkStats",
+    name = "ModulatedLinkBudget",
     module = "lox_space",
     frozen,
     from_py_object
 )]
 #[derive(Debug, Clone)]
-pub struct PyModulatedLinkStats(pub ModulatedLinkStats);
+pub struct PyModulatedLinkBudget(pub ModulatedLinkBudget);
 
 #[pymethods]
-impl PyModulatedLinkStats {
+impl PyModulatedLinkBudget {
     /// The underlying modulation-agnostic link budget.
     #[getter]
-    fn link(&self) -> PyLinkStats {
-        PyLinkStats(self.0.link.clone())
+    fn budget(&self) -> PyLinkBudget {
+        PyLinkBudget(self.0.budget.clone())
+    }
+
+    /// C/N in dB in the channel's occupied bandwidth.
+    #[getter]
+    fn c_n(&self) -> PyDecibel {
+        PyDecibel(self.0.c_n)
+    }
+
+    /// Returns whether the link closes: margin >= 0.
+    fn closes(&self) -> bool {
+        self.0.closes()
     }
 
     /// The waveform the link was evaluated on.
@@ -1547,7 +1550,7 @@ impl PyModulatedLinkStats {
 
     fn __repr__(&self) -> String {
         format!(
-            "ModulatedLinkStats(eb_n0={:.2} dB, margin={:.2} dB)",
+            "ModulatedLinkBudget(eb_n0={:.2} dB, margin={:.2} dB)",
             self.0.eb_n0.as_f64(),
             self.0.margin.as_f64(),
         )

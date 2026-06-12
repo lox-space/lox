@@ -2706,19 +2706,6 @@ class ModCod:
     def information_rate(self, symbol_rate: Frequency) -> Frequency:
         """Returns the information bit rate at the given symbol rate."""
         ...
-    def evaluate(
-        self,
-        link: LinkStats,
-        channel: Channel,
-        design_margin: Decibel | None = None,
-    ) -> ModulatedLinkStats:
-        """Evaluates a link budget on a channel against this MODCOD.
-
-        Raises:
-            ValueError: if the link's noise bandwidth does not match the
-                channel's occupied bandwidth.
-        """
-        ...
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
@@ -2969,14 +2956,30 @@ class GtModel:
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
-class LinkStats:
-    """Modulation-agnostic link budget statistics."""
-    @staticmethod
-    def for_link(
+class LinkBudget:
+    """A modulation-agnostic link budget between two link terminals.
+
+    All outputs are bandwidth-free; use ``modulate`` to apply a waveform and
+    MODCOD, or the ``c_n``/``noise_power`` methods for ad-hoc bandwidths.
+
+    Args:
+        tx: The transmit terminal (TxChain or EirpModel).
+        rx: The receive terminal (RxChain or GtModel).
+        carrier: Carrier frequency.
+        range: Slant range as Distance.
+        tx_angle: Off-boresight angle at transmitter as Angle (optional).
+        rx_angle: Off-boresight angle at receiver as Angle (optional).
+        tx_direction: Line-of-sight direction at transmitter as [x, y, z] (optional).
+        rx_direction: Line-of-sight direction at receiver as [x, y, z] (optional).
+        losses: PropagationLosses (optional, defaults to none).
+        link_type: "uplink", "downlink", or "crosslink" (optional). On
+            downlinks the budget uses the rain-degraded G/T (ITU-R P.618 §8.2).
+    """
+    def __new__(
+        cls,
         tx: TxTerminal,
         rx: RxTerminal,
         carrier: Frequency,
-        bandwidth: Frequency,
         range: Distance,
         tx_angle: Angle | None = None,
         rx_angle: Angle | None = None,
@@ -2984,16 +2987,15 @@ class LinkStats:
         rx_direction: list[float] | None = None,
         losses: PropagationLosses | None = None,
         link_type: str | None = None,
-    ) -> LinkStats:
-        """Computes a modulation-agnostic link budget between two link terminals.
-
-        The carrier must lie inside both terminals' frequency ranges. Each
-        terminal's pointing is given either as an off-boresight angle or as a
-        line-of-sight direction vector in the antenna's parent frame; omitting
-        both assumes ideal (boresight) pointing. On downlinks
-        (``link_type="downlink"``) the budget uses the rain-degraded G/T
-        (ITU-R P.618 §8.2).
-        """
+    ) -> Self: ...
+    def modulate(
+        self,
+        channel: Channel,
+        modcod: ModCod,
+        design_margin: Decibel | None = None,
+    ) -> ModulatedLinkBudget:
+        """Applies a waveform and a MODCOD to this budget. Everything
+        bandwidth-dependent derives from the channel."""
         ...
     @property
     def slant_range(self) -> Distance:
@@ -3024,21 +3026,16 @@ class LinkStats:
     def c_n0(self) -> Decibel:
         """Carrier-to-noise density ratio in dB·Hz."""
         ...
-    @property
-    def c_n(self) -> Decibel:
-        """C/N in dB."""
+    def c_n(self, bandwidth: Frequency) -> Decibel:
+        """Returns C/N in dB for the given noise bandwidth."""
         ...
     @property
     def carrier_rx_power(self) -> Decibel | None:
         """Received carrier power in dBW. ``None`` for lumped G/T receivers."""
         ...
-    @property
-    def noise_power(self) -> Decibel | None:
-        """Noise power in dBW. ``None`` for lumped G/T receivers."""
-        ...
-    @property
-    def bandwidth(self) -> Frequency:
-        """Channel noise bandwidth."""
+    def noise_power(self, bandwidth: Frequency) -> Decibel | None:
+        """Returns the noise power in dBW for the given bandwidth. ``None``
+        for lumped G/T receivers."""
         ...
     @property
     def frequency(self) -> Frequency:
@@ -3046,30 +3043,10 @@ class LinkStats:
         ...
     def __repr__(self) -> str: ...
 
-class InterferenceStats:
-    """Interference statistics for a link with a given interferer power."""
-    @property
-    def interference_power(self) -> Power:
-        """Interference power."""
-        ...
-    @property
-    def c_n0i0(self) -> Decibel:
-        """Carrier-to-noise-plus-interference density ratio in dB·Hz."""
-        ...
-    @property
-    def eb_n0i0(self) -> Decibel:
-        """Eb/(N0+I0) in dB."""
-        ...
-    @property
-    def margin_with_interference(self) -> Decibel:
-        """Link margin with interference in dB."""
-        ...
-    def __repr__(self) -> str: ...
-
-class ModulatedLinkStats:
+class ModulatedLinkBudget:
     """Link-budget output with a modulation and coding scheme applied."""
     @property
-    def link(self) -> LinkStats:
+    def budget(self) -> LinkBudget:
         """The underlying modulation-agnostic link budget."""
         ...
     @property
@@ -3091,6 +3068,9 @@ class ModulatedLinkStats:
     def information_rate(self) -> Frequency:
         """Information bit rate: symbol rate × info bits per symbol."""
         ...
+    def closes(self) -> bool:
+        """Returns whether the link closes: margin >= 0."""
+        ...
     @property
     def es_n0(self) -> Decibel:
         """Es/N0 (energy per symbol to noise spectral density) in dB."""
@@ -3098,6 +3078,10 @@ class ModulatedLinkStats:
     @property
     def eb_n0(self) -> Decibel:
         """Eb/N0 (energy per information bit to noise spectral density) in dB."""
+        ...
+    @property
+    def c_n(self) -> Decibel:
+        """C/N in dB in the channel's occupied bandwidth."""
         ...
     @property
     def margin(self) -> Decibel:

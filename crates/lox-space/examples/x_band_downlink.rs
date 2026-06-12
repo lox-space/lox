@@ -22,9 +22,7 @@ use std::error::Error;
 use lox_space::comms::FrequencyRange;
 use lox_space::comms::antenna::Antenna;
 use lox_space::comms::channel::{Channel, LinkDirection};
-use lox_space::comms::link_budget::{
-    Eirp, GOverT, LinkParameters, LinkStats, ModulatedLinkStats, PropagationLosses,
-};
+use lox_space::comms::link_budget::{Eirp, GOverT, LinkBudget, LinkConditions, PropagationLosses};
 use lox_space::comms::modcod::{ModCod, dvb_s2};
 use lox_space::comms::pfd::{PfdMask, power_flux_density};
 use lox_space::comms::pointing::Pointing;
@@ -124,34 +122,46 @@ fn main() -> Result<(), Box<dyn Error>> {
         .expect("table mode");
     let design_margin = 3.0.db();
 
-    let params = LinkParameters::builder(carrier, channel.bandwidth(), range)
+    let conditions = LinkConditions::builder(carrier, range)
         .losses(losses)
         .tx_pointing(tx_pointing)
         .rx_pointing(rx_pointing)
         .direction(LinkDirection::Downlink)
         .build()?;
-    let link = LinkStats::for_link(&tx, &rx, &params)?;
-    let modulated = ModulatedLinkStats::evaluate(link, &channel, modcod, design_margin)?;
+    let budget = LinkBudget::new(&tx, &rx, &conditions)?;
+    let modulated = budget.modulate(&channel, modcod, design_margin);
 
     println!("\n--- Link budget at {} GHz ---", carrier.to_gigahertz());
-    println!("EIRP:            {:>8.2} dBW", modulated.link.eirp.as_f64());
-    println!("FSPL:            {:>8.2} dB", modulated.link.fspl.as_f64());
+    println!(
+        "EIRP:            {:>8.2} dBW",
+        modulated.budget.eirp.as_f64()
+    );
+    println!(
+        "FSPL:            {:>8.2} dB",
+        modulated.budget.fspl.as_f64()
+    );
     println!(
         "Env. losses:     {:>8.2} dB",
-        modulated.link.losses.total().as_f64()
+        modulated.budget.losses.total().as_f64()
     );
-    println!("G/T (clear-sky): {:>8.2} dB/K", modulated.link.gt.as_f64());
-    let gt_degraded = modulated.link.gt_degraded.expect("downlink with RX chain");
+    println!(
+        "G/T (clear-sky): {:>8.2} dB/K",
+        modulated.budget.gt.as_f64()
+    );
+    let gt_degraded = modulated
+        .budget
+        .gt_degraded
+        .expect("downlink with RX chain");
     println!(
         "G/T (rain):      {:>8.2} dB/K ({:+.2} dB)",
         gt_degraded.as_f64(),
-        gt_degraded.as_f64() - modulated.link.gt.as_f64()
+        gt_degraded.as_f64() - modulated.budget.gt.as_f64()
     );
     println!(
         "C/N0:            {:>8.2} dB·Hz",
-        modulated.link.c_n0.as_f64()
+        modulated.budget.c_n0.as_f64()
     );
-    println!("C/N:             {:>8.2} dB", modulated.link.c_n.as_f64());
+    println!("C/N:             {:>8.2} dB", modulated.c_n.as_f64());
     println!("Es/N0:           {:>8.2} dB", modulated.es_n0.as_f64());
     println!("Eb/N0:           {:>8.2} dB", modulated.eb_n0.as_f64());
     println!(
@@ -160,7 +170,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     println!("Link margin:     {:>8.2} dB", modulated.margin.as_f64());
     assert!(
-        modulated.margin.as_f64() > 0.0,
+        modulated.closes(),
         "the downlink should close at worst-case geometry"
     );
 
@@ -182,7 +192,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Regulatory check: PFD on the ground vs. the RR Art. 21.16 mask
     // (−150 dBW/m²/4 kHz below 5° for the 8.025–8.4 GHz EESS allocation).
     // ------------------------------------------------------------------
-    let pfd = power_flux_density(modulated.link.eirp, range, channel.bandwidth(), 4.0.khz());
+    let pfd = power_flux_density(modulated.budget.eirp, range, channel.bandwidth(), 4.0.khz());
     let mask = PfdMask::art_21_16((-150.0).db());
     let limit = mask.value_at(elevation);
     println!(
