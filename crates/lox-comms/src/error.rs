@@ -75,19 +75,6 @@ pub enum LinkBudgetError {
         /// The link end's frequency range.
         band: FrequencyRange,
     },
-    /// The link budget's noise bandwidth does not match the channel's
-    /// occupied bandwidth.
-    #[error(
-        "link noise bandwidth {} Hz does not match the channel bandwidth {} Hz",
-        link.to_hertz(),
-        channel.to_hertz()
-    )]
-    BandwidthMismatch {
-        /// The noise bandwidth the link budget was computed with.
-        link: Frequency,
-        /// The channel's occupied bandwidth.
-        channel: Frequency,
-    },
 }
 
 #[cfg(test)]

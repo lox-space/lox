@@ -61,7 +61,7 @@ losses = lox.PropagationLosses(rain=2.0 * lox.dB, gaseous=0.5 * lox.dB)
 losses = lox.PropagationLosses.none()
 ```
 
-The result plugs directly into `LinkStats.for_link` for link budget analysis.
+The result plugs directly into `LinkBudget` for link budget analysis.
 
 ## Individual Models
 
@@ -158,7 +158,7 @@ print(f"Rain height: {h.to_kilometers():.1f} km")
 
 ## Link Budget Integration
 
-`PropagationLosses` can be passed directly to `LinkStats.for_link`, where
+`PropagationLosses` can be passed directly to `LinkBudget`, where
 `tx` is a `TxChain` or `EirpModel` and `rx` is an `RxChain` or `GtModel` (see
 [Communications](comms.md)):
 
@@ -172,11 +172,10 @@ losses = provider.propagation_losses(
     diameter=0.6 * lox.m,
 )
 
-stats = lox.LinkStats.for_link(
+budget = lox.LinkBudget(
     tx,
     rx,
     carrier=29.0 * lox.GHz,
-    bandwidth=5.0 * lox.MHz,
     range=1000.0 * lox.km,
     losses=losses,
 )
