@@ -14,6 +14,7 @@ use lox_core::units::{Decibel, Distance, Frequency, Power, Temperature};
 
 use crate::channel::{Channel, LinkDirection};
 use crate::error::NonPhysicalError;
+use crate::modcod::ModCod;
 use crate::pointing::Pointing;
 use crate::utils::free_space_path_loss;
 use crate::{BOLTZMANN_CONSTANT, LinkBudgetError};
@@ -466,25 +467,64 @@ impl LinkStats {
     }
 }
 
-/// Link-budget output with modulation/coding figures applied.
+/// Link-budget output with a modulation and coding scheme applied.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ModulatedLinkStats {
     /// The modulation-agnostic link budget.
     pub link: LinkStats,
-    /// The channel (modulation, FEC, required Eb/N₀, margin) applied.
+    /// The waveform the link is evaluated on.
     pub channel: Channel,
-    /// Symbol rate from the channel.
-    pub symbol_rate: Frequency,
+    /// The modulation and coding scheme the link is evaluated against.
+    pub modcod: ModCod,
+    /// Design margin applied on top of the MODCOD threshold.
+    pub design_margin: Decibel,
     /// Es/N0 (energy per symbol to noise spectral density).
     pub es_n0: Decibel,
     /// Eb/N0 (energy per information bit to noise spectral density).
     pub eb_n0: Decibel,
-    /// Link margin.
+    /// Link margin: Eb/N0 − required Eb/N0 − design margin.
     pub margin: Decibel,
 }
 
 impl ModulatedLinkStats {
+    /// Evaluates a link budget against a waveform and a MODCOD.
+    ///
+    /// Computes Es/N0 from the channel's symbol rate, Eb/N0 through the
+    /// MODCOD's exact information bits per symbol, and the link margin
+    /// against the MODCOD's threshold plus the design margin.
+    pub fn evaluate(
+        link: LinkStats,
+        channel: &Channel,
+        modcod: &ModCod,
+        design_margin: Decibel,
+    ) -> Self {
+        let es_n0 = channel.es_n0(link.c_n0);
+        let eb_n0 = es_n0 - Decibel::from_linear(modcod.mode().info_bits_per_symbol());
+        let margin = eb_n0 - modcod.required_eb_n0() - design_margin;
+        Self {
+            link,
+            channel: channel.clone(),
+            modcod: modcod.clone(),
+            design_margin,
+            es_n0,
+            eb_n0,
+            margin,
+        }
+    }
+
+    /// Returns the symbol rate of the underlying channel.
+    pub fn symbol_rate(&self) -> Frequency {
+        self.channel.symbol_rate()
+    }
+
+    /// Returns the information bit rate: symbol rate × info bits per symbol.
+    pub fn information_rate(&self) -> Frequency {
+        self.modcod
+            .mode()
+            .information_rate(self.channel.symbol_rate())
+    }
+
     /// Returns interference statistics for the given interferer power.
     ///
     /// Returns an error when absolute carrier or noise power is unavailable
@@ -555,6 +595,7 @@ mod tests {
 
     use crate::antenna::ConstantAntenna;
     use crate::channel::{LinkDirection, Modulation};
+    use crate::modcod::ErrorMetric;
     use crate::receiver::NoiseTempReceiver;
     use crate::terminal::{EirpModel, GtModel, RxChain, TxChain};
     use crate::transmitter::AmplifierTransmitter;
@@ -589,16 +630,20 @@ mod tests {
     }
 
     fn channel() -> Channel {
-        Channel {
-            link_type: LinkDirection::Downlink,
-            symbol_rate: 5.0.mhz(),
-            required_eb_n0: 10.0.db(),
-            margin: 3.0.db(),
-            modulation: Modulation::Qpsk,
-            roll_off: 0.35,
-            fec: 0.5,
-            chip_rate: None,
-        }
+        Channel::builder(5.0.mhz()).build().unwrap()
+    }
+
+    /// QPSK rate 1/2 requiring Eb/N0 = 10 dB at BER 1e-6.
+    fn modcod() -> ModCod {
+        ModCod::from_required_eb_n0(
+            "test downlink",
+            Modulation::Qpsk,
+            0.5,
+            10.0.db(),
+            ErrorMetric::Ber,
+            1e-6,
+        )
+        .unwrap()
     }
 
     fn link_params(bandwidth: Frequency) -> LinkParameters {
@@ -978,18 +1023,21 @@ mod tests {
     }
 
     #[test]
-    fn test_channel_apply_produces_modulated_stats() {
+    fn test_evaluate_produces_modulated_stats() {
         let stats = component_stats();
-        let m = channel().apply(stats);
-        // Eb/N0 ≈ 37.91 (QPSK, fec=0.5, C/N0 ≈ 104.91 dB·Hz)
+        let m = ModulatedLinkStats::evaluate(stats, &channel(), &modcod(), 3.0.db());
+        // Eb/N0 ≈ 37.91 (QPSK 1/2 → 1 info bit/symbol, C/N0 ≈ 104.91 dB·Hz)
         assert_approx_eq!(m.eb_n0.as_f64(), 37.91, atol <= 0.02);
-        // required_eb_n0 = 10, margin field = 3 → link_margin ≈ 24.91
+        // required_eb_n0 = 10, design margin = 3 → margin ≈ 24.91
         assert_approx_eq!(m.margin.as_f64(), 24.91, atol <= 0.02);
+        // Information rate: 5 Msps × 1 info bit/symbol.
+        assert_approx_eq!(m.information_rate().to_hertz(), 5e6, rtol <= 1e-12);
+        assert_approx_eq!(m.symbol_rate().to_hertz(), 5e6, rtol <= 1e-12);
     }
 
     #[test]
     fn test_modulated_with_interference_reduces_margin() {
-        let m = channel().apply(component_stats());
+        let m = ModulatedLinkStats::evaluate(component_stats(), &channel(), &modcod(), 3.0.db());
         let interference = m.with_interference(Power::watts(1e-12)).unwrap();
         assert!(interference.margin_with_interference.as_f64() <= m.margin.as_f64());
         assert!(interference.eb_n0i0.as_f64() <= m.eb_n0.as_f64());
@@ -997,7 +1045,7 @@ mod tests {
 
     #[test]
     fn test_with_interference_rejects_non_physical_power() {
-        let m = channel().apply(component_stats());
+        let m = ModulatedLinkStats::evaluate(component_stats(), &channel(), &modcod(), 3.0.db());
         for power in [-1e-12, f64::NAN, f64::INFINITY] {
             let err = m.with_interference(Power::watts(power)).unwrap_err();
             assert!(matches!(err, LinkBudgetError::NonPhysical { .. }));
@@ -1013,8 +1061,7 @@ mod tests {
 
     #[test]
     fn test_lumped_modulated_with_interference_is_error() {
-        let err = channel()
-            .apply(lumped_stats())
+        let err = ModulatedLinkStats::evaluate(lumped_stats(), &channel(), &modcod(), 3.0.db())
             .with_interference(Power::watts(1e-12))
             .unwrap_err();
         assert_eq!(err, LinkBudgetError::AbsolutePowerUnavailable);

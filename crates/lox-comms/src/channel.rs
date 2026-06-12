@@ -2,9 +2,21 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Communication channel model (modulation, bandwidth, Es/N0, Eb/N0, DSSS).
+//! Waveform occupancy: how symbols occupy spectrum.
+//!
+//! A [`Channel`] describes the physical waveform — symbol rate, pulse
+//! shaping, and optional DSSS spreading — and nothing else. What is
+//! transmitted on it (modulation and coding) is a
+//! [`ModCod`](crate::modcod::ModCod); link direction lives on
+//! [`LinkParameters`](crate::link_budget::LinkParameters); acceptance
+//! criteria (required Eb/N0, design margin) are evaluation inputs.
+
+use core::fmt;
+use std::str::FromStr;
 
 use lox_core::units::{Decibel, Frequency};
+
+use crate::error::NonPhysicalError;
 
 /// Digital modulation scheme.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -15,8 +27,18 @@ pub enum Modulation {
     Bpsk,
     /// Quadrature Phase-Shift Keying (2 bits/symbol).
     Qpsk,
+    /// Offset Quadrature Phase-Shift Keying (2 bits/symbol).
+    Oqpsk,
     /// 8-Phase-Shift Keying (3 bits/symbol).
     Psk8,
+    /// 8-Amplitude-Phase-Shift Keying (3 bits/symbol, DVB-S2X).
+    Apsk8,
+    /// 16-Amplitude-Phase-Shift Keying (4 bits/symbol, DVB-S2).
+    Apsk16,
+    /// 32-Amplitude-Phase-Shift Keying (5 bits/symbol, DVB-S2).
+    Apsk32,
+    /// 64-Amplitude-Phase-Shift Keying (6 bits/symbol, DVB-S2X).
+    Apsk64,
     /// 16-Quadrature Amplitude Modulation (4 bits/symbol).
     Qam16,
     /// 32-Quadrature Amplitude Modulation (5 bits/symbol).
@@ -27,21 +49,92 @@ pub enum Modulation {
     Qam128,
     /// 256-Quadrature Amplitude Modulation (8 bits/symbol).
     Qam256,
+    /// Gaussian Minimum-Shift Keying (1 bit/symbol).
+    Gmsk,
+    /// Binary Frequency-Shift Keying (1 bit/symbol).
+    Fsk2,
+    /// Quaternary Frequency-Shift Keying (2 bits/symbol).
+    Fsk4,
 }
 
 impl Modulation {
     /// Returns the number of bits per symbol for this modulation scheme.
     pub fn bits_per_symbol(self) -> u8 {
         match self {
-            Modulation::Bpsk => 1,
-            Modulation::Qpsk => 2,
-            Modulation::Psk8 => 3,
-            Modulation::Qam16 => 4,
-            Modulation::Qam32 => 5,
-            Modulation::Qam64 => 6,
+            Modulation::Bpsk | Modulation::Gmsk | Modulation::Fsk2 => 1,
+            Modulation::Qpsk | Modulation::Oqpsk | Modulation::Fsk4 => 2,
+            Modulation::Psk8 | Modulation::Apsk8 => 3,
+            Modulation::Qam16 | Modulation::Apsk16 => 4,
+            Modulation::Qam32 | Modulation::Apsk32 => 5,
+            Modulation::Qam64 | Modulation::Apsk64 => 6,
             Modulation::Qam128 => 7,
             Modulation::Qam256 => 8,
         }
+    }
+
+    /// Returns the conventional name, e.g. `"16APSK"`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Modulation::Bpsk => "BPSK",
+            Modulation::Qpsk => "QPSK",
+            Modulation::Oqpsk => "OQPSK",
+            Modulation::Psk8 => "8PSK",
+            Modulation::Apsk8 => "8APSK",
+            Modulation::Apsk16 => "16APSK",
+            Modulation::Apsk32 => "32APSK",
+            Modulation::Apsk64 => "64APSK",
+            Modulation::Qam16 => "16QAM",
+            Modulation::Qam32 => "32QAM",
+            Modulation::Qam64 => "64QAM",
+            Modulation::Qam128 => "128QAM",
+            Modulation::Qam256 => "256QAM",
+            Modulation::Gmsk => "GMSK",
+            Modulation::Fsk2 => "2FSK",
+            Modulation::Fsk4 => "4FSK",
+        }
+    }
+
+    /// All supported modulation schemes.
+    pub const ALL: [Self; 16] = [
+        Self::Bpsk,
+        Self::Qpsk,
+        Self::Oqpsk,
+        Self::Psk8,
+        Self::Apsk8,
+        Self::Apsk16,
+        Self::Apsk32,
+        Self::Apsk64,
+        Self::Qam16,
+        Self::Qam32,
+        Self::Qam64,
+        Self::Qam128,
+        Self::Qam256,
+        Self::Gmsk,
+        Self::Fsk2,
+        Self::Fsk4,
+    ];
+}
+
+impl fmt::Display for Modulation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.name())
+    }
+}
+
+/// The name does not match a known modulation scheme.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("unknown modulation: '{0}'")]
+pub struct ParseModulationError(String);
+
+impl FromStr for Modulation {
+    type Err = ParseModulationError;
+
+    /// Parses a conventional modulation name, ignoring ASCII case.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::ALL
+            .into_iter()
+            .find(|m| s.eq_ignore_ascii_case(m.name()))
+            .ok_or_else(|| ParseModulationError(s.to_owned()))
     }
 }
 
@@ -58,8 +151,8 @@ pub enum LinkDirection {
     Crosslink,
 }
 
-impl std::fmt::Display for LinkDirection {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for LinkDirection {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LinkDirection::Uplink => write!(f, "uplink"),
             LinkDirection::Downlink => write!(f, "downlink"),
@@ -68,7 +161,7 @@ impl std::fmt::Display for LinkDirection {
     }
 }
 
-impl std::str::FromStr for LinkDirection {
+impl FromStr for LinkDirection {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -83,41 +176,81 @@ impl std::str::FromStr for LinkDirection {
     }
 }
 
-/// A communication channel.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+/// A communication channel: the waveform's occupancy of spectrum.
+///
+/// Holds the symbol rate, the pulse-shaping roll-off, and the optional DSSS
+/// chip rate. Valid by construction via [`Channel::builder`].
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "ChannelRepr")
+)]
 pub struct Channel {
-    /// Link direction.
-    pub link_type: LinkDirection,
-    /// Symbol rate.
-    pub symbol_rate: Frequency,
-    /// Required Eb/N0 for the target BER.
-    pub required_eb_n0: Decibel,
-    /// Required link margin.
-    pub margin: Decibel,
-    /// Modulation scheme.
-    pub modulation: Modulation,
-    /// Roll-off factor (excess bandwidth factor).
-    pub roll_off: f64,
-    /// Forward error correction code rate.
-    pub fec: f64,
-    /// Chip rate for DSSS systems (`None` for narrowband).
-    pub chip_rate: Option<Frequency>,
+    symbol_rate: Frequency,
+    roll_off: f64,
+    chip_rate: Option<Frequency>,
 }
 
+/// Serde wire format for [`Channel`]: forces deserialization through the
+/// validated builder.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct ChannelRepr {
+    symbol_rate: Frequency,
+    #[serde(default = "default_roll_off")]
+    roll_off: f64,
+    #[serde(default)]
+    chip_rate: Option<Frequency>,
+}
+
+#[cfg(feature = "serde")]
+fn default_roll_off() -> f64 {
+    DEFAULT_ROLL_OFF
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<ChannelRepr> for Channel {
+    type Error = NonPhysicalError;
+
+    fn try_from(repr: ChannelRepr) -> Result<Self, Self::Error> {
+        let mut builder = Channel::builder(repr.symbol_rate).roll_off(repr.roll_off);
+        if let Some(chip_rate) = repr.chip_rate {
+            builder = builder.chip_rate(chip_rate);
+        }
+        builder.build()
+    }
+}
+
+/// Default pulse-shaping roll-off factor.
+const DEFAULT_ROLL_OFF: f64 = 0.35;
+
 impl Channel {
-    /// Returns the raw bit rate in bits per second.
+    /// Starts building a channel with the given symbol rate.
     ///
-    /// R_b = R_s · b
-    pub fn data_rate(&self) -> Frequency {
-        self.modulation.bits_per_symbol() as f64 * self.symbol_rate
+    /// The roll-off defaults to 0.35 and the chip rate to `None`
+    /// (narrowband).
+    pub fn builder(symbol_rate: Frequency) -> ChannelBuilder {
+        ChannelBuilder {
+            symbol_rate,
+            roll_off: DEFAULT_ROLL_OFF,
+            chip_rate: None,
+        }
     }
 
-    /// Returns the information (post-FEC) bit rate in bits per second.
-    ///
-    /// R_info = R_s · b · FEC
-    pub fn information_rate(&self) -> Frequency {
-        self.fec * self.data_rate()
+    /// Returns the symbol rate.
+    pub fn symbol_rate(&self) -> Frequency {
+        self.symbol_rate
+    }
+
+    /// Returns the pulse-shaping roll-off factor.
+    pub fn roll_off(&self) -> f64 {
+        self.roll_off
+    }
+
+    /// Returns the DSSS chip rate, or `None` for narrowband channels.
+    pub fn chip_rate(&self) -> Option<Frequency> {
+        self.chip_rate
     }
 
     /// Returns the occupied channel bandwidth.
@@ -136,27 +269,11 @@ impl Channel {
         c_n0 - Decibel::from_linear(self.symbol_rate.to_hertz())
     }
 
-    /// Computes Eb/N0 (energy per information bit to noise spectral density) from C/N0.
-    ///
-    /// Eb/N0 = Es/N0 − 10·log₁₀(b · FEC)
-    pub fn eb_n0(&self, c_n0: Decibel) -> Decibel {
-        let es_n0 = self.es_n0(c_n0);
-        let bps_fec = self.modulation.bits_per_symbol() as f64 * self.fec;
-        es_n0 - Decibel::from_linear(bps_fec)
-    }
-
     /// Computes C/N (carrier-to-noise ratio) from C/N0.
     ///
     /// C/N = C/N0 − 10·log₁₀(BW_occupied)
     pub fn c_n(&self, c_n0: Decibel) -> Decibel {
         c_n0 - Decibel::from_linear(self.bandwidth().to_hertz())
-    }
-
-    /// Computes the link margin from a given Eb/N0.
-    ///
-    /// Margin = Eb/N0 − required_eb_n0 − margin
-    pub fn link_margin(&self, eb_n0: Decibel) -> Decibel {
-        eb_n0 - self.required_eb_n0 - self.margin
     }
 
     /// Returns the DSSS spreading factor, or `None` for narrowband channels.
@@ -181,26 +298,51 @@ impl Channel {
         self.chip_rate
             .map(|cr| c_n0 - Decibel::from_linear(cr.to_hertz()))
     }
+}
 
-    /// Layers modulation/FEC figures onto a modulation-agnostic [`crate::link_budget::LinkStats`].
+/// Builder for [`Channel`].
+///
+/// Created via [`Channel::builder`]. Inputs are validated at
+/// [`ChannelBuilder::build`].
+#[derive(Debug, Clone)]
+pub struct ChannelBuilder {
+    symbol_rate: Frequency,
+    roll_off: f64,
+    chip_rate: Option<Frequency>,
+}
+
+impl ChannelBuilder {
+    /// Sets the pulse-shaping roll-off factor.
+    pub fn roll_off(mut self, roll_off: f64) -> Self {
+        self.roll_off = roll_off;
+        self
+    }
+
+    /// Sets the DSSS chip rate.
+    pub fn chip_rate(mut self, chip_rate: Frequency) -> Self {
+        self.chip_rate = Some(chip_rate);
+        self
+    }
+
+    /// Builds the channel, validating all inputs.
     ///
-    /// Computes `Es/N0`, `Eb/N0`, and link margin from the channel's modulation, FEC,
-    /// symbol rate, required `Eb/N0`, and required margin.
-    pub fn apply(
-        &self,
-        link: crate::link_budget::LinkStats,
-    ) -> crate::link_budget::ModulatedLinkStats {
-        let es_n0 = self.es_n0(link.c_n0);
-        let eb_n0 = self.eb_n0(link.c_n0);
-        let margin = self.link_margin(eb_n0);
-        crate::link_budget::ModulatedLinkStats {
-            link,
-            channel: self.clone(),
-            symbol_rate: self.symbol_rate,
-            es_n0,
-            eb_n0,
-            margin,
+    /// Rejects a non-finite or non-positive symbol rate, a non-finite or
+    /// negative roll-off, and a chip rate below the symbol rate.
+    pub fn build(self) -> Result<Channel, NonPhysicalError> {
+        NonPhysicalError::check_positive("symbol rate [Hz]", self.symbol_rate.to_hertz())?;
+        NonPhysicalError::check_non_negative("roll-off factor", self.roll_off)?;
+        if let Some(chip_rate) = self.chip_rate {
+            NonPhysicalError::check_positive("chip rate [Hz]", chip_rate.to_hertz())?;
+            NonPhysicalError::check_non_negative(
+                "chip rate minus symbol rate [Hz]",
+                chip_rate.to_hertz() - self.symbol_rate.to_hertz(),
+            )?;
         }
+        Ok(Channel {
+            symbol_rate: self.symbol_rate,
+            roll_off: self.roll_off,
+            chip_rate: self.chip_rate,
+        })
     }
 }
 
@@ -212,66 +354,59 @@ mod tests {
     use super::*;
 
     fn narrowband_channel() -> Channel {
-        Channel {
-            link_type: LinkDirection::Downlink,
-            symbol_rate: 5.0.mhz(),
-            required_eb_n0: 10.0.db(),
-            margin: 3.0.db(),
-            modulation: Modulation::Qpsk,
-            roll_off: 0.35,
-            fec: 0.5,
-            chip_rate: None,
-        }
+        Channel::builder(5.0.mhz()).build().unwrap()
+    }
+
+    fn dsss_channel() -> Channel {
+        Channel::builder(0.01.mhz())
+            .chip_rate(4.0.mhz())
+            .build()
+            .unwrap()
     }
 
     #[test]
     fn test_bits_per_symbol() {
         assert_eq!(Modulation::Bpsk.bits_per_symbol(), 1);
         assert_eq!(Modulation::Qpsk.bits_per_symbol(), 2);
+        assert_eq!(Modulation::Oqpsk.bits_per_symbol(), 2);
         assert_eq!(Modulation::Psk8.bits_per_symbol(), 3);
+        assert_eq!(Modulation::Apsk8.bits_per_symbol(), 3);
+        assert_eq!(Modulation::Apsk16.bits_per_symbol(), 4);
+        assert_eq!(Modulation::Apsk32.bits_per_symbol(), 5);
+        assert_eq!(Modulation::Apsk64.bits_per_symbol(), 6);
         assert_eq!(Modulation::Qam16.bits_per_symbol(), 4);
         assert_eq!(Modulation::Qam32.bits_per_symbol(), 5);
         assert_eq!(Modulation::Qam64.bits_per_symbol(), 6);
         assert_eq!(Modulation::Qam128.bits_per_symbol(), 7);
         assert_eq!(Modulation::Qam256.bits_per_symbol(), 8);
+        assert_eq!(Modulation::Gmsk.bits_per_symbol(), 1);
+        assert_eq!(Modulation::Fsk2.bits_per_symbol(), 1);
+        assert_eq!(Modulation::Fsk4.bits_per_symbol(), 2);
     }
 
     #[test]
-    fn test_data_rate() {
-        let ch = narrowband_channel();
-        // QPSK: 2 bits/symbol, symbol_rate=5 MHz → data_rate=10 MHz
-        assert_approx_eq!(ch.data_rate().to_hertz(), 10e6, rtol <= 1e-10);
-    }
-
-    #[test]
-    fn test_information_rate() {
-        let ch = narrowband_channel();
-        // data_rate=10 MHz, fec=0.5 → information_rate=5 MHz
-        assert_approx_eq!(ch.information_rate().to_hertz(), 5e6, rtol <= 1e-10);
+    fn test_modulation_name_parse_round_trip() {
+        for m in Modulation::ALL {
+            assert_eq!(m.name().parse::<Modulation>(), Ok(m));
+            assert_eq!(m.to_string(), m.name());
+        }
+        // Parsing ignores ASCII case.
+        assert_eq!("qpsk".parse::<Modulation>(), Ok(Modulation::Qpsk));
+        assert_eq!("16apsk".parse::<Modulation>(), Ok(Modulation::Apsk16));
+        assert!("3PSK".parse::<Modulation>().is_err());
     }
 
     #[test]
     fn test_bandwidth_narrowband() {
-        // QPSK, symbol_rate=5 MHz, roll-off=0.35
-        // BW = 5e6 * 1.35 = 6.75 MHz
+        // symbol_rate=5 MHz, default roll-off=0.35: BW = 5e6 * 1.35 = 6.75 MHz
         let ch = narrowband_channel();
         assert_approx_eq!(ch.bandwidth().to_hertz(), 6.75e6, rtol <= 1e-10);
     }
 
     #[test]
-    fn test_bandwidth_bpsk() {
-        // BPSK, symbol_rate=1 MHz, roll-off=0.5
-        // BW = 1e6 * 1.5 = 1.5 MHz
-        let ch = Channel {
-            link_type: LinkDirection::Downlink,
-            symbol_rate: 1.0.mhz(),
-            required_eb_n0: 10.0.db(),
-            margin: 3.0.db(),
-            modulation: Modulation::Bpsk,
-            roll_off: 0.5,
-            fec: 0.5,
-            chip_rate: None,
-        };
+    fn test_bandwidth_with_roll_off() {
+        // symbol_rate=1 MHz, roll-off=0.5: BW = 1e6 * 1.5 = 1.5 MHz
+        let ch = Channel::builder(1.0.mhz()).roll_off(0.5).build().unwrap();
         assert_approx_eq!(ch.bandwidth().to_hertz(), 1.5e6, rtol <= 1e-10);
     }
 
@@ -285,33 +420,8 @@ mod tests {
     }
 
     #[test]
-    fn test_eb_n0() {
-        // C/N0 = 80 dBHz, symbol_rate = 5 MHz, QPSK (2 bps), fec = 0.5
-        // Es/N0 = 80 - 10*log10(5e6) = 13.0103
-        // Eb/N0 = 13.0103 - 10*log10(2 * 0.5) = 13.0103 - 0 = 13.0103
-        let ch = narrowband_channel();
-        let eb_n0 = ch.eb_n0(80.0.db());
-        assert_approx_eq!(eb_n0.as_f64(), 13.0103, atol <= 0.001);
-    }
-
-    #[test]
-    fn test_eb_n0_with_higher_code_rate() {
-        // symbol_rate=5 MHz, QPSK (2 bps), fec=5/6
-        // Es/N0 = 80 - 10*log10(5e6) = 13.0103
-        // Eb/N0 = 13.0103 - 10*log10(2 * 5/6) = 13.0103 - 2.2185 = 10.7918
-        let ch = Channel {
-            fec: 5.0 / 6.0,
-            ..narrowband_channel()
-        };
-        let eb_n0 = ch.eb_n0(80.0.db());
-        let expected = 13.0103 - 10.0 * (2.0 * 5.0 / 6.0_f64).log10();
-        assert_approx_eq!(eb_n0.as_f64(), expected, atol <= 0.001);
-    }
-
-    #[test]
     fn test_c_n() {
         // C/N0 = 80 dBHz, BW = 6.75 MHz
-        // C/N = 80 - 10*log10(6.75e6) = 80 - 68.29 = 11.71 dB
         let ch = narrowband_channel();
         let c_n = ch.c_n(80.0.db());
         let expected = 80.0 - 10.0 * 6.75e6_f64.log10();
@@ -319,65 +429,24 @@ mod tests {
     }
 
     #[test]
-    fn test_link_margin() {
-        // Eb/N0 = 15 dB, required = 10 dB, margin = 3 dB → link margin = 2 dB
-        let ch = narrowband_channel();
-        let margin = ch.link_margin(15.0.db());
-        assert_approx_eq!(margin.as_f64(), 2.0, atol <= 1e-10);
-    }
-
-    #[test]
-    fn test_dsss_spreading_factor() {
-        let ch = Channel {
-            chip_rate: Some(4.0.mhz()),
-            symbol_rate: 0.01.mhz(),
-            modulation: Modulation::Bpsk,
-            ..narrowband_channel()
-        };
+    fn test_dsss_spreading_factor_and_processing_gain() {
+        let ch = dsss_channel();
         assert_approx_eq!(ch.spreading_factor().unwrap(), 400.0, rtol <= 1e-10);
-    }
-
-    #[test]
-    fn test_dsss_processing_gain() {
-        let ch = Channel {
-            chip_rate: Some(4.0.mhz()),
-            symbol_rate: 0.01.mhz(),
-            modulation: Modulation::Bpsk,
-            ..narrowband_channel()
-        };
         // PG = 10*log10(400) = 26.02 dB
         assert_approx_eq!(
             ch.processing_gain().unwrap().as_f64(),
             26.0206,
             atol <= 0.001
         );
-    }
-
-    #[test]
-    fn test_dsss_bandwidth() {
         // DSSS: BW = chip_rate * (1 + roll_off) = 4e6 * 1.35 = 5.4 MHz
-        let ch = Channel {
-            chip_rate: Some(4.0.mhz()),
-            symbol_rate: 0.01.mhz(),
-            modulation: Modulation::Bpsk,
-            ..narrowband_channel()
-        };
         assert_approx_eq!(ch.bandwidth().to_hertz(), 5.4e6, rtol <= 1e-10);
     }
 
     #[test]
     fn test_dsss_es_n0_spread_vs_despread() {
-        let ch = Channel {
-            chip_rate: Some(4.0.mhz()),
-            symbol_rate: 0.01.mhz(),
-            modulation: Modulation::Bpsk,
-            ..narrowband_channel()
-        };
+        let ch = dsss_channel();
         let c_n0 = 60.0.db();
-        let es_n0_spread = ch.es_n0_spread(c_n0).unwrap();
-        let es_n0_despread = ch.es_n0(c_n0);
-        // Difference should equal processing gain
-        let diff = es_n0_despread - es_n0_spread;
+        let diff = ch.es_n0(c_n0) - ch.es_n0_spread(c_n0).unwrap();
         assert_approx_eq!(
             diff.as_f64(),
             ch.processing_gain().unwrap().as_f64(),
@@ -394,14 +463,56 @@ mod tests {
     }
 
     #[test]
-    fn test_link_direction_display() {
-        assert_eq!(LinkDirection::Uplink.to_string(), "uplink");
-        assert_eq!(LinkDirection::Downlink.to_string(), "downlink");
-        assert_eq!(LinkDirection::Crosslink.to_string(), "crosslink");
+    fn test_channel_rejects_non_physical_inputs() {
+        assert!(Channel::builder(Frequency::hertz(0.0)).build().is_err());
+        assert!(Channel::builder(Frequency::hertz(-5e6)).build().is_err());
+        assert!(Channel::builder(5.0.mhz()).roll_off(-0.1).build().is_err());
+        assert!(
+            Channel::builder(5.0.mhz())
+                .roll_off(f64::NAN)
+                .build()
+                .is_err()
+        );
+        // Chip rate below the symbol rate is not a spreading system.
+        assert!(
+            Channel::builder(5.0.mhz())
+                .chip_rate(1.0.mhz())
+                .build()
+                .is_err()
+        );
+        // Chip rate equal to the symbol rate is allowed (SF = 1).
+        assert!(
+            Channel::builder(5.0.mhz())
+                .chip_rate(5.0.mhz())
+                .build()
+                .is_ok()
+        );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_channel_serde_round_trip_and_validation() {
+        let ch = dsss_channel();
+        let json = serde_json::to_string(&ch).unwrap();
+        let round_trip: Channel = serde_json::from_str(&json).unwrap();
+        assert_eq!(ch, round_trip);
+
+        // Roll-off defaults when omitted.
+        let minimal: Channel = serde_json::from_str(r#"{"symbol_rate":5.0e6}"#).unwrap();
+        assert_approx_eq!(minimal.roll_off(), 0.35, atol <= 1e-15);
+
+        // Non-physical inputs are rejected at deserialization time.
+        assert!(serde_json::from_str::<Channel>(r#"{"symbol_rate":-5.0e6}"#).is_err());
+        assert!(
+            serde_json::from_str::<Channel>(r#"{"symbol_rate":5.0e6,"roll_off":-1.0}"#).is_err()
+        );
     }
 
     #[test]
-    fn test_link_direction_from_str() {
+    fn test_link_direction_display_and_parse() {
+        assert_eq!(LinkDirection::Uplink.to_string(), "uplink");
+        assert_eq!(LinkDirection::Downlink.to_string(), "downlink");
+        assert_eq!(LinkDirection::Crosslink.to_string(), "crosslink");
         assert_eq!(
             "uplink".parse::<LinkDirection>().unwrap(),
             LinkDirection::Uplink
