@@ -2994,6 +2994,11 @@ class LinkBudget:
         losses: PropagationLosses | None = None,
         link_type: str | None = None,
     ) -> Self: ...
+    def budget_lines(self) -> list[tuple[str, Decibel, str]]:
+        """Returns the budget as ordered (label, value, kind) report lines,
+        where kind is "gain", "loss", "subtotal", or "total"."""
+        ...
+    def __str__(self) -> str: ...
     def modulate_best(
         self,
         channel: Channel,
@@ -3114,6 +3119,11 @@ class ModulatedLinkBudget:
     def closes(self) -> bool:
         """Returns whether the link closes: margin >= 0."""
         ...
+    def budget_lines(self) -> list[tuple[str, Decibel, str]]:
+        """Returns the budget as ordered (label, value, kind) report lines,
+        extended with C/N, Es/N0, Eb/N0, threshold, and margins."""
+        ...
+    def __str__(self) -> str: ...
     @property
     def es_n0(self) -> Decibel:
         """Es/N0 (energy per symbol to noise spectral density) in dB."""
@@ -3134,6 +3144,11 @@ class ModulatedLinkBudget:
         """Computes interference statistics for a given interferer power."""
         ...
     def __repr__(self) -> str: ...
+
+def combine_carrier_to_noise(contributions: list[Decibel]) -> Decibel:
+    """Combines carrier-to-noise contributions in the linear domain:
+    1/(C/N)_total = sum(1/(C/N)_i)."""
+    ...
 
 def fspl(distance: Distance, frequency: Frequency) -> Decibel:
     """Computes the free-space path loss in dB.

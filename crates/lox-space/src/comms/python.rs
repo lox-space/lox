@@ -14,7 +14,8 @@ use lox_comms::LinkBudgetError;
 use lox_comms::channel::{Channel, LinkDirection, Modulation};
 use lox_comms::link_budget::{Eirp, GOverT};
 use lox_comms::link_budget::{
-    InterferenceStats, LinkBudget, LinkConditions, ModulatedLinkBudget, frequency_overlap_factor,
+    InterferenceStats, LineKind, LinkBudget, LinkConditions, ModulatedLinkBudget, combine_c_n,
+    frequency_overlap_factor,
 };
 use lox_comms::modcod::{self, ErrorMetric, ModCod};
 use lox_comms::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
@@ -1249,6 +1250,31 @@ impl PyPropagationLosses {
     }
 }
 
+fn line_kind_name(kind: LineKind) -> &'static str {
+    match kind {
+        LineKind::Gain => "gain",
+        LineKind::Loss => "loss",
+        LineKind::Subtotal => "subtotal",
+        LineKind::Total => "total",
+        _ => "unknown",
+    }
+}
+
+fn budget_lines_py(
+    lines: Vec<lox_comms::link_budget::BudgetLine>,
+) -> Vec<(String, PyDecibel, String)> {
+    lines
+        .into_iter()
+        .map(|l| {
+            (
+                l.label,
+                PyDecibel(l.value),
+                line_kind_name(l.kind).to_owned(),
+            )
+        })
+        .collect()
+}
+
 // --- Link Budget ---
 
 /// A modulation-agnostic link budget between two link terminals.
@@ -1404,6 +1430,17 @@ impl PyLinkBudget {
         PyDecibel(self.0.c_n0)
     }
 
+    /// Returns the budget as ordered (label, value, kind) report lines,
+    /// where kind is "gain", "loss", "subtotal", or "total". Gains minus
+    /// losses equal the C/N0 total exactly.
+    fn budget_lines(&self) -> Vec<(String, PyDecibel, String)> {
+        budget_lines_py(self.0.budget_lines())
+    }
+
+    fn __str__(&self) -> String {
+        self.0.to_string()
+    }
+
     /// Returns C/N in dB for the given noise bandwidth.
     fn c_n(&self, bandwidth: PyFrequency) -> PyResult<PyDecibel> {
         self.0
@@ -1524,6 +1561,17 @@ impl PyModulatedLinkBudget {
         self.0.closes()
     }
 
+    /// Returns the budget as ordered (label, value, kind) report lines,
+    /// extended with C/N, Es/N0, Eb/N0, the MODCOD threshold, the design
+    /// margin, and the link margin.
+    fn budget_lines(&self) -> Vec<(String, PyDecibel, String)> {
+        budget_lines_py(self.0.budget_lines())
+    }
+
+    fn __str__(&self) -> String {
+        self.0.to_string()
+    }
+
     /// The waveform the link was evaluated on.
     #[getter]
     fn channel(&self) -> PyChannel {
@@ -1589,6 +1637,17 @@ impl PyModulatedLinkBudget {
 }
 
 // --- Free functions ---
+
+/// Combines carrier-to-noise contributions in the linear domain:
+/// 1/(C/N)_total = sum(1/(C/N)_i).
+///
+/// Args:
+///     contributions: C/N values as Decibel.
+#[pyfunction]
+pub fn combine_carrier_to_noise(contributions: Vec<PyDecibel>) -> PyDecibel {
+    let contributions: Vec<Decibel> = contributions.into_iter().map(|c| c.0).collect();
+    PyDecibel(combine_c_n(&contributions))
+}
 
 /// Computes the free-space path loss in dB.
 ///
