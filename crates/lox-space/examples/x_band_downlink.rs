@@ -21,7 +21,7 @@ use std::error::Error;
 
 use lox_space::comms::antenna::Antenna;
 use lox_space::comms::channel::{Channel, LinkDirection, Modulation};
-use lox_space::comms::link_budget::{Eirp, EnvironmentalLosses, GOverT, LinkStats};
+use lox_space::comms::link_budget::{Eirp, EnvironmentalLosses, GOverT, LinkParameters, LinkStats};
 use lox_space::comms::pfd::{PfdMask, power_flux_density};
 use lox_space::comms::pointing::Pointing;
 use lox_space::comms::receiver::CascadeReceiver;
@@ -126,16 +126,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         chip_rate: None,
     };
 
-    let link = LinkStats::for_link(
-        &tx,
-        &rx,
-        carrier,
-        channel.bandwidth(),
-        range,
-        losses,
-        tx_pointing,
-        rx_pointing,
-    )?;
+    let params = LinkParameters::builder(carrier, channel.bandwidth(), range)
+        .losses(losses)
+        .tx_pointing(tx_pointing)
+        .rx_pointing(rx_pointing)
+        .build()?;
+    let link = LinkStats::for_link(&tx, &rx, &params)?;
     let modulated = channel.apply(link);
 
     println!("\n--- Link budget at {} GHz ---", carrier.to_gigahertz());
