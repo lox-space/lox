@@ -22,7 +22,7 @@ use std::error::Error;
 use lox_space::comms::FrequencyRange;
 use lox_space::comms::antenna::Antenna;
 use lox_space::comms::channel::{Channel, LinkDirection, Modulation};
-use lox_space::comms::link_budget::{Eirp, EnvironmentalLosses, GOverT, LinkParameters, LinkStats};
+use lox_space::comms::link_budget::{Eirp, GOverT, LinkParameters, LinkStats, PropagationLosses};
 use lox_space::comms::pfd::{PfdMask, power_flux_density};
 use lox_space::comms::pointing::Pointing;
 use lox_space::comms::receiver::CascadeReceiver;
@@ -103,14 +103,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Atmospherics at X-band, 5° elevation, 99.9 % availability — static
     // values here; `lox-itur` computes them from the ITU-R P-series maps.
     // ------------------------------------------------------------------
-    let losses = EnvironmentalLosses {
-        rain: 1.2.db(),
-        gaseous: 0.4.db(),
-        scintillation: 0.3.db(),
-        atmospheric: 0.0.db(),
-        cloud: 0.1.db(),
-        depolarization: 0.0.db(),
-    };
+    let losses = PropagationLosses::builder()
+        .rain(1.2.db())
+        .gaseous(0.4.db())
+        .scintillation(0.3.db())
+        .cloud(0.1.db())
+        .build()?;
 
     // ------------------------------------------------------------------
     // DVB-S2-style channel: QPSK 3/4 at 150 Msps → 225 Mbit/s net.

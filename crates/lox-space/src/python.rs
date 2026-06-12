@@ -15,14 +15,13 @@ use crate::comms::python::{
     PyAmplifierTransmitter, PyAntennaFrame, PyCascadeReceiver, PyChannel, PyConstantAntenna,
     PyDecibel, PyDipolePattern, PyEirpModel, PyFrequencyRange, PyGaussianPattern, PyGtModel,
     PyInterferenceStats, PyLinkStats, PyModulatedLinkStats, PyModulation, PyNoiseStage,
-    PyNoiseTempReceiver, PyParabolicPattern, PyPatternedAntenna, PyPfdMask, PyRxChain, PyTxChain,
-    freq_overlap, fspl, power_flux_density, slant_range,
+    PyNoiseTempReceiver, PyParabolicPattern, PyPatternedAntenna, PyPfdMask, PyPropagationLosses,
+    PyRxChain, PyTxChain, freq_overlap, fspl, power_flux_density, slant_range,
 };
 use crate::constellations::python::{PyConstellation, PyConstellationSatellite};
 use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
 use crate::ephem::python::PySpk;
 use crate::frames::python::PyFrame;
-use crate::itur::python::PyEnvironmentalLosses;
 use crate::itur::python::PyItuProvider;
 use crate::itur::python::register_itur_functions;
 use crate::math::python::PySeries;
@@ -72,7 +71,7 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyNoiseStage>()?;
     m.add_class::<PyChannel>()?;
     m.add_class::<PyItuProvider>()?;
-    m.add_class::<PyEnvironmentalLosses>()?;
+    m.add_class::<PyPropagationLosses>()?;
     m.add_class::<PyLinkStats>()?;
     m.add_class::<PyInterferenceStats>()?;
     m.add_class::<PyModulatedLinkStats>()?;

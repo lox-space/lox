@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-pub use lox_itur::{EnvironmentalLosses, ItuProvider, ItuProviderError};
+pub use lox_itur::{ItuProvider, ItuProviderError};
 
 #[cfg(feature = "python")]
 pub mod python;

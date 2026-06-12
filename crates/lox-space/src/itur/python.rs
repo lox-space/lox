@@ -14,7 +14,9 @@ use crate::comms::python::PyDecibel;
 use crate::units::python::{PyAngle, PyDistance, PyFrequency, PyPressure, PyTemperature};
 
 use lox_core::units::{Angle, Decibel};
-use lox_itur::{EnvironmentalLosses, ItuProvider};
+use lox_itur::ItuProvider;
+
+use crate::comms::python::PyPropagationLosses;
 
 /// An open ITU-R data bundle (`lox-itur-data.npz`).
 ///
@@ -200,8 +202,12 @@ impl PyItuProvider {
         Ok(PyDecibel(d))
     }
 
-    /// Computes atmospheric attenuation on a slant path, returning individual
-    /// contributions as an `EnvironmentalLosses` object.
+    /// Computes excess propagation losses on a slant path, returning
+    /// itemized lines as a `PropagationLosses` object.
+    ///
+    /// The total follows the ITU-R P.618 combination, with the combination
+    /// residual booked on the scintillation line; the absorptive part
+    /// excludes scintillation.
     ///
     /// Args:
     ///     lat: Latitude.
@@ -213,11 +219,10 @@ impl PyItuProvider {
     ///     polarisation_tilt: Polarisation tilt angle (default 45 deg for circular).
     ///
     /// Returns:
-    ///     EnvironmentalLosses with rain, gaseous, cloud, scintillation, and
-    ///     depolarization fields populated.
+    ///     PropagationLosses with rain, gaseous, cloud, and scintillation lines.
     #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (lat, lon, frequency, elevation, probability, diameter, polarisation_tilt=None))]
-    fn atmospheric_attenuation_slant_path(
+    fn propagation_losses(
         &self,
         lat: PyAngle,
         lon: PyAngle,
@@ -226,164 +231,27 @@ impl PyItuProvider {
         probability: f64,
         diameter: PyDistance,
         polarisation_tilt: Option<PyAngle>,
-    ) -> PyResult<PyEnvironmentalLosses> {
+    ) -> PyResult<PyPropagationLosses> {
         let tau = polarisation_tilt
             .map(|a| a.0)
             .unwrap_or(Angle::degrees(45.0));
-        let losses = EnvironmentalLosses::new(
-            &self.0,
-            lat.0,
-            lon.0,
-            frequency.0,
-            elevation.0,
-            probability,
-            diameter.0,
-            tau,
-        )
-        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-        Ok(PyEnvironmentalLosses(losses))
+        let losses = self
+            .0
+            .propagation_losses(
+                lat.0,
+                lon.0,
+                frequency.0,
+                elevation.0,
+                probability,
+                diameter.0,
+                tau,
+            )
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        Ok(PyPropagationLosses(losses))
     }
 
     fn __repr__(&self) -> String {
         format!("ItuProvider(upstream={:?})", self.0.upstream_version())
-    }
-}
-
-/// Atmospheric environmental losses computed from ITU-R models.
-#[pyclass(
-    name = "EnvironmentalLosses",
-    module = "lox_space",
-    frozen,
-    from_py_object
-)]
-#[derive(Debug, Clone)]
-pub struct PyEnvironmentalLosses(pub EnvironmentalLosses);
-
-#[pymethods]
-impl PyEnvironmentalLosses {
-    /// Computes atmospheric attenuation on a slant path from ITU-R models.
-    ///
-    /// Args:
-    ///     provider: Open ItuProvider supplying the gridded reference data.
-    ///     lat: Latitude.
-    ///     lon: Longitude.
-    ///     frequency: Frequency.
-    ///     elevation: Elevation angle (clamped to >= 5 deg).
-    ///     probability: Exceedance probability (% of average year).
-    ///     diameter: Physical antenna diameter.
-    ///     polarisation_tilt: Polarisation tilt angle (default 45 deg for circular).
-    #[new]
-    #[allow(clippy::too_many_arguments)]
-    #[pyo3(signature = (provider, lat, lon, frequency, elevation, probability, diameter, polarisation_tilt=None))]
-    fn new(
-        provider: &PyItuProvider,
-        lat: PyAngle,
-        lon: PyAngle,
-        frequency: PyFrequency,
-        elevation: PyAngle,
-        probability: f64,
-        diameter: PyDistance,
-        polarisation_tilt: Option<PyAngle>,
-    ) -> PyResult<Self> {
-        let tau = polarisation_tilt
-            .map(|a| a.0)
-            .unwrap_or(Angle::degrees(45.0));
-        let losses = EnvironmentalLosses::new(
-            &provider.0,
-            lat.0,
-            lon.0,
-            frequency.0,
-            elevation.0,
-            probability,
-            diameter.0,
-            tau,
-        )
-        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-        Ok(Self(losses))
-    }
-
-    /// Returns zero environmental losses.
-    #[staticmethod]
-    fn none() -> Self {
-        Self(EnvironmentalLosses::none())
-    }
-
-    /// Creates environmental losses from individual values.
-    #[staticmethod]
-    #[pyo3(signature = (rain=None, gaseous=None, scintillation=None, atmospheric=None, cloud=None, depolarization=None))]
-    fn from_values(
-        rain: Option<PyDecibel>,
-        gaseous: Option<PyDecibel>,
-        scintillation: Option<PyDecibel>,
-        atmospheric: Option<PyDecibel>,
-        cloud: Option<PyDecibel>,
-        depolarization: Option<PyDecibel>,
-    ) -> Self {
-        Self(EnvironmentalLosses {
-            rain: rain.map_or(Decibel::new(0.0), |d| d.0),
-            gaseous: gaseous.map_or(Decibel::new(0.0), |d| d.0),
-            scintillation: scintillation.map_or(Decibel::new(0.0), |d| d.0),
-            atmospheric: atmospheric.map_or(Decibel::new(0.0), |d| d.0),
-            cloud: cloud.map_or(Decibel::new(0.0), |d| d.0),
-            depolarization: depolarization.map_or(Decibel::new(0.0), |d| d.0),
-        })
-    }
-
-    /// Returns the total environmental loss.
-    fn total(&self) -> PyDecibel {
-        PyDecibel(self.0.total())
-    }
-
-    /// Rain attenuation.
-    #[getter]
-    fn rain(&self) -> PyDecibel {
-        PyDecibel(self.0.rain)
-    }
-    /// Gaseous absorption.
-    #[getter]
-    fn gaseous(&self) -> PyDecibel {
-        PyDecibel(self.0.gaseous)
-    }
-    /// Scintillation loss.
-    #[getter]
-    fn scintillation(&self) -> PyDecibel {
-        PyDecibel(self.0.scintillation)
-    }
-    /// General atmospheric loss (combined total).
-    #[getter]
-    fn atmospheric(&self) -> PyDecibel {
-        PyDecibel(self.0.atmospheric)
-    }
-    /// Cloud attenuation.
-    #[getter]
-    fn cloud(&self) -> PyDecibel {
-        PyDecibel(self.0.cloud)
-    }
-    /// Depolarization loss.
-    #[getter]
-    fn depolarization(&self) -> PyDecibel {
-        PyDecibel(self.0.depolarization)
-    }
-
-    fn __eq__(&self, other: &PyEnvironmentalLosses) -> bool {
-        self.0.rain.as_f64() == other.0.rain.as_f64()
-            && self.0.gaseous.as_f64() == other.0.gaseous.as_f64()
-            && self.0.scintillation.as_f64() == other.0.scintillation.as_f64()
-            && self.0.atmospheric.as_f64() == other.0.atmospheric.as_f64()
-            && self.0.cloud.as_f64() == other.0.cloud.as_f64()
-            && self.0.depolarization.as_f64() == other.0.depolarization.as_f64()
-    }
-
-    fn __repr__(&self) -> String {
-        format!(
-            "EnvironmentalLosses(rain={}, gaseous={}, scintillation={}, atmospheric={}, cloud={}, depolarization={})",
-            PyDecibel(self.0.rain).__repr__(),
-            PyDecibel(self.0.gaseous).__repr__(),
-            PyDecibel(self.0.scintillation).__repr__(),
-            PyDecibel(self.0.atmospheric).__repr__(),
-            PyDecibel(self.0.cloud).__repr__(),
-            PyDecibel(self.0.depolarization).__repr__(),
-        )
     }
 }
 
