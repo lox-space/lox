@@ -181,10 +181,10 @@ impl<F, R> RootFindingDetector<F, R> {
     /// The start sign is needed by [`EventsToIntervals`] to determine whether
     /// the condition holds throughout when no zero-crossings are found.
     /// Returning it here avoids a redundant function evaluation.
-    pub(crate) fn detect_with_start_sign<T>(
+    pub(crate) fn detect_with_holds<T>(
         &self,
         interval: TimeInterval<T>,
-    ) -> Result<(Vec<Event<T>>, f64), DetectError>
+    ) -> Result<(Vec<Event<T>>, bool), DetectError>
     where
         T: TimeScale + Copy,
         F: DetectFn<T>,
@@ -192,7 +192,9 @@ impl<F, R> RootFindingDetector<F, R> {
     {
         let signal = DetectSignal(&self.func);
         let minimizer = BrentMinimizer::default();
-        let (events, start_value) = match self.coarse_step {
+        // The bool reports whether the condition holds somewhere — the
+        // discriminant `EventsToIntervals` needs when there are no crossings.
+        match self.coarse_step {
             Some(coarse_step) => detect_grid_two_level(
                 &signal,
                 &self.root_finder,
@@ -200,16 +202,15 @@ impl<F, R> RootFindingDetector<F, R> {
                 interval,
                 coarse_step,
                 self.step,
-            )?,
+            ),
             None => detect_grid(
                 &signal,
                 &self.root_finder,
                 &minimizer,
                 interval,
                 &UniformSampler::new(self.step),
-            )?,
-        };
-        Ok((events, start_value.signum()))
+            ),
+        }
     }
 }
 
@@ -220,8 +221,7 @@ where
     for<'a, 'b> R: FindBracketedRoot<SignalCallback<'a, T, DetectSignal<&'b F>>>,
 {
     fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<Event<T>>, DetectError> {
-        self.detect_with_start_sign(interval)
-            .map(|(events, _)| events)
+        self.detect_with_holds(interval).map(|(events, _)| events)
     }
 }
 
@@ -263,12 +263,13 @@ where
         let start = interval.start();
         let end = interval.end();
 
-        let (events, start_sign) = self.detector.detect_with_start_sign(interval)?;
+        let (events, holds) = self.detector.detect_with_holds(interval)?;
         if events.is_empty() {
-            // No zero crossings — use the sign at the start (already computed
-            // during step evaluation) to determine if the condition holds
-            // throughout or not at all.
-            return if start_sign >= 0.0 {
+            // No zero crossings: the condition holds one sign throughout, so
+            // return the whole interval iff it holds somewhere (strictly
+            // positive at some sample) — not merely non-negative, which would
+            // accept a zero/`+0.0` start of a non-positive signal.
+            return if holds {
                 Ok(vec![interval])
             } else {
                 Ok(vec![])
@@ -687,7 +688,7 @@ mod tests {
 
     #[test]
     fn test_two_level_no_events() {
-        // Constant negative function — no events, correct start_sign.
+        // Constant negative function — no events, condition holds nowhere.
         let start = time!(Tai, 2000, 1, 1, 12).unwrap();
         let end = start + TimeDelta::from_seconds(10);
         let interval = TimeInterval::new(start, end);
@@ -696,9 +697,9 @@ mod tests {
             RootFindingDetector::new(FnDetect(|_t: Time<Tai>| -1.0), TimeDelta::from_seconds(1))
                 .with_coarse_step(TimeDelta::from_seconds(3));
 
-        let (events, start_sign) = det.detect_with_start_sign(interval).unwrap();
+        let (events, holds) = det.detect_with_holds(interval).unwrap();
         assert!(events.is_empty());
-        assert!(start_sign < 0.0);
+        assert!(!holds);
     }
 
     #[test]
