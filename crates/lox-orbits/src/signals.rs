@@ -1248,8 +1248,7 @@ mod tests {
     #[test]
     fn test_min_equals_interval_intersection() {
         use crate::events::{
-            EventsToIntervals, IntervalDetector, IntervalDetectorExt, RootFindingDetector,
-            TryFnDetect,
+            EventsToIntervals, IntervalDetector, RootFindingDetector, TryFnDetect,
         };
 
         let interval = horizon(86_400.0);
@@ -1298,7 +1297,10 @@ mod tests {
             }),
             step,
         ));
-        let reference = a.intersect(b).detect(interval).unwrap();
+        let reference = lox_time::intervals::intersect_intervals(
+            &a.detect(interval).unwrap(),
+            &b.detect(interval).unwrap(),
+        );
         let reference_evals = count_ref.load(Ordering::Relaxed);
 
         assert_eq!(windows.len(), reference.len());

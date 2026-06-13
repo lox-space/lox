@@ -11,9 +11,7 @@
 //! tests track; these benches pin the end-to-end cost.
 
 use divan::Bencher;
-use lox_orbits::events::{
-    EventsToIntervals, FnDetect, IntervalDetector, IntervalDetectorExt, RootFindingDetector,
-};
+use lox_orbits::events::{EventsToIntervals, FnDetect, IntervalDetector, RootFindingDetector};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
@@ -72,24 +70,6 @@ fn two_level_windows(bencher: Bencher) {
         let detector = RootFindingDetector::new(FnDetect(f), TimeDelta::from_seconds(10))
             .with_coarse_step(TimeDelta::from_seconds(300));
         EventsToIntervals::new(detector).detect(interval).unwrap()
-    });
-}
-
-#[divan::bench]
-fn intersection_windows(bencher: Bencher) {
-    let interval = horizon();
-    let f = elevation(interval.start());
-    let g = occultation(interval.start());
-    bencher.bench(|| {
-        let a = EventsToIntervals::new(RootFindingDetector::new(
-            FnDetect(f),
-            TimeDelta::from_seconds(10),
-        ));
-        let b = EventsToIntervals::new(RootFindingDetector::new(
-            FnDetect(g),
-            TimeDelta::from_seconds(10),
-        ));
-        a.intersect(b).detect(interval).unwrap()
     });
 }
 
