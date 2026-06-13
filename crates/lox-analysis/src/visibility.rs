@@ -10,13 +10,15 @@ use lox_bodies::{
 };
 use lox_core::glam::DVec3;
 use lox_ephem::Ephemeris;
+use lox_frames::iau::icrf_to_iau;
 use lox_frames::providers::DefaultRotationProvider;
-use lox_frames::rotations::{DynRotationError, RotationError, TryRotation};
-use lox_frames::{DynFrame, ReferenceFrame};
+use lox_frames::rotations::{DynRotationError, Rotation, RotationError, TryRotation};
+use lox_frames::{DynFrame, Iau, ReferenceFrame};
 use lox_math::series::{InterpolationType, Series, SeriesError};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
+use lox_time::julian_dates::JulianDate;
 use lox_time::series::TimeSeries;
 use lox_time::time_scales::{DynTimeScale, Tai, Tdb, TimeScale};
 use rayon::prelude::*;
@@ -379,10 +381,24 @@ struct ElevationDetectFn<'a, O: Origin, R: ReferenceFrame> {
     body_fixed_frame: DynFrame,
 }
 
-impl<O, R> DetectFn<Tai> for ElevationDetectFn<'_, O, R>
+/// Builds the ICRF→IAU body-fixed rotation at a TDB time; the transpose
+/// gives IAU→ICRF. The [`Iau`] frame is built once per grid by the caller —
+/// its construction re-evaluates the rotational elements purely for
+/// validation, which must not happen per sample — so this core does only the
+/// single rotational-elements evaluation the rotation actually needs, from a
+/// TDB time the batched caller also reuses for the ephemeris lookup.
+fn icrf_to_iau_at(frame: &Iau<DynOrigin>, tdb: Time<Tdb>) -> Rotation {
+    let secs = tdb.seconds_since_j2000();
+    icrf_to_iau(
+        frame.rotational_elements(secs),
+        frame.rotational_element_rates(secs),
+    )
+}
+
+impl<O, R> Signal<Tai> for ElevationDetectFn<'_, O, R>
 where
     O: TrySpheroid + Copy,
-    R: ReferenceFrame + Copy,
+    R: ReferenceFrame + Copy + Into<DynFrame>,
     DefaultRotationProvider: TryRotation<R, DynFrame, Tai>,
     <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
         std::error::Error + Send + Sync + 'static,
@@ -397,6 +413,33 @@ where
         let obs = self.gs.compute_observables(sc.position(), sc.velocity());
         Ok(obs.elevation() - self.mask.min_elevation(obs.azimuth()))
     }
+
+    fn eval_grid(&self, times: &[Time<Tai>], out: &mut [f64]) -> Result<(), Self::Error> {
+        // Fast path for the common ground-station geometry: an ICRF-referenced
+        // trajectory rotated into an IAU body-fixed frame. One cursor
+        // interpolation over the grid, one rotation build per sample. Other
+        // frame pairs fall back to the (identical) scalar path.
+        let frame = match (self.sc.reference_frame().into(), self.body_fixed_frame) {
+            (DynFrame::Icrf, DynFrame::Iau(body)) => Iau::try_new(body).ok(),
+            _ => None,
+        };
+        let Some(frame) = frame else {
+            for (time, value) in times.iter().zip(out.iter_mut()) {
+                *value = self.eval(*time)?;
+            }
+            return Ok(());
+        };
+
+        let mut cursor = 0usize;
+        for (time, value) in times.iter().zip(out.iter_mut()) {
+            let state = self.sc.interpolate_at_cursor(*time, &mut cursor);
+            let rot = icrf_to_iau_at(&frame, time.to_scale(Tdb));
+            let (p, v) = rot.rotate_state(state.position(), state.velocity());
+            let obs = self.gs.compute_observables(p, v);
+            *value = obs.elevation() - self.mask.min_elevation(obs.azimuth());
+        }
+        Ok(())
+    }
 }
 
 /// Line-of-sight between a ground station and spacecraft, relative to an
@@ -409,10 +452,10 @@ struct LineOfSightDetectFn<'a, O: Origin, R: ReferenceFrame, E> {
     body_fixed_frame: DynFrame,
 }
 
-impl<O, R, E: Ephemeris> DetectFn<Tai> for LineOfSightDetectFn<'_, O, R, E>
+impl<O, R, E: Ephemeris> Signal<Tai> for LineOfSightDetectFn<'_, O, R, E>
 where
     O: TrySpheroid + Copy,
-    R: ReferenceFrame + Copy,
+    R: ReferenceFrame + Copy + Into<DynFrame>,
     E::Error: 'static,
     DefaultRotationProvider: TryRotation<DynFrame, R, Tai>,
     <DefaultRotationProvider as TryRotation<DynFrame, R, Tai>>::Error:
@@ -436,6 +479,39 @@ where
         let (r_gs_frame, _) = rot.rotate_state(self.gs.body_fixed_position(), DVec3::ZERO);
         let r_gs = r_gs_frame - r_body;
         Ok(self.body.line_of_sight(r_gs, r_sc)?)
+    }
+
+    fn eval_grid(&self, times: &[Time<Tai>], out: &mut [f64]) -> Result<(), Self::Error> {
+        // Fast path for an IAU body-fixed ground station and an ICRF-referenced
+        // trajectory: one TAI→TDB conversion per sample feeds *both* the
+        // ephemeris lookup and the rotation (the scalar path converts twice),
+        // plus one cursor interpolation over the grid.
+        let frame = match (self.body_fixed_frame, self.sc.reference_frame().into()) {
+            (DynFrame::Iau(b), DynFrame::Icrf) => Iau::try_new(b).ok(),
+            _ => None,
+        };
+        let Some(frame) = frame else {
+            for (time, value) in times.iter().zip(out.iter_mut()) {
+                *value = self.eval(*time)?;
+            }
+            return Ok(());
+        };
+
+        let gs_bf = self.gs.body_fixed_position();
+        let mut cursor = 0usize;
+        for (time, value) in times.iter().zip(out.iter_mut()) {
+            let tdb = time.to_scale(Tdb);
+            let r_body = self
+                .ephemeris
+                .position(tdb, self.sc.origin(), self.body)
+                .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
+            let r_sc = self.sc.interpolate_at_cursor(*time, &mut cursor).position() - r_body;
+            let rot = icrf_to_iau_at(&frame, tdb).transpose();
+            let (r_gs_frame, _) = rot.rotate_state(gs_bf, DVec3::ZERO);
+            let r_gs = r_gs_frame - r_body;
+            *value = self.body.line_of_sight(r_gs, r_sc)?;
+        }
+        Ok(())
     }
 }
 
@@ -937,23 +1013,23 @@ where
         let body_fixed_frame = gs.body_fixed_frame();
         let mut constraints: Vec<ConstraintSignal<'_>> = vec![(
             Constraint::Elevation,
-            Box::new(DetectSignal(ElevationDetectFn {
+            Box::new(ElevationDetectFn {
                 gs: gs.location(),
                 mask: gs.mask(),
                 sc: sc_traj,
                 body_fixed_frame,
-            })),
+            }),
         )];
         for &body in self.occulting_bodies {
             constraints.push((
                 Constraint::LineOfSight(body),
-                Box::new(DetectSignal(LineOfSightDetectFn {
+                Box::new(LineOfSightDetectFn {
                     gs: gs.location(),
                     sc: sc_traj,
                     body,
                     ephemeris: self.ephemeris,
                     body_fixed_frame,
-                })),
+                }),
             ));
         }
         let coarse = combine_coarse_steps(
@@ -1440,12 +1516,12 @@ where
             );
             let constraints: Vec<ConstraintSignal<'_>> = vec![(
                 Constraint::Elevation,
-                Box::new(DetectSignal(ElevationDetectFn {
+                Box::new(ElevationDetectFn {
                     gs: gs.location(),
                     mask: gs.mask(),
                     sc: sc_traj,
                     body_fixed_frame: gs.body_fixed_frame(),
-                })),
+                }),
             )];
             let coarse = combine_coarse_steps(
                 coarse_step,
@@ -2022,12 +2098,12 @@ mod tests {
         let typed = ensemble.get(sc.id()).unwrap();
         let constraints: Vec<ConstraintSignal<'_>> = vec![(
             Constraint::Elevation,
-            Box::new(DetectSignal(ElevationDetectFn {
+            Box::new(ElevationDetectFn {
                 gs: gs.location(),
                 mask: gs.mask(),
                 sc: typed,
                 body_fixed_frame: gs.body_fixed_frame(),
-            })),
+            }),
         )];
         let tai_interval =
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
@@ -2047,6 +2123,128 @@ mod tests {
             );
             assert_approx_eq!((a.end() - f.end()).to_seconds().to_f64(), 0.0, atol <= 1e-3);
         }
+    }
+
+    /// The batched `eval_grid` fast path must reproduce the scalar `eval`
+    /// bit-for-bit-close for both the elevation and line-of-sight signals —
+    /// it shares one time-scale conversion and one rotation build per sample,
+    /// so any divergence from the per-point path is a bug.
+    #[test]
+    fn test_batched_eval_grid_matches_scalar() {
+        let sc_traj = spacecraft_trajectory_dyn();
+        let (epoch, o, f, data) = sc_traj.into_parts();
+        let typed = Trajectory::from_parts(epoch.with_scale(Tai), o, f, data);
+        let gs = location_dyn();
+        let mask = ElevationMask::with_fixed_elevation(0.0);
+        let bf = DynFrame::Iau(DynOrigin::Earth);
+
+        let span = (typed.end_time() - typed.start_time())
+            .to_seconds()
+            .to_f64();
+        // Irregular, non-decreasing grid including the endpoints.
+        let times: Vec<_> = (0..400)
+            .map(|k| {
+                let frac = (k as f64 / 399.0).powf(1.3);
+                typed.start_time() + TimeDelta::from_seconds_f64(span * frac)
+            })
+            .collect();
+
+        let elev = ElevationDetectFn {
+            gs: &gs,
+            mask: &mask,
+            sc: &typed,
+            body_fixed_frame: bf,
+        };
+        let mut grid = vec![0.0; times.len()];
+        elev.eval_grid(&times, &mut grid).unwrap();
+        for (k, &t) in times.iter().enumerate() {
+            assert_approx_eq!(grid[k], elev.eval(t).unwrap(), atol <= 1e-9);
+        }
+
+        let spk = ephemeris();
+        let los = LineOfSightDetectFn {
+            gs: &gs,
+            sc: &typed,
+            body: DynOrigin::Moon,
+            ephemeris: spk,
+            body_fixed_frame: bf,
+        };
+        let mut grid = vec![0.0; times.len()];
+        los.eval_grid(&times, &mut grid).unwrap();
+        for (k, &t) in times.iter().enumerate() {
+            assert_approx_eq!(grid[k], los.eval(t).unwrap(), atol <= 1e-9);
+        }
+    }
+
+    /// One-off diagnostic: eval count and wall time for the single-pair
+    /// scenario, to decide whether per-eval cost or scaffolding dominates
+    /// (run with --release, --ignored, --nocapture).
+    #[test]
+    #[ignore]
+    fn measure_eval_count() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::time::Instant;
+
+        struct Counting<'a, S>(S, &'a AtomicUsize, &'a AtomicUsize, &'a AtomicUsize);
+        impl<T: TimeScale + Copy, S: Signal<T>> Signal<T> for Counting<'_, S> {
+            type Error = S::Error;
+            fn eval(&self, time: Time<T>) -> Result<f64, Self::Error> {
+                self.1.fetch_add(1, Ordering::Relaxed);
+                self.3.fetch_add(1, Ordering::Relaxed); // scalar eval calls
+                self.0.eval(time)
+            }
+            fn eval_grid(&self, times: &[Time<T>], out: &mut [f64]) -> Result<(), Self::Error> {
+                self.1.fetch_add(times.len(), Ordering::Relaxed);
+                self.2.fetch_add(1, Ordering::Relaxed); // eval_grid calls
+                self.0.eval_grid(times, out)
+            }
+        }
+
+        let sc_traj = spacecraft_trajectory_dyn();
+        let (epoch, o, f, data) = sc_traj.into_parts();
+        let typed = Trajectory::from_parts(epoch.with_scale(Tai), o, f, data);
+        let gs = location_dyn();
+        let mask = ElevationMask::with_fixed_elevation(0.0);
+        let interval = TimeInterval::new(typed.start_time(), typed.end_time());
+        let step = TimeDelta::from_seconds(60);
+        let coarse = auto_coarse_step(&typed, DynOrigin::Earth, step);
+
+        let count = AtomicUsize::new(0);
+        let grid_calls = AtomicUsize::new(0);
+        let scalar_calls = AtomicUsize::new(0);
+        let constraints: Vec<ConstraintSignal<'_>> = vec![(
+            Constraint::Elevation,
+            Box::new(Counting(
+                ElevationDetectFn {
+                    gs: &gs,
+                    mask: &mask,
+                    sc: &typed,
+                    body_fixed_frame: DynFrame::Iau(DynOrigin::Earth),
+                },
+                &count,
+                &grid_calls,
+                &scalar_calls,
+            )),
+        )];
+
+        let runs = 50;
+        let t0 = Instant::now();
+        for _ in 0..runs {
+            detect_pair(&constraints, 1, interval, step, coarse).unwrap();
+        }
+        let elapsed = t0.elapsed();
+        let evals = count.load(Ordering::Relaxed) / runs;
+        let per_run = elapsed.as_nanos() as f64 / runs as f64;
+        println!("evals/run           {evals}");
+        println!(
+            "eval_grid calls/run {}",
+            grid_calls.load(Ordering::Relaxed) / runs
+        );
+        println!(
+            "scalar evals/run    {}",
+            scalar_calls.load(Ordering::Relaxed) / runs
+        );
+        println!("wall/run            {:8.1} µs", per_run / 1000.0);
     }
 
     /// One-off diagnostic: per-eval cost breakdown (run with --release,
@@ -2088,6 +2286,25 @@ mod tests {
         }
         let interp_rot = t0.elapsed();
 
+        // TAI→TDB conversion alone (per-call offset evaluation).
+        let t0 = Instant::now();
+        for &t in &times {
+            black_box(t.to_scale(Tdb));
+        }
+        let tdb = t0.elapsed();
+
+        // Rotation matrix alone (TDB conversion + rotational elements + build),
+        // exercising the DynFrame→DynFrame dispatch each call.
+        let t0 = Instant::now();
+        for &t in &times {
+            black_box(
+                DefaultRotationProvider
+                    .try_rotation(DynFrame::Icrf, body_fixed_frame, t)
+                    .unwrap(),
+            );
+        }
+        let rot_only = t0.elapsed();
+
         let elev_fn = ElevationDetectFn {
             gs: &gs,
             mask: &mask,
@@ -2114,11 +2331,37 @@ mod tests {
         }
         let los = t0.elapsed();
 
+        // Ephemeris position lookup alone (TDB conversion + SPK segment search
+        // + Chebyshev eval), the per-time cost batching could amortize for LOS.
+        let t0 = Instant::now();
+        for &t in &times {
+            black_box(
+                spk.position(t.to_scale(Tdb), typed.origin(), DynOrigin::Moon)
+                    .unwrap(),
+            );
+        }
+        let ephem = t0.elapsed();
+
+        // Batched eval_grid over one big grid (per-sample cost, no
+        // per-bracket allocation confound).
+        let mut grid_out = vec![0.0; n];
+        let t0 = Instant::now();
+        elev_fn.eval_grid(&times, &mut grid_out).unwrap();
+        let elev_grid = t0.elapsed();
+        let t0 = Instant::now();
+        los_fn.eval_grid(&times, &mut grid_out).unwrap();
+        let los_grid = t0.elapsed();
+
         let per = |d: std::time::Duration| d.as_nanos() as f64 / n as f64;
         println!("interpolate_at      {:8.0} ns", per(interp));
         println!("  + rotation        {:8.0} ns", per(interp_rot));
+        println!("tdb conversion      {:8.0} ns", per(tdb));
+        println!("rotation only       {:8.0} ns", per(rot_only));
+        println!("ephemeris position  {:8.0} ns", per(ephem));
         println!("elevation eval      {:8.0} ns", per(elev));
+        println!("elevation eval_grid {:8.0} ns", per(elev_grid));
         println!("los eval            {:8.0} ns", per(los));
+        println!("los eval_grid       {:8.0} ns", per(los_grid));
     }
 
     #[test]

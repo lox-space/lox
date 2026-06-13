@@ -273,6 +273,39 @@ impl Series {
         }
     }
 
+    /// Cursor-hinted variant of [`find_index`](Self::find_index): returns the
+    /// identical interval index but restricts the binary search to the side of
+    /// `cursor` that must contain it. For a non-decreasing sequence of queries
+    /// the answer is at or after `cursor`, so only the shrinking suffix is
+    /// searched — strictly cheaper than, and never worse than, the full search.
+    /// The result is a valid `cursor` for the next query; a stale (too-large)
+    /// cursor falls back to searching the prefix, so correctness never depends
+    /// on the hint.
+    ///
+    /// A linear forward walk was tried first and was a pessimization: for a
+    /// grid sampled sparsely relative to the knots it advances O(knots-skipped)
+    /// per query, worse than the O(log n) it replaced.
+    #[inline]
+    pub fn find_index_from(&self, xp: f64, cursor: usize) -> usize {
+        let x = self.x.as_ref();
+        let n = x.len();
+        if xp <= x[0] {
+            return 0;
+        }
+        if xp >= x[n - 1] {
+            return n - 2;
+        }
+        let last = n - 2;
+        let c = cursor.min(last);
+        if xp >= x[c] {
+            // Answer is in [c, last]: search the suffix and offset.
+            c + x[c..].partition_point(|&v| xp > v) - 1
+        } else {
+            // Stale cursor ahead of xp: the answer is in [0, c).
+            x[..c].partition_point(|&v| xp > v) - 1
+        }
+    }
+
     /// Interpolates at point `xp` using the precomputed interval `idx`.
     #[inline]
     pub fn interpolate_at_index(&self, xp: f64, idx: usize) -> f64 {
@@ -376,6 +409,35 @@ mod tests {
     use lox_test_utils::assert_approx_eq;
 
     use super::*;
+
+    /// The cursor variant must return exactly the same interval as the
+    /// binary-search `find_index`, including at exact knots, below the first
+    /// knot, and above the last — swept forward with a carried cursor and
+    /// also probed with a deliberately stale (too-large) cursor.
+    #[test]
+    fn test_find_index_from_matches_find_index() {
+        let x = vec![0.0, 1.0, 2.5, 4.0, 4.0001, 10.0];
+        let y = x.clone();
+        let s = Series::try_new(x, y, InterpolationType::Linear).unwrap();
+
+        let queries = [
+            -1.0, 0.0, 0.5, 1.0, 1.0001, 2.5, 3.9999, 4.0, 4.00005, 4.0001, 9.9, 10.0, 11.0,
+        ];
+        // Forward sweep with a carried cursor.
+        let mut cursor = 0;
+        for &q in &queries {
+            cursor = s.find_index_from(q, cursor);
+            assert_eq!(cursor, s.find_index(q), "carried cursor at {q}");
+        }
+        // Stale cursor (pinned at the maximum) must still self-correct.
+        for &q in &queries {
+            assert_eq!(
+                s.find_index_from(q, 4),
+                s.find_index(q),
+                "stale cursor at {q}"
+            );
+        }
+    }
 
     #[rstest]
     #[case(0.5, 0.5)]
