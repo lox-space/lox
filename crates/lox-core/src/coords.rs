@@ -1160,6 +1160,51 @@ impl CartesianTrajectory {
         );
         Cartesian::from_vecs(pos, vel)
     }
+
+    /// Interpolates the full state at time `t` (seconds since epoch) using a
+    /// carried index `cursor` instead of a binary search.
+    ///
+    /// The three position components share one knot grid, so a single cursor
+    /// locates the spline interval for all of them. Across a non-decreasing
+    /// sequence of `t` the cursor advances monotonically — O(1) amortized per
+    /// call versus the O(log knots) of [`at`](Self::at) — and a backward
+    /// correction keeps the result identical for any ordering. Allocation-free:
+    /// the caller carries `cursor` across the loop, so batched evaluation needs
+    /// no scratch arrays.
+    #[inline]
+    pub fn at_cursor(&self, t: f64, cursor: &mut usize) -> Cartesian {
+        let (sx, sy, sz) = (&self.series[0], &self.series[1], &self.series[2]);
+        *cursor = sx.find_index_from(t, *cursor);
+        let idx = *cursor;
+        let pos = DVec3::new(
+            sx.interpolate_at_index(t, idx),
+            sy.interpolate_at_index(t, idx),
+            sz.interpolate_at_index(t, idx),
+        );
+        let vel = DVec3::new(
+            sx.derivative_at_index(t, idx),
+            sy.derivative_at_index(t, idx),
+            sz.derivative_at_index(t, idx),
+        );
+        Cartesian::from_vecs(pos, vel)
+    }
+
+    /// Interpolates position and velocity at a batch of times (seconds since
+    /// epoch), filling `pos` and `vel` via a single carried cursor (see
+    /// [`at_cursor`](Self::at_cursor)).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `pos` or `vel` is shorter than `secs`.
+    pub fn at_grid(&self, secs: &[f64], pos: &mut [DVec3], vel: &mut [DVec3]) {
+        assert!(pos.len() >= secs.len() && vel.len() >= secs.len());
+        let mut cursor = 0usize;
+        for (k, &t) in secs.iter().enumerate() {
+            let state = self.at_cursor(t, &mut cursor);
+            pos[k] = state.position();
+            vel[k] = state.velocity();
+        }
+    }
 }
 
 /// Iterator over the discrete states in a [`CartesianTrajectory`].

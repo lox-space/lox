@@ -223,6 +223,51 @@ where
         self.interpolate(time - self.epoch)
     }
 
+    /// Interpolates the state at an absolute time using a carried index
+    /// `cursor`, advancing it instead of binary-searching the knot grid.
+    ///
+    /// Initialise `cursor` to `0` and reuse it across a non-decreasing
+    /// sequence of times for O(1) amortized lookups with no allocation — the
+    /// allocation-free core of batched [`Signal`](crate::signals::Signal)
+    /// evaluation. See [`CartesianTrajectory::at_cursor`].
+    #[inline]
+    pub fn interpolate_at_cursor(
+        &self,
+        time: Time<T>,
+        cursor: &mut usize,
+    ) -> CartesianOrbit<T, O, R>
+    where
+        T: Copy,
+    {
+        let t = (time - self.epoch).to_seconds().to_f64();
+        Orbit::from_state(
+            self.data.at_cursor(t, cursor),
+            time,
+            self.origin,
+            self.frame,
+        )
+    }
+
+    /// Batch-interpolates position and velocity at the given absolute times,
+    /// filling `pos` and `vel` via a single carried cursor.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `pos` or `vel` is shorter than `times`.
+    pub fn interpolate_states(&self, times: &[Time<T>], pos: &mut [DVec3], vel: &mut [DVec3])
+    where
+        T: Copy,
+    {
+        assert!(pos.len() >= times.len() && vel.len() >= times.len());
+        let mut cursor = 0usize;
+        for (k, &time) in times.iter().enumerate() {
+            let t = (time - self.epoch).to_seconds().to_f64();
+            let state = self.data.at_cursor(t, &mut cursor);
+            pos[k] = state.position();
+            vel[k] = state.velocity();
+        }
+    }
+
     /// Returns the interpolated position at time `t` seconds from the epoch.
     pub fn position(&self, t: f64) -> DVec3 {
         self.data.position(t)
@@ -552,5 +597,26 @@ mod tests {
         assert_eq!(origin, Earth);
         assert_eq!(frame, Icrf);
         assert_eq!(epoch, epoch_before);
+    }
+
+    #[test]
+    fn test_interpolate_states_matches_pointwise() {
+        let traj = sample_trajectory();
+        let epoch = traj.epoch();
+        // A non-uniform, non-decreasing grid spanning and overshooting the span,
+        // plus knot-coincident points, to exercise the cursor edges.
+        let times: Vec<_> = [0.0, 0.0, 17.0, 60.0, 60.0, 95.5, 120.0, 130.0]
+            .iter()
+            .map(|s| epoch + lox_time::deltas::TimeDelta::from_seconds_f64(*s))
+            .collect();
+        let mut pos = vec![DVec3::ZERO; times.len()];
+        let mut vel = vec![DVec3::ZERO; times.len()];
+        traj.interpolate_states(&times, &mut pos, &mut vel);
+
+        for (k, &t) in times.iter().enumerate() {
+            let want = traj.interpolate_at(t);
+            assert_eq!(pos[k], want.position(), "position at index {k}");
+            assert_eq!(vel[k], want.velocity(), "velocity at index {k}");
+        }
     }
 }
