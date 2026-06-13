@@ -223,6 +223,30 @@ where
         self.interpolate(time - self.epoch)
     }
 
+    /// Maximum instantaneous angular rate `|r × v| / |r|²` \[rad/s\] of the
+    /// position direction over the trajectory's knots.
+    ///
+    /// This is the fastest the geocentric (or body-centric) line of sight to
+    /// the object sweeps — the kinematic bound on how quickly any geometry-
+    /// derived signal can vary. It is read directly from the sampled states,
+    /// so it holds the actual perigee speed *visited* by this arc (not a
+    /// theoretical osculating perigee) and makes no two-body assumption,
+    /// staying valid for perturbed, maneuvering, or non-Keplerian segments.
+    pub fn max_angular_rate(&self) -> f64 {
+        let (x, y, z) = (self.data.x(), self.data.y(), self.data.z());
+        let (vx, vy, vz) = (self.data.vx(), self.data.vy(), self.data.vz());
+        let mut max = 0.0_f64;
+        for i in 0..x.len() {
+            let r = DVec3::new(x[i], y[i], z[i]);
+            let v = DVec3::new(vx[i], vy[i], vz[i]);
+            let r2 = r.length_squared();
+            if r2 > 0.0 {
+                max = max.max(r.cross(v).length() / r2);
+            }
+        }
+        max
+    }
+
     /// Interpolates the state at an absolute time using a carried index
     /// `cursor`, advancing it instead of binary-searching the knot grid.
     ///

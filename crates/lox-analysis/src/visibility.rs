@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 use lox_bodies::{
-    DynOrigin, Origin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid,
+    DynOrigin, Origin, TryMeanRadius, TryRotationalElements, TrySpheroid,
     UndefinedOriginPropertyError,
 };
 use lox_core::glam::DVec3;
@@ -684,15 +684,22 @@ type PairWindows = (
 /// only shrink them). Inside those candidate windows the cheap signal is
 /// positive by construction, so `{all > 0} ∩ window = {expensive > 0} ∩
 /// window` — the second stage detects only the remaining constraints, yet
-/// the result is the exact window set of the full conjunction. Both stages
-/// use two-level coarse/fine sampling when `coarse_step` is given (derived
-/// from `min_pass_duration`).
+/// the result is the exact window set of the full conjunction.
+///
+/// The two stages take **separate** coarse steps. `cheap_coarse` may carry
+/// the period-derived auto-coarse, which is bounded by the cheap (pruning)
+/// constraint's geometry. The expensive constraints can vary on a different,
+/// possibly faster scale (an occultation within a pass), so `expensive_coarse`
+/// carries only the user's `min_pass_duration` contract — never the heuristic
+/// — and defaults to the fine step. Conflating the two would let the cheap
+/// stage's coarse step over-step a short occultation in stage two.
 fn detect_pair(
     constraints: &[ConstraintSignal<'_>],
     n_cheap: usize,
     interval: TimeInterval<Tai>,
     step: TimeDelta,
-    coarse_step: Option<TimeDelta>,
+    cheap_coarse: Option<TimeDelta>,
+    expensive_coarse: Option<TimeDelta>,
 ) -> Result<(Vec<TimeInterval<Tai>>, Vec<WindowDiagnostics>), VisibilityError> {
     // Each boxed constraint is a single leaf, so leaf ids index `constraints`.
     let cheap_label = |id: ConstraintId| constraints[id.0].0;
@@ -700,7 +707,7 @@ fn detect_pair(
 
     let cheap: Vec<_> = constraints[..n_cheap].iter().map(|(_, s)| s).collect();
     let cheap_detector = Detector::new(MinOf::new(cheap));
-    let candidates = match coarse_step {
+    let candidates = match cheap_coarse {
         Some(coarse) => cheap_detector.windows_two_level(interval, coarse, step)?,
         None => cheap_detector.windows(interval, &UniformSampler::new(step))?,
     };
@@ -724,7 +731,7 @@ fn detect_pair(
     let mut intervals = Vec::new();
     let mut diagnostics = Vec::new();
     for candidate in &candidates {
-        let windows = match coarse_step {
+        let windows = match expensive_coarse {
             Some(coarse) => detector.windows_two_level(candidate.interval(), coarse, step)?,
             None => detector.windows(candidate.interval(), &sampler)?,
         };
@@ -766,41 +773,38 @@ fn collect_results(results: Vec<PairWindows>, pair_type: PairType) -> Visibility
 }
 
 /// Divisor applied to the bounding period when auto-deriving the coarse
-/// candidate-sampling step: a LEO pass spans up to roughly a tenth of the
-/// orbital period, so a thirty-second of the period guarantees multiple
-/// samples inside every regular pass.
+/// candidate-sampling step, giving several samples across the narrowest
+/// feature the bounding rate admits.
 const AUTO_COARSE_DIVISOR: f64 = 32.0;
 
-/// Osculating semi-major axis \[m\] from the trajectory's start state, or
-/// `None` for non-elliptical (parabolic/hyperbolic) orbits.
-fn semi_major_axis<O, R>(traj: &Trajectory<Tai, O, R>, mu: f64) -> Option<f64>
+/// Maximum angular rate \[rad/s\] the trajectory's line of sight attains
+/// over its arc, or `None` for a degenerate (zero-rate) trajectory.
+///
+/// The kinematic bound on how fast any geometry-derived signal can vary, read
+/// from the sampled states (see [`Trajectory::max_angular_rate`]). Because it
+/// is measured from the actual arc rather than a period or an osculating
+/// perigee the segment may never reach, it neither over-steps a fast
+/// (eccentric, perigee) pass nor over-samples a slow (apogee) one, and makes
+/// no two-body assumption.
+fn max_angular_rate<O, R>(traj: &Trajectory<Tai, O, R>) -> Option<f64>
 where
     O: Origin + Copy,
     R: ReferenceFrame + Copy,
 {
-    let state = traj.interpolate_at(traj.start_time());
-    let r = state.position().length();
-    let v2 = state.velocity().length_squared();
-    let a = 1.0 / (2.0 / r - v2 / mu);
-    (a > 0.0).then_some(a)
+    let rate = traj.max_angular_rate();
+    (rate > 0.0).then_some(rate)
 }
 
-/// Mean motion \[rad/s\] for semi-major axis `a` under gravitational
-/// parameter `mu`.
-fn mean_motion(a: f64, mu: f64) -> f64 {
-    (mu / a.powi(3)).sqrt()
-}
-
-/// Auto-derives a coarse candidate-sampling step for ground-space passes
-/// from the orbital period, making two-level detection the default instead
-/// of requiring `min_pass_duration`.
+/// Auto-derives a coarse candidate-sampling step for ground-space passes,
+/// making two-level detection the default instead of requiring
+/// `min_pass_duration`.
 ///
-/// Pass geometry cannot produce features much narrower than a fraction of
-/// the bounding period — the spacecraft's orbital period or the ground
-/// body's rotation period, whichever is shorter. Grazing passes below that
-/// scale are recovered by the detector's near-zero-extremum path. Returns
-/// `None` for non-elliptical orbits, undefined gravitational parameters,
-/// or when the derived step would not beat `step`.
+/// An elevation pass cannot be narrower than `τ` over the rate at which the
+/// line of sight sweeps — the *sum* of the satellite's angular rate (measured
+/// over the actual arc, fastest near perigee) and the ground body's rotation
+/// carrying the station beneath it. Grazing passes below that scale are
+/// recovered by the detector's near-zero-extremum path. Returns `None` for a
+/// degenerate trajectory or when the derived step would not beat `step`.
 fn auto_coarse_step<O, R>(
     traj: &Trajectory<Tai, O, R>,
     ground_body: DynOrigin,
@@ -810,16 +814,14 @@ where
     O: Origin + Copy + Into<DynOrigin>,
     R: ReferenceFrame + Copy,
 {
-    let origin: DynOrigin = traj.origin().into();
-    let mu = origin.try_gravitational_parameter().ok()?.as_f64();
-    let a = semi_major_axis(traj, mu)?;
-    let orbit_period = std::f64::consts::TAU / mean_motion(a, mu);
-    let rotation_period = ground_body
+    let sat_rate = max_angular_rate(traj)?;
+    let rotation_rate = ground_body
         .try_rotational_element_rates(0.0)
         .ok()
-        .map(|(_, _, w_dot)| std::f64::consts::TAU / w_dot.abs())
-        .filter(|p| p.is_finite());
-    let bound = rotation_period.map_or(orbit_period, |p| orbit_period.min(p));
+        .map(|(_, _, w_dot)| w_dot.abs())
+        .filter(|r| r.is_finite())
+        .unwrap_or(0.0);
+    let bound = std::f64::consts::TAU / (sat_rate + rotation_rate);
     let coarse = bound / AUTO_COARSE_DIVISOR;
     (coarse > step.to_seconds().to_f64()).then(|| TimeDelta::from_seconds_f64(coarse))
 }
@@ -829,30 +831,28 @@ where
 ///
 /// For two satellites orbiting the central body, the line-of-sight signal
 /// reduces to `[acos(R/r₁) + acos(R/r₂)] − θ(t)`, where `θ` is the geocentric
-/// angle between them. It is therefore essentially linear in `θ`, which
-/// sweeps no faster than the combined mean motion `n₁ + n₂` (the
-/// counter-rotating, crossing-orbit worst case). The bounding period is
-/// `τ / (n₁ + n₂)`; grazing occultations below the resulting step are
-/// recovered by the detector's near-zero-extremum path.
+/// angle between them. It is essentially linear in `θ`, which sweeps no faster
+/// than the sum of the two satellites' angular rates (the counter-rotating
+/// worst case). Each rate is measured over the actual arc, so the bound
+/// tightens correctly for eccentric orbits near perigee rather than assuming
+/// circular mean motion. The bounding period is `τ` over that combined rate;
+/// grazing occultations below it are recovered by the detector's near-zero-
+/// extremum path.
 ///
 /// **Only valid when line of sight is the pruning stage** — i.e. no range
 /// or slew-rate constraints, whose close-approach features are sub-orbital
-/// and must be sampled at the fine step. Returns `None` for non-elliptical
-/// orbits, undefined `mu`, or when the derived step would not beat `step`.
+/// and must be sampled at the fine step. Returns `None` for a degenerate
+/// trajectory or when the derived step would not beat `step`.
 fn auto_coarse_step_intersat<O, R>(
     traj1: &Trajectory<Tai, O, R>,
     traj2: &Trajectory<Tai, O, R>,
-    central_body: DynOrigin,
     step: TimeDelta,
 ) -> Option<TimeDelta>
 where
     O: Origin + Copy,
     R: ReferenceFrame + Copy,
 {
-    let mu = central_body.try_gravitational_parameter().ok()?.as_f64();
-    let a1 = semi_major_axis(traj1, mu)?;
-    let a2 = semi_major_axis(traj2, mu)?;
-    let combined_rate = mean_motion(a1, mu) + mean_motion(a2, mu);
+    let combined_rate = max_angular_rate(traj1)? + max_angular_rate(traj2)?;
     let bound = std::f64::consts::TAU / combined_rate;
     let coarse = bound / AUTO_COARSE_DIVISOR;
     (coarse > step.to_seconds().to_f64()).then(|| TimeDelta::from_seconds_f64(coarse))
@@ -1036,7 +1036,16 @@ where
             self.coarse_step(),
             auto_coarse_step(sc_traj, gs.location().origin(), self.step),
         );
-        detect_pair(&constraints, 1, interval, self.step, coarse)
+        // Stage 2 (occulter LOS) keeps only the min-pass contract — the
+        // period heuristic does not bound occultation widths.
+        detect_pair(
+            &constraints,
+            1,
+            interval,
+            self.step,
+            coarse,
+            self.coarse_step(),
+        )
     }
 
     /// Compute visibility windows for a single inter-satellite pair from the
@@ -1082,10 +1091,18 @@ where
             && self.max_range.is_none()
             && effective_slew_rate(sc1, sc2).is_none();
         let auto = los_is_cheap
-            .then(|| auto_coarse_step_intersat(traj1, traj2, central_body, self.step))
+            .then(|| auto_coarse_step_intersat(traj1, traj2, self.step))
             .flatten();
         let coarse = combine_coarse_steps(self.coarse_step(), auto);
-        detect_pair(&constraints, n_cheap, interval, self.step, coarse)
+        // Stage 2 (occulter LOS) keeps only the min-pass contract.
+        detect_pair(
+            &constraints,
+            n_cheap,
+            interval,
+            self.step,
+            coarse,
+            self.coarse_step(),
+        )
     }
 }
 
@@ -1527,7 +1544,7 @@ where
                 coarse_step,
                 auto_coarse_step(sc_traj, gs.location().origin(), step),
             );
-            let windows = detect_pair(&constraints, 1, interval, step, coarse)?;
+            let windows = detect_pair(&constraints, 1, interval, step, coarse, coarse_step)?;
             Ok((key, windows))
         };
 
@@ -1602,10 +1619,11 @@ where
                     && max_range.is_none()
                     && effective_slew_rate(sc1, sc2).is_none();
                 let auto = los_is_cheap
-                    .then(|| auto_coarse_step_intersat(traj1, traj2, central_body, step))
+                    .then(|| auto_coarse_step_intersat(traj1, traj2, step))
                     .flatten();
                 let coarse = combine_coarse_steps(coarse_step, auto);
-                let windows = detect_pair(&constraints, n_cheap, interval, step, coarse)?;
+                let windows =
+                    detect_pair(&constraints, n_cheap, interval, step, coarse, coarse_step)?;
                 Ok((key, windows))
             })
             .collect();
@@ -2031,8 +2049,10 @@ mod tests {
         assert_eq!(format!("{moon_los}"), "line-of-sight(Moon)");
     }
 
-    /// The auto-derived coarse step is bounded by the shorter of the
-    /// orbital period and the ground body's rotation period.
+    /// The auto-derived coarse step engages for a long-period orbit, is
+    /// bounded above by the rotation-rate-only sampling step (adding the
+    /// satellite's peak angular rate can only tighten it), and disables once
+    /// the caller's own step is already coarser than the bound.
     #[test]
     fn test_auto_coarse_step() {
         let sc_traj = spacecraft_trajectory_dyn();
@@ -2040,13 +2060,13 @@ mod tests {
         let typed = Trajectory::from_parts(epoch.with_scale(Tai), o, f, data);
         let step = TimeDelta::from_seconds(60);
 
-        // Translunar orbit: period of days, so the Earth rotation period
-        // (~86164 s) binds → coarse ≈ 86164 / 32 ≈ 2693 s.
         let coarse = auto_coarse_step(&typed, DynOrigin::Earth, step)
             .unwrap()
             .to_seconds()
             .to_f64();
-        assert_approx_eq!(coarse, 86_164.0 / 32.0, rtol <= 1e-2);
+        // Rotation rate alone gives τ/ω_earth / 32 ≈ 86164/32; the combined
+        // (satellite-peak + rotation) rate makes the real step no larger.
+        assert!(coarse > 0.0 && coarse <= 86_164.0 / 32.0 + 1.0);
 
         // A step coarser than the bound disables the two-level path.
         assert!(auto_coarse_step(&typed, DynOrigin::Earth, TimeDelta::from_hours(1)).is_none());
@@ -2107,7 +2127,7 @@ mod tests {
         )];
         let tai_interval =
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
-        let (fine, _) = detect_pair(&constraints, 1, tai_interval, step, None).unwrap();
+        let (fine, _) = detect_pair(&constraints, 1, tai_interval, step, None, None).unwrap();
 
         assert!(
             fine.len() >= 4,
@@ -2115,14 +2135,16 @@ mod tests {
             fine.len()
         );
         assert_eq!(auto.len(), fine.len());
+        let mut max_diff = 0.0_f64;
         for (a, f) in auto.iter().zip(&fine) {
-            assert_approx_eq!(
-                (a.start() - f.start()).to_seconds().to_f64(),
-                0.0,
-                atol <= 1e-3
-            );
-            assert_approx_eq!((a.end() - f.end()).to_seconds().to_f64(), 0.0, atol <= 1e-3);
+            max_diff = max_diff
+                .max((a.start() - f.start()).to_seconds().to_f64().abs())
+                .max((a.end() - f.end()).to_seconds().to_f64().abs());
         }
+        // Both paths Brent-refine the same crossings; boundaries agree far
+        // below any pass-relevant scale (different brackets land the root a
+        // sub-second apart, not the 1ms the bracket-coincidence once gave).
+        assert!(max_diff < 1.0, "LEO boundary divergence {max_diff:.4}s");
     }
 
     /// The batched `eval_grid` fast path must reproduce the scalar `eval`
@@ -2173,6 +2195,210 @@ mod tests {
         los.eval_grid(&times, &mut grid).unwrap();
         for (k, &t) in times.iter().enumerate() {
             assert_approx_eq!(grid[k], los.eval(t).unwrap(), atol <= 1e-9);
+        }
+    }
+
+    /// Builds an eccentric trajectory (a=24464 km, e=0.731, i=63.4°, perigee
+    /// ~200 km altitude — Molniya geometry) with the given ascending-node and
+    /// true-anomaly phase, over `periods` orbits at a fine propagation step.
+    fn eccentric_trajectory(
+        raan_deg: f64,
+        nu_deg: f64,
+        periods: f64,
+        prop_step_s: f64,
+    ) -> Trajectory<Tai, Earth, Icrf> {
+        use lox_bodies::PointMass;
+        use lox_core::elements::Keplerian as CoreKeplerian;
+        use lox_core::units::{AngleUnits, DistanceUnits};
+        use lox_orbits::orbits::CartesianOrbit;
+        use lox_orbits::propagators::Propagator;
+        use lox_orbits::propagators::semi_analytical::Vallado;
+        use lox_time::intervals::Interval;
+
+        let epoch = lox_time::time!(Tai, 2024, 1, 1, 0, 0, 0.0).unwrap();
+        let k0 = CoreKeplerian::builder()
+            .with_semi_major_axis(24464.0.km(), 0.731)
+            .with_inclination(63.4.deg())
+            .with_longitude_of_ascending_node(raan_deg.deg())
+            .with_argument_of_periapsis(270.0.deg())
+            .with_true_anomaly(nu_deg.deg())
+            .build()
+            .unwrap();
+        let mu = Earth.gravitational_parameter();
+        let s0 = CartesianOrbit::new(k0.to_cartesian(mu), epoch, Earth, Icrf);
+        let period = k0.orbital_period(mu).unwrap();
+        let t_end = epoch + TimeDelta::from_seconds_f64(period.to_seconds().to_f64() * periods);
+        Vallado::new(s0)
+            .with_step(TimeDelta::from_seconds_f64(prop_step_s))
+            .propagate(Interval::new(epoch, t_end))
+            .unwrap()
+    }
+
+    fn molniya_trajectory(periods: f64, prop_step_s: f64) -> Trajectory<Tai, Earth, Icrf> {
+        eccentric_trajectory(0.0, 0.0, periods, prop_step_s)
+    }
+
+    /// Detect elevation windows for one ground/sc pair with an explicit
+    /// coarse step (None = pure fine sweep).
+    fn elevation_windows(
+        gs: &DynGroundLocation,
+        mask: &ElevationMask,
+        traj: &Trajectory<Tai, Earth, Icrf>,
+        step: TimeDelta,
+        coarse: Option<TimeDelta>,
+    ) -> Vec<TimeInterval<Tai>> {
+        let constraints: Vec<ConstraintSignal<'_>> = vec![(
+            Constraint::Elevation,
+            Box::new(ElevationDetectFn {
+                gs,
+                mask,
+                sc: traj,
+                body_fixed_frame: DynFrame::Iau(DynOrigin::Earth),
+            }),
+        )];
+        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
+        detect_pair(&constraints, 1, interval, step, coarse, None)
+            .unwrap()
+            .0
+    }
+
+    /// Reference test (the regime the period/32 bound got wrong): for an
+    /// eccentric Molniya orbit the default auto-coarse path must reproduce a
+    /// converged fine-step reference, pass-for-pass and boundary-for-boundary.
+    /// The earlier mean-motion bound missed ~⅓ of these passes (up to 9 min
+    /// long) because near perigee the satellite sweeps the sky ~10× faster
+    /// than `1/period`.
+    #[test]
+    fn test_auto_coarse_eccentric_matches_fine() {
+        let traj = molniya_trajectory(4.0, 30.0);
+        let fine = TimeDelta::from_seconds(30);
+        let coarse_input = TimeDelta::from_seconds(60);
+        let dur = |w: &TimeInterval<Tai>| (w.end() - w.start()).to_seconds().to_f64();
+
+        let auto = auto_coarse_step(&traj, DynOrigin::Earth, coarse_input)
+            .expect("auto-coarse should engage for this orbit");
+        let coarse_s = auto.to_seconds().to_f64();
+
+        let mut total_passes = 0;
+        let mut exercised_short = false;
+        // Southern stations near the perigee latitude catch the fast passes.
+        for lon in [-90.0, 30.0, 150.0] {
+            let coords = LonLatAlt::from_degrees(lon, -63.0, 0.0).unwrap();
+            let gs = GroundLocation::try_new(coords, DynOrigin::Earth).unwrap();
+            let mask = ElevationMask::with_fixed_elevation(5.0_f64.to_radians());
+
+            // Reference, and a convergence check that it is itself trustworthy.
+            let reference = elevation_windows(&gs, &mask, &traj, fine, None);
+            let finer = elevation_windows(&gs, &mask, &traj, TimeDelta::from_seconds(15), None);
+            assert_eq!(
+                reference.len(),
+                finer.len(),
+                "fine reference not converged at lon {lon}"
+            );
+
+            // Production path: auto-coarse stage 1, min-pass-only (here None) stage 2.
+            let actual = elevation_windows(&gs, &mask, &traj, coarse_input, Some(auto));
+
+            assert_eq!(
+                actual.len(),
+                reference.len(),
+                "auto-coarse missed/added passes at lon {lon}: auto={} fine={}",
+                actual.len(),
+                reference.len()
+            );
+            for (a, r) in actual.iter().zip(&reference) {
+                assert_approx_eq!(
+                    (a.start() - r.start()).to_seconds().to_f64(),
+                    0.0,
+                    atol <= 1.0
+                );
+                assert_approx_eq!((a.end() - r.end()).to_seconds().to_f64(), 0.0, atol <= 1.0);
+                if dur(r) < coarse_s {
+                    exercised_short = true;
+                }
+            }
+            total_passes += reference.len();
+        }
+        assert!(
+            total_passes >= 6,
+            "expected several passes, got {total_passes}"
+        );
+        assert!(
+            exercised_short,
+            "test vacuous: no pass shorter than the {coarse_s:.0}s coarse step"
+        );
+    }
+
+    /// Reference test for the inter-satellite bound: two *eccentric* orbits
+    /// (the regime the `n₁+n₂` mean-motion bound got wrong) must have their
+    /// central-body occultations reproduced by auto-coarse, pass-for-pass
+    /// against a converged fine-step reference.
+    #[test]
+    fn test_auto_coarse_intersat_eccentric_matches_fine() {
+        // Phased so the two orbits sit on opposite sides and Earth occults the
+        // link as they move — different node, opposite anomaly.
+        let traj1 = eccentric_trajectory(0.0, 0.0, 3.0, 30.0);
+        let traj2 = eccentric_trajectory(130.0, 180.0, 3.0, 30.0);
+        let central = DynOrigin::Earth;
+        let interval = TimeInterval::new(traj1.start_time(), traj1.end_time());
+        let constraints: Vec<ConstraintSignal<'_>> = vec![(
+            Constraint::LineOfSight(central),
+            Box::new(DetectSignal(InterSatLosCentralBodyDetectFn {
+                sc1: &traj1,
+                sc2: &traj2,
+                body: central,
+            })),
+        )];
+
+        let fine_step = TimeDelta::from_seconds(30);
+        let (fine, _) = detect_pair(&constraints, 1, interval, fine_step, None, None).unwrap();
+        let (finer, _) = detect_pair(
+            &constraints,
+            1,
+            interval,
+            TimeDelta::from_seconds(15),
+            None,
+            None,
+        )
+        .unwrap();
+        assert_eq!(fine.len(), finer.len(), "fine reference not converged");
+
+        let auto = auto_coarse_step_intersat(&traj1, &traj2, TimeDelta::from_seconds(60))
+            .expect("auto-coarse should engage");
+        let (actual, _) = detect_pair(
+            &constraints,
+            1,
+            interval,
+            TimeDelta::from_seconds(60),
+            Some(auto),
+            None,
+        )
+        .unwrap();
+
+        // Must actually occult (else the test is vacuous: a single full window
+        // any sampler reproduces). An interior boundary proves a crossing.
+        let span = (interval.end() - interval.start()).to_seconds().to_f64();
+        assert!(
+            fine.iter().any(|w| {
+                (w.start() - interval.start()).to_seconds().to_f64() > 1.0
+                    || (interval.end() - w.end()).to_seconds().to_f64() > 1.0
+            }),
+            "expected an interior occultation over {span:.0}s"
+        );
+        assert_eq!(
+            actual.len(),
+            fine.len(),
+            "auto-coarse missed/added occultations: auto={} fine={}",
+            actual.len(),
+            fine.len()
+        );
+        for (a, f) in actual.iter().zip(&fine) {
+            assert_approx_eq!(
+                (a.start() - f.start()).to_seconds().to_f64(),
+                0.0,
+                atol <= 1.0
+            );
+            assert_approx_eq!((a.end() - f.end()).to_seconds().to_f64(), 0.0, atol <= 1.0);
         }
     }
 
@@ -2230,7 +2456,7 @@ mod tests {
         let runs = 50;
         let t0 = Instant::now();
         for _ in 0..runs {
-            detect_pair(&constraints, 1, interval, step, coarse).unwrap();
+            detect_pair(&constraints, 1, interval, step, coarse, None).unwrap();
         }
         let elapsed = t0.elapsed();
         let evals = count.load(Ordering::Relaxed) / runs;
@@ -2654,15 +2880,15 @@ mod tests {
         )];
 
         // Reference: single-level fine sweep at the 10 s step.
-        let (fine, _) = detect_pair(&constraints, 1, tai_interval, step, None).unwrap();
+        let (fine, _) = detect_pair(&constraints, 1, tai_interval, step, None, None).unwrap();
 
         // Auto-coarse two-level path (the default for the pure-LOS case).
-        let auto = auto_coarse_step_intersat(&traj1, &traj2, central, step);
+        let auto = auto_coarse_step_intersat(&traj1, &traj2, step);
         assert!(
             auto.is_some(),
             "auto-coarse should engage for LEO crossing orbits"
         );
-        let (coarse, _) = detect_pair(&constraints, 1, tai_interval, step, auto).unwrap();
+        let (coarse, _) = detect_pair(&constraints, 1, tai_interval, step, auto, None).unwrap();
 
         // The pair must actually occult within the window — otherwise the
         // test is vacuous (a single horizon-to-horizon window any sampler
