@@ -701,14 +701,28 @@ where
     S: Signal<T>,
     for<'a> R: FindBracketedRoot<SignalCallback<'a, T, S>>,
 {
-    for i in 1..offsets.len() {
-        let (v0, v1) = (values[i - 1], values[i]);
-        if let Some(crossing) = ZeroCrossing::new(v0.signum(), v1.signum()) {
+    // Classify crossings between *nonzero* samples, skipping exact zeros.
+    // A zero sample is a boundary, not a sign: `signum` maps ±0.0 to ±1, so
+    // comparing raw signums would read a 0 between equal-signed neighbours
+    // (a touching root) as two spurious crossings, and depends on the IEEE
+    // sign bit of a value that is mathematically zero. Tracking the last
+    // nonzero sample instead bridges any run of zeros: opposite signs across
+    // it are one genuine crossing, equal signs are none.
+    let mut last_nonzero: Option<(f64, f64)> = None;
+    for i in 0..offsets.len() {
+        let v1 = values[i];
+        if v1 == 0.0 {
+            continue;
+        }
+        if let Some((o0, v0)) = last_nonzero
+            && let Some(crossing) = ZeroCrossing::new(v0.signum(), v1.signum())
+        {
             let t = root_finder
-                .find_in_bracket_with_values(callback, (offsets[i - 1], offsets[i]), (v0, v1))
+                .find_in_bracket_with_values(callback, (o0, offsets[i]), (v0, v1))
                 .map_err(DetectError::RootFinder)?;
             events.push(Event::new(start + TimeDelta::from_seconds_f64(t), crossing));
         }
+        last_nonzero = Some((offsets[i], v1));
     }
     Ok(())
 }
@@ -894,48 +908,60 @@ where
     let fine = fine_step.to_seconds().to_f64();
 
     let mut events = Vec::new();
-    for i in 1..offsets.len() {
-        if ZeroCrossing::new(values[i - 1].signum(), values[i].signum()).is_none() {
+    // Bracket selection bridges exact zeros the same way `scan_crossings`
+    // does: a coarse sample of exactly 0 is skipped, and a sign change is
+    // taken between the last two *nonzero* coarse samples. Otherwise a
+    // crossing landing exactly on a coarse sample would fall in the gap
+    // between two brackets that each look sign-stable.
+    let mut last_nonzero: Option<(f64, f64)> = None;
+    for i in 0..offsets.len() {
+        let v1 = values[i];
+        if v1 == 0.0 {
             continue;
         }
-        // Subdivide the sign-changing coarse bracket at the fine step; the
-        // endpoint values are already known, the interior is one batch eval.
-        let (o0, o1) = (offsets[i - 1], offsets[i]);
-        let segments = ((o1 - o0) / fine).ceil().max(1.0) as usize;
-        let mut fine_offsets = Vec::with_capacity(segments + 1);
-        let mut interior_times = Vec::with_capacity(segments.saturating_sub(1));
-        fine_offsets.push(o0);
-        for k in 1..segments {
-            let o = o0 + k as f64 * fine;
-            fine_offsets.push(o);
-            interior_times.push(start + TimeDelta::from_seconds_f64(o));
+        if let Some((o0, v0)) = last_nonzero
+            && ZeroCrossing::new(v0.signum(), v1.signum()).is_some()
+        {
+            // Subdivide the sign-changing span (which may bridge zero coarse
+            // samples) at the fine step; endpoints known, interior one batch.
+            let o1 = offsets[i];
+            let segments = ((o1 - o0) / fine).ceil().max(1.0) as usize;
+            let mut fine_offsets = Vec::with_capacity(segments + 1);
+            let mut interior_times = Vec::with_capacity(segments.saturating_sub(1));
+            fine_offsets.push(o0);
+            for k in 1..segments {
+                let o = o0 + k as f64 * fine;
+                fine_offsets.push(o);
+                interior_times.push(start + TimeDelta::from_seconds_f64(o));
+            }
+            fine_offsets.push(o1);
+            let mut fine_values = vec![0.0; fine_offsets.len()];
+            fine_values[0] = v0;
+            *fine_values.last_mut().unwrap() = v1;
+            if !interior_times.is_empty() {
+                signal
+                    .eval_grid(&interior_times, &mut fine_values[1..segments])
+                    .map_err(|e| DetectError::Callback(Box::new(e)))?;
+            }
+            scan_crossings(
+                callback,
+                root_finder,
+                &fine_offsets,
+                &fine_values,
+                start,
+                &mut events,
+            )?;
+            scan_grazing(
+                callback,
+                root_finder,
+                minimizer,
+                &fine_offsets,
+                &fine_values,
+                start,
+                &mut events,
+            )?;
         }
-        fine_offsets.push(o1);
-        let mut fine_values = vec![0.0; fine_offsets.len()];
-        fine_values[0] = values[i - 1];
-        *fine_values.last_mut().unwrap() = values[i];
-        if !interior_times.is_empty() {
-            signal
-                .eval_grid(&interior_times, &mut fine_values[1..segments])
-                .map_err(|e| DetectError::Callback(Box::new(e)))?;
-        }
-        scan_crossings(
-            callback,
-            root_finder,
-            &fine_offsets,
-            &fine_values,
-            start,
-            &mut events,
-        )?;
-        scan_grazing(
-            callback,
-            root_finder,
-            minimizer,
-            &fine_offsets,
-            &fine_values,
-            start,
-            &mut events,
-        )?;
+        last_nonzero = Some((offsets[i], v1));
     }
     scan_grazing(
         callback,
@@ -1594,6 +1620,52 @@ mod tests {
         assert!(
             pruned_evals < full_evals / 2,
             "pruning should skip most expensive evals ({pruned_evals} vs {full_evals})"
+        );
+    }
+
+    /// CHARACTERIZE: a real up-crossing landing exactly on a sample must
+    /// still be detected (the reviewer's claimed miss).
+    #[test]
+    fn test_crossing_exactly_on_sample() {
+        let interval = horizon(10.0);
+        let start = interval.start();
+        // f = s − 5: exactly 0 at the t=5 sample; positive on (5, 10].
+        let f = SignalFn(move |t: Time<Tai>| (t - start).to_seconds().to_f64() - 5.0);
+        let windows = Detector::new(f)
+            .windows(
+                interval,
+                &UniformSampler::new(TimeDelta::from_seconds_f64(1.0)),
+            )
+            .unwrap();
+        assert_eq!(windows.len(), 1, "crossing on a sample was missed");
+        assert_approx_eq!(
+            elapsed(interval, windows[0].interval().start()),
+            5.0,
+            atol <= 1e-6
+        );
+    }
+
+    /// CHARACTERIZE: a forced `+0.0` sample between two negatives (a touching
+    /// root from below, where natural arithmetic might not align the zero
+    /// sign) must NOT produce a spurious window.
+    #[test]
+    fn test_touching_zero_sample_no_spurious_window() {
+        let interval = horizon(10.0);
+        let start = interval.start();
+        // Negative everywhere except an exact +0.0 at the t=5 sample.
+        let f = SignalFn(move |t: Time<Tai>| {
+            let s = (t - start).to_seconds().to_f64();
+            if (s - 5.0).abs() < 1e-9 { 0.0 } else { -1.0 }
+        });
+        let windows = Detector::new(f)
+            .windows(
+                interval,
+                &UniformSampler::new(TimeDelta::from_seconds_f64(1.0)),
+            )
+            .unwrap();
+        assert!(
+            windows.is_empty(),
+            "spurious window from a +0.0 touching sample: {windows:?}"
         );
     }
 
