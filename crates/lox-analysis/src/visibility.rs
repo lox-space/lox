@@ -2402,6 +2402,44 @@ mod tests {
         }
     }
 
+    /// Probe: does a *sparse* trajectory (perigee between knots) defeat the
+    /// knot-sampled angular-rate bound, so auto-coarse over-steps features the
+    /// fine sweep finds on the same spline? Prints any misses
+    /// (--release --ignored --nocapture).
+    #[test]
+    #[ignore]
+    fn probe_sparse_trajectory_knot_rate() {
+        for prop_step in [60.0, 120.0, 240.0, 480.0] {
+            let traj = molniya_trajectory(4.0, prop_step);
+            let fine = TimeDelta::from_seconds(30);
+            let mut total_ref = 0;
+            let mut total_missed = 0;
+            for lon in [-90.0, 30.0, 150.0] {
+                let coords = LonLatAlt::from_degrees(lon, -63.0, 0.0).unwrap();
+                let gs = GroundLocation::try_new(coords, DynOrigin::Earth).unwrap();
+                let mask = ElevationMask::with_fixed_elevation(5.0_f64.to_radians());
+                let reference = elevation_windows(&gs, &mask, &traj, fine, None);
+                let auto = auto_coarse_step(&traj, DynOrigin::Earth, TimeDelta::from_seconds(60));
+                let actual =
+                    elevation_windows(&gs, &mask, &traj, TimeDelta::from_seconds(60), auto);
+                total_ref += reference.len();
+                for r in &reference {
+                    if !actual
+                        .iter()
+                        .any(|a| a.start() < r.end() && r.start() < a.end())
+                    {
+                        total_missed += 1;
+                    }
+                }
+            }
+            println!(
+                "prop_step {prop_step:>5}s: ref {total_ref} passes, {total_missed} missed, coarse={:?}s",
+                auto_coarse_step(&traj, DynOrigin::Earth, TimeDelta::from_seconds(60))
+                    .map(|c| c.to_seconds().to_f64() as i64)
+            );
+        }
+    }
+
     /// One-off diagnostic: eval count and wall time for the single-pair
     /// scenario, to decide whether per-eval cost or scaffolding dominates
     /// (run with --release, --ignored, --nocapture).
