@@ -224,24 +224,59 @@ where
     }
 
     /// Maximum instantaneous angular rate `|r × v| / |r|²` \[rad/s\] of the
-    /// position direction over the trajectory's knots.
+    /// position direction over the trajectory.
     ///
     /// This is the fastest the geocentric (or body-centric) line of sight to
     /// the object sweeps — the kinematic bound on how quickly any geometry-
-    /// derived signal can vary. It is read directly from the sampled states,
-    /// so it holds the actual perigee speed *visited* by this arc (not a
-    /// theoretical osculating perigee) and makes no two-body assumption,
-    /// staying valid for perturbed, maneuvering, or non-Keplerian segments.
+    /// derived signal can vary. It is read from the sampled states, so it
+    /// holds the actual perigee speed *visited* by this arc (not a theoretical
+    /// osculating perigee) and makes no two-body assumption, staying valid for
+    /// perturbed or non-Keplerian segments.
+    ///
+    /// The rate is first taken at the knots, then refined *between* knots
+    /// around each fast local maximum (the spline's true peak near a perigee
+    /// can fall between knots on a sparsely sampled arc). Only those few
+    /// segments are sub-sampled, so the cost stays close to the knot scan.
     pub fn max_angular_rate(&self) -> f64 {
         let (x, y, z) = (self.data.x(), self.data.y(), self.data.z());
         let (vx, vy, vz) = (self.data.vx(), self.data.vy(), self.data.vz());
-        let mut max = 0.0_f64;
-        for i in 0..x.len() {
-            let r = DVec3::new(x[i], y[i], z[i]);
-            let v = DVec3::new(vx[i], vy[i], vz[i]);
+        let rate = |r: DVec3, v: DVec3| {
             let r2 = r.length_squared();
             if r2 > 0.0 {
-                max = max.max(r.cross(v).length() / r2);
+                r.cross(v).length() / r2
+            } else {
+                0.0
+            }
+        };
+        let n = x.len();
+        let knot: Vec<f64> = (0..n)
+            .map(|i| {
+                rate(
+                    DVec3::new(x[i], y[i], z[i]),
+                    DVec3::new(vx[i], vy[i], vz[i]),
+                )
+            })
+            .collect();
+        let mut max = knot.iter().copied().fold(0.0_f64, f64::max);
+        if max == 0.0 || n < 3 {
+            return max;
+        }
+
+        // Sub-sample the segments flanking each fast local-maximum knot, where
+        // the inter-knot peak (perigee) lives. One such knot per close
+        // approach, so this is O(passes), not O(knots).
+        let times = self.data.time_steps();
+        let threshold = 0.5 * max;
+        const SUB: usize = 16;
+        for i in 1..n - 1 {
+            if knot[i] < threshold || knot[i] < knot[i - 1] || knot[i] < knot[i + 1] {
+                continue;
+            }
+            let (t0, t1) = (times[i - 1], times[i + 1]);
+            for k in 1..2 * SUB {
+                let t = t0 + (t1 - t0) * k as f64 / (2.0 * SUB as f64);
+                let state = self.data.at(t);
+                max = max.max(rate(state.position(), state.velocity()));
             }
         }
         max
@@ -621,6 +656,67 @@ mod tests {
         assert_eq!(origin, Earth);
         assert_eq!(frame, Icrf);
         assert_eq!(epoch, epoch_before);
+    }
+
+    #[test]
+    fn test_max_angular_rate_captures_inter_knot_peak() {
+        use crate::propagators::Propagator;
+        use crate::propagators::semi_analytical::Vallado;
+        use lox_bodies::PointMass;
+        use lox_core::elements::Keplerian as CoreKeplerian;
+        use lox_core::units::{AngleUnits, DistanceUnits};
+        use lox_time::intervals::Interval;
+        use lox_time::time;
+
+        // Eccentric orbit (a=24464 km, e=0.731) sampled *sparsely* (300 s), so
+        // the perigee — where the angular rate peaks — falls between knots.
+        let epoch = time!(Tdb, 2024, 1, 1, 0, 0, 0.0).unwrap();
+        let k0 = CoreKeplerian::builder()
+            .with_semi_major_axis(24464.0.km(), 0.731)
+            .with_inclination(63.4.deg())
+            .with_longitude_of_ascending_node(0.0.deg())
+            .with_argument_of_periapsis(270.0.deg())
+            .with_true_anomaly(150.0.deg()) // start away from perigee
+            .build()
+            .unwrap();
+        let mu = Earth.gravitational_parameter();
+        let s0 = CartesianOrbit::new(k0.to_cartesian(mu), epoch, Earth, Icrf);
+        let period = k0.orbital_period(mu).unwrap();
+        let traj = Vallado::new(s0)
+            .with_step(lox_time::deltas::TimeDelta::from_seconds(300))
+            .propagate(Interval::new(epoch, epoch + period))
+            .unwrap();
+
+        // Brute-force reference: the true spline maximum, densely sampled.
+        let span = (traj.end_time() - traj.start_time()).to_seconds().to_f64();
+        let dense = (0..=20_000)
+            .map(|k| {
+                let s = traj.interpolate(lox_time::deltas::TimeDelta::from_seconds_f64(
+                    span * k as f64 / 20_000.0,
+                ));
+                let (r, v) = (s.position(), s.velocity());
+                r.cross(v).length() / r.length_squared()
+            })
+            .fold(0.0_f64, f64::max);
+
+        // Knots-only would under-estimate; the refinement must recover the peak.
+        let knot_only = {
+            let mut m = 0.0_f64;
+            for st in traj.states() {
+                let (r, v) = (st.position(), st.velocity());
+                m = m.max(r.cross(v).length() / r.length_squared());
+            }
+            m
+        };
+        let refined = traj.max_angular_rate();
+        assert!(
+            refined > knot_only,
+            "refinement did not exceed knot-only ({refined:e} vs {knot_only:e})"
+        );
+        assert!(
+            refined >= 0.98 * dense,
+            "refined rate {refined:e} missed the dense peak {dense:e}"
+        );
     }
 
     #[test]
