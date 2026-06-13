@@ -1084,25 +1084,21 @@ where
                 })),
             ));
         }
-        // Auto-coarse only when line of sight is the pruning stage: range
-        // and slew-rate constraints have sub-orbital close-approach features
-        // that must stay at the fine step.
+        // The inter-satellite auto-coarse bounds every line-of-sight signal
+        // here (central and occulter — the satellites' motion dominates), so
+        // it applies to whichever stage carries the line of sight, keeping the
+        // LOS detected at the *same* resolution whether or not range/slew
+        // constraints are present. Range and slew-rate constraints, however,
+        // have sub-orbital close-approach features and must stay at the fine
+        // step, so they never receive the auto-coarse.
         let los_is_cheap = self.min_range.is_none()
             && self.max_range.is_none()
             && effective_slew_rate(sc1, sc2).is_none();
-        let auto = los_is_cheap
-            .then(|| auto_coarse_step_intersat(traj1, traj2, self.step))
-            .flatten();
-        let coarse = combine_coarse_steps(self.coarse_step(), auto);
-        // Stage 2 (occulter LOS) keeps only the min-pass contract.
-        detect_pair(
-            &constraints,
-            n_cheap,
-            interval,
-            self.step,
-            coarse,
-            self.coarse_step(),
-        )
+        let auto = auto_coarse_step_intersat(traj1, traj2, self.step);
+        let cheap =
+            combine_coarse_steps(self.coarse_step(), los_is_cheap.then_some(auto).flatten());
+        let expensive = combine_coarse_steps(self.coarse_step(), auto);
+        detect_pair(&constraints, n_cheap, interval, self.step, cheap, expensive)
     }
 }
 
@@ -1612,18 +1608,19 @@ where
                     min_range,
                     max_range,
                 );
-                // Auto-coarse only when line of sight is the pruning stage:
-                // range and slew-rate constraints have sub-orbital
-                // close-approach features that must stay at the fine step.
+                // The auto-coarse bounds every inter-satellite LOS signal, so
+                // it applies to whichever stage carries the line of sight —
+                // keeping LOS at the same resolution with or without range/slew
+                // present. Range and slew-rate constraints stay at the fine
+                // step (sub-orbital close-approach features).
                 let los_is_cheap = min_range.is_none()
                     && max_range.is_none()
                     && effective_slew_rate(sc1, sc2).is_none();
-                let auto = los_is_cheap
-                    .then(|| auto_coarse_step_intersat(traj1, traj2, step))
-                    .flatten();
-                let coarse = combine_coarse_steps(coarse_step, auto);
-                let windows =
-                    detect_pair(&constraints, n_cheap, interval, step, coarse, coarse_step)?;
+                let auto = auto_coarse_step_intersat(traj1, traj2, step);
+                let cheap =
+                    combine_coarse_steps(coarse_step, los_is_cheap.then_some(auto).flatten());
+                let expensive = combine_coarse_steps(coarse_step, auto);
+                let windows = detect_pair(&constraints, n_cheap, interval, step, cheap, expensive)?;
                 Ok((key, windows))
             })
             .collect();
