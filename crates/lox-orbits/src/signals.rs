@@ -670,7 +670,7 @@ impl<S, R> Detector<S, R> {
         &self,
         interval: TimeInterval<T>,
         sampler: &impl Sampler<T>,
-    ) -> Result<(Vec<Event<T>>, f64), DetectError>
+    ) -> Result<(Vec<Event<T>>, bool), DetectError>
     where
         T: TimeScale + Copy,
         S: Signal<T>,
@@ -826,6 +826,16 @@ where
     Ok(())
 }
 
+/// Whether the condition holds anywhere on the grid — some sample strictly
+/// positive. This is the discriminant for the no-crossing case (a constant-
+/// sign signal): the window is the whole interval iff the condition holds
+/// somewhere, and nothing otherwise. Using the sign of the start sample would
+/// misclassify a non-positive signal whose start is exactly 0 (or `+0.0`,
+/// e.g. an all-zero signal or `f = -t`) as active.
+fn holds_somewhere(values: &[f64]) -> bool {
+    values.iter().any(|&v| v > 0.0)
+}
+
 fn sort_events<T: TimeScale + Copy>(events: &mut [Event<T>], start: Time<T>) {
     events.sort_by(|a, b| {
         let ta = (a.time() - start).to_seconds().to_f64();
@@ -842,7 +852,7 @@ pub(crate) fn detect_grid<T, S, R>(
     minimizer: &BrentMinimizer,
     interval: TimeInterval<T>,
     sampler: &impl Sampler<T>,
-) -> Result<(Vec<Event<T>>, f64), DetectError>
+) -> Result<(Vec<Event<T>>, bool), DetectError>
 where
     T: TimeScale + Copy,
     S: Signal<T>,
@@ -873,7 +883,7 @@ where
         &mut events,
     )?;
     sort_events(&mut events, start);
-    Ok((events, values[0]))
+    Ok((events, holds_somewhere(&values)))
 }
 
 /// Two-level sample → bracket → refine: a coarse sweep brackets the
@@ -887,7 +897,7 @@ pub(crate) fn detect_grid_two_level<T, S, R>(
     interval: TimeInterval<T>,
     coarse_step: TimeDelta,
     fine_step: TimeDelta,
-) -> Result<(Vec<Event<T>>, f64), DetectError>
+) -> Result<(Vec<Event<T>>, bool), DetectError>
 where
     T: TimeScale + Copy,
     S: Signal<T>,
@@ -973,7 +983,7 @@ where
         &mut events,
     )?;
     sort_events(&mut events, start);
-    Ok((events, values[0]))
+    Ok((events, holds_somewhere(&values)))
 }
 
 impl<S, R> Detector<S, R> {
@@ -1029,8 +1039,8 @@ impl<S, R> Detector<S, R> {
         S: Signal<T>,
         for<'a> R: FindBracketedRoot<SignalCallback<'a, T, S>>,
     {
-        let (events, start_value) = self.events_with_start_value(interval, sampler)?;
-        self.windows_from(interval, events, start_value)
+        let (events, holds) = self.events_with_start_value(interval, sampler)?;
+        self.windows_from(interval, events, holds)
     }
 
     /// Two-level variant of [`windows`](Self::windows).
@@ -1045,7 +1055,7 @@ impl<S, R> Detector<S, R> {
         S: Signal<T>,
         for<'a> R: FindBracketedRoot<SignalCallback<'a, T, S>>,
     {
-        let (events, start_value) = detect_grid_two_level(
+        let (events, holds) = detect_grid_two_level(
             &self.signal,
             &self.root_finder,
             &self.minimizer,
@@ -1053,7 +1063,7 @@ impl<S, R> Detector<S, R> {
             coarse_step,
             fine_step,
         )?;
-        self.windows_from(interval, events, start_value)
+        self.windows_from(interval, events, holds)
     }
 
     /// Pairs Up/Down events into windows with binding-constraint
@@ -1063,7 +1073,7 @@ impl<S, R> Detector<S, R> {
         &self,
         interval: TimeInterval<T>,
         events: Vec<Event<T>>,
-        start_value: f64,
+        holds: bool,
     ) -> Result<Vec<Window<T>>, DetectError>
     where
         T: TimeScale + Copy,
@@ -1083,7 +1093,9 @@ impl<S, R> Detector<S, R> {
         };
 
         if events.is_empty() {
-            return if start_value.signum() >= 0.0 {
+            // No crossings: the signal holds one sign, so the window is the
+            // whole interval iff the condition holds somewhere.
+            return if holds {
                 Ok(vec![Window {
                     interval,
                     opened_by: binding(interval.start())?,
@@ -1666,6 +1678,59 @@ mod tests {
         assert!(
             windows.is_empty(),
             "spurious window from a +0.0 touching sample: {windows:?}"
+        );
+    }
+
+    /// REGRESSION: a non-positive signal with no crossings must yield no
+    /// window even when its start sample is exactly 0 (or `+0.0`). Using the
+    /// start sample's sign would accept these as the whole interval.
+    #[test]
+    fn test_no_window_for_nonpositive_zero_start() {
+        let interval = horizon(10.0);
+        let start = interval.start();
+        let sampler = UniformSampler::new(TimeDelta::from_seconds_f64(1.0));
+
+        // f = −t: starts at 0, negative after. {f > 0} is empty.
+        let ramp = SignalFn(move |t: Time<Tai>| -((t - start).to_seconds().to_f64()));
+        assert!(
+            Detector::new(ramp)
+                .windows(interval, &sampler)
+                .unwrap()
+                .is_empty(),
+            "negative ramp from a zero start yielded a window"
+        );
+
+        // All-zero signal: {f > 0} is empty.
+        let zero = SignalFn(|_: Time<Tai>| 0.0);
+        assert!(
+            Detector::new(zero)
+                .windows(interval, &sampler)
+                .unwrap()
+                .is_empty(),
+            "all-zero signal yielded a window"
+        );
+
+        // +0.0 at the start sample, negative elsewhere: still empty.
+        let zero_start = SignalFn(move |t: Time<Tai>| {
+            let s = (t - start).to_seconds().to_f64();
+            if s == 0.0 { 0.0 } else { -1.0 }
+        });
+        assert!(
+            Detector::new(zero_start)
+                .windows(interval, &sampler)
+                .unwrap()
+                .is_empty(),
+            "+0.0 start of a negative signal yielded a window"
+        );
+
+        // Sanity: a genuinely positive constant still gives the whole interval.
+        let pos = SignalFn(|_: Time<Tai>| 1.0);
+        assert_eq!(
+            Detector::new(pos)
+                .windows(interval, &sampler)
+                .unwrap()
+                .len(),
+            1
         );
     }
 
