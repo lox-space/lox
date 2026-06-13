@@ -695,6 +695,26 @@ fn collect_results(results: Vec<PairWindows>, pair_type: PairType) -> Visibility
 /// samples inside every regular pass.
 const AUTO_COARSE_DIVISOR: f64 = 32.0;
 
+/// Osculating semi-major axis \[m\] from the trajectory's start state, or
+/// `None` for non-elliptical (parabolic/hyperbolic) orbits.
+fn semi_major_axis<O, R>(traj: &Trajectory<Tai, O, R>, mu: f64) -> Option<f64>
+where
+    O: Origin + Copy,
+    R: ReferenceFrame + Copy,
+{
+    let state = traj.interpolate_at(traj.start_time());
+    let r = state.position().length();
+    let v2 = state.velocity().length_squared();
+    let a = 1.0 / (2.0 / r - v2 / mu);
+    (a > 0.0).then_some(a)
+}
+
+/// Mean motion \[rad/s\] for semi-major axis `a` under gravitational
+/// parameter `mu`.
+fn mean_motion(a: f64, mu: f64) -> f64 {
+    (mu / a.powi(3)).sqrt()
+}
+
 /// Auto-derives a coarse candidate-sampling step for ground-space passes
 /// from the orbital period, making two-level detection the default instead
 /// of requiring `min_pass_duration`.
@@ -714,22 +734,50 @@ where
     O: Origin + Copy + Into<DynOrigin>,
     R: ReferenceFrame + Copy,
 {
-    let state = traj.interpolate_at(traj.start_time());
     let origin: DynOrigin = traj.origin().into();
     let mu = origin.try_gravitational_parameter().ok()?.as_f64();
-    let r = state.position().length();
-    let v2 = state.velocity().length_squared();
-    let a = 1.0 / (2.0 / r - v2 / mu);
-    if a <= 0.0 {
-        return None;
-    }
-    let orbit_period = std::f64::consts::TAU * (a.powi(3) / mu).sqrt();
+    let a = semi_major_axis(traj, mu)?;
+    let orbit_period = std::f64::consts::TAU / mean_motion(a, mu);
     let rotation_period = ground_body
         .try_rotational_element_rates(0.0)
         .ok()
         .map(|(_, _, w_dot)| std::f64::consts::TAU / w_dot.abs())
         .filter(|p| p.is_finite());
     let bound = rotation_period.map_or(orbit_period, |p| orbit_period.min(p));
+    let coarse = bound / AUTO_COARSE_DIVISOR;
+    (coarse > step.to_seconds().to_f64()).then(|| TimeDelta::from_seconds_f64(coarse))
+}
+
+/// Auto-derives a coarse step for the inter-satellite central-body
+/// line-of-sight stage.
+///
+/// For two satellites orbiting the central body, the line-of-sight signal
+/// reduces to `[acos(R/r₁) + acos(R/r₂)] − θ(t)`, where `θ` is the geocentric
+/// angle between them. It is therefore essentially linear in `θ`, which
+/// sweeps no faster than the combined mean motion `n₁ + n₂` (the
+/// counter-rotating, crossing-orbit worst case). The bounding period is
+/// `τ / (n₁ + n₂)`; grazing occultations below the resulting step are
+/// recovered by the detector's near-zero-extremum path.
+///
+/// **Only valid when line of sight is the pruning stage** — i.e. no range
+/// or slew-rate constraints, whose close-approach features are sub-orbital
+/// and must be sampled at the fine step. Returns `None` for non-elliptical
+/// orbits, undefined `mu`, or when the derived step would not beat `step`.
+fn auto_coarse_step_intersat<O, R>(
+    traj1: &Trajectory<Tai, O, R>,
+    traj2: &Trajectory<Tai, O, R>,
+    central_body: DynOrigin,
+    step: TimeDelta,
+) -> Option<TimeDelta>
+where
+    O: Origin + Copy,
+    R: ReferenceFrame + Copy,
+{
+    let mu = central_body.try_gravitational_parameter().ok()?.as_f64();
+    let a1 = semi_major_axis(traj1, mu)?;
+    let a2 = semi_major_axis(traj2, mu)?;
+    let combined_rate = mean_motion(a1, mu) + mean_motion(a2, mu);
+    let bound = std::f64::consts::TAU / combined_rate;
     let coarse = bound / AUTO_COARSE_DIVISOR;
     (coarse > step.to_seconds().to_f64()).then(|| TimeDelta::from_seconds_f64(coarse))
 }
@@ -930,12 +978,13 @@ where
         traj2: &Trajectory<Tai, O, R>,
         interval: TimeInterval<Tai>,
     ) -> Result<(Vec<TimeInterval<Tai>>, Vec<WindowDiagnostics>), VisibilityError> {
+        let central_body: DynOrigin = self.scenario.origin().into();
         let (mut constraints, n_cheap) = inter_satellite_signals(
             sc1,
             sc2,
             traj1,
             traj2,
-            self.scenario.origin().into(),
+            central_body,
             self.min_range,
             self.max_range,
         );
@@ -950,13 +999,17 @@ where
                 })),
             ));
         }
-        detect_pair(
-            &constraints,
-            n_cheap,
-            interval,
-            self.step,
-            self.coarse_step(),
-        )
+        // Auto-coarse only when line of sight is the pruning stage: range
+        // and slew-rate constraints have sub-orbital close-approach features
+        // that must stay at the fine step.
+        let los_is_cheap = self.min_range.is_none()
+            && self.max_range.is_none()
+            && effective_slew_rate(sc1, sc2).is_none();
+        let auto = los_is_cheap
+            .then(|| auto_coarse_step_intersat(traj1, traj2, central_body, self.step))
+            .flatten();
+        let coarse = combine_coarse_steps(self.coarse_step(), auto);
+        detect_pair(&constraints, n_cheap, interval, self.step, coarse)
     }
 }
 
@@ -1466,7 +1519,17 @@ where
                     min_range,
                     max_range,
                 );
-                let windows = detect_pair(&constraints, n_cheap, interval, step, coarse_step)?;
+                // Auto-coarse only when line of sight is the pruning stage:
+                // range and slew-rate constraints have sub-orbital
+                // close-approach features that must stay at the fine step.
+                let los_is_cheap = min_range.is_none()
+                    && max_range.is_none()
+                    && effective_slew_rate(sc1, sc2).is_none();
+                let auto = los_is_cheap
+                    .then(|| auto_coarse_step_intersat(traj1, traj2, central_body, step))
+                    .flatten();
+                let coarse = combine_coarse_steps(coarse_step, auto);
+                let windows = detect_pair(&constraints, n_cheap, interval, step, coarse)?;
                 Ok((key, windows))
             })
             .collect();
@@ -2319,6 +2382,68 @@ mod tests {
             .into_dyn();
 
         (traj1, traj2)
+    }
+
+    /// Auto-coarse central-LOS detection reproduces the single-level fine
+    /// sweep on OneWeb crossing orbits — the stress case for the combined
+    /// mean-motion bound (fast relative angular motion, multiple occultations).
+    #[test]
+    fn test_auto_coarse_intersat_matches_fine_sweep_for_crossing_orbits() {
+        let (traj1d, traj2d) = oneweb_trajectories();
+        let interval = TimeInterval::new(traj1d.start_time(), traj1d.end_time());
+        let tai_interval =
+            TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
+
+        let (e1, o1, f1, d1) = traj1d.into_parts();
+        let traj1 = Trajectory::from_parts(e1.with_scale(Tai), o1, f1, d1);
+        let (e2, o2, f2, d2) = traj2d.into_parts();
+        let traj2 = Trajectory::from_parts(e2.with_scale(Tai), o2, f2, d2);
+
+        let central = DynOrigin::Earth;
+        let step = TimeDelta::from_seconds(10);
+        let constraints: Vec<ConstraintSignal<'_>> = vec![(
+            Constraint::LineOfSight(central),
+            Box::new(DetectSignal(InterSatLosCentralBodyDetectFn {
+                sc1: &traj1,
+                sc2: &traj2,
+                body: central,
+            })),
+        )];
+
+        // Reference: single-level fine sweep at the 10 s step.
+        let (fine, _) = detect_pair(&constraints, 1, tai_interval, step, None).unwrap();
+
+        // Auto-coarse two-level path (the default for the pure-LOS case).
+        let auto = auto_coarse_step_intersat(&traj1, &traj2, central, step);
+        assert!(
+            auto.is_some(),
+            "auto-coarse should engage for LEO crossing orbits"
+        );
+        let (coarse, _) = detect_pair(&constraints, 1, tai_interval, step, auto).unwrap();
+
+        // The pair must actually occult within the window — otherwise the
+        // test is vacuous (a single horizon-to-horizon window any sampler
+        // would trivially reproduce). An interior boundary proves a real
+        // line-of-sight crossing was located and matched.
+        let span = tai_interval.end() - tai_interval.start();
+        let has_interior_crossing = fine.iter().any(|w| {
+            (w.start() - tai_interval.start()).to_seconds().to_f64() > 1.0
+                || (tai_interval.end() - w.end()).to_seconds().to_f64() > 1.0
+        });
+        assert!(
+            has_interior_crossing,
+            "expected an interior occultation crossing over {} s",
+            span.to_seconds().to_f64()
+        );
+        assert_eq!(coarse.len(), fine.len());
+        for (c, f) in coarse.iter().zip(&fine) {
+            assert_approx_eq!(
+                (c.start() - f.start()).to_seconds().to_f64(),
+                0.0,
+                atol <= 1e-3
+            );
+            assert_approx_eq!((c.end() - f.end()).to_seconds().to_f64(), 0.0, atol <= 1e-3);
+        }
     }
 
     #[test]
