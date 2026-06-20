@@ -2,8 +2,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use bevy::{math::DVec3, prelude::*};
+use bevy::prelude::*;
 use lox_bodies::DynOrigin;
+use lox_core::glam::DVec3;
 use lox_ephem::{Ephemeris, spk::parser::Spk};
 use lox_time::time_scales::Tdb;
 
