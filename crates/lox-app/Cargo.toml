@@ -18,6 +18,7 @@ publish = false
 [dependencies]
 chrono.workspace = true
 lox-bodies.workspace = true
+lox-core.workspace = true
 lox-ephem.workspace = true
 lox-time = { workspace = true, features = ["chrono"] }
-bevy = "0.18"
+bevy = "0.19"

@@ -52,21 +52,21 @@ fn spawn_ui(mut commands: Commands) {
         Node::DEFAULT,
         Text::default(),
         TextColor(Color::WHITE),
-        TextLayout::new_with_justify(Justify::Center),
+        TextLayout::justify(Justify::Center),
         PlayPauseDisplay,
     );
     let factor_text = (
         Node::DEFAULT,
         Text::default(),
         TextColor(Color::WHITE),
-        TextLayout::new_with_justify(Justify::Center),
+        TextLayout::justify(Justify::Center),
         FactorDisplay,
     );
     let time_text = (
         Node::DEFAULT,
         Text::default(),
         TextColor(Color::WHITE),
-        TextLayout::new_with_justify(Justify::Center),
+        TextLayout::justify(Justify::Center),
         TimeDisplay,
     );
 

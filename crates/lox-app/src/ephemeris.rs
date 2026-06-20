@@ -2,8 +2,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use bevy::{math::DVec3, prelude::*};
-use lox_bodies::DynOrigin;
+use bevy::prelude::*;
+use lox_bodies::Origin;
+use lox_core::glam::DVec3;
 use lox_ephem::{Ephemeris, spk::parser::Spk};
 use lox_time::time_scales::Tdb;
 
@@ -11,21 +12,21 @@ use crate::time::{AppState, ScenarioTime, update_time};
 
 static DE440S: &[u8] = include_bytes!("../../../data/spice/de440s.bsp");
 
-const BODIES: [(DynOrigin, &str); 10] = [
-    (DynOrigin::Sun, "Sun"),
-    (DynOrigin::Mercury, "Mercury"),
-    (DynOrigin::Earth, "Earth"),
-    (DynOrigin::Moon, "Moon"),
-    (DynOrigin::MarsBarycenter, "Mars"),
-    (DynOrigin::JupiterBarycenter, "Jupiter"),
-    (DynOrigin::SaturnBarycenter, "Saturn"),
-    (DynOrigin::UranusBarycenter, "Uranus"),
-    (DynOrigin::NeptuneBarycenter, "Neptune"),
-    (DynOrigin::PlutoBarycenter, "Pluto"),
+const BODIES: [(Origin, &str); 10] = [
+    (Origin::Sun, "Sun"),
+    (Origin::Mercury, "Mercury"),
+    (Origin::Earth, "Earth"),
+    (Origin::Moon, "Moon"),
+    (Origin::MarsBarycenter, "Mars"),
+    (Origin::JupiterBarycenter, "Jupiter"),
+    (Origin::SaturnBarycenter, "Saturn"),
+    (Origin::UranusBarycenter, "Uranus"),
+    (Origin::NeptuneBarycenter, "Neptune"),
+    (Origin::PlutoBarycenter, "Pluto"),
 ];
 
 #[derive(Debug, Component)]
-struct Origin(DynOrigin);
+struct BodyOrigin(Origin);
 
 #[derive(Debug, Component)]
 #[expect(unused)]
@@ -43,9 +44,9 @@ fn spawn_bodies(
     for (origin, name) in BODIES {
         let position = ephemeris
             .0
-            .position(t, DynOrigin::SolarSystemBarycenter, origin)?;
+            .position(t, Origin::SolarSystemBarycenter, origin)?;
         commands.spawn((
-            Origin(origin),
+            BodyOrigin(origin),
             BodyName(name.to_owned()),
             Position(position),
         ));
@@ -56,13 +57,13 @@ fn spawn_bodies(
 fn update_bodies(
     time: Res<ScenarioTime>,
     ephemeris: Res<Ephem>,
-    query: Query<(&Origin, &mut Position)>,
+    query: Query<(&BodyOrigin, &mut Position)>,
 ) -> Result<(), BevyError> {
     let t = time.current_time().to_scale(Tdb);
     for (origin, mut position) in query {
         position.0 = ephemeris
             .0
-            .position(t, DynOrigin::SolarSystemBarycenter, origin.0)?;
+            .position(t, Origin::SolarSystemBarycenter, origin.0)?;
     }
     Ok(())
 }
