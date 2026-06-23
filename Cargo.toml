@@ -50,9 +50,9 @@ itertools = "0.14.0"
 libm = "0.2.15"
 nalgebra = "0.35.0"
 nom = { version = "8.0.0", default-features = false }
-numpy = "0.28.0"
+numpy = "0.29.0"
 proptest = "1.9.0"
-pyo3 = "0.28.2"
+pyo3 = "0.29.0"
 quick-xml = { version = "0.40.1", features = ["serde", "serialize"] }
 rayon = "1.11.0"
 rstest = "0.26.1"
