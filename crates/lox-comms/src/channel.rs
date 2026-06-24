@@ -151,6 +151,21 @@ pub enum LinkDirection {
     Crosslink,
 }
 
+impl LinkDirection {
+    /// Returns the direction of the reverse link.
+    ///
+    /// [`Uplink`](Self::Uplink) and [`Downlink`](Self::Downlink) swap;
+    /// [`Crosslink`](Self::Crosslink) is symmetric and maps to itself.
+    #[must_use]
+    pub const fn flip(self) -> Self {
+        match self {
+            LinkDirection::Uplink => LinkDirection::Downlink,
+            LinkDirection::Downlink => LinkDirection::Uplink,
+            LinkDirection::Crosslink => LinkDirection::Crosslink,
+        }
+    }
+}
+
 impl fmt::Display for LinkDirection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
