@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.40](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.39...lox-orbits-v0.1.0-alpha.40) - 2026-06-24
+
+### Other
+
+- *(deps)* bump geo to 0.33 and geojson to 1.0
+- *(deps)* bump differential-equations to 0.6, nalgebra to 0.35, quick-xml to 0.40
+
 ## [0.1.0-alpha.39](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.38...lox-orbits-v0.1.0-alpha.39) - 2026-05-26
 
 ### Other

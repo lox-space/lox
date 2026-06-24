@@ -958,7 +958,7 @@ checksum = "953f07c43838f8e6f9758cab68bf5bed85465e7587ebe0b823f1bcd81978ad3a"
 
 [[package]]
 name = "lox-analysis"
-version = "0.1.0-alpha.14"
+version = "0.1.0-alpha.15"
 dependencies = [
  "csv",
  "geo",
@@ -979,7 +979,7 @@ dependencies = [
 
 [[package]]
 name = "lox-bodies"
-version = "0.1.0-alpha.26"
+version = "0.1.0-alpha.27"
 dependencies = [
  "lox-core",
  "lox-test-utils",
@@ -990,7 +990,7 @@ dependencies = [
 
 [[package]]
 name = "lox-comms"
-version = "0.1.0-alpha.15"
+version = "0.1.0-alpha.16"
 dependencies = [
  "lox-core",
  "lox-test-utils",
@@ -1001,7 +1001,7 @@ dependencies = [
 
 [[package]]
 name = "lox-core"
-version = "0.1.0-alpha.14"
+version = "0.1.0-alpha.15"
 dependencies = [
  "chrono",
  "fast_polynomial",
@@ -1028,7 +1028,7 @@ dependencies = [
 
 [[package]]
 name = "lox-earth"
-version = "0.1.0-alpha.29"
+version = "0.1.0-alpha.30"
 dependencies = [
  "csv",
  "fast_polynomial",
@@ -1045,7 +1045,7 @@ dependencies = [
 
 [[package]]
 name = "lox-ephem"
-version = "0.1.0-alpha.24"
+version = "0.1.0-alpha.25"
 dependencies = [
  "arrayvec",
  "itertools",
@@ -1059,7 +1059,7 @@ dependencies = [
 
 [[package]]
 name = "lox-frames"
-version = "0.1.0-alpha.20"
+version = "0.1.0-alpha.21"
 dependencies = [
  "fast_polynomial",
  "lox-bodies",
@@ -1074,7 +1074,7 @@ dependencies = [
 
 [[package]]
 name = "lox-io"
-version = "0.1.0-alpha.24"
+version = "0.1.0-alpha.25"
 dependencies = [
  "lox-core",
  "lox-test-utils",
@@ -1086,7 +1086,7 @@ dependencies = [
 
 [[package]]
 name = "lox-itur"
-version = "0.1.0-alpha.5"
+version = "0.1.0-alpha.6"
 dependencies = [
  "codspeed-divan-compat",
  "libm",
@@ -1102,14 +1102,14 @@ dependencies = [
 
 [[package]]
 name = "lox-math"
-version = "0.1.0-alpha.23"
+version = "0.1.0-alpha.24"
 dependencies = [
  "lox-core",
 ]
 
 [[package]]
 name = "lox-odm"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 dependencies = [
  "codspeed-divan-compat",
  "lox-bodies",
@@ -1126,7 +1126,7 @@ dependencies = [
 
 [[package]]
 name = "lox-orbits"
-version = "0.1.0-alpha.39"
+version = "0.1.0-alpha.40"
 dependencies = [
  "chrono",
  "csv",
@@ -1150,7 +1150,7 @@ dependencies = [
 
 [[package]]
 name = "lox-space"
-version = "0.1.0-alpha.49"
+version = "0.1.0-alpha.50"
 dependencies = [
  "codspeed-divan-compat",
  "geo",
@@ -1178,7 +1178,7 @@ dependencies = [
 
 [[package]]
 name = "lox-test-utils"
-version = "0.1.0-alpha.9"
+version = "0.1.0-alpha.10"
 dependencies = [
  "codspeed-divan-compat",
  "glam 0.33.1",
@@ -1188,7 +1188,7 @@ dependencies = [
 
 [[package]]
 name = "lox-time"
-version = "0.1.0-alpha.26"
+version = "0.1.0-alpha.27"
 dependencies = [
  "chrono",
  "itertools",
@@ -1201,7 +1201,7 @@ dependencies = [
 
 [[package]]
 name = "lox-units"
-version = "0.1.0-alpha.15"
+version = "0.1.0-alpha.16"
 dependencies = [
  "lox-core",
 ]

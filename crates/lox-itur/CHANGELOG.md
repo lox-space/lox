@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.6](https://github.com/lox-space/lox/compare/lox-itur-v0.1.0-alpha.5...lox-itur-v0.1.0-alpha.6) - 2026-06-24
+
+### Other
+
+- *(lox-itur)* [**breaking**] replace EnvironmentalLosses with ItuProvider::propagation_losses
+
 ## [0.1.0-alpha.5](https://github.com/lox-space/lox/compare/lox-itur-v0.1.0-alpha.4...lox-itur-v0.1.0-alpha.5) - 2026-05-26
 
 ### Added
