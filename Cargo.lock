@@ -1826,6 +1826,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "big_space"
+version = "0.12.0"
+source = "git+https://github.com/helgee/big_space.git?branch=he%2Fbevy-0.19#e11d6e4005d7efe2af463b43d8dd12902662553d"
+dependencies = [
+ "async-channel",
+ "bevy_app",
+ "bevy_color",
+ "bevy_ecs",
+ "bevy_input",
+ "bevy_log",
+ "bevy_math",
+ "bevy_platform",
+ "bevy_reflect",
+ "bevy_tasks",
+ "bevy_time",
+ "bevy_transform",
+ "bevy_utils",
+ "smallvec",
+]
+
+[[package]]
 name = "bit-set"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3920,6 +3941,7 @@ name = "lox-app"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "big_space",
  "chrono",
  "lox-bodies",
  "lox-core",

@@ -5,16 +5,20 @@
 use bevy::prelude::*;
 
 mod ephemeris;
+mod scene;
 mod time;
 mod ui;
 
-use time::TimePlugin;
-use ui::UiPlugin;
-
-use crate::ephemeris::EphemerisPlugin;
+use crate::{ephemeris::EphemerisPlugin, scene::ScenePlugin, time::TimePlugin, ui::UiPlugin};
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, EphemerisPlugin, TimePlugin, UiPlugin))
+        .add_plugins((
+            DefaultPlugins,
+            EphemerisPlugin,
+            TimePlugin,
+            UiPlugin,
+            ScenePlugin,
+        ))
         .run();
 }
