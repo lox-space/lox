@@ -8,10 +8,7 @@ mod ephemeris;
 mod time;
 mod ui;
 
-use time::TimePlugin;
-use ui::UiPlugin;
-
-use crate::ephemeris::EphemerisPlugin;
+use crate::{ephemeris::EphemerisPlugin, time::TimePlugin, ui::UiPlugin};
 
 fn main() {
     App::new()

@@ -22,3 +22,7 @@ lox-core.workspace = true
 lox-ephem.workspace = true
 lox-time = { workspace = true, features = ["chrono"] }
 bevy = "0.19"
+# Use fork of big_space until it gets updated for Bevy 0.19 compat
+big_space = { git = "https://github.com/helgee/big_space.git", branch = "he/bevy-0.19", features = [
+  "i64",
+] }
