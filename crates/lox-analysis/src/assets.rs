@@ -10,6 +10,8 @@ use std::fmt;
 use lox_bodies::{DynOrigin, Origin};
 use lox_core::units::AngularRate;
 
+#[cfg(not(feature = "rayon"))]
+use crate::FallbackParIter as _;
 #[cfg(feature = "imaging")]
 use crate::imaging::OpticalPayload;
 #[cfg(feature = "imaging")]
@@ -23,8 +25,6 @@ use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::{DynTimeScale, Tai};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
-#[cfg(not(feature = "rayon"))]
-use crate::FallbackParIter as _;
 
 #[cfg(feature = "comms")]
 use lox_comms::terminal::{RxTerminal, TxTerminal};

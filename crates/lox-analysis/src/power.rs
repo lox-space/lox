@@ -10,6 +10,8 @@
 
 use std::collections::HashMap;
 
+#[cfg(not(feature = "rayon"))]
+use crate::FallbackParIter as _;
 use lox_bodies::{DynOrigin, Origin, Sun, TryMeanRadius, TrySpheroid};
 use lox_core::glam::DVec3;
 use lox_core::math::series::InterpolationType;
@@ -22,8 +24,6 @@ use lox_time::series::TimeSeries;
 use lox_time::time_scales::{Tai, Tdb};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
-#[cfg(not(feature = "rayon"))]
-use crate::FallbackParIter as _;
 use thiserror::Error;
 
 use crate::assets::{AssetId, ConstellationId, Scenario, Spacecraft};

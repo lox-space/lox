@@ -4,6 +4,8 @@
 
 use std::collections::HashMap;
 
+#[cfg(not(feature = "rayon"))]
+use crate::FallbackParIter as _;
 use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid, UndefinedOriginPropertyError};
 use lox_core::glam::DVec3;
 use lox_ephem::Ephemeris;
@@ -18,8 +20,6 @@ use lox_time::series::TimeSeries;
 use lox_time::time_scales::{DynTimeScale, Tai, Tdb, TimeScale};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
-#[cfg(not(feature = "rayon"))]
-use crate::FallbackParIter as _;
 use std::f64::consts::PI;
 use thiserror::Error;
 
