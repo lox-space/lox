@@ -16,7 +16,10 @@ use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
 use lox_time::time_scales::{DynTimeScale, Tai, Tdb, TimeScale};
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
+#[cfg(not(feature = "rayon"))]
+use crate::FallbackParIter as _;
 use std::f64::consts::PI;
 use thiserror::Error;
 

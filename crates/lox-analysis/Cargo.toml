@@ -28,11 +28,13 @@ lox-time = { workspace = true, features = ["chrono"] }
 
 geo = { workspace = true, optional = true }
 geojson = { workspace = true, optional = true }
-rayon.workspace = true
+rayon = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [features]
+default = ["rayon"]
+rayon = ["dep:rayon"]
 comms = ["dep:lox-comms"]
 geojson = ["dep:geojson"]
 imaging = ["dep:geo"]

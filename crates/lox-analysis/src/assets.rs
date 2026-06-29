@@ -21,7 +21,10 @@ use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::{DynTimeScale, Tai};
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
+#[cfg(not(feature = "rayon"))]
+use crate::FallbackParIter as _;
 
 #[cfg(feature = "comms")]
 use lox_comms::terminal::{RxTerminal, TxTerminal};

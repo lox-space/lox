@@ -20,7 +20,10 @@ use lox_time::deltas::TimeDelta;
 use lox_time::intervals::{self, TimeInterval};
 use lox_time::series::TimeSeries;
 use lox_time::time_scales::{Tai, Tdb};
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
+#[cfg(not(feature = "rayon"))]
+use crate::FallbackParIter as _;
 use thiserror::Error;
 
 use crate::assets::{AssetId, ConstellationId, Scenario, Spacecraft};

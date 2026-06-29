@@ -6,6 +6,11 @@
 
 //! Visibility analysis, ground station and spacecraft asset modelling.
 
+#[cfg(not(feature = "rayon"))]
+mod rayon_compat;
+#[cfg(not(feature = "rayon"))]
+pub(crate) use rayon_compat::FallbackParIter;
+
 /// Asset definitions: ground stations, spacecraft, constellations, and scenarios.
 pub mod assets;
 /// AOI imaging event detection: sub-satellite point, swath, and off-nadir coverage.

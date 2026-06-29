@@ -8,7 +8,10 @@ use core::marker::PhantomData;
 use std::collections::HashMap;
 
 use lox_core::glam::DVec3;
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
+#[cfg(not(feature = "rayon"))]
+use crate::FallbackParIter as _;
 use thiserror::Error;
 
 use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid};
