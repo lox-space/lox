@@ -355,7 +355,6 @@ mod tests {
 
     fn epoch() -> Time<Tdb> {
         Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2))
-            .unwrap()
             .to_time()
             .to_scale(Tdb)
     }

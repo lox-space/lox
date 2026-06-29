@@ -13,9 +13,6 @@ type Epoch = Literal["jd", "mjd", "j1950", "j2000"]
 type Unit = Literal["seconds", "days", "centuries"]
 
 # Exceptions
-class NonFiniteTimeDeltaError(Exception):
-    """Raised when a TimeDelta operation produces a non-finite result."""
-
 class EopParserError(Exception):
     """Raised when Earth orientation parameter data cannot be parsed."""
 
@@ -1608,13 +1605,13 @@ class J2:
     Args:
         initial_state: Initial orbital state (mean elements).
         osculating: Enable Kwok short-period corrections (default: False).
-        step: Fixed time step in seconds for interval propagation (default: 60).
+        step: Fixed time step for interval propagation (default: 60 seconds).
     """
     def __new__(
         cls,
         initial_state: Cartesian,
         osculating: bool = False,
-        step: float | None = None,
+        step: TimeDelta | None = None,
     ) -> Self: ...
     @overload
     def propagate(self, steps: Time) -> Cartesian: ...
@@ -1640,13 +1637,13 @@ class J4:
     Args:
         initial_state: Initial orbital state (mean elements).
         osculating: Enable Kwok short-period corrections (default: False).
-        step: Fixed time step in seconds for interval propagation (default: 60).
+        step: Fixed time step for interval propagation (default: 60 seconds).
     """
     def __new__(
         cls,
         initial_state: Cartesian,
         osculating: bool = False,
-        step: float | None = None,
+        step: TimeDelta | None = None,
     ) -> Self: ...
     @overload
     def propagate(self, steps: Time) -> Cartesian: ...

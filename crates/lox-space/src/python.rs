@@ -33,10 +33,7 @@ use crate::orbits::python::{
     py_intersect_intervals, py_union_intervals,
 };
 use crate::time::python::{
-    deltas::{NonFiniteTimeDeltaError, PyTimeDelta},
-    time::PyTime,
-    time_scales::PyTimeScale,
-    time_series::PyTimeSeries,
+    deltas::PyTimeDelta, time::PyTime, time_scales::PyTimeScale, time_series::PyTimeSeries,
     utc::PyUtc,
 };
 use crate::units::{
@@ -156,17 +153,13 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // time
     m.add_class::<PyTime>()?;
     m.add_class::<PyTimeDelta>()?;
-    m.add("seconds", PyTimeDelta::new(1.0))?;
-    m.add("minutes", PyTimeDelta::new(60.0))?;
-    m.add("hours", PyTimeDelta::new(3600.0))?;
-    m.add("days", PyTimeDelta::new(86400.0))?;
+    m.add("seconds", PyTimeDelta::new(1.0)?)?;
+    m.add("minutes", PyTimeDelta::new(60.0)?)?;
+    m.add("hours", PyTimeDelta::new(3600.0)?)?;
+    m.add("days", PyTimeDelta::new(86400.0)?)?;
     m.add_class::<PyTimeScale>()?;
     m.add_class::<PyTimeSeries>()?;
     m.add_class::<PyUtc>()?;
-    m.add(
-        "NonFiniteTimeDeltaError",
-        m.py().get_type::<NonFiniteTimeDeltaError>(),
-    )?;
 
     // units
     m.add_class::<PyAngle>()?;

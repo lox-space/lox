@@ -492,7 +492,14 @@ impl ManeuverBuilder {
         })?;
 
         let ignition_epoch = parse_epoch(&ign_field, time_system)?;
-        let duration = TimeDelta::from_seconds_f64(parse_f64(&dur_field)?);
+        let duration =
+            TimeDelta::try_from_seconds_f64(parse_f64(&dur_field)?).map_err(|e| KvnError {
+                span: Span::default(),
+                kind: KvnErrorKind::InvalidValue {
+                    keyword: dur_field.key.clone(),
+                    reason: e.to_string(),
+                },
+            })?;
         let delta_mass = Mass::kilograms(parse_f64(&dm_field)?);
         let frame = self.frame.map(|s| OdmFrame::from_wire(&s));
         let dv1 = Velocity::kilometers_per_second(parse_f64(&dv1_field)?);

@@ -92,16 +92,13 @@ fn find_leap_seconds(epochs: &[i64], leap_seconds: &[i64], seconds: i64) -> Time
 
 /// Returns the TAI−UTC leap second offset at the given TAI instant.
 pub fn find_leap_seconds_tai(epochs: &[i64], leap_seconds: &[i64], tai: Time<Tai>) -> TimeDelta {
-    let seconds = tai.seconds().expect("TAI time should have finite seconds");
+    let seconds = tai.seconds();
     find_leap_seconds(epochs, leap_seconds, seconds)
 }
 
 /// Returns the UTC−TAI leap second offset at the given UTC instant.
 pub fn find_leap_seconds_utc(epochs: &[i64], leap_seconds: &[i64], utc: Utc) -> TimeDelta {
-    let seconds = utc
-        .to_delta()
-        .seconds()
-        .expect("UTC time should have finite seconds");
+    let seconds = utc.to_delta().seconds();
     let mut ls = find_leap_seconds(epochs, leap_seconds, seconds);
     if utc.second() == 60 {
         ls -= TimeDelta::from_seconds(1);
@@ -121,10 +118,7 @@ pub fn is_leap_second_date(epochs: &[i64], date: Date) -> bool {
 
 /// Returns `true` if a leap second occurs at the given TAI instant.
 pub fn is_leap_second(epochs: &[i64], tai: Time<Tai>) -> bool {
-    match tai.seconds() {
-        Some(seconds) => epochs.binary_search(&seconds).is_ok(),
-        None => false,
-    }
+    epochs.binary_search(&tai.seconds()).is_ok()
 }
 
 #[cfg(test)]

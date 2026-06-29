@@ -79,17 +79,12 @@ where
 {
     fn to_utc_with_provider(&self, provider: &impl LeapSecondsProvider) -> Utc {
         let tai = self.to_scale(Tai);
-        assert!(
-            tai.seconds().is_some(),
-            "NaN TimeDelta cannot be converted to UTC"
-        );
         let delta = if tai < TAI_AT_UTC_1972_01_01 {
             before1972::delta_tai_utc(&tai)
         } else {
             provider.delta_tai_utc(tai)
         };
-        let mut utc = Utc::from_delta(tai.to_delta() - delta)
-            .expect("finite TAI time should produce valid UTC");
+        let mut utc = Utc::from_delta(tai.to_delta() - delta);
         if provider.is_leap_second(tai) {
             utc.time = TimeOfDay::new(utc.hour(), utc.minute(), 60)
                 .unwrap()

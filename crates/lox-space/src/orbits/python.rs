@@ -1269,7 +1269,9 @@ impl PyTrajectory {
         }
         let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(array.nrows());
         for row in array.rows() {
-            let time = start_time.0 + TimeDelta::from_seconds_f64(row[0]);
+            let delta = TimeDelta::try_from_seconds_f64(row[0])
+                .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            let time = start_time.0 + delta;
             let position = DVec3::new(row[1], row[2], row[3]);
             let velocity = DVec3::new(row[4], row[5], row[6]);
             states.push(CartesianOrbit::new(
@@ -1788,7 +1790,7 @@ impl PyNumericalPropagator {
 /// Args:
 ///     initial_state: Initial orbital state (mean Keplerian elements).
 ///     osculating: Enable Kwok short-period corrections (default: False).
-///     step: Fixed time step in seconds for interval propagation (default: 60).
+///     step: Fixed time step for interval propagation (default: 60 seconds).
 #[pyclass(name = "J2", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
 pub struct PyJ2Propagator(pub DynJ2Propagator);
@@ -1797,12 +1799,16 @@ pub struct PyJ2Propagator(pub DynJ2Propagator);
 impl PyJ2Propagator {
     #[new]
     #[pyo3(signature = (initial_state, osculating=false, step=None))]
-    fn new(initial_state: PyCartesian, osculating: bool, step: Option<f64>) -> PyResult<Self> {
+    fn new(
+        initial_state: PyCartesian,
+        osculating: bool,
+        step: Option<PyTimeDelta>,
+    ) -> PyResult<Self> {
         let mut propagator = DynJ2Propagator::try_new(initial_state.0)
             .map_err(|e| PyValueError::new_err(e.to_string()))?
             .with_osculating(osculating);
         if let Some(step) = step {
-            propagator = propagator.with_step(TimeDelta::from_seconds_f64(step));
+            propagator = propagator.with_step(step.0);
         }
         Ok(Self(propagator))
     }
@@ -1852,7 +1858,7 @@ impl PyJ2Propagator {
 /// Args:
 ///     initial_state: Initial orbital state (mean Keplerian elements).
 ///     osculating: Enable Kwok short-period corrections (default: False).
-///     step: Fixed time step in seconds for interval propagation (default: 60).
+///     step: Fixed time step for interval propagation (default: 60 seconds).
 #[pyclass(name = "J4", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
 pub struct PyJ4Propagator(pub DynJ4Propagator);
@@ -1861,12 +1867,16 @@ pub struct PyJ4Propagator(pub DynJ4Propagator);
 impl PyJ4Propagator {
     #[new]
     #[pyo3(signature = (initial_state, osculating=false, step=None))]
-    fn new(initial_state: PyCartesian, osculating: bool, step: Option<f64>) -> PyResult<Self> {
+    fn new(
+        initial_state: PyCartesian,
+        osculating: bool,
+        step: Option<PyTimeDelta>,
+    ) -> PyResult<Self> {
         let mut propagator = DynJ4Propagator::try_new(initial_state.0)
             .map_err(|e| PyValueError::new_err(e.to_string()))?
             .with_osculating(osculating);
         if let Some(step) = step {
-            propagator = propagator.with_step(TimeDelta::from_seconds_f64(step));
+            propagator = propagator.with_step(step.0);
         }
         Ok(Self(propagator))
     }

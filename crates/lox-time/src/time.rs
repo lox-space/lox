@@ -12,6 +12,7 @@ use core::fmt::Formatter;
 use core::ops::Add;
 use core::ops::Sub;
 use core::str::FromStr;
+use lox_core::time::deltas::InvalidFloatSeconds;
 
 use lox_core::f64;
 use lox_core::i64;
@@ -164,17 +165,38 @@ impl<T: TimeScale> Time<T> {
         }
     }
 
-    /// Given a Julian date, instantiates a [Time] in the specified [TimeScale], relative to
+    /// Creates a [Time] in the specified [TimeScale], given a Julian date relative to
     /// `epoch`.
-    pub fn from_julian_date(scale: T, julian_date: Days, epoch: Epoch) -> Self {
+    pub const fn from_julian_date(scale: T, julian_date: Days, epoch: Epoch) -> Self {
         let delta = TimeDelta::from_julian_date(julian_date, epoch);
         Self { scale, delta }
     }
 
-    /// Instantiates a [Time] from a two-part Julian date `jd1 + jd2` in days.
-    pub fn from_two_part_julian_date(scale: T, jd1: Days, jd2: Days) -> Self {
+    /// Try to create a [Time] in the specified [TimeScale], given a Julian date relative to
+    /// `epoch`.
+    pub fn try_from_julian_date(
+        scale: T,
+        julian_date: Days,
+        epoch: Epoch,
+    ) -> Result<Self, InvalidFloatSeconds> {
+        let delta = TimeDelta::try_from_julian_date(julian_date, epoch)?;
+        Ok(Self { scale, delta })
+    }
+
+    /// Creates a [Time] from a two-part Julian date `jd1 + jd2` in days.
+    pub const fn from_two_part_julian_date(scale: T, jd1: Days, jd2: Days) -> Self {
         let delta = TimeDelta::from_two_part_julian_date(jd1, jd2);
         Self { scale, delta }
+    }
+
+    /// Try to create a [Time] from a two-part Julian date `jd1 + jd2` in days.
+    pub fn try_from_two_part_julian_date(
+        scale: T,
+        jd1: Days,
+        jd2: Days,
+    ) -> Result<Self, InvalidFloatSeconds> {
+        let delta = TimeDelta::try_from_two_part_julian_date(jd1, jd2)?;
+        Ok(Self { scale, delta })
     }
 
     /// Returns a [TimeBuilder] for constructing a new [Time] in the given [TimeScale].
@@ -247,20 +269,19 @@ impl<T: TimeScale> Time<T> {
         Self::from_epoch(scale, Epoch::J2000)
     }
 
-    /// Returns the seconds and subsecond components, or `None` if the delta is non-finite.
-    pub fn as_seconds_and_subsecond(&self) -> Option<(i64, Subsecond)> {
+    /// Returns the seconds and subsecond components.
+    pub fn as_seconds_and_subsecond(&self) -> (i64, Subsecond) {
         self.delta.as_seconds_and_subsecond()
     }
 
     /// Returns the number of whole seconds since J2000.
-    pub fn seconds(&self) -> Option<i64> {
-        self.as_seconds_and_subsecond().map(|(seconds, _)| seconds)
+    pub fn seconds(&self) -> i64 {
+        self.as_seconds_and_subsecond().0
     }
 
     /// Returns the fraction of a second from the last whole second as an `f64`.
-    pub fn subsecond(&self) -> Option<f64> {
-        self.as_seconds_and_subsecond()
-            .map(|(_, subsecond)| subsecond.as_seconds_f64())
+    pub fn subsecond(&self) -> f64 {
+        self.as_seconds_and_subsecond().1.as_seconds_f64()
     }
 }
 
@@ -420,16 +441,14 @@ impl<T: TimeScale> Sub<Time<T>> for Time<T> {
 
 impl<T: TimeScale> CivilTime for Time<T> {
     fn time(&self) -> TimeOfDay {
-        debug_assert!(self.delta.is_finite());
-        let (seconds, subsecond) = self.as_seconds_and_subsecond().unwrap();
+        let (seconds, subsecond) = self.as_seconds_and_subsecond();
         TimeOfDay::from_seconds_since_j2000(seconds).with_subsecond(subsecond)
     }
 }
 
 impl<T: TimeScale> CalendarDate for Time<T> {
     fn date(&self) -> Date {
-        debug_assert!(self.delta.is_finite());
-        let seconds = self.seconds().unwrap();
+        let seconds = self.seconds();
         Date::from_seconds_since_j2000(seconds)
     }
 }
@@ -559,13 +578,13 @@ mod tests {
             .with_ymd(2000, 1, 1)
             .build()
             .unwrap();
-        assert_eq!(time.seconds(), Some(-SECONDS_PER_HALF_DAY));
+        assert_eq!(time.seconds(), -SECONDS_PER_HALF_DAY);
         let time = Time::builder_with_scale(Tai)
             .with_ymd(2000, 1, 1)
             .with_hms(12, 0, 0.0)
             .build()
             .unwrap();
-        assert_eq!(time.seconds(), Some(0));
+        assert_eq!(time.seconds(), 0);
     }
 
     #[test]
@@ -585,13 +604,13 @@ mod tests {
     #[case(Epoch::J2000, 0)]
     fn test_time_from_julian_date(#[case] epoch: Epoch, #[case] seconds: i64) {
         let time = Time::from_julian_date(Tai, 0.0, epoch);
-        assert_eq!(time.seconds(), Some(seconds));
+        assert_eq!(time.seconds(), seconds);
     }
 
     #[test]
     fn test_time_from_julian_date_subsecond() {
         let time = Time::from_julian_date(Tai, 0.3 / f64::consts::SECONDS_PER_DAY, Epoch::J2000);
-        assert_approx_eq!(time.subsecond().unwrap(), 0.3, atol <= 1e-15);
+        assert_approx_eq!(time.subsecond(), 0.3, atol <= 1e-15);
     }
 
     #[test]
@@ -600,15 +619,6 @@ mod tests {
         let (jd1, jd2) = t0.two_part_julian_date();
         let t1 = Time::from_two_part_julian_date(Tai, jd1, jd2);
         assert_approx_eq!(t0, t1);
-    }
-
-    #[rstest]
-    #[case(i64::MAX as f64, 1.0)]
-    #[case(i64::MIN as f64, -1.0)]
-    fn test_time_from_two_part_julian_date_edge_cases(#[case] jd1: f64, #[case] jd2: f64) {
-        let time = Time::from_two_part_julian_date(Tai, jd1, jd2);
-        // Edge cases now result in non-finite TimeDelta variants (NaN, PosInf, NegInf)
-        assert!(!time.to_delta().is_finite());
     }
 
     #[rstest]
@@ -633,7 +643,38 @@ mod tests {
         #[case] expected: i64,
     ) {
         let time = Time::from_two_part_julian_date(Tai, jd1, jd2);
-        assert_eq!(time.seconds(), Some(expected));
+        assert_eq!(time.seconds(), expected);
+    }
+
+    // Non-finite or out-of-range Julian dates are unrecoverable programmer
+    // errors and must panic rather than yield a silently-wrong epoch.
+    #[rstest]
+    #[case(f64::INFINITY)]
+    #[case(-f64::INFINITY)]
+    #[case(f64::NAN)]
+    #[case(-f64::NAN)]
+    #[case(i64::MAX as f64 / f64::consts::SECONDS_PER_DAY + 1.0)]
+    #[case(i64::MIN as f64 / f64::consts::SECONDS_PER_DAY - 1.0)]
+    #[should_panic]
+    fn test_time_from_julian_date_special_values(#[case] julian_date: f64) {
+        Time::from_julian_date(Tai, julian_date, Epoch::J2000);
+    }
+
+    #[rstest]
+    #[case(i64::MAX as f64, 1.0)]
+    #[case(i64::MIN as f64, -1.0)]
+    #[should_panic]
+    fn test_time_from_two_part_julian_date_edge_cases(#[case] jd1: f64, #[case] jd2: f64) {
+        Time::from_two_part_julian_date(Tai, jd1, jd2);
+    }
+
+    // Each part is individually in range, but their sum overflows the seconds
+    // component — this must panic, not silently wrap in a release build.
+    #[test]
+    #[should_panic]
+    fn test_time_from_two_part_julian_date_overflow() {
+        let half_max_days = i64::MAX as f64 / f64::consts::SECONDS_PER_DAY * 0.6;
+        Time::from_two_part_julian_date(Tai, half_max_days, half_max_days);
     }
 
     #[test]
@@ -642,20 +683,7 @@ mod tests {
         let delta = TimeDelta::from_seconds(20);
         let tdb = tai.with_scale_and_delta(Tdb, delta);
         assert_eq!(tdb.scale(), Tdb);
-        assert_eq!(tdb.seconds(), Some(tai.seconds().unwrap() + 20));
-    }
-
-    #[rstest]
-    #[case(f64::INFINITY)]
-    #[case(-f64::INFINITY)]
-    #[case(f64::NAN)]
-    #[case(-f64::NAN)]
-    #[case(i64::MAX as f64 / f64::consts::SECONDS_PER_DAY + 1.0)]
-    #[case(i64::MIN as f64 / f64::consts::SECONDS_PER_DAY - 1.0)]
-    fn test_time_from_julian_date_special_values(#[case] julian_date: f64) {
-        let time = Time::from_julian_date(Tai, julian_date, Epoch::J2000);
-        // Special values (NaN, Infinity) result in non-finite TimeDelta
-        assert!(!time.to_delta().is_finite());
+        assert_eq!(tdb.seconds(), tai.seconds() + 20);
     }
 
     #[rstest]
@@ -761,7 +789,7 @@ mod tests {
     #[test]
     fn test_time_seconds() {
         let time = Time::new(Tai, 1234567890, Subsecond::from_f64(0.9876543210).unwrap());
-        let expected = Some(1234567890);
+        let expected = 1234567890;
         let actual = time.seconds();
         assert_eq!(
             expected, actual,
@@ -828,13 +856,13 @@ mod tests {
     #[test]
     fn test_time_macro() {
         let time = time!(Tai, 2000, 1, 1).unwrap();
-        assert_eq!(time.seconds(), Some(-SECONDS_PER_HALF_DAY));
+        assert_eq!(time.seconds(), -SECONDS_PER_HALF_DAY);
         let time = time!(Tai, 2000, 1, 1, 12).unwrap();
-        assert_eq!(time.seconds(), Some(0));
+        assert_eq!(time.seconds(), 0);
         let time = time!(Tai, 2000, 1, 1, 12, 0).unwrap();
-        assert_eq!(time.seconds(), Some(0));
+        assert_eq!(time.seconds(), 0);
         let time = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap();
-        assert_eq!(time.seconds(), Some(0));
+        assert_eq!(time.seconds(), 0);
         // TODO: Fix subsecond handling in TimeOfDay::from_hms or time builder
         // let time = time!(Tai, 2000, 1, 1, 12, 0, 0.123).unwrap();
         // assert_eq!(time.seconds(), Some(0));
@@ -844,7 +872,7 @@ mod tests {
     #[test]
     fn test_time_subsecond() {
         let time = Time::new(Tai, 0, Subsecond::from_f64(0.123).unwrap());
-        assert_eq!(time.subsecond(), Some(0.123));
+        assert_eq!(time.subsecond(), 0.123);
     }
 
     #[rstest]

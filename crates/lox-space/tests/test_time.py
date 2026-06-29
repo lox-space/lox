@@ -65,8 +65,12 @@ def test_time_delta():
     assert str(delta + delta) == "3 seconds"
     assert str(delta - delta) == "0 seconds"
     assert str(-delta) == "-1.5 seconds"
-    with pytest.raises(lox.NonFiniteTimeDeltaError):
-        lox.TimeDelta(float("nan")).seconds()
+    with pytest.raises(ValueError):
+        lox.TimeDelta(float("nan"))
+    with pytest.raises(ValueError):
+        delta * float("nan")
+    with pytest.raises(ValueError):
+        float("inf") * delta
 
 
 def test_time_delta_constructors():
@@ -182,6 +186,8 @@ def test_time_from_two_part_julian_date():
     jd1, jd2 = expected.two_part_julian_date()
     actual = lox.Time.from_two_part_julian_date("TAI", jd1, jd2)
     assert expected.isclose(actual)
+    with pytest.raises(ValueError):
+        lox.Time.from_two_part_julian_date("TAI", jd1, float("nan"))
 
 
 def test_time_from_day_of_year():

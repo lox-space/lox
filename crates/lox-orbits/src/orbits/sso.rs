@@ -463,7 +463,6 @@ mod tests {
         let jd1 = 2458849.5;
         let jd2 = 49.78099017 - 1.0;
         let epoch = Utc::from_delta(TimeDelta::from_two_part_julian_date(jd1, jd2))
-            .unwrap()
             .to_time()
             .to_scale(Tdb);
         let ltan = LocalTimeOfNode::LTAN(TimeOfDay::from_hour_and_minute(13, 30).unwrap());
@@ -477,7 +476,6 @@ mod tests {
         let jd1 = 2458849.5;
         let jd2 = 49.78099017 - 1.0;
         let epoch = Utc::from_delta(TimeDelta::from_two_part_julian_date(jd1, jd2))
-            .unwrap()
             .to_time()
             .to_scale(Tdb);
 

@@ -662,7 +662,12 @@ impl TryFrom<OpmXml> for Opm {
         let mut maneuvers: Vec<Maneuver> = Vec::new();
         for mp in data.maneuver_parameters {
             let ignition_epoch = parse_epoch(time_system, &mp.man_epoch_ignition)?;
-            let duration = TimeDelta::from_seconds_f64(mp.man_duration.value);
+            let duration = TimeDelta::try_from_seconds_f64(mp.man_duration.value).map_err(|e| {
+                XmlError::InvalidValue {
+                    keyword: "MAN_DURATION".to_string(),
+                    reason: e.to_string(),
+                }
+            })?;
             let delta_mass = Mass::kilograms(mp.man_delta_mass.value);
             let frame = mp.man_ref_frame.map(|s| OdmFrame::from_wire(s.trim()));
             let dv1 = Velocity::kilometers_per_second(mp.man_dv_1.value);
