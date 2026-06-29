@@ -26,7 +26,7 @@ jobs:
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
       - name: Cache itur wheel
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: itur-0.4.0-py2.py3-none-any.whl
           key: itur-wheel-0.4.0
@@ -121,7 +121,7 @@ jobs:
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
       - name: Cache itur wheel
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: itur-0.4.0-py2.py3-none-any.whl
           key: itur-wheel-0.4.0
