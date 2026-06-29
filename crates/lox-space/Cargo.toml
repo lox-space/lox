@@ -24,7 +24,7 @@ test = false
 
 [dependencies]
 lox-test-utils = { workspace = true, features = ["std"] }
-lox-analysis = { workspace = true, optional = true }
+lox-analysis = { workspace = true, optional = true, default-features = false }
 lox-bodies = { workspace = true, optional = true }
 lox-comms = { workspace = true, optional = true }
 lox-core = { workspace = true, optional = true, features = ["std"] }
@@ -87,9 +87,11 @@ default = [
   "math",
   "odm",
   "orbits",
+  "rayon",
   "time",
   "units",
 ]
+rayon = ["lox-analysis?/rayon"]
 analysis = ["orbits", "dep:lox-analysis", "lox-analysis?/comms"]
 imaging = ["analysis", "dep:geo", "lox-analysis?/imaging", "lox-analysis?/geojson"]
 bodies = ["math", "units", "dep:lox-bodies"]
