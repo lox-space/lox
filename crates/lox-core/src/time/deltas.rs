@@ -17,6 +17,7 @@ use core::fmt::Display;
 use core::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use lox_test_utils::approx_eq::ApproxEq;
+use thiserror::Error;
 
 use crate::math::float::mul_add;
 
@@ -31,6 +32,631 @@ use crate::types::units::Days;
 
 use super::julian_dates::{Epoch, JulianDate, Unit};
 use super::subsecond::Subsecond;
+
+/// A signed finite time delta with whole seconds and an attosecond remainder in `[0, 10¹⁸)`.
+///
+/// `TimeDelta` represents a duration as whole seconds plus a fractional attosecond
+/// component.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct TimeDelta {
+    /// Whole seconds component.
+    seconds: i64,
+    /// Attosecond remainder in `[0, 10¹⁸)`.
+    attoseconds: i64,
+}
+
+impl TimeDelta {
+    /// A zero-length time delta.
+    pub const ZERO: Self = TimeDelta::from_seconds(0);
+
+    /// Creates a new `TimeDelta` from seconds and attoseconds.
+    ///
+    /// The attoseconds value is automatically normalized to [0, 10¹⁸), with
+    /// overflow/underflow carried into the seconds component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use lox_core::time::deltas::TimeDelta;
+    ///
+    /// let dt = TimeDelta::new(1, 500_000_000_000_000_000);
+    /// assert_eq!(dt.seconds(), 1);
+    /// assert_eq!(dt.attoseconds(), 500_000_000_000_000_000);
+    /// ```
+    pub const fn new(seconds: i64, attoseconds: i64) -> Self {
+        let (seconds, attoseconds) = Self::normalize(seconds, attoseconds);
+        Self {
+            seconds,
+            attoseconds,
+        }
+    }
+
+    /// Normalizes attoseconds to [0, ATTOSECONDS_IN_SECOND) range.
+    const fn normalize(mut seconds: i64, mut attoseconds: i64) -> (i64, i64) {
+        // Handle overflow: attoseconds >= ATTOSECONDS_IN_SECOND
+        if attoseconds >= ATTOSECONDS_IN_SECOND {
+            let carry = attoseconds / ATTOSECONDS_IN_SECOND;
+            seconds += carry;
+            attoseconds %= ATTOSECONDS_IN_SECOND;
+        }
+
+        // Handle underflow: attoseconds < 0
+        if attoseconds < 0 {
+            // Calculate how many seconds to borrow
+            let borrow = (-attoseconds + ATTOSECONDS_IN_SECOND - 1) / ATTOSECONDS_IN_SECOND;
+            seconds -= borrow;
+            attoseconds += borrow * ATTOSECONDS_IN_SECOND;
+        }
+
+        (seconds, attoseconds)
+    }
+
+    /// Returns a [`TimeDeltaBuilder`] for constructing a `TimeDelta` from individual components.
+    pub const fn builder() -> TimeDeltaBuilder {
+        TimeDeltaBuilder::new()
+    }
+
+    /// Creates a `TimeDelta` from a floating-point number of seconds.
+    ///
+    /// # Panics
+    /// Panics if a non-finite or out-of-range value is encountered.
+    #[track_caller]
+    pub const fn from_seconds_f64(value: f64) -> Self {
+        assert!(
+            value.is_finite() && value >= i64::MIN as f64 && value < i64::MAX as f64,
+            "non-finite or out-of-range value encountered"
+        );
+
+        // Inline const-compatible round_ties_even (banker's rounding). The
+        // bounds check above guarantees `value` fits in `i64::MIN..=i64::MAX`.
+        let i = value as i64 as f64;
+        let frac = value - i;
+        let seconds = if frac > 0.5 {
+            i + 1.0
+        } else if frac < -0.5 {
+            i - 1.0
+        } else if frac == 0.5 {
+            if (i as i64) % 2 == 0 { i } else { i + 1.0 }
+        } else if frac == -0.5 {
+            if (i as i64) % 2 == 0 { i } else { i - 1.0 }
+        } else {
+            i
+        };
+        let subseconds = value - seconds;
+        // Inline const-compatible round (half away from zero). The product is
+        // bounded by `ATTOSECONDS_IN_SECOND` (1e18), within `i64` range.
+        let scaled = subseconds * ATTOSECONDS_IN_SECOND as f64;
+        let si = scaled as i64 as f64;
+        let sfrac = scaled - si;
+        let attos_rounded = if sfrac >= 0.5 {
+            si + 1.0
+        } else if sfrac <= -0.5 {
+            si - 1.0
+        } else {
+            si
+        };
+
+        if subseconds.is_sign_negative() {
+            Self {
+                seconds: seconds as i64 - 1,
+                attoseconds: attos_rounded as i64 + ATTOSECONDS_IN_SECOND,
+            }
+        } else {
+            Self {
+                seconds: seconds as i64,
+                attoseconds: attos_rounded as i64,
+            }
+        }
+    }
+
+    /// Tries to create a `TimeDelta` from a floating-point number of seconds.
+    ///
+    /// # Errors
+    /// Returns an error if an out-of-range value is encountered.
+    pub fn try_from_seconds_f64(value: f64) -> Result<Self, InvalidFloatSeconds> {
+        if !value.is_finite() || value < i64::MIN as f64 || value >= i64::MAX as f64 {
+            return Err(InvalidFloatSeconds(value));
+        }
+        Ok(Self::from_seconds_f64(value))
+    }
+
+    /// Creates a `TimeDelta` from a whole number of seconds.
+    pub const fn from_seconds(seconds: i64) -> Self {
+        Self::new(seconds, 0)
+    }
+
+    /// Creates a `TimeDelta` from a whole number of minutes.
+    pub const fn from_minutes(minutes: i64) -> Self {
+        Self::from_seconds(minutes * I64_SECONDS_PER_MINUTE)
+    }
+
+    /// Creates a `TimeDelta` from a floating-point number of minutes.
+    pub const fn from_minutes_f64(value: f64) -> Self {
+        Self::from_seconds_f64(value * f64::consts::SECONDS_PER_MINUTE)
+    }
+
+    /// Tries to create a `TimeDelta` from a floating-point number of minutes.
+    ///
+    /// # Errors
+    /// Returns an error if an out-of-range value is encountered.
+    pub fn try_from_minutes_f64(value: f64) -> Result<Self, InvalidFloatSeconds> {
+        Self::try_from_seconds_f64(value * f64::consts::SECONDS_PER_MINUTE)
+    }
+
+    /// Creates a `TimeDelta` from a whole number of hours.
+    pub const fn from_hours(hours: i64) -> Self {
+        Self::from_seconds(hours * I64_SECONDS_PER_HOUR)
+    }
+
+    /// Creates a `TimeDelta` from a floating-point number of hours.
+    pub const fn from_hours_f64(value: f64) -> Self {
+        Self::from_seconds_f64(value * f64::consts::SECONDS_PER_HOUR)
+    }
+
+    /// Tries to create a `TimeDelta` from a floating-point number of hours.
+    ///
+    /// # Errors
+    /// Returns an error if an out-of-range value is encountered.
+    pub fn try_from_hours_f64(value: f64) -> Result<Self, InvalidFloatSeconds> {
+        Self::try_from_seconds_f64(value * f64::consts::SECONDS_PER_HOUR)
+    }
+
+    /// Creates a `TimeDelta` from a whole number of days.
+    pub const fn from_days(days: i64) -> Self {
+        Self::from_seconds(days * I64_SECONDS_PER_DAY)
+    }
+
+    /// Creates a `TimeDelta` from a floating-point number of days.
+    pub const fn from_days_f64(value: f64) -> Self {
+        Self::from_seconds_f64(value * f64::consts::SECONDS_PER_DAY)
+    }
+
+    /// Tries to create a `TimeDelta` from a floating-point number of days.
+    ///
+    /// # Errors
+    /// Returns an error if an out-of-range value is encountered.
+    pub fn try_from_days_f64(value: f64) -> Result<Self, InvalidFloatSeconds> {
+        Self::try_from_seconds_f64(value * f64::consts::SECONDS_PER_DAY)
+    }
+
+    /// Creates a `TimeDelta` from a number of milliseconds.
+    pub const fn from_milliseconds(ms: i64) -> Self {
+        let seconds = ms / 1000;
+        let remainder = ms % 1000;
+        Self::new(seconds, remainder * ATTOSECONDS_IN_MILLISECOND)
+    }
+
+    /// Creates a `TimeDelta` from a number of microseconds.
+    pub const fn from_microseconds(us: i64) -> Self {
+        let seconds = us / 1_000_000;
+        let remainder = us % 1_000_000;
+        Self::new(seconds, remainder * ATTOSECONDS_IN_MICROSECOND)
+    }
+
+    /// Creates a `TimeDelta` from a number of nanoseconds.
+    pub const fn from_nanoseconds(ns: i64) -> Self {
+        let seconds = ns / 1_000_000_000;
+        let remainder = ns % 1_000_000_000;
+        Self::new(seconds, remainder * ATTOSECONDS_IN_NANOSECOND)
+    }
+
+    /// Creates a `TimeDelta` from a number of picoseconds.
+    pub const fn from_picoseconds(ps: i64) -> Self {
+        let seconds = ps / 1_000_000_000_000;
+        let remainder = ps % 1_000_000_000_000;
+        Self::new(seconds, remainder * ATTOSECONDS_IN_PICOSECOND)
+    }
+
+    /// Creates a `TimeDelta` from a number of femtoseconds.
+    pub const fn from_femtoseconds(fs: i64) -> Self {
+        let seconds = fs / 1_000_000_000_000_000;
+        let remainder = fs % 1_000_000_000_000_000;
+        Self::new(seconds, remainder * ATTOSECONDS_IN_FEMTOSECOND)
+    }
+
+    /// Creates a `TimeDelta` from a number of attoseconds.
+    pub const fn from_attoseconds(atto: i64) -> Self {
+        let seconds = atto / ATTOSECONDS_IN_SECOND;
+        let remainder = atto % ATTOSECONDS_IN_SECOND;
+        Self::new(seconds, remainder)
+    }
+
+    /// Creates a `TimeDelta` from a floating-point number of Julian years (365.25 days each).
+    pub const fn from_julian_years(value: f64) -> Self {
+        Self::from_seconds_f64(value * f64::consts::SECONDS_PER_JULIAN_YEAR)
+    }
+
+    /// Tries to create a `TimeDelta` from a floating-point number of Julian years.
+    ///
+    /// # Errors
+    /// Returns an error if an out-of-range value is encountered.
+    pub fn try_from_julian_years(value: f64) -> Result<Self, InvalidFloatSeconds> {
+        Self::try_from_seconds_f64(value * f64::consts::SECONDS_PER_JULIAN_YEAR)
+    }
+
+    /// Creates a `TimeDelta` from a floating-point number of Julian centuries (36525 days each).
+    pub const fn from_julian_centuries(value: f64) -> Self {
+        Self::from_seconds_f64(value * f64::consts::SECONDS_PER_JULIAN_CENTURY)
+    }
+
+    /// Tries to create a `TimeDelta` from a floating-point number of Julian centuries.
+    ///
+    /// # Errors
+    /// Returns an error if an out-of-range value is encountered.
+    pub fn try_from_julian_centuries(value: f64) -> Result<Self, InvalidFloatSeconds> {
+        Self::try_from_seconds_f64(value * f64::consts::SECONDS_PER_JULIAN_CENTURY)
+    }
+
+    /// Creates a `TimeDelta` from whole seconds and a [`Subsecond`] fractional part.
+    pub const fn from_seconds_and_subsecond(seconds: i64, subsecond: Subsecond) -> Self {
+        Self::new(seconds, subsecond.as_attoseconds())
+    }
+
+    /// Creates a `TimeDelta` from floating-point seconds and a subsecond fraction.
+    pub const fn from_seconds_and_subsecond_f64(seconds: f64, subsecond: f64) -> Self {
+        Self::from_seconds_f64(subsecond).add_const(Self::from_seconds_f64(seconds))
+    }
+
+    /// Converts a Julian date relative to `epoch` into seconds since J2000.
+    const fn julian_date_seconds(julian_date: Days, epoch: Epoch) -> f64 {
+        let seconds = julian_date * f64::consts::SECONDS_PER_DAY;
+        match epoch {
+            Epoch::JulianDate => seconds - f64::consts::SECONDS_BETWEEN_JD_AND_J2000,
+            Epoch::ModifiedJulianDate => seconds - f64::consts::SECONDS_BETWEEN_MJD_AND_J2000,
+            Epoch::J1950 => seconds - f64::consts::SECONDS_BETWEEN_J1950_AND_J2000,
+            Epoch::J2000 => seconds,
+        }
+    }
+
+    /// Creates a `TimeDelta` from a Julian date relative to the given epoch.
+    pub const fn from_julian_date(julian_date: Days, epoch: Epoch) -> Self {
+        Self::from_seconds_f64(Self::julian_date_seconds(julian_date, epoch))
+    }
+
+    /// Tries to create a `TimeDelta` from a Julian date relative to the given epoch.
+    ///
+    /// # Errors
+    /// Returns an error if an out-of-range value is encountered.
+    pub fn try_from_julian_date(
+        julian_date: Days,
+        epoch: Epoch,
+    ) -> Result<Self, InvalidFloatSeconds> {
+        Self::try_from_seconds_f64(Self::julian_date_seconds(julian_date, epoch))
+    }
+
+    /// Creates a `TimeDelta` from a two-part Julian date (`jd1 + jd2`).
+    pub const fn from_two_part_julian_date(jd1: Days, jd2: Days) -> Self {
+        TimeDelta::from_seconds_f64(jd1 * f64::consts::SECONDS_PER_DAY)
+            .add_const(TimeDelta::from_seconds_f64(
+                jd2 * f64::consts::SECONDS_PER_DAY,
+            ))
+            .sub_const(TimeDelta::from_seconds(SECONDS_BETWEEN_JD_AND_J2000))
+    }
+
+    /// Tries to create a `TimeDelta` from a two-part Julian date (`jd1 + jd2`).
+    ///
+    /// # Errors
+    /// Returns an error if an out-of-range value is encountered.
+    pub fn try_from_two_part_julian_date(
+        jd1: Days,
+        jd2: Days,
+    ) -> Result<Self, InvalidFloatSeconds> {
+        let dt1 = TimeDelta::try_from_seconds_f64(jd1 * f64::consts::SECONDS_PER_DAY)?;
+        let dt2 = TimeDelta::try_from_seconds_f64(jd2 * f64::consts::SECONDS_PER_DAY)?;
+        let dt = dt1
+            .checked_add(dt2)
+            .and_then(|dt| dt.checked_sub(TimeDelta::from_seconds(SECONDS_BETWEEN_JD_AND_J2000)))
+            .ok_or(InvalidFloatSeconds(
+                jd1 + jd2 - SECONDS_BETWEEN_JD_AND_J2000 as f64,
+            ))?;
+        Ok(dt)
+    }
+
+    /// Returns the whole seconds and [`Subsecond`] components.
+    pub const fn as_seconds_and_subsecond(&self) -> (i64, Subsecond) {
+        (self.seconds, Subsecond::from_attoseconds(self.attoseconds))
+    }
+
+    /// Returns the time delta as a high-precision [`Seconds`] representation.
+    ///
+    /// The result is a [`Seconds`] where `hi` contains the whole seconds and `lo`
+    /// contains the subsecond fraction. This preserves full precision even
+    /// for large time values.
+    ///
+    /// For a lossy single f64, use `.to_seconds().to_f64()`.
+    pub const fn to_seconds(&self) -> Seconds {
+        Seconds::new(
+            self.seconds as f64,
+            self.attoseconds as f64 / ATTOSECONDS_IN_SECOND as f64,
+        )
+    }
+
+    /// Returns `true` if the time delta is negative.
+    pub const fn is_negative(&self) -> bool {
+        self.seconds < 0
+    }
+
+    /// Returns `true` if the time delta is exactly zero.
+    pub const fn is_zero(&self) -> bool {
+        self.seconds == 0 && self.attoseconds == 0
+    }
+
+    /// Returns `true` if the time delta is positive.
+    pub const fn is_positive(&self) -> bool {
+        self.seconds > 0 || self.seconds == 0 && self.attoseconds > 0
+    }
+
+    /// Returns the whole seconds component.
+    pub const fn seconds(&self) -> i64 {
+        self.seconds
+    }
+
+    /// Returns the subsecond fraction as an `f64`.
+    pub const fn subsecond(&self) -> f64 {
+        self.as_seconds_and_subsecond().1.as_seconds_f64()
+    }
+
+    /// Returns the attosecond component.
+    pub const fn attoseconds(&self) -> i64 {
+        self.attoseconds
+    }
+
+    const fn neg_const(self) -> Self {
+        if self.attoseconds == 0 {
+            return Self {
+                seconds: -self.seconds,
+                attoseconds: self.attoseconds,
+            };
+        }
+
+        Self {
+            seconds: -self.seconds - 1,
+            attoseconds: ATTOSECONDS_IN_SECOND - self.attoseconds,
+        }
+    }
+
+    /// Adds two `TimeDelta` values in a `const` context.
+    ///
+    /// # Panics
+    /// Panics if the sum overflows the seconds component. Use
+    /// [`checked_add`](Self::checked_add) for a fallible alternative.
+    pub const fn add_const(self, rhs: Self) -> Self {
+        let seconds = match self.seconds.checked_add(rhs.seconds) {
+            Some(seconds) => seconds,
+            None => panic!("overflow adding `TimeDelta` values"),
+        };
+        let attoseconds = self.attoseconds + rhs.attoseconds;
+        let (seconds, attoseconds) = if attoseconds >= ATTOSECONDS_IN_SECOND {
+            let carry = attoseconds / ATTOSECONDS_IN_SECOND;
+            let seconds = match seconds.checked_add(carry) {
+                Some(seconds) => seconds,
+                None => panic!("overflow adding `TimeDelta` values"),
+            };
+            (seconds, attoseconds % ATTOSECONDS_IN_SECOND)
+        } else {
+            (seconds, attoseconds)
+        };
+        Self {
+            seconds,
+            attoseconds,
+        }
+    }
+
+    /// Adds two `TimeDelta` values and returns `None` if overflow occurred.
+    pub fn checked_add(self, rhs: Self) -> Option<Self> {
+        let seconds = self.seconds.checked_add(rhs.seconds)?;
+        let attoseconds = self.attoseconds.checked_add(rhs.attoseconds)?;
+        let (seconds, attoseconds) = if attoseconds >= ATTOSECONDS_IN_SECOND {
+            (
+                seconds.checked_add(attoseconds / ATTOSECONDS_IN_SECOND)?,
+                attoseconds % ATTOSECONDS_IN_SECOND,
+            )
+        } else {
+            (seconds, attoseconds)
+        };
+        Some(Self {
+            seconds,
+            attoseconds,
+        })
+    }
+
+    /// Subtracts `rhs` from `self` in a `const` context.
+    ///
+    /// # Panics
+    /// Panics if the difference overflows the seconds component. Use
+    /// [`checked_sub`](Self::checked_sub) for a fallible alternative.
+    pub const fn sub_const(self, rhs: Self) -> Self {
+        let mut seconds = match self.seconds.checked_sub(rhs.seconds) {
+            Some(seconds) => seconds,
+            None => panic!("overflow subtracting `TimeDelta` values"),
+        };
+        let attoseconds = if self.attoseconds >= rhs.attoseconds {
+            self.attoseconds - rhs.attoseconds
+        } else {
+            seconds = match seconds.checked_sub(1) {
+                Some(seconds) => seconds,
+                None => panic!("overflow subtracting `TimeDelta` values"),
+            };
+            self.attoseconds + ATTOSECONDS_IN_SECOND - rhs.attoseconds
+        };
+        Self {
+            seconds,
+            attoseconds,
+        }
+    }
+
+    /// Subtracts `rhs` from `self` and returns `None` if overflow occurred.
+    pub fn checked_sub(self, rhs: Self) -> Option<Self> {
+        let mut seconds = self.seconds.checked_sub(rhs.seconds)?;
+        let attoseconds = if self.attoseconds >= rhs.attoseconds {
+            self.attoseconds - rhs.attoseconds
+        } else {
+            seconds = seconds.checked_sub(1)?;
+            self.attoseconds + ATTOSECONDS_IN_SECOND - rhs.attoseconds
+        };
+        Some(Self {
+            seconds,
+            attoseconds,
+        })
+    }
+
+    /// Multiplies the time delta by an `f64` scalar in a `const` context.
+    pub const fn mul_const(self, rhs: f64) -> Self {
+        let seconds_product = rhs * self.seconds as f64;
+        let attoseconds_product = rhs * self.attoseconds as f64 / ATTOSECONDS_IN_SECOND as f64;
+
+        Self::from_seconds_f64(attoseconds_product + seconds_product)
+    }
+
+    /// Tries to multiply the time delta by an `f64` scalar.
+    ///
+    /// # Errors
+    /// Returns an error if an out-of-range value is encountered.
+    pub fn try_mul(self, rhs: f64) -> Result<Self, InvalidFloatSeconds> {
+        let seconds_product = rhs * self.seconds as f64;
+        let attoseconds_product = rhs * self.attoseconds as f64 / ATTOSECONDS_IN_SECOND as f64;
+
+        Self::try_from_seconds_f64(attoseconds_product + seconds_product)
+    }
+}
+
+/// Error returned when trying to create a `TimeDelta` from an out-of-range `f64`.
+#[derive(Debug, Error, PartialEq)]
+#[error("value {0} is non-finite or out-of-range")]
+pub struct InvalidFloatSeconds(f64);
+
+impl Default for TimeDelta {
+    fn default() -> Self {
+        Self::new(0, 0)
+    }
+}
+
+impl Ord for TimeDelta {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        let Self {
+            seconds: s1,
+            attoseconds: a1,
+        } = self;
+        let Self {
+            seconds: s2,
+            attoseconds: a2,
+        } = other;
+        s1.cmp(s2).then_with(|| a1.cmp(a2))
+    }
+}
+
+impl PartialOrd for TimeDelta {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl From<f64> for TimeDelta {
+    fn from(value: f64) -> Self {
+        Self::from_seconds_f64(value)
+    }
+}
+
+impl Display for TimeDelta {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{} s", self.to_seconds().to_f64())
+    }
+}
+
+impl JulianDate for TimeDelta {
+    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
+        let tf = self.to_seconds();
+        let epoch_offset = match epoch {
+            Epoch::JulianDate => f64::consts::SECONDS_BETWEEN_JD_AND_J2000,
+            Epoch::ModifiedJulianDate => f64::consts::SECONDS_BETWEEN_MJD_AND_J2000,
+            Epoch::J1950 => f64::consts::SECONDS_BETWEEN_J1950_AND_J2000,
+            Epoch::J2000 => 0.0,
+        };
+        let adjusted = tf + Seconds::from_f64(epoch_offset);
+        let seconds = adjusted.to_f64();
+        match unit {
+            Unit::Seconds => seconds,
+            Unit::Days => seconds / f64::consts::SECONDS_PER_DAY,
+            Unit::Years => seconds / f64::consts::SECONDS_PER_JULIAN_YEAR,
+            Unit::Centuries => seconds / f64::consts::SECONDS_PER_JULIAN_CENTURY,
+        }
+    }
+}
+
+impl Neg for TimeDelta {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        self.neg_const()
+    }
+}
+
+impl Add for TimeDelta {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        self.add_const(rhs)
+    }
+}
+
+impl AddAssign for TimeDelta {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs
+    }
+}
+
+impl Sub for TimeDelta {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self.sub_const(rhs)
+    }
+}
+
+impl SubAssign for TimeDelta {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs
+    }
+}
+
+impl Mul<TimeDelta> for f64 {
+    type Output = TimeDelta;
+
+    /// Scales a `TimeDelta` by a scalar.
+    ///
+    /// # Panics
+    /// Panics if a non-finite or out-of-range value is encountered. Use
+    /// [`TimeDelta::try_mul`] for a fallible alternative.
+    fn mul(self, rhs: TimeDelta) -> Self::Output {
+        rhs.mul_const(self)
+    }
+}
+
+impl From<i64> for TimeDelta {
+    fn from(value: i64) -> Self {
+        TimeDelta::from_seconds(value)
+    }
+}
+
+impl From<i32> for TimeDelta {
+    fn from(value: i32) -> Self {
+        TimeDelta::from_seconds(value as i64)
+    }
+}
+
+impl ApproxEq for TimeDelta {
+    fn approx_eq(
+        &self,
+        rhs: &Self,
+        atol: f64,
+        rtol: f64,
+    ) -> lox_test_utils::approx_eq::ApproxEqResults {
+        self.to_seconds()
+            .to_f64()
+            .approx_eq(&rhs.to_seconds().to_f64(), atol, rtol)
+    }
+}
 
 /// Extension trait for creating [`TimeDelta`] values from numeric types.
 ///
@@ -287,643 +913,6 @@ fn two_prod(a: f64, b: f64) -> (f64, f64) {
     let e = mul_add(a, b, -p); // FMA: a * b - p
     (p, e)
 }
-
-/// A signed time delta with attosecond precision.
-///
-/// `TimeDelta` represents a duration as whole seconds plus a fractional attosecond
-/// component. It also supports sentinel values for NaN and positive/negative infinity.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum TimeDelta {
-    /// A finite time delta with whole seconds and an attosecond remainder in `[0, 10¹⁸)`.
-    Valid {
-        /// Whole seconds component.
-        seconds: i64,
-        /// Attosecond remainder in `[0, 10¹⁸)`.
-        attoseconds: i64,
-    },
-    /// Not-a-number sentinel.
-    NaN,
-    /// Positive infinity sentinel.
-    PosInf,
-    /// Negative infinity sentinel.
-    NegInf,
-}
-
-impl TimeDelta {
-    /// A zero-length time delta.
-    pub const ZERO: Self = TimeDelta::from_seconds(0);
-
-    /// Creates a new `TimeDelta` from seconds and attoseconds.
-    ///
-    /// The attoseconds value is automatically normalized to [0, 10¹⁸), with
-    /// overflow/underflow carried into the seconds component.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use lox_core::time::deltas::TimeDelta;
-    ///
-    /// let dt = TimeDelta::new(1, 500_000_000_000_000_000);
-    /// assert_eq!(dt.seconds(), Some(1));
-    /// assert_eq!(dt.attoseconds(), Some(500_000_000_000_000_000));
-    /// ```
-    pub const fn new(seconds: i64, attoseconds: i64) -> Self {
-        let (seconds, attoseconds) = Self::normalize(seconds, attoseconds);
-        Self::Valid {
-            seconds,
-            attoseconds,
-        }
-    }
-
-    /// Normalizes attoseconds to [0, ATTOSECONDS_IN_SECOND) range.
-    const fn normalize(mut seconds: i64, mut attoseconds: i64) -> (i64, i64) {
-        // Handle overflow: attoseconds >= ATTOSECONDS_IN_SECOND
-        if attoseconds >= ATTOSECONDS_IN_SECOND {
-            let carry = attoseconds / ATTOSECONDS_IN_SECOND;
-            seconds += carry;
-            attoseconds %= ATTOSECONDS_IN_SECOND;
-        }
-
-        // Handle underflow: attoseconds < 0
-        if attoseconds < 0 {
-            // Calculate how many seconds to borrow
-            let borrow = (-attoseconds + ATTOSECONDS_IN_SECOND - 1) / ATTOSECONDS_IN_SECOND;
-            seconds -= borrow;
-            attoseconds += borrow * ATTOSECONDS_IN_SECOND;
-        }
-
-        (seconds, attoseconds)
-    }
-
-    /// Returns a [`TimeDeltaBuilder`] for constructing a `TimeDelta` from individual components.
-    pub const fn builder() -> TimeDeltaBuilder {
-        TimeDeltaBuilder::new()
-    }
-
-    /// Creates a `TimeDelta` from a floating-point number of seconds.
-    ///
-    /// Returns `NaN`, `PosInf`, or `NegInf` for the corresponding special float values.
-    pub const fn from_seconds_f64(value: f64) -> Self {
-        if value.is_nan() {
-            return TimeDelta::NaN;
-        }
-        if value < i64::MIN as f64 {
-            return TimeDelta::NegInf;
-        }
-        if value > i64::MAX as f64 {
-            return TimeDelta::PosInf;
-        }
-        // Inline const-compatible round_ties_even (banker's rounding). The
-        // bounds check above guarantees `value` fits in `i64::MIN..=i64::MAX`.
-        let i = value as i64 as f64;
-        let frac = value - i;
-        let seconds = if frac > 0.5 {
-            i + 1.0
-        } else if frac < -0.5 {
-            i - 1.0
-        } else if frac == 0.5 {
-            if (i as i64) % 2 == 0 { i } else { i + 1.0 }
-        } else if frac == -0.5 {
-            if (i as i64) % 2 == 0 { i } else { i - 1.0 }
-        } else {
-            i
-        };
-        let subseconds = value - seconds;
-        // Inline const-compatible round (half away from zero). The product is
-        // bounded by `ATTOSECONDS_IN_SECOND` (1e18), within `i64` range.
-        let scaled = subseconds * ATTOSECONDS_IN_SECOND as f64;
-        let si = scaled as i64 as f64;
-        let sfrac = scaled - si;
-        let attos_rounded = if sfrac >= 0.5 {
-            si + 1.0
-        } else if sfrac <= -0.5 {
-            si - 1.0
-        } else {
-            si
-        };
-        if subseconds.is_sign_negative() {
-            TimeDelta::Valid {
-                seconds: seconds as i64 - 1,
-                attoseconds: attos_rounded as i64 + ATTOSECONDS_IN_SECOND,
-            }
-        } else {
-            TimeDelta::Valid {
-                seconds: seconds as i64,
-                attoseconds: attos_rounded as i64,
-            }
-        }
-    }
-
-    /// Creates a `TimeDelta` from a whole number of seconds.
-    pub const fn from_seconds(seconds: i64) -> Self {
-        Self::new(seconds, 0)
-    }
-
-    /// Creates a `TimeDelta` from a whole number of minutes.
-    pub const fn from_minutes(minutes: i64) -> Self {
-        Self::from_seconds(minutes * I64_SECONDS_PER_MINUTE)
-    }
-
-    /// Creates a `TimeDelta` from a floating-point number of minutes.
-    pub const fn from_minutes_f64(value: f64) -> Self {
-        Self::from_seconds_f64(value * f64::consts::SECONDS_PER_MINUTE)
-    }
-
-    /// Creates a `TimeDelta` from a whole number of hours.
-    pub const fn from_hours(hours: i64) -> Self {
-        Self::from_seconds(hours * I64_SECONDS_PER_HOUR)
-    }
-
-    /// Creates a `TimeDelta` from a floating-point number of hours.
-    pub const fn from_hours_f64(value: f64) -> Self {
-        Self::from_seconds_f64(value * f64::consts::SECONDS_PER_HOUR)
-    }
-
-    /// Creates a `TimeDelta` from a whole number of days.
-    pub const fn from_days(days: i64) -> Self {
-        Self::from_seconds(days * I64_SECONDS_PER_DAY)
-    }
-
-    /// Creates a `TimeDelta` from a floating-point number of days.
-    pub const fn from_days_f64(value: f64) -> Self {
-        Self::from_seconds_f64(value * f64::consts::SECONDS_PER_DAY)
-    }
-
-    /// Creates a `TimeDelta` from a number of milliseconds.
-    pub const fn from_milliseconds(ms: i64) -> Self {
-        let seconds = ms / 1000;
-        let remainder = ms % 1000;
-        Self::new(seconds, remainder * ATTOSECONDS_IN_MILLISECOND)
-    }
-
-    /// Creates a `TimeDelta` from a number of microseconds.
-    pub const fn from_microseconds(us: i64) -> Self {
-        let seconds = us / 1_000_000;
-        let remainder = us % 1_000_000;
-        Self::new(seconds, remainder * ATTOSECONDS_IN_MICROSECOND)
-    }
-
-    /// Creates a `TimeDelta` from a number of nanoseconds.
-    pub const fn from_nanoseconds(ns: i64) -> Self {
-        let seconds = ns / 1_000_000_000;
-        let remainder = ns % 1_000_000_000;
-        Self::new(seconds, remainder * ATTOSECONDS_IN_NANOSECOND)
-    }
-
-    /// Creates a `TimeDelta` from a number of picoseconds.
-    pub const fn from_picoseconds(ps: i64) -> Self {
-        let seconds = ps / 1_000_000_000_000;
-        let remainder = ps % 1_000_000_000_000;
-        Self::new(seconds, remainder * ATTOSECONDS_IN_PICOSECOND)
-    }
-
-    /// Creates a `TimeDelta` from a number of femtoseconds.
-    pub const fn from_femtoseconds(fs: i64) -> Self {
-        let seconds = fs / 1_000_000_000_000_000;
-        let remainder = fs % 1_000_000_000_000_000;
-        Self::new(seconds, remainder * ATTOSECONDS_IN_FEMTOSECOND)
-    }
-
-    /// Creates a `TimeDelta` from a number of attoseconds.
-    pub const fn from_attoseconds(atto: i64) -> Self {
-        let seconds = atto / ATTOSECONDS_IN_SECOND;
-        let remainder = atto % ATTOSECONDS_IN_SECOND;
-        Self::new(seconds, remainder)
-    }
-
-    /// Creates a `TimeDelta` from a floating-point number of Julian years (365.25 days each).
-    pub const fn from_julian_years(value: f64) -> Self {
-        Self::from_seconds_f64(value * f64::consts::SECONDS_PER_JULIAN_YEAR)
-    }
-
-    /// Creates a `TimeDelta` from a floating-point number of Julian centuries (36525 days each).
-    pub const fn from_julian_centuries(value: f64) -> Self {
-        Self::from_seconds_f64(value * f64::consts::SECONDS_PER_JULIAN_CENTURY)
-    }
-
-    /// Creates a `TimeDelta` from whole seconds and a [`Subsecond`] fractional part.
-    pub const fn from_seconds_and_subsecond(seconds: i64, subsecond: Subsecond) -> Self {
-        Self::new(seconds, subsecond.as_attoseconds())
-    }
-
-    /// Creates a `TimeDelta` from floating-point seconds and a subsecond fraction.
-    pub const fn from_seconds_and_subsecond_f64(seconds: f64, subsecond: f64) -> Self {
-        Self::from_seconds_f64(subsecond).add_const(Self::from_seconds_f64(seconds))
-    }
-
-    /// Creates a `TimeDelta` from a Julian date relative to the given epoch.
-    pub const fn from_julian_date(julian_date: Days, epoch: Epoch) -> Self {
-        let seconds = julian_date * f64::consts::SECONDS_PER_DAY;
-        let seconds = match epoch {
-            Epoch::JulianDate => seconds - f64::consts::SECONDS_BETWEEN_JD_AND_J2000,
-            Epoch::ModifiedJulianDate => seconds - f64::consts::SECONDS_BETWEEN_MJD_AND_J2000,
-            Epoch::J1950 => seconds - f64::consts::SECONDS_BETWEEN_J1950_AND_J2000,
-            Epoch::J2000 => seconds,
-        };
-        Self::from_seconds_f64(seconds)
-    }
-
-    /// Creates a `TimeDelta` from a two-part Julian date (`jd1 + jd2`).
-    pub const fn from_two_part_julian_date(jd1: Days, jd2: Days) -> Self {
-        TimeDelta::from_seconds_f64(jd1 * f64::consts::SECONDS_PER_DAY)
-            .add_const(TimeDelta::from_seconds_f64(
-                jd2 * f64::consts::SECONDS_PER_DAY,
-            ))
-            .sub_const(TimeDelta::from_seconds(SECONDS_BETWEEN_JD_AND_J2000))
-    }
-
-    /// Returns the whole seconds and [`Subsecond`] components, or `None` for non-finite values.
-    pub const fn as_seconds_and_subsecond(&self) -> Option<(i64, Subsecond)> {
-        match self {
-            TimeDelta::Valid {
-                seconds,
-                attoseconds,
-            } => Some((*seconds, Subsecond::from_attoseconds(*attoseconds))),
-            _ => None,
-        }
-    }
-
-    /// Returns the time delta as a high-precision [`Seconds`] representation.
-    ///
-    /// The result is a [`Seconds`] where `hi` contains the whole seconds and `lo`
-    /// contains the subsecond fraction. This preserves full precision even
-    /// for large time values.
-    ///
-    /// For a lossy single f64, use `.to_seconds().to_f64()`.
-    pub const fn to_seconds(&self) -> Seconds {
-        let (seconds, attoseconds) = match self {
-            TimeDelta::Valid {
-                seconds,
-                attoseconds,
-            } => (*seconds, *attoseconds),
-            TimeDelta::NaN => return Seconds::new(f64::NAN, f64::NAN),
-            TimeDelta::PosInf => return Seconds::new(f64::INFINITY, 0.0),
-            TimeDelta::NegInf => return Seconds::new(f64::NEG_INFINITY, 0.0),
-        };
-        Seconds::new(
-            seconds as f64,
-            attoseconds as f64 / ATTOSECONDS_IN_SECOND as f64,
-        )
-    }
-
-    /// Returns `true` if the time delta is negative.
-    pub const fn is_negative(&self) -> bool {
-        match self {
-            TimeDelta::Valid { seconds, .. } => *seconds < 0,
-            TimeDelta::NegInf => true,
-            _ => false,
-        }
-    }
-
-    /// Returns `true` if the time delta is exactly zero.
-    pub const fn is_zero(&self) -> bool {
-        match &self {
-            TimeDelta::Valid {
-                seconds,
-                attoseconds,
-            } => *seconds == 0 && *attoseconds == 0,
-            _ => false,
-        }
-    }
-
-    /// Returns `true` if the time delta is positive.
-    pub const fn is_positive(&self) -> bool {
-        match self {
-            TimeDelta::Valid {
-                seconds,
-                attoseconds,
-            } => *seconds > 0 || *seconds == 0 && *attoseconds > 0,
-            TimeDelta::PosInf => true,
-            _ => false,
-        }
-    }
-
-    /// Returns `true` if the time delta is a finite value (not NaN or infinite).
-    pub const fn is_finite(&self) -> bool {
-        matches!(self, Self::Valid { .. })
-    }
-
-    /// Returns `true` if the time delta is NaN.
-    pub const fn is_nan(&self) -> bool {
-        matches!(self, Self::NaN)
-    }
-
-    /// Returns `true` if the time delta is positive or negative infinity.
-    pub const fn is_infinite(&self) -> bool {
-        matches!(self, Self::PosInf | Self::NegInf)
-    }
-
-    /// Returns the whole seconds component, or `None` for non-finite values.
-    pub const fn seconds(&self) -> Option<i64> {
-        match self {
-            Self::Valid { seconds, .. } => Some(*seconds),
-            _ => None,
-        }
-    }
-
-    /// Returns the subsecond fraction as an `f64`, or `None` for non-finite values.
-    pub const fn subsecond(&self) -> Option<f64> {
-        match self.as_seconds_and_subsecond() {
-            Some((_, subsecond)) => Some(subsecond.as_seconds_f64()),
-            None => None,
-        }
-    }
-
-    /// Returns the attosecond component, or `None` for non-finite values.
-    pub const fn attoseconds(&self) -> Option<i64> {
-        match self {
-            Self::Valid { attoseconds, .. } => Some(*attoseconds),
-            _ => None,
-        }
-    }
-
-    const fn neg_const(self) -> Self {
-        let (seconds, attoseconds) = match self {
-            TimeDelta::Valid {
-                seconds,
-                attoseconds,
-            } => (seconds, attoseconds),
-            TimeDelta::NaN => return Self::NaN,
-            TimeDelta::PosInf => return Self::NegInf,
-            TimeDelta::NegInf => return Self::PosInf,
-        };
-        if attoseconds == 0 {
-            return Self::Valid {
-                seconds: -seconds,
-                attoseconds,
-            };
-        }
-
-        Self::Valid {
-            seconds: -seconds - 1,
-            attoseconds: ATTOSECONDS_IN_SECOND - attoseconds,
-        }
-    }
-
-    /// Adds two `TimeDelta` values in a `const` context.
-    pub const fn add_const(self, rhs: Self) -> Self {
-        let (secs_lhs, attos_lhs, secs_rhs, attos_rhs) = match (self, rhs) {
-            (
-                TimeDelta::Valid {
-                    seconds: secs_lhs,
-                    attoseconds: attos_lhs,
-                },
-                TimeDelta::Valid {
-                    seconds: secs_rhs,
-                    attoseconds: attos_rhs,
-                },
-            ) => (secs_lhs, attos_lhs, secs_rhs, attos_rhs),
-            (TimeDelta::PosInf, TimeDelta::Valid { .. })
-            | (TimeDelta::Valid { .. }, TimeDelta::PosInf)
-            | (TimeDelta::PosInf, TimeDelta::PosInf) => return TimeDelta::PosInf,
-            (TimeDelta::NegInf, TimeDelta::Valid { .. })
-            | (TimeDelta::Valid { .. }, TimeDelta::NegInf)
-            | (TimeDelta::NegInf, TimeDelta::NegInf) => return TimeDelta::NegInf,
-            (TimeDelta::PosInf, TimeDelta::NegInf) | (TimeDelta::NegInf, TimeDelta::PosInf) => {
-                return TimeDelta::NaN;
-            }
-            (_, TimeDelta::NaN) | (TimeDelta::NaN, _) => return TimeDelta::NaN,
-        };
-
-        let seconds = secs_lhs + secs_rhs;
-        let attoseconds = attos_lhs + attos_rhs;
-        Self::new(seconds, attoseconds)
-    }
-
-    /// Subtracts `rhs` from `self` in a `const` context.
-    pub const fn sub_const(self, rhs: Self) -> Self {
-        let (secs_lhs, attos_lhs, secs_rhs, attos_rhs) = match (self, rhs) {
-            (
-                TimeDelta::Valid {
-                    seconds: secs_lhs,
-                    attoseconds: attos_lhs,
-                },
-                TimeDelta::Valid {
-                    seconds: secs_rhs,
-                    attoseconds: attos_rhs,
-                },
-            ) => (secs_lhs, attos_lhs, secs_rhs, attos_rhs),
-            (TimeDelta::PosInf, TimeDelta::Valid { .. }) => return TimeDelta::PosInf,
-            (TimeDelta::Valid { .. }, TimeDelta::PosInf) => return TimeDelta::NegInf,
-            (TimeDelta::NegInf, TimeDelta::Valid { .. }) => return TimeDelta::NegInf,
-            (TimeDelta::Valid { .. }, TimeDelta::NegInf) => return TimeDelta::PosInf,
-            (TimeDelta::PosInf, TimeDelta::PosInf) | (TimeDelta::NegInf, TimeDelta::NegInf) => {
-                return TimeDelta::NaN;
-            }
-            (TimeDelta::PosInf, TimeDelta::NegInf) => return TimeDelta::PosInf,
-            (TimeDelta::NegInf, TimeDelta::PosInf) => return TimeDelta::NegInf,
-            (_, TimeDelta::NaN) | (TimeDelta::NaN, _) => return TimeDelta::NaN,
-        };
-
-        let seconds = secs_lhs - secs_rhs;
-        let attoseconds = attos_lhs - attos_rhs;
-        Self::new(seconds, attoseconds)
-    }
-
-    /// Multiplies the time delta by an `f64` scalar in a `const` context.
-    pub const fn mul_const(self, rhs: f64) -> Self {
-        let (seconds, attoseconds) = match self {
-            TimeDelta::Valid {
-                seconds,
-                attoseconds,
-            } => (seconds, attoseconds),
-            TimeDelta::NaN => return TimeDelta::NaN,
-            TimeDelta::PosInf => {
-                return if rhs.is_nan() {
-                    TimeDelta::NaN
-                } else if rhs > 0.0 {
-                    TimeDelta::PosInf
-                } else if rhs < 0.0 {
-                    TimeDelta::NegInf
-                } else {
-                    TimeDelta::NaN
-                };
-            }
-            TimeDelta::NegInf => {
-                return if rhs.is_nan() {
-                    TimeDelta::NaN
-                } else if rhs > 0.0 {
-                    TimeDelta::NegInf
-                } else if rhs < 0.0 {
-                    TimeDelta::PosInf
-                } else {
-                    TimeDelta::NaN
-                };
-            }
-        };
-
-        if rhs.is_nan() {
-            return TimeDelta::NaN;
-        }
-        if !rhs.is_finite() {
-            return if rhs.is_sign_positive() {
-                TimeDelta::PosInf
-            } else {
-                TimeDelta::NegInf
-            };
-        }
-
-        // Multiply seconds component
-        let seconds_product = rhs * seconds as f64;
-
-        // Multiply attoseconds component (keeping high precision)
-        // attoseconds * factor / ATTOSECONDS_IN_SECOND
-        let attoseconds_product = rhs * attoseconds as f64 / ATTOSECONDS_IN_SECOND as f64;
-
-        // Combine results
-        TimeDelta::from_seconds_f64(attoseconds_product + seconds_product)
-    }
-}
-
-impl Default for TimeDelta {
-    fn default() -> Self {
-        Self::new(0, 0)
-    }
-}
-
-impl Ord for TimeDelta {
-    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        use core::cmp::Ordering;
-
-        match (self, other) {
-            // NaN is incomparable, but we need total ordering for Ord
-            // Define NaN as less than everything else
-            (TimeDelta::NaN, TimeDelta::NaN) => Ordering::Equal,
-            (TimeDelta::NaN, _) => Ordering::Less,
-            (_, TimeDelta::NaN) => Ordering::Greater,
-
-            // Infinities
-            (TimeDelta::NegInf, TimeDelta::NegInf) => Ordering::Equal,
-            (TimeDelta::NegInf, _) => Ordering::Less,
-            (_, TimeDelta::NegInf) => Ordering::Greater,
-
-            (TimeDelta::PosInf, TimeDelta::PosInf) => Ordering::Equal,
-            (TimeDelta::PosInf, _) => Ordering::Greater,
-            (_, TimeDelta::PosInf) => Ordering::Less,
-
-            // Both Valid: compare (seconds, attoseconds) tuples
-            (
-                TimeDelta::Valid {
-                    seconds: s1,
-                    attoseconds: a1,
-                },
-                TimeDelta::Valid {
-                    seconds: s2,
-                    attoseconds: a2,
-                },
-            ) => s1.cmp(s2).then_with(|| a1.cmp(a2)),
-        }
-    }
-}
-
-impl PartialOrd for TimeDelta {
-    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl From<f64> for TimeDelta {
-    fn from(value: f64) -> Self {
-        Self::from_seconds_f64(value)
-    }
-}
-
-impl Display for TimeDelta {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{} s", self.to_seconds().to_f64())
-    }
-}
-
-impl JulianDate for TimeDelta {
-    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
-        let tf = self.to_seconds();
-        let epoch_offset = match epoch {
-            Epoch::JulianDate => f64::consts::SECONDS_BETWEEN_JD_AND_J2000,
-            Epoch::ModifiedJulianDate => f64::consts::SECONDS_BETWEEN_MJD_AND_J2000,
-            Epoch::J1950 => f64::consts::SECONDS_BETWEEN_J1950_AND_J2000,
-            Epoch::J2000 => 0.0,
-        };
-        let adjusted = tf + Seconds::from_f64(epoch_offset);
-        let seconds = adjusted.to_f64();
-        match unit {
-            Unit::Seconds => seconds,
-            Unit::Days => seconds / f64::consts::SECONDS_PER_DAY,
-            Unit::Years => seconds / f64::consts::SECONDS_PER_JULIAN_YEAR,
-            Unit::Centuries => seconds / f64::consts::SECONDS_PER_JULIAN_CENTURY,
-        }
-    }
-}
-
-impl Neg for TimeDelta {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        self.neg_const()
-    }
-}
-
-impl Add for TimeDelta {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        self.add_const(rhs)
-    }
-}
-
-impl AddAssign for TimeDelta {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs
-    }
-}
-
-impl Sub for TimeDelta {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        self.sub_const(rhs)
-    }
-}
-
-impl SubAssign for TimeDelta {
-    fn sub_assign(&mut self, rhs: Self) {
-        *self = *self - rhs
-    }
-}
-
-impl Mul<TimeDelta> for f64 {
-    type Output = TimeDelta;
-
-    fn mul(self, rhs: TimeDelta) -> Self::Output {
-        rhs.mul_const(self)
-    }
-}
-
-impl From<i64> for TimeDelta {
-    fn from(value: i64) -> Self {
-        TimeDelta::from_seconds(value)
-    }
-}
-
-impl From<i32> for TimeDelta {
-    fn from(value: i32) -> Self {
-        TimeDelta::from_seconds(value as i64)
-    }
-}
-
-impl ApproxEq for TimeDelta {
-    fn approx_eq(
-        &self,
-        rhs: &Self,
-        atol: f64,
-        rtol: f64,
-    ) -> lox_test_utils::approx_eq::ApproxEqResults {
-        self.to_seconds()
-            .to_f64()
-            .approx_eq(&rhs.to_seconds().to_f64(), atol, rtol)
-    }
-}
-
 /// A builder for constructing [`TimeDelta`] values from individual time components.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct TimeDeltaBuilder {
@@ -1037,7 +1026,7 @@ impl TimeDeltaBuilder {
     ///     .seconds(1)
     ///     .milliseconds(500)
     ///     .build();
-    /// assert_eq!(dt.seconds(), Some(1));
+    /// assert_eq!(dt.seconds(), 1);
     /// ```
     pub const fn build(self) -> TimeDelta {
         let seconds = self.seconds;
@@ -1059,6 +1048,8 @@ impl TimeDeltaBuilder {
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
+
     use super::*;
     use crate::i64::consts::ATTOSECONDS_IN_SECOND;
     use crate::math::float::abs;
@@ -1067,68 +1058,154 @@ mod tests {
     fn test_new_normalizes_attoseconds() {
         // Attoseconds >= ATTOSECONDS_IN_SECOND should carry into seconds
         let dt = TimeDelta::new(1, ATTOSECONDS_IN_SECOND + 500);
-        assert_eq!(dt.seconds(), Some(2));
-        assert_eq!(dt.attoseconds(), Some(500));
+        assert_eq!(dt.seconds(), 2);
+        assert_eq!(dt.attoseconds(), 500);
 
         // Negative attoseconds should borrow from seconds
         let dt = TimeDelta::new(1, -500);
-        assert_eq!(dt.seconds(), Some(0));
-        assert_eq!(dt.attoseconds(), Some(ATTOSECONDS_IN_SECOND - 500));
+        assert_eq!(dt.seconds(), 0);
+        assert_eq!(dt.attoseconds(), ATTOSECONDS_IN_SECOND - 500);
     }
 
     #[test]
     fn test_from_seconds() {
         let dt = TimeDelta::from_seconds(60);
-        assert_eq!(dt.seconds(), Some(60));
-        assert_eq!(dt.attoseconds(), Some(0));
+        assert_eq!(dt.seconds(), 60);
+        assert_eq!(dt.attoseconds(), 0);
     }
 
     #[test]
     fn test_from_seconds_f64_positive() {
         let dt = TimeDelta::from_seconds_f64(1.5);
-        assert_eq!(dt.seconds(), Some(1));
-        assert_eq!(dt.attoseconds(), Some(500_000_000_000_000_000));
+        assert_eq!(dt.seconds(), 1);
+        assert_eq!(dt.attoseconds(), 500_000_000_000_000_000);
     }
 
     #[test]
     fn test_from_seconds_f64_negative() {
         let dt = TimeDelta::from_seconds_f64(-1.5);
-        assert_eq!(dt.seconds(), Some(-2));
-        assert_eq!(dt.attoseconds(), Some(500_000_000_000_000_000));
+        assert_eq!(dt.seconds(), -2);
+        assert_eq!(dt.attoseconds(), 500_000_000_000_000_000);
     }
 
-    #[test]
-    fn test_from_seconds_f64_special_values() {
-        assert!(matches!(
-            TimeDelta::from_seconds_f64(f64::NAN),
-            TimeDelta::NaN
-        ));
-        assert!(matches!(
-            TimeDelta::from_seconds_f64(f64::INFINITY),
-            TimeDelta::PosInf
-        ));
-        assert!(matches!(
-            TimeDelta::from_seconds_f64(f64::NEG_INFINITY),
-            TimeDelta::NegInf
-        ));
+    #[rstest]
+    #[should_panic]
+    #[case::nan(f64::NAN)]
+    #[should_panic]
+    #[case::pos_inf(f64::INFINITY)]
+    #[should_panic]
+    #[case::neg_inf(f64::NEG_INFINITY)]
+    #[should_panic]
+    #[case::over((i64::MAX as f64).next_up())]
+    #[should_panic]
+    #[case::under((i64::MIN as f64).next_down())]
+    fn test_from_seconds_f64_invalid_values(#[case] value: f64) {
+        TimeDelta::from_seconds_f64(value);
     }
 
     #[test]
     fn test_from_minutes() {
         let dt = TimeDelta::from_minutes_f64(1.0);
-        assert_eq!(dt.seconds(), Some(60));
+        assert_eq!(dt.seconds(), 60);
     }
 
     #[test]
     fn test_from_hours() {
         let dt = TimeDelta::from_hours_f64(1.0);
-        assert_eq!(dt.seconds(), Some(3600));
+        assert_eq!(dt.seconds(), 3600);
     }
 
     #[test]
     fn test_from_days() {
         let dt = TimeDelta::from_days_f64(1.0);
-        assert_eq!(dt.seconds(), Some(86400));
+        assert_eq!(dt.seconds(), 86400);
+    }
+
+    #[test]
+    fn test_try_from_days_f64() {
+        assert_eq!(
+            TimeDelta::try_from_days_f64(1.5).unwrap(),
+            TimeDelta::from_hours(36)
+        );
+        assert!(TimeDelta::try_from_days_f64(f64::INFINITY).is_err());
+    }
+
+    #[test]
+    fn test_try_from_julian_years() {
+        assert_eq!(
+            TimeDelta::try_from_julian_years(1.0).unwrap(),
+            TimeDelta::from_seconds_f64(crate::f64::consts::SECONDS_PER_JULIAN_YEAR)
+        );
+        assert!(TimeDelta::try_from_julian_years(f64::NAN).is_err());
+    }
+
+    #[test]
+    fn test_try_from_julian_centuries() {
+        assert_eq!(
+            TimeDelta::try_from_julian_centuries(1.0).unwrap(),
+            TimeDelta::from_seconds_f64(crate::f64::consts::SECONDS_PER_JULIAN_CENTURY)
+        );
+        assert!(TimeDelta::try_from_julian_centuries(f64::INFINITY).is_err());
+    }
+
+    #[test]
+    fn test_try_from_two_part_julian_date() {
+        assert_eq!(
+            TimeDelta::try_from_two_part_julian_date(2451545.0, 0.0).unwrap(),
+            TimeDelta::ZERO
+        );
+        assert!(TimeDelta::try_from_two_part_julian_date(2451545.0, f64::NAN).is_err());
+        assert!(TimeDelta::try_from_two_part_julian_date(f64::INFINITY, 0.0).is_err());
+    }
+
+    #[test]
+    fn test_checked_add_carry() {
+        assert_eq!(
+            TimeDelta::new(1, 800_000_000_000_000_000)
+                .checked_add(TimeDelta::new(2, 300_000_000_000_000_000)),
+            Some(TimeDelta::new(4, 100_000_000_000_000_000))
+        );
+    }
+
+    #[test]
+    fn test_checked_add_carry_overflow() {
+        assert!(
+            TimeDelta::new(i64::MAX, 800_000_000_000_000_000)
+                .checked_add(TimeDelta::new(0, 300_000_000_000_000_000))
+                .is_none()
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "overflow adding `TimeDelta` values")]
+    fn test_add_const_carry_overflow_panics() {
+        let _ = TimeDelta::new(i64::MAX, 800_000_000_000_000_000)
+            + TimeDelta::new(0, 300_000_000_000_000_000);
+    }
+
+    #[test]
+    fn test_checked_sub_borrow() {
+        assert_eq!(
+            TimeDelta::new(1, 200_000_000_000_000_000)
+                .checked_sub(TimeDelta::new(0, 500_000_000_000_000_000)),
+            Some(TimeDelta::new(0, 700_000_000_000_000_000))
+        );
+    }
+
+    #[test]
+    fn test_checked_sub_borrow_underflow() {
+        assert!(
+            TimeDelta::new(i64::MIN, 200_000_000_000_000_000)
+                .checked_sub(TimeDelta::new(0, 500_000_000_000_000_000))
+                .is_none()
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "overflow subtracting `TimeDelta` values")]
+    fn test_sub_const_borrow_underflow_panics() {
+        let _ = TimeDelta::new(i64::MIN, 200_000_000_000_000_000)
+            - TimeDelta::new(0, 500_000_000_000_000_000);
     }
 
     #[test]
@@ -1137,7 +1214,6 @@ mod tests {
         assert!(!TimeDelta::from_seconds(-1).is_positive());
         assert!(!TimeDelta::from_seconds(0).is_positive());
         assert!(TimeDelta::new(0, 1).is_positive());
-        assert!(TimeDelta::PosInf.is_positive());
     }
 
     #[test]
@@ -1145,7 +1221,6 @@ mod tests {
         assert!(TimeDelta::from_seconds(-1).is_negative());
         assert!(!TimeDelta::from_seconds(1).is_negative());
         assert!(!TimeDelta::from_seconds(0).is_negative());
-        assert!(TimeDelta::NegInf.is_negative());
     }
 
     #[test]
@@ -1160,19 +1235,14 @@ mod tests {
     fn test_neg() {
         let dt = TimeDelta::new(1, 500_000_000_000_000_000);
         let neg = -dt;
-        assert_eq!(neg.seconds(), Some(-2));
-        assert_eq!(neg.attoseconds(), Some(500_000_000_000_000_000));
+        assert_eq!(neg.seconds(), -2);
+        assert_eq!(neg.attoseconds(), 500_000_000_000_000_000);
 
         // Zero attoseconds
         let dt = TimeDelta::from_seconds(1);
         let neg = -dt;
-        assert_eq!(neg.seconds(), Some(-1));
-        assert_eq!(neg.attoseconds(), Some(0));
-
-        // Infinities
-        assert!(matches!(-TimeDelta::PosInf, TimeDelta::NegInf));
-        assert!(matches!(-TimeDelta::NegInf, TimeDelta::PosInf));
-        assert!(matches!(-TimeDelta::NaN, TimeDelta::NaN));
+        assert_eq!(neg.seconds(), -1);
+        assert_eq!(neg.attoseconds(), 0);
     }
 
     #[test]
@@ -1180,8 +1250,8 @@ mod tests {
         let a = TimeDelta::new(1, 600_000_000_000_000_000);
         let b = TimeDelta::new(1, 600_000_000_000_000_000);
         let sum = a + b;
-        assert_eq!(sum.seconds(), Some(3));
-        assert_eq!(sum.attoseconds(), Some(200_000_000_000_000_000));
+        assert_eq!(sum.seconds(), 3);
+        assert_eq!(sum.attoseconds(), 200_000_000_000_000_000);
     }
 
     #[test]
@@ -1189,24 +1259,8 @@ mod tests {
         let a = TimeDelta::new(1, 700_000_000_000_000_000);
         let b = TimeDelta::new(0, 500_000_000_000_000_000);
         let sum = a + b;
-        assert_eq!(sum.seconds(), Some(2));
-        assert_eq!(sum.attoseconds(), Some(200_000_000_000_000_000));
-    }
-
-    #[test]
-    fn test_add_infinities() {
-        assert!(matches!(
-            TimeDelta::PosInf + TimeDelta::from_seconds(1),
-            TimeDelta::PosInf
-        ));
-        assert!(matches!(
-            TimeDelta::NegInf + TimeDelta::from_seconds(1),
-            TimeDelta::NegInf
-        ));
-        assert!(matches!(
-            TimeDelta::PosInf + TimeDelta::NegInf,
-            TimeDelta::NaN
-        ));
+        assert_eq!(sum.seconds(), 2);
+        assert_eq!(sum.attoseconds(), 200_000_000_000_000_000);
     }
 
     #[test]
@@ -1214,8 +1268,8 @@ mod tests {
         let a = TimeDelta::new(3, 200_000_000_000_000_000);
         let b = TimeDelta::new(1, 600_000_000_000_000_000);
         let diff = a - b;
-        assert_eq!(diff.seconds(), Some(1));
-        assert_eq!(diff.attoseconds(), Some(600_000_000_000_000_000));
+        assert_eq!(diff.seconds(), 1);
+        assert_eq!(diff.attoseconds(), 600_000_000_000_000_000);
     }
 
     #[test]
@@ -1223,8 +1277,8 @@ mod tests {
         let a = TimeDelta::new(2, 200_000_000_000_000_000);
         let b = TimeDelta::new(1, 500_000_000_000_000_000);
         let diff = a - b;
-        assert_eq!(diff.seconds(), Some(0));
-        assert_eq!(diff.attoseconds(), Some(700_000_000_000_000_000));
+        assert_eq!(diff.seconds(), 0);
+        assert_eq!(diff.attoseconds(), 700_000_000_000_000_000);
     }
 
     #[test]
@@ -1232,24 +1286,8 @@ mod tests {
         let a = TimeDelta::from_seconds(1);
         let b = TimeDelta::from_seconds(2);
         let diff = a - b;
-        assert_eq!(diff.seconds(), Some(-1));
-        assert_eq!(diff.attoseconds(), Some(0));
-    }
-
-    #[test]
-    fn test_sub_infinities() {
-        assert!(matches!(
-            TimeDelta::PosInf - TimeDelta::from_seconds(1),
-            TimeDelta::PosInf
-        ));
-        assert!(matches!(
-            TimeDelta::from_seconds(1) - TimeDelta::PosInf,
-            TimeDelta::NegInf
-        ));
-        assert!(matches!(
-            TimeDelta::PosInf - TimeDelta::PosInf,
-            TimeDelta::NaN
-        ));
+        assert_eq!(diff.seconds(), -1);
+        assert_eq!(diff.attoseconds(), 0);
     }
 
     #[test]
@@ -1266,18 +1304,6 @@ mod tests {
     }
 
     #[test]
-    fn test_ord_infinities() {
-        let valid = TimeDelta::from_seconds(1);
-
-        assert!(TimeDelta::NegInf < valid);
-        assert!(valid < TimeDelta::PosInf);
-        assert!(TimeDelta::NegInf < TimeDelta::PosInf);
-        assert!(TimeDelta::NaN < TimeDelta::NegInf);
-        assert!(TimeDelta::NaN < valid);
-        assert!(TimeDelta::NaN < TimeDelta::PosInf);
-    }
-
-    #[test]
     fn test_builder() {
         let dt = TimeDelta::builder()
             .seconds(1)
@@ -1285,16 +1311,16 @@ mod tests {
             .microseconds(250)
             .build();
 
-        assert_eq!(dt.seconds(), Some(1));
-        assert_eq!(dt.attoseconds(), Some(500_250_000_000_000_000));
+        assert_eq!(dt.seconds(), 1);
+        assert_eq!(dt.attoseconds(), 500_250_000_000_000_000);
     }
 
     #[test]
     fn test_builder_overflow() {
         let dt = TimeDelta::builder().seconds(0).milliseconds(1500).build();
 
-        assert_eq!(dt.seconds(), Some(1));
-        assert_eq!(dt.attoseconds(), Some(500_000_000_000_000_000));
+        assert_eq!(dt.seconds(), 1);
+        assert_eq!(dt.attoseconds(), 500_000_000_000_000_000);
     }
 
     #[test]
@@ -1309,24 +1335,24 @@ mod tests {
     #[test]
     fn test_from_integer() {
         let dt: TimeDelta = 42i32.into();
-        assert_eq!(dt.seconds(), Some(42));
+        assert_eq!(dt.seconds(), 42);
 
         let dt: TimeDelta = 42i64.into();
-        assert_eq!(dt.seconds(), Some(42));
+        assert_eq!(dt.seconds(), 42);
     }
 
     #[test]
     fn test_add_assign() {
         let mut dt = TimeDelta::from_seconds(1);
         dt += TimeDelta::from_seconds(2);
-        assert_eq!(dt.seconds(), Some(3));
+        assert_eq!(dt.seconds(), 3);
     }
 
     #[test]
     fn test_sub_assign() {
         let mut dt = TimeDelta::from_seconds(5);
         dt -= TimeDelta::from_seconds(2);
-        assert_eq!(dt.seconds(), Some(3));
+        assert_eq!(dt.seconds(), 3);
     }
 
     #[test]
@@ -1370,7 +1396,6 @@ mod tests {
 
         // Verify it's in the expected range (around 0.55 seconds for these values)
         assert!(result_seconds > 0.5 && result_seconds < 0.6);
-        assert!(result.is_finite());
     }
 
     #[test]
@@ -1380,28 +1405,6 @@ mod tests {
         // Multiply by zero
         let result = 0.0 * dt;
         assert!(result.is_zero());
-
-        // Multiply by NaN
-        let result = f64::NAN * dt;
-        assert!(result.is_nan());
-
-        // Multiply by infinity
-        let result = f64::INFINITY * dt;
-        assert_eq!(result, TimeDelta::PosInf);
-
-        let result = f64::NEG_INFINITY * dt;
-        assert_eq!(result, TimeDelta::NegInf);
-
-        // Multiply infinity by negative factor
-        let result = -2.0 * TimeDelta::PosInf;
-        assert_eq!(result, TimeDelta::NegInf);
-
-        let result = -2.0 * TimeDelta::NegInf;
-        assert_eq!(result, TimeDelta::PosInf);
-
-        // Multiply infinity by zero
-        let result = 0.0 * TimeDelta::PosInf;
-        assert!(result.is_nan());
     }
 
     #[test]
@@ -1533,23 +1536,23 @@ mod tests {
     #[test]
     fn test_from_milliseconds() {
         let dt = TimeDelta::from_milliseconds(1500);
-        assert_eq!(dt.seconds(), Some(1));
-        assert_eq!(dt.attoseconds(), Some(500_000_000_000_000_000));
+        assert_eq!(dt.seconds(), 1);
+        assert_eq!(dt.attoseconds(), 500_000_000_000_000_000);
 
         let dt = TimeDelta::from_milliseconds(-1500);
-        assert_eq!(dt.seconds(), Some(-2));
-        assert_eq!(dt.attoseconds(), Some(500_000_000_000_000_000));
+        assert_eq!(dt.seconds(), -2);
+        assert_eq!(dt.attoseconds(), 500_000_000_000_000_000);
     }
 
     #[test]
     fn test_from_microseconds() {
         let dt = TimeDelta::from_microseconds(1_000_000);
-        assert_eq!(dt.seconds(), Some(1));
-        assert_eq!(dt.attoseconds(), Some(0));
+        assert_eq!(dt.seconds(), 1);
+        assert_eq!(dt.attoseconds(), 0);
 
         let dt = TimeDelta::from_microseconds(1_500_000);
-        assert_eq!(dt.seconds(), Some(1));
-        assert_eq!(dt.attoseconds(), Some(500_000_000_000_000_000));
+        assert_eq!(dt.seconds(), 1);
+        assert_eq!(dt.attoseconds(), 500_000_000_000_000_000);
     }
 
     #[test]
@@ -1558,32 +1561,32 @@ mod tests {
         assert_eq!(dt.to_seconds().to_f64(), 0.5);
 
         let dt = TimeDelta::from_nanoseconds(1_500_000_000);
-        assert_eq!(dt.seconds(), Some(1));
-        assert_eq!(dt.attoseconds(), Some(500_000_000_000_000_000));
+        assert_eq!(dt.seconds(), 1);
+        assert_eq!(dt.attoseconds(), 500_000_000_000_000_000);
     }
 
     #[test]
     fn test_from_picoseconds() {
         let dt = TimeDelta::from_picoseconds(1_000_000_000_000);
-        assert_eq!(dt.seconds(), Some(1));
-        assert_eq!(dt.attoseconds(), Some(0));
+        assert_eq!(dt.seconds(), 1);
+        assert_eq!(dt.attoseconds(), 0);
     }
 
     #[test]
     fn test_from_femtoseconds() {
         let dt = TimeDelta::from_femtoseconds(1_000_000_000_000_000);
-        assert_eq!(dt.seconds(), Some(1));
-        assert_eq!(dt.attoseconds(), Some(0));
+        assert_eq!(dt.seconds(), 1);
+        assert_eq!(dt.attoseconds(), 0);
     }
 
     #[test]
     fn test_from_attoseconds() {
         let dt = TimeDelta::from_attoseconds(ATTOSECONDS_IN_SECOND);
-        assert_eq!(dt.seconds(), Some(1));
-        assert_eq!(dt.attoseconds(), Some(0));
+        assert_eq!(dt.seconds(), 1);
+        assert_eq!(dt.attoseconds(), 0);
 
         let dt = TimeDelta::from_attoseconds(ATTOSECONDS_IN_SECOND + 42);
-        assert_eq!(dt.seconds(), Some(1));
-        assert_eq!(dt.attoseconds(), Some(42));
+        assert_eq!(dt.seconds(), 1);
+        assert_eq!(dt.attoseconds(), 42);
     }
 }

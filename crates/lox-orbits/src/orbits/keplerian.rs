@@ -221,9 +221,8 @@ mod tests {
             TrueAnomaly::new(0.0.deg()),
         );
 
-        let epoch: Time<Tai> = Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2))
-            .unwrap()
-            .to_time();
+        let epoch: Time<Tai> =
+            Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2)).to_time();
 
         let result = KeplerianOrbit::try_from_keplerian(elements, epoch, Earth, Icrf);
         assert!(result.is_ok());
@@ -242,9 +241,8 @@ mod tests {
             TrueAnomaly::new(0.0.deg()),
         );
 
-        let epoch: Time<Tai> = Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2))
-            .unwrap()
-            .to_time();
+        let epoch: Time<Tai> =
+            Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2)).to_time();
 
         KeplerianOrbit::try_from_keplerian(elements, epoch, Earth, Icrf).unwrap();
     }

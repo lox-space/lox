@@ -218,7 +218,7 @@ def test_j2_multiple_times():
 
 def test_j2_custom_step():
     state = iss_state()
-    j2 = lox.J2(state, step=30.0)
+    j2 = lox.J2(state, step=30 * lox.seconds)
     t0 = state.time()
     t1 = t0 + 10 * lox.minutes
     trajectory = j2.propagate(t0, end=t1)

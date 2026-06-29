@@ -162,7 +162,7 @@ mod tests {
                 Velocity::meters_per_second(-5.0),
             ],
         };
-        assert_eq!(m.duration.seconds(), Some(0));
+        assert_eq!(m.duration.seconds(), 0);
         assert_eq!(m.delta_mass.to_kilograms(), -1.5);
         assert_eq!(m.delta_v[0].to_meters_per_second(), 10.0);
     }

@@ -2,19 +2,13 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use pyo3::exceptions::PyException;
+use lox_time::deltas::InvalidFloatSeconds;
+use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
-use pyo3::{Bound, PyResult, create_exception, pyclass, pymethods};
+use pyo3::{Bound, PyErr, PyResult, pyclass, pymethods};
 
 use crate::time::deltas::TimeDelta;
 use crate::time::intervals::TimeDeltaInterval;
-
-create_exception!(
-    lox_space,
-    NonFiniteTimeDeltaError,
-    PyException,
-    "Python exception raised when a non-finite `TimeDelta` is accessed."
-);
 
 /// Represents a duration or time difference.
 ///
@@ -35,8 +29,10 @@ pub struct PyTimeDelta(pub TimeDelta);
 impl PyTimeDelta {
     #[new]
     /// Constructs a `TimeDelta` from a duration in seconds.
-    pub fn new(seconds: f64) -> Self {
-        Self(TimeDelta::from_seconds_f64(seconds))
+    pub fn new(seconds: f64) -> PyResult<Self> {
+        Ok(Self(
+            TimeDelta::try_from_seconds_f64(seconds).map_err(PyInvalidFloatSeconds)?,
+        ))
     }
 
     /// Returns the developer representation of the `TimeDelta`.
@@ -70,13 +66,13 @@ impl PyTimeDelta {
     }
 
     /// Returns the `TimeDelta` scaled by a floating-point factor.
-    pub fn __mul__(&self, other: f64) -> Self {
-        Self(other * self.0)
+    pub fn __mul__(&self, other: f64) -> PyResult<Self> {
+        Ok(Self(self.0.try_mul(other).map_err(PyInvalidFloatSeconds)?))
     }
 
     /// Returns the `TimeDelta` scaled by a floating-point factor (right-hand side).
-    pub fn __rmul__(&self, other: f64) -> Self {
-        Self(other * self.0)
+    pub fn __rmul__(&self, other: f64) -> PyResult<Self> {
+        Ok(Self(self.0.try_mul(other).map_err(PyInvalidFloatSeconds)?))
     }
 
     /// Returns `true` if two `TimeDelta` values are equal.
@@ -88,26 +84,16 @@ impl PyTimeDelta {
     ///
     /// Returns:
     ///     Integer seconds (sign matches the delta).
-    ///
-    /// Raises:
-    ///     NonFiniteTimeDeltaError: If the delta is non-finite.
-    pub fn seconds(&self) -> PyResult<i64> {
-        self.0.seconds().ok_or(NonFiniteTimeDeltaError::new_err(
-            "cannot access seconds for non-finite time delta",
-        ))
+    pub fn seconds(&self) -> i64 {
+        self.0.seconds()
     }
 
     /// Return the subsecond (fractional second) component.
     ///
     /// Returns:
     ///     Fractional seconds (0.0 to 1.0).
-    ///
-    /// Raises:
-    ///     NonFiniteTimeDeltaError: If the delta is non-finite.
-    pub fn subsecond(&self) -> PyResult<f64> {
-        self.0.subsecond().ok_or(NonFiniteTimeDeltaError::new_err(
-            "cannot access subsecond for non-finite time delta",
-        ))
+    pub fn subsecond(&self) -> f64 {
+        self.0.subsecond()
     }
 
     /// Create a TimeDelta from integer seconds.
@@ -119,31 +105,41 @@ impl PyTimeDelta {
     /// Create a TimeDelta from minutes.
     #[classmethod]
     pub fn from_minutes(_cls: &Bound<'_, PyType>, minutes: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_minutes_f64(minutes)))
+        Ok(Self(
+            TimeDelta::try_from_minutes_f64(minutes).map_err(PyInvalidFloatSeconds)?,
+        ))
     }
 
     /// Create a TimeDelta from hours.
     #[classmethod]
     pub fn from_hours(_cls: &Bound<'_, PyType>, hours: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_hours_f64(hours)))
+        Ok(Self(
+            TimeDelta::try_from_hours_f64(hours).map_err(PyInvalidFloatSeconds)?,
+        ))
     }
 
     /// Create a TimeDelta from days (86400 seconds per day).
     #[classmethod]
     pub fn from_days(_cls: &Bound<'_, PyType>, days: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_days_f64(days)))
+        Ok(Self(
+            TimeDelta::try_from_days_f64(days).map_err(PyInvalidFloatSeconds)?,
+        ))
     }
 
     /// Create a TimeDelta from Julian years (365.25 days per year).
     #[classmethod]
     pub fn from_julian_years(_cls: &Bound<'_, PyType>, years: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_julian_years(years)))
+        Ok(Self(
+            TimeDelta::try_from_julian_years(years).map_err(PyInvalidFloatSeconds)?,
+        ))
     }
 
     /// Create a TimeDelta from Julian centuries (36525 days per century).
     #[classmethod]
     pub fn from_julian_centuries(_cls: &Bound<'_, PyType>, centuries: f64) -> PyResult<Self> {
-        Ok(Self(TimeDelta::from_julian_centuries(centuries)))
+        Ok(Self(
+            TimeDelta::try_from_julian_centuries(centuries).map_err(PyInvalidFloatSeconds)?,
+        ))
     }
 
     /// Create a TimeDelta from integer milliseconds.
@@ -214,5 +210,13 @@ impl PyTimeDelta {
     ///     The duration as a float in seconds.
     pub fn to_decimal_seconds(&self) -> f64 {
         self.0.to_seconds().to_f64()
+    }
+}
+
+pub(crate) struct PyInvalidFloatSeconds(pub InvalidFloatSeconds);
+
+impl From<PyInvalidFloatSeconds> for PyErr {
+    fn from(err: PyInvalidFloatSeconds) -> Self {
+        PyValueError::new_err(err.0.to_string())
     }
 }

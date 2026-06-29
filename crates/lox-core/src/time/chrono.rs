@@ -25,9 +25,7 @@ impl TryFrom<TimeDelta> for DateTime<Utc> {
     type Error = ChronoError;
 
     fn try_from(delta: TimeDelta) -> Result<Self, Self::Error> {
-        let (second, nanos) = delta
-            .to_unix_second_and_nanos()
-            .ok_or(ChronoError::DateTime(delta))?;
+        let (second, nanos) = delta.to_unix_second_and_nanos();
         DateTime::from_timestamp(second, nanos).ok_or(ChronoError::DateTime(delta))
     }
 }
@@ -42,9 +40,7 @@ impl TryFrom<TimeDelta> for chrono::TimeDelta {
     type Error = ChronoError;
 
     fn try_from(delta: TimeDelta) -> Result<Self, Self::Error> {
-        let (second, nanos) = delta
-            .to_unix_second_and_nanos()
-            .ok_or(ChronoError::TimeDelta(delta))?;
+        let (second, nanos) = delta.to_unix_second_and_nanos();
         chrono::TimeDelta::new(second, nanos).ok_or(ChronoError::TimeDelta(delta))
     }
 }
@@ -62,14 +58,13 @@ impl From<chrono::TimeDelta> for TimeDelta {
 }
 
 impl TimeDelta {
-    fn to_unix_second_and_nanos(self) -> Option<(i64, u32)> {
+    fn to_unix_second_and_nanos(self) -> (i64, u32) {
         let delta = self - UNIX_EPOCH;
-        delta.as_seconds_and_subsecond().map(|(second, subsecond)| {
-            (
-                second,
-                (subsecond.as_attoseconds() / ATTOSECONDS_IN_NANOSECOND) as u32,
-            )
-        })
+        let (second, subsecond) = delta.as_seconds_and_subsecond();
+        (
+            second,
+            (subsecond.as_attoseconds() / ATTOSECONDS_IN_NANOSECOND) as u32,
+        )
     }
 
     fn from_unix_second_and_nanos(second: i64, nanos: u32) -> Self {
@@ -88,8 +83,6 @@ mod tests {
     #[case(UNIX_EPOCH)]
     #[case(TimeDelta::default())]
     #[case(TimeDelta::from_seconds_f64(0.123456))]
-    #[should_panic(expected = "NaN")]
-    #[case(TimeDelta::NaN)]
     fn test_chrono_time_delta_roundtrip(#[case] exp: TimeDelta) {
         let dt: DateTime<Utc> = exp.try_into().unwrap();
         let act: TimeDelta = dt.into();
@@ -102,8 +95,6 @@ mod tests {
     #[case(UNIX_EPOCH + TimeDelta::from_seconds(-1))]
     #[case(UNIX_EPOCH + TimeDelta::from_seconds_f64(1.123456))]
     #[case(UNIX_EPOCH + TimeDelta::from_seconds_f64(-1.123456))]
-    #[should_panic(expected = "NaN")]
-    #[case(TimeDelta::NaN)]
     fn test_foo(#[case] exp: TimeDelta) {
         let delta: chrono::TimeDelta = exp.try_into().unwrap();
         let act: TimeDelta = delta.into();

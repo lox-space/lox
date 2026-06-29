@@ -8,18 +8,15 @@ use std::str::FromStr;
 use lox_test_utils::{ApproxEq, approx_eq};
 use lox_time::subsecond::Subsecond;
 use pyo3::basic::CompareOp;
-use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyType};
-use pyo3::{
-    Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python, create_exception, pyclass,
-    pymethods,
-};
+use pyo3::{Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python, pyclass, pymethods};
 
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::time::calendar_dates::{CalendarDate, Date};
 use crate::time::deltas::{TimeDelta, ToDelta};
 use crate::time::julian_dates::{Epoch, JulianDate, Unit};
-use crate::time::python::deltas::PyTimeDelta;
+use crate::time::python::deltas::{PyInvalidFloatSeconds, PyTimeDelta};
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
 use crate::time::time_scales::Tai;
 use crate::time::utc::transformations::ToUtc;
@@ -28,15 +25,7 @@ use crate::time::{DynTime, Time, TimeError, TimeScaleMismatch};
 use super::time_scales::PyTimeScale;
 use super::utc::PyUtc;
 
-create_exception!(
-    lox_space,
-    NonFiniteTimeError,
-    PyException,
-    "Python exception raised when a non-finite `Time` is accessed."
-);
-
-/// Wrapper converting [`TimeError`] into a Python `ValueError`.
-pub struct PyTimeError(pub TimeError);
+struct PyTimeError(pub TimeError);
 
 impl From<PyTimeError> for PyErr {
     fn from(err: PyTimeError) -> Self {
@@ -52,8 +41,7 @@ impl From<PyTimeScaleMismatch> for PyErr {
     }
 }
 
-/// Wrapper parsing a Julian date epoch string into a [`lox_time::julian_dates::Epoch`].
-pub struct PyEpoch(pub Epoch);
+struct PyEpoch(pub Epoch);
 
 impl FromStr for PyEpoch {
     type Err = PyErr;
@@ -70,8 +58,7 @@ impl FromStr for PyEpoch {
     }
 }
 
-/// Wrapper parsing a Julian date unit string into a [`lox_time::julian_dates::Unit`].
-pub struct PyUnit(pub Unit);
+struct PyUnit(pub Unit);
 
 impl FromStr for PyUnit {
     type Err = PyErr;
@@ -172,7 +159,9 @@ impl PyTime {
     ) -> PyResult<Self> {
         let scale: PyTimeScale = scale.try_into()?;
         let epoch: PyEpoch = epoch.parse()?;
-        Ok(Self(Time::from_julian_date(scale.0, jd, epoch.0)))
+        Ok(Self(
+            Time::try_from_julian_date(scale.0, jd, epoch.0).map_err(PyInvalidFloatSeconds)?,
+        ))
     }
 
     /// Create a Time from a two-part Julian date for maximum precision.
@@ -195,7 +184,10 @@ impl PyTime {
         jd2: f64,
     ) -> PyResult<Self> {
         let scale: PyTimeScale = scale.try_into()?;
-        Ok(Self(Time::from_two_part_julian_date(scale.0, jd1, jd2)))
+        Ok(Self(
+            Time::try_from_two_part_julian_date(scale.0, jd1, jd2)
+                .map_err(PyInvalidFloatSeconds)?,
+        ))
     }
 
     /// Create a Time from year and day of year.
@@ -297,26 +289,16 @@ impl PyTime {
     ///
     /// Returns:
     ///     Integer seconds since the internal epoch.
-    ///
-    /// Raises:
-    ///     NonFiniteTimeError: If the time is non-finite.
-    pub fn seconds(&self) -> PyResult<i64> {
-        self.0.seconds().ok_or(NonFiniteTimeError::new_err(
-            "cannot access seconds for non-finite time",
-        ))
+    pub fn seconds(&self) -> i64 {
+        self.0.seconds()
     }
 
     /// Return the subsecond (fractional second) component.
     ///
     /// Returns:
     ///     Fractional seconds (0.0 to 1.0).
-    ///
-    /// Raises:
-    ///     NonFiniteTimeError: If the time is non-finite.
-    pub fn subsecond(&self) -> PyResult<f64> {
-        self.0.subsecond().ok_or(NonFiniteTimeError::new_err(
-            "cannot access subsecond for non-finite time",
-        ))
+    pub fn subsecond(&self) -> f64 {
+        self.0.subsecond()
     }
 
     #[classattr]

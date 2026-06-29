@@ -42,9 +42,6 @@ pub enum UtcError {
     /// Second 60 was specified on a date without a leap second.
     #[error("no leap second on {0}")]
     NonLeapSecondDate(Date),
-    /// The UTC datetime could not be constructed (e.g. from a non-finite delta).
-    #[error("unable to construct UTC datetime")]
-    UtcUndefined,
     /// The input string is not valid ISO 8601.
     #[error("invalid ISO string `{0}`")]
     InvalidIsoString(String),
@@ -135,13 +132,11 @@ impl Utc {
     /// Constructs a new [Utc] instance from a [TimeDelta] relative to J2000.
     ///
     /// Note that this constructor is not leap-second aware.
-    pub fn from_delta(delta: TimeDelta) -> Result<Self, UtcError> {
-        let (seconds, subsecond) = delta
-            .as_seconds_and_subsecond()
-            .ok_or(UtcError::UtcUndefined)?;
+    pub fn from_delta(delta: TimeDelta) -> Self {
+        let (seconds, subsecond) = delta.as_seconds_and_subsecond();
         let date = Date::from_seconds_since_j2000(seconds);
         let time = TimeOfDay::from_seconds_since_j2000(seconds).with_subsecond(subsecond);
-        Ok(Self { date, time })
+        Self { date, time }
     }
 }
 
