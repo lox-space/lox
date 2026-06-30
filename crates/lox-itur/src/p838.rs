@@ -149,7 +149,7 @@ pub(crate) fn rain_specific_attenuation_raw(
 
 #[cfg(test)]
 mod tests {
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
 
     use super::*;
 

@@ -97,8 +97,8 @@ mod tests {
 
     use crate::eop::EopParser;
 
+    use lox_approx::assert_approx_eq;
     use lox_io::spice::lsk::LeapSecondsKernel;
-    use lox_test_utils::assert_approx_eq;
     use lox_test_utils::data_file;
     use lox_time::Time;
     use lox_time::deltas::ToDelta;

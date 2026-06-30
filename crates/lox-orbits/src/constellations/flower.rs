@@ -185,12 +185,12 @@ impl FlowerBuilder {
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_bodies::Earth;
     use lox_bodies::MeanRadius;
     use lox_bodies::PointMass;
     use lox_bodies::RotationalElements;
     use lox_frames::Icrf;
-    use lox_test_utils::assert_approx_eq;
     use lox_time::time_scales::Tai;
     use lox_units::{AngleUnits, DistanceUnits};
 

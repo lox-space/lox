@@ -343,13 +343,14 @@ mod tests {
     use std::f64::consts::{FRAC_PI_2, PI};
     use std::sync::OnceLock;
 
+    use lox_approx::assert_approx_eq;
     use lox_bodies::DynOrigin;
     use lox_core::glam::DVec3;
     use lox_ephem::spk::parser::Spk;
     use lox_frames::DynFrame;
     use lox_orbits::propagators::sgp4::{Elements, Sgp4};
     use lox_orbits::propagators::{OrbitSource, Propagator};
-    use lox_test_utils::{assert_approx_eq, data_file};
+    use lox_test_utils::data_file;
     use lox_time::intervals::Interval;
 
     use super::*;

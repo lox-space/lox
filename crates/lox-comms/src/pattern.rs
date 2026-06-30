@@ -89,8 +89,8 @@ impl AntennaPattern {
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_core::units::{Angle, Distance, FrequencyUnits};
-    use lox_test_utils::assert_approx_eq;
 
     use crate::antenna::AntennaGain;
 

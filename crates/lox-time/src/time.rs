@@ -14,11 +14,11 @@ use core::ops::Sub;
 use core::str::FromStr;
 use lox_core::time::deltas::InvalidFloatSeconds;
 
+use lox_approx::ApproxEq;
+use lox_approx::ApproxEqResults;
 use lox_core::f64;
 use lox_core::i64;
 use lox_core::types::units::Days;
-use lox_test_utils::approx_eq::ApproxEq;
-use lox_test_utils::approx_eq::results::ApproxEqResults;
 use thiserror::Error;
 
 use crate::calendar_dates::CalendarDate;
@@ -556,8 +556,8 @@ mod tests {
     use alloc::format;
     use alloc::string::ToString;
     use core::cmp::Ordering;
+    use lox_approx::assert_approx_eq;
     use lox_core::f64::consts::DAYS_PER_JULIAN_CENTURY;
-    use lox_test_utils::assert_approx_eq;
     use rstest::rstest;
 
     use crate::Time;

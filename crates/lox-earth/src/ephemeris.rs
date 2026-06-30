@@ -154,8 +154,8 @@ const BARICENTRIC_COEFFS: Coeffs = Coeffs {
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_core::units::{DistanceUnits, VelocityUnits};
-    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 

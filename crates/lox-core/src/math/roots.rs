@@ -5,7 +5,7 @@
 //! Root-finding algorithms: Steffensen, Newton, Brent, and Secant methods.
 
 use alloc::boxed::Box;
-use lox_test_utils::approx_eq;
+use lox_approx::approx_eq;
 use thiserror::Error;
 
 use crate::math::float::{abs, powi, sqrt};
@@ -349,7 +349,7 @@ where
 #[cfg(test)]
 mod tests {
     use core::f64::consts::PI;
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
 
     use super::*;
     use crate::math::float::{cos, sin};

@@ -12,7 +12,7 @@ use core::{
 };
 
 use glam::DMat3;
-use lox_test_utils::ApproxEq;
+use lox_approx::ApproxEq;
 
 use crate::comms::FrequencyBand;
 use crate::f64::consts::SECONDS_PER_DAY;
@@ -1520,7 +1520,7 @@ mod tests {
     use alloc::format;
     use core::f64::consts::{FRAC_PI_2, PI};
 
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
     use rstest::rstest;
 
     extern crate alloc;

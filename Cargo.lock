@@ -963,6 +963,7 @@ dependencies = [
  "csv",
  "geo",
  "geojson",
+ "lox-approx",
  "lox-bodies",
  "lox-comms",
  "lox-core",
@@ -978,11 +979,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "lox-approx"
+version = "0.1.0"
+dependencies = [
+ "codspeed-divan-compat",
+ "glam 0.33.1",
+ "lox-derive",
+]
+
+[[package]]
 name = "lox-bodies"
 version = "0.1.0-alpha.26"
 dependencies = [
+ "lox-approx",
  "lox-core",
- "lox-test-utils",
  "rstest",
  "serde",
  "thiserror",
@@ -992,8 +1002,8 @@ dependencies = [
 name = "lox-comms"
 version = "0.1.0-alpha.15"
 dependencies = [
+ "lox-approx",
  "lox-core",
- "lox-test-utils",
  "serde",
  "serde_json",
  "thiserror",
@@ -1007,7 +1017,7 @@ dependencies = [
  "fast_polynomial",
  "glam 0.33.1",
  "libm",
- "lox-test-utils",
+ "lox-approx",
  "nom",
  "proptest",
  "rstest",
@@ -1032,6 +1042,7 @@ version = "0.1.0-alpha.29"
 dependencies = [
  "csv",
  "fast_polynomial",
+ "lox-approx",
  "lox-core",
  "lox-frames",
  "lox-io",
@@ -1062,9 +1073,9 @@ name = "lox-frames"
 version = "0.1.0-alpha.20"
 dependencies = [
  "fast_polynomial",
+ "lox-approx",
  "lox-bodies",
  "lox-core",
- "lox-test-utils",
  "lox-time",
  "lox-units",
  "rstest",
@@ -1090,8 +1101,8 @@ version = "0.1.0-alpha.5"
 dependencies = [
  "codspeed-divan-compat",
  "libm",
+ "lox-approx",
  "lox-core",
- "lox-test-utils",
  "serde",
  "serde_json",
  "sha2",
@@ -1133,6 +1144,7 @@ dependencies = [
  "differential-equations",
  "itertools",
  "libm",
+ "lox-approx",
  "lox-bodies",
  "lox-core",
  "lox-earth",
@@ -1155,6 +1167,7 @@ dependencies = [
  "codspeed-divan-compat",
  "geo",
  "lox-analysis",
+ "lox-approx",
  "lox-bodies",
  "lox-comms",
  "lox-core",
@@ -1179,12 +1192,6 @@ dependencies = [
 [[package]]
 name = "lox-test-utils"
 version = "0.1.0-alpha.9"
-dependencies = [
- "codspeed-divan-compat",
- "glam 0.33.1",
- "libm",
- "lox-derive",
-]
 
 [[package]]
 name = "lox-time"
@@ -1192,8 +1199,8 @@ version = "0.1.0-alpha.26"
 dependencies = [
  "chrono",
  "itertools",
+ "lox-approx",
  "lox-core",
- "lox-test-utils",
  "rstest",
  "serde",
  "thiserror",

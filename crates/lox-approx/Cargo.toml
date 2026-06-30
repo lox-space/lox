@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+[package]
+name = "lox-approx"
+version = "0.1.0"
+description = "Approximate equality testing with absolute and relative tolerances (PEP 485 `math.isclose`)"
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+
+[dependencies]
+lox-derive = { workspace = true, optional = true }
+glam = { workspace = true, optional = true }
+
+[dev-dependencies]
+divan.workspace = true
+
+[features]
+default = ["std"]
+std = ["glam?/std"]
+glam = ["dep:glam"]
+# Forwards a math backend to `glam` for `no_std` builds (`--features glam,libm`).
+# lox-approx itself needs no math backend.
+libm = ["glam?/libm"]
+derive = ["dep:lox-derive"]
+
+[[bench]]
+name = "approx_eq"
+harness = false
+required-features = ["glam"]

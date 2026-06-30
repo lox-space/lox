@@ -200,9 +200,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_bodies::{Earth, PointMass};
     use lox_frames::Icrf;
-    use lox_test_utils::assert_approx_eq;
     use lox_time::time;
     use lox_time::time_scales::Tdb;
     use lox_units::AngleUnits;

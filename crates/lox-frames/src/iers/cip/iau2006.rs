@@ -173,7 +173,7 @@ fn calculate_cip_unit_vector(
 
 #[cfg(test)]
 mod tests {
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
     use lox_time::{Time, time_scales::Tdb};
 
     use crate::iers::cip::CipCoords;

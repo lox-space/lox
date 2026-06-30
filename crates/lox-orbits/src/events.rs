@@ -668,7 +668,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
     use lox_time::time;
     use lox_time::time_scales::Tai;
     use std::f64::consts::{PI, TAU};

@@ -359,7 +359,7 @@ fn water_vapour_density_raw(lat_deg: f64, h_km: f64, season: Season) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
 
     use super::*;
 

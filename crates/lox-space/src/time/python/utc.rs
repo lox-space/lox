@@ -8,7 +8,7 @@ use crate::time::python::time::PyTime;
 use crate::time::python::time_scales::PyTimeScale;
 use crate::time::time_of_day::CivilTime;
 use crate::time::utc::{Utc, UtcError};
-use lox_test_utils::{ApproxEq, approx_eq};
+use lox_approx::{ApproxEq, approx_eq};
 use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
 use pyo3::{Bound, PyAny, PyErr, PyResult, pyclass, pymethods};

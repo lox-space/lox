@@ -120,7 +120,7 @@ pub(crate) fn radio_refractive_index_raw(p_hpa: f64, e_hpa: f64, t_k: f64) -> f6
 
 #[cfg(test)]
 mod tests {
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
 
     use super::*;
 

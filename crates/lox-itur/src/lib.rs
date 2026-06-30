@@ -171,8 +171,8 @@ impl ItuProvider {
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_core::comms::LossKind;
-    use lox_test_utils::assert_approx_eq;
 
     use crate::provider::test_fixture::provider;
 

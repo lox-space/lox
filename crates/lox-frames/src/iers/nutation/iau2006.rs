@@ -27,8 +27,8 @@ impl Nutation {
 mod tests {
     use crate::iers::nutation::Nutation;
 
+    use lox_approx::assert_approx_eq;
     use lox_core::units::AngleUnits;
-    use lox_test_utils::assert_approx_eq;
     use lox_time::{Time, time_scales::Tdb};
 
     #[test]

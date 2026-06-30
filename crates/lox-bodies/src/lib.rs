@@ -432,7 +432,7 @@ impl J4 for Earth {
 
 #[cfg(test)]
 mod tests {
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
 
     use super::*;
 

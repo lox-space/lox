@@ -18,8 +18,8 @@ categories.workspace = true
 readme = "README.md"
 
 [dependencies]
+lox-approx = { workspace = true, default-features = false }
 lox-core = { workspace = true, default-features = false }
-lox-test-utils = { workspace = true, default-features = false }
 
 chrono = { workspace = true, optional = true }
 itertools = { workspace = true, optional = true }
@@ -34,9 +34,9 @@ default = ["std"]
 std = [
     "dep:itertools",
     "lox-core/std",
-    "lox-test-utils/std",
+    "lox-approx/std",
     "serde?/std",
 ]
-libm = ["lox-core/libm", "lox-test-utils/libm"]
+libm = ["lox-core/libm"]
 chrono = ["dep:chrono", "lox-core/chrono", "std"]
 serde = ["dep:serde", "lox-core/serde"]

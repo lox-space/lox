@@ -102,8 +102,8 @@ impl AntennaGain for GaussianPattern {
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_core::units::FrequencyUnits;
-    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 

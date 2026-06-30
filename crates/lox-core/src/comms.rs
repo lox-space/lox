@@ -576,7 +576,7 @@ pub enum PropagationLossError {
 mod tests {
     extern crate alloc;
 
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
     use rstest::rstest;
 
     use crate::units::FrequencyUnits;

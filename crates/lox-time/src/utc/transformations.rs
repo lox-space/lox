@@ -153,7 +153,7 @@ mod test {
 
     #[test]
     fn test_all_scales_to_utc() {
-        use lox_test_utils::assert_approx_eq;
+        use lox_approx::assert_approx_eq;
 
         let tai = time!(Tai, 2024, 5, 17, 12, 13, 14.0).unwrap();
         let exp = tai.to_utc();

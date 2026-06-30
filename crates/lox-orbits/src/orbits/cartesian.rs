@@ -273,13 +273,14 @@ where
 mod tests {
     use std::sync::OnceLock;
 
+    use lox_approx::assert_approx_eq;
     use lox_bodies::{Earth, Jupiter, Venus};
     use lox_core::coords::Cartesian;
     use lox_core::glam::DVec3;
     use lox_ephem::Ephemeris;
     use lox_ephem::spk::parser::Spk;
     use lox_frames::providers::DefaultRotationProvider;
-    use lox_test_utils::{assert_approx_eq, data_file};
+    use lox_test_utils::data_file;
     use lox_time::{time, time_scales::Tdb, utc::Utc};
 
     use super::*;

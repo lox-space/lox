@@ -228,12 +228,12 @@ where
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_bodies::Earth;
     use lox_core::elements::Keplerian as CoreKeplerian;
     use lox_core::glam::DVec3;
     use lox_core::units::{AngleUnits, DistanceUnits};
     use lox_frames::Icrf;
-    use lox_test_utils::assert_approx_eq;
     use lox_time::intervals::Interval;
     use lox_time::time_scales::Tdb;
     use lox_time::utc;

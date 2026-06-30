@@ -16,7 +16,7 @@
 use core::fmt::Display;
 use core::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
-use lox_test_utils::approx_eq::ApproxEq;
+use lox_approx::ApproxEq;
 use thiserror::Error;
 
 use crate::math::float::mul_add;
@@ -646,12 +646,7 @@ impl From<i32> for TimeDelta {
 }
 
 impl ApproxEq for TimeDelta {
-    fn approx_eq(
-        &self,
-        rhs: &Self,
-        atol: f64,
-        rtol: f64,
-    ) -> lox_test_utils::approx_eq::ApproxEqResults {
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> lox_approx::ApproxEqResults {
         self.to_seconds()
             .to_f64()
             .approx_eq(&rhs.to_seconds().to_f64(), atol, rtol)

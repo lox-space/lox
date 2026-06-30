@@ -111,9 +111,9 @@ impl Propagator<Tai, Earth> for Sgp4 {
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_frames::Icrf;
     use lox_frames::providers::DefaultRotationProvider;
-    use lox_test_utils::assert_approx_eq;
     use lox_time::deltas::TimeDelta;
     use lox_time::intervals::Interval;
 

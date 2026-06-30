@@ -282,7 +282,7 @@ pub fn kwok_osculating_cartesian(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
 
     const MU_EARTH: f64 = 3.986004418e14;
     const J2_EARTH: f64 = 1.08262668e-3;

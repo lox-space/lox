@@ -30,7 +30,7 @@ libm = ["lox-core/libm"]
 serde = ["dep:serde", "lox-core/serde"]
 
 [dev-dependencies]
-lox-test-utils = { workspace = true, features = ["std"] }
+lox-approx = { workspace = true, features = ["std"] }
 rstest.workspace = true
 
 [lib]

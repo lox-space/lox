@@ -423,9 +423,10 @@ where
 mod tests {
     use std::sync::OnceLock;
 
+    use lox_approx::assert_approx_eq;
     use lox_core::units::DistanceUnits;
     use lox_earth::eop::{EopParser, EopProvider};
-    use lox_test_utils::{assert_approx_eq, data_file};
+    use lox_test_utils::data_file;
     use lox_time::{deltas::TimeDelta, utc::Utc};
 
     use super::*;

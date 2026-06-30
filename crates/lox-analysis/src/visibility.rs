@@ -1548,12 +1548,13 @@ where
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_bodies::{Earth, Spheroid};
     use lox_core::coords::LonLatAlt;
     use lox_core::units::Distance;
     use lox_ephem::spk::parser::Spk;
     use lox_orbits::propagators::OrbitSource;
-    use lox_test_utils::{assert_approx_eq, data_file, read_data_file};
+    use lox_test_utils::{data_file, read_data_file};
     use lox_time::time_scales::{DynTimeScale, Tai};
     use lox_time::utc::Utc;
     use std::iter::zip;
