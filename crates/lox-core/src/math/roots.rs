@@ -14,8 +14,15 @@ use crate::math::float::{abs, powi, sqrt};
 #[derive(Debug, Error)]
 pub enum RootFinderError {
     /// The algorithm did not converge within the maximum number of iterations.
-    #[error("not converged after {0} iterations, residual {1}")]
-    NotConverged(u32, f64),
+    #[error("not converged after {iterations} iterations at x = {x}, residual {residual}")]
+    NotConverged {
+        /// Number of iterations performed before giving up.
+        iterations: u32,
+        /// The best root estimate reached.
+        x: f64,
+        /// The residual `f(x)` at the best estimate.
+        residual: f64,
+    },
     /// The root is not within the given bracket.
     #[error("root not in bracket")]
     NotInBracket,
@@ -158,14 +165,18 @@ impl core::fmt::Display for ZeroCrossing {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Steffensen {
     max_iter: u32,
-    tolerance: f64,
+    /// Absolute tolerance on the root location.
+    abs_tol: f64,
+    /// Relative tolerance on the root location.
+    rel_tol: f64,
 }
 
 impl Default for Steffensen {
     fn default() -> Self {
         Self {
             max_iter: 1000,
-            tolerance: sqrt(f64::EPSILON),
+            abs_tol: sqrt(f64::EPSILON),
+            rel_tol: sqrt(f64::EPSILON),
         }
     }
 }
@@ -177,15 +188,36 @@ where
     fn find(&self, f: F, initial_guess: f64) -> Result<f64, RootFinderError> {
         let mut p0 = initial_guess;
         for _ in 0..self.max_iter {
-            let f1 = p0 + f.call(p0).map_err(RootFinderError::Callback)?;
-            let f2 = f1 + f.call(f1).map_err(RootFinderError::Callback)?;
+            let fp0 = f.call(p0).map_err(RootFinderError::Callback)?;
+            if !fp0.is_finite() {
+                return Err(RootFinderError::NonFinite(fp0));
+            }
+            // An initial guess that is already a root is returned directly,
+            // avoiding a 0/0 update.
+            if fp0 == 0.0 {
+                return Ok(p0);
+            }
+            let f1 = p0 + fp0;
+            let ff1 = f.call(f1).map_err(RootFinderError::Callback)?;
+            if !ff1.is_finite() {
+                return Err(RootFinderError::NonFinite(ff1));
+            }
+            let f2 = f1 + ff1;
             let p = p0 - powi(f1 - p0, 2) / (f2 - 2.0 * f1 + p0);
-            if approx_eq!(p, p0, atol <= self.tolerance) {
+            if !p.is_finite() {
+                return Err(RootFinderError::NonFinite(p));
+            }
+            if approx_eq!(p, p0, rtol <= self.rel_tol, atol <= self.abs_tol) {
                 return Ok(p);
             }
             p0 = p;
         }
-        Err(RootFinderError::NotConverged(self.max_iter, p0))
+        let residual = f.call(p0).map_err(RootFinderError::Callback)?;
+        Err(RootFinderError::NotConverged {
+            iterations: self.max_iter,
+            x: p0,
+            residual,
+        })
     }
 }
 
@@ -193,14 +225,18 @@ where
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Newton {
     max_iter: u32,
-    tolerance: f64,
+    /// Absolute tolerance on the root location.
+    abs_tol: f64,
+    /// Relative tolerance on the root location.
+    rel_tol: f64,
 }
 
 impl Default for Newton {
     fn default() -> Self {
         Self {
             max_iter: 50,
-            tolerance: sqrt(f64::EPSILON),
+            abs_tol: sqrt(f64::EPSILON),
+            rel_tol: sqrt(f64::EPSILON),
         }
     }
 }
@@ -218,15 +254,34 @@ where
     ) -> Result<f64, RootFinderError> {
         let mut p0 = initial_guess;
         for _ in 0..self.max_iter {
-            let p = p0
-                - f.call(p0).map_err(RootFinderError::Callback)?
-                    / derivative.call(p0).map_err(RootFinderError::Callback)?;
-            if approx_eq!(p, p0, atol <= self.tolerance) {
+            let fx = f.call(p0).map_err(RootFinderError::Callback)?;
+            if !fx.is_finite() {
+                return Err(RootFinderError::NonFinite(fx));
+            }
+            // An initial guess that is already a root is returned directly,
+            // avoiding a 0/0 update at a stationary point.
+            if fx == 0.0 {
+                return Ok(p0);
+            }
+            let dfx = derivative.call(p0).map_err(RootFinderError::Callback)?;
+            if !dfx.is_finite() {
+                return Err(RootFinderError::NonFinite(dfx));
+            }
+            let p = p0 - fx / dfx;
+            if !p.is_finite() {
+                return Err(RootFinderError::NonFinite(p));
+            }
+            if approx_eq!(p, p0, rtol <= self.rel_tol, atol <= self.abs_tol) {
                 return Ok(p);
             }
             p0 = p;
         }
-        Err(RootFinderError::NotConverged(self.max_iter, p0))
+        let residual = f.call(p0).map_err(RootFinderError::Callback)?;
+        Err(RootFinderError::NotConverged {
+            iterations: self.max_iter,
+            x: p0,
+            residual,
+        })
     }
 }
 
@@ -356,7 +411,11 @@ where
             fcur = f.call(xcur).map_err(RootFinderError::Callback)?;
         }
 
-        Err(RootFinderError::NotConverged(self.max_iter, fcur))
+        Err(RootFinderError::NotConverged {
+            iterations: self.max_iter,
+            x: xcur,
+            residual: fcur,
+        })
     }
 }
 
@@ -395,6 +454,72 @@ mod tests {
             )
             .expect("should converge");
         assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-8);
+    }
+
+    #[test]
+    fn test_newton_exact_root_initial_guess() {
+        // f(x) = x^2, f'(x) = 2x. At x = 0 both are zero; the guess is already
+        // the root and must be returned rather than producing 0/0 = NaN.
+        let newton = Newton::default();
+        let act = newton
+            .find_with_derivative(
+                |x: f64| -> Result { Ok(powi(x, 2)) },
+                |x: f64| -> Result { Ok(2.0 * x) },
+                0.0,
+            )
+            .expect("guess is already the root");
+        assert_eq!(act, 0.0);
+    }
+
+    #[test]
+    fn test_newton_zero_derivative_is_non_finite() {
+        // f(x) = x^2 + 1 has no real root; at x = 0 the derivative is zero, so
+        // the step diverges and must be reported as a non-finite error.
+        let newton = Newton::default();
+        let err = newton
+            .find_with_derivative(
+                |x: f64| -> Result { Ok(powi(x, 2) + 1.0) },
+                |x: f64| -> Result { Ok(2.0 * x) },
+                0.0,
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NonFinite(_)));
+    }
+
+    #[test]
+    fn test_newton_large_root_relative_tolerance() {
+        // A root at 1e8 is unreachable by an absolute step tolerance of
+        // sqrt(EPSILON); the relative tolerance lets it converge.
+        let newton = Newton::default();
+        let act = newton
+            .find_with_derivative(
+                |x: f64| -> Result { Ok(powi(x, 2) - 1e16) },
+                |x: f64| -> Result { Ok(2.0 * x) },
+                9e7,
+            )
+            .expect("should converge");
+        assert_approx_eq!(act, 1e8, rtol <= 1e-9);
+    }
+
+    #[test]
+    fn test_steffensen_exact_root_initial_guess() {
+        // f(x) = x^2 - 4 has a root at 2; the guess is already the root.
+        let steffensen = Steffensen::default();
+        let act = steffensen
+            .find(|x: f64| -> Result { Ok(powi(x, 2) - 4.0) }, 2.0)
+            .expect("guess is already the root");
+        assert_eq!(act, 2.0);
+    }
+
+    #[test]
+    fn test_steffensen_zero_denominator_is_non_finite() {
+        // A constant non-zero residual makes the Aitken denominator vanish; the
+        // update diverges and must be reported as a non-finite error.
+        let steffensen = Steffensen::default();
+        let err = steffensen
+            .find(|_x: f64| -> Result { Ok(1.0) }, 0.0)
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NonFinite(_)));
     }
 
     #[test]

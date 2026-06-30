@@ -151,7 +151,11 @@ where
             }
         }
 
-        Err(RootFinderError::NotConverged(self.max_iter, fx))
+        Err(RootFinderError::NotConverged {
+            iterations: self.max_iter,
+            x,
+            residual: fx,
+        })
     }
 }
 
