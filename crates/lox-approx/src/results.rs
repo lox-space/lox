@@ -48,6 +48,13 @@ pub enum ApproxEqResult {
         /// The length of the right-hand side collection.
         right: usize,
     },
+    /// The comparison failed because one `Option` was `Some` and the other was `None`.
+    OptionMismatch {
+        /// Whether the left-hand side was `Some`.
+        left_some: bool,
+        /// Whether the right-hand side was `Some`.
+        right_some: bool,
+    },
 }
 
 impl ApproxEqResult {
@@ -357,6 +364,21 @@ impl Display for ApproxEqResults {
                         writeln!(f, "Field: {}", field)?;
                     }
                     writeln!(f, "Length mismatch: {} != {}\n", left, right)?;
+                }
+                ApproxEqResult::OptionMismatch {
+                    left_some,
+                    right_some,
+                } => {
+                    if !field.is_empty() {
+                        writeln!(f, "Field: {}", field)?;
+                    }
+                    let name = |some| if some { "Some" } else { "None" };
+                    writeln!(
+                        f,
+                        "Option mismatch: {} != {}\n",
+                        name(*left_some),
+                        name(*right_some)
+                    )?;
                 }
             }
         }
