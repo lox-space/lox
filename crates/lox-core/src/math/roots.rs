@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Root-finding algorithms: Steffensen, Newton, Brent, and Secant methods.
+//! Root-finding algorithms: Steffensen, Newton, and Brent methods.
 
 use alloc::boxed::Box;
 use lox_approx::approx_eq;
@@ -19,6 +19,9 @@ pub enum RootFinderError {
     /// The root is not within the given bracket.
     #[error("root not in bracket")]
     NotInBracket,
+    /// The objective function returned a non-finite value.
+    #[error("function returned a non-finite value: {0}")]
+    NonFinite(f64),
     /// The objective function returned an error.
     #[error(transparent)]
     Callback(#[from] CallbackError),
@@ -228,10 +231,17 @@ where
 }
 
 /// Brent's method for bracketed root-finding.
+///
+/// Convergence is governed by the width of the bracket: iteration stops once it
+/// is narrower than `abs_tol + rel_tol * |x|`. Both tolerances are on the root
+/// location `x`, not on the residual `f(x)`, so the result is independent of how
+/// the objective is scaled.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Brent {
     max_iter: u32,
+    /// Absolute tolerance on the root location.
     abs_tol: f64,
+    /// Relative tolerance on the root location.
     rel_tol: f64,
 }
 
@@ -263,16 +273,26 @@ where
 
         let (mut fpre, mut fcur) = values;
 
-        if fpre * fcur > 0.0 {
-            return Err(RootFinderError::NotInBracket);
+        if !fpre.is_finite() {
+            return Err(RootFinderError::NonFinite(fpre));
+        }
+        if !fcur.is_finite() {
+            return Err(RootFinderError::NonFinite(fcur));
         }
 
-        if approx_eq!(fpre, 0.0, atol <= self.abs_tol) {
+        // An endpoint that is exactly a root is returned directly.
+        if fpre == 0.0 {
             return Ok(xpre);
         }
-
-        if approx_eq!(fcur, 0.0, atol <= self.abs_tol) {
+        if fcur == 0.0 {
             return Ok(xcur);
+        }
+
+        // The endpoints must straddle the root. Comparing the sign bits of the
+        // two finite, non-zero values avoids the underflow and NaN hazards of
+        // testing the sign of their product.
+        if fpre.is_sign_negative() == fcur.is_sign_negative() {
+            return Err(RootFinderError::NotInBracket);
         }
 
         for _ in 0..self.max_iter {
@@ -295,7 +315,7 @@ where
             let delta = (self.abs_tol + self.rel_tol * abs(xcur)) / 2.0;
             let sbis = (xblk - xcur) / 2.0;
 
-            if approx_eq!(fcur, 0.0, atol <= self.abs_tol) || abs(sbis) < delta {
+            if fcur == 0.0 || abs(sbis) < delta {
                 return Ok(xcur);
             }
 
@@ -337,79 +357,6 @@ where
         }
 
         Err(RootFinderError::NotConverged(self.max_iter, fcur))
-    }
-}
-
-/// Secant method for root-finding.
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Secant {
-    max_iter: u32,
-    rel_tol: f64,
-    abs_tol: f64,
-}
-
-impl Default for Secant {
-    fn default() -> Self {
-        Self {
-            max_iter: 100,
-            rel_tol: sqrt(f64::EPSILON),
-            abs_tol: 1e-6,
-        }
-    }
-}
-
-impl<F> FindBracketedRoot<F> for Secant
-where
-    F: Callback,
-{
-    fn find_in_bracket_with_values(
-        &self,
-        f: F,
-        bracket: (f64, f64),
-        values: (f64, f64),
-    ) -> Result<f64, RootFinderError> {
-        let (x0, x1) = bracket;
-        let mut p0 = x0;
-        let mut p1 = x1;
-        let (mut q0, mut q1) = values;
-        if abs(q1) < abs(q0) {
-            core::mem::swap(&mut p0, &mut p1);
-            core::mem::swap(&mut q0, &mut q1);
-        }
-        for i in 0..self.max_iter {
-            if q1 == q0 {
-                if p1 != p0 {
-                    return Err(RootFinderError::NotConverged(i, q0));
-                }
-                return Ok((p1 + p0) / 2.0);
-            }
-            let p = if abs(q1) > abs(q0) {
-                (-q0 / q1 * p1 + p0) / (1.0 - q0 / q1)
-            } else {
-                (-q1 / q0 * p0 + p1) / (1.0 - q1 / q0)
-            };
-            if approx_eq!(p, p1, rtol <= self.rel_tol, atol <= self.abs_tol) {
-                return Ok(p);
-            }
-            p0 = p1;
-            q0 = q1;
-            p1 = p;
-            q1 = f.call(p).map_err(RootFinderError::Callback)?;
-        }
-        Err(RootFinderError::NotConverged(self.max_iter, p0))
-    }
-}
-
-impl<F> FindRoot<F> for Secant
-where
-    F: Callback,
-{
-    fn find(&self, f: F, initial_guess: f64) -> Result<f64, RootFinderError> {
-        let x0 = initial_guess;
-        let eps = 1e-4;
-        let mut x1 = x0 * (1.0 + eps);
-        x1 += if x1 > x0 { eps } else { -eps };
-        self.find_in_bracket(f, (x0, x1))
     }
 }
 
@@ -469,26 +416,6 @@ mod tests {
             .find_in_bracket(
                 |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) },
                 (1.0, 1.5),
-            )
-            .expect("should converge");
-        assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-8);
-    }
-
-    #[test]
-    fn test_secant_cubic() {
-        let secant = Secant::default();
-        let act = secant
-            .find_in_bracket(
-                |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) },
-                (1.0, 1.5),
-            )
-            .expect("should converge");
-        assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-8);
-
-        let act = secant
-            .find(
-                |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) },
-                1.0,
             )
             .expect("should converge");
         assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-8);
@@ -574,12 +501,6 @@ mod tests {
         let via_recompute = brent.find_in_bracket(f, (a, b)).expect("should converge");
         assert_approx_eq!(via_values, via_recompute, rtol <= 1e-12);
 
-        let secant = Secant::default();
-        let via_values = secant
-            .find_in_bracket_with_values(f, (a, b), (fa, fb))
-            .expect("should converge");
-        assert_approx_eq!(via_values, 1.3652300134140969, rtol <= 1e-8);
-
         // The supplied endpoints are not re-evaluated.
         let count = Cell::new(0usize);
         let counting = |x: f64| -> Result {
@@ -592,5 +513,40 @@ mod tests {
             .find_in_bracket_with_values(counting, (a, b), (fa, fb))
             .expect("should converge");
         assert_eq!(count.get(), 0, "endpoints must not be re-evaluated");
+    }
+
+    #[test]
+    fn test_brent_rejects_non_finite_endpoint() {
+        let brent = Brent::default();
+        let err = brent
+            .find_in_bracket_with_values(
+                |_x: f64| -> Result { Ok(1.0) },
+                (0.0, 1.0),
+                (f64::NAN, 1.0),
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NonFinite(_)));
+    }
+
+    #[test]
+    fn test_brent_rejects_same_sign_underflowing_bracket() {
+        // Same-sign endpoints whose product underflows to 0.0 must still be
+        // rejected rather than accepted as a bracket (and returned as a root).
+        let brent = Brent::default();
+        let err = brent
+            .find_in_bracket(|x: f64| -> Result { Ok(1e-200 * (x + 1.0)) }, (0.0, 1.0))
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NotInBracket));
+    }
+
+    #[test]
+    fn test_brent_scale_independent() {
+        // A heavily down-scaled objective: f(0) = -1e-6 must not be mistaken for
+        // a root by a residual tolerance. The true root is at x = 1e6.
+        let brent = Brent::default();
+        let act = brent
+            .find_in_bracket(|x: f64| -> Result { Ok(1e-12 * (x - 1e6)) }, (0.0, 2e6))
+            .expect("should converge");
+        assert_approx_eq!(act, 1e6, rtol <= 1e-5);
     }
 }
