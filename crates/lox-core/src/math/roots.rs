@@ -201,12 +201,23 @@ impl Steffensen {
     }
 }
 
+/// Evaluates `f` at `x`, mapping a callback failure or non-finite result to the
+/// corresponding [`RootFinderError`].
+fn eval_finite<F: Callback>(f: &F, x: f64) -> Result<f64, RootFinderError> {
+    let value = f.call(x).map_err(RootFinderError::Callback)?;
+    if !value.is_finite() {
+        return Err(RootFinderError::NonFinite(value));
+    }
+    Ok(value)
+}
+
 impl<F> FindRoot<F> for Steffensen
 where
     F: Callback,
 {
     fn find(&self, f: F, initial_guess: f64) -> Result<f64, RootFinderError> {
         let mut p0 = initial_guess;
+        let mut last: Option<(f64, f64)> = None;
         for _ in 0..self.max_iter {
             let fp0 = f.call(p0).map_err(RootFinderError::Callback)?;
             if !fp0.is_finite() {
@@ -217,6 +228,7 @@ where
             if fp0 == 0.0 {
                 return Ok(p0);
             }
+            last = Some((p0, fp0));
             let f1 = p0 + fp0;
             let ff1 = f.call(f1).map_err(RootFinderError::Callback)?;
             if !ff1.is_finite() {
@@ -232,10 +244,18 @@ where
             }
             p0 = p;
         }
-        let residual = f.call(p0).map_err(RootFinderError::Callback)?;
+        // Report the last point where `f` was actually evaluated rather than
+        // re-evaluating a stepped final iterate, which may lie outside the
+        // callback's valid domain and turn non-convergence into a callback error
+        // or panic. When `max_iter == 0` the loop never runs, so fall back to the
+        // still-in-domain initial guess.
+        let (x, residual) = match last {
+            Some(pair) => pair,
+            None => (p0, eval_finite(&f, p0)?),
+        };
         Err(RootFinderError::NotConverged {
             iterations: self.max_iter,
-            x: p0,
+            x,
             residual,
         })
     }
@@ -293,6 +313,7 @@ where
         initial_guess: f64,
     ) -> Result<f64, RootFinderError> {
         let mut p0 = initial_guess;
+        let mut last: Option<(f64, f64)> = None;
         for _ in 0..self.max_iter {
             let fx = f.call(p0).map_err(RootFinderError::Callback)?;
             if !fx.is_finite() {
@@ -303,6 +324,7 @@ where
             if fx == 0.0 {
                 return Ok(p0);
             }
+            last = Some((p0, fx));
             let dfx = derivative.call(p0).map_err(RootFinderError::Callback)?;
             if !dfx.is_finite() {
                 return Err(RootFinderError::NonFinite(dfx));
@@ -316,10 +338,18 @@ where
             }
             p0 = p;
         }
-        let residual = f.call(p0).map_err(RootFinderError::Callback)?;
+        // Report the last point where `f` was actually evaluated rather than
+        // re-evaluating a stepped final iterate, which may lie outside the
+        // callback's valid domain and turn non-convergence into a callback error
+        // or panic. When `max_iter == 0` the loop never runs, so fall back to the
+        // still-in-domain initial guess.
+        let (x, residual) = match last {
+            Some(pair) => pair,
+            None => (p0, eval_finite(&f, p0)?),
+        };
         Err(RootFinderError::NotConverged {
             iterations: self.max_iter,
-            x: p0,
+            x,
             residual,
         })
     }
@@ -327,10 +357,9 @@ where
 
 /// Brent's method for bracketed root-finding.
 ///
-/// Convergence is governed by the width of the bracket: iteration stops once it
-/// is narrower than `abs_tol + rel_tol * |x|`. Both tolerances are on the root
-/// location `x`, not on the residual `f(x)`, so the result is independent of how
-/// the objective is scaled.
+/// The tolerances bound the root location `x`, not the residual `f(x)`: the
+/// returned root is accurate to within `abs_tol + rel_tol * |x|`, independent of
+/// how the objective is scaled.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Brent {
     max_iter: u32,
@@ -411,7 +440,9 @@ where
         }
 
         for _ in 0..self.max_iter {
-            if fpre * fcur < 0.0 {
+            // Compare sign bits rather than the product to avoid the underflow
+            // that loses the sign of very small opposite-sign residuals.
+            if fpre.is_sign_negative() != fcur.is_sign_negative() {
                 xblk = xpre;
                 fblk = fpre;
                 spre = xcur - xpre;
@@ -469,6 +500,9 @@ where
             }
 
             fcur = f.call(xcur).map_err(RootFinderError::Callback)?;
+            if !fcur.is_finite() {
+                return Err(RootFinderError::NonFinite(fcur));
+            }
         }
 
         Err(RootFinderError::NotConverged {
@@ -767,5 +801,95 @@ mod tests {
             err,
             RootFinderError::NotConverged { iterations: 1, .. }
         ));
+    }
+
+    #[test]
+    fn test_brent_tiny_opposite_sign_residuals() {
+        // Residuals so small their product underflows to a signed zero; the
+        // in-loop bracketing must recognise the sign change from the sign bits
+        // rather than the product, which would otherwise return the endpoint.
+        let brent = Brent::default();
+        let act = brent
+            .find_in_bracket(|x: f64| -> Result { Ok(1e-200 * (x - 0.5)) }, (0.0, 1.0))
+            .expect("should converge");
+        assert_approx_eq!(act, 0.5, rtol <= 1e-8);
+    }
+
+    #[test]
+    fn test_brent_interior_non_finite() {
+        // Finite, opposite-sign endpoints but a non-finite value at an interior
+        // point must be reported rather than silently accepted as a root.
+        let calls = core::cell::Cell::new(0u32);
+        let brent = Brent::default();
+        let err = brent
+            .find_in_bracket(
+                |x: f64| -> Result {
+                    let n = calls.get();
+                    calls.set(n + 1);
+                    // The first two calls evaluate the bracket endpoints.
+                    if n >= 2 { Ok(f64::NAN) } else { Ok(x - 0.5) }
+                },
+                (0.0, 1.0),
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NonFinite(_)));
+    }
+
+    #[test]
+    fn test_newton_not_converged_does_not_re_evaluate() {
+        // The final iterate steps outside the callback's valid domain. Reaching
+        // the iteration cap must still yield NotConverged, not a callback error
+        // from re-evaluating the un-checked final iterate.
+        let newton = Newton::default().with_max_iter(1);
+        let err = newton
+            .find_with_derivative(
+                |x: f64| -> Result {
+                    if x > 5.0 {
+                        Err("out of domain".into())
+                    } else {
+                        Ok(x * x - 2.0)
+                    }
+                },
+                |_x: f64| -> Result { Ok(0.1) },
+                1.0,
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NotConverged { .. }));
+    }
+
+    #[test]
+    fn test_newton_zero_max_iter_reports_real_residual() {
+        // With no iterations the solver still reports a finite residual measured
+        // at the initial guess, not NaN.
+        let newton = Newton::default().with_max_iter(0);
+        let err = newton
+            .find_with_derivative(
+                |x: f64| -> Result { Ok(x * x - 2.0) },
+                |x: f64| -> Result { Ok(2.0 * x) },
+                1.0,
+            )
+            .unwrap_err();
+        match err {
+            RootFinderError::NotConverged { x, residual, .. } => {
+                assert_eq!(x, 1.0);
+                assert_approx_eq!(residual, -1.0, atol <= 1e-12);
+            }
+            other => panic!("expected NotConverged, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_steffensen_zero_max_iter_reports_real_residual() {
+        let steffensen = Steffensen::default().with_max_iter(0);
+        let err = steffensen
+            .find(|x: f64| -> Result { Ok(x * x - 2.0) }, 1.0)
+            .unwrap_err();
+        match err {
+            RootFinderError::NotConverged { x, residual, .. } => {
+                assert_eq!(x, 1.0);
+                assert_approx_eq!(residual, -1.0, atol <= 1e-12);
+            }
+            other => panic!("expected NotConverged, got {other:?}"),
+        }
     }
 }
