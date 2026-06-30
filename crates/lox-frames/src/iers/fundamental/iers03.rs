@@ -272,7 +272,7 @@ pub fn neptune_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 #[cfg(test)]
 #[allow(clippy::approx_constant)]
 mod tests {
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
 
     use super::*;
 

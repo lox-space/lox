@@ -6,7 +6,7 @@
 //! Procedural derive macros for the Lox ecosystem.
 //!
 //! Provides `#[derive(ApproxEq)]` for automatic approximate-equality
-//! implementations against `lox_test_utils::approx_eq::ApproxEq`.
+//! implementations against `lox_approx::ApproxEq`.
 
 #![warn(missing_docs)]
 
@@ -39,13 +39,13 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         ..
     } = parse_macro_input!(input);
 
-    let lox_test_utils = match crate_name("lox-test-utils") {
+    let lox_approx = match crate_name("lox-approx") {
         Ok(FoundCrate::Itself) => quote!(crate),
         Ok(FoundCrate::Name(name)) => {
             let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
             quote!(::#ident)
         }
-        Err(_) => quote!(::lox_test_utils),
+        Err(_) => quote!(::lox_approx),
     };
 
     let fields: Vec<proc_macro2::TokenStream> = match data {
@@ -90,10 +90,10 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let generics = add_trait_bounds(generics);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    let results = quote! {#lox_test_utils::approx_eq::results::ApproxEqResults};
+    let results = quote! {#lox_approx::ApproxEqResults};
 
     let output = quote! {
-        impl #impl_generics #lox_test_utils::approx_eq::ApproxEq for #ident #ty_generics #where_clause {
+        impl #impl_generics #lox_approx::ApproxEq for #ident #ty_generics #where_clause {
             fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> #results {
                 let mut results = #results::new();
                 #(#fields)*

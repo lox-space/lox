@@ -1,11 +1,11 @@
-// SPDX-FileCopyrightText: 2025 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
 //
 // SPDX-License-Identifier: MPL-2.0
 
 //! Result types for approximate equality comparisons.
 //!
 //! This module contains the result types used internally by the approximate equality system.
-//! These types are typically not used directly but are returned by the [`ApproxEq`](crate::approx_eq::ApproxEq) trait
+//! These types are typically not used directly but are returned by the [`ApproxEq`](crate::ApproxEq) trait
 //! implementations.
 
 use alloc::borrow::Cow;
@@ -24,6 +24,8 @@ use core::fmt::Display;
 /// - [`Pass`](ApproxEqResult::Pass): The values are approximately equal within tolerance
 /// - [`Fail`](ApproxEqResult::Fail): The values differ beyond the tolerance, with details
 ///   about the difference
+/// - [`LengthMismatch`](ApproxEqResult::LengthMismatch): The two collections had different
+///   lengths and could not be compared element-by-element
 #[derive(Debug, Clone, Copy)]
 pub enum ApproxEqResult {
     /// The comparison passed - values are approximately equal.
@@ -39,6 +41,13 @@ pub enum ApproxEqResult {
         /// The effective tolerance used (if both values are finite).
         tol: Option<f64>,
     },
+    /// The comparison failed because two collections had different lengths.
+    LengthMismatch {
+        /// The length of the left-hand side collection.
+        left: usize,
+        /// The length of the right-hand side collection.
+        right: usize,
+    },
 }
 
 impl ApproxEqResult {
@@ -51,23 +60,24 @@ impl ApproxEqResult {
     /// - `atol`: Absolute tolerance
     /// - `rtol`: Relative tolerance
     ///
-    /// # Algorithm
-    ///
-    /// The effective tolerance is computed as:
-    /// ```text
-    /// tol = max(atol, rtol * max(|left|, |right|))
-    /// ```
-    ///
-    /// The values are considered equal if `|left - right| ≤ tol`.
+    /// The values are equal when `|left - right| ≤ max(atol, rtol * max(|left|, |right|))`.
     ///
     /// # Special Cases
     ///
-    /// If either value is non-finite (NaN or infinity), the comparison automatically fails.
+    /// Exactly equal values always pass, so two equal infinities (`inf == inf`,
+    /// `-inf == -inf`) are approximately equal, matching PEP 485. Any other non-finite
+    /// comparison fails: `NaN` is never equal to anything, `inf` vs `-inf` and `inf` vs a
+    /// finite value differ.
+    ///
+    /// # Panics
+    ///
+    /// Panics if either tolerance is negative (or NaN), matching the `ValueError` Python's
+    /// `math.isclose` raises for negative tolerances.
     ///
     /// # Examples
     ///
     /// ```
-    /// use lox_test_utils::approx_eq::ApproxEqResult;
+    /// use lox_approx::ApproxEqResult;
     ///
     /// let result = ApproxEqResult::new(1.0, 1.0001, 0.001, 0.0);
     /// assert!(result.is_pass());
@@ -77,6 +87,15 @@ impl ApproxEqResult {
     /// ```
     #[inline]
     pub fn new(left: f64, right: f64, atol: f64, rtol: f64) -> Self {
+        assert!(
+            atol >= 0.0 && rtol >= 0.0,
+            "tolerances must be non-negative"
+        );
+        // Exact equality first, matching PEP 485: this makes inf == inf and -inf == -inf
+        // pass while leaving NaN (never equal) and inf-vs-finite failing.
+        if left == right {
+            return Self::Pass;
+        }
         if !left.is_finite() || !right.is_finite() {
             return Self::Fail {
                 left,
@@ -100,26 +119,12 @@ impl ApproxEqResult {
         }
     }
 
-    /// Creates a failing comparison result for two values that cannot be meaningfully compared.
-    ///
-    /// This is used for non-finite values (NaN, infinity) where the difference and tolerance
-    /// are not defined.
-    #[inline]
-    pub fn fail(left: f64, right: f64) -> Self {
-        Self::Fail {
-            left,
-            right,
-            diff: None,
-            tol: None,
-        }
-    }
-
     /// Returns `true` if the comparison passed.
     ///
     /// # Examples
     ///
     /// ```
-    /// use lox_test_utils::approx_eq::ApproxEqResult;
+    /// use lox_approx::ApproxEqResult;
     ///
     /// let pass = ApproxEqResult::new(1.0, 1.0, 0.0, 0.0);
     /// assert!(pass.is_pass());
@@ -135,7 +140,7 @@ impl ApproxEqResult {
 
 /// A collection of comparison results.
 ///
-/// This type is the return value of [`ApproxEq::approx_eq`](crate::approx_eq::ApproxEq::approx_eq)
+/// This type is the return value of [`ApproxEq::approx_eq`](crate::ApproxEq::approx_eq)
 /// and can represent either a single comparison result or multiple results for composite types.
 ///
 /// # Variants
@@ -165,7 +170,7 @@ impl ApproxEqResults {
     /// # Examples
     ///
     /// ```
-    /// use lox_test_utils::approx_eq::ApproxEqResults;
+    /// use lox_approx::ApproxEqResults;
     ///
     /// let results = ApproxEqResults::new();
     /// assert!(results.is_approx_eq()); // Empty results pass
@@ -182,7 +187,7 @@ impl ApproxEqResults {
     /// # Examples
     ///
     /// ```
-    /// use lox_test_utils::approx_eq::{ApproxEqResult, ApproxEqResults};
+    /// use lox_approx::{ApproxEqResult, ApproxEqResults};
     ///
     /// let result = ApproxEqResult::new(1.0, 1.0001, 0.001, 0.0);
     /// let results = ApproxEqResults::single(result);
@@ -200,7 +205,7 @@ impl ApproxEqResults {
     /// # Examples
     ///
     /// ```
-    /// use lox_test_utils::approx_eq::{ApproxEqResult, ApproxEqResults};
+    /// use lox_approx::{ApproxEqResult, ApproxEqResults};
     ///
     /// let pass = ApproxEqResult::new(1.0, 1.0, 0.0, 0.0);
     /// let results = ApproxEqResults::single(pass);
@@ -225,7 +230,7 @@ impl ApproxEqResults {
     /// # Examples
     ///
     /// ```
-    /// use lox_test_utils::approx_eq::{ApproxEqResult, ApproxEqResults};
+    /// use lox_approx::{ApproxEqResult, ApproxEqResults};
     ///
     /// let fail = ApproxEqResult::new(1.0, 2.0, 0.0, 0.0);
     /// let results = ApproxEqResults::single(fail);
@@ -284,7 +289,7 @@ impl ApproxEqResults {
     /// # Examples
     ///
     /// ```
-    /// use lox_test_utils::approx_eq::{ApproxEq, ApproxEqResults};
+    /// use lox_approx::{ApproxEq, ApproxEqResults};
     ///
     /// let mut results = ApproxEqResults::new();
     /// results.merge("x", 1.0.approx_eq(&1.0, 0.0, 0.0));
@@ -346,6 +351,12 @@ impl Display for ApproxEqResults {
                     if let Some(tol) = tol {
                         writeln!(f, "Tol:   {:?}\n", tol)?;
                     }
+                }
+                ApproxEqResult::LengthMismatch { left, right } => {
+                    if !field.is_empty() {
+                        writeln!(f, "Field: {}", field)?;
+                    }
+                    writeln!(f, "Length mismatch: {} != {}\n", left, right)?;
                 }
             }
         }

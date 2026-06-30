@@ -29,7 +29,7 @@ zip = { workspace = true }
 
 [dev-dependencies]
 divan.workspace = true
-lox-test-utils = { workspace = true, features = ["derive"] }
+lox-approx = { workspace = true, features = ["std"] }
 tempfile = { workspace = true }
 
 [features]

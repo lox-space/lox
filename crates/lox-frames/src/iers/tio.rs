@@ -6,9 +6,9 @@
 //! Module tio exposes functions for calculating the Terrestrial Intermediate Origin (TIO) locator,
 //! s', which places the TIO on the equator of the Celestial Intermediate Pole (CIP).
 
+use lox_approx::ApproxEq;
 use lox_core::types::units::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};
-use lox_test_utils::ApproxEq;
 use lox_time::Time;
 use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::Tt;
@@ -39,7 +39,7 @@ impl TioLocator {
 
 #[cfg(test)]
 mod tests {
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
 
     use super::*;
 

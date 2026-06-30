@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use fast_polynomial::poly_array;
+use lox_approx::ApproxEq;
 use lox_core::glam::DMat3;
-use lox_test_utils::ApproxEq;
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tt};
 use lox_units::Angle;
 
@@ -230,7 +230,7 @@ impl PrecessionCorrectionsIau2000 {
 
 #[cfg(test)]
 mod tests {
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
     use lox_units::AngleUnits;
 
     use crate::iers::Iau2000Model;

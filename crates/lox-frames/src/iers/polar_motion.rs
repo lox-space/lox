@@ -52,8 +52,8 @@ impl PoleCoords {
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_core::units::AngleUnits;
-    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 

@@ -373,7 +373,7 @@ mod tests {
     use alloc::vec;
     use rstest::rstest;
 
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
 
     use super::*;
 

@@ -34,8 +34,8 @@ pub fn slant_range(elevation: Angle, earth_radius: Distance, altitude: Distance)
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_core::units::{DistanceUnits, FrequencyUnits};
-    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 

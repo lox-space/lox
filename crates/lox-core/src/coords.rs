@@ -11,7 +11,7 @@ use core::f64::consts::{FRAC_PI_2, TAU};
 use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use glam::{DMat3, DVec3};
-use lox_test_utils::ApproxEq;
+use lox_approx::ApproxEq;
 
 use crate::math::float::{abs, atan2, powi, sin_cos, sqrt};
 use thiserror::Error;
@@ -1220,7 +1220,7 @@ impl FromIterator<TimeStampedCartesian> for CartesianTrajectory {
 
 #[cfg(test)]
 mod tests {
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
     use rstest::rstest;
 
     use crate::units::{AngleUnits, AngularRate, DistanceUnits, VelocityUnits};

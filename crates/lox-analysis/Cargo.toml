@@ -48,7 +48,8 @@ serde = [
 
 [dev-dependencies]
 csv.workspace = true
-lox-test-utils = { workspace = true, features = ["std"] }
+lox-approx = { workspace = true, features = ["std", "glam"] }
+lox-test-utils.workspace = true
 
 [lib]
 doctest = false

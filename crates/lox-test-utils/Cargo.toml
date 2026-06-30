@@ -16,20 +16,3 @@ keywords.workspace = true
 categories.workspace = true
 readme = "README.md"
 
-[dependencies]
-lox-derive = { workspace = true, optional = true }
-glam.workspace = true
-libm = { workspace = true, optional = true }
-
-[dev-dependencies]
-divan.workspace = true
-
-[features]
-default = ["std"]
-std = ["glam/std"]
-libm = ["dep:libm", "glam/libm"]
-derive = ["dep:lox-derive"]
-
-[[bench]]
-name = "approx_eq"
-harness = false

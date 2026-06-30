@@ -1,14 +1,15 @@
-// SPDX-FileCopyrightText: 2025 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
 //
 // SPDX-License-Identifier: MPL-2.0
 
 //! Approximate equality testing for floating-point types.
 //!
-//! This module provides a robust framework for comparing floating-point values with configurable
-//! tolerances. It implements the NumPy-style `isclose` algorithm, which uses both absolute and
-//! relative tolerances to determine equality.
+//! This crate provides a robust framework for comparing floating-point values with configurable
+//! tolerances, using both absolute and relative tolerances to determine equality. It uses the
+//! same closeness formula as Python's `math.isclose` ([PEP 485]), with stricter tolerance
+//! validation: tolerances must be non-negative and finite.
 //!
-//! # Algorithm
+//! [PEP 485]: https://peps.python.org/pep-0485/
 //!
 //! Two values `a` and `b` are considered approximately equal if:
 //!
@@ -26,7 +27,7 @@
 //! and [`assert_approx_ne!`](crate::assert_approx_ne!) macros:
 //!
 //! ```
-//! use lox_test_utils::{approx_eq, assert_approx_eq};
+//! use lox_approx::{approx_eq, assert_approx_eq};
 //!
 //! // Default tolerances - uses rtol = sqrt(f64::EPSILON)
 //! assert!(approx_eq!(1.0, 1.0 + f64::EPSILON));
@@ -44,10 +45,9 @@
 //!
 //! The following types implement [`ApproxEq`] out of the box:
 //! - `f64` - scalar floating-point values
-//! - `glam::DVec3` - 3D vectors
-//! - `glam::DMat3` - 3×3 matrices
 //! - `Vec<T>` where `T: ApproxEq`
 //! - `[T; N]` where `T: ApproxEq`
+//! - `glam::DVec3` / `glam::DMat3` - 3D vectors and 3×3 matrices (requires the `glam` feature)
 //!
 //! # Custom Types
 //!
@@ -55,7 +55,7 @@
 //! (requires the `derive` feature):
 //!
 //! ```ignore
-//! use lox_test_utils::ApproxEq;
+//! use lox_approx::ApproxEq;
 //!
 //! #[derive(ApproxEq, Debug)]
 //! struct Vec3 {
@@ -64,34 +64,32 @@
 //!     z: f64,
 //! }
 //! ```
-//!
-//! # Performance
-//!
-//! This implementation is highly optimized for performance. Single scalar comparisons
-//! (e.g., `f64`) complete in sub-nanosecond time.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+#![warn(missing_docs)]
+
+extern crate alloc;
+
+use alloc::borrow::Cow;
 use alloc::format;
 use alloc::vec::Vec;
 use core::iter::zip;
 
+#[cfg(feature = "glam")]
 use glam::{DMat3, DVec3};
 
-pub mod macros;
-pub mod results;
+mod macros;
+mod results;
 
 pub use results::{ApproxEqResult, ApproxEqResults};
 
-#[inline]
-fn sqrt(x: f64) -> f64 {
-    #[cfg(feature = "std")]
-    {
-        x.sqrt()
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        libm::sqrt(x)
-    }
-}
+/// Derive macro for [`ApproxEq`] that compares structs field-by-field.
+#[cfg(feature = "derive")]
+#[doc(inline)]
+pub use lox_derive::ApproxEq;
+
+/// The default relative tolerance, `sqrt(f64::EPSILON)` ≈ 1.49e-8.
+const DEFAULT_RTOL: f64 = 1.4901161193847656e-8;
 
 /// Returns the default relative tolerance based on the absolute tolerance.
 ///
@@ -101,13 +99,13 @@ fn sqrt(x: f64) -> f64 {
 /// # Examples
 ///
 /// ```
-/// use lox_test_utils::approx_eq::default_rtol;
+/// use lox_approx::default_rtol;
 ///
 /// assert_eq!(default_rtol(0.0), f64::EPSILON.sqrt());
 /// assert_eq!(default_rtol(0.01), 0.0);
 /// ```
 pub fn default_rtol(atol: f64) -> f64 {
-    if atol > 0.0 { 0.0 } else { sqrt(f64::EPSILON) }
+    if atol > 0.0 { 0.0 } else { DEFAULT_RTOL }
 }
 
 /// Trait for types that can be compared for approximate equality.
@@ -125,7 +123,7 @@ pub fn default_rtol(atol: f64) -> f64 {
 /// Implementing for a custom type:
 ///
 /// ```
-/// use lox_test_utils::approx_eq::{ApproxEq, ApproxEqResults, ApproxEqResult};
+/// use lox_approx::{ApproxEq, ApproxEqResults, ApproxEqResult};
 ///
 /// #[derive(Debug)]
 /// struct Complex {
@@ -169,6 +167,7 @@ impl ApproxEq for f64 {
     }
 }
 
+#[cfg(feature = "glam")]
 impl ApproxEq for DVec3 {
     #[inline]
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
@@ -180,6 +179,7 @@ impl ApproxEq for DVec3 {
     }
 }
 
+#[cfg(feature = "glam")]
 impl ApproxEq for DMat3 {
     #[inline]
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
@@ -197,6 +197,16 @@ where
 {
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
         let mut results = ApproxEqResults::new();
+        if self.len() != rhs.len() {
+            results.insert(
+                Cow::Borrowed("len"),
+                ApproxEqResult::LengthMismatch {
+                    left: self.len(),
+                    right: rhs.len(),
+                },
+            );
+            return results;
+        }
         for (idx, (left, right)) in zip(self, rhs).enumerate() {
             results.merge(format!("{}", idx), left.approx_eq(right, atol, rtol));
         }
@@ -363,6 +373,8 @@ mod tests {
         assert_approx_eq!(4.32, 4.3, rtol <= 0.1, atol <= 0.01);
         assert_approx_eq!(1.001, 1.002, rtol <= 0.001, atol <= 0.0001);
         assert_approx_ne!(4.5, 4.9, rtol <= 0.001, atol <= 0.001);
+        assert_approx_eq!(100.0, 100.5, rtol <= 0.01);
+        assert_approx_ne!(4.5, 4.9, rtol <= 0.001);
     }
 
     #[test]
@@ -375,6 +387,83 @@ mod tests {
         assert!(approx_ne!(4.5, 4.9, rtol <= 0.001, atol <= 0.001));
     }
 
+    #[cfg(feature = "std")]
+    #[test]
+    fn test_assert_macros_evaluate_operands_once() {
+        use core::cell::Cell;
+
+        let calls = Cell::new(0);
+        let bump = |v: f64| {
+            calls.set(calls.get() + 1);
+            v
+        };
+
+        // assert_approx_ne! panics when the values are approximately equal; on that
+        // failure path the operand must still be evaluated exactly once.
+        let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            assert_approx_ne!(bump(1.0), 1.0);
+        }));
+        assert!(res.is_err());
+        assert_eq!(calls.get(), 1);
+
+        // The same holds for a tolerance expression on the eq failure path.
+        calls.set(0);
+        let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            assert_approx_eq!(1.0, 2.0, atol <= bump(0.0), rtol <= 0.0);
+        }));
+        assert!(res.is_err());
+        assert_eq!(calls.get(), 1);
+
+        // The atol-only arm feeds atol into default_rtol; it must still evaluate once.
+        calls.set(0);
+        let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            assert_approx_eq!(1.0, 2.0, atol <= bump(0.0));
+        }));
+        assert!(res.is_err());
+        assert_eq!(calls.get(), 1);
+
+        // And the bool macro's atol-only arm (the success path also exercises expansion).
+        calls.set(0);
+        assert!(approx_eq!(1.0, 1.0, atol <= bump(0.0)));
+        assert_eq!(calls.get(), 1);
+    }
+
+    #[test]
+    fn test_macros_path_qualified() {
+        // Macros must resolve their recursive self-calls via `$crate`, so a path-qualified
+        // invocation works without importing the macro.
+        assert!(crate::approx_eq!(1.0, 1.0));
+        assert!(crate::approx_ne!(1.0, 2.0));
+        crate::assert_approx_eq!(1.0, 1.0);
+        crate::assert_approx_ne!(1.0, 2.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "tolerances must be non-negative")]
+    fn test_negative_atol_panics() {
+        approx_eq!(1.0, 1.0, atol <= -0.1);
+    }
+
+    #[test]
+    #[should_panic(expected = "tolerances must be non-negative")]
+    fn test_negative_rtol_panics() {
+        approx_eq!(1.0, 1.0, rtol <= -0.1);
+    }
+
+    #[test]
+    fn test_approx_eq_non_finite() {
+        // Equal infinities are approximately equal (PEP 485 math.isclose semantics).
+        assert_approx_eq!(f64::INFINITY, f64::INFINITY);
+        assert_approx_eq!(f64::NEG_INFINITY, f64::NEG_INFINITY);
+
+        // Opposite infinities, infinity vs finite, and any NaN are not.
+        assert_approx_ne!(f64::INFINITY, f64::NEG_INFINITY);
+        assert_approx_ne!(f64::INFINITY, 1.0);
+        assert_approx_ne!(f64::NAN, f64::NAN);
+        assert_approx_ne!(f64::NAN, 1.0);
+    }
+
+    #[cfg(feature = "glam")]
     #[test]
     fn test_approx_eq_dvec3() {
         let v1 = DVec3::new(1.0, 1.0, 4.0);
@@ -396,6 +485,18 @@ mod tests {
     }
 
     #[test]
+    fn test_approx_eq_vec_length_mismatch() {
+        assert_approx_ne!(vec![1.0], vec![1.0, 2.0]);
+        assert_approx_ne!(vec![1.0, 2.0], vec![1.0]);
+        assert_approx_ne!(Vec::<f64>::new(), vec![1.0]);
+        // A matching prefix must not mask a trailing extra element.
+        assert_approx_ne!(vec![1.0, 1.0], vec![1.0, 1.0, 1.0]);
+
+        let result = vec![1.0].approx_eq(&vec![1.0, 2.0], 0.0, 1e-8).to_string();
+        assert!(result.contains("Length mismatch: 1 != 2"));
+    }
+
+    #[test]
     fn test_approx_eq_array() {
         let v1 = [1.0, 1.0, 4.0];
         let v2 = [1.0, 1.0, 4.00000000000001];
@@ -405,6 +506,7 @@ mod tests {
         assert_approx_ne!(v3, v4);
     }
 
+    #[cfg(feature = "glam")]
     #[test]
     fn test_approx_eq_display_results() {
         let v1 = DVec3::new(1.0, 1.0, 4.000000002);

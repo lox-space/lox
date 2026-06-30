@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
 //
 // SPDX-License-Identifier: MPL-2.0
 
@@ -35,7 +35,7 @@
 /// # Examples
 ///
 /// ```
-/// use lox_test_utils::approx_eq;
+/// use lox_approx::approx_eq;
 ///
 /// // Default tolerances
 /// assert!(approx_eq!(1.0, 1.0 + f64::EPSILON));
@@ -50,10 +50,9 @@
 /// // Both tolerances
 /// assert!(approx_eq!(1.0, 1.001, atol <= 0.01, rtol <= 0.01));
 ///
-/// // Works with vectors
-/// use glam::DVec3;
-/// let v1 = DVec3::new(1.0, 2.0, 3.0);
-/// let v2 = DVec3::new(1.0 + f64::EPSILON, 2.0, 3.0);
+/// // Works with composite types like arrays and vectors
+/// let v1 = [1.0, 2.0, 3.0];
+/// let v2 = [1.0 + f64::EPSILON, 2.0, 3.0];
 /// assert!(approx_eq!(v1, v2));
 /// ```
 ///
@@ -64,29 +63,20 @@
 #[macro_export]
 macro_rules! approx_eq {
     ($lhs:expr, $rhs:expr) => {
-        approx_eq!(
-            $lhs,
-            $rhs,
-            atol <= 0.0,
-            rtol <= $crate::approx_eq::default_rtol(0.0)
-        )
+        $crate::approx_eq!($lhs, $rhs, atol <= 0.0, rtol <= $crate::default_rtol(0.0))
     };
     ($lhs:expr, $rhs:expr, rtol <= $rtol:expr) => {
-        approx_eq!($lhs, $rhs, atol <= 0.0, rtol <= $rtol)
+        $crate::approx_eq!($lhs, $rhs, atol <= 0.0, rtol <= $rtol)
     };
-    ($lhs:expr, $rhs:expr, atol <= $atol:expr) => {
-        approx_eq!(
-            $lhs,
-            $rhs,
-            atol <= $atol,
-            rtol <= $crate::approx_eq::default_rtol($atol)
-        )
-    };
+    ($lhs:expr, $rhs:expr, atol <= $atol:expr) => {{
+        let atol = $atol;
+        $crate::approx_eq!($lhs, $rhs, atol <= atol, rtol <= $crate::default_rtol(atol))
+    }};
     ($lhs:expr, $rhs:expr, rtol <= $rtol:expr, atol <= $atol:expr) => {
-        approx_eq!($lhs, $rhs, atol <= $atol, rtol <= $rtol)
+        $crate::approx_eq!($lhs, $rhs, atol <= $atol, rtol <= $rtol)
     };
     ($lhs:expr, $rhs:expr, atol <= $atol:expr, rtol <= $rtol:expr) => {
-        $crate::approx_eq::approx_eq_helper(&$lhs, &$rhs, $atol, $rtol).is_approx_eq()
+        $crate::approx_eq_helper(&$lhs, &$rhs, $atol, $rtol).is_approx_eq()
     };
 }
 
@@ -108,7 +98,7 @@ macro_rules! approx_eq {
 /// # Examples
 ///
 /// ```
-/// use lox_test_utils::approx_ne;
+/// use lox_approx::approx_ne;
 ///
 /// // Values that differ significantly
 /// assert!(approx_ne!(1.0, 2.0));
@@ -129,29 +119,20 @@ macro_rules! approx_eq {
 #[macro_export]
 macro_rules! approx_ne {
     ($lhs:expr, $rhs:expr) => {
-        approx_ne!(
-            $lhs,
-            $rhs,
-            atol <= 0.0,
-            rtol <= $crate::approx_eq::default_rtol(0.0)
-        )
+        $crate::approx_ne!($lhs, $rhs, atol <= 0.0, rtol <= $crate::default_rtol(0.0))
     };
     ($lhs:expr, $rhs:expr, rtol <= $rtol:expr) => {
-        approx_ne!($lhs, $rhs, atol <= 0.0, rtol <= $rtol)
+        $crate::approx_ne!($lhs, $rhs, atol <= 0.0, rtol <= $rtol)
     };
-    ($lhs:expr, $rhs:expr, atol <= $atol:expr) => {
-        approx_ne!(
-            $lhs,
-            $rhs,
-            atol <= $atol,
-            rtol <= $crate::approx_eq::default_rtol($atol)
-        )
-    };
+    ($lhs:expr, $rhs:expr, atol <= $atol:expr) => {{
+        let atol = $atol;
+        $crate::approx_ne!($lhs, $rhs, atol <= atol, rtol <= $crate::default_rtol(atol))
+    }};
     ($lhs:expr, $rhs:expr, rtol <= $rtol:expr, atol <= $atol:expr) => {
-        approx_ne!($lhs, $rhs, atol <= $atol, rtol <= $rtol)
+        $crate::approx_ne!($lhs, $rhs, atol <= $atol, rtol <= $rtol)
     };
     ($lhs:expr, $rhs:expr, atol <= $atol:expr, rtol <= $rtol:expr) => {
-        $crate::approx_eq::approx_eq_helper(&$lhs, &$rhs, $atol, $rtol).is_approx_ne()
+        $crate::approx_eq_helper(&$lhs, &$rhs, $atol, $rtol).is_approx_ne()
     };
 }
 
@@ -177,7 +158,7 @@ macro_rules! approx_ne {
 /// # Examples
 ///
 /// ```
-/// use lox_test_utils::assert_approx_eq;
+/// use lox_approx::assert_approx_eq;
 ///
 /// // This passes - values are within default tolerance
 /// assert_approx_eq!(1.0, 1.0 + f64::EPSILON);
@@ -185,10 +166,9 @@ macro_rules! approx_ne {
 /// // Custom tolerance
 /// assert_approx_eq!(1.0, 1.005, atol <= 0.01);
 ///
-/// // Works with vectors
-/// use glam::DVec3;
-/// let v1 = DVec3::new(1.0, 2.0, 3.0);
-/// let v2 = DVec3::new(1.0, 2.0, 3.0 + f64::EPSILON);
+/// // Works with composite types like arrays and vectors
+/// let v1 = [1.0, 2.0, 3.0];
+/// let v2 = [1.0, 2.0, 3.0 + f64::EPSILON];
 /// assert_approx_eq!(v1, v2);
 /// ```
 ///
@@ -197,7 +177,7 @@ macro_rules! approx_ne {
 /// Panics with a detailed error message if the values are not approximately equal:
 ///
 /// ```should_panic
-/// use lox_test_utils::assert_approx_eq;
+/// use lox_approx::assert_approx_eq;
 ///
 /// // This will panic with a detailed error message
 /// assert_approx_eq!(1.0, 2.0);
@@ -210,36 +190,36 @@ macro_rules! approx_ne {
 #[macro_export]
 macro_rules! assert_approx_eq {
     ($lhs:expr, $rhs:expr) => {
-        assert_approx_eq!(
-            $lhs,
-            $rhs,
-            atol <= 0.0,
-            rtol <= $crate::approx_eq::default_rtol(0.0)
-        )
+        $crate::assert_approx_eq!($lhs, $rhs, atol <= 0.0, rtol <= $crate::default_rtol(0.0))
     };
     ($lhs:expr, $rhs:expr, rtol <= $rtol:expr) => {
-        assert_approx_eq!($lhs, $rhs, atol <= 0.0, rtol <= $rtol);
+        $crate::assert_approx_eq!($lhs, $rhs, atol <= 0.0, rtol <= $rtol);
     };
-    ($lhs:expr, $rhs:expr, atol <= $atol:expr) => {
-        assert_approx_eq!(
+    ($lhs:expr, $rhs:expr, atol <= $atol:expr) => {{
+        let atol = $atol;
+        $crate::assert_approx_eq!(
             &$lhs,
             &$rhs,
-            atol <= $atol,
-            rtol <= $crate::approx_eq::default_rtol($atol)
+            atol <= atol,
+            rtol <= $crate::default_rtol(atol)
         )
-    };
+    }};
     ($lhs:expr, $rhs:expr, rtol <= $rtol:expr, atol <= $atol:expr) => {
-        assert_approx_eq!($lhs, $rhs, atol <= $atol, rtol <= $rtol)
+        $crate::assert_approx_eq!($lhs, $rhs, atol <= $atol, rtol <= $rtol)
     };
     ($lhs:expr, $rhs:expr, atol <= $atol:expr, rtol <= $rtol:expr) => {{
-        let result = $crate::approx_eq::approx_eq_helper(&$lhs, &$rhs, $atol, $rtol);
+        let lhs = &$lhs;
+        let rhs = &$rhs;
+        let atol = $atol;
+        let rtol = $rtol;
+        let result = $crate::approx_eq_helper(lhs, rhs, atol, rtol);
         assert!(
             result.is_approx_eq(),
             "{} ≉ {}\n\nAbsolute tolerance: {:?}\nRelative tolerance: {:?}\n\n{}",
             stringify!($lhs),
             stringify!($rhs),
-            $atol,
-            $rtol,
+            atol,
+            rtol,
             result
         )
     }};
@@ -263,7 +243,7 @@ macro_rules! assert_approx_eq {
 /// # Examples
 ///
 /// ```
-/// use lox_test_utils::assert_approx_ne;
+/// use lox_approx::assert_approx_ne;
 ///
 /// // Values differ significantly
 /// assert_approx_ne!(1.0, 2.0);
@@ -272,10 +252,9 @@ macro_rules! assert_approx_eq {
 /// // Custom tolerance - these values differ beyond 1%
 /// assert_approx_ne!(1.0, 1.5, atol <= 0.01);
 ///
-/// // Works with vectors
-/// use glam::DVec3;
-/// let v1 = DVec3::new(1.0, 2.0, 3.0);
-/// let v2 = DVec3::new(1.0, 2.0, 5.0);  // z differs significantly
+/// // Works with composite types like arrays and vectors
+/// let v1 = [1.0, 2.0, 3.0];
+/// let v2 = [1.0, 2.0, 5.0];  // last element differs significantly
 /// assert_approx_ne!(v1, v2);
 /// ```
 ///
@@ -284,7 +263,7 @@ macro_rules! assert_approx_eq {
 /// Panics if the values are approximately equal within the tolerances:
 ///
 /// ```should_panic
-/// use lox_test_utils::assert_approx_ne;
+/// use lox_approx::assert_approx_ne;
 ///
 /// // This will panic because the values are equal
 /// assert_approx_ne!(1.0, 1.0);
@@ -297,36 +276,31 @@ macro_rules! assert_approx_eq {
 #[macro_export]
 macro_rules! assert_approx_ne {
     ($lhs:expr, $rhs:expr) => {
-        assert_approx_ne!(
-            &$lhs,
-            &$rhs,
-            atol <= 0.0,
-            rtol <= $crate::approx_eq::default_rtol(0.0)
-        )
+        $crate::assert_approx_ne!(&$lhs, &$rhs, atol <= 0.0, rtol <= $crate::default_rtol(0.0))
     };
     ($lhs:expr, $rhs:expr, rtol <= $rtol:expr) => {
-        assert_approx_ne!($lhs, $rhs, 0.0, $rtol)
+        $crate::assert_approx_ne!($lhs, $rhs, atol <= 0.0, rtol <= $rtol)
     };
-    ($lhs:expr, $rhs:expr, atol <= $atol:expr) => {
-        assert_approx_ne!(
-            $lhs,
-            $rhs,
-            atol <= $atol,
-            rtol <= $crate::approx_eq::default_rtol($atol)
-        )
-    };
+    ($lhs:expr, $rhs:expr, atol <= $atol:expr) => {{
+        let atol = $atol;
+        $crate::assert_approx_ne!($lhs, $rhs, atol <= atol, rtol <= $crate::default_rtol(atol))
+    }};
     ($lhs:expr, $rhs:expr, rtol <= $rtol:expr, atol <= $atol:expr) => {
-        assert_approx_ne!($lhs, $rhs, atol <= $atol, rtol <= $rtol)
+        $crate::assert_approx_ne!($lhs, $rhs, atol <= $atol, rtol <= $rtol)
     };
     ($lhs:expr, $rhs:expr, atol <= $atol:expr, rtol <= $rtol:expr) => {{
-        let result = $crate::approx_eq::approx_eq_helper(&$lhs, &$rhs, $atol, $rtol);
+        let lhs = &$lhs;
+        let rhs = &$rhs;
+        let atol = $atol;
+        let rtol = $rtol;
+        let result = $crate::approx_eq_helper(lhs, rhs, atol, rtol);
         assert!(
             result.is_approx_ne(),
             "{:?} ≈ {:?}\n\nAbsolute tolerance: {:?}\nRelative tolerance: {:?}",
-            $lhs,
-            $rhs,
-            $atol,
-            $rtol,
+            lhs,
+            rhs,
+            atol,
+            rtol,
         )
     }};
 }

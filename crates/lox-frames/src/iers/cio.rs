@@ -5,8 +5,8 @@
 
 //! Module cio exposes functions for calculating the Celestial Intermediate Origin (CIO) locator, s.
 
+use lox_approx::ApproxEq;
 use lox_core::units::Angle;
-use lox_test_utils::ApproxEq;
 
 pub mod iau2006;
 

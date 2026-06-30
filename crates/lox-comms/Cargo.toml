@@ -26,7 +26,7 @@ serde = { workspace = true, optional = true }
 serde = ["dep:serde", "lox-core/serde"]
 
 [dev-dependencies]
-lox-test-utils = { workspace = true, features = ["derive"] }
+lox-approx = { workspace = true, features = ["std", "glam"] }
 serde_json = { workspace = true, features = ["float_roundtrip"] }
 
 [lib]

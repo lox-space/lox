@@ -148,8 +148,8 @@ pub fn neptune_l_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 #[cfg(test)]
 mod tests {
 
+    use lox_approx::assert_approx_eq;
     use lox_core::types::units::JulianCenturies;
-    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 

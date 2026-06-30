@@ -5,7 +5,7 @@
 use std::ops::{Add, Sub};
 use std::str::FromStr;
 
-use lox_test_utils::{ApproxEq, approx_eq};
+use lox_approx::{ApproxEq, approx_eq};
 use lox_time::subsecond::Subsecond;
 use pyo3::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};

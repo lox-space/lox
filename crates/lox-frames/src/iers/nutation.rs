@@ -8,9 +8,9 @@
 
 use std::ops::Add;
 
+use lox_approx::ApproxEq;
 use lox_core::glam::DMat3;
 use lox_core::units::Angle;
-use lox_test_utils::ApproxEq;
 use lox_time::{
     Time,
     time_scales::{Tdb, Tt},
@@ -101,8 +101,8 @@ impl Add<&Self> for Nutation {
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_core::units::AngleUnits;
-    use lox_test_utils::assert_approx_eq;
 
     use super::*;
 

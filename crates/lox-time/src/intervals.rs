@@ -9,9 +9,9 @@ use core::{
     ops::{Add, Sub},
 };
 
+use lox_approx::ApproxEq;
+use lox_approx::ApproxEqResults;
 use lox_core::time::deltas::TimeDelta;
-use lox_test_utils::approx_eq::ApproxEq;
-use lox_test_utils::approx_eq::results::ApproxEqResults;
 
 use crate::{
     Time,

@@ -122,8 +122,8 @@ fn planetary_nutation(
 /// All fixtures and assertion values were generated using the ERFA C library unless otherwise
 /// stated.
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_core::units::AngleUnits;
-    use lox_test_utils::assert_approx_eq;
     use lox_time::{Time, time_scales::Tdb};
 
     use crate::iers::nutation::Nutation;

@@ -4,17 +4,12 @@
 
 //! Test utilities for the Lox ecosystem.
 //!
-//! Provides approximate equality testing (`approx_eq`), test data helpers, and the
-//! `#[derive(ApproxEq)]` macro (behind the `derive` feature).
+//! Provides test data helpers for locating and reading files from the workspace
+//! `data` fixture directory. Approximate equality testing now lives in the
+//! `lox-approx` crate.
 
-#![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
 
-extern crate alloc;
-
-pub mod approx_eq;
-
-#[cfg(feature = "std")]
 mod fixtures {
     use std::{
         fs::read_to_string,
@@ -40,9 +35,4 @@ mod fixtures {
     }
 }
 
-#[cfg(feature = "std")]
 pub use fixtures::{data_dir, data_file, read_data_file};
-
-#[cfg(feature = "derive")]
-#[doc(inline)]
-pub use lox_derive::ApproxEq;

@@ -259,9 +259,9 @@ mod tests {
     use crate::rotations::TryRotation;
     use crate::{Iau, providers::DefaultRotationProvider};
 
+    use lox_approx::assert_approx_eq;
     use lox_bodies::{DynOrigin, Earth};
     use lox_core::glam::DVec3;
-    use lox_test_utils::assert_approx_eq;
     use lox_time::utc::Utc;
     use rstest::rstest;
 

@@ -297,11 +297,11 @@ where
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_bodies::Earth;
     use lox_core::coords::Cartesian;
     use lox_frames::Icrf;
     use lox_frames::providers::DefaultRotationProvider;
-    use lox_test_utils::assert_approx_eq;
     use lox_time::intervals::Interval;
     use lox_time::time_scales::Tdb;
     use lox_time::{time, utc};

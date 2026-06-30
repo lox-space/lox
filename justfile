@@ -48,7 +48,7 @@ lint-clippy *ARGS:
 # Bare-metal (no_std) clippy lint. Requires the thumbv7em-none-eabi target
 # (`rustup target add thumbv7em-none-eabi`).
 lint-clippy-embedded *ARGS:
-    cargo clippy -p lox-core -p lox-test-utils -p lox-math -p lox-units -p lox-bodies -p lox-time --no-default-features --features libm --target thumbv7em-none-eabi {{ARGS}} -- -D warnings
+    cargo clippy -p lox-core -p lox-approx -p lox-math -p lox-units -p lox-bodies -p lox-time --no-default-features --features libm --target thumbv7em-none-eabi {{ARGS}} -- -D warnings
 
 lint-rustfmt *ARGS:
     cargo fmt --check {{ARGS}}

@@ -17,7 +17,7 @@ categories.workspace = true
 readme = "README.md"
 
 [dependencies]
-lox-test-utils = { workspace = true, default-features = false, features = ["derive"] }
+lox-approx = { workspace = true, default-features = false, features = ["derive", "glam"] }
 
 chrono = { workspace = true, optional = true }
 fast_polynomial.workspace = true
@@ -33,7 +33,7 @@ std = [
     "glam/std",
     "nom/std",
     "fast_polynomial/std",
-    "lox-test-utils/std",
+    "lox-approx/std",
     "chrono?/std",
     "serde?/std",
 ]
@@ -41,7 +41,6 @@ libm = [
     "dep:libm",
     "glam/libm",
     "fast_polynomial/libm",
-    "lox-test-utils/libm",
 ]
 chrono = ["dep:chrono"]
 serde = ["dep:serde", "glam/serde"]

@@ -244,7 +244,7 @@ impl WalkerStarBuilder {
 mod tests {
     use std::collections::HashSet;
 
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
     use lox_units::{AngleUnits, DistanceUnits};
 
     use super::*;

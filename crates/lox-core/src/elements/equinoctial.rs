@@ -182,7 +182,7 @@ impl Equinoctial {
 
 #[cfg(test)]
 mod tests {
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
 
     use crate::elements::keplerian::GravitationalParameter;
     use crate::units::{AngleUnits, DistanceUnits, VelocityUnits};

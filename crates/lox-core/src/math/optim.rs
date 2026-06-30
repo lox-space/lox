@@ -4,7 +4,7 @@
 
 //! Bracketed optimization algorithms.
 
-use lox_test_utils::approx_eq;
+use lox_approx::approx_eq;
 
 use super::roots::{Callback, RootFinderError};
 use crate::math::float::abs;
@@ -159,7 +159,7 @@ where
 mod tests {
     use alloc::boxed::Box;
     use core::f64::consts::PI;
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
 
     use super::*;
     use crate::math::float::{cos, powi};

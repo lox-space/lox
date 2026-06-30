@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: 2025 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
 //
 // SPDX-License-Identifier: MPL-2.0
 
 use divan::Bencher;
 use glam::{DMat3, DVec3};
-use lox_test_utils::approx_eq;
+use lox_approx::approx_eq;
 
 fn main() {
     divan::main();

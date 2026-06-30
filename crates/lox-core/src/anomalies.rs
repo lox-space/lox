@@ -23,7 +23,7 @@
 //! - For hyperbolic orbits: represents hyperbolic anomaly F
 //! - For parabolic orbits: represents parabolic anomaly D (stored as radians)
 
-use lox_test_utils::approx_eq::{ApproxEq, ApproxEqResults};
+use lox_approx::{ApproxEq, ApproxEqResults};
 use thiserror::Error;
 
 use crate::math::float::{abs, atan, atanh, cbrt, cos, cosh, powi, sin, sinh, sqrt, tan, tanh};

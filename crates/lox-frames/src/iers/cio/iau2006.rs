@@ -92,7 +92,7 @@ fn evaluate_single_order_terms(
 
 #[cfg(test)]
 mod tests {
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
 
     use super::*;
 

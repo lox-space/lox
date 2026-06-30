@@ -10,8 +10,8 @@ use core::f64::consts::TAU;
 use core::fmt::Display;
 
 use glam::DVec3;
-use lox_test_utils::ApproxEq;
-use lox_test_utils::approx_eq;
+use lox_approx::ApproxEq;
+use lox_approx::approx_eq;
 use thiserror::Error;
 
 use crate::math::float::{ln, powf, powi, signum, sqrt};
@@ -651,7 +651,7 @@ impl KeplerianBuilder {
 
 #[cfg(test)]
 mod tests {
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
 
     use crate::units::VelocityUnits;
 

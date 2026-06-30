@@ -4,10 +4,10 @@
 
 use std::{fmt::Display, ops::Mul};
 
+use lox_approx::ApproxEq;
 use lox_bodies::{TryRotationalElements, UndefinedOriginPropertyError};
 use lox_core::glam::{DMat3, DVec3};
 use lox_core::{coords::Cartesian, f64::consts::ROTATION_RATE_EARTH};
-use lox_test_utils::ApproxEq;
 use lox_time::{
     Time,
     julian_dates::JulianDate,
@@ -618,7 +618,7 @@ impl From<DMat3> for Rotation {
 mod tests {
     use std::convert::Infallible;
 
-    use lox_test_utils::assert_approx_eq;
+    use lox_approx::assert_approx_eq;
     use lox_time::{deltas::TimeDelta, offsets::OffsetProvider};
     use lox_units::AngleUnits;
 

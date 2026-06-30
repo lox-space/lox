@@ -18,12 +18,12 @@ categories.workspace = true
 readme = "README.md"
 
 [dependencies]
+lox-approx = { workspace = true, features = ["std", "glam"] }
 lox-core = { workspace = true, features = ["std"] }
 lox-frames.workspace = true
 lox-io.workspace = true
 lox-time.workspace = true
 lox-math.workspace = true
-lox-test-utils = { workspace = true, features = ["std"] }
 
 csv.workspace = true
 fast_polynomial = { workspace = true, features = ["std"] }
@@ -31,6 +31,7 @@ serde.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+lox-test-utils.workspace = true
 rstest.workspace = true
 
 [lib]
