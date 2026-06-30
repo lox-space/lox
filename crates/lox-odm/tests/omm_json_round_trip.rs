@@ -11,6 +11,7 @@
 //! [`lox_odm::json::read_omm_list`], [`lox_odm::json::write_omm`],
 //! [`lox_odm::json::write_omm_list`].
 
+use lox_approx::assert_approx_eq;
 use lox_odm::json::{read_omm, read_omm_list, write_omm, write_omm_list};
 
 const NUSAT_8: &str = r#"{
@@ -72,7 +73,7 @@ fn nusat_8_tle_parameters_populated() {
     assert_eq!(tle.classification_type.as_deref(), Some("U"));
     assert_eq!(tle.element_set_no, Some(999));
     assert_eq!(tle.rev_at_epoch, Some(5327));
-    assert!((tle.bstar.unwrap() - 8.4553e-5).abs() < 1e-12);
+    assert_approx_eq!(tle.bstar, Some(8.4553e-5), atol <= 1e-12);
 }
 
 #[test]

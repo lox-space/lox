@@ -969,6 +969,7 @@ pub fn read_opm(input: &str) -> Result<Opm, KvnError> {
 mod tests {
     use std::collections::BTreeMap;
 
+    use lox_approx::assert_approx_eq;
     use lox_bodies::DynOrigin;
     use lox_core::elements::{GravitationalParameter, Keplerian};
     use lox_core::units::{Angle, Distance, Mass, Velocity};
@@ -1692,7 +1693,7 @@ DRAG_COEFF = 2.2
         let sp = parsed
             .spacecraft
             .expect("spacecraft block should be present");
-        assert!((sp.mass.unwrap().to_kilograms() - 500.0).abs() < 1e-9);
+        assert_approx_eq!(sp.mass.map(|v| v.to_kilograms()), Some(500.0), atol <= 1e-9);
         assert_eq!(sp.solar_rad_coeff, Some(1.2));
         assert_eq!(sp.drag_coeff, Some(2.2));
     }
@@ -1883,7 +1884,7 @@ MAN_DV_2 = 0.0 [km/s]
         let sp = parsed
             .spacecraft
             .expect("spacecraft block should survive round-trip");
-        assert!((sp.mass.unwrap().to_kilograms() - 200.0).abs() < 1e-9);
+        assert_approx_eq!(sp.mass.map(|v| v.to_kilograms()), Some(200.0), atol <= 1e-9);
     }
 
     #[test]

@@ -838,6 +838,7 @@ mod tests {
     use std::collections::BTreeMap;
     use std::f64::consts::PI;
 
+    use lox_approx::assert_approx_eq;
     use lox_bodies::DynOrigin;
     use lox_core::elements::{GravitationalParameter, MeanElements};
     use lox_core::units::{Area, AreaToMass, Mass};
@@ -1132,7 +1133,7 @@ mod tests {
         assert_eq!(tle.norad_cat_id, Some(45018));
         assert_eq!(tle.element_set_no, Some(999));
         assert_eq!(tle.rev_at_epoch, Some(5327));
-        assert!((tle.bstar.unwrap() - 8.4553e-5).abs() < 1e-10);
+        assert_approx_eq!(tle.bstar, Some(8.4553e-5), atol <= 1e-10);
     }
 
     #[test]
@@ -1488,7 +1489,7 @@ Z_DOT = 0.0 [km/s]
         let written = write_omm(&omm);
         let parsed = read_omm(&written).expect("parse failed");
         let sp = parsed.spacecraft.expect("spacecraft block should survive");
-        assert!((sp.mass.unwrap().to_kilograms() - 150.0).abs() < 1e-9);
+        assert_approx_eq!(sp.mass.map(|v| v.to_kilograms()), Some(150.0), atol <= 1e-9);
         assert_eq!(
             parsed.user_defined.get("OPERATOR"),
             Some(&"GSOC".to_string())
