@@ -88,8 +88,67 @@ pub trait FindBracketedRoot<F>
 where
     F: Callback,
 {
+    /// Finds a root of `f` within `bracket`, reusing the function values at the
+    /// bracket endpoints instead of evaluating them again.
+    ///
+    /// `values` must equal `(f(bracket.0), f(bracket.1))`.
+    fn find_in_bracket_with_values(
+        &self,
+        f: F,
+        bracket: (f64, f64),
+        values: (f64, f64),
+    ) -> Result<f64, RootFinderError>;
+
     /// Finds a root of `f` within the given `bracket`.
-    fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError>;
+    fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError> {
+        let fa = f.call(bracket.0).map_err(RootFinderError::Callback)?;
+        let fb = f.call(bracket.1).map_err(RootFinderError::Callback)?;
+        self.find_in_bracket_with_values(f, bracket, (fa, fb))
+    }
+}
+
+/// Direction of a zero-crossing of a scalar function between two samples.
+///
+/// Classification uses a half-open convention: a sample of `0.0` belongs to the
+/// non-negative ("active") side, so a crossing is a transition between a
+/// negative sample and a non-negative one. This matches the `value >= 0`
+/// convention used by interval/event detection. `NaN` samples do not define a
+/// direction.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ZeroCrossing {
+    /// The signal crosses from negative to non-negative.
+    Up,
+    /// The signal crosses from non-negative to negative.
+    Down,
+}
+
+impl ZeroCrossing {
+    /// Classifies the crossing direction between two consecutive samples `s0`
+    /// and `s1`, returning `None` when there is no crossing or either sample is
+    /// `NaN`.
+    ///
+    /// A value of `0.0` counts as the non-negative side, so brackets are
+    /// half-open.
+    pub fn new(s0: f64, s1: f64) -> Option<ZeroCrossing> {
+        if s0.is_nan() || s1.is_nan() {
+            return None;
+        }
+        match (s0 < 0.0, s1 < 0.0) {
+            (true, false) => Some(ZeroCrossing::Up),
+            (false, true) => Some(ZeroCrossing::Down),
+            _ => None,
+        }
+    }
+}
+
+impl core::fmt::Display for ZeroCrossing {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            ZeroCrossing::Up => write!(f, "up"),
+            ZeroCrossing::Down => write!(f, "down"),
+        }
+    }
 }
 
 /// Steffensen's method for root-finding (derivative-free).
@@ -190,15 +249,19 @@ impl<F> FindBracketedRoot<F> for Brent
 where
     F: Callback,
 {
-    fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError> {
+    fn find_in_bracket_with_values(
+        &self,
+        f: F,
+        bracket: (f64, f64),
+        values: (f64, f64),
+    ) -> Result<f64, RootFinderError> {
         let mut fblk = 0.0;
         let mut xblk = 0.0;
         let (mut xpre, mut xcur) = bracket;
         let mut spre = 0.0;
         let mut scur = 0.0;
 
-        let mut fpre = f.call(xpre).map_err(RootFinderError::Callback)?;
-        let mut fcur = f.call(xcur).map_err(RootFinderError::Callback)?;
+        let (mut fpre, mut fcur) = values;
 
         if fpre * fcur > 0.0 {
             return Err(RootFinderError::NotInBracket);
@@ -299,12 +362,16 @@ impl<F> FindBracketedRoot<F> for Secant
 where
     F: Callback,
 {
-    fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError> {
+    fn find_in_bracket_with_values(
+        &self,
+        f: F,
+        bracket: (f64, f64),
+        values: (f64, f64),
+    ) -> Result<f64, RootFinderError> {
         let (x0, x1) = bracket;
         let mut p0 = x0;
         let mut p1 = x1;
-        let mut q0 = f.call(p0).map_err(RootFinderError::Callback)?;
-        let mut q1 = f.call(p1).map_err(RootFinderError::Callback)?;
+        let (mut q0, mut q1) = values;
         if abs(q1) < abs(q0) {
             core::mem::swap(&mut p0, &mut p1);
             core::mem::swap(&mut q0, &mut q1);
@@ -467,5 +534,63 @@ mod tests {
                 (-1.0, 2.0),
             )
             .unwrap();
+    }
+
+    #[test]
+    fn test_zero_crossing() {
+        // Negative -> positive is Up; positive -> negative is Down.
+        assert_eq!(ZeroCrossing::new(-1.0, 1.0), Some(ZeroCrossing::Up));
+        assert_eq!(ZeroCrossing::new(1.0, -1.0), Some(ZeroCrossing::Down));
+        // Same side -> no crossing.
+        assert_eq!(ZeroCrossing::new(-1.0, -2.0), None);
+        assert_eq!(ZeroCrossing::new(1.0, 2.0), None);
+        // Half-open: zero counts as the non-negative side.
+        assert_eq!(ZeroCrossing::new(-1.0, 0.0), Some(ZeroCrossing::Up));
+        assert_eq!(ZeroCrossing::new(0.0, -1.0), Some(ZeroCrossing::Down));
+        assert_eq!(ZeroCrossing::new(0.0, 1.0), None);
+        assert_eq!(ZeroCrossing::new(1.0, 0.0), None);
+        // The sign of zero does not affect classification.
+        assert_eq!(ZeroCrossing::new(-1.0, -0.0), Some(ZeroCrossing::Up));
+        assert_eq!(ZeroCrossing::new(-0.0, -1.0), Some(ZeroCrossing::Down));
+        // NaN never defines a direction.
+        assert_eq!(ZeroCrossing::new(f64::NAN, 1.0), None);
+        assert_eq!(ZeroCrossing::new(-1.0, f64::NAN), None);
+    }
+
+    #[test]
+    fn test_find_in_bracket_with_values_reuses_endpoints() {
+        use core::cell::Cell;
+
+        let f = |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) };
+        let (a, b) = (1.0, 1.5);
+        let fa = powi(a, 3) + 4.0 * powi(a, 2) - 10.0;
+        let fb = powi(b, 3) + 4.0 * powi(b, 2) - 10.0;
+
+        // The value-reuse entry point agrees with the recomputing one.
+        let brent = Brent::default();
+        let via_values = brent
+            .find_in_bracket_with_values(f, (a, b), (fa, fb))
+            .expect("should converge");
+        let via_recompute = brent.find_in_bracket(f, (a, b)).expect("should converge");
+        assert_approx_eq!(via_values, via_recompute, rtol <= 1e-12);
+
+        let secant = Secant::default();
+        let via_values = secant
+            .find_in_bracket_with_values(f, (a, b), (fa, fb))
+            .expect("should converge");
+        assert_approx_eq!(via_values, 1.3652300134140969, rtol <= 1e-8);
+
+        // The supplied endpoints are not re-evaluated.
+        let count = Cell::new(0usize);
+        let counting = |x: f64| -> Result {
+            if x == a || x == b {
+                count.set(count.get() + 1);
+            }
+            Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0)
+        };
+        Brent::default()
+            .find_in_bracket_with_values(counting, (a, b), (fa, fb))
+            .expect("should converge");
+        assert_eq!(count.get(), 0, "endpoints must not be re-evaluated");
     }
 }
