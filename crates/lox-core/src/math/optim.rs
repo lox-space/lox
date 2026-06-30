@@ -5,9 +5,30 @@
 //! Bracketed optimization algorithms.
 
 use lox_approx::approx_eq;
+use thiserror::Error;
 
-use super::roots::{Callback, RootFinderError};
+use super::roots::{Callback, CallbackError};
 use crate::math::float::abs;
+
+/// Error returned by bracketed minimization algorithms.
+#[derive(Debug, Error)]
+pub enum MinimizerError {
+    /// The algorithm did not converge within the maximum number of iterations.
+    #[error(
+        "minimization did not converge after {iterations} iterations at x = {x}, f(x) = {value}"
+    )]
+    NotConverged {
+        /// Number of iterations performed before giving up.
+        iterations: u32,
+        /// The best minimizer estimate reached.
+        x: f64,
+        /// The objective value `f(x)` at the best estimate.
+        value: f64,
+    },
+    /// The objective function returned an error.
+    #[error(transparent)]
+    Callback(#[from] CallbackError),
+}
 
 /// Finds the minimum of a function within a bracket.
 pub trait FindBracketedMinimum<F>
@@ -15,7 +36,7 @@ where
     F: Callback,
 {
     /// Finds the x value that minimizes `f` within the given `bracket`.
-    fn find_minimum_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError>;
+    fn find_minimum_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, MinimizerError>;
 }
 
 /// Brent's method for finding the minimum of a unimodal function in a bracket.
@@ -45,7 +66,7 @@ impl<F> FindBracketedMinimum<F> for BrentMinimizer
 where
     F: Callback,
 {
-    fn find_minimum_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError> {
+    fn find_minimum_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, MinimizerError> {
         let (mut a, mut b) = bracket;
         if a > b {
             core::mem::swap(&mut a, &mut b);
@@ -151,10 +172,10 @@ where
             }
         }
 
-        Err(RootFinderError::NotConverged {
+        Err(MinimizerError::NotConverged {
             iterations: self.max_iter,
             x,
-            residual: fx,
+            value: fx,
         })
     }
 }
