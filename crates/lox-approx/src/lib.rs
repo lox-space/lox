@@ -45,8 +45,10 @@
 //!
 //! The following types implement [`ApproxEq`] out of the box:
 //! - `f64` - scalar floating-point values
-//! - `Vec<T>` where `T: ApproxEq`
-//! - `[T; N]` where `T: ApproxEq`
+//! - `[T]`, `Vec<T>`, and `[T; N]` where `T: ApproxEq` - sequences (compared element-wise,
+//!   reporting a length mismatch when the lengths differ)
+//! - `Option<T>` where `T: ApproxEq` - `Some`/`Some` compares the inner values, `None`/`None`
+//!   passes, and `Some`/`None` is a mismatch
 //! - `glam::DVec3` / `glam::DMat3` - 3D vectors and 3×3 matrices (requires the `glam` feature)
 //!
 //! # Custom Types
@@ -140,7 +142,7 @@ pub fn default_rtol(atol: f64) -> f64 {
 ///     }
 /// }
 /// ```
-pub trait ApproxEq<Rhs = Self>: core::fmt::Debug {
+pub trait ApproxEq<Rhs: ?Sized = Self>: core::fmt::Debug {
     /// Compares `self` with `rhs` for approximate equality.
     ///
     /// # Parameters
@@ -191,7 +193,7 @@ impl ApproxEq for DMat3 {
     }
 }
 
-impl<T> ApproxEq for Vec<T>
+impl<T> ApproxEq for [T]
 where
     T: ApproxEq,
 {
@@ -214,22 +216,53 @@ where
     }
 }
 
+impl<T> ApproxEq for Vec<T>
+where
+    T: ApproxEq,
+{
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        self.as_slice().approx_eq(rhs.as_slice(), atol, rtol)
+    }
+}
+
 impl<T, const N: usize> ApproxEq for [T; N]
 where
     T: ApproxEq,
 {
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
-        let mut results = ApproxEqResults::new();
-        for (idx, (left, right)) in zip(self, rhs).enumerate() {
-            results.merge(format!("{}", idx), left.approx_eq(right, atol, rtol));
+        self.as_slice().approx_eq(rhs.as_slice(), atol, rtol)
+    }
+}
+
+/// `Some` versus `Some` compares the inner values, `None` versus `None` passes, and a
+/// `Some`/`None` mismatch is reported as an [`ApproxEqResult::OptionMismatch`].
+impl<T> ApproxEq for Option<T>
+where
+    T: ApproxEq,
+{
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        match (self, rhs) {
+            (Some(left), Some(right)) => left.approx_eq(right, atol, rtol),
+            (None, None) => ApproxEqResults::new(),
+            (left, right) => {
+                let mut results = ApproxEqResults::new();
+                results.insert(
+                    Cow::Borrowed("option"),
+                    ApproxEqResult::OptionMismatch {
+                        left_some: left.is_some(),
+                        right_some: right.is_some(),
+                    },
+                );
+                results
+            }
         }
-        results
     }
 }
 
 impl<T, U> ApproxEq<&U> for &T
 where
-    T: ApproxEq<U>,
+    T: ApproxEq<U> + ?Sized,
+    U: ?Sized,
 {
     fn approx_eq(&self, rhs: &&U, atol: f64, rtol: f64) -> ApproxEqResults {
         (*self).approx_eq(*rhs, atol, rtol)
@@ -494,6 +527,30 @@ mod tests {
 
         let result = vec![1.0].approx_eq(&vec![1.0, 2.0], 0.0, 1e-8).to_string();
         assert!(result.contains("Length mismatch: 1 != 2"));
+    }
+
+    #[test]
+    fn test_approx_eq_slice() {
+        let v1 = vec![1.0, 1.0, 4.0];
+        let v2 = vec![1.0, 1.0, 4.00000000000001];
+        let v4 = vec![1.0, 1.0, 4.00300002];
+        // Compared directly as slices, no `.to_vec()` needed.
+        assert_approx_eq!(v1.as_slice(), v2.as_slice());
+        assert_approx_ne!(v1.as_slice(), v4.as_slice());
+        assert_approx_ne!(v1.as_slice(), [1.0, 1.0].as_slice());
+    }
+
+    #[test]
+    fn test_approx_eq_option() {
+        assert_approx_eq!(Some(1.0), Some(1.00000000000001));
+        assert_approx_ne!(Some(1.0), Some(1.1));
+        assert_approx_eq!(None::<f64>, None::<f64>);
+        // Some vs None is a shape mismatch.
+        assert_approx_ne!(Some(1.0), None);
+        assert_approx_ne!(None, Some(1.0));
+
+        let result = Some(1.0).approx_eq(&None, 0.0, 1e-8).to_string();
+        assert!(result.contains("Option mismatch: Some != None"));
     }
 
     #[test]
