@@ -181,6 +181,26 @@ impl Default for Steffensen {
     }
 }
 
+impl Steffensen {
+    /// Sets the maximum number of iterations.
+    pub fn with_max_iter(mut self, max_iter: u32) -> Self {
+        self.max_iter = max_iter;
+        self
+    }
+
+    /// Sets the absolute tolerance on the root location.
+    pub fn with_abs_tol(mut self, abs_tol: f64) -> Self {
+        self.abs_tol = abs_tol;
+        self
+    }
+
+    /// Sets the relative tolerance on the root location.
+    pub fn with_rel_tol(mut self, rel_tol: f64) -> Self {
+        self.rel_tol = rel_tol;
+        self
+    }
+}
+
 impl<F> FindRoot<F> for Steffensen
 where
     F: Callback,
@@ -238,6 +258,26 @@ impl Default for Newton {
             abs_tol: sqrt(f64::EPSILON),
             rel_tol: sqrt(f64::EPSILON),
         }
+    }
+}
+
+impl Newton {
+    /// Sets the maximum number of iterations.
+    pub fn with_max_iter(mut self, max_iter: u32) -> Self {
+        self.max_iter = max_iter;
+        self
+    }
+
+    /// Sets the absolute tolerance on the root location.
+    pub fn with_abs_tol(mut self, abs_tol: f64) -> Self {
+        self.abs_tol = abs_tol;
+        self
+    }
+
+    /// Sets the relative tolerance on the root location.
+    pub fn with_rel_tol(mut self, rel_tol: f64) -> Self {
+        self.rel_tol = rel_tol;
+        self
     }
 }
 
@@ -307,6 +347,26 @@ impl Default for Brent {
             abs_tol: 1e-6,
             rel_tol: sqrt(f64::EPSILON),
         }
+    }
+}
+
+impl Brent {
+    /// Sets the maximum number of iterations.
+    pub fn with_max_iter(mut self, max_iter: u32) -> Self {
+        self.max_iter = max_iter;
+        self
+    }
+
+    /// Sets the absolute tolerance on the root location.
+    pub fn with_abs_tol(mut self, abs_tol: f64) -> Self {
+        self.abs_tol = abs_tol;
+        self
+    }
+
+    /// Sets the relative tolerance on the root location.
+    pub fn with_rel_tol(mut self, rel_tol: f64) -> Self {
+        self.rel_tol = rel_tol;
+        self
     }
 }
 
@@ -673,5 +733,39 @@ mod tests {
             .find_in_bracket(|x: f64| -> Result { Ok(1e-12 * (x - 1e6)) }, (0.0, 2e6))
             .expect("should converge");
         assert_approx_eq!(act, 1e6, rtol <= 1e-5);
+    }
+
+    #[test]
+    fn test_brent_builder_tolerances() {
+        // Custom tolerances set via the builder still locate the root.
+        let brent = Brent::default()
+            .with_abs_tol(1e-2)
+            .with_rel_tol(1e-8)
+            .with_max_iter(50);
+        let act = brent
+            .find_in_bracket(
+                |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) },
+                (1.0, 1.5),
+            )
+            .expect("should converge");
+        assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-2);
+    }
+
+    #[test]
+    fn test_newton_builder_max_iter() {
+        // A single iteration is not enough to converge on the cubic root, and
+        // the configured cap is reported back in the error.
+        let newton = Newton::default().with_max_iter(1);
+        let err = newton
+            .find_with_derivative(
+                |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) },
+                |x: f64| -> Result { Ok(2.0 * powi(x, 2) + 8.0 * x) },
+                1.5,
+            )
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            RootFinderError::NotConverged { iterations: 1, .. }
+        ));
     }
 }
