@@ -515,6 +515,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
     use core::f64::consts::PI;
     use lox_approx::assert_approx_eq;
 
@@ -891,5 +892,240 @@ mod tests {
             }
             other => panic!("expected NotConverged, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn test_callback_error_conversions() {
+        // Both `From` constructors wrap the message transparently.
+        let from_str: CallbackError = "boom".into();
+        assert_eq!(from_str.to_string(), "boom");
+
+        let boxed: BoxedError = "kaboom".into();
+        let from_boxed: CallbackError = boxed.into();
+        assert_eq!(from_boxed.to_string(), "kaboom");
+    }
+
+    #[test]
+    fn test_root_finder_error_display() {
+        let not_converged = RootFinderError::NotConverged {
+            iterations: 7,
+            x: 1.5,
+            residual: -0.25,
+        };
+        assert_eq!(
+            not_converged.to_string(),
+            "not converged after 7 iterations at x = 1.5, residual -0.25"
+        );
+        assert_eq!(
+            RootFinderError::NotInBracket.to_string(),
+            "root not in bracket"
+        );
+        assert_eq!(
+            RootFinderError::NonFinite(f64::INFINITY).to_string(),
+            "function returned a non-finite value: inf"
+        );
+    }
+
+    #[test]
+    fn test_zero_crossing_display() {
+        assert_eq!(ZeroCrossing::Up.to_string(), "up");
+        assert_eq!(ZeroCrossing::Down.to_string(), "down");
+    }
+
+    #[test]
+    fn test_steffensen_builder_tolerances() {
+        // Custom tolerances set via the builder still locate the root.
+        let steffensen = Steffensen::default()
+            .with_abs_tol(1e-4)
+            .with_rel_tol(1e-8)
+            .with_max_iter(100);
+        let act = steffensen
+            .find(
+                |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) },
+                1.5,
+            )
+            .expect("should converge");
+        assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-3);
+    }
+
+    #[test]
+    fn test_newton_builder_tolerances() {
+        let newton = Newton::default().with_abs_tol(1e-4).with_rel_tol(1e-8);
+        let act = newton
+            .find_with_derivative(
+                |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) },
+                |x: f64| -> Result { Ok(2.0 * powi(x, 2) + 8.0 * x) },
+                1.5,
+            )
+            .expect("should converge");
+        assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-3);
+    }
+
+    #[test]
+    fn test_steffensen_non_finite_function_value() {
+        // A non-finite value at the initial guess is reported immediately.
+        let steffensen = Steffensen::default();
+        let err = steffensen
+            .find(|_x: f64| -> Result { Ok(f64::INFINITY) }, 1.0)
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NonFinite(_)));
+    }
+
+    #[test]
+    fn test_steffensen_non_finite_aitken_probe() {
+        // The first sample is finite, but the displaced Aitken probe f(p0 + f(p0))
+        // is non-finite and must be reported.
+        let steffensen = Steffensen::default();
+        let err = steffensen
+            .find(
+                |x: f64| -> Result { if x >= 2.0 { Ok(f64::INFINITY) } else { Ok(x) } },
+                1.5,
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NonFinite(_)));
+    }
+
+    #[test]
+    fn test_steffensen_not_converged_reports_last_evaluation() {
+        // One iteration cannot converge; the error reports the point that was
+        // actually evaluated (the initial guess) and its residual.
+        let steffensen = Steffensen::default().with_max_iter(1);
+        let err = steffensen
+            .find(
+                |x: f64| -> Result { Ok(powi(x, 3) + 4.0 * powi(x, 2) - 10.0) },
+                1.5,
+            )
+            .unwrap_err();
+        match err {
+            RootFinderError::NotConverged {
+                iterations: 1,
+                x,
+                residual,
+            } => {
+                assert_eq!(x, 1.5);
+                assert_approx_eq!(residual, 2.375, atol <= 1e-9);
+            }
+            other => panic!("expected NotConverged, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_newton_non_finite_function_value() {
+        let newton = Newton::default();
+        let err = newton
+            .find_with_derivative(
+                |_x: f64| -> Result { Ok(f64::INFINITY) },
+                |_x: f64| -> Result { Ok(1.0) },
+                1.0,
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NonFinite(_)));
+    }
+
+    #[test]
+    fn test_newton_non_finite_derivative_value() {
+        // A finite function value but a non-finite derivative is reported.
+        let newton = Newton::default();
+        let err = newton
+            .find_with_derivative(
+                |x: f64| -> Result { Ok(x) },
+                |_x: f64| -> Result { Ok(f64::INFINITY) },
+                1.0,
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NonFinite(_)));
+    }
+
+    #[test]
+    fn test_brent_rejects_non_finite_second_endpoint() {
+        // The first endpoint is finite; the second is not.
+        let brent = Brent::default();
+        let err = brent
+            .find_in_bracket_with_values(
+                |_x: f64| -> Result { Ok(1.0) },
+                (0.0, 1.0),
+                (1.0, f64::NAN),
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NonFinite(_)));
+    }
+
+    #[test]
+    fn test_brent_endpoint_is_root() {
+        let brent = Brent::default();
+        // The lower endpoint is exactly the root.
+        let lo = brent
+            .find_in_bracket_with_values(|x: f64| -> Result { Ok(x) }, (0.0, 1.0), (0.0, 1.0))
+            .expect("lower endpoint is the root");
+        assert_eq!(lo, 0.0);
+        // The upper endpoint is exactly the root.
+        let hi = brent
+            .find_in_bracket_with_values(
+                |x: f64| -> Result { Ok(x - 1.0) },
+                (0.0, 1.0),
+                (-1.0, 0.0),
+            )
+            .expect("upper endpoint is the root");
+        assert_eq!(hi, 1.0);
+    }
+
+    #[test]
+    fn test_brent_not_converged() {
+        // A single iteration cannot narrow a wide bracket below the tolerance.
+        let brent = Brent::default().with_max_iter(1);
+        let err = brent
+            .find_in_bracket(|x: f64| -> Result { Ok(powi(x, 3) - 0.5) }, (-1e6, 1e6))
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            RootFinderError::NotConverged { iterations: 1, .. }
+        ));
+    }
+
+    #[test]
+    fn test_zero_max_iter_non_finite_initial_guess() {
+        // With no iterations the initial guess is still evaluated; a non-finite
+        // value there is reported as NonFinite, not NotConverged.
+        let newton = Newton::default().with_max_iter(0);
+        let err = newton
+            .find_with_derivative(
+                |_x: f64| -> Result { Ok(f64::INFINITY) },
+                |_x: f64| -> Result { Ok(1.0) },
+                1.0,
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NonFinite(_)));
+    }
+
+    #[test]
+    fn test_brent_converges_on_stiff_function() {
+        // A high-degree monomial has extreme curvature near its root, which
+        // exercises Brent's switching between interpolation and bisection.
+        let brent = Brent::default();
+        let root = brent
+            .find_in_bracket(|x: f64| -> Result { Ok(powi(x, 15) - 0.5) }, (0.0, 1.0))
+            .expect("should converge");
+        assert!(abs(powi(root, 15) - 0.5) < 1e-3);
+    }
+
+    #[test]
+    fn test_brent_in_loop_callback_error() {
+        // Endpoints evaluate cleanly, but an interior evaluation fails; the
+        // callback error must propagate.
+        let brent = Brent::default();
+        let err = brent
+            .find_in_bracket_with_values(
+                |x: f64| -> Result {
+                    if x == -1.0 || x == 2.0 {
+                        Ok(x * x - 2.0)
+                    } else {
+                        Err("interior failure".into())
+                    }
+                },
+                (-1.0, 2.0),
+                (-1.0, 2.0),
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::Callback(_)));
     }
 }
