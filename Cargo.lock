@@ -1123,6 +1123,7 @@ name = "lox-odm"
 version = "0.1.0-alpha.3"
 dependencies = [
  "codspeed-divan-compat",
+ "lox-approx",
  "lox-bodies",
  "lox-core",
  "lox-frames",

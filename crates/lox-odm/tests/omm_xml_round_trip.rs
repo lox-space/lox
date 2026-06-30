@@ -5,6 +5,7 @@
 //! Integration tests: XML OMM round-trip on a realistic SGP4-tuned fixture
 //! (GOES-13) and synthetic inputs, verifying structural round-trip correctness.
 
+use lox_approx::assert_approx_eq;
 use lox_odm::xml::omm::{read_omm, write_omm};
 
 /// Realistic GOES-13 OMM in XML wire format.
@@ -150,16 +151,8 @@ fn tle_parameters_round_trip_full_fields() {
     assert_eq!(tle.norad_cat_id, Some(25544));
     assert_eq!(tle.element_set_no, Some(999));
     assert_eq!(tle.rev_at_epoch, Some(4453));
-    assert!(
-        (tle.bstar.unwrap() - 0.00011328).abs() < 1e-12,
-        "BSTAR mismatch: {:?}",
-        tle.bstar
-    );
-    assert!(
-        (tle.mean_motion_dot.unwrap() - 0.00000264).abs() < 1e-12,
-        "MEAN_MOTION_DOT mismatch: {:?}",
-        tle.mean_motion_dot
-    );
+    assert_approx_eq!(tle.bstar, Some(0.00011328), atol <= 1e-12);
+    assert_approx_eq!(tle.mean_motion_dot, Some(0.00000264), atol <= 1e-12);
     assert_eq!(tle.mean_motion_ddot, Some(0.0));
 
     // Write and re-read to confirm TLE fields survive serialisation.

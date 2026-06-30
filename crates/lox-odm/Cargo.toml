@@ -30,6 +30,7 @@ thiserror = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
 divan.workspace = true
+lox-approx = { workspace = true, features = ["std"] }
 
 [[bench]]
 name = "parse"

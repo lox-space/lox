@@ -694,6 +694,7 @@ mod tests {
     use std::collections::BTreeMap;
     use std::f64::consts::PI;
 
+    use lox_approx::assert_approx_eq;
     use lox_bodies::DynOrigin;
     use lox_core::elements::{GravitationalParameter, MeanElements};
     use lox_core::units::{Area, AreaToMass, Mass};
@@ -813,11 +814,19 @@ mod tests {
         assert_eq!(tle.norad_cat_id, Some(45018));
         assert_eq!(tle.element_set_no, Some(999));
         assert_eq!(tle.rev_at_epoch, Some(5327));
-        assert!((tle.bstar.unwrap() - 8.4553e-5).abs() < 1e-12);
-        assert!((tle.bterm.unwrap().to_square_meters_per_kilogram() - 0.05).abs() < 1e-12);
-        assert!((tle.mean_motion_dot.unwrap() - 2.241e-5).abs() < 1e-12);
+        assert_approx_eq!(tle.bstar, Some(8.4553e-5), atol <= 1e-12);
+        assert_approx_eq!(
+            tle.bterm.map(|v| v.to_square_meters_per_kilogram()),
+            Some(0.05),
+            atol <= 1e-12
+        );
+        assert_approx_eq!(tle.mean_motion_dot, Some(2.241e-5), atol <= 1e-12);
         assert_eq!(tle.mean_motion_ddot, Some(0.0));
-        assert!((tle.agom.unwrap().to_square_meters_per_kilogram() - 0.03).abs() < 1e-12);
+        assert_approx_eq!(
+            tle.agom.map(|v| v.to_square_meters_per_kilogram()),
+            Some(0.03),
+            atol <= 1e-12
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -1030,8 +1039,12 @@ mod tests {
         let parsed = read_omm(&xml_str).expect("spacecraft+covariance parse failed");
 
         let sp = parsed.spacecraft.expect("spacecraft missing");
-        assert!((sp.mass.unwrap().to_kilograms() - 500.0).abs() < 1e-10);
-        assert!((sp.drag_coeff.unwrap() - 2.2).abs() < 1e-12);
+        assert_approx_eq!(
+            sp.mass.map(|v| v.to_kilograms()),
+            Some(500.0),
+            atol <= 1e-10
+        );
+        assert_approx_eq!(sp.drag_coeff, Some(2.2), atol <= 1e-12);
 
         let cov = parsed.covariance.expect("covariance missing");
         assert_eq!(cov.matrix, Matrix6::identity());

@@ -1058,6 +1058,7 @@ mod tests {
     use std::collections::BTreeMap;
     use std::f64::consts::PI;
 
+    use lox_approx::assert_approx_eq;
     use lox_bodies::DynOrigin;
     use lox_core::elements::{GravitationalParameter, MeanElements};
     use lox_core::units::{Area, AreaToMass, Mass};
@@ -1174,7 +1175,7 @@ mod tests {
 
         let tle = parsed.tle_parameters.expect("missing TLE parameters");
         assert_eq!(tle.norad_cat_id, Some(45018));
-        assert!((tle.bstar.unwrap() - 8.4553e-5).abs() < 1e-10);
+        assert_approx_eq!(tle.bstar, Some(8.4553e-5), atol <= 1e-10);
         assert_eq!(tle.classification_type.as_deref(), Some("U"));
     }
 
@@ -1468,7 +1469,7 @@ mod tests {
         assert_eq!(omm.metadata.object_id, "2020-003C");
         let tle = omm.tle_parameters.as_ref().expect("missing TLE parameters");
         assert_eq!(tle.norad_cat_id, Some(45018));
-        assert!((tle.bstar.unwrap() - 8.4553e-5).abs() < 1e-9);
+        assert_approx_eq!(tle.bstar, Some(8.4553e-5), atol <= 1e-9);
 
         // Provider extras (non-CCSDS keys) must be captured on read.
         for key in [
@@ -1553,7 +1554,7 @@ mod tests {
         let parsed = read_omm(&json).expect("parse failed");
 
         let sp = parsed.spacecraft.expect("spacecraft not preserved");
-        assert!((sp.mass.unwrap().to_kilograms() - 120.5).abs() < 1e-9);
+        assert_approx_eq!(sp.mass.map(|v| v.to_kilograms()), Some(120.5), atol <= 1e-9);
         assert_eq!(sp.solar_rad_coeff, Some(1.2));
         assert_eq!(sp.drag_coeff, Some(2.2));
     }
@@ -1575,8 +1576,16 @@ mod tests {
         let parsed = read_omm(&json).expect("parse failed");
 
         let tle = parsed.tle_parameters.expect("missing TLE parameters");
-        assert!((tle.bterm.unwrap().to_square_meters_per_kilogram() - 0.05).abs() < 1e-9);
-        assert!((tle.agom.unwrap().to_square_meters_per_kilogram() - 0.03).abs() < 1e-9);
+        assert_approx_eq!(
+            tle.bterm.map(|v| v.to_square_meters_per_kilogram()),
+            Some(0.05),
+            atol <= 1e-9
+        );
+        assert_approx_eq!(
+            tle.agom.map(|v| v.to_square_meters_per_kilogram()),
+            Some(0.03),
+            atol <= 1e-9
+        );
     }
 
     // -----------------------------------------------------------------------
