@@ -5,8 +5,10 @@
 use std::collections::VecDeque;
 
 use itertools::Itertools;
-pub use lox_math::roots::ZeroCrossing;
-use lox_math::roots::{BoxedError, Callback, CallbackError, FindBracketedRoot, RootFinderError};
+pub use lox_core::math::roots::ZeroCrossing;
+use lox_core::math::roots::{
+    BoxedError, Callback, CallbackError, FindBracketedRoot, RootFinderError,
+};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
@@ -122,7 +124,7 @@ impl<T: TimeScale + Copy, F: DetectFn<T>> Callback for DetectCallback<'_, T, F> 
 // RootFindingDetector — wraps DetectFn + root finder → EventDetector
 // ---------------------------------------------------------------------------
 
-use lox_math::roots::Brent;
+use lox_core::math::roots::Brent;
 
 /// Wraps a `DetectFn` with a root finder to produce an `EventDetector`.
 pub struct RootFindingDetector<F, R = Brent> {

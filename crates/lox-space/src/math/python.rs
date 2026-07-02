@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::math::series::{Series, SeriesError};
-use lox_math::series::{InterpolationType, UnknownInterpolationType};
+use lox_core::math::series::{InterpolationType, UnknownInterpolationType};
 use pyo3::exceptions::PyValueError;
 use pyo3::{PyErr, PyResult, pyclass, pymethods};
 

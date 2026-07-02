@@ -6,11 +6,11 @@ use std::collections::HashMap;
 
 use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid, UndefinedOriginPropertyError};
 use lox_core::glam::DVec3;
+use lox_core::math::series::{InterpolationType, Series, SeriesError};
 use lox_ephem::Ephemeris;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::{DynRotationError, RotationError, TryRotation};
 use lox_frames::{DynFrame, ReferenceFrame};
-use lox_math::series::{InterpolationType, Series, SeriesError};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;

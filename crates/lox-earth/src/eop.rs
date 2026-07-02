@@ -9,10 +9,10 @@ use std::{
 
 use csv::{ByteRecord, ReaderBuilder};
 use lox_core::f64::consts::{SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY};
+use lox_core::math::series::{InterpolationType, Series, SeriesError};
 use lox_core::units::Angle;
 use lox_frames::iers::{Corrections, polar_motion::PoleCoords};
 use lox_io::spice::lsk::LeapSecondsKernel;
-use lox_math::series::{InterpolationType, Series, SeriesError};
 use lox_time::{
     deltas::TimeDelta,
     julian_dates::JulianDate,

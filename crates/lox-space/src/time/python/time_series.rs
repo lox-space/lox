@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_math::series::InterpolationType;
+use lox_core::math::series::InterpolationType;
 use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
 use pyo3::{Bound, PyResult, pyclass, pymethods};
