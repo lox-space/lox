@@ -22,7 +22,6 @@ lox-approx = { workspace = true, default-features = false }
 lox-core = { workspace = true, default-features = false }
 
 chrono = { workspace = true, optional = true }
-itertools = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 
@@ -31,12 +30,7 @@ rstest.workspace = true
 
 [features]
 default = ["std"]
-std = [
-    "dep:itertools",
-    "lox-core/std",
-    "lox-approx/std",
-    "serde?/std",
-]
+std = ["lox-core/std", "lox-approx/std", "serde?/std"]
 libm = ["lox-core/libm"]
 chrono = ["dep:chrono", "lox-core/chrono", "std"]
 serde = ["dep:serde", "lox-core/serde"]

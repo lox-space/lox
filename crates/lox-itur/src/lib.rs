@@ -47,8 +47,6 @@
 pub(crate) mod grid;
 pub(crate) mod manifest;
 pub(crate) mod npz;
-pub mod p1510;
-pub mod p1511;
 pub mod p453;
 pub mod p618;
 pub mod p676;

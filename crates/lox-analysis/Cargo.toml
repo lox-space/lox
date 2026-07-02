@@ -22,7 +22,6 @@ lox-comms = { workspace = true, optional = true }
 lox-core = { workspace = true, features = ["std"] }
 lox-ephem.workspace = true
 lox-frames.workspace = true
-lox-math.workspace = true
 lox-orbits.workspace = true
 lox-time = { workspace = true, features = ["chrono"] }
 

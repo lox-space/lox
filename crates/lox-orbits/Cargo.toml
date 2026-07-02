@@ -23,7 +23,6 @@ lox-core = { workspace = true, features = ["std"] }
 lox-earth.workspace = true
 lox-ephem.workspace = true
 lox-frames.workspace = true
-lox-math.workspace = true
 lox-approx = { workspace = true, features = ["std", "glam"] }
 lox-odm = { workspace = true, optional = true }
 lox-time = { workspace = true, features = ["chrono"] }

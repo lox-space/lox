@@ -23,7 +23,6 @@ lox-core = { workspace = true, features = ["std"] }
 lox-frames.workspace = true
 lox-io.workspace = true
 lox-time.workspace = true
-lox-math.workspace = true
 
 csv.workspace = true
 fast_polynomial = { workspace = true, features = ["std"] }
