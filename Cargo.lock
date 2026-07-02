@@ -969,7 +969,6 @@ dependencies = [
  "lox-core",
  "lox-ephem",
  "lox-frames",
- "lox-math",
  "lox-orbits",
  "lox-test-utils",
  "lox-time",
@@ -1046,7 +1045,6 @@ dependencies = [
  "lox-core",
  "lox-frames",
  "lox-io",
- "lox-math",
  "lox-test-utils",
  "lox-time",
  "rstest",
@@ -1151,7 +1149,6 @@ dependencies = [
  "lox-earth",
  "lox-ephem",
  "lox-frames",
- "lox-math",
  "lox-odm",
  "lox-test-utils",
  "lox-time",
@@ -1199,7 +1196,6 @@ name = "lox-time"
 version = "0.1.0-alpha.26"
 dependencies = [
  "chrono",
- "itertools",
  "lox-approx",
  "lox-core",
  "rstest",
