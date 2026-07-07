@@ -11,15 +11,15 @@ use lox_core::glam::DVec3;
 use rayon::prelude::*;
 use thiserror::Error;
 
+use crate::events::{
+    DetectError, DetectFn, EventsToIntervals, IntervalDetector, RootFindingDetector,
+};
 use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid};
 use lox_core::coords::LonLatAlt;
 use lox_core::units::Angle;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_frames::{DynFrame, ReferenceFrame};
-use lox_orbits::events::{
-    DetectError, DetectFn, EventsToIntervals, IntervalDetector, RootFindingDetector,
-};
 use lox_orbits::orbits::{Ensemble, Trajectory};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;

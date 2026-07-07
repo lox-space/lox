@@ -31,7 +31,6 @@ lox-units.workspace = true
 chrono = { workspace = true, optional = true }
 csv.workspace = true
 differential-equations.workspace = true
-itertools.workspace = true
 libm.workspace = true
 serde = { workspace = true, optional = true }
 sgp4.workspace = true

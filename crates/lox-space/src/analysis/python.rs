@@ -5,6 +5,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::analysis::assets::{AssetId, ConstellationId, DynScenario, GroundStation, Spacecraft};
+use crate::analysis::events::{Event, ZeroCrossing};
 use crate::analysis::imaging::{
     AccessError, Aoi, AoiId, LookSide, OpticalAccessAnalysis, OpticalPayload, SarAccessAnalysis,
     SarPayload,
@@ -27,11 +28,12 @@ use crate::ephem::spk::parser::Spk;
 use crate::frames::python::PyFrame;
 use crate::orbits::ground::Observables;
 use crate::orbits::python::{
-    PyGroundLocation, PyInterval, PyJ2Propagator, PyJ4Propagator, PyNumericalPropagator, PySgp4,
-    PyTrajectory, PyVallado,
+    PyGroundLocation, PyJ2Propagator, PyJ4Propagator, PyNumericalPropagator, PySgp4, PyTrajectory,
+    PyVallado,
 };
 use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
+use crate::time::python::intervals::PyInterval;
 use crate::time::python::time::PyTime;
 use crate::time::python::time_series::PyTimeSeries;
 use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyVelocity};
@@ -41,7 +43,7 @@ use lox_orbits::orbits::Ensemble;
 use lox_orbits::propagators::OrbitSource;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
-use lox_time::time_scales::Tai;
+use lox_time::time_scales::{DynTimeScale, Tai};
 use lox_units::{Angle, Distance, Velocity};
 
 use numpy::{PyArray1, PyArrayMethods};
@@ -63,6 +65,54 @@ pub struct PyElevationMaskError(pub ElevationMaskError);
 impl From<PyElevationMaskError> for PyErr {
     fn from(err: PyElevationMaskError) -> Self {
         PyValueError::new_err(err.0.to_string())
+    }
+}
+
+/// Represents a detected event (zero-crossing of a function).
+///
+/// Events are detected when a monitored function crosses zero during
+/// trajectory analysis. The crossing direction indicates whether the
+/// function went from negative to positive ("up") or positive to negative ("down").
+///
+/// Args:
+///     time: The time of the event.
+///     crossing: The crossing direction ("up" or "down").
+#[pyclass(name = "Event", module = "lox_space", frozen, from_py_object)]
+#[derive(Clone, Debug)]
+pub struct PyEvent(pub Event<DynTimeScale>);
+
+#[pymethods]
+impl PyEvent {
+    #[new]
+    fn new(time: PyTime, crossing: &str) -> PyResult<Self> {
+        let crossing = match crossing {
+            "up" => ZeroCrossing::Up,
+            "down" => ZeroCrossing::Down,
+            _ => return Err(PyValueError::new_err("crossing must be 'up' or 'down'")),
+        };
+        Ok(PyEvent(Event::new(time.0, crossing)))
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Event({}, \"{}\")", self.time().__repr__(), self.crossing(),)
+    }
+
+    fn __str__(&self) -> String {
+        format!(
+            "Event - {}crossing at {}",
+            self.crossing(),
+            self.time().__str__()
+        )
+    }
+
+    /// Return the time of this event.
+    fn time(&self) -> PyTime {
+        PyTime(self.0.time())
+    }
+
+    /// Return the crossing direction ("up" or "down").
+    fn crossing(&self) -> String {
+        self.0.crossing().to_string()
     }
 }
 

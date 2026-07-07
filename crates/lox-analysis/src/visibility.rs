@@ -23,7 +23,7 @@ use thiserror::Error;
 use lox_core::units::{AngularRate, Distance};
 
 use crate::assets::{AssetId, GroundStation, Scenario, Spacecraft};
-use lox_orbits::events::{
+use crate::events::{
     DetectError, DetectFn, EventsToIntervals, IntervalDetector, IntervalDetectorExt,
     RootFindingDetector,
 };

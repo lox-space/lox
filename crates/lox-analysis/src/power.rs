@@ -24,9 +24,9 @@ use rayon::prelude::*;
 use thiserror::Error;
 
 use crate::assets::{AssetId, ConstellationId, Scenario, Spacecraft};
+use crate::events::{DetectFn, EventsToIntervals, IntervalDetector, RootFindingDetector};
 use crate::visibility::{EvalError, LineOfSight};
 use lox_frames::ReferenceFrame;
-use lox_orbits::events::{DetectFn, EventsToIntervals, IntervalDetector, RootFindingDetector};
 use lox_orbits::orbits::{Ensemble, Trajectory};
 
 // ---------------------------------------------------------------------------
@@ -81,7 +81,7 @@ type SpacecraftPowerData = (
 pub enum PowerError {
     /// Event detection failed.
     #[error(transparent)]
-    Detect(#[from] lox_orbits::events::DetectError),
+    Detect(#[from] crate::events::DetectError),
     /// Evaluation error (frame rotation, ephemeris, …).
     #[error(transparent)]
     Eval(#[from] EvalError),
