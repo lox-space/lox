@@ -45,7 +45,7 @@ def test_from_numpy():
     )
     trajectory = lox.Trajectory.from_numpy(time, states)
     npt.assert_allclose(
-        trajectory.interpolate(time + lox.TimeDelta(1.5)).position(),
+        trajectory.at(time + lox.TimeDelta(1.5)).position(),
         [2.5e3, 2.5e3, 2.5e3],
     )
     states1 = trajectory.to_numpy()
@@ -54,7 +54,7 @@ def test_from_numpy():
 
 def test_interpolation(orbit, trajectory):
     dt = orbit.orbital_period()
-    s1 = trajectory.interpolate(dt)
+    s1 = trajectory.at(dt)
     k1 = s1.to_keplerian()
     assert float(orbit.semi_major_axis()) == pytest.approx(
         float(k1.semi_major_axis()), rel=1e-8

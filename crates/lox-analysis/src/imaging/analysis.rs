@@ -137,7 +137,7 @@ where
     <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
         core::error::Error + Send + Sync + 'static,
 {
-    let state = trajectory.interpolate_at(time);
+    let state = trajectory.at(time);
     let state_bf = state
         .try_to_frame(body_fixed_frame, &DefaultRotationProvider)
         .map_err(|e| EvalError::Rotation(Box::new(e)))?;

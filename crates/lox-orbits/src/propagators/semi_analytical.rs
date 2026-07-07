@@ -316,7 +316,7 @@ mod tests {
         let t_end = time + period;
         let interval = Interval::new(time, t_end);
         let trajectory = Vallado::new(s0).propagate(interval).unwrap();
-        let s1 = trajectory.interpolate(period);
+        let s1 = trajectory.at_delta(period);
         let k1 = s1.to_keplerian();
 
         assert_approx_eq!(

@@ -1380,7 +1380,7 @@ class Trajectory:
 
     Examples:
         >>> trajectory = propagator.propagate(times)
-        >>> state = trajectory.interpolate(t)
+        >>> state = trajectory.at(t)
         >>> arr = trajectory.to_numpy()
     """
     def __new__(cls, states: list[Cartesian]) -> Self: ...
@@ -1413,8 +1413,12 @@ class Trajectory:
     def states(self) -> list[Cartesian]:
         """Return the list of states in this trajectory."""
         ...
-    def interpolate(self, time: Time | TimeDelta) -> Cartesian:
-        """Interpolate the trajectory at a specific time."""
+    def at(self, time: Time | TimeDelta) -> Cartesian:
+        """Interpolate the trajectory at a specific time.
+
+        Args:
+            time: Either a Time (absolute) or TimeDelta (relative to trajectory start).
+        """
         ...
     def to_frame(self, frame: str | Frame, provider: EOPProvider | None = None) -> Self:
         """Transform all states to a different reference frame."""

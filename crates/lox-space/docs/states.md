@@ -83,7 +83,7 @@ sso = lox.Keplerian.sso(
 
 # Work with trajectories
 trajectory = lox.Trajectory([state1, state2, state3])
-interpolated = trajectory.interpolate(t + lox.TimeDelta(100))
+interpolated = trajectory.at(t + lox.TimeDelta(100))
 ```
 
 ---
