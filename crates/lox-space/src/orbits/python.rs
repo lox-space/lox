@@ -73,18 +73,6 @@ impl From<PyDetectError> for PyErr {
     }
 }
 
-/// Concrete error for Python callback failures (avoids `Box<dyn Error>` sizing issues).
-#[derive(Debug)]
-struct PyCallbackError(String);
-
-impl std::fmt::Display for PyCallbackError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-impl std::error::Error for PyCallbackError {}
-
 struct PySsoError(lox_orbits::orbits::sso::SsoError);
 
 impl From<PySsoError> for PyErr {
@@ -145,75 +133,6 @@ fn propagate_dispatch<'py>(
         };
     }
     Err(PyValueError::new_err("invalid time argument(s)"))
-}
-
-/// Find events where a function crosses zero.
-///
-/// Detects zero-crossings of a user-defined function of time.
-///
-/// Args:
-///     func: Function that takes a Time and returns a float.
-///     start: Start time of the analysis period.
-///     end: End time of the analysis period.
-///     step: Step size for sampling the function.
-///
-/// Returns:
-///     List of Event objects at the detected zero-crossings.
-#[pyfunction]
-pub fn find_events(
-    func: &Bound<'_, PyAny>,
-    start: PyTime,
-    end: PyTime,
-    step: PyTimeDelta,
-) -> PyResult<Vec<PyEvent>> {
-    let interval = TimeInterval::new(start.0, end.0);
-    let events = crate::orbits::events::try_find_events(
-        |t| {
-            let py_time = PyTime(t);
-            func.call((py_time,), None)
-                .and_then(|obj| obj.extract::<f64>())
-                .map_err(|e| PyCallbackError(e.to_string()))
-        },
-        interval,
-        step.0,
-    )
-    .map_err(PyDetectError)?;
-    Ok(events.into_iter().map(PyEvent).collect())
-}
-
-/// Find time windows where a function is positive.
-///
-/// Finds all intervals where a user-defined function is positive.
-/// Windows are bounded by zero-crossings of the function.
-///
-/// Args:
-///     func: Function that takes a Time and returns a float.
-///     start: Start time of the analysis period.
-///     end: End time of the analysis period.
-///     step: Step size for sampling the function.
-///
-/// Returns:
-///     List of Interval objects for intervals where the function is positive.
-#[pyfunction]
-pub fn find_windows(
-    func: &Bound<'_, PyAny>,
-    start: PyTime,
-    end: PyTime,
-    step: PyTimeDelta,
-) -> PyResult<Vec<PyInterval>> {
-    let interval = TimeInterval::new(start.0, end.0);
-    let windows = crate::orbits::events::try_find_windows(
-        |t| {
-            let py_time = PyTime(t);
-            func.call((py_time,), None)
-                .and_then(|obj| obj.extract::<f64>())
-                .map_err(|e| PyCallbackError(e.to_string()))
-        },
-        interval,
-        step.0,
-    )
-    .map_err(PyDetectError)?;
-    Ok(windows.into_iter().map(PyInterval).collect())
 }
 
 /// Intersect two sorted lists of intervals.
@@ -1213,8 +1132,7 @@ impl PyModifiedEquinoctial {
 #[derive(Debug, Clone)]
 pub struct PyTrajectory(pub DynTrajectory);
 
-/// Error wrapper converting `TrajectoryError` into a Python `ValueError`.
-pub struct PyTrajectoryError(pub TrajectoryError);
+pub(crate) struct PyTrajectoryError(pub TrajectoryError);
 
 impl From<PyTrajectoryError> for PyErr {
     fn from(err: PyTrajectoryError) -> Self {
@@ -1308,62 +1226,6 @@ impl PyTrajectory {
     /// Return the list of states in this trajectory.
     fn states(&self) -> Vec<PyCartesian> {
         self.0.states().into_iter().map(PyCartesian).collect()
-    }
-
-    /// Find events where a function crosses zero.
-    ///
-    /// Args:
-    ///     func: Function that takes a State and returns a float.
-    ///           Events are detected where the function crosses zero.
-    ///     step: Step size for sampling the function.
-    ///
-    /// Returns:
-    ///     List of Event objects.
-    fn find_events(&self, func: &Bound<'_, PyAny>, step: PyTimeDelta) -> PyResult<Vec<PyEvent>> {
-        let traj = &self.0;
-        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
-        let events = crate::orbits::events::try_find_events(
-            |t| {
-                let state = PyCartesian(traj.interpolate_at(t));
-                func.call((state,), None)
-                    .and_then(|obj| obj.extract::<f64>())
-                    .map_err(|e| PyCallbackError(e.to_string()))
-            },
-            interval,
-            step.0,
-        )
-        .map_err(PyDetectError)?;
-        Ok(events.into_iter().map(PyEvent).collect())
-    }
-
-    /// Find time windows where a function is positive.
-    ///
-    /// Args:
-    ///     func: Function that takes a State and returns a float.
-    ///           Windows are periods where the function is positive.
-    ///     step: Step size for sampling the function.
-    ///
-    /// Returns:
-    ///     List of Interval objects.
-    fn find_windows(
-        &self,
-        func: &Bound<'_, PyAny>,
-        step: PyTimeDelta,
-    ) -> PyResult<Vec<PyInterval>> {
-        let traj = &self.0;
-        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
-        let windows = crate::orbits::events::try_find_windows(
-            |t| {
-                let state = PyCartesian(traj.interpolate_at(t));
-                func.call((state,), None)
-                    .and_then(|obj| obj.extract::<f64>())
-                    .map_err(|e| PyCallbackError(e.to_string()))
-            },
-            interval,
-            step.0,
-        )
-        .map_err(PyDetectError)?;
-        Ok(windows.into_iter().map(PyInterval).collect())
     }
 
     /// Interpolate the trajectory at a specific time.

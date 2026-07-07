@@ -28,23 +28,6 @@ time interval together.
 ```python
 import lox_space as lox
 
-# Find events on a trajectory
-def altitude(state):
-    """Returns altitude above reference radius."""
-    x, y, z = state.position()
-    r = (float(x)**2 + float(y)**2 + float(z)**2)**0.5
-    return r - 6378000.0  # meters above Earth radius
-
-step = lox.TimeDelta(10.0)  # 10-second step size
-events = trajectory.find_events(altitude, step)
-for event in events:
-    print(f"{event.crossing()} crossing at {event.time()}")
-
-# Find time intervals
-intervals = trajectory.find_windows(altitude, step)
-for iv in intervals:
-    print(f"Interval: {iv.start()} to {iv.end()}, duration: {iv.duration()}")
-
 # Visibility analysis
 gs = lox.GroundStation("ESOC", ground_location, elevation_mask)
 sc = lox.Spacecraft("ISS", lox.SGP4(tle))
@@ -72,18 +55,6 @@ for p in results.passes("ESOC", "ISS"):
 ---
 
 ::: lox_space.Interval
-    options:
-      show_source: false
-
----
-
-::: lox_space.find_events
-    options:
-      show_source: false
-
----
-
-::: lox_space.find_windows
     options:
       show_source: false
 

@@ -29,8 +29,7 @@ use crate::math::python::PySeries;
 use crate::orbits::python::{
     PyCartesian, PyEvent, PyGroundLocation, PyGroundPropagator, PyInterval, PyJ2Propagator,
     PyJ4Propagator, PyKeplerian, PyModifiedEquinoctial, PyNumericalPropagator, PySgp4, PyTle,
-    PyTrajectory, PyVallado, find_events, find_windows, py_complement_intervals,
-    py_intersect_intervals, py_union_intervals,
+    PyTrajectory, PyVallado, py_complement_intervals, py_intersect_intervals, py_union_intervals,
 };
 use crate::time::python::{
     deltas::PyTimeDelta, time::PyTime, time_scales::PyTimeScale, time_series::PyTimeSeries,
@@ -144,8 +143,6 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyTle>()?;
     m.add_class::<PyTrajectory>()?;
     m.add_class::<PyVallado>()?;
-    m.add_function(wrap_pyfunction!(find_events, m)?)?;
-    m.add_function(wrap_pyfunction!(find_windows, m)?)?;
     m.add_function(wrap_pyfunction!(py_intersect_intervals, m)?)?;
     m.add_function(wrap_pyfunction!(py_union_intervals, m)?)?;
     m.add_function(wrap_pyfunction!(py_complement_intervals, m)?)?;
