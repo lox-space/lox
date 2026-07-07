@@ -6,14 +6,12 @@
 
 #![warn(missing_docs)]
 
-//! Orbit representations, propagators, ground stations, constellations, and event detection.
+//! Orbit representations, propagators, ground stations, and constellations.
 
 pub use lox_core::glam::DVec3;
 
 /// Satellite constellation builders (Walker, Flower, Street of Coverage).
 pub mod constellations;
-/// Root-finding event detection and interval computation.
-pub mod events;
 /// Ground location and observables computation.
 pub mod ground;
 /// ODM integration: builders and conversions for OPM/OEM messages.

@@ -8,6 +8,8 @@
 
 /// Asset definitions: ground stations, spacecraft, constellations, and scenarios.
 pub mod assets;
+/// Root-finding event detection and interval computation.
+pub mod events;
 /// AOI imaging event detection: sub-satellite point, swath, and off-nadir coverage.
 #[cfg(feature = "imaging")]
 pub mod imaging;

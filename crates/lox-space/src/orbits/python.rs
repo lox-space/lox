@@ -9,7 +9,6 @@ use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::ephem::python::{PyDafSpkError, PySpk};
 use crate::frames::DynFrame;
 use crate::frames::python::{PyDynRotationError, PyFrame};
-use crate::orbits::events::{DetectError, Event, ZeroCrossing};
 use crate::orbits::ground::{
     DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables,
 };
@@ -29,15 +28,13 @@ use crate::time::DynTime;
 use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
-use crate::time::time_scales::{DynTimeScale, Tai};
+use crate::time::time_scales::Tai;
 use crate::units::python::{PyAngle, PyDistance, PyVelocity};
 use lox_core::coords::{Cartesian, LonLatAlt};
 use lox_core::glam::DVec3;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
-use lox_time::intervals::{
-    Interval, TimeInterval, complement_intervals, intersect_intervals, union_intervals,
-};
+use lox_time::intervals::Interval;
 use lox_units::{Angle, Distance, Velocity};
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
@@ -61,14 +58,6 @@ struct PyTrajectoryTransformationError(TrajectoryTransformationError);
 impl From<PyTrajectoryTransformationError> for PyErr {
     fn from(err: PyTrajectoryTransformationError) -> Self {
         // FIXME: wrong error type
-        PyValueError::new_err(err.0.to_string())
-    }
-}
-
-struct PyDetectError(DetectError);
-
-impl From<PyDetectError> for PyErr {
-    fn from(err: PyDetectError) -> Self {
         PyValueError::new_err(err.0.to_string())
     }
 }
@@ -133,62 +122,6 @@ fn propagate_dispatch<'py>(
         };
     }
     Err(PyValueError::new_err("invalid time argument(s)"))
-}
-
-/// Intersect two sorted lists of intervals.
-///
-/// Args:
-///     a: First list of intervals.
-///     b: Second list of intervals.
-///
-/// Returns:
-///     List of intervals representing the intersection.
-#[pyfunction]
-#[pyo3(name = "intersect_intervals")]
-pub fn py_intersect_intervals(a: Vec<PyInterval>, b: Vec<PyInterval>) -> Vec<PyInterval> {
-    let a: Vec<_> = a.into_iter().map(|i| i.0).collect();
-    let b: Vec<_> = b.into_iter().map(|i| i.0).collect();
-    intersect_intervals(&a, &b)
-        .into_iter()
-        .map(PyInterval)
-        .collect()
-}
-
-/// Compute the union of two sorted lists of intervals.
-///
-/// Args:
-///     a: First list of intervals.
-///     b: Second list of intervals.
-///
-/// Returns:
-///     List of merged intervals representing the union.
-#[pyfunction]
-#[pyo3(name = "union_intervals")]
-pub fn py_union_intervals(a: Vec<PyInterval>, b: Vec<PyInterval>) -> Vec<PyInterval> {
-    let a: Vec<_> = a.into_iter().map(|i| i.0).collect();
-    let b: Vec<_> = b.into_iter().map(|i| i.0).collect();
-    union_intervals(&a, &b)
-        .into_iter()
-        .map(PyInterval)
-        .collect()
-}
-
-/// Compute the complement of intervals within a bounding interval.
-///
-/// Args:
-///     intervals: List of intervals to complement.
-///     bound: Bounding interval.
-///
-/// Returns:
-///     List of gap intervals within the bound.
-#[pyfunction]
-#[pyo3(name = "complement_intervals")]
-pub fn py_complement_intervals(intervals: Vec<PyInterval>, bound: PyInterval) -> Vec<PyInterval> {
-    let intervals: Vec<_> = intervals.into_iter().map(|i| i.0).collect();
-    complement_intervals(&intervals, bound.0)
-        .into_iter()
-        .map(PyInterval)
-        .collect()
 }
 
 /// Represents an orbital state (position and velocity) at a specific time.
@@ -1305,157 +1238,6 @@ impl PyTrajectory {
             states.push(PyCartesian(s).to_frame_inner(frame.clone(), provider)?.0);
         }
         Ok(PyTrajectory(DynTrajectory::new(states)))
-    }
-}
-
-/// Represents a detected event (zero-crossing of a function).
-///
-/// Events are detected when a monitored function crosses zero during
-/// trajectory analysis. The crossing direction indicates whether the
-/// function went from negative to positive ("up") or positive to negative ("down").
-///
-/// Args:
-///     time: The time of the event.
-///     crossing: The crossing direction ("up" or "down").
-#[pyclass(name = "Event", module = "lox_space", frozen, from_py_object)]
-#[derive(Clone, Debug)]
-pub struct PyEvent(pub Event<DynTimeScale>);
-
-#[pymethods]
-impl PyEvent {
-    #[new]
-    fn new(time: PyTime, crossing: &str) -> PyResult<Self> {
-        let crossing = match crossing {
-            "up" => ZeroCrossing::Up,
-            "down" => ZeroCrossing::Down,
-            _ => return Err(PyValueError::new_err("crossing must be 'up' or 'down'")),
-        };
-        Ok(PyEvent(Event::new(time.0, crossing)))
-    }
-
-    fn __repr__(&self) -> String {
-        format!("Event({}, \"{}\")", self.time().__repr__(), self.crossing(),)
-    }
-
-    fn __str__(&self) -> String {
-        format!(
-            "Event - {}crossing at {}",
-            self.crossing(),
-            self.time().__str__()
-        )
-    }
-
-    /// Return the time of this event.
-    fn time(&self) -> PyTime {
-        PyTime(self.0.time())
-    }
-
-    /// Return the crossing direction ("up" or "down").
-    fn crossing(&self) -> String {
-        self.0.crossing().to_string()
-    }
-}
-
-/// Represents a time window (interval between two times).
-///
-/// Intervals are used to represent periods when certain conditions are met,
-/// such as visibility intervals between a ground station and spacecraft.
-///
-/// Args:
-///     start: The start time of the interval.
-///     end: The end time of the interval.
-#[pyclass(name = "Interval", module = "lox_space", frozen, from_py_object)]
-#[derive(Clone, Debug)]
-pub struct PyInterval(pub TimeInterval<DynTimeScale>);
-
-#[pymethods]
-impl PyInterval {
-    #[new]
-    fn new(start: PyTime, end: PyTime) -> Self {
-        PyInterval(TimeInterval::new(start.0, end.0))
-    }
-
-    /// Return the developer-facing string representation of this interval.
-    pub fn __repr__(&self) -> String {
-        format!(
-            "Interval({}, {})",
-            self.start().__repr__(),
-            self.end().__repr__(),
-        )
-    }
-
-    /// Return the start time of this interval.
-    fn start(&self) -> PyTime {
-        PyTime(self.0.start())
-    }
-
-    /// Return the end time of this interval.
-    fn end(&self) -> PyTime {
-        PyTime(self.0.end())
-    }
-
-    /// Return the duration of this interval.
-    fn duration(&self) -> PyTimeDelta {
-        PyTimeDelta(self.0.duration())
-    }
-
-    /// Return whether this interval is empty (start >= end).
-    fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    /// Return whether this interval contains the given time.
-    fn contains_time(&self, time: PyTime) -> bool {
-        self.0.contains_time(time.0)
-    }
-
-    /// Return whether this interval fully contains another interval.
-    fn contains(&self, other: &PyInterval) -> bool {
-        self.0.contains(&other.0)
-    }
-
-    /// Return the intersection of this interval with another.
-    fn intersect(&self, other: PyInterval) -> PyInterval {
-        PyInterval(self.0.intersect(other.0))
-    }
-
-    /// Return whether this interval overlaps with another.
-    fn overlaps(&self, other: PyInterval) -> bool {
-        self.0.overlaps(other.0)
-    }
-
-    /// Return a list of times spaced by the given step within this interval.
-    ///
-    /// Args:
-    ///     step: The step size (must be non-zero).
-    ///
-    /// Returns:
-    ///     List of Time objects.
-    ///
-    /// Raises:
-    ///     ValueError: If step is zero.
-    fn step_by(&self, step: PyTimeDelta) -> PyResult<Vec<PyTime>> {
-        if step.0.is_zero() {
-            return Err(PyValueError::new_err("step must be non-zero"));
-        }
-        Ok(self.0.step_by(step.0).map(PyTime).collect())
-    }
-
-    /// Return a list of n evenly-spaced times within this interval.
-    ///
-    /// Args:
-    ///     n: Number of points (must be >= 2).
-    ///
-    /// Returns:
-    ///     List of Time objects.
-    ///
-    /// Raises:
-    ///     ValueError: If n < 2.
-    fn linspace(&self, n: usize) -> PyResult<Vec<PyTime>> {
-        if n < 2 {
-            return Err(PyValueError::new_err("n must be >= 2"));
-        }
-        Ok(self.0.linspace(n).into_iter().map(PyTime).collect())
     }
 }
 

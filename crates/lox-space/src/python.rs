@@ -5,7 +5,7 @@
 use std::f64::consts::PI;
 
 use crate::analysis::python::{
-    PyAccessResults, PyAccessWindow, PyAoi, PyElevationMask, PyEnsemble, PyGroundStation,
+    PyAccessResults, PyAccessWindow, PyAoi, PyElevationMask, PyEnsemble, PyEvent, PyGroundStation,
     PyLookSide, PyObservables, PyOpticalAccessAnalysis, PyOpticalPayload, PyPass, PyPassDirection,
     PyPowerBudgetAnalysis, PyPowerBudgetResults, PySarAccessAnalysis, PySarPayload, PyScenario,
     PySpacecraft, PyVisibilityAnalysis, PyVisibilityResults,
@@ -27,12 +27,15 @@ use crate::itur::python::PyItuProvider;
 use crate::itur::python::register_itur_functions;
 use crate::math::python::PySeries;
 use crate::orbits::python::{
-    PyCartesian, PyEvent, PyGroundLocation, PyGroundPropagator, PyInterval, PyJ2Propagator,
-    PyJ4Propagator, PyKeplerian, PyModifiedEquinoctial, PyNumericalPropagator, PySgp4, PyTle,
-    PyTrajectory, PyVallado, py_complement_intervals, py_intersect_intervals, py_union_intervals,
+    PyCartesian, PyGroundLocation, PyGroundPropagator, PyJ2Propagator, PyJ4Propagator, PyKeplerian,
+    PyModifiedEquinoctial, PyNumericalPropagator, PySgp4, PyTle, PyTrajectory, PyVallado,
 };
 use crate::time::python::{
-    deltas::PyTimeDelta, time::PyTime, time_scales::PyTimeScale, time_series::PyTimeSeries,
+    deltas::PyTimeDelta,
+    intervals::{PyInterval, py_complement_intervals, py_intersect_intervals, py_union_intervals},
+    time::PyTime,
+    time_scales::PyTimeScale,
+    time_series::PyTimeSeries,
     utc::PyUtc,
 };
 use crate::units::{

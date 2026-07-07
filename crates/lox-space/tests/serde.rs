@@ -7,12 +7,12 @@
 use lox_core::coords::Cartesian;
 use lox_core::coords::LonLatAlt;
 use lox_core::glam::{DMat3, DVec3};
+use lox_space::analysis::events::ZeroCrossing;
 use lox_space::bodies::*;
 use lox_space::frames::Teme;
 use lox_space::frames::rotations::Rotation;
 use lox_space::frames::*;
 use lox_space::orbits::CartesianOrbit;
-use lox_space::orbits::events::ZeroCrossing;
 use lox_space::orbits::ground::GroundLocation;
 use lox_space::time::Time;
 use lox_space::time::intervals::TimeInterval;

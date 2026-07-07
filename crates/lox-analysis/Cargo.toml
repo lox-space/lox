@@ -27,6 +27,7 @@ lox-time = { workspace = true, features = ["chrono"] }
 
 geo = { workspace = true, optional = true }
 geojson = { workspace = true, optional = true }
+itertools.workspace = true
 rayon.workspace = true
 serde = { workspace = true, optional = true }
 thiserror.workspace = true

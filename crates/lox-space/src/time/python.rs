@@ -7,6 +7,8 @@
 
 /// Python bindings for time delta types.
 pub mod deltas;
+/// Python bindings for time interval types.
+pub mod intervals;
 /// Python bindings for the core `Time` type.
 pub mod time;
 /// Python bindings for time scale types.
