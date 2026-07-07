@@ -6,6 +6,7 @@
 
 //! Mathematical utilities: root-finding, interpolation, optimization, and linear algebra.
 
+pub mod callback;
 pub mod float;
 pub mod glam;
 pub mod linear_algebra;
@@ -13,3 +14,4 @@ pub mod optim;
 pub mod roots;
 pub mod series;
 pub mod slices;
+pub mod zero_crossing;

@@ -7,7 +7,8 @@
 use lox_approx::approx_eq;
 use thiserror::Error;
 
-use super::roots::{Callback, LoxError};
+use crate::error::LoxError;
+use crate::math::callback::Callback;
 use crate::math::float::abs;
 
 /// Error returned by bracketed minimization algorithms.

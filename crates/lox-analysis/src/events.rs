@@ -5,8 +5,10 @@
 use std::collections::VecDeque;
 
 use itertools::Itertools;
-pub use lox_core::math::roots::ZeroCrossing;
-use lox_core::math::roots::{Callback, FindBracketedRoot, LoxError, RootFinderError};
+use lox_core::error::LoxError;
+use lox_core::math::callback::Callback;
+use lox_core::math::roots::{FindBracketedRoot, RootFinderError};
+pub use lox_core::math::zero_crossing::ZeroCrossing;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;

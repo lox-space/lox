@@ -6,7 +6,8 @@
 
 use std::io;
 
-use lox_core::math::roots::{LoxError, RootFinderError};
+use lox_core::error::LoxError;
+use lox_core::math::roots::RootFinderError;
 use lox_frames::rotations::RotationError;
 use lox_space::math::python::{callback_pyerr, raised_exception};
 use pyo3::Python;
