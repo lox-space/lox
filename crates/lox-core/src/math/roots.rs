@@ -7,82 +7,9 @@
 use lox_approx::approx_eq;
 use thiserror::Error;
 
-pub use crate::error::{BoxedError, LoxError};
+use crate::error::LoxError;
+use crate::math::callback::Callback;
 use crate::math::float::{abs, powi, sqrt};
-
-/// Error returned by root-finding algorithms.
-#[derive(Debug, Error)]
-pub enum RootFinderError {
-    /// The algorithm did not converge within the maximum number of iterations.
-    #[error("not converged after {iterations} iterations at x = {x}, residual {residual}")]
-    NotConverged {
-        /// Number of iterations performed before giving up.
-        iterations: u32,
-        /// The best root estimate reached.
-        x: f64,
-        /// The residual `f(x)` at the best estimate.
-        residual: f64,
-    },
-    /// The root is not within the given bracket.
-    #[error("root not in bracket")]
-    NotInBracket,
-    /// The objective function returned a non-finite value.
-    #[error("function returned a non-finite value ({value}) at x = {x}")]
-    NonFinite {
-        /// The point at which the function was evaluated.
-        x: f64,
-        /// The non-finite value returned.
-        value: f64,
-    },
-    /// The derivative returned a non-finite value.
-    #[error("derivative returned a non-finite value ({value}) at x = {x}")]
-    NonFiniteDerivative {
-        /// The point at which the derivative was evaluated.
-        x: f64,
-        /// The non-finite value returned.
-        value: f64,
-    },
-    /// The iteration update diverged, e.g. due to a zero derivative at a
-    /// stationary point or a vanishing update denominator.
-    #[error("iteration step diverged at x = {x}")]
-    DivergedStep {
-        /// The iterate at which the update diverged.
-        x: f64,
-    },
-    /// The objective function returned an error.
-    #[error(transparent)]
-    Callback(#[from] LoxError),
-}
-
-/// A callable function for root-finding algorithms.
-pub trait Callback {
-    /// Evaluates the function at `v`.
-    fn call(&self, v: f64) -> Result<f64, LoxError>;
-}
-
-impl<F> Callback for F
-where
-    F: Fn(f64) -> f64,
-{
-    fn call(&self, v: f64) -> Result<f64, LoxError> {
-        Ok(self(v))
-    }
-}
-
-/// Adapts a fallible closure into a [`Callback`].
-///
-/// Plain closures implement [`Callback`] directly; wrap a closure in
-/// `Fallible` when its evaluation can fail.
-pub struct Fallible<F>(pub F);
-
-impl<F> Callback for Fallible<F>
-where
-    F: Fn(f64) -> Result<f64, BoxedError>,
-{
-    fn call(&self, v: f64) -> Result<f64, LoxError> {
-        (self.0)(v).map_err(LoxError::from)
-    }
-}
 
 /// Finds a root of `f` starting from an initial guess.
 pub trait FindRoot<F>
@@ -132,48 +59,58 @@ where
     }
 }
 
-/// Direction of a zero-crossing of a scalar function between two samples.
-///
-/// Classification uses a half-open convention: a sample of `0.0` belongs to the
-/// non-negative ("active") side, so a crossing is a transition between a
-/// negative sample and a non-negative one. This matches the `value >= 0`
-/// convention used by interval/event detection. `NaN` samples do not define a
-/// direction.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum ZeroCrossing {
-    /// The signal crosses from negative to non-negative.
-    Up,
-    /// The signal crosses from non-negative to negative.
-    Down,
+/// Error returned by root-finding algorithms.
+#[derive(Debug, Error)]
+pub enum RootFinderError {
+    /// The algorithm did not converge within the maximum number of iterations.
+    #[error("not converged after {iterations} iterations at x = {x}, residual {residual}")]
+    NotConverged {
+        /// Number of iterations performed before giving up.
+        iterations: u32,
+        /// The best root estimate reached.
+        x: f64,
+        /// The residual `f(x)` at the best estimate.
+        residual: f64,
+    },
+    /// The root is not within the given bracket.
+    #[error("root not in bracket")]
+    NotInBracket,
+    /// The objective function returned a non-finite value.
+    #[error("function returned a non-finite value ({value}) at x = {x}")]
+    NonFinite {
+        /// The point at which the function was evaluated.
+        x: f64,
+        /// The non-finite value returned.
+        value: f64,
+    },
+    /// The derivative returned a non-finite value.
+    #[error("derivative returned a non-finite value ({value}) at x = {x}")]
+    NonFiniteDerivative {
+        /// The point at which the derivative was evaluated.
+        x: f64,
+        /// The non-finite value returned.
+        value: f64,
+    },
+    /// The iteration update diverged, e.g. due to a zero derivative at a
+    /// stationary point or a vanishing update denominator.
+    #[error("iteration step diverged at x = {x}")]
+    DivergedStep {
+        /// The iterate at which the update diverged.
+        x: f64,
+    },
+    /// The objective function returned an error.
+    #[error(transparent)]
+    Callback(#[from] LoxError),
 }
 
-impl ZeroCrossing {
-    /// Classifies the crossing direction between two consecutive samples `s0`
-    /// and `s1`, returning `None` when there is no crossing or either sample is
-    /// `NaN`.
-    ///
-    /// A value of `0.0` counts as the non-negative side, so brackets are
-    /// half-open.
-    pub fn new(s0: f64, s1: f64) -> Option<ZeroCrossing> {
-        if s0.is_nan() || s1.is_nan() {
-            return None;
-        }
-        match (s0 < 0.0, s1 < 0.0) {
-            (true, false) => Some(ZeroCrossing::Up),
-            (false, true) => Some(ZeroCrossing::Down),
-            _ => None,
-        }
+/// Evaluates `f` at `x`, mapping a callback failure or non-finite result to the
+/// corresponding [`RootFinderError`].
+fn eval_finite<F: Callback>(f: &F, x: f64) -> Result<f64, RootFinderError> {
+    let value = f.call(x)?;
+    if !value.is_finite() {
+        return Err(RootFinderError::NonFinite { x, value });
     }
-}
-
-impl core::fmt::Display for ZeroCrossing {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            ZeroCrossing::Up => write!(f, "up"),
-            ZeroCrossing::Down => write!(f, "down"),
-        }
-    }
+    Ok(value)
 }
 
 /// Steffensen's method for root-finding (derivative-free).
@@ -219,16 +156,6 @@ impl Steffensen {
         self.rel_tol = rel_tol;
         self
     }
-}
-
-/// Evaluates `f` at `x`, mapping a callback failure or non-finite result to the
-/// corresponding [`RootFinderError`].
-fn eval_finite<F: Callback>(f: &F, x: f64) -> Result<f64, RootFinderError> {
-    let value = f.call(x)?;
-    if !value.is_finite() {
-        return Err(RootFinderError::NonFinite { x, value });
-    }
-    Ok(value)
 }
 
 impl<F> FindRoot<F> for Steffensen
@@ -539,6 +466,8 @@ mod tests {
     use lox_approx::assert_approx_eq;
 
     use super::*;
+    use crate::error::BoxedError;
+    use crate::math::callback::Fallible;
     use crate::math::float::{cos, sin};
 
     type Result = core::result::Result<f64, BoxedError>;
@@ -680,27 +609,6 @@ mod tests {
                 (-1.0, 2.0),
             )
             .unwrap();
-    }
-
-    #[test]
-    fn test_zero_crossing() {
-        // Negative -> positive is Up; positive -> negative is Down.
-        assert_eq!(ZeroCrossing::new(-1.0, 1.0), Some(ZeroCrossing::Up));
-        assert_eq!(ZeroCrossing::new(1.0, -1.0), Some(ZeroCrossing::Down));
-        // Same side -> no crossing.
-        assert_eq!(ZeroCrossing::new(-1.0, -2.0), None);
-        assert_eq!(ZeroCrossing::new(1.0, 2.0), None);
-        // Half-open: zero counts as the non-negative side.
-        assert_eq!(ZeroCrossing::new(-1.0, 0.0), Some(ZeroCrossing::Up));
-        assert_eq!(ZeroCrossing::new(0.0, -1.0), Some(ZeroCrossing::Down));
-        assert_eq!(ZeroCrossing::new(0.0, 1.0), None);
-        assert_eq!(ZeroCrossing::new(1.0, 0.0), None);
-        // The sign of zero does not affect classification.
-        assert_eq!(ZeroCrossing::new(-1.0, -0.0), Some(ZeroCrossing::Up));
-        assert_eq!(ZeroCrossing::new(-0.0, -1.0), Some(ZeroCrossing::Down));
-        // NaN never defines a direction.
-        assert_eq!(ZeroCrossing::new(f64::NAN, 1.0), None);
-        assert_eq!(ZeroCrossing::new(-1.0, f64::NAN), None);
     }
 
     #[test]
@@ -915,12 +823,6 @@ mod tests {
             RootFinderError::DivergedStep { x: 0.5 }.to_string(),
             "iteration step diverged at x = 0.5"
         );
-    }
-
-    #[test]
-    fn test_zero_crossing_display() {
-        assert_eq!(ZeroCrossing::Up.to_string(), "up");
-        assert_eq!(ZeroCrossing::Down.to_string(), "down");
     }
 
     #[test]
