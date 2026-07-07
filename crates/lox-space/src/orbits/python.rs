@@ -1238,12 +1238,12 @@ impl PyTrajectory {
     ///
     /// Raises:
     ///     ValueError: If the time argument is invalid.
-    fn interpolate(&self, time: &Bound<'_, PyAny>) -> PyResult<PyCartesian> {
+    fn at(&self, time: &Bound<'_, PyAny>) -> PyResult<PyCartesian> {
         if let Ok(delta) = time.extract::<PyTimeDelta>() {
-            return Ok(PyCartesian(self.0.interpolate(delta.0)));
+            return Ok(PyCartesian(self.0.at_delta(delta.0)));
         }
         if let Ok(time) = time.extract::<PyTime>() {
-            return Ok(PyCartesian(self.0.interpolate_at(time.0)));
+            return Ok(PyCartesian(self.0.at(time.0)));
         }
         Err(PyValueError::new_err("invalid time argument"))
     }

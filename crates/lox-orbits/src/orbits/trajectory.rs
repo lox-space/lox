@@ -96,9 +96,14 @@ where
 
     /// Interpolates the trajectory at the given absolute time.
     pub fn at(&self, time: Time<T>) -> CartesianOrbit<T, O, R> {
-        let t = (time - self.epoch).to_seconds().to_f64();
+        self.at_delta(time - self.epoch)
+    }
+
+    /// Interpolates the trajectory at the given time delta from the trajectory start.
+    pub fn at_delta(&self, dt: TimeDelta) -> CartesianOrbit<T, O, R> {
+        let t = dt.to_seconds().to_f64();
         let state = self.data.at(t);
-        Orbit::from_state(state, time, self.origin, self.frame)
+        Orbit::from_state(state, self.epoch + dt, self.origin, self.frame)
     }
 
     /// Transforms the entire trajectory into a different reference frame.
@@ -106,7 +111,7 @@ where
         self,
         frame: R1,
         provider: &P,
-    ) -> Result<Trajectory<T, O, R1>, Box<dyn std::error::Error>>
+    ) -> Result<Trajectory<T, O, R1>, P::Error>
     where
         R1: ReferenceFrame + Copy,
         P: TryRotation<R, R1, T>,
@@ -142,11 +147,6 @@ where
         ))
     }
 
-    /// Returns the reference epoch of the trajectory.
-    pub fn epoch(&self) -> Time<T> {
-        self.epoch
-    }
-
     /// Returns the central body origin.
     pub fn origin(&self) -> O {
         self.origin
@@ -157,7 +157,7 @@ where
         self.frame
     }
 
-    /// Returns the start time of the trajectory (same as the epoch).
+    /// Returns the start time of the trajectory.
     pub fn start_time(&self) -> Time<T> {
         self.epoch
     }
@@ -180,13 +180,11 @@ where
 
     /// Returns all orbital states at the original data points.
     pub fn states(&self) -> Vec<CartesianOrbit<T, O, R>> {
-        let time_steps = self.data.time_steps();
-        time_steps
-            .iter()
-            .map(|&t| {
-                let state = self.data.at(t);
-                let time = self.epoch + TimeDelta::from_seconds_f64(t);
-                Orbit::from_state(state, time, self.origin, self.frame)
+        self.data
+            .clone()
+            .into_iter()
+            .map(|TimeStampedCartesian { time, state }| {
+                Orbit::from_state(state, self.epoch + time, self.origin, self.frame)
             })
             .collect()
     }
@@ -194,43 +192,11 @@ where
     /// Returns the trajectory as a vector of `[t, x, y, z, vx, vy, vz]` rows.
     pub fn to_vec(&self) -> Vec<Vec<f64>> {
         let time_steps = self.data.time_steps();
-        time_steps
-            .iter()
-            .map(|&t| {
-                let state = self.data.at(t);
-                vec![
-                    t,
-                    state.position().x,
-                    state.position().y,
-                    state.position().z,
-                    state.velocity().x,
-                    state.velocity().y,
-                    state.velocity().z,
-                ]
-            })
+        let (x, y, z) = (self.data.x(), self.data.y(), self.data.z());
+        let (vx, vy, vz) = (self.data.vx(), self.data.vy(), self.data.vz());
+        (0..time_steps.len())
+            .map(|i| vec![time_steps[i], x[i], y[i], z[i], vx[i], vy[i], vz[i]])
             .collect()
-    }
-
-    /// Interpolates the trajectory at the given time delta from the epoch.
-    pub fn interpolate(&self, dt: TimeDelta) -> CartesianOrbit<T, O, R> {
-        let t = dt.to_seconds().to_f64();
-        let state = self.data.at(t);
-        Orbit::from_state(state, self.epoch + dt, self.origin, self.frame)
-    }
-
-    /// Interpolates the trajectory at the given absolute time.
-    pub fn interpolate_at(&self, time: Time<T>) -> CartesianOrbit<T, O, R> {
-        self.interpolate(time - self.epoch)
-    }
-
-    /// Returns the interpolated position at time `t` seconds from the epoch.
-    pub fn position(&self, t: f64) -> DVec3 {
-        self.data.position(t)
-    }
-
-    /// Returns the interpolated velocity at time `t` seconds from the epoch.
-    pub fn velocity(&self, t: f64) -> DVec3 {
-        self.data.velocity(t)
     }
 }
 
@@ -486,7 +452,7 @@ mod tests {
     #[test]
     fn test_trajectory_into_parts() {
         let traj = sample_trajectory();
-        let epoch_before = traj.epoch();
+        let epoch_before = traj.start_time();
         let (epoch, origin, frame, _data) = traj.into_parts();
 
         assert_eq!(origin, Earth);

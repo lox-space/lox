@@ -213,7 +213,7 @@ impl DynPass {
         let mut pass_observables = Vec::new();
 
         for current_time in interval.step_by(time_resolution) {
-            let state = sc.interpolate_at(current_time);
+            let state = sc.at(current_time);
             let state_bf = state
                 .try_to_frame(body_fixed_frame, &DefaultRotationProvider)
                 .unwrap();
@@ -389,7 +389,7 @@ where
     type Error = EvalError;
 
     fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
-        let sc = self.sc.interpolate_at(time);
+        let sc = self.sc.at(time);
         let sc = sc
             .try_to_frame(self.body_fixed_frame, &DefaultRotationProvider)
             .map_err(|e| EvalError::Rotation(Box::new(e)))?;
@@ -426,7 +426,7 @@ where
             .ephemeris
             .position(tdb, self.sc.origin(), self.body)
             .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
-        let r_sc = self.sc.interpolate_at(time).position() - r_body;
+        let r_sc = self.sc.at(time).position() - r_body;
         // Compute ground station position in the scenario frame R by rotating
         // from body-fixed → R.
         let rot = DefaultRotationProvider
@@ -461,8 +461,8 @@ where
             .ephemeris
             .position(tdb, self.sc1.origin(), self.body)
             .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
-        let r_sc1 = self.sc1.interpolate_at(time).position() - r_body;
-        let r_sc2 = self.sc2.interpolate_at(time).position() - r_body;
+        let r_sc1 = self.sc1.at(time).position() - r_body;
+        let r_sc2 = self.sc2.at(time).position() - r_body;
         Ok(self.body.line_of_sight(r_sc1, r_sc2)?)
     }
 }
@@ -484,8 +484,8 @@ where
     type Error = EvalError;
 
     fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
-        let r_sc1 = self.sc1.interpolate_at(time).position();
-        let r_sc2 = self.sc2.interpolate_at(time).position();
+        let r_sc1 = self.sc1.at(time).position();
+        let r_sc2 = self.sc2.at(time).position();
         Ok(self.body.line_of_sight(r_sc1, r_sc2)?)
     }
 }
@@ -514,8 +514,8 @@ where
     type Error = EvalError;
 
     fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
-        let r1 = self.sc1.interpolate_at(time).position();
-        let r2 = self.sc2.interpolate_at(time).position();
+        let r1 = self.sc1.at(time).position();
+        let r2 = self.sc2.at(time).position();
         let range = (r1 - r2).length();
         let threshold = self.threshold.to_meters();
         Ok(match self.direction {
@@ -544,8 +544,8 @@ where
     type Error = EvalError;
 
     fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
-        let s1 = self.sc1.interpolate_at(time);
-        let s2 = self.sc2.interpolate_at(time);
+        let s1 = self.sc1.at(time);
+        let s2 = self.sc2.at(time);
         let r = s2.position() - s1.position();
         let v = s2.velocity() - s1.velocity();
         let r_len_sq = r.length_squared();
