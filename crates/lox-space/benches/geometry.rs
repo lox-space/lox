@@ -4,15 +4,15 @@
 
 //! Microbenchmarks for the pure-function geometry kernels that sit at the
 //! bottom of every visibility and power computation: line-of-sight angle
-//! (spherical and spheroidal), beta angle, solar flux, and elevation-mask
-//! lookup. These are sub-microsecond calls, so each runs with a large sample
-//! size and `black_box`-wrapped inputs/outputs to defeat constant folding.
+//! (spherical and spheroidal), beta angle, and solar flux. These are
+//! sub-microsecond calls, so each runs with a large sample size and
+//! `black_box`-wrapped inputs/outputs to defeat constant folding.
 //!
 //! Run with `cargo bench -p lox-space --bench geometry`.
 
 use divan::black_box;
 use lox_space::analysis::power::{beta_angle, solar_flux};
-use lox_space::analysis::visibility::{ElevationMask, line_of_sight, line_of_sight_spheroid};
+use lox_space::analysis::visibility::{line_of_sight, line_of_sight_spheroid};
 use lox_space::orbits::DVec3;
 
 fn main() {
@@ -56,23 +56,4 @@ fn beta_angle_kernel(bencher: divan::Bencher) {
 fn solar_flux_kernel(bencher: divan::Bencher) {
     let distance_m = 1.495_978_707e11_f64;
     bencher.bench(|| solar_flux(black_box(distance_m)));
-}
-
-#[divan::bench(sample_size = 1000, sample_count = 1000)]
-fn elevation_mask_fixed(bencher: divan::Bencher) {
-    let mask = ElevationMask::with_fixed_elevation(5.0_f64.to_radians());
-    bencher.bench(|| mask.min_elevation(black_box(2.5)));
-}
-
-#[divan::bench(sample_size = 1000, sample_count = 1000)]
-fn elevation_mask_variable(bencher: divan::Bencher) {
-    // Azimuth-dependent piecewise-linear mask (radians). The azimuth series
-    // must span exactly [-π, π].
-    use std::f64::consts::PI;
-    let azimuth: Vec<f64> = (0..=8).map(|i| -PI + i as f64 * (2.0 * PI / 8.0)).collect();
-    let elevation: Vec<f64> = (0..=8)
-        .map(|i| (5.0 + (i % 3) as f64 * 5.0).to_radians())
-        .collect();
-    let mask = ElevationMask::new(azimuth, elevation).unwrap();
-    bencher.bench(|| mask.min_elevation(black_box(0.5)));
 }
