@@ -54,7 +54,7 @@ nom = { version = "8.0.0", default-features = false }
 numpy = "0.29.0"
 proptest = "1.9.0"
 pyo3 = "0.29.0"
-quick-xml = { version = "0.40.1", features = ["serde", "serialize"] }
+quick-xml = { version = "0.41.0", features = ["serde", "serialize"] }
 rayon = "1.11.0"
 rstest = "0.26.1"
 serde = { version = "1.0.228", features = ["derive", "rc"] }
