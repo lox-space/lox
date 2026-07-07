@@ -27,8 +27,28 @@ pub enum RootFinderError {
     #[error("root not in bracket")]
     NotInBracket,
     /// The objective function returned a non-finite value.
-    #[error("function returned a non-finite value: {0}")]
-    NonFinite(f64),
+    #[error("function returned a non-finite value ({value}) at x = {x}")]
+    NonFinite {
+        /// The point at which the function was evaluated.
+        x: f64,
+        /// The non-finite value returned.
+        value: f64,
+    },
+    /// The derivative returned a non-finite value.
+    #[error("derivative returned a non-finite value ({value}) at x = {x}")]
+    NonFiniteDerivative {
+        /// The point at which the derivative was evaluated.
+        x: f64,
+        /// The non-finite value returned.
+        value: f64,
+    },
+    /// The iteration update diverged, e.g. due to a zero derivative at a
+    /// stationary point or a vanishing update denominator.
+    #[error("iteration step diverged at x = {x}")]
+    DivergedStep {
+        /// The iterate at which the update diverged.
+        x: f64,
+    },
     /// The objective function returned an error.
     #[error(transparent)]
     Callback(#[from] LoxError),
@@ -106,8 +126,8 @@ where
 
     /// Finds a root of `f` within the given `bracket`.
     fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError> {
-        let fa = f.call(bracket.0).map_err(RootFinderError::Callback)?;
-        let fb = f.call(bracket.1).map_err(RootFinderError::Callback)?;
+        let fa = f.call(bracket.0)?;
+        let fb = f.call(bracket.1)?;
         self.find_in_bracket_with_values(f, bracket, (fa, fb))
     }
 }
@@ -199,9 +219,9 @@ impl Steffensen {
 /// Evaluates `f` at `x`, mapping a callback failure or non-finite result to the
 /// corresponding [`RootFinderError`].
 fn eval_finite<F: Callback>(f: &F, x: f64) -> Result<f64, RootFinderError> {
-    let value = f.call(x).map_err(RootFinderError::Callback)?;
+    let value = f.call(x)?;
     if !value.is_finite() {
-        return Err(RootFinderError::NonFinite(value));
+        return Err(RootFinderError::NonFinite { x, value });
     }
     Ok(value)
 }
@@ -214,10 +234,7 @@ where
         let mut p0 = initial_guess;
         let mut last: Option<(f64, f64)> = None;
         for _ in 0..self.max_iter {
-            let fp0 = f.call(p0).map_err(RootFinderError::Callback)?;
-            if !fp0.is_finite() {
-                return Err(RootFinderError::NonFinite(fp0));
-            }
+            let fp0 = eval_finite(&f, p0)?;
             // An initial guess that is already a root is returned directly,
             // avoiding a 0/0 update.
             if fp0 == 0.0 {
@@ -225,14 +242,11 @@ where
             }
             last = Some((p0, fp0));
             let f1 = p0 + fp0;
-            let ff1 = f.call(f1).map_err(RootFinderError::Callback)?;
-            if !ff1.is_finite() {
-                return Err(RootFinderError::NonFinite(ff1));
-            }
+            let ff1 = eval_finite(&f, f1)?;
             let f2 = f1 + ff1;
             let p = p0 - powi(f1 - p0, 2) / (f2 - 2.0 * f1 + p0);
             if !p.is_finite() {
-                return Err(RootFinderError::NonFinite(p));
+                return Err(RootFinderError::DivergedStep { x: p0 });
             }
             if approx_eq!(p, p0, rtol <= self.rel_tol, atol <= self.abs_tol) {
                 return Ok(p);
@@ -310,23 +324,20 @@ where
         let mut p0 = initial_guess;
         let mut last: Option<(f64, f64)> = None;
         for _ in 0..self.max_iter {
-            let fx = f.call(p0).map_err(RootFinderError::Callback)?;
-            if !fx.is_finite() {
-                return Err(RootFinderError::NonFinite(fx));
-            }
+            let fx = eval_finite(&f, p0)?;
             // An initial guess that is already a root is returned directly,
             // avoiding a 0/0 update at a stationary point.
             if fx == 0.0 {
                 return Ok(p0);
             }
             last = Some((p0, fx));
-            let dfx = derivative.call(p0).map_err(RootFinderError::Callback)?;
+            let dfx = derivative.call(p0)?;
             if !dfx.is_finite() {
-                return Err(RootFinderError::NonFinite(dfx));
+                return Err(RootFinderError::NonFiniteDerivative { x: p0, value: dfx });
             }
             let p = p0 - fx / dfx;
             if !p.is_finite() {
-                return Err(RootFinderError::NonFinite(p));
+                return Err(RootFinderError::DivergedStep { x: p0 });
             }
             if approx_eq!(p, p0, rtol <= self.rel_tol, atol <= self.abs_tol) {
                 return Ok(p);
@@ -413,10 +424,16 @@ where
         let (mut fpre, mut fcur) = values;
 
         if !fpre.is_finite() {
-            return Err(RootFinderError::NonFinite(fpre));
+            return Err(RootFinderError::NonFinite {
+                x: xpre,
+                value: fpre,
+            });
         }
         if !fcur.is_finite() {
-            return Err(RootFinderError::NonFinite(fcur));
+            return Err(RootFinderError::NonFinite {
+                x: xcur,
+                value: fcur,
+            });
         }
 
         // An endpoint that is exactly a root is returned directly.
@@ -494,10 +511,7 @@ where
                 xcur += if sbis > 0.0 { delta } else { -delta };
             }
 
-            fcur = f.call(xcur).map_err(RootFinderError::Callback)?;
-            if !fcur.is_finite() {
-                return Err(RootFinderError::NonFinite(fcur));
-            }
+            fcur = eval_finite(&f, xcur)?;
         }
 
         Err(RootFinderError::NotConverged {
@@ -558,14 +572,14 @@ mod tests {
     }
 
     #[test]
-    fn test_newton_zero_derivative_is_non_finite() {
+    fn test_newton_zero_derivative_diverges() {
         // f(x) = x^2 + 1 has no real root; at x = 0 the derivative is zero, so
-        // the step diverges and must be reported as a non-finite error.
+        // the update diverges and must be reported as a diverged step.
         let newton = Newton::default();
         let err = newton
             .find_with_derivative(|x: f64| powi(x, 2) + 1.0, |x: f64| 2.0 * x, 0.0)
             .unwrap_err();
-        assert!(matches!(err, RootFinderError::NonFinite(_)));
+        assert!(matches!(err, RootFinderError::DivergedStep { x } if x == 0.0));
     }
 
     #[test]
@@ -590,12 +604,12 @@ mod tests {
     }
 
     #[test]
-    fn test_steffensen_zero_denominator_is_non_finite() {
+    fn test_steffensen_zero_denominator_diverges() {
         // A constant non-zero residual makes the Aitken denominator vanish; the
-        // update diverges and must be reported as a non-finite error.
+        // update diverges and must be reported as a diverged step.
         let steffensen = Steffensen::default();
         let err = steffensen.find(|_x: f64| 1.0, 0.0).unwrap_err();
-        assert!(matches!(err, RootFinderError::NonFinite(_)));
+        assert!(matches!(err, RootFinderError::DivergedStep { x } if x == 0.0));
     }
 
     #[test]
@@ -716,7 +730,7 @@ mod tests {
         let err = brent
             .find_in_bracket_with_values(|_x: f64| 1.0, (0.0, 1.0), (f64::NAN, 1.0))
             .unwrap_err();
-        assert!(matches!(err, RootFinderError::NonFinite(_)));
+        assert!(matches!(err, RootFinderError::NonFinite { .. }));
     }
 
     #[test]
@@ -801,7 +815,7 @@ mod tests {
                 (0.0, 1.0),
             )
             .unwrap_err();
-        assert!(matches!(err, RootFinderError::NonFinite(_)));
+        assert!(matches!(err, RootFinderError::NonFinite { .. }));
     }
 
     #[test]
@@ -872,8 +886,24 @@ mod tests {
             "root not in bracket"
         );
         assert_eq!(
-            RootFinderError::NonFinite(f64::INFINITY).to_string(),
-            "function returned a non-finite value: inf"
+            RootFinderError::NonFinite {
+                x: 1.5,
+                value: f64::INFINITY
+            }
+            .to_string(),
+            "function returned a non-finite value (inf) at x = 1.5"
+        );
+        assert_eq!(
+            RootFinderError::NonFiniteDerivative {
+                x: 1.5,
+                value: f64::NAN
+            }
+            .to_string(),
+            "derivative returned a non-finite value (NaN) at x = 1.5"
+        );
+        assert_eq!(
+            RootFinderError::DivergedStep { x: 0.5 }.to_string(),
+            "iteration step diverged at x = 0.5"
         );
     }
 
@@ -914,7 +944,7 @@ mod tests {
         // A non-finite value at the initial guess is reported immediately.
         let steffensen = Steffensen::default();
         let err = steffensen.find(|_x: f64| f64::INFINITY, 1.0).unwrap_err();
-        assert!(matches!(err, RootFinderError::NonFinite(_)));
+        assert!(matches!(err, RootFinderError::NonFinite { .. }));
     }
 
     #[test]
@@ -925,7 +955,7 @@ mod tests {
         let err = steffensen
             .find(|x: f64| if x >= 2.0 { f64::INFINITY } else { x }, 1.5)
             .unwrap_err();
-        assert!(matches!(err, RootFinderError::NonFinite(_)));
+        assert!(matches!(err, RootFinderError::NonFinite { .. }));
     }
 
     #[test]
@@ -955,17 +985,21 @@ mod tests {
         let err = newton
             .find_with_derivative(|_x: f64| f64::INFINITY, |_x: f64| 1.0, 1.0)
             .unwrap_err();
-        assert!(matches!(err, RootFinderError::NonFinite(_)));
+        assert!(matches!(err, RootFinderError::NonFinite { .. }));
     }
 
     #[test]
     fn test_newton_non_finite_derivative_value() {
-        // A finite function value but a non-finite derivative is reported.
+        // A finite function value but a non-finite derivative is reported
+        // against the derivative, not the objective.
         let newton = Newton::default();
         let err = newton
             .find_with_derivative(|x: f64| x, |_x: f64| f64::INFINITY, 1.0)
             .unwrap_err();
-        assert!(matches!(err, RootFinderError::NonFinite(_)));
+        assert!(matches!(
+            err,
+            RootFinderError::NonFiniteDerivative { x, .. } if x == 1.0
+        ));
     }
 
     #[test]
@@ -975,7 +1009,7 @@ mod tests {
         let err = brent
             .find_in_bracket_with_values(|_x: f64| 1.0, (0.0, 1.0), (1.0, f64::NAN))
             .unwrap_err();
-        assert!(matches!(err, RootFinderError::NonFinite(_)));
+        assert!(matches!(err, RootFinderError::NonFinite { .. }));
     }
 
     #[test]
@@ -1014,7 +1048,7 @@ mod tests {
         let err = newton
             .find_with_derivative(|_x: f64| f64::INFINITY, |_x: f64| 1.0, 1.0)
             .unwrap_err();
-        assert!(matches!(err, RootFinderError::NonFinite(_)));
+        assert!(matches!(err, RootFinderError::NonFinite { .. }));
     }
 
     #[test]
