@@ -177,12 +177,17 @@ impl core::fmt::Display for ZeroCrossing {
 }
 
 /// Steffensen's method for root-finding (derivative-free).
+///
+/// The tolerances bound the iteration step, not the residual: near steep
+/// features the iteration can stall within tolerance where `f(x)` is not
+/// small and report a false root. Prefer [`Brent`] when a bracket is
+/// available.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Steffensen {
     max_iter: u32,
-    /// Absolute tolerance on the root location.
+    /// Absolute tolerance on the iteration step.
     abs_tol: f64,
-    /// Relative tolerance on the root location.
+    /// Relative tolerance on the iteration step.
     rel_tol: f64,
 }
 
@@ -203,13 +208,13 @@ impl Steffensen {
         self
     }
 
-    /// Sets the absolute tolerance on the root location.
+    /// Sets the absolute tolerance on the iteration step.
     pub fn with_abs_tol(mut self, abs_tol: f64) -> Self {
         self.abs_tol = abs_tol;
         self
     }
 
-    /// Sets the relative tolerance on the root location.
+    /// Sets the relative tolerance on the iteration step.
     pub fn with_rel_tol(mut self, rel_tol: f64) -> Self {
         self.rel_tol = rel_tol;
         self
@@ -271,12 +276,17 @@ where
 }
 
 /// Newton-Raphson method for root-finding (requires derivative).
+///
+/// The tolerances bound the iteration step, not the residual: near steep
+/// features the iteration can stall within tolerance where `f(x)` is not
+/// small and report a false root. Prefer [`Brent`] when a bracket is
+/// available.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Newton {
     max_iter: u32,
-    /// Absolute tolerance on the root location.
+    /// Absolute tolerance on the iteration step.
     abs_tol: f64,
-    /// Relative tolerance on the root location.
+    /// Relative tolerance on the iteration step.
     rel_tol: f64,
 }
 
@@ -297,13 +307,13 @@ impl Newton {
         self
     }
 
-    /// Sets the absolute tolerance on the root location.
+    /// Sets the absolute tolerance on the iteration step.
     pub fn with_abs_tol(mut self, abs_tol: f64) -> Self {
         self.abs_tol = abs_tol;
         self
     }
 
-    /// Sets the relative tolerance on the root location.
+    /// Sets the relative tolerance on the iteration step.
     pub fn with_rel_tol(mut self, rel_tol: f64) -> Self {
         self.rel_tol = rel_tol;
         self
