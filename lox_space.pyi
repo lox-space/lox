@@ -856,38 +856,6 @@ class ElevationMask:
         """Return the minimum elevation at the given azimuth."""
         ...
 
-def find_events(
-    func: Callable[[Time], float], start: Time, end: Time, step: TimeDelta
-) -> list[Event]:
-    """Find events where a function crosses zero.
-
-    Args:
-        func: Function that takes a Time and returns a float.
-        start: Start time of the analysis period.
-        end: End time of the analysis period.
-        step: Step size for sampling the function.
-
-    Returns:
-        List of Event objects at the detected zero-crossings.
-    """
-    ...
-
-def find_windows(
-    func: Callable[[Time], float], start: Time, end: Time, step: TimeDelta
-) -> list[Interval]:
-    """Find time windows where a function is positive.
-
-    Args:
-        func: Function that takes a Time and returns a float.
-        start: Start time of the analysis period.
-        end: End time of the analysis period.
-        step: Step size for sampling the function.
-
-    Returns:
-        List of Interval objects for intervals where the function is positive.
-    """
-    ...
-
 def intersect_intervals(a: list[Interval], b: list[Interval]) -> list[Interval]:
     """Intersect two sorted lists of intervals.
 
@@ -1444,16 +1412,6 @@ class Trajectory:
         ...
     def states(self) -> list[Cartesian]:
         """Return the list of states in this trajectory."""
-        ...
-    def find_events(
-        self, func: Callable[[Cartesian], float], step: TimeDelta
-    ) -> list[Event]:
-        """Find events where a function crosses zero."""
-        ...
-    def find_windows(
-        self, func: Callable[[Cartesian], float], step: TimeDelta
-    ) -> list[Interval]:
-        """Find time windows where a function is positive."""
         ...
     def interpolate(self, time: Time | TimeDelta) -> Cartesian:
         """Interpolate the trajectory at a specific time."""
