@@ -17,6 +17,7 @@ pub mod anomalies;
 pub mod comms;
 pub mod coords;
 pub mod elements;
+pub mod error;
 pub mod f64;
 pub mod glam;
 pub mod i32;

@@ -7,7 +7,7 @@
 use lox_approx::approx_eq;
 use thiserror::Error;
 
-use super::roots::{Callback, CallbackError};
+use super::roots::{Callback, LoxError};
 use crate::math::float::abs;
 
 /// Error returned by bracketed minimization algorithms.
@@ -27,7 +27,7 @@ pub enum MinimizerError {
     },
     /// The objective function returned an error.
     #[error(transparent)]
-    Callback(#[from] CallbackError),
+    Callback(#[from] LoxError),
 }
 
 /// Finds the minimum of a function within a bracket.
@@ -182,21 +182,17 @@ where
 
 #[cfg(test)]
 mod tests {
-    use alloc::boxed::Box;
     use core::f64::consts::PI;
     use lox_approx::assert_approx_eq;
 
     use super::*;
     use crate::math::float::{cos, powi};
 
-    type BoxedError = Box<dyn core::error::Error + Send + Sync + 'static>;
-    type Result = core::result::Result<f64, BoxedError>;
-
     #[test]
     fn test_brent_minimizer_quadratic() {
         let minimizer = BrentMinimizer::default();
         let x = minimizer
-            .find_minimum_in_bracket(|x: f64| -> Result { Ok(powi(x - 3.0, 2)) }, (0.0, 5.0))
+            .find_minimum_in_bracket(|x: f64| powi(x - 3.0, 2), (0.0, 5.0))
             .expect("should converge");
         assert_approx_eq!(x, 3.0, atol <= 1e-8);
     }
@@ -206,10 +202,7 @@ mod tests {
         // cos(x) has a minimum at PI in [PI/2, 3*PI/2]
         let minimizer = BrentMinimizer::default();
         let x = minimizer
-            .find_minimum_in_bracket(
-                |x: f64| -> Result { Ok(cos(x)) },
-                (PI / 2.0, 3.0 * PI / 2.0),
-            )
+            .find_minimum_in_bracket(|x: f64| cos(x), (PI / 2.0, 3.0 * PI / 2.0))
             .expect("should converge");
         assert_approx_eq!(x, PI, atol <= 1e-8);
     }
@@ -218,7 +211,7 @@ mod tests {
     fn test_brent_minimizer_reversed_bracket() {
         let minimizer = BrentMinimizer::default();
         let x = minimizer
-            .find_minimum_in_bracket(|x: f64| -> Result { Ok(powi(x - 2.0, 2)) }, (5.0, 0.0))
+            .find_minimum_in_bracket(|x: f64| powi(x - 2.0, 2), (5.0, 0.0))
             .expect("should converge");
         assert_approx_eq!(x, 2.0, atol <= 1e-8);
     }
@@ -230,7 +223,7 @@ mod tests {
             abs_tol: 1e-4,
         };
         let x = minimizer
-            .find_minimum_in_bracket(|x: f64| -> Result { Ok(powi(x - 1.0, 2)) }, (-2.0, 5.0))
+            .find_minimum_in_bracket(|x: f64| powi(x - 1.0, 2), (-2.0, 5.0))
             .expect("should converge");
         assert_approx_eq!(x, 1.0, atol <= 1e-3);
     }
@@ -241,8 +234,7 @@ mod tests {
             max_iter: 0,
             abs_tol: 1e-15,
         };
-        let result = minimizer
-            .find_minimum_in_bracket(|x: f64| -> Result { Ok(powi(x - 1.0, 2)) }, (0.0, 5.0));
+        let result = minimizer.find_minimum_in_bracket(|x: f64| powi(x - 1.0, 2), (0.0, 5.0));
         assert!(result.is_err());
     }
 }
