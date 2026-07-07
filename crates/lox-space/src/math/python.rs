@@ -2,10 +2,42 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+use std::error::Error;
+
 use crate::math::series::{Series, SeriesError};
+use lox_core::error::find_source;
 use lox_core::math::series::{InterpolationType, UnknownInterpolationType};
 use pyo3::exceptions::PyValueError;
-use pyo3::{PyErr, PyResult, pyclass, pymethods};
+use pyo3::{PyErr, PyResult, Python, pyclass, pymethods};
+
+/// Recovers a Python exception embedded anywhere in `err`'s source chain.
+///
+/// Returns `None` when the chain contains no `PyErr`.
+pub fn raised_exception(py: Python<'_>, err: &(dyn Error + 'static)) -> Option<PyErr> {
+    find_source::<PyErr>(err).map(|e| e.clone_ref(py))
+}
+
+/// Converts an error from a fallible user callback into a `PyErr`.
+///
+/// A Python exception embedded in the source chain is re-raised as the
+/// original exception object; any other error becomes a `ValueError` whose
+/// message preserves the full error chain.
+pub fn callback_pyerr(py: Python<'_>, err: &(dyn Error + 'static)) -> PyErr {
+    if let Some(exc) = raised_exception(py, err) {
+        return exc;
+    }
+    let mut msg = err.to_string();
+    let mut source = err.source();
+    while let Some(e) = source {
+        let s = e.to_string();
+        if !msg.contains(&s) {
+            msg.push_str(": ");
+            msg.push_str(&s);
+        }
+        source = e.source();
+    }
+    PyValueError::new_err(msg)
+}
 
 /// Python error wrapper for [`SeriesError`].
 pub struct PySeriesError(pub SeriesError);

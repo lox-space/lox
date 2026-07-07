@@ -11,7 +11,6 @@ use std::f64::consts::PI;
 use lox_bodies::Origin;
 use lox_core::elements::KeplerianBuilder;
 use lox_core::math::optim::{BrentMinimizer, FindBracketedMinimum};
-use lox_core::math::roots::BoxedError;
 use lox_core::units::{Angle, Distance};
 use lox_frames::ReferenceFrame;
 use lox_time::Time;
@@ -135,7 +134,7 @@ impl StreetOfCoverageBuilder {
 
         let nu_opt = BrentMinimizer::default()
             .find_minimum_in_bracket(
-                |nu: f64| -> Result<f64, BoxedError> { Ok(nu_to_minimize(nu, pf, sf, j, inc)) },
+                |nu: f64| nu_to_minimize(nu, pf, sf, j, inc),
                 (nu_min, nu_max),
             )
             .map_err(|_| ConstellationError::SocNotConverged)?;

@@ -6,9 +6,7 @@ use std::collections::VecDeque;
 
 use itertools::Itertools;
 pub use lox_core::math::roots::ZeroCrossing;
-use lox_core::math::roots::{
-    BoxedError, Callback, CallbackError, FindBracketedRoot, RootFinderError,
-};
+use lox_core::math::roots::{Callback, FindBracketedRoot, LoxError, RootFinderError};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
@@ -57,9 +55,6 @@ pub enum DetectError {
     /// The root-finding algorithm failed.
     #[error(transparent)]
     RootFinder(#[from] RootFinderError),
-    /// The user-provided callback returned an error.
-    #[error(transparent)]
-    Callback(Box<dyn std::error::Error + Send + Sync>),
 }
 
 // ---------------------------------------------------------------------------
@@ -112,11 +107,9 @@ impl<'a, T: TimeScale + Copy, F: DetectFn<T>> DetectCallback<'a, T, F> {
 }
 
 impl<T: TimeScale + Copy, F: DetectFn<T>> Callback for DetectCallback<'_, T, F> {
-    fn call(&self, v: f64) -> Result<f64, CallbackError> {
+    fn call(&self, v: f64) -> Result<f64, LoxError> {
         let time = self.start + TimeDelta::from_seconds_f64(v);
-        self.func
-            .eval(time)
-            .map_err(|e| CallbackError::from(Box::new(e) as BoxedError))
+        self.func.eval(time).map_err(LoxError::new)
     }
 }
 
