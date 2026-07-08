@@ -33,6 +33,7 @@ serde = ["dep:serde", "lox-bodies/serde", "lox-time/serde", "lox-core/serde"]
 
 [dev-dependencies]
 rstest.workspace = true
+serde_json.workspace = true
 
 [lib]
 doctest = false
