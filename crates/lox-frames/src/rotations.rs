@@ -279,6 +279,42 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
         Ok(self.tod_to_teme(time)?.transpose())
     }
 
+    /// Rotation from ICRF to TEME (classical FK5 chain).
+    ///
+    /// Fuses bias–precession, nutation, and the equation of the equinoxes,
+    /// evaluating the nutation series once rather than once for the nutation
+    /// matrix and again for the sidereal angle.
+    fn icrf_to_teme(&self, time: Time<T>) -> Result<Rotation, RotationError>
+    where
+        T: TimeScale + Copy,
+        Self: TryOffset<T, Tt> + TryOffset<T, Tdb>,
+    {
+        let sys = ReferenceSystem::Iers1996;
+        let tt = time.try_to_scale(Tt, self).map_err(RotationError::offset)?;
+        let tdb = time
+            .try_to_scale(Tdb, self)
+            .map_err(RotationError::offset)?;
+        let corr = self.corrections(time, sys).map_err(RotationError::eop)?;
+
+        let icrf_to_mod = sys.bias_precession_matrix(tt);
+        let epsa = sys.mean_obliquity(tdb.with_scale(Tt));
+        let nut = sys.nutation(tdb);
+        let mod_to_tod = (nut + corr).nutation_matrix(epsa);
+        let eoe = EquationOfTheEquinoxes::iau1994_from_dpsi(tdb, nut.dpsi);
+        let tod_to_teme = eoe.0.rotation_z();
+
+        Ok(Rotation::new(tod_to_teme * mod_to_tod * icrf_to_mod))
+    }
+
+    /// Rotation from TEME to ICRF.
+    fn teme_to_icrf(&self, time: Time<T>) -> Result<Rotation, RotationError>
+    where
+        T: TimeScale + Copy,
+        Self: TryOffset<T, Tt> + TryOffset<T, Tdb>,
+    {
+        Ok(self.icrf_to_teme(time)?.transpose())
+    }
+
     /// Rotation from ICRF to CIRF (CIP + CIO).
     fn icrf_to_cirf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
@@ -745,6 +781,22 @@ mod tests {
         // Round-trip should give identity
         let roundtrip = icrf_to_teme.compose(teme_to_icrf);
         assert_approx_eq!(roundtrip.m, DMat3::IDENTITY, atol <= 1e-14);
+    }
+
+    #[test]
+    fn test_icrf_to_teme_fused_matches_composed() {
+        let tt = Time::from_two_part_julian_date(Tt, 2454195.5, 0.500754444444444);
+        let sys = ReferenceSystem::Iers1996;
+
+        let fused = TestRotationProvider.icrf_to_teme(tt).unwrap();
+        let composed = TestRotationProvider
+            .icrf_to_mod(tt, sys)
+            .unwrap()
+            .compose(TestRotationProvider.mod_to_tod(tt, sys).unwrap())
+            .compose(TestRotationProvider.tod_to_teme(tt).unwrap());
+
+        assert_approx_eq!(fused.m, composed.m, atol <= 1e-15);
+        assert_approx_eq!(fused.dm, composed.dm, atol <= 1e-15);
     }
 
     #[test]

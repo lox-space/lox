@@ -192,4 +192,13 @@ mod frame_benches {
         bencher
             .bench(|| DefaultRotationProvider.try_rotation(DynFrame::Icrf, target, black_box(t)));
     }
+
+    // The SGP4 hot path: TEME state (dynamic frame) converted to ICRF.
+    #[divan::bench]
+    fn dyn_teme_to_icrf(bencher: Bencher) {
+        let t = epoch();
+        bencher.bench(|| {
+            DefaultRotationProvider.try_rotation(DynFrame::Teme, DynFrame::Icrf, black_box(t))
+        });
+    }
 }

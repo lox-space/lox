@@ -267,19 +267,11 @@ where
     type Error = RotationError;
 
     fn rotation_to_icrf(&self, provider: &P, time: Time<T>) -> Result<Rotation, Self::Error> {
-        let sys = ReferenceSystem::Iers1996;
-        Ok(provider
-            .teme_to_tod(time)?
-            .compose(provider.tod_to_mod(time, sys)?)
-            .compose(provider.mod_to_icrf(time, sys)?))
+        provider.teme_to_icrf(time)
     }
 
     fn rotation_from_icrf(&self, provider: &P, time: Time<T>) -> Result<Rotation, Self::Error> {
-        let sys = ReferenceSystem::Iers1996;
-        Ok(provider
-            .icrf_to_mod(time, sys)?
-            .compose(provider.mod_to_tod(time, sys)?)
-            .compose(provider.tod_to_teme(time)?))
+        provider.icrf_to_teme(time)
     }
 }
 
