@@ -349,6 +349,45 @@ mod tests {
     }
 
     #[test]
+    fn rotates_between_two_non_icrf_frames() {
+        // Neither endpoint is ICRF, so the composition goes through both legs of
+        // `rotation_via_icrf`; the round-trip must return to identity.
+        let t = epoch();
+        let tod = Tod(Iers2003(Iau2000Model::A));
+        let fwd = DefaultRotationProvider.try_rotation(tod, Itrf, t).unwrap();
+        let bwd = DefaultRotationProvider.try_rotation(Itrf, tod, t).unwrap();
+        assert_approx_eq!(fwd.m * bwd.m, DMat3::IDENTITY, atol <= 1e-14);
+    }
+
+    #[test]
+    fn dyn_rotates_between_two_non_icrf_frames() {
+        let t = epoch();
+        let tod = DynFrame::Tod(ReferenceSystem::Iers2003(Iau2000Model::A));
+        let fwd = DefaultRotationProvider
+            .try_rotation(tod, DynFrame::Itrf, t)
+            .unwrap();
+        let bwd = DefaultRotationProvider
+            .try_rotation(DynFrame::Itrf, tod, t)
+            .unwrap();
+        assert_approx_eq!(fwd.m * bwd.m, DMat3::IDENTITY, atol <= 1e-14);
+    }
+
+    #[test]
+    fn roundtrip_icrf_j2000() {
+        let t = epoch();
+        let fwd = DefaultRotationProvider
+            .try_rotation(Icrf, J2000, t)
+            .unwrap();
+        let bwd = DefaultRotationProvider
+            .try_rotation(J2000, Icrf, t)
+            .unwrap();
+        assert_approx_eq!(fwd.m * bwd.m, DMat3::IDENTITY, atol <= 1e-15);
+        // J2000 differs from ICRF only by the small frame bias.
+        assert!(!fwd.m.abs_diff_eq(DMat3::IDENTITY, 1e-9));
+        assert!(fwd.m.abs_diff_eq(DMat3::IDENTITY, 1e-6));
+    }
+
+    #[test]
     fn threads_2000b_model() {
         // The hub route reads the nutation model from the frame value, so 2000A
         // and 2000B genuinely differ (mas-level) instead of collapsing to 2000A.

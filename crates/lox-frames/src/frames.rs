@@ -354,3 +354,52 @@ mod serde_tests {
         assert!(result.is_err());
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use lox_bodies::DynOrigin;
+
+    use crate::traits::frame_key;
+
+    use super::*;
+
+    #[test]
+    fn zst_frame_names_and_abbreviations() {
+        assert_eq!(Icrf.abbreviation(), "ICRF");
+        assert_eq!(J2000.abbreviation(), "J2000");
+        assert_eq!(Cirf.abbreviation(), "CIRF");
+        assert_eq!(Tirf.abbreviation(), "TIRF");
+        assert_eq!(Itrf.abbreviation(), "ITRF");
+        assert_eq!(Teme.abbreviation(), "TEME");
+        assert!(Icrf.name().contains("Celestial"));
+        assert!(J2000.name().contains("J2000"));
+        assert!(Cirf.name().contains("Celestial Intermediate"));
+        assert!(Tirf.name().contains("Terrestrial Intermediate"));
+        assert!(Itrf.name().contains("Terrestrial Reference"));
+        assert!(Teme.name().contains("True Equator"));
+    }
+
+    #[test]
+    fn iau_frame_naming() {
+        // Sun/Moon take the "the" article; other bodies do not.
+        let sun = Iau::try_new(DynOrigin::Sun).unwrap();
+        let earth = Iau::try_new(DynOrigin::Earth).unwrap();
+        assert!(sun.name().contains("for the Sun"));
+        assert!(earth.name().contains("for Earth"));
+        assert_eq!(earth.abbreviation(), "IAU_EARTH");
+    }
+
+    #[test]
+    fn custom_frame_has_no_key() {
+        struct Custom;
+        impl ReferenceFrame for Custom {
+            fn name(&self) -> String {
+                "Custom".to_owned()
+            }
+            fn abbreviation(&self) -> String {
+                "CUS".to_owned()
+            }
+        }
+        assert_eq!(frame_key(&Custom), None);
+    }
+}
