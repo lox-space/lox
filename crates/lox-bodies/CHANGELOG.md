@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.27](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.26...lox-bodies-v0.1.0-alpha.27) - 2026-07-08
+
+### Added
+
+- *(lox-approx)* add lox-approx crate
+
 ## [0.1.0-alpha.26](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.25...lox-bodies-v0.1.0-alpha.26) - 2026-05-26
 
 ### Other

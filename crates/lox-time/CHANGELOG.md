@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.27](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.26...lox-time-v0.1.0-alpha.27) - 2026-07-08
+
+### Added
+
+- *(lox-approx)* add lox-approx crate
+
+### Other
+
+- dependency cleanup
+- *(lox-core/lox-time)* remove TimeDelta sentinels
+
 ## [0.1.0-alpha.26](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.25...lox-time-v0.1.0-alpha.26) - 2026-05-26
 
 ### Other

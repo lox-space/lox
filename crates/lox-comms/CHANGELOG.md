@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.16](https://github.com/lox-space/lox/compare/lox-comms-v0.1.0-alpha.15...lox-comms-v0.1.0-alpha.16) - 2026-07-08
+
+### Added
+
+- *(lox-approx)* add lox-approx crate
+- *(lox-comms)* line-item budget report and C/N combining (Track F.1/F.2)
+- *(lox-comms)* integrate ACM into the pipeline via LinkBudget::modulate_best
+- *(lox-space)* [**breaking**] expose rain-degraded G/T via link_type in Python API
+- *(lox-comms)* rain-degraded G/T for downlinks (ITU-R P.618 §8.2)
+- *(lox-comms)* direction-aware link-budget pointing via Pointing enum
+- *(lox-comms)* replace pfd_mask with piecewise-linear PfdMask
+- *(lox-comms)* add phi angle to antenna gain trait
+- *(lox-comms)* add AntennaFrame
+
+### Fixed
+
+- validate bandwidth in budget views, restore stub coverage
+- bandwidth-mismatch guard in evaluate, stale docs, broken pyi stub
+- *(lox-comms)* floor gaussian and parabolic pattern gains
+
+### Other
+
+- *(lox-comms)* flatten noise_power to Result via AbsolutePowerUnavailable
+- *(lox-comms)* [**breaking**] rework the link budget into a discoverable pipeline
+- close coverage gaps in modcod, channel, and Python bindings
+- *(lox-comms)* [**breaking**] restructure channel layer around waveform/modcod split
+- *(lox-comms)* cover LinkParameters serde validation
+- *(lox-comms)* [**breaking**] consume PropagationLosses and drop the lox-itur dependency
+- *(lox-core)* [**breaking**] move FrequencyBand and FrequencyRange to new comms module
+- *(lox-comms)* [**breaking**] introduce LinkParameters for LinkStats::for_link
+- *(lox-comms)* [**breaking**] replace CommunicationSystem with link terminals and Eirp/GOverT traits
+- *(lox-comms)* use to_radians in slant_range
+- *(lox-comms)* replace dipole directivity integration with closed form
+- *(lox-comms)* use Angle::ZERO everywhere
+- *(lox-comms)* use antenna frame for patterned antenna
+- *(lox-comms)* remove beamwidth from AntennaGain trait
+
 ## [0.1.0-alpha.15](https://github.com/lox-space/lox/compare/lox-comms-v0.1.0-alpha.14...lox-comms-v0.1.0-alpha.15) - 2026-06-08
 
 ### Added
