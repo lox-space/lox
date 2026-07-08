@@ -246,8 +246,24 @@ impl_frame_serde!(Teme, "TEME");
 
 /// IAU body-fixed reference frame derived from rotational elements.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Iau<T: TryRotationalElements>(T);
+
+// Deserialization goes through `try_new` so a body with undefined rotational
+// elements cannot produce a frame that later panics on use.
+#[cfg(feature = "serde")]
+impl<'de, T> serde::Deserialize<'de> for Iau<T>
+where
+    T: TryRotationalElements + serde::Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let body = T::deserialize(deserializer)?;
+        Iau::try_new(body).map_err(serde::de::Error::custom)
+    }
+}
 
 impl<T> Iau<T>
 where
@@ -280,12 +296,18 @@ where
     /// Returns the rotational elements (right ascension, declination, prime meridian) at
     /// the given Julian centuries since J2000.
     pub fn rotational_elements(&self, j2000: f64) -> (f64, f64, f64) {
-        self.0.try_rotational_elements(j2000).unwrap()
+        // Construction (`new`, `try_new`, and deserialization) guarantees the
+        // body has defined rotational elements.
+        self.0
+            .try_rotational_elements(j2000)
+            .expect("Iau frame wraps a body with defined rotational elements")
     }
 
     /// Returns the time derivatives of the rotational elements.
     pub fn rotational_element_rates(&self, j2000: f64) -> (f64, f64, f64) {
-        self.0.try_rotational_element_rates(j2000).unwrap()
+        self.0
+            .try_rotational_element_rates(j2000)
+            .expect("Iau frame wraps a body with defined rotational elements")
     }
 }
 
@@ -318,5 +340,28 @@ where
 
     fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
         Some(1000 + self.0.id().0 as usize)
+    }
+}
+
+#[cfg(all(test, feature = "serde"))]
+mod serde_tests {
+    use lox_bodies::DynOrigin;
+
+    use super::Iau;
+
+    #[test]
+    fn deserialize_valid_body() {
+        let json = serde_json::to_string(&DynOrigin::Earth).unwrap();
+        let frame: Iau<DynOrigin> = serde_json::from_str(&json).unwrap();
+        assert_eq!(frame.body(), DynOrigin::Earth);
+    }
+
+    #[test]
+    fn deserialize_rejects_undefined_elements() {
+        // Sycorax has no rotational elements; deserializing it as an IAU frame
+        // must fail rather than yield a frame that panics on first use.
+        let json = serde_json::to_string(&DynOrigin::Sycorax).unwrap();
+        let result: Result<Iau<DynOrigin>, _> = serde_json::from_str(&json);
+        assert!(result.is_err());
     }
 }
