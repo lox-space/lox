@@ -435,7 +435,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
 
         xy += self
             .corrections(time, ReferenceSystem::Iers2010)
-            .unwrap_or_default();
+            .map_err(RotationError::eop)?;
 
         Ok(Rotation::new(xy.celestial_to_intermediate_matrix(s)))
     }
@@ -499,7 +499,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
 }
 
 fn rotation_matrix_derivative(m: DMat3, v: DVec3) -> DMat3 {
-    let sx = DVec3::new(0.0, v.z, v.y);
+    let sx = DVec3::new(0.0, v.z, -v.y);
     let sy = DVec3::new(-v.z, 0.0, v.x);
     let sz = DVec3::new(v.y, -v.x, 0.0);
     let s = DMat3::from_cols(sx, sy, sz);
@@ -887,6 +887,27 @@ mod tests {
         // Round-trip should give identity
         let roundtrip = icrf_to_teme.compose(teme_to_icrf);
         assert_approx_eq!(roundtrip.m, DMat3::IDENTITY, atol <= 1e-14);
+    }
+
+    #[test]
+    fn test_angular_velocity_derivative() {
+        // `omega` is the angular velocity of the target frame, so the passive
+        // rotation's derivative satisfies dm = -[omega]x * m. With m = identity
+        // that means dm * p == -(omega x p) for any p, and dm must be skew-symmetric.
+        // A general (non-z-axis) omega catches the sign of the off-diagonal terms.
+        let omega = DVec3::new(0.1, 0.2, 0.3);
+        let rotation = Rotation::new(DMat3::IDENTITY).with_angular_velocity(omega);
+
+        assert_approx_eq!(rotation.dm, -rotation.dm.transpose(), atol <= 1e-15);
+
+        for p in [
+            DVec3::new(1.0, 0.0, 0.0),
+            DVec3::new(0.0, 1.0, 0.0),
+            DVec3::new(0.0, 0.0, 1.0),
+            DVec3::new(-2.0, 3.5, 7.0),
+        ] {
+            assert_approx_eq!(rotation.dm * p, -omega.cross(p), atol <= 1e-15);
+        }
     }
 
     #[test]
