@@ -116,7 +116,7 @@ def test_icrf_to_itrf(epoch, provider):
         lox_pos, ap_pos, rtol=1e-8, err_msg=f"ITRF position mismatch at {epoch}"
     )
     npt.assert_allclose(
-        lox_vel, ap_vel, rtol=1e-6, err_msg=f"ITRF velocity mismatch at {epoch}"
+        lox_vel, ap_vel, rtol=1e-8, atol=5e-7, err_msg=f"ITRF velocity mismatch at {epoch}"
     )
 
 
@@ -142,7 +142,7 @@ def test_icrf_to_cirf(epoch, provider):
         lox_pos, ap_pos, rtol=1e-8, err_msg=f"CIRF position mismatch at {epoch}"
     )
     npt.assert_allclose(
-        lox_vel, ap_vel, rtol=1e-6, err_msg=f"CIRF velocity mismatch at {epoch}"
+        lox_vel, ap_vel, rtol=1e-8, atol=5e-7, err_msg=f"CIRF velocity mismatch at {epoch}"
     )
 
 
@@ -168,7 +168,7 @@ def test_icrf_to_tod(epoch, provider):
         lox_pos, ap_pos, rtol=1e-7, err_msg=f"TOD position mismatch at {epoch}"
     )
     npt.assert_allclose(
-        lox_vel, ap_vel, rtol=1e-5, err_msg=f"TOD velocity mismatch at {epoch}"
+        lox_vel, ap_vel, rtol=1e-8, atol=5e-7, err_msg=f"TOD velocity mismatch at {epoch}"
     )
 
 
