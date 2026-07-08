@@ -432,7 +432,7 @@ mod tests {
     }
 
     #[test]
-    fn test_try_to_frame_keyentity() {
+    fn test_try_to_frame_identity() {
         use lox_bodies::DynOrigin;
         use lox_frames::DynFrame;
 

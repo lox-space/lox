@@ -280,10 +280,6 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     }
 
     /// Rotation from ICRF to TEME (classical FK5 chain).
-    ///
-    /// Fuses bias–precession, nutation, and the equation of the equinoxes,
-    /// evaluating the nutation series once rather than once for the nutation
-    /// matrix and again for the sidereal angle.
     fn icrf_to_teme(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
         T: TimeScale + Copy,
