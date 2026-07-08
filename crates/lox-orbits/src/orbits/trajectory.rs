@@ -8,7 +8,7 @@ use lox_bodies::{DynOrigin, Origin};
 use lox_core::coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian};
 use lox_core::glam::DVec3;
 use lox_ephem::Ephemeris;
-use lox_frames::{DynFrame, Icrf, ReferenceFrame, rotations::TryRotation, traits::frame_id};
+use lox_frames::{DynFrame, Icrf, ReferenceFrame, rotations::TryRotation, traits::frame_key};
 use lox_time::{
     Time,
     deltas::TimeDelta,
@@ -116,7 +116,7 @@ where
         R1: ReferenceFrame + Copy,
         P: TryRotation<R, R1, T>,
     {
-        if frame_id(&self.frame) == frame_id(&frame) {
+        if frame_key(&self.frame) == frame_key(&frame) {
             return Ok(Trajectory::from_parts(
                 self.epoch,
                 self.origin,

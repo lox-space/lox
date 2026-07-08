@@ -14,7 +14,7 @@ use lox_core::coords::LonLatAlt;
 use lox_core::glam::{DMat3, DVec3};
 use lox_ephem::Ephemeris;
 use lox_frames::{
-    DynFrame, Iau, Icrf, ReferenceFrame, TryBodyFixed, rotations::TryRotation, traits::frame_id,
+    DynFrame, Iau, Icrf, ReferenceFrame, TryBodyFixed, rotations::TryRotation, traits::frame_key,
 };
 use lox_time::offsets::{DefaultOffsetProvider, Offset};
 use lox_time::time_scales::{Tdb, TimeScale};
@@ -89,7 +89,7 @@ where
         O: Copy,
         T: Copy,
     {
-        if let (Some(id0), Some(id1)) = (frame_id(&self.reference_frame()), frame_id(&frame))
+        if let (Some(id0), Some(id1)) = (frame_key(&self.reference_frame()), frame_key(&frame))
             && id0 == id1
         {
             return Ok(CartesianOrbit::new(
@@ -432,7 +432,7 @@ mod tests {
     }
 
     #[test]
-    fn test_try_to_frame_identity() {
+    fn test_try_to_frame_keyentity() {
         use lox_bodies::DynOrigin;
         use lox_frames::DynFrame;
 
