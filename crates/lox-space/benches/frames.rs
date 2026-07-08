@@ -9,12 +9,13 @@
 //! reflects the model cost of a branch independent of EOP data acquisition.
 //!
 //! Groups:
-//!   * `typed`    — the monomorphised `TryRotation<Icrf, Leaf>` path, one per branch leaf.
-//!   * `nutation` — ICRF→TOD across every convention, showing the cost spread
-//!                  between IAU 1980 / 2000A / 2000B / 2006 nutation.
-//!   * `kernels`  — the raw nutation term-summation per model, in isolation.
-//!   * `dynamic`  — the same rotations through the `DynFrame` match, showing
-//!                  dispatch overhead vs. the typed path (the Python-facing path).
+//!
+//! * `typed`    — the monomorphised `TryRotation<Icrf, Leaf>` path, one per branch leaf.
+//! * `nutation` — ICRF→TOD across every convention, showing the cost spread
+//!   between IAU 1980 / 2000A / 2000B / 2006 nutation.
+//! * `kernels`  — the raw nutation term-summation per model, in isolation.
+//! * `dynamic`  — the same rotations through the `DynFrame` match, showing
+//!   dispatch overhead vs. the typed path (the Python-facing path).
 //!
 //! The whole suite is gated on the `frames` feature; with it off the bench
 //! compiles to an empty divan run. Run with `cargo bench -p lox-space --bench frames`.

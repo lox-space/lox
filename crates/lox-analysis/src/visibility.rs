@@ -9,7 +9,7 @@ use lox_core::glam::DVec3;
 use lox_core::math::series::{InterpolationType, Series, SeriesError};
 use lox_ephem::Ephemeris;
 use lox_frames::providers::DefaultRotationProvider;
-use lox_frames::rotations::{DynRotationError, RotationError, TryRotation};
+use lox_frames::rotations::{RotationError, TryRotation};
 use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
@@ -346,12 +346,6 @@ pub enum EvalError {
     /// Ephemeris lookup failed.
     #[error("ephemeris error: {0}")]
     Ephemeris(Box<dyn std::error::Error + Send + Sync>),
-}
-
-impl From<DynRotationError> for EvalError {
-    fn from(e: DynRotationError) -> Self {
-        EvalError::Rotation(Box::new(e))
-    }
 }
 
 impl From<RotationError> for EvalError {

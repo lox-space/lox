@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::{fmt::Display, ops::Mul};
+use std::ops::Mul;
 
 use lox_approx::ApproxEq;
 use lox_bodies::{TryRotationalElements, UndefinedOriginPropertyError};
@@ -29,7 +29,8 @@ use crate::{
     },
 };
 
-mod impls;
+/// Hub-based rotation composition through ICRF.
+pub mod to_icrf;
 
 /// Computes the rotation from one reference frame to another at a given time.
 pub trait TryRotation<Origin, Target, T>
@@ -50,174 +51,31 @@ where
     ) -> Result<Rotation, Self::Error>;
 }
 
-/// Computes a composed rotation through multiple intermediate frames.
-pub trait TryComposedRotation<T, P>
-where
-    T: TimeScale + Copy,
-{
-    /// Computes the composed rotation at the given time using the provider.
-    fn try_composed_rotation(&self, provider: &P, time: Time<T>)
-    -> Result<Rotation, RotationError>;
-}
-
-impl<T, P, R1, R2, R3> TryComposedRotation<T, P> for (R1, R2, R3)
-where
-    T: TimeScale + Copy,
-    R1: ReferenceFrame + Copy,
-    R2: ReferenceFrame + Copy,
-    R3: ReferenceFrame + Copy,
-    P: RotationProvider<T>
-        + TryRotation<R1, R2, T, Error = RotationError>
-        + TryRotation<R2, R3, T, Error = RotationError>,
-{
-    fn try_composed_rotation(
-        &self,
-        provider: &P,
-        time: Time<T>,
-    ) -> Result<Rotation, RotationError> {
-        Ok(provider
-            .try_rotation(self.0, self.1, time)?
-            .compose(provider.try_rotation(self.1, self.2, time)?))
-    }
-}
-
-impl<T, P, R1, R2, R3, R4> TryComposedRotation<T, P> for (R1, R2, R3, R4)
-where
-    T: TimeScale + Copy,
-    R1: ReferenceFrame + Copy,
-    R2: ReferenceFrame + Copy,
-    R3: ReferenceFrame + Copy,
-    R4: ReferenceFrame + Copy,
-    P: RotationProvider<T>
-        + TryRotation<R1, R2, T, Error = RotationError>
-        + TryRotation<R2, R3, T, Error = RotationError>
-        + TryRotation<R3, R4, T, Error = RotationError>,
-{
-    fn try_composed_rotation(
-        &self,
-        provider: &P,
-        time: Time<T>,
-    ) -> Result<Rotation, RotationError> {
-        Ok(provider
-            .try_rotation(self.0, self.1, time)?
-            .compose(provider.try_rotation(self.1, self.2, time)?)
-            .compose(provider.try_rotation(self.2, self.3, time)?))
-    }
-}
-
-impl<T, P, R1, R2, R3, R4, R5> TryComposedRotation<T, P> for (R1, R2, R3, R4, R5)
-where
-    T: TimeScale + Copy,
-    R1: ReferenceFrame + Copy,
-    R2: ReferenceFrame + Copy,
-    R3: ReferenceFrame + Copy,
-    R4: ReferenceFrame + Copy,
-    R5: ReferenceFrame + Copy,
-    P: RotationProvider<T>
-        + TryRotation<R1, R2, T, Error = RotationError>
-        + TryRotation<R2, R3, T, Error = RotationError>
-        + TryRotation<R3, R4, T, Error = RotationError>
-        + TryRotation<R4, R5, T, Error = RotationError>,
-{
-    fn try_composed_rotation(
-        &self,
-        provider: &P,
-        time: Time<T>,
-    ) -> Result<Rotation, RotationError> {
-        Ok(provider
-            .try_rotation(self.0, self.1, time)?
-            .compose(provider.try_rotation(self.1, self.2, time)?)
-            .compose(provider.try_rotation(self.2, self.3, time)?)
-            .compose(provider.try_rotation(self.3, self.4, time)?))
-    }
-}
-
-impl<T, P, R1, R2, R3, R4, R5, R6> TryComposedRotation<T, P> for (R1, R2, R3, R4, R5, R6)
-where
-    T: TimeScale + Copy,
-    R1: ReferenceFrame + Copy,
-    R2: ReferenceFrame + Copy,
-    R3: ReferenceFrame + Copy,
-    R4: ReferenceFrame + Copy,
-    R5: ReferenceFrame + Copy,
-    R6: ReferenceFrame + Copy,
-    P: RotationProvider<T>
-        + TryRotation<R1, R2, T, Error = RotationError>
-        + TryRotation<R2, R3, T, Error = RotationError>
-        + TryRotation<R3, R4, T, Error = RotationError>
-        + TryRotation<R4, R5, T, Error = RotationError>
-        + TryRotation<R5, R6, T, Error = RotationError>,
-{
-    fn try_composed_rotation(
-        &self,
-        provider: &P,
-        time: Time<T>,
-    ) -> Result<Rotation, RotationError> {
-        Ok(provider
-            .try_rotation(self.0, self.1, time)?
-            .compose(provider.try_rotation(self.1, self.2, time)?)
-            .compose(provider.try_rotation(self.2, self.3, time)?)
-            .compose(provider.try_rotation(self.3, self.4, time)?)
-            .compose(provider.try_rotation(self.4, self.5, time)?))
-    }
-}
-
 /// The source of a rotation error.
-#[derive(Debug)]
-pub enum RotationErrorKind {
-    /// Time scale offset computation failed.
-    Offset,
-    /// Earth orientation parameter lookup failed.
-    Eop,
-}
-
-impl Display for RotationErrorKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RotationErrorKind::Offset => "offset error".fmt(f),
-            RotationErrorKind::Eop => "EOP error".fmt(f),
-        }
-    }
-}
-
-/// A rotation computation failed due to a time offset or EOP error.
+/// A frame rotation could not be computed.
 #[derive(Debug, Error)]
-#[error("{kind}: {error}")]
-pub struct RotationError {
-    kind: RotationErrorKind,
-    error: Box<dyn std::error::Error + Send + Sync + 'static>,
+pub enum RotationError {
+    /// Time scale offset computation failed.
+    #[error("offset error: {0}")]
+    Offset(Box<dyn std::error::Error + Send + Sync + 'static>),
+    /// Earth orientation parameter lookup failed.
+    #[error("EOP error: {0}")]
+    Eop(Box<dyn std::error::Error + Send + Sync + 'static>),
+    /// A required body property (e.g. rotational elements) is undefined.
+    #[error(transparent)]
+    UndefinedProperty(#[from] UndefinedOriginPropertyError),
 }
 
 impl RotationError {
     /// Creates a rotation error from a time offset error.
     pub fn offset(err: impl std::error::Error + Send + Sync + 'static) -> Self {
-        RotationError {
-            kind: RotationErrorKind::Offset,
-            error: Box::new(err),
-        }
+        RotationError::Offset(Box::new(err))
     }
 
     /// Creates a rotation error from an EOP error.
     pub fn eop(err: impl std::error::Error + Send + Sync + 'static) -> Self {
-        RotationError {
-            kind: RotationErrorKind::Eop,
-            error: Box::new(err),
-        }
+        RotationError::Eop(Box::new(err))
     }
-}
-
-/// Errors from dynamic-dispatch rotation computations.
-#[derive(Debug, Error)]
-pub enum DynRotationError {
-    /// Underlying rotation error (offset or EOP).
-    #[error(transparent)]
-    Offset(#[from] RotationError),
-    /// The origin and target frames use incompatible IERS reference systems.
-    #[error("incompatible reference systems")]
-    IncompatibleReferenceSystems,
-    /// A required body property is undefined.
-    #[error(transparent)]
-    UndefinedProperty(#[from] UndefinedOriginPropertyError),
 }
 
 /// Provides Earth orientation data and frame rotation methods for a given time scale.
