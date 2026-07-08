@@ -34,9 +34,13 @@ pub struct PoleCoords {
 }
 
 impl PoleCoords {
-    /// Computes the classical polar motion matrix W = R_y(-xp) * R_x(-yp).
+    /// Returns the classical polar motion matrix for the pole coordinates.
+    ///
+    /// # References
+    ///
+    /// - SOFA [`pom00`](https://github.com/liberfa/erfa/blob/master/src/pom00.c)
     pub fn polar_motion_matrix(&self) -> DMat3 {
-        (-self.xp).rotation_y() * (-self.yp).rotation_x()
+        (-self.yp).rotation_x() * (-self.xp).rotation_y()
     }
 
     /// Computes the polar motion matrix including the TIO locator s' (IAU 2000+).
