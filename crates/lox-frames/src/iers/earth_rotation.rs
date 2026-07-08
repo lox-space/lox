@@ -218,11 +218,17 @@ pub struct EquationOfTheEquinoxes(pub Angle);
 impl EquationOfTheEquinoxes {
     /// Computes the equation of the equinoxes using the IAU 1994 model.
     pub fn iau1994(time: Time<Tdb>) -> Self {
+        let Nutation { dpsi, .. } = Nutation::iau1980(time);
+        Self::iau1994_from_dpsi(time, dpsi)
+    }
+
+    /// Computes the IAU 1994 equation of the equinoxes from a precomputed
+    /// nutation in longitude, avoiding a second nutation evaluation.
+    pub(crate) fn iau1994_from_dpsi(time: Time<Tdb>, dpsi: Angle) -> Self {
         let t = time.centuries_since_j2000();
         let om = (Angle::arcseconds(poly_array(t, &[450160.280, -482890.539, 7.455, 0.008]))
             + Angle::new((-5.0 * t).rem_euclid(1.0) * TAU))
         .mod_two_pi();
-        let Nutation { dpsi, .. } = Nutation::iau1980(time);
         let eps0 = MeanObliquity::iau1980(time.with_scale(Tt));
         Self(
             eps0.0.cos() * dpsi
