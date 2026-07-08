@@ -5,20 +5,9 @@
 use lox_bodies::{Origin, RotationalElements, TryRotationalElements, UndefinedOriginPropertyError};
 
 use crate::{
-    iers::IersSystem,
-    traits::{BodyFixed, QuasiInertial, ReferenceFrame},
+    iers::{IersSystem, ReferenceSystem},
+    traits::{BodyFixed, FrameKey, QuasiInertial, ReferenceFrame},
 };
-
-const ICRF_ID: usize = 0;
-const CIRF_ID: usize = 1;
-const TIRF_ID: usize = 2;
-const ITRF_ID: usize = 3;
-const J2000_ID: usize = 4;
-const TEME_ID: usize = 7;
-
-const MOD_ID: usize = 11;
-const TOD_ID: usize = 12;
-const PEF_ID: usize = 13;
 
 /// International Celestial Reference Frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -35,8 +24,8 @@ impl ReferenceFrame for Icrf {
         "ICRF".to_string()
     }
 
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
-        Some(ICRF_ID)
+    fn frame_key(&self, _: crate::traits::private::Internal) -> Option<FrameKey> {
+        Some(FrameKey::Icrf)
     }
 }
 
@@ -57,8 +46,8 @@ impl ReferenceFrame for J2000 {
         "J2000".to_string()
     }
 
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
-        Some(J2000_ID)
+    fn frame_key(&self, _: crate::traits::private::Internal) -> Option<FrameKey> {
+        Some(FrameKey::J2000)
     }
 }
 
@@ -79,8 +68,8 @@ impl ReferenceFrame for Cirf {
         "CIRF".to_string()
     }
 
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
-        Some(CIRF_ID)
+    fn frame_key(&self, _: crate::traits::private::Internal) -> Option<FrameKey> {
+        Some(FrameKey::Cirf)
     }
 }
 
@@ -99,8 +88,8 @@ impl ReferenceFrame for Tirf {
         "TIRF".to_string()
     }
 
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
-        Some(TIRF_ID)
+    fn frame_key(&self, _: crate::traits::private::Internal) -> Option<FrameKey> {
+        Some(FrameKey::Tirf)
     }
 }
 
@@ -119,8 +108,8 @@ impl ReferenceFrame for Itrf {
         "ITRF".to_string()
     }
 
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
-        Some(ITRF_ID)
+    fn frame_key(&self, _: crate::traits::private::Internal) -> Option<FrameKey> {
+        Some(FrameKey::Itrf)
     }
 }
 
@@ -131,7 +120,7 @@ pub struct Mod<T: IersSystem>(pub T);
 
 impl<T> ReferenceFrame for Mod<T>
 where
-    T: IersSystem,
+    T: IersSystem + Into<ReferenceSystem> + Copy,
 {
     fn name(&self) -> String {
         format!("{} Mean of Date Frame", self.0.name())
@@ -141,8 +130,8 @@ where
         format!("MOD({})", self.0.abbreviation())
     }
 
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
-        Some(MOD_ID * 10 + self.0.id())
+    fn frame_key(&self, _: crate::traits::private::Internal) -> Option<FrameKey> {
+        Some(FrameKey::Mod(self.0.into()))
     }
 }
 
@@ -153,7 +142,7 @@ pub struct Tod<T: IersSystem>(pub T);
 
 impl<T> ReferenceFrame for Tod<T>
 where
-    T: IersSystem,
+    T: IersSystem + Into<ReferenceSystem> + Copy,
 {
     fn name(&self) -> String {
         format!("{} True of Date Frame", self.0.name())
@@ -163,8 +152,8 @@ where
         format!("TOD({})", self.0.abbreviation())
     }
 
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
-        Some(TOD_ID * 10 + self.0.id())
+    fn frame_key(&self, _: crate::traits::private::Internal) -> Option<FrameKey> {
+        Some(FrameKey::Tod(self.0.into()))
     }
 }
 
@@ -175,7 +164,7 @@ pub struct Pef<T: IersSystem>(pub T);
 
 impl<T> ReferenceFrame for Pef<T>
 where
-    T: IersSystem,
+    T: IersSystem + Into<ReferenceSystem> + Copy,
 {
     fn name(&self) -> String {
         format!("{} Pseudo-Earth Fixed Frame", self.0.name())
@@ -185,8 +174,8 @@ where
         format!("PEF({})", self.0.abbreviation())
     }
 
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
-        Some(PEF_ID * 10 + self.0.id())
+    fn frame_key(&self, _: crate::traits::private::Internal) -> Option<FrameKey> {
+        Some(FrameKey::Pef(self.0.into()))
     }
 }
 
@@ -205,8 +194,8 @@ impl ReferenceFrame for Teme {
         "TEME".to_owned()
     }
 
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
-        Some(TEME_ID)
+    fn frame_key(&self, _: crate::traits::private::Internal) -> Option<FrameKey> {
+        Some(FrameKey::Teme)
     }
 }
 
@@ -338,8 +327,8 @@ where
         iau_abbreviation(self.0.name())
     }
 
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
-        Some(1000 + self.0.id().0 as usize)
+    fn frame_key(&self, _: crate::traits::private::Internal) -> Option<FrameKey> {
+        Some(FrameKey::Iau(self.0.id()))
     }
 }
 

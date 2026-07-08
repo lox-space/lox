@@ -22,7 +22,7 @@ use crate::{
     frames::{Cirf, Iau, Icrf, Itrf, J2000, Mod, Pef, Teme, Tirf, Tod},
     iers::{IersSystem, ReferenceSystem},
     rotations::{Rotation, RotationError, RotationProvider, TryRotation},
-    traits::{ReferenceFrame, frame_id},
+    traits::{FrameKey, ReferenceFrame, frame_key},
 };
 
 /// A frame that can produce its own rotation to and from ICRF from a provider's data.
@@ -64,16 +64,15 @@ where
     type Error = RotationError;
 
     fn try_rotation(&self, origin: O, target: Tg, time: Time<T>) -> Result<Rotation, Self::Error> {
-        // Skip work cheaply via frame_id: identical frames need no rotation, and
-        // when one endpoint is ICRF a single leg suffices (no composition).
-        let origin_id = frame_id(&origin);
-        let target_id = frame_id(&target);
-        let icrf_id = frame_id(&Icrf);
-        if origin_id.is_some() && origin_id == target_id {
+        // Skip work cheaply via frame keys: identical frames need no rotation,
+        // and when one endpoint is ICRF a single leg suffices (no composition).
+        let origin_key = frame_key(&origin);
+        let target_key = frame_key(&target);
+        if origin_key.is_some() && origin_key == target_key {
             Ok(Rotation::IDENTITY)
-        } else if origin_id == icrf_id {
+        } else if origin_key == Some(FrameKey::Icrf) {
             target.rotation_from_icrf(self, time)
-        } else if target_id == icrf_id {
+        } else if target_key == Some(FrameKey::Icrf) {
             origin.rotation_to_icrf(self, time)
         } else {
             rotation_via_icrf(self, origin, target, time)

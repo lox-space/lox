@@ -11,8 +11,8 @@ use crate::{
     frames::{Cirf, Iau, Icrf, Itrf, J2000, Mod, Pef, Teme, Tirf, Tod, iau_abbreviation, iau_name},
     iers::{Iau2000Model, IersSystem, ReferenceSystem},
     traits::{
-        NonBodyFixedFrameError, NonQuasiInertialFrameError, ReferenceFrame, TryBodyFixed,
-        TryQuasiInertial, frame_id,
+        FrameKey, NonBodyFixedFrameError, NonQuasiInertialFrameError, ReferenceFrame, TryBodyFixed,
+        TryQuasiInertial, frame_key,
     },
 };
 
@@ -74,19 +74,19 @@ impl ReferenceFrame for DynFrame {
         }
     }
 
-    fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
+    fn frame_key(&self, _: crate::traits::private::Internal) -> Option<FrameKey> {
         match self {
-            DynFrame::Icrf => frame_id(&Icrf),
-            DynFrame::J2000 => frame_id(&J2000),
-            DynFrame::Cirf => frame_id(&Cirf),
-            DynFrame::Tirf => frame_id(&Tirf),
-            DynFrame::Itrf => frame_id(&Itrf),
-            DynFrame::Iau(dyn_origin) => Some(1000 + dyn_origin.id().0 as usize),
-            DynFrame::Mod(sys) => frame_id(&Mod(*sys)),
-            DynFrame::Tod(sys) => frame_id(&Tod(*sys)),
+            DynFrame::Icrf => frame_key(&Icrf),
+            DynFrame::J2000 => frame_key(&J2000),
+            DynFrame::Cirf => frame_key(&Cirf),
+            DynFrame::Tirf => frame_key(&Tirf),
+            DynFrame::Itrf => frame_key(&Itrf),
+            DynFrame::Iau(dyn_origin) => Some(FrameKey::Iau(dyn_origin.id())),
+            DynFrame::Mod(sys) => frame_key(&Mod(*sys)),
+            DynFrame::Tod(sys) => frame_key(&Tod(*sys)),
 
-            DynFrame::Pef(sys) => frame_id(&Pef(*sys)),
-            DynFrame::Teme => frame_id(&Teme),
+            DynFrame::Pef(sys) => frame_key(&Pef(*sys)),
+            DynFrame::Teme => frame_key(&Teme),
         }
     }
 }
@@ -341,15 +341,23 @@ mod tests {
     }
 
     #[test]
-    fn test_frame_id() {
-        assert_eq!(frame_id(&Icrf), frame_id(&DynFrame::Icrf));
-        assert_eq!(frame_id(&J2000), frame_id(&DynFrame::J2000));
-        assert_eq!(frame_id(&Cirf), frame_id(&DynFrame::Cirf));
-        assert_eq!(frame_id(&Tirf), frame_id(&DynFrame::Tirf));
-        assert_eq!(frame_id(&Itrf), frame_id(&DynFrame::Itrf));
+    fn test_frame_key() {
+        assert_eq!(frame_key(&Icrf), frame_key(&DynFrame::Icrf));
+        assert_eq!(frame_key(&J2000), frame_key(&DynFrame::J2000));
+        assert_eq!(frame_key(&Cirf), frame_key(&DynFrame::Cirf));
+        assert_eq!(frame_key(&Tirf), frame_key(&DynFrame::Tirf));
+        assert_eq!(frame_key(&Itrf), frame_key(&DynFrame::Itrf));
         assert_eq!(
-            frame_id(&Iau::new(Earth)),
-            frame_id(&DynFrame::Iau(DynOrigin::Earth))
+            frame_key(&Iau::new(Earth)),
+            frame_key(&DynFrame::Iau(DynOrigin::Earth))
+        );
+        // Parameterized frames agree too, and the nutation model is part of the key.
+        let mod_b = ReferenceSystem::Iers2003(Iau2000Model::B);
+        assert_eq!(frame_key(&Mod(mod_b)), frame_key(&DynFrame::Mod(mod_b)));
+        assert_eq!(frame_key(&Teme), frame_key(&DynFrame::Teme));
+        assert_ne!(
+            frame_key(&DynFrame::Mod(ReferenceSystem::Iers2003(Iau2000Model::A))),
+            frame_key(&DynFrame::Mod(mod_b))
         );
     }
 
