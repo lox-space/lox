@@ -248,25 +248,3 @@ class TestOneWebEuropeBenchmark:
         assert results.num_pairs() == len(oneweb_sample_large) * len(
             sample_ground_assets
         )
-
-    @pytest.mark.slow
-    @pytest.mark.benchmark
-    def test_full_scale_estimate(self, europe_ground_assets, oneweb):
-        """Estimate performance for full-scale scenario."""
-        total_spacecraft = len(oneweb)
-        total_ground_stations = len(europe_ground_assets)
-        total_combinations = total_spacecraft * total_ground_stations
-
-        print(f"\n{'=' * 60}")
-        print("Full-Scale Performance Estimate")
-        print(f"{'=' * 60}")
-        print(f"Total OneWeb satellites: {total_spacecraft}")
-        print(f"Total Europe ground points: {total_ground_stations}")
-        print(f"Total combinations: {total_combinations:,}")
-        print(
-            f"Memory estimate (results only): {total_combinations * 200 / 1024 / 1024:.1f} MB"
-        )
-        print(f"{'=' * 60}")
-
-        # This is just an informational test
-        assert total_combinations > 400000
