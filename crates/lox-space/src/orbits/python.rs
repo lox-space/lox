@@ -8,7 +8,7 @@ use crate::bodies::python::{PyOrigin, PyUndefinedOriginPropertyError};
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::ephem::python::{PyDafSpkError, PySpk};
 use crate::frames::DynFrame;
-use crate::frames::python::{PyDynRotationError, PyFrame};
+use crate::frames::python::{PyFrame, PyRotationError};
 use crate::orbits::ground::{
     DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables,
 };
@@ -416,10 +416,10 @@ impl PyCartesian {
         let rot = match provider {
             Some(provider) => provider
                 .try_rotation(origin, target, time)
-                .map_err(PyDynRotationError),
+                .map_err(PyRotationError),
             None => DefaultRotationProvider
                 .try_rotation(origin, target, time)
-                .map_err(PyDynRotationError),
+                .map_err(PyRotationError),
         }?;
         let (r1, v1) = rot.rotate_state(self.0.position(), self.0.velocity());
         Ok(PyCartesian(CartesianOrbit::new(

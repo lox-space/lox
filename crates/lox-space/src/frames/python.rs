@@ -6,7 +6,7 @@ use crate::frames::{
     dynamic::{DynFrame, UnknownFrameError},
     traits::ReferenceFrame,
 };
-use lox_frames::rotations::DynRotationError;
+use lox_frames::rotations::RotationError;
 use pyo3::{
     PyErr, PyResult, create_exception,
     exceptions::{PyException, PyValueError},
@@ -30,11 +30,10 @@ create_exception!(
     "Python exception raised when a frame transformation cannot be performed."
 );
 
-/// PyO3 error wrapper for [`lox_frames::rotations::DynRotationError`].
-pub struct PyDynRotationError(pub DynRotationError);
+pub(crate) struct PyRotationError(pub RotationError);
 
-impl From<PyDynRotationError> for PyErr {
-    fn from(err: PyDynRotationError) -> Self {
+impl From<PyRotationError> for PyErr {
+    fn from(err: PyRotationError) -> Self {
         FrameTransformationError::new_err(err.0.to_string())
     }
 }
