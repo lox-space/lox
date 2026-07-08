@@ -72,6 +72,10 @@ harness = false
 name = "imaging"
 harness = false
 
+[[bench]]
+name = "frames"
+harness = false
+
 [features]
 default = [
   "analysis",
