@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.40](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.39...lox-orbits-v0.1.0-alpha.40) - 2026-07-08
+
+### Added
+
+- *(lox-approx)* add lox-approx crate
+
+### Fixed
+
+- restore mangled identity test name, trim impl detail from docs
+
+### Other
+
+- *(lox-frames)* replace packed frame ids with a structured FrameKey
+- *(lox-core)* introduce type-erased LoxError and make plain closures the Callback default
+- *(lox-orbits/lox-analysis)* move events to lox-analysis
+- *(lox-orbits)* clean up trajectory API
+- *(lox-orbits)* remove direct trajectory event API
+- dependency cleanup
+- *(lox-core/lox-orbits)* move ZeroCrossing into roots and reuse bracket endpoint values
+- *(lox-core/lox-time)* remove TimeDelta sentinels
+- *(deps)* bump geo to 0.33 and geojson to 1.0
+- *(deps)* bump differential-equations to 0.6, nalgebra to 0.35, quick-xml to 0.40
+
 ## [0.1.0-alpha.39](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.38...lox-orbits-v0.1.0-alpha.39) - 2026-05-26
 
 ### Other

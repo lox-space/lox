@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.15](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.14...lox-core-v0.1.0-alpha.15) - 2026-07-08
+
+### Added
+
+- *(lox-core)* add tolerance and iteration builders to root finders
+- *(lox-approx)* add lox-approx crate
+- *(lox-core)* add itemized PropagationLosses to the comms module
+- *(lox-core)* add FrequencyRange, FrequencyBand parsing, and Power/Temperature unit traits
+
+### Fixed
+
+- *(lox-core)* harden root-finder convergence errors
+- *(lox-core)* harden Brent and remove unused Secant root-finder
+- *(lox-core)* harden Brent and remove unused Secant root-finder
+
+### Other
+
+- *(lox-core)* extract callback and zero-crossing modules from roots
+- *(lox-core)* split NonFinite into callback and diverged-step errors
+- *(lox-core)* split NonFinite into callback and diverged-step errors
+- *(lox-core)* introduce type-erased LoxError and make plain closures the Callback default
+- *(lox-core)* improve roots test coverage
+- *(lox-core/lox-orbits)* move ZeroCrossing into roots and reuse bracket endpoint values
+- *(lox-core/lox-time)* remove TimeDelta sentinels
+- *(lox-core)* [**breaking**] move FrequencyBand and FrequencyRange to new comms module
+
 ## [0.1.0-alpha.14](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.13...lox-core-v0.1.0-alpha.14) - 2026-05-26
 
 ### Other

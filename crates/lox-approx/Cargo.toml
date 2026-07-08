@@ -4,7 +4,7 @@
 
 [package]
 name = "lox-approx"
-version = "0.1.0"
+version = "0.1.1"
 description = "Approximate equality testing with absolute and relative tolerances (PEP 485 `math.isclose`)"
 rust-version.workspace = true
 edition.workspace = true

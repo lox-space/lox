@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.15](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.14...lox-analysis-v0.1.0-alpha.15) - 2026-07-08
+
+### Added
+
+- *(lox-approx)* add lox-approx crate
+
+### Other
+
+- *(lox-frames)* simplify composed rotations via ICRF
+- *(lox-core)* extract callback and zero-crossing modules from roots
+- *(lox-analysis)* gate import properly
+- *(lox-core)* introduce type-erased LoxError and make plain closures the Callback default
+- *(lox-orbits/lox-analysis)* move events to lox-analysis
+- *(lox-orbits)* clean up trajectory API
+- dependency cleanup
+- *(deps)* bump geo to 0.33 and geojson to 1.0
+- *(lox-core)* [**breaking**] move FrequencyBand and FrequencyRange to new comms module
+- *(lox-analysis)* [**breaking**] attach named comms terminals to assets
+
 ## [0.1.0-alpha.14](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.13...lox-analysis-v0.1.0-alpha.14) - 2026-06-08
 
 ### Added

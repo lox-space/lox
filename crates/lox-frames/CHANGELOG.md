@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.1.0-alpha.21](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.20...lox-frames-v0.1.0-alpha.21) - 2026-07-08
+
+### Added
+
+- *(lox-approx)* add lox-approx crate
+
+### Fixed
+
+- restore mangled identity test name, trim impl detail from docs
+- *(lox-frames)* validate rotational elements on Iau deserialization
+- *(lox-frames)* dedup IAU frame naming, round-trip IERS2003B abbreviation
+- *(lox-frames)* match SOFA polar-motion axis order, name TEME frame id
+- *(lox-frames)* fix correctness issues
+
+### Other
+
+- *(lox-frames)* cover via-ICRF composition, J2000, IAU naming, default key
+- *(lox-frames)* replace packed frame ids with a structured FrameKey
+- *(lox-frames)* fuse TEME<->ICRF, evaluate nutation once
+- *(lox-frames)* simplify composed rotations via ICRF
+- *(lox-core/lox-time)* remove TimeDelta sentinels
+
 ## [0.1.0-alpha.20](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.19...lox-frames-v0.1.0-alpha.20) - 2026-05-26
 
 ### Other
