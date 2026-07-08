@@ -223,7 +223,7 @@ impl EquationOfTheEquinoxes {
     }
 
     /// Computes the IAU 1994 equation of the equinoxes from a precomputed
-    /// nutation in longitude, avoiding a second nutation evaluation.
+    /// nutation in longitude.
     pub(crate) fn iau1994_from_dpsi(time: Time<Tdb>, dpsi: Angle) -> Self {
         let t = time.centuries_since_j2000();
         let om = (Angle::arcseconds(poly_array(t, &[450160.280, -482890.539, 7.455, 0.008]))
