@@ -14,6 +14,7 @@ const CIRF_ID: usize = 1;
 const TIRF_ID: usize = 2;
 const ITRF_ID: usize = 3;
 const J2000_ID: usize = 4;
+const TEME_ID: usize = 7;
 
 const MOD_ID: usize = 11;
 const TOD_ID: usize = 12;
@@ -205,7 +206,7 @@ impl ReferenceFrame for Teme {
     }
 
     fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
-        Some(7)
+        Some(TEME_ID)
     }
 }
 
