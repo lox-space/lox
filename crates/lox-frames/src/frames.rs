@@ -138,7 +138,7 @@ where
     }
 
     fn abbreviation(&self) -> String {
-        format!("MOD({})", self.0.name())
+        format!("MOD({})", self.0.abbreviation())
     }
 
     fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
@@ -160,7 +160,7 @@ where
     }
 
     fn abbreviation(&self) -> String {
-        format!("TOD({})", self.0.name())
+        format!("TOD({})", self.0.abbreviation())
     }
 
     fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
@@ -182,7 +182,7 @@ where
     }
 
     fn abbreviation(&self) -> String {
-        format!("PEF({})", self.0.name())
+        format!("PEF({})", self.0.abbreviation())
     }
 
     fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {
@@ -291,21 +291,29 @@ where
 
 impl<T: TryRotationalElements> BodyFixed for Iau<T> {}
 
+/// Full name of the IAU body-fixed frame for a body named `body`.
+pub(crate) fn iau_name(body: &str) -> String {
+    match body {
+        "Sun" | "Moon" => format!("IAU Body-Fixed Reference Frame for the {body}"),
+        _ => format!("IAU Body-Fixed Reference Frame for {body}"),
+    }
+}
+
+/// Abbreviation of the IAU body-fixed frame for a body named `body`.
+pub(crate) fn iau_abbreviation(body: &str) -> String {
+    format!("IAU_{}", body.replace([' ', '-'], "_").to_uppercase())
+}
+
 impl<T> ReferenceFrame for Iau<T>
 where
     T: TryRotationalElements + Origin,
 {
     fn name(&self) -> String {
-        let body = self.0.name();
-        match body {
-            "Sun" | "Moon" => format!("IAU Body-Fixed Reference Frame for the {body}"),
-            _ => format!("IAU Body-Fixed Reference Frame for {body}"),
-        }
+        iau_name(self.0.name())
     }
 
     fn abbreviation(&self) -> String {
-        let body = self.0.name().replace([' ', '-'], "_").to_uppercase();
-        format!("IAU_{body}")
+        iau_abbreviation(self.0.name())
     }
 
     fn frame_id(&self, _: crate::traits::private::Internal) -> Option<usize> {

@@ -45,6 +45,11 @@ pub trait IersSystem: sealed::Sealed {
     fn id(&self) -> usize;
     /// Returns the convention name (e.g. "IERS1996").
     fn name(&self) -> String;
+    /// Returns a round-trippable tag, encoding the nutation model where it
+    /// differs from the default (e.g. "IERS2003B").
+    fn abbreviation(&self) -> String {
+        self.name()
+    }
 }
 
 /// IERS 1996 conventions.
@@ -101,6 +106,13 @@ impl IersSystem for Iers2003 {
     fn name(&self) -> String {
         "IERS2003".to_owned()
     }
+
+    fn abbreviation(&self) -> String {
+        match self.0 {
+            Iau2000Model::A => "IERS2003".to_owned(),
+            Iau2000Model::B => "IERS2003B".to_owned(),
+        }
+    }
 }
 
 impl Display for Iers2003 {
@@ -156,6 +168,14 @@ impl IersSystem for ReferenceSystem {
             ReferenceSystem::Iers1996 => Iers1996.to_string(),
             ReferenceSystem::Iers2003(model) => Iers2003(*model).to_string(),
             ReferenceSystem::Iers2010 => Iers2010.to_string(),
+        }
+    }
+
+    fn abbreviation(&self) -> String {
+        match self {
+            ReferenceSystem::Iers1996 => Iers1996.abbreviation(),
+            ReferenceSystem::Iers2003(model) => Iers2003(*model).abbreviation(),
+            ReferenceSystem::Iers2010 => Iers2010.abbreviation(),
         }
     }
 }

@@ -8,7 +8,7 @@ use lox_bodies::{DynOrigin, Origin, TryRotationalElements};
 use thiserror::Error;
 
 use crate::{
-    frames::{Cirf, Iau, Icrf, Itrf, J2000, Mod, Pef, Teme, Tirf, Tod},
+    frames::{Cirf, Iau, Icrf, Itrf, J2000, Mod, Pef, Teme, Tirf, Tod, iau_abbreviation, iau_name},
     iers::{Iau2000Model, IersSystem, ReferenceSystem},
     traits::{
         NonBodyFixedFrameError, NonQuasiInertialFrameError, ReferenceFrame, TryBodyFixed,
@@ -51,13 +51,7 @@ impl ReferenceFrame for DynFrame {
             DynFrame::Cirf => Cirf.name(),
             DynFrame::Tirf => Tirf.name(),
             DynFrame::Itrf => Itrf.name(),
-            DynFrame::Iau(dyn_origin) => {
-                let body = dyn_origin.name();
-                match body {
-                    "Sun" | "Moon" => format!("IAU Body-Fixed Reference Frame for the {body}"),
-                    _ => format!("IAU Body-Fixed Reference Frame for {body}"),
-                }
-            }
+            DynFrame::Iau(dyn_origin) => iau_name(dyn_origin.name()),
             DynFrame::Mod(sys) => Mod(*sys).name(),
             DynFrame::Tod(sys) => Tod(*sys).name(),
             DynFrame::Pef(sys) => Pef(*sys).name(),
@@ -72,10 +66,7 @@ impl ReferenceFrame for DynFrame {
             DynFrame::Cirf => Cirf.abbreviation(),
             DynFrame::Tirf => Tirf.abbreviation(),
             DynFrame::Itrf => Itrf.abbreviation(),
-            DynFrame::Iau(dyn_origin) => {
-                let body = dyn_origin.name().replace([' ', '-'], "_").to_uppercase();
-                format!("IAU_{body}")
-            }
+            DynFrame::Iau(dyn_origin) => iau_abbreviation(dyn_origin.name()),
             DynFrame::Mod(sys) => Mod(*sys).abbreviation(),
             DynFrame::Tod(sys) => Tod(*sys).abbreviation(),
             DynFrame::Pef(sys) => Pef(*sys).abbreviation(),
@@ -201,7 +192,8 @@ fn parse_iau_frame(s: &str) -> Option<DynFrame> {
 fn parse_reference_system(s: &str) -> Option<ReferenceSystem> {
     match s.to_uppercase().as_str() {
         "IERS1996" => Some(ReferenceSystem::Iers1996),
-        "IERS2003" => Some(ReferenceSystem::Iers2003(Iau2000Model::A)),
+        "IERS2003" | "IERS2003A" => Some(ReferenceSystem::Iers2003(Iau2000Model::A)),
+        "IERS2003B" => Some(ReferenceSystem::Iers2003(Iau2000Model::B)),
         "IERS2010" => Some(ReferenceSystem::Iers2010),
         _ => None,
     }
@@ -420,12 +412,15 @@ mod tests {
     #[case(DynFrame::Teme)]
     #[case(DynFrame::Mod(ReferenceSystem::Iers1996))]
     #[case(DynFrame::Mod(ReferenceSystem::Iers2003(Iau2000Model::A)))]
+    #[case(DynFrame::Mod(ReferenceSystem::Iers2003(Iau2000Model::B)))]
     #[case(DynFrame::Mod(ReferenceSystem::Iers2010))]
     #[case(DynFrame::Tod(ReferenceSystem::Iers1996))]
     #[case(DynFrame::Tod(ReferenceSystem::Iers2003(Iau2000Model::A)))]
+    #[case(DynFrame::Tod(ReferenceSystem::Iers2003(Iau2000Model::B)))]
     #[case(DynFrame::Tod(ReferenceSystem::Iers2010))]
     #[case(DynFrame::Pef(ReferenceSystem::Iers1996))]
     #[case(DynFrame::Pef(ReferenceSystem::Iers2003(Iau2000Model::A)))]
+    #[case(DynFrame::Pef(ReferenceSystem::Iers2003(Iau2000Model::B)))]
     #[case(DynFrame::Pef(ReferenceSystem::Iers2010))]
     #[case(DynFrame::Iau(DynOrigin::Earth))]
     fn test_abbreviation_round_trip(#[case] frame: DynFrame) {
