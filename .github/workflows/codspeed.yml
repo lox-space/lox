@@ -44,7 +44,7 @@ jobs:
         with:
           command: develop
           args: --release --uv
-      - uses: CodSpeedHQ/action@v4
+      - uses: CodSpeedHQ/action@v5.0.1
         with:
           mode: simulation
           run: uv run --directory "$UV_PROJECT" pytest --codspeed crates/lox-space/tests/test_*benchmark*
@@ -63,7 +63,7 @@ jobs:
         run: cargo install cargo-codspeed
       - name: Build benchmarks
         run: cargo codspeed build -p lox-space
-      - uses: CodSpeedHQ/action@v4
+      - uses: CodSpeedHQ/action@v5.0.1
         with:
           mode: simulation
           run: cargo codspeed run -p lox-space
