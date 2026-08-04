@@ -13,7 +13,7 @@
 
 extern crate alloc;
 
-pub use crate::dynamic::DynOrigin;
+pub use crate::dynamic::Origin;
 use alloc::borrow::ToOwned;
 use alloc::string::String;
 use core::fmt::{Display, Formatter};
@@ -671,9 +671,9 @@ mod tests {
 
     #[test]
     fn test_rotational_elements_error() {
-        assert!(DynOrigin::Mundilfari.try_rotational_elements(0.0).is_err());
+        assert!(Origin::Mundilfari.try_rotational_elements(0.0).is_err());
         assert!(
-            DynOrigin::Mundilfari
+            Origin::Mundilfari
                 .try_rotational_element_rates(0.0)
                 .is_err()
         );

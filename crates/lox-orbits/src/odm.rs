@@ -12,7 +12,7 @@ use std::path::Path;
 use std::f64::consts::PI;
 
 use chrono::{DateTime, Utc as ChronoUtc};
-use lox_bodies::{CoordinateOrigin, DynOrigin};
+use lox_bodies::{CoordinateOrigin, Origin};
 use lox_core::anomalies::{AnomalyError, MeanAnomaly};
 use lox_core::coords::Cartesian;
 use lox_core::elements::{
@@ -23,7 +23,7 @@ use lox_core::elements::{
 };
 use lox_core::f64::consts::SECONDS_PER_DAY;
 use lox_core::units::Angle;
-use lox_frames::{DynFrame, ReferenceFrame};
+use lox_frames::{Frame, ReferenceFrame};
 use lox_odm::Format;
 use lox_odm::OdmError;
 use lox_odm::types::common::{
@@ -34,7 +34,7 @@ use lox_odm::types::omm::{Omm, OmmMeanElements, OmmMetadata};
 use lox_odm::types::opm::{Opm, OpmMetadata};
 use lox_time::offsets::{DefaultOffsetProvider, OffsetProvider};
 use lox_time::time::DynTime;
-use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 
 use crate::orbits::{
     CartesianOrbit, DynCartesianOrbit, DynKeplerianOrbit, DynTrajectory, KeplerianOrbit, Orbit,
@@ -47,12 +47,12 @@ use crate::propagators::sgp4::{Sgp4, Sgp4Error};
 const DEFAULT_ORIGINATOR: &str = "Lox (https://lox.rs)";
 
 // ----------------------------------------------------------------------------
-// Helper: convert a `Time<T>` (where T: Into<DynTimeScale>) to `OdmTime`
+// Helper: convert a `Time<T>` (where T: Into<TimeScale>) to `OdmTime`
 // ----------------------------------------------------------------------------
 
 fn orbit_epoch_to_odm_time<T>(time: lox_time::Time<T>) -> OdmTime
 where
-    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
+    T: ContinuousTimeScale + Copy + Into<TimeScale>,
 {
     OdmTime::Time(time.into_dyn())
 }
@@ -294,7 +294,7 @@ where
     ///
     /// Use this to preserve the original time system across a round-trip
     /// through a typed orbit: e.g. an OPM read with `TIME_SYSTEM = UTC`
-    /// becomes a [`DynCartesianOrbit`] in TAI (because [`DynTimeScale`]
+    /// becomes a [`DynCartesianOrbit`] in TAI (because [`TimeScale`]
     /// has no UTC variant), and setting `.time_system(OdmTimeSystem::Utc)`
     /// on the builder restores UTC on output.
     ///
@@ -356,9 +356,9 @@ where
 
 impl<T, O, R, P> OpmBuilder<T, O, R, P>
 where
-    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
-    O: CoordinateOrigin + Copy + Into<DynOrigin>,
-    R: ReferenceFrame + Copy + Into<DynFrame>,
+    T: ContinuousTimeScale + Copy + Into<TimeScale>,
+    O: CoordinateOrigin + Copy + Into<Origin>,
+    R: ReferenceFrame + Copy + Into<Frame>,
     P: OffsetProvider,
 {
     /// Builds the [`Opm`], consuming the builder.
@@ -460,7 +460,7 @@ impl DynCartesianOrbit {
     /// Constructs a [`DynCartesianOrbit`] from a typed OPM.
     ///
     /// Returns an error if the OPM's center or frame is `Custom` (free-form)
-    /// because such names cannot be mapped to a `DynOrigin` / `DynFrame`.
+    /// because such names cannot be mapped to a `Origin` / `Frame`.
     pub fn from_opm(opm: &Opm) -> Result<Self, OpmFromOdmError> {
         let origin = opm.metadata.center.known().ok_or_else(|| {
             OpmFromOdmError::CustomCenter(opm.metadata.center.name().into_owned())
@@ -692,9 +692,9 @@ where
 
 impl<T, O, R, P> OemBuilder<T, O, R, P>
 where
-    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
-    O: CoordinateOrigin + Copy + Into<DynOrigin>,
-    R: ReferenceFrame + Copy + Into<DynFrame>,
+    T: ContinuousTimeScale + Copy + Into<TimeScale>,
+    O: CoordinateOrigin + Copy + Into<Origin>,
+    R: ReferenceFrame + Copy + Into<Frame>,
     P: OffsetProvider,
 {
     /// Builds the [`Oem`], consuming the builder.
@@ -839,7 +839,7 @@ impl DynTrajectory {
             return Err(OemFromOdmError::InsufficientStates(segment.states.len()));
         }
 
-        let orbits: Vec<CartesianOrbit<DynTimeScale, DynOrigin, DynFrame>> = segment
+        let orbits: Vec<CartesianOrbit<TimeScale, Origin, Frame>> = segment
             .states
             .iter()
             .map(|(odm_time, state)| {
@@ -995,7 +995,7 @@ impl Sgp4 {
         let centre = omm.metadata.center.known().ok_or_else(|| {
             OmmFromOdmError::CustomCenter(omm.metadata.center.name().into_owned())
         })?;
-        if centre != DynOrigin::Earth {
+        if centre != Origin::Earth {
             return Err(OmmFromOdmError::CustomCenter(format!(
                 "SGP4 only supports Earth; got {}",
                 omm.metadata.center.name()
@@ -1247,9 +1247,9 @@ where
 
 impl<T, O, R, P> OmmBuilder<T, O, R, P>
 where
-    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
-    O: CoordinateOrigin + Copy + Into<DynOrigin>,
-    R: ReferenceFrame + Copy + Into<DynFrame>,
+    T: ContinuousTimeScale + Copy + Into<TimeScale>,
+    O: CoordinateOrigin + Copy + Into<Origin>,
+    R: ReferenceFrame + Copy + Into<Frame>,
     P: OffsetProvider,
 {
     /// Builds the [`Omm`], consuming the builder.
@@ -1401,7 +1401,7 @@ impl DynKeplerianOrbit {
         );
 
         // Use raw `Orbit::from_state` because TEME is not in
-        // `DynFrame::TryQuasiInertial`'s permitted set, but for typed-view
+        // `Frame::TryQuasiInertial`'s permitted set, but for typed-view
         // purposes we still want to allow construction.
         let time = omm.epoch.to_dyn_time();
         Ok(Orbit::from_state(kep, time, origin, frame))
@@ -1429,10 +1429,10 @@ impl DynKeplerianOrbit {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lox_bodies::{DynOrigin, Earth};
+    use lox_bodies::{Earth, Origin};
     use lox_core::coords::Cartesian;
     use lox_core::units::{Distance, Velocity};
-    use lox_frames::{DynFrame, Icrf};
+    use lox_frames::{Frame, Icrf};
     use lox_odm::Format;
     use lox_odm::types::common::{OdmCenter, OdmFrame, OdmTime};
     use lox_time::deltas::TimeDelta;
@@ -1485,8 +1485,8 @@ mod tests {
         Orbit::from_state(
             sample_cartesian(),
             sample_epoch_tai().into_dyn(),
-            DynOrigin::Earth,
-            DynFrame::Icrf,
+            Origin::Earth,
+            Frame::Icrf,
         )
     }
 
@@ -1499,7 +1499,7 @@ mod tests {
         let t0 = sample_epoch_tai().into_dyn();
         let t1 = t0 + TimeDelta::from_seconds(60);
         let t2 = t0 + TimeDelta::from_seconds(120);
-        let s0 = Orbit::from_state(sample_cartesian(), t0, DynOrigin::Earth, DynFrame::Icrf);
+        let s0 = Orbit::from_state(sample_cartesian(), t0, Origin::Earth, Frame::Icrf);
         let s1 = Orbit::from_state(
             Cartesian::new(
                 Distance::kilometers(6999.0),
@@ -1510,8 +1510,8 @@ mod tests {
                 Velocity::kilometers_per_second(0.0),
             ),
             t1,
-            DynOrigin::Earth,
-            DynFrame::Icrf,
+            Origin::Earth,
+            Frame::Icrf,
         );
         let s2 = Orbit::from_state(
             Cartesian::new(
@@ -1523,8 +1523,8 @@ mod tests {
                 Velocity::kilometers_per_second(0.0),
             ),
             t2,
-            DynOrigin::Earth,
-            DynFrame::Icrf,
+            Origin::Earth,
+            Frame::Icrf,
         );
         Trajectory::new(vec![s0, s1, s2])
     }
@@ -1544,8 +1544,8 @@ mod tests {
         assert_eq!(opm.metadata.object_name, "TEST-SAT");
         assert_eq!(opm.metadata.object_id, "2024-000A");
         assert_eq!(opm.header.originator, "TEST_ORG");
-        assert_eq!(opm.metadata.center, OdmCenter::Known(DynOrigin::Earth));
-        assert_eq!(opm.metadata.frame, OdmFrame::Known(DynFrame::Icrf));
+        assert_eq!(opm.metadata.center, OdmCenter::Known(Origin::Earth));
+        assert_eq!(opm.metadata.frame, OdmFrame::Known(Frame::Icrf));
         assert_eq!(opm.state, sample_cartesian());
     }
 
@@ -1566,8 +1566,8 @@ mod tests {
             .originator("STATIC_ORG")
             .build()
             .unwrap();
-        assert_eq!(opm.metadata.center, OdmCenter::Known(DynOrigin::Earth));
-        assert_eq!(opm.metadata.frame, OdmFrame::Known(DynFrame::Icrf));
+        assert_eq!(opm.metadata.center, OdmCenter::Known(Origin::Earth));
+        assert_eq!(opm.metadata.frame, OdmFrame::Known(Frame::Icrf));
         assert_eq!(opm.state, sample_cartesian());
     }
 
@@ -1593,8 +1593,8 @@ mod tests {
             .build()
             .unwrap();
         let reconstructed = DynCartesianOrbit::from_opm(&opm).unwrap();
-        assert_eq!(reconstructed.origin(), DynOrigin::Earth);
-        assert_eq!(reconstructed.reference_frame(), DynFrame::Icrf);
+        assert_eq!(reconstructed.origin(), Origin::Earth);
+        assert_eq!(reconstructed.reference_frame(), Frame::Icrf);
         assert_eq!(reconstructed.state(), orbit.state());
     }
 
@@ -1660,7 +1660,7 @@ mod tests {
                 object_name: "APOPHIS".to_string(),
                 object_id: "2004-XY".to_string(),
                 center: OdmCenter::Custom("APOPHIS".to_string()),
-                frame: OdmFrame::Known(DynFrame::Icrf),
+                frame: OdmFrame::Known(Frame::Icrf),
                 frame_epoch: None,
             },
             epoch,
@@ -1689,8 +1689,8 @@ mod tests {
             .unwrap();
         assert_eq!(oem.segments.len(), 1);
         let seg = &oem.segments[0];
-        assert_eq!(seg.metadata.center, OdmCenter::Known(DynOrigin::Earth));
-        assert_eq!(seg.metadata.frame, OdmFrame::Known(DynFrame::Icrf));
+        assert_eq!(seg.metadata.center, OdmCenter::Known(Origin::Earth));
+        assert_eq!(seg.metadata.frame, OdmFrame::Known(Frame::Icrf));
         assert_eq!(seg.states.len(), 3);
     }
 
@@ -1704,8 +1704,8 @@ mod tests {
             .build()
             .unwrap();
         let reconstructed = DynTrajectory::from_oem(&oem).unwrap();
-        assert_eq!(reconstructed.origin(), DynOrigin::Earth);
-        assert_eq!(reconstructed.reference_frame(), DynFrame::Icrf);
+        assert_eq!(reconstructed.origin(), Origin::Earth);
+        assert_eq!(reconstructed.reference_frame(), Frame::Icrf);
         assert_eq!(reconstructed.states().len(), expected_len);
     }
 
@@ -1737,8 +1737,8 @@ mod tests {
                 comments: Vec::new(),
                 object_name: "SAT".to_string(),
                 object_id: "2024-000A".to_string(),
-                center: OdmCenter::Known(DynOrigin::Earth),
-                frame: OdmFrame::Known(DynFrame::Icrf),
+                center: OdmCenter::Known(Origin::Earth),
+                frame: OdmFrame::Known(Frame::Icrf),
                 frame_epoch: None,
                 start_time: epoch0,
                 useable_start_time: None,
@@ -1753,7 +1753,7 @@ mod tests {
         };
         let traj = DynTrajectory::from_oem_segment(&seg).unwrap();
         assert_eq!(traj.states().len(), 2);
-        assert_eq!(traj.origin(), DynOrigin::Earth);
+        assert_eq!(traj.origin(), Origin::Earth);
     }
 
     #[test]

@@ -162,10 +162,10 @@ impl Omm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lox_bodies::DynOrigin;
-    use lox_frames::DynFrame;
+    use lox_bodies::Origin;
+    use lox_frames::Frame;
     use lox_time::time::Time;
-    use lox_time::time_scales::DynTimeScale;
+    use lox_time::time_scales::TimeScale;
 
     #[test]
     fn omm_metadata_construction() {
@@ -173,13 +173,13 @@ mod tests {
             comments: Vec::new(),
             object_name: "ISS".to_string(),
             object_id: "1998-067A".to_string(),
-            center: OdmCenter::Known(DynOrigin::Earth),
-            frame: OdmFrame::Known(DynFrame::Teme),
+            center: OdmCenter::Known(Origin::Earth),
+            frame: OdmFrame::Known(Frame::Teme),
             frame_epoch: None,
             mean_element_theory: "SGP/SGP4".to_string(),
         };
         assert_eq!(m.object_name, "ISS");
-        assert_eq!(m.frame, OdmFrame::Known(DynFrame::Teme));
+        assert_eq!(m.frame, OdmFrame::Known(Frame::Teme));
         assert_eq!(m.mean_element_theory, "SGP/SGP4");
     }
 
@@ -213,7 +213,7 @@ mod tests {
     }
 
     fn sample_epoch() -> OdmTime {
-        OdmTime::Time(Time::j2000(DynTimeScale::Tai))
+        OdmTime::Time(Time::j2000(TimeScale::Tai))
     }
 
     fn sample_header() -> OdmHeader {
@@ -231,8 +231,8 @@ mod tests {
             comments: Vec::new(),
             object_name: "TEST-SAT".to_string(),
             object_id: "2024-000A".to_string(),
-            center: OdmCenter::Known(DynOrigin::Earth),
-            frame: OdmFrame::Known(DynFrame::Teme),
+            center: OdmCenter::Known(Origin::Earth),
+            frame: OdmFrame::Known(Frame::Teme),
             frame_epoch: None,
             mean_element_theory: "SGP/SGP4".to_string(),
         }
@@ -296,7 +296,7 @@ mod tests {
     #[test]
     fn omm_gm_falls_back_to_canonical_for_known_center() {
         let omm = sample_omm();
-        let expected = DynOrigin::Earth.try_gravitational_parameter().ok();
+        let expected = Origin::Earth.try_gravitational_parameter().ok();
         assert_eq!(omm.gm(), expected);
     }
 

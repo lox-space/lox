@@ -4,13 +4,11 @@
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
 use crate::propagators::Propagator;
-use lox_bodies::{
-    DynOrigin, RotationalElements, Spheroid, TrySpheroid, UndefinedOriginPropertyError,
-};
+use lox_bodies::{Origin, RotationalElements, Spheroid, TrySpheroid, UndefinedOriginPropertyError};
 use lox_core::coords::{Cartesian, Ellipsoid, LonLatAlt};
 use lox_core::glam::{DMat3, DVec3};
 use lox_core::types::units::Radians;
-use lox_frames::{DynFrame, Iau, ReferenceFrame};
+use lox_frames::{Frame, Iau, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
@@ -67,7 +65,7 @@ pub struct GroundLocation<B: TrySpheroid> {
 }
 
 /// Type alias for a ground location with a dynamic origin.
-pub type DynGroundLocation = GroundLocation<DynOrigin>;
+pub type DynGroundLocation = GroundLocation<Origin>;
 
 /// Infallible constructor — requires compile-time `Spheroid` guarantee.
 impl<B: Spheroid> GroundLocation<B> {
@@ -77,7 +75,7 @@ impl<B: Spheroid> GroundLocation<B> {
     }
 }
 
-/// Fallible constructor — for `DynOrigin` and other `TrySpheroid` types.
+/// Fallible constructor — for `Origin` and other `TrySpheroid` types.
 impl<B: TrySpheroid> GroundLocation<B> {
     /// Creates a new ground location, returning an error if the body has no spheroid.
     pub fn try_new(coordinates: LonLatAlt, body: B) -> Result<Self, UndefinedOriginPropertyError> {
@@ -88,7 +86,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
     }
 }
 
-impl<B: TrySpheroid + Into<DynOrigin>> GroundLocation<B> {
+impl<B: TrySpheroid + Into<Origin>> GroundLocation<B> {
     /// Converts the ground location into a dynamic representation.
     pub fn into_dyn(self) -> DynGroundLocation {
         GroundLocation {
@@ -200,7 +198,7 @@ pub struct GroundPropagator<B: TrySpheroid, R: ReferenceFrame> {
 }
 
 /// Type alias for a ground propagator with dynamic origin and frame.
-pub type DynGroundPropagator = GroundPropagator<DynOrigin, DynFrame>;
+pub type DynGroundPropagator = GroundPropagator<Origin, Frame>;
 
 /// Typed constructor -- for static bodies with `Spheroid + RotationalElements`.
 impl<B: Spheroid + RotationalElements> GroundPropagator<B, Iau<B>> {
@@ -218,15 +216,15 @@ impl<B: Spheroid + RotationalElements> GroundPropagator<B, Iau<B>> {
     }
 }
 
-/// Infallible constructor for `DynOrigin`.
+/// Infallible constructor for `Origin`.
 ///
 /// Unlike `GroundLocation::try_new`, this constructor cannot fail: the location
-/// already holds a valid ellipsoid, and building the IAU frame from a `DynOrigin`
+/// already holds a valid ellipsoid, and building the IAU frame from a `Origin`
 /// is always possible.
-impl GroundPropagator<DynOrigin, DynFrame> {
+impl GroundPropagator<Origin, Frame> {
     /// Creates a new ground propagator for a dynamic-origin ground location.
-    pub fn new_dyn(location: GroundLocation<DynOrigin>) -> Self {
-        let frame = DynFrame::Iau(location.body);
+    pub fn new_dyn(location: GroundLocation<Origin>) -> Self {
+        let frame = Frame::Iau(location.body);
         GroundPropagator {
             location,
             frame,
@@ -404,14 +402,14 @@ mod tests {
     #[test]
     fn test_try_new_with_dyn_origin() {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
-        let location = GroundLocation::try_new(coords, DynOrigin::Earth).unwrap();
-        assert_eq!(location.origin(), DynOrigin::Earth);
+        let location = GroundLocation::try_new(coords, Origin::Earth).unwrap();
+        assert_eq!(location.origin(), Origin::Earth);
     }
 
     #[test]
     fn test_try_new_rejects_non_spheroid() {
         let coords = LonLatAlt::from_degrees(0.0, 0.0, 0.0).unwrap();
-        let result = GroundLocation::try_new(coords, DynOrigin::SolarSystemBarycenter);
+        let result = GroundLocation::try_new(coords, Origin::SolarSystemBarycenter);
         assert!(result.is_err());
     }
 
@@ -420,7 +418,7 @@ mod tests {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::new(coords, Earth);
         let dyn_location = location.into_dyn();
-        assert_eq!(dyn_location.origin(), DynOrigin::Earth);
+        assert_eq!(dyn_location.origin(), Origin::Earth);
         assert_approx_eq!(dyn_location.longitude(), -4.3676f64.to_radians());
         assert_approx_eq!(dyn_location.latitude(), 40.4527f64.to_radians());
     }
@@ -428,7 +426,7 @@ mod tests {
     #[test]
     fn test_ground_propagator_try_new_with_dyn_origin() {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
-        let location = GroundLocation::try_new(coords, DynOrigin::Earth).unwrap();
+        let location = GroundLocation::try_new(coords, Origin::Earth).unwrap();
         let propagator = GroundPropagator::new_dyn(location);
         let time = utc!(2022, 1, 31, 23).unwrap().to_time();
         let t1 = time + TimeDelta::from_minutes(5);
@@ -436,7 +434,7 @@ mod tests {
         let traj = propagator
             .propagate(interval)
             .unwrap()
-            .into_frame(DynFrame::Icrf, &DefaultRotationProvider)
+            .into_frame(Frame::Icrf, &DefaultRotationProvider)
             .unwrap();
         let state = traj.states()[0];
         // Same result as the static version

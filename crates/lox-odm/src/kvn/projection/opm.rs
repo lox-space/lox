@@ -974,10 +974,10 @@ mod tests {
     use std::collections::BTreeMap;
 
     use lox_approx::assert_approx_eq;
-    use lox_bodies::DynOrigin;
+    use lox_bodies::Origin;
     use lox_core::elements::{GravitationalParameter, Keplerian};
     use lox_core::units::{Angle, Distance, Mass, Velocity};
-    use lox_frames::DynFrame;
+    use lox_frames::Frame;
     use nalgebra::Matrix6;
 
     use crate::types::common::{Covariance, OdmCenter, OdmFrame, OdmHeader, OdmTime};
@@ -987,7 +987,7 @@ mod tests {
 
     fn sample_epoch() -> OdmTime {
         OdmTime::Time(lox_time::time::Time::j2000(
-            lox_time::time_scales::DynTimeScale::Tai,
+            lox_time::time_scales::TimeScale::Tai,
         ))
     }
 
@@ -1005,8 +1005,8 @@ mod tests {
                 comments: Vec::new(),
                 object_name: "TEST-SAT".to_string(),
                 object_id: "2024-000A".to_string(),
-                center: OdmCenter::Known(DynOrigin::Earth),
-                frame: OdmFrame::Known(DynFrame::Icrf),
+                center: OdmCenter::Known(Origin::Earth),
+                frame: OdmFrame::Known(Frame::Icrf),
                 frame_epoch: None,
             },
             epoch,
@@ -1707,7 +1707,7 @@ DRAG_COEFF = 2.2
         let mut opm = sample_opm();
         opm.covariance = Some(Covariance {
             comments: Vec::new(),
-            frame: Some(OdmFrame::Known(lox_frames::DynFrame::Icrf)),
+            frame: Some(OdmFrame::Known(lox_frames::Frame::Icrf)),
             matrix: Matrix6::identity(),
         });
         let written = write_opm(&opm);
@@ -1726,7 +1726,7 @@ DRAG_COEFF = 2.2
             ignition_epoch: sample_epoch(),
             duration: TimeDelta::from_seconds(30),
             delta_mass: Mass::kilograms(-0.5),
-            frame: Some(OdmFrame::Known(lox_frames::DynFrame::Icrf)),
+            frame: Some(OdmFrame::Known(lox_frames::Frame::Icrf)),
             delta_v: [
                 Velocity::kilometers_per_second(0.01),
                 Velocity::kilometers_per_second(0.0),
@@ -1952,7 +1952,7 @@ MAN_DV_3 = 0.0 [km/s]
             ignition_epoch: sample_epoch(),
             duration: TimeDelta::from_seconds(60),
             delta_mass: Mass::kilograms(-1.0),
-            frame: Some(OdmFrame::Known(lox_frames::DynFrame::Icrf)),
+            frame: Some(OdmFrame::Known(lox_frames::Frame::Icrf)),
             delta_v: [
                 Velocity::kilometers_per_second(0.1),
                 Velocity::kilometers_per_second(0.0),

@@ -12,16 +12,16 @@ use differential_equations::{
     traits::State,
 };
 use lox_bodies::{
-    CoordinateOrigin, DynOrigin, J2, PointMass, Spheroid, TryJ2, TryPointMass, TrySpheroid,
+    CoordinateOrigin, J2, Origin, PointMass, Spheroid, TryJ2, TryPointMass, TrySpheroid,
     UndefinedOriginPropertyError,
 };
 use lox_core::coords::Cartesian;
 use lox_core::glam::DVec3;
-use lox_frames::{DynFrame, ReferenceFrame};
+use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 use thiserror::Error;
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
@@ -65,7 +65,7 @@ pub struct NumericalPropagator<
 }
 
 /// Type alias for a [`NumericalPropagator`] using dynamic time scale, origin, and frame.
-pub type DynNumericalPropagator = NumericalPropagator<DynTimeScale, DynOrigin, DynFrame>;
+pub type DynNumericalPropagator = NumericalPropagator<TimeScale, Origin, Frame>;
 
 fn default_h_max(position: DVec3, velocity: DVec3) -> f64 {
     position.length() / velocity.length() / H_MAX_STEPS_PER_TIMESCALE
@@ -92,7 +92,7 @@ where
     }
 }
 
-// Fallible — Try* bounds (covers DynOrigin)
+// Fallible — Try* bounds (covers Origin)
 impl<T, O, R> NumericalPropagator<T, O, R>
 where
     T: ContinuousTimeScale,

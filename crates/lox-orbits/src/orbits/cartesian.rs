@@ -5,8 +5,8 @@
 use std::ops::Sub;
 
 use lox_bodies::{
-    CoordinateOrigin, DynOrigin, PointMass, RotationalElements, Spheroid, TryPointMass,
-    TrySpheroid, UndefinedOriginPropertyError,
+    CoordinateOrigin, Origin, PointMass, RotationalElements, Spheroid, TryPointMass, TrySpheroid,
+    UndefinedOriginPropertyError,
 };
 use lox_core::coords::Cartesian;
 use lox_core::coords::FromBodyFixedError;
@@ -14,7 +14,7 @@ use lox_core::coords::LonLatAlt;
 use lox_core::glam::{DMat3, DVec3};
 use lox_ephem::Ephemeris;
 use lox_frames::{
-    DynFrame, Iau, Icrf, ReferenceFrame, TryBodyFixed, rotations::TryRotation, traits::frame_key,
+    Frame, Iau, Icrf, ReferenceFrame, TryBodyFixed, rotations::TryRotation, traits::frame_key,
 };
 use lox_time::offsets::{DefaultOffsetProvider, Offset};
 use lox_time::time_scales::{ContinuousTimeScale, Tdb};
@@ -128,7 +128,7 @@ where
 pub enum StateToDynGroundError {
     /// The origin body does not define equatorial radius and flattening.
     #[error("equatorial radius and flattening factor are not available for origin `{}`", .0.name())]
-    UndefinedSpheroid(DynOrigin),
+    UndefinedSpheroid(Origin),
     /// Failed to convert from body-fixed coordinates.
     #[error(transparent)]
     FromBodyFixed(#[from] FromBodyFixedError),
@@ -189,7 +189,7 @@ impl DynCartesianOrbit {
     /// Transforms this dynamic orbit to a different central body origin using an ephemeris.
     pub fn try_to_origin<E: Ephemeris>(
         &self,
-        target: DynOrigin,
+        target: Origin,
         ephemeris: &E,
     ) -> Result<DynCartesianOrbit, E::Error> {
         if self.origin() == target {
@@ -209,7 +209,7 @@ impl DynCartesianOrbit {
             self.state() - delta,
             self.time(),
             target,
-            DynFrame::Icrf,
+            Frame::Icrf,
         ))
     }
 
@@ -232,7 +232,7 @@ impl DynCartesianOrbit {
 
     /// Returns the LVLH rotation matrix, returning an error if the frame is not ICRF.
     pub fn try_rotation_lvlh(&self) -> Result<DMat3, &'static str> {
-        if self.reference_frame() != DynFrame::Icrf {
+        if self.reference_frame() != Frame::Icrf {
             return Err("only valid for ICRF");
         }
         Ok(rotation_lvlh(self.position(), self.velocity()))
@@ -414,9 +414,9 @@ mod tests {
 
     #[test]
     fn test_into_dyn() {
-        use lox_bodies::DynOrigin;
-        use lox_frames::DynFrame;
-        use lox_time::time_scales::DynTimeScale;
+        use lox_bodies::Origin;
+        use lox_frames::Frame;
+        use lox_time::time_scales::TimeScale;
 
         let time = time!(Tdb, 2023, 3, 25, 21, 8, 0.0).unwrap();
         let pos = DVec3::new(1000.0, 2000.0, 3000.0);
@@ -424,17 +424,17 @@ mod tests {
         let state = CartesianOrbit::new(Cartesian::from_vecs(pos, vel), time, Earth, Icrf);
         let dyn_state = state.into_dyn();
 
-        assert_eq!(dyn_state.origin(), DynOrigin::Earth);
-        assert_eq!(dyn_state.reference_frame(), DynFrame::Icrf);
-        assert_eq!(dyn_state.time().scale(), DynTimeScale::Tdb);
+        assert_eq!(dyn_state.origin(), Origin::Earth);
+        assert_eq!(dyn_state.reference_frame(), Frame::Icrf);
+        assert_eq!(dyn_state.time().scale(), TimeScale::Tdb);
         assert_approx_eq!(dyn_state.position(), pos);
         assert_approx_eq!(dyn_state.velocity(), vel);
     }
 
     #[test]
     fn test_try_to_frame_identity() {
-        use lox_bodies::DynOrigin;
-        use lox_frames::DynFrame;
+        use lox_bodies::Origin;
+        use lox_frames::Frame;
 
         let time = Utc::from_iso("2024-07-05T09:09:18.173")
             .unwrap()
@@ -444,13 +444,13 @@ mod tests {
         let state = CartesianOrbit::new(
             Cartesian::from_vecs(pos, vel),
             time,
-            DynOrigin::Earth,
-            DynFrame::Icrf,
+            Origin::Earth,
+            Frame::Icrf,
         );
 
         // Converting ICRF→ICRF should be a no-op that preserves state exactly
         let same = state
-            .try_to_frame(DynFrame::Icrf, &DefaultRotationProvider)
+            .try_to_frame(Frame::Icrf, &DefaultRotationProvider)
             .unwrap();
         assert_eq!(same.position(), pos);
         assert_eq!(same.velocity(), vel);
@@ -472,21 +472,17 @@ mod tests {
 
     #[test]
     fn test_try_to_origin_same_origin() {
-        use lox_bodies::DynOrigin;
-        use lox_frames::DynFrame;
+        use lox_bodies::Origin;
+        use lox_frames::Frame;
 
         let r = DVec3::new(6068279.27, -1692843.94, -2516619.18);
         let v = DVec3::new(-660.415582, 5495.938726, -5303.093233);
         let utc = Utc::from_iso("2016-05-30T12:00:00.000").unwrap();
         let time = utc.to_dyn_time();
 
-        let state = CartesianOrbit::new(
-            Cartesian::from_vecs(r, v),
-            time,
-            DynOrigin::Earth,
-            DynFrame::Icrf,
-        );
-        let same = state.try_to_origin(DynOrigin::Earth, ephemeris()).unwrap();
+        let state =
+            CartesianOrbit::new(Cartesian::from_vecs(r, v), time, Origin::Earth, Frame::Icrf);
+        let same = state.try_to_origin(Origin::Earth, ephemeris()).unwrap();
         assert_eq!(same.position(), r);
         assert_eq!(same.velocity(), v);
     }

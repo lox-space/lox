@@ -14,7 +14,7 @@
 //! * `nutation` — ICRF→TOD across every convention, showing the cost spread
 //!   between IAU 1980 / 2000A / 2000B / 2006 nutation.
 //! * `kernels`  — the raw nutation term-summation per model, in isolation.
-//! * `dynamic`  — the same rotations through the `DynFrame` match, showing
+//! * `dynamic`  — the same rotations through the `Frame` match, showing
 //!   dispatch overhead vs. the typed path (the Python-facing path).
 //!
 //! The whole suite is gated on the `frames` feature; with it off the bench
@@ -33,7 +33,7 @@ mod frame_benches {
     use lox_space::frames::iers::{Iau2000Model, Iers1996, Iers2003, Iers2010, ReferenceSystem};
     use lox_space::frames::providers::DefaultRotationProvider;
     use lox_space::frames::rotations::TryRotation;
-    use lox_space::frames::{Cirf, DynFrame, Iau, Icrf, Itrf, Mod, Pef, Teme, Tirf, Tod};
+    use lox_space::frames::{Cirf, Frame, Iau, Icrf, Itrf, Mod, Pef, Teme, Tirf, Tod};
     use lox_space::time::Time;
     use lox_space::time::time_scales::{Tdb, Tt};
 
@@ -166,39 +166,35 @@ mod frame_benches {
         bencher.bench(|| Nutation::iau2006a(black_box(t)));
     }
 
-    // ---- dynamic: same rotations via the DynFrame match ----------------------
+    // ---- dynamic: same rotations via the Frame match ----------------------
     // Difference vs. the typed group is the dispatch overhead (Python's path).
 
     #[divan::bench]
     fn dyn_icrf_to_itrf(bencher: Bencher) {
         let t = epoch();
-        bencher.bench(|| {
-            DefaultRotationProvider.try_rotation(DynFrame::Icrf, DynFrame::Itrf, black_box(t))
-        });
+        bencher
+            .bench(|| DefaultRotationProvider.try_rotation(Frame::Icrf, Frame::Itrf, black_box(t)));
     }
 
     #[divan::bench]
     fn dyn_icrf_to_tod(bencher: Bencher) {
         let t = epoch();
-        let target = DynFrame::Tod(ReferenceSystem::Iers2003(Iau2000Model::A));
-        bencher
-            .bench(|| DefaultRotationProvider.try_rotation(DynFrame::Icrf, target, black_box(t)));
+        let target = Frame::Tod(ReferenceSystem::Iers2003(Iau2000Model::A));
+        bencher.bench(|| DefaultRotationProvider.try_rotation(Frame::Icrf, target, black_box(t)));
     }
 
     #[divan::bench]
     fn dyn_icrf_to_iau_earth(bencher: Bencher) {
         let t = epoch();
-        let target = DynFrame::Iau(Earth.into());
-        bencher
-            .bench(|| DefaultRotationProvider.try_rotation(DynFrame::Icrf, target, black_box(t)));
+        let target = Frame::Iau(Earth.into());
+        bencher.bench(|| DefaultRotationProvider.try_rotation(Frame::Icrf, target, black_box(t)));
     }
 
     // The SGP4 hot path: TEME state (dynamic frame) converted to ICRF.
     #[divan::bench]
     fn dyn_teme_to_icrf(bencher: Bencher) {
         let t = epoch();
-        bencher.bench(|| {
-            DefaultRotationProvider.try_rotation(DynFrame::Teme, DynFrame::Icrf, black_box(t))
-        });
+        bencher
+            .bench(|| DefaultRotationProvider.try_rotation(Frame::Teme, Frame::Icrf, black_box(t)));
     }
 }

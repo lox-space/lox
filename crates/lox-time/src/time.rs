@@ -37,11 +37,11 @@ use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_of_day::TimeOfDayError;
 use crate::time_scales::ContinuousTimeScale;
-use crate::time_scales::DynTimeScale;
 use crate::time_scales::Tai;
 use crate::time_scales::Tcb;
 use crate::time_scales::Tcg;
 use crate::time_scales::Tdb;
+use crate::time_scales::TimeScale;
 use crate::time_scales::Tt;
 use crate::time_scales::Ut1;
 
@@ -80,7 +80,7 @@ pub struct Time<T: ContinuousTimeScale> {
 }
 
 /// A [`Time`] with a runtime-determined time scale.
-pub type DynTime = Time<DynTimeScale>;
+pub type DynTime = Time<TimeScale>;
 
 impl<T: ContinuousTimeScale> Time<T> {
     /// Instantiates a [Time] in the given [ContinuousTimeScale] from the count of seconds since J2000, subdivided
@@ -289,7 +289,7 @@ impl<T: ContinuousTimeScale> Time<T> {
     }
 }
 
-impl<T: ContinuousTimeScale + Into<DynTimeScale>> Time<T> {
+impl<T: ContinuousTimeScale + Into<TimeScale>> Time<T> {
     /// Converts this time into a [`DynTime`] with a runtime time scale.
     pub fn into_dyn(self) -> DynTime {
         Time::from_delta(self.scale.into(), self.delta)
@@ -316,8 +316,8 @@ impl<T: ContinuousTimeScale + Eq> Ord for Time<T> {
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 #[error("cannot compare `Time` objects with different time scales `{lhs}` and `{rhs}`")]
 pub struct TimeScaleMismatch {
-    lhs: DynTimeScale,
-    rhs: DynTimeScale,
+    lhs: TimeScale,
+    rhs: TimeScale,
 }
 
 impl DynTime {
@@ -565,7 +565,7 @@ mod tests {
     use rstest::rstest;
 
     use crate::Time;
-    use crate::time_scales::{DynTimeScale, Tai, Tdb, Tt};
+    use crate::time_scales::{Tai, Tdb, TimeScale, Tt};
     use lox_core::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 
     use super::*;
@@ -1160,12 +1160,12 @@ mod tests {
     fn test_time_into_dyn() {
         let time = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap();
         let dyn_time = time.into_dyn();
-        assert_eq!(dyn_time.scale(), DynTimeScale::Tai);
+        assert_eq!(dyn_time.scale(), TimeScale::Tai);
         assert_eq!(dyn_time.to_delta(), time.to_delta());
 
         let tdb_time = time!(Tdb, 2023, 6, 15, 10, 30, 0.0).unwrap();
         let dyn_tdb = tdb_time.into_dyn();
-        assert_eq!(dyn_tdb.scale(), DynTimeScale::Tdb);
+        assert_eq!(dyn_tdb.scale(), TimeScale::Tdb);
         assert_eq!(dyn_tdb.to_delta(), tdb_time.to_delta());
     }
 

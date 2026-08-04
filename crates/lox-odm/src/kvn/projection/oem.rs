@@ -711,9 +711,9 @@ pub fn read_oem(input: &str) -> Result<Oem, KvnError> {
 mod tests {
     use std::collections::BTreeMap;
 
-    use lox_bodies::DynOrigin;
+    use lox_bodies::Origin;
     use lox_core::units::{Distance, Velocity};
-    use lox_frames::DynFrame;
+    use lox_frames::Frame;
     use nalgebra::Matrix6;
 
     use crate::kvn::error::KvnErrorKind;
@@ -724,14 +724,14 @@ mod tests {
 
     fn sample_epoch() -> OdmTime {
         OdmTime::Time(lox_time::time::Time::j2000(
-            lox_time::time_scales::DynTimeScale::Tai,
+            lox_time::time_scales::TimeScale::Tai,
         ))
     }
 
     fn sample_epoch_plus(seconds: i64) -> OdmTime {
         use lox_time::deltas::TimeDelta;
         OdmTime::Time(
-            lox_time::time::Time::j2000(lox_time::time_scales::DynTimeScale::Tai)
+            lox_time::time::Time::j2000(lox_time::time_scales::TimeScale::Tai)
                 + TimeDelta::from_seconds(seconds),
         )
     }
@@ -752,8 +752,8 @@ mod tests {
             comments: Vec::new(),
             object_name: "TEST-SAT".to_string(),
             object_id: "2024-000A".to_string(),
-            center: OdmCenter::Known(DynOrigin::Earth),
-            frame: OdmFrame::Known(DynFrame::Icrf),
+            center: OdmCenter::Known(Origin::Earth),
+            frame: OdmFrame::Known(Frame::Icrf),
             frame_epoch: None,
             start_time: sample_epoch(),
             useable_start_time: None,
@@ -1264,7 +1264,7 @@ COVARIANCE_STOP
         oem.segments[0].covariance_history.push(OemCovariance {
             comments: Vec::new(),
             epoch: sample_epoch(),
-            frame: Some(OdmFrame::Known(DynFrame::Icrf)),
+            frame: Some(OdmFrame::Known(Frame::Icrf)),
             matrix: Matrix6::identity(),
         });
 

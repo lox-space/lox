@@ -113,19 +113,19 @@ impl OemSegment {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lox_bodies::DynOrigin;
+    use lox_bodies::Origin;
     use lox_core::units::{Distance, Velocity};
-    use lox_frames::DynFrame;
+    use lox_frames::Frame;
     use lox_time::deltas::TimeDelta;
     use lox_time::time::Time;
-    use lox_time::time_scales::DynTimeScale;
+    use lox_time::time_scales::TimeScale;
 
     fn sample_epoch() -> OdmTime {
-        OdmTime::Time(Time::j2000(DynTimeScale::Tai))
+        OdmTime::Time(Time::j2000(TimeScale::Tai))
     }
 
     fn sample_epoch_plus(seconds: i64) -> OdmTime {
-        OdmTime::Time(Time::j2000(DynTimeScale::Tai) + TimeDelta::from_seconds(seconds))
+        OdmTime::Time(Time::j2000(TimeScale::Tai) + TimeDelta::from_seconds(seconds))
     }
 
     #[test]
@@ -134,8 +134,8 @@ mod tests {
             comments: Vec::new(),
             object_name: "ISS".to_string(),
             object_id: "1998-067A".to_string(),
-            center: OdmCenter::Known(DynOrigin::Earth),
-            frame: OdmFrame::Known(DynFrame::Icrf),
+            center: OdmCenter::Known(Origin::Earth),
+            frame: OdmFrame::Known(Frame::Icrf),
             frame_epoch: None,
             start_time: sample_epoch(),
             useable_start_time: None,
@@ -166,10 +166,10 @@ mod tests {
         let cov = OemCovariance {
             comments: Vec::new(),
             epoch: sample_epoch(),
-            frame: Some(OdmFrame::Known(DynFrame::Itrf)),
+            frame: Some(OdmFrame::Known(Frame::Itrf)),
             matrix: Matrix6::zeros(),
         };
-        assert_eq!(cov.frame, Some(OdmFrame::Known(DynFrame::Itrf)));
+        assert_eq!(cov.frame, Some(OdmFrame::Known(Frame::Itrf)));
         assert_eq!(cov.matrix[(5, 5)], 0.0);
     }
 
@@ -189,8 +189,8 @@ mod tests {
             comments: Vec::new(),
             object_name: "TEST".to_string(),
             object_id: "2024-000A".to_string(),
-            center: OdmCenter::Known(DynOrigin::Earth),
-            frame: OdmFrame::Known(DynFrame::Icrf),
+            center: OdmCenter::Known(Origin::Earth),
+            frame: OdmFrame::Known(Frame::Icrf),
             frame_epoch: None,
             start_time: sample_epoch(),
             useable_start_time: None,

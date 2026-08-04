@@ -545,10 +545,10 @@ pub fn write_oem(oem: &Oem) -> Result<String, XmlError> {
 mod tests {
     use std::collections::BTreeMap;
 
-    use lox_bodies::DynOrigin;
+    use lox_bodies::Origin;
     use lox_core::coords::Cartesian;
     use lox_core::units::{Distance, Velocity};
-    use lox_frames::DynFrame;
+    use lox_frames::Frame;
     use nalgebra::Matrix6;
 
     use crate::types::common::{OdmCenter, OdmFrame, OdmHeader, OdmTime};
@@ -558,14 +558,14 @@ mod tests {
 
     fn tai_epoch() -> OdmTime {
         OdmTime::Time(lox_time::time::Time::j2000(
-            lox_time::time_scales::DynTimeScale::Tai,
+            lox_time::time_scales::TimeScale::Tai,
         ))
     }
 
     fn tai_epoch_plus(seconds: i64) -> OdmTime {
         use lox_time::deltas::TimeDelta;
         OdmTime::Time(
-            lox_time::time::Time::j2000(lox_time::time_scales::DynTimeScale::Tai)
+            lox_time::time::Time::j2000(lox_time::time_scales::TimeScale::Tai)
                 + TimeDelta::from_seconds(seconds),
         )
     }
@@ -596,8 +596,8 @@ mod tests {
             comments: Vec::new(),
             object_name: "TEST-SAT".to_string(),
             object_id: "2024-000A".to_string(),
-            center: OdmCenter::Known(DynOrigin::Earth),
-            frame: OdmFrame::Known(DynFrame::Icrf),
+            center: OdmCenter::Known(Origin::Earth),
+            frame: OdmFrame::Known(Frame::Icrf),
             frame_epoch: None,
             start_time: tai_epoch(),
             useable_start_time: None,
@@ -650,7 +650,7 @@ mod tests {
         // Second segment with a different center and frame
         let mut seg2 = sample_segment();
         seg2.metadata.object_name = "TEST-SAT-2".to_string();
-        seg2.metadata.center = OdmCenter::Known(DynOrigin::Moon);
+        seg2.metadata.center = OdmCenter::Known(Origin::Moon);
         seg2.states = vec![
             (tai_epoch_plus(3600), sample_state(5.0)),
             (tai_epoch_plus(7200), sample_state(10.0)),
@@ -684,7 +684,7 @@ mod tests {
         oem.segments[0].covariance_history.push(OemCovariance {
             comments: vec!["cov comment".to_string()],
             epoch: tai_epoch_plus(30),
-            frame: Some(OdmFrame::Known(DynFrame::J2000)),
+            frame: Some(OdmFrame::Known(Frame::J2000)),
             matrix,
         });
 

@@ -10,7 +10,7 @@ use pyo3::{Bound, PyResult, pyclass, pymethods};
 use crate::math::python::{PySeriesError, PyUnknownInterpolationType};
 use crate::time::python::time::PyTime;
 use crate::time::series::TimeSeries;
-use crate::time::time_scales::DynTimeScale;
+use crate::time::time_scales::TimeScale;
 
 /// Time-indexed interpolation series.
 ///
@@ -34,7 +34,7 @@ use crate::time::time_scales::DynTimeScale;
 ///     1.5
 #[pyclass(name = "TimeSeries", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
-pub struct PyTimeSeries(pub TimeSeries<DynTimeScale>);
+pub struct PyTimeSeries(pub TimeSeries<TimeScale>);
 
 #[pymethods]
 impl PyTimeSeries {

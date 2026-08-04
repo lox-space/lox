@@ -6,8 +6,8 @@
 //!
 //! - [`MessageKind`] — discriminator enum for the five message variants
 //!   (OPM, OEM, OMM, OCM, ODM-CI).
-//! - [`OdmCenter`] / [`OdmFrame`] — wrappers around [`lox_bodies::DynOrigin`]
-//!   / [`lox_frames::DynFrame`] that admit free-form names appearing in
+//! - [`OdmCenter`] / [`OdmFrame`] — wrappers around [`lox_bodies::Origin`]
+//!   / [`lox_frames::Frame`] that admit free-form names appearing in
 //!   CCSDS messages.
 //! - [`OdmHeader`] — common header carried by every ODM message.
 
@@ -15,15 +15,15 @@ use std::borrow::Cow;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use lox_bodies::{CoordinateOrigin, DynOrigin};
+use lox_bodies::{CoordinateOrigin, Origin};
 use lox_core::time::calendar_dates::CalendarDate;
 use lox_core::time::time_of_day::CivilTime;
 use lox_core::units::{Area, Mass};
-use lox_frames::{DynFrame, traits::ReferenceFrame};
+use lox_frames::{Frame, traits::ReferenceFrame};
 use lox_time::deltas::ToDelta;
 use lox_time::offsets::{DefaultOffsetProvider, OffsetProvider, TryOffset};
 use lox_time::time::{DynTime, Time};
-use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale, Tai};
+use lox_time::time_scales::{ContinuousTimeScale, Tai, TimeScale};
 use lox_time::utc::Utc;
 use lox_time::utc::transformations::ToUtc;
 use nalgebra::Matrix6;
@@ -65,9 +65,9 @@ impl Display for MessageKind {
 /// is preserved verbatim for lossless round-trip.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OdmCenter {
-    /// A body recognised by [`DynOrigin`].
-    Known(DynOrigin),
-    /// A free-form name not recognised by [`DynOrigin`].
+    /// A body recognised by [`Origin`].
+    Known(Origin),
+    /// A free-form name not recognised by [`Origin`].
     /// Preserved verbatim on write.
     Custom(String),
 }
@@ -76,13 +76,13 @@ impl OdmCenter {
     /// Parses a wire-format `CENTER_NAME` string.
     ///
     /// CCSDS wire form is uppercase (e.g. `EARTH`, `SUN`,
-    /// `SOLAR SYSTEM BARYCENTER`). [`DynOrigin::from_str`] matches
+    /// `SOLAR SYSTEM BARYCENTER`). [`Origin::from_str`] matches
     /// lowercase identifiers, so the input is lowercased before lookup
     /// (asymmetric with [`OdmFrame::from_wire`], which uppercases for
-    /// [`DynFrame::from_str`]).
+    /// [`Frame::from_str`]).
     /// On failure, wraps the original input as [`OdmCenter::Custom`].
     pub fn from_wire(s: &str) -> Self {
-        match DynOrigin::from_str(&s.to_lowercase()) {
+        match Origin::from_str(&s.to_lowercase()) {
             Ok(origin) => OdmCenter::Known(origin),
             Err(_) => OdmCenter::Custom(s.to_string()),
         }
@@ -100,9 +100,9 @@ impl OdmCenter {
         }
     }
 
-    /// Returns the underlying [`DynOrigin`] if this is a known body,
+    /// Returns the underlying [`Origin`] if this is a known body,
     /// or [`None`] for [`OdmCenter::Custom`].
-    pub fn known(&self) -> Option<DynOrigin> {
+    pub fn known(&self) -> Option<Origin> {
         match self {
             OdmCenter::Known(o) => Some(*o),
             OdmCenter::Custom(_) => None,
@@ -116,8 +116,8 @@ impl Display for OdmCenter {
     }
 }
 
-impl From<DynOrigin> for OdmCenter {
-    fn from(origin: DynOrigin) -> Self {
+impl From<Origin> for OdmCenter {
+    fn from(origin: Origin) -> Self {
         OdmCenter::Known(origin)
     }
 }
@@ -129,9 +129,9 @@ impl From<DynOrigin> for OdmCenter {
 /// names are preserved verbatim for lossless round-trip.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OdmFrame {
-    /// A frame recognised by [`DynFrame`].
-    Known(DynFrame),
-    /// A free-form name not recognised by [`DynFrame`].
+    /// A frame recognised by [`Frame`].
+    Known(Frame),
+    /// A free-form name not recognised by [`Frame`].
     /// Preserved verbatim on write.
     Custom(String),
 }
@@ -140,12 +140,12 @@ impl OdmFrame {
     /// Parses a wire-format `REF_FRAME` string.
     ///
     /// CCSDS wire form is uppercase (e.g. `ICRF`, `EME2000`, `TEME`).
-    /// [`DynFrame::from_str`] matches uppercase identifiers, so the input
+    /// [`Frame::from_str`] matches uppercase identifiers, so the input
     /// is uppercased before lookup (mirror of [`OdmCenter::from_wire`],
-    /// which lowercases for [`DynOrigin::from_str`]).
+    /// which lowercases for [`Origin::from_str`]).
     /// On failure, wraps the original input as [`OdmFrame::Custom`].
     pub fn from_wire(s: &str) -> Self {
-        match DynFrame::from_str(&s.to_uppercase()) {
+        match Frame::from_str(&s.to_uppercase()) {
             Ok(frame) => OdmFrame::Known(frame),
             Err(_) => OdmFrame::Custom(s.to_string()),
         }
@@ -165,9 +165,9 @@ impl OdmFrame {
         }
     }
 
-    /// Returns the underlying [`DynFrame`] if this is a known frame,
+    /// Returns the underlying [`Frame`] if this is a known frame,
     /// or [`None`] for [`OdmFrame::Custom`].
-    pub fn known(&self) -> Option<DynFrame> {
+    pub fn known(&self) -> Option<Frame> {
         match self {
             OdmFrame::Known(f) => Some(*f),
             OdmFrame::Custom(_) => None,
@@ -181,8 +181,8 @@ impl Display for OdmFrame {
     }
 }
 
-impl From<DynFrame> for OdmFrame {
-    fn from(frame: DynFrame) -> Self {
+impl From<Frame> for OdmFrame {
+    fn from(frame: Frame) -> Self {
         OdmFrame::Known(frame)
     }
 }
@@ -275,7 +275,7 @@ impl OdmTime {
             let utc = Utc::from_iso(iso).map_err(|_| OdmTimeError::InvalidIso(iso.to_string()))?;
             return Ok(OdmTime::Utc(utc));
         }
-        let scale = DynTimeScale::from_str(time_system)
+        let scale = TimeScale::from_str(time_system)
             .map_err(|_| OdmTimeError::UnknownTimeSystem(time_system.to_string()))?;
         let t =
             Time::from_iso(scale, iso).map_err(|_| OdmTimeError::InvalidIso(iso.to_string()))?;
@@ -332,7 +332,7 @@ impl OdmTime {
             _ => {
                 let target_dyn = target
                     .as_continuous()
-                    .expect("non-Utc OdmTimeSystem always maps to a DynTimeScale");
+                    .expect("non-Utc OdmTimeSystem always maps to a TimeScale");
                 let dyn_source = self.to_dyn_time();
                 if dyn_source.scale() == target_dyn {
                     return Ok(OdmTime::Time(dyn_source));
@@ -360,11 +360,11 @@ impl OdmTime {
         match self {
             OdmTime::Utc(u) => Ok(u.to_time()),
             OdmTime::Time(d) => {
-                if d.scale() == DynTimeScale::Tai {
+                if d.scale() == TimeScale::Tai {
                     Ok(Time::from_delta(Tai, d.to_delta()))
                 } else {
                     let offset = provider
-                        .try_offset(d.scale(), DynTimeScale::Tai, d.to_delta())
+                        .try_offset(d.scale(), TimeScale::Tai, d.to_delta())
                         .map_err(|e| OdmTimeError::OffsetUnavailable {
                             from: d.scale().abbreviation(),
                             to: "TAI",
@@ -450,9 +450,9 @@ pub enum OdmTimeError {
 
 /// The eight time systems permitted by CCSDS ODM messages.
 ///
-/// Mirrors [`DynTimeScale`] plus `Utc`. UTC is special-cased because it is
+/// Mirrors [`TimeScale`] plus `Utc`. UTC is special-cased because it is
 /// not a continuous scale (it has leap seconds) and so cannot be represented
-/// by [`DynTimeScale`].
+/// by [`TimeScale`].
 ///
 /// Used as the target of [`OdmTime::try_in_scale`] and as the wire-format hint
 /// passed to OPM/OEM builders to control the emitted `TIME_SYSTEM` keyword.
@@ -491,17 +491,17 @@ impl OdmTimeSystem {
         }
     }
 
-    /// Maps to a [`DynTimeScale`] for the seven continuous variants; returns
+    /// Maps to a [`TimeScale`] for the seven continuous variants; returns
     /// `None` for UTC.
-    pub fn as_continuous(&self) -> Option<DynTimeScale> {
+    pub fn as_continuous(&self) -> Option<TimeScale> {
         match self {
-            Self::Tai => Some(DynTimeScale::Tai),
-            Self::Tcb => Some(DynTimeScale::Tcb),
-            Self::Tcg => Some(DynTimeScale::Tcg),
-            Self::Tdb => Some(DynTimeScale::Tdb),
-            Self::Tt => Some(DynTimeScale::Tt),
-            Self::Ut1 => Some(DynTimeScale::Ut1),
-            Self::Gps => Some(DynTimeScale::Gps),
+            Self::Tai => Some(TimeScale::Tai),
+            Self::Tcb => Some(TimeScale::Tcb),
+            Self::Tcg => Some(TimeScale::Tcg),
+            Self::Tdb => Some(TimeScale::Tdb),
+            Self::Tt => Some(TimeScale::Tt),
+            Self::Ut1 => Some(TimeScale::Ut1),
+            Self::Gps => Some(TimeScale::Gps),
             Self::Utc => None,
         }
     }
@@ -530,16 +530,16 @@ impl Display for OdmTimeSystem {
     }
 }
 
-impl From<DynTimeScale> for OdmTimeSystem {
-    fn from(s: DynTimeScale) -> Self {
+impl From<TimeScale> for OdmTimeSystem {
+    fn from(s: TimeScale) -> Self {
         match s {
-            DynTimeScale::Tai => Self::Tai,
-            DynTimeScale::Tcb => Self::Tcb,
-            DynTimeScale::Tcg => Self::Tcg,
-            DynTimeScale::Tdb => Self::Tdb,
-            DynTimeScale::Tt => Self::Tt,
-            DynTimeScale::Ut1 => Self::Ut1,
-            DynTimeScale::Gps => Self::Gps,
+            TimeScale::Tai => Self::Tai,
+            TimeScale::Tcb => Self::Tcb,
+            TimeScale::Tcg => Self::Tcg,
+            TimeScale::Tdb => Self::Tdb,
+            TimeScale::Tt => Self::Tt,
+            TimeScale::Ut1 => Self::Ut1,
+            TimeScale::Gps => Self::Gps,
         }
     }
 }
@@ -549,7 +549,7 @@ mod tests {
     use super::*;
     use lox_time::deltas::TimeDelta;
     use lox_time::time::Time;
-    use lox_time::time_scales::DynTimeScale;
+    use lox_time::time_scales::TimeScale;
 
     /// Offset provider that errors on every UT1 conversion. Used to
     /// exercise the [`OdmTimeError::OffsetUnavailable`] path; the
@@ -599,14 +599,14 @@ mod tests {
     #[test]
     fn odm_center_from_wire_known_capitalised() {
         let c = OdmCenter::from_wire("Earth");
-        assert_eq!(c, OdmCenter::Known(DynOrigin::Earth));
+        assert_eq!(c, OdmCenter::Known(Origin::Earth));
     }
 
     #[test]
     fn odm_center_from_wire_known_lowercase() {
-        // DynOrigin::from_str accepts both "earth" and "Earth"
+        // Origin::from_str accepts both "earth" and "Earth"
         let c = OdmCenter::from_wire("earth");
-        assert_eq!(c, OdmCenter::Known(DynOrigin::Earth));
+        assert_eq!(c, OdmCenter::Known(Origin::Earth));
     }
 
     #[test]
@@ -617,7 +617,7 @@ mod tests {
 
     #[test]
     fn odm_center_name_known() {
-        let c = OdmCenter::Known(DynOrigin::Mars);
+        let c = OdmCenter::Known(Origin::Mars);
         assert_eq!(c.name(), Cow::Borrowed("MARS"));
     }
 
@@ -629,8 +629,8 @@ mod tests {
 
     #[test]
     fn odm_center_known_returns_dyn_origin() {
-        let c = OdmCenter::Known(DynOrigin::Moon);
-        assert_eq!(c.known(), Some(DynOrigin::Moon));
+        let c = OdmCenter::Known(Origin::Moon);
+        assert_eq!(c.known(), Some(Origin::Moon));
     }
 
     #[test]
@@ -641,7 +641,7 @@ mod tests {
 
     #[test]
     fn odm_center_display() {
-        let earth = OdmCenter::Known(DynOrigin::Earth);
+        let earth = OdmCenter::Known(Origin::Earth);
         assert_eq!(format!("{earth}"), "EARTH");
         let asteroid = OdmCenter::Custom("APOPHIS".to_string());
         assert_eq!(format!("{asteroid}"), "APOPHIS");
@@ -649,21 +649,21 @@ mod tests {
 
     #[test]
     fn odm_center_from_dyn_origin() {
-        let c: OdmCenter = DynOrigin::Venus.into();
-        assert_eq!(c, OdmCenter::Known(DynOrigin::Venus));
+        let c: OdmCenter = Origin::Venus.into();
+        assert_eq!(c, OdmCenter::Known(Origin::Venus));
     }
 
     #[test]
     fn odm_frame_from_wire_known() {
         let f = OdmFrame::from_wire("ICRF");
-        assert_eq!(f, OdmFrame::Known(DynFrame::Icrf));
+        assert_eq!(f, OdmFrame::Known(Frame::Icrf));
     }
 
     #[test]
     fn odm_frame_from_wire_known_lowercase() {
-        // DynFrame::from_str does a to_uppercase() on input.
+        // Frame::from_str does a to_uppercase() on input.
         let f = OdmFrame::from_wire("teme");
-        assert_eq!(f, OdmFrame::Known(DynFrame::Teme));
+        assert_eq!(f, OdmFrame::Known(Frame::Teme));
     }
 
     #[test]
@@ -674,12 +674,12 @@ mod tests {
 
     #[test]
     fn odm_frame_name_known() {
-        // DynFrame::name returns an owned String; OdmFrame::name returns
+        // Frame::name returns an owned String; OdmFrame::name returns
         // Cow::Owned for known frames and Cow::Borrowed for custom.
-        let f = OdmFrame::Known(DynFrame::Icrf);
+        let f = OdmFrame::Known(Frame::Icrf);
         let n = f.name();
         assert!(!n.is_empty());
-        // The exact wire-canonical form for ICRF lives in DynFrame's name()
+        // The exact wire-canonical form for ICRF lives in Frame's name()
         // — we just smoke-test that something non-empty is produced.
     }
 
@@ -691,8 +691,8 @@ mod tests {
 
     #[test]
     fn odm_frame_known_returns_dyn_frame() {
-        let f = OdmFrame::Known(DynFrame::Teme);
-        assert_eq!(f.known(), Some(DynFrame::Teme));
+        let f = OdmFrame::Known(Frame::Teme);
+        assert_eq!(f.known(), Some(Frame::Teme));
     }
 
     #[test]
@@ -703,13 +703,13 @@ mod tests {
 
     #[test]
     fn odm_frame_from_dyn_frame() {
-        let f: OdmFrame = DynFrame::J2000.into();
-        assert_eq!(f, OdmFrame::Known(DynFrame::J2000));
+        let f: OdmFrame = Frame::J2000.into();
+        assert_eq!(f, OdmFrame::Known(Frame::J2000));
     }
 
     #[test]
     fn odm_frame_display() {
-        let known = OdmFrame::Known(DynFrame::Icrf);
+        let known = OdmFrame::Known(Frame::Icrf);
         // Smoke-test: Display delegates to name(), which is non-empty for known frames.
         assert!(!format!("{known}").is_empty());
         let custom = OdmFrame::Custom("OPERATOR_LVLH".to_string());
@@ -719,7 +719,7 @@ mod tests {
     fn sample_epoch() -> OdmTime {
         // Construct a valid OdmTime for fixture use. The specific value
         // doesn't matter for OdmHeader tests — only that we have an OdmTime.
-        OdmTime::Time(Time::j2000(DynTimeScale::Tai))
+        OdmTime::Time(Time::j2000(TimeScale::Tai))
     }
 
     #[test]
@@ -812,20 +812,20 @@ mod tests {
 
     #[test]
     fn odm_time_to_dyn_time_passes_through_for_continuous_scale() {
-        let original = Time::j2000(DynTimeScale::Tai);
+        let original = Time::j2000(TimeScale::Tai);
         let odm = OdmTime::Time(original);
         assert_eq!(odm.to_dyn_time(), original);
     }
 
     #[test]
     fn odm_time_from_dyn_time_via_into() {
-        let t: OdmTime = Time::j2000(DynTimeScale::Tai).into();
+        let t: OdmTime = Time::j2000(TimeScale::Tai).into();
         assert!(matches!(t, OdmTime::Time(_)));
     }
 
     #[test]
     fn odm_time_iso_strips_scale_suffix_for_continuous_scales() {
-        let t = OdmTime::Time(Time::j2000(DynTimeScale::Tai));
+        let t = OdmTime::Time(Time::j2000(TimeScale::Tai));
         let iso = t.iso();
         assert!(
             !iso.contains("TAI") && !iso.contains(' '),
@@ -891,7 +891,7 @@ mod tests {
 
     #[test]
     fn odm_time_in_scale_noop_when_target_matches_source() {
-        let tai = OdmTime::Time(Time::j2000(DynTimeScale::Tai));
+        let tai = OdmTime::Time(Time::j2000(TimeScale::Tai));
         assert_eq!(tai.try_in_scale(OdmTimeSystem::Tai).unwrap(), tai);
 
         let utc = OdmTime::from_wire("UTC", "2024-01-01T00:00:00").unwrap();
@@ -912,7 +912,7 @@ mod tests {
         // J2000 in TAI is the canonical pivot. TAI - GPS = +19 s ⇒
         // converting the same instant to GPS must be 19 s "earlier" in
         // GPS-second-count terms (i.e. GPS reads 19s lower).
-        let tai = OdmTime::Time(Time::j2000(DynTimeScale::Tai));
+        let tai = OdmTime::Time(Time::j2000(TimeScale::Tai));
         let gps = tai.try_in_scale(OdmTimeSystem::Gps).unwrap();
         assert_eq!(gps.time_system(), OdmTimeSystem::Gps);
         // Round-trip through TAI must return the original.
@@ -950,7 +950,7 @@ mod tests {
 
     #[test]
     fn try_in_scale_with_propagates_offset_failure_for_ut1_target() {
-        let tai = OdmTime::Time(Time::j2000(DynTimeScale::Tai));
+        let tai = OdmTime::Time(Time::j2000(TimeScale::Tai));
         let err = tai
             .try_in_scale_with(OdmTimeSystem::Ut1, &FailingUt1Provider)
             .unwrap_err();
@@ -984,9 +984,9 @@ mod tests {
     fn odm_time_scale_accessor_matches_construction() {
         let utc = OdmTime::from_wire("UTC", "2024-01-01T00:00:00").unwrap();
         assert_eq!(utc.time_system(), OdmTimeSystem::Utc);
-        let tai = OdmTime::Time(Time::j2000(DynTimeScale::Tai));
+        let tai = OdmTime::Time(Time::j2000(TimeScale::Tai));
         assert_eq!(tai.time_system(), OdmTimeSystem::Tai);
-        let gps = OdmTime::Time(Time::j2000(DynTimeScale::Gps));
+        let gps = OdmTime::Time(Time::j2000(TimeScale::Gps));
         assert_eq!(gps.time_system(), OdmTimeSystem::Gps);
     }
 }

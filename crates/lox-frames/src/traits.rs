@@ -13,7 +13,7 @@ pub(crate) mod private {
 }
 
 /// Structural identity of a reference frame, used to detect when two frames —
-/// whether expressed concretely or as a [`DynFrame`](crate::DynFrame) — are the
+/// whether expressed concretely or as a [`Frame`](crate::Frame) — are the
 /// same, without rotating.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FrameKey {

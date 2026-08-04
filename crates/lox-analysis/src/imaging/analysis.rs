@@ -14,12 +14,12 @@ use thiserror::Error;
 use crate::events::{
     DetectError, DetectFn, EventsToIntervals, IntervalDetector, RootFindingDetector,
 };
-use lox_bodies::{CoordinateOrigin, DynOrigin, TryMeanRadius, TrySpheroid};
+use lox_bodies::{CoordinateOrigin, Origin, TryMeanRadius, TrySpheroid};
 use lox_core::coords::LonLatAlt;
 use lox_core::units::Angle;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
-use lox_frames::{DynFrame, ReferenceFrame};
+use lox_frames::{Frame, ReferenceFrame};
 use lox_orbits::orbits::{Ensemble, Trajectory};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
@@ -128,13 +128,13 @@ fn sub_sat_sample<O, R>(
     trajectory: &Trajectory<Tai, O, R>,
     time: Time<Tai>,
     origin: O,
-    body_fixed_frame: DynFrame,
+    body_fixed_frame: Frame,
 ) -> Result<SubSatSample, EvalError>
 where
     O: TrySpheroid + TryMeanRadius + Copy,
     R: ReferenceFrame + Copy,
-    DefaultRotationProvider: TryRotation<R, DynFrame, Tai>,
-    <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
+    DefaultRotationProvider: TryRotation<R, Frame, Tai>,
+    <DefaultRotationProvider as TryRotation<R, Frame, Tai>>::Error:
         core::error::Error + Send + Sync + 'static,
 {
     let state = trajectory.at(time);
@@ -183,7 +183,7 @@ struct AccessDetectFn<'a, P: AccessPayload, O: CoordinateOrigin, R: ReferenceFra
     aoi: &'a Aoi,
     trajectory: &'a Trajectory<Tai, O, R>,
     origin: O,
-    body_fixed_frame: DynFrame,
+    body_fixed_frame: Frame,
 }
 
 impl<P, O, R> DetectFn<Tai> for AccessDetectFn<'_, P, O, R>
@@ -191,8 +191,8 @@ where
     P: AccessPayload + Copy,
     O: TrySpheroid + TryMeanRadius + Copy,
     R: ReferenceFrame + Copy,
-    DefaultRotationProvider: TryRotation<R, DynFrame, Tai>,
-    <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
+    DefaultRotationProvider: TryRotation<R, Frame, Tai>,
+    <DefaultRotationProvider as TryRotation<R, Frame, Tai>>::Error:
         core::error::Error + Send + Sync + 'static,
 {
     type Error = EvalError;
@@ -225,7 +225,7 @@ where
     ensemble: &'a Ensemble<AssetId, Tai, O, R>,
     aois: Vec<(AoiId, Aoi)>,
     step: TimeDelta,
-    body_fixed_frame: DynFrame,
+    body_fixed_frame: Frame,
     _marker: PhantomData<P>,
 }
 
@@ -233,10 +233,10 @@ impl<'a, P, O, R> AccessAnalysis<'a, P, O, R>
 where
     P: AccessPayload + Copy + Send + Sync,
     Spacecraft: PayloadAccessor<P>,
-    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<DynOrigin>,
-    R: ReferenceFrame + Copy + Send + Sync + Into<DynFrame>,
-    DefaultRotationProvider: TryRotation<R, DynFrame, Tai>,
-    <DefaultRotationProvider as TryRotation<R, DynFrame, Tai>>::Error:
+    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<Origin>,
+    R: ReferenceFrame + Copy + Send + Sync + Into<Frame>,
+    DefaultRotationProvider: TryRotation<R, Frame, Tai>,
+    <DefaultRotationProvider as TryRotation<R, Frame, Tai>>::Error:
         core::error::Error + Send + Sync + 'static,
 {
     /// Creates a new access analysis. The body-fixed frame defaults to the
@@ -246,7 +246,7 @@ where
         ensemble: &'a Ensemble<AssetId, Tai, O, R>,
         aois: Vec<(AoiId, Aoi)>,
     ) -> Self {
-        let body_fixed_frame = DynFrame::Iau(scenario.origin().into());
+        let body_fixed_frame = Frame::Iau(scenario.origin().into());
         Self {
             scenario,
             ensemble,
@@ -264,7 +264,7 @@ where
     }
 
     /// Overrides the body-fixed frame (default IAU of scenario origin).
-    pub fn with_body_fixed_frame(mut self, frame: DynFrame) -> Self {
+    pub fn with_body_fixed_frame(mut self, frame: Frame) -> Self {
         self.body_fixed_frame = frame;
         self
     }

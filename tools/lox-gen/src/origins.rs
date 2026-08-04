@@ -1000,7 +1000,7 @@ fn unpair(vec: &[f64]) -> (Vec<f64>, Vec<f64>) {
 
 pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
     let mut code = quote! {
-        use crate::DynOrigin;
+        use crate::Origin;
         use crate::Elements;
         use crate::MeanRadius;
         use crate::NaifId;
@@ -1084,9 +1084,9 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                 }
             }
 
-            impl From<#ident> for DynOrigin {
+            impl From<#ident> for Origin {
                 fn from(_: #ident) -> Self {
-                    DynOrigin::#ident
+                    Origin::#ident
                 }
             }
         });
@@ -1098,7 +1098,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             fn #origin_test_name() {
                 assert_eq!(#ident.id().0, #id);
                 assert_eq!(#ident.to_string(), #name);
-                assert_eq!(DynOrigin::from(#ident), DynOrigin::#ident);
+                assert_eq!(Origin::from(#ident), Origin::#ident);
             }
         });
 
@@ -1122,21 +1122,21 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             });
 
             point_mass_match_arms.extend(quote! {
-                DynOrigin::#ident => Ok(GravitationalParameter::km3_per_s2(#gm)),
+                Origin::#ident => Ok(GravitationalParameter::km3_per_s2(#gm)),
             });
 
             tests.extend(quote! {
                 #[test]
                 fn #point_mass_test_name() {
                     assert_eq!(#ident.gravitational_parameter(), GravitationalParameter::km3_per_s2(#gm));
-                    assert_eq!(DynOrigin::#ident.try_gravitational_parameter(), Ok(GravitationalParameter::km3_per_s2(#gm)));
+                    assert_eq!(Origin::#ident.try_gravitational_parameter(), Ok(GravitationalParameter::km3_per_s2(#gm)));
                 }
             });
         } else {
             tests.extend(quote! {
                 #[test]
                 fn #point_mass_test_name() {
-                    assert!(DynOrigin::#ident.try_gravitational_parameter().is_err());
+                    assert!(Origin::#ident.try_gravitational_parameter().is_err());
                 }
             });
         };
@@ -1158,21 +1158,21 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             });
 
             mean_radius_match_arms.extend(quote! {
-                DynOrigin::#ident => Ok(Distance::kilometers(#mean_radius)),
+                Origin::#ident => Ok(Distance::kilometers(#mean_radius)),
             });
 
             tests.extend(quote! {
                 #[test]
                 fn #mean_radius_test_name() {
                     assert_eq!(#ident.mean_radius(), Distance::kilometers(#mean_radius));
-                    assert_eq!(DynOrigin::#ident.try_mean_radius(), Ok(Distance::kilometers(#mean_radius)));
+                    assert_eq!(Origin::#ident.try_mean_radius(), Ok(Distance::kilometers(#mean_radius)));
                 }
             });
         } else {
             tests.extend(quote! {
                 #[test]
                 fn #mean_radius_test_name() {
-                    assert!(DynOrigin::#ident.try_mean_radius().is_err());
+                    assert!(Origin::#ident.try_mean_radius().is_err());
                 }
             });
         }
@@ -1202,19 +1202,19 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                 });
 
                 polar_radius_match_arms.extend(quote! {
-                    DynOrigin::#ident => Ok(Distance::kilometers(#polar)),
+                    Origin::#ident => Ok(Distance::kilometers(#polar)),
                 });
                 equatorial_radius_match_arms.extend(quote! {
-                    DynOrigin::#ident => Ok(Distance::kilometers(#equatorial)),
+                    Origin::#ident => Ok(Distance::kilometers(#equatorial)),
                 });
 
                 tests.extend(quote! {
                     #[test]
                     fn #spheroid_test_name() {
                         assert_eq!(#ident.polar_radius(), Distance::kilometers(#polar));
-                        assert_eq!(DynOrigin::#ident.try_polar_radius(), Ok(Distance::kilometers(#polar)));
+                        assert_eq!(Origin::#ident.try_polar_radius(), Ok(Distance::kilometers(#polar)));
                         assert_eq!(#ident.equatorial_radius(), Distance::kilometers(#equatorial));
-                        assert_eq!(DynOrigin::#ident.try_equatorial_radius(), Ok(Distance::kilometers(#equatorial)));
+                        assert_eq!(Origin::#ident.try_equatorial_radius(), Ok(Distance::kilometers(#equatorial)));
                     }
 
                 });
@@ -1222,33 +1222,33 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                 tests.extend(quote! {
                     #[test]
                     fn #spheroid_test_name() {
-                        assert!(DynOrigin::#ident.try_polar_radius().is_err());
-                        assert!(DynOrigin::#ident.try_equatorial_radius().is_err());
+                        assert!(Origin::#ident.try_polar_radius().is_err());
+                        assert!(Origin::#ident.try_equatorial_radius().is_err());
                     }
                 });
             }
 
             ellipsoid_match_arms.extend(quote! {
-                DynOrigin::#ident => Ok((Distance::kilometers(#equatorial), Distance::kilometers(#along_orbit), Distance::kilometers(#polar))),
+                Origin::#ident => Ok((Distance::kilometers(#equatorial), Distance::kilometers(#along_orbit), Distance::kilometers(#polar))),
             });
 
             tests.extend(quote! {
                 #[test]
                 fn #triaxial_test_name() {
                     assert_eq!(#ident.radii(), (Distance::kilometers(#equatorial), Distance::kilometers(#along_orbit), Distance::kilometers(#polar)));
-                    assert_eq!(DynOrigin::#ident.try_radii(), Ok((Distance::kilometers(#equatorial), Distance::kilometers(#along_orbit), Distance::kilometers(#polar))));
+                    assert_eq!(Origin::#ident.try_radii(), Ok((Distance::kilometers(#equatorial), Distance::kilometers(#along_orbit), Distance::kilometers(#polar))));
                 }
             });
         } else {
             tests.extend(quote! {
                 #[test]
                 fn #triaxial_test_name() {
-                    assert!(DynOrigin::#ident.try_radii().is_err());
+                    assert!(Origin::#ident.try_radii().is_err());
                 }
                 #[test]
                 fn #spheroid_test_name() {
-                    assert!(DynOrigin::#ident.try_polar_radius().is_err());
-                    assert!(DynOrigin::#ident.try_equatorial_radius().is_err());
+                    assert!(Origin::#ident.try_polar_radius().is_err());
+                    assert!(Origin::#ident.try_equatorial_radius().is_err());
                 }
             });
         }
@@ -1370,17 +1370,17 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             });
 
             rotational_elements_match_arms.extend(quote! {
-                DynOrigin::#ident => Ok(#ident.rotational_elements(t)),
+                Origin::#ident => Ok(#ident.rotational_elements(t)),
             });
 
             rotational_element_rates_match_arms.extend(quote! {
-                DynOrigin::#ident => Ok(#ident.rotational_element_rates(t)),
+                Origin::#ident => Ok(#ident.rotational_element_rates(t)),
             });
         }
     }
 
     code.extend(quote! {
-        impl TryPointMass for DynOrigin {
+        impl TryPointMass for Origin {
             fn try_gravitational_parameter(&self) -> Result<GravitationalParameter, UndefinedOriginPropertyError> {
                 match self {
                     #point_mass_match_arms
@@ -1393,7 +1393,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                 }
             }
         }
-        impl TryMeanRadius for DynOrigin {
+        impl TryMeanRadius for Origin {
             fn try_mean_radius(&self) -> Result<Distance, UndefinedOriginPropertyError> {
                 match self {
                     #mean_radius_match_arms
@@ -1406,7 +1406,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                 }
             }
         }
-        impl TryTriaxialEllipsoid for DynOrigin {
+        impl TryTriaxialEllipsoid for Origin {
             fn try_radii(&self) -> Result<Radii, UndefinedOriginPropertyError> {
                 match self {
                     #ellipsoid_match_arms
@@ -1419,7 +1419,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                 }
             }
         }
-        impl TrySpheroid for DynOrigin {
+        impl TrySpheroid for Origin {
             fn try_polar_radius(&self) -> Result<Distance, UndefinedOriginPropertyError> {
                 match self {
                     #polar_radius_match_arms
@@ -1443,7 +1443,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
                 }
             }
         }
-        impl TryRotationalElements for DynOrigin {
+        impl TryRotationalElements for Origin {
             fn try_rotational_elements(&self, t: f64)
                 -> Result<Elements, UndefinedOriginPropertyError> {
                 match self {

@@ -15,11 +15,11 @@ mod flower;
 mod street_of_coverage;
 mod walker;
 
-use lox_bodies::{CoordinateOrigin, DynOrigin};
+use lox_bodies::{CoordinateOrigin, Origin};
 use lox_core::elements::{Keplerian, KeplerianError};
-use lox_frames::{DynFrame, ReferenceFrame};
+use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
-use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 use thiserror::Error;
 
 pub use flower::FlowerBuilder;
@@ -110,7 +110,7 @@ pub struct Constellation<T: ContinuousTimeScale, O: CoordinateOrigin, R: Referen
 }
 
 /// Type alias for a constellation with fully dynamic time scale, origin, and frame.
-pub type DynConstellation = Constellation<DynTimeScale, DynOrigin, DynFrame>;
+pub type DynConstellation = Constellation<TimeScale, Origin, Frame>;
 
 impl<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> Constellation<T, O, R> {
     /// Creates a new constellation from precomputed satellites.
@@ -189,9 +189,9 @@ impl<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> Constellati
 
 impl<T, O, R> Constellation<T, O, R>
 where
-    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
-    O: CoordinateOrigin + Copy + Into<DynOrigin>,
-    R: ReferenceFrame + Copy + Into<DynFrame>,
+    T: ContinuousTimeScale + Copy + Into<TimeScale>,
+    O: CoordinateOrigin + Copy + Into<Origin>,
+    R: ReferenceFrame + Copy + Into<Frame>,
 {
     /// Converts the constellation into a fully dynamic representation.
     pub fn into_dyn(self) -> DynConstellation {
@@ -266,8 +266,8 @@ mod tests {
         let dyn_c = c.into_dyn();
         assert_eq!(dyn_c.name(), "test");
         assert_eq!(dyn_c.len(), 6);
-        assert_eq!(dyn_c.origin(), DynOrigin::Earth);
-        assert_eq!(dyn_c.frame(), DynFrame::Icrf);
+        assert_eq!(dyn_c.origin(), Origin::Earth);
+        assert_eq!(dyn_c.frame(), Frame::Icrf);
         assert_eq!(dyn_c.propagator(), ConstellationPropagator::Numerical);
     }
 

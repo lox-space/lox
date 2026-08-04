@@ -26,14 +26,14 @@ pub use sar::{LookSide, SarPayload, SarPayloadError};
 mod tests {
     use super::*;
     use geo::{LineString, Polygon};
-    use lox_bodies::DynOrigin;
+    use lox_bodies::Origin;
     use lox_core::units::{Angle, Distance};
-    use lox_frames::DynFrame;
+    use lox_frames::Frame;
     use lox_orbits::orbits::{DynTrajectory, Ensemble};
     use lox_orbits::propagators::OrbitSource;
     use lox_time::deltas::TimeDelta;
     use lox_time::intervals::TimeInterval;
-    use lox_time::time_scales::{DynTimeScale, Tai};
+    use lox_time::time_scales::{Tai, TimeScale};
 
     use crate::assets::{AssetId, Scenario};
     use crate::imaging::PassDirection;
@@ -77,14 +77,14 @@ mod tests {
     /// Build a Scenario + Ensemble from spacecraft with pre-computed trajectories.
     fn make_imaging_scenario(
         space_assets: &[crate::assets::Spacecraft],
-        interval: TimeInterval<DynTimeScale>,
+        interval: TimeInterval<TimeScale>,
     ) -> (
-        Scenario<DynOrigin, DynFrame>,
-        Ensemble<AssetId, Tai, DynOrigin, DynFrame>,
+        Scenario<Origin, Frame>,
+        Ensemble<AssetId, Tai, Origin, Frame>,
     ) {
         let tai_interval =
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
-        let scenario = Scenario::with_interval(tai_interval, DynOrigin::Earth, DynFrame::Icrf)
+        let scenario = Scenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
             .with_spacecraft(space_assets);
         let mut map = std::collections::HashMap::new();
         for sc in space_assets {

@@ -302,15 +302,15 @@ mod integration_tests {
 
     use geo::{LineString, Polygon};
 
-    use lox_bodies::DynOrigin;
-    use lox_frames::DynFrame;
+    use lox_bodies::Origin;
+    use lox_frames::Frame;
     use lox_orbits::orbits::{DynTrajectory, Ensemble};
     use lox_orbits::propagators::OrbitSource;
     use lox_orbits::propagators::Propagator;
     use lox_orbits::propagators::sgp4::{Elements, Sgp4};
     use lox_time::deltas::TimeDelta;
     use lox_time::intervals::{Interval, TimeInterval};
-    use lox_time::time_scales::{DynTimeScale, Tai};
+    use lox_time::time_scales::{Tai, TimeScale};
 
     use crate::assets::{AssetId, DynScenario, Spacecraft};
     use crate::imaging::AccessWindow;
@@ -352,11 +352,11 @@ mod integration_tests {
 
     fn make_scenario(
         spacecraft: &[Spacecraft],
-        interval: TimeInterval<DynTimeScale>,
-    ) -> (DynScenario, Ensemble<AssetId, Tai, DynOrigin, DynFrame>) {
+        interval: TimeInterval<TimeScale>,
+    ) -> (DynScenario, Ensemble<AssetId, Tai, Origin, Frame>) {
         let tai_interval =
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
-        let scenario = DynScenario::with_interval(tai_interval, DynOrigin::Earth, DynFrame::Icrf)
+        let scenario = DynScenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
             .with_spacecraft(spacecraft);
         let mut map = HashMap::new();
         for sc in spacecraft {
