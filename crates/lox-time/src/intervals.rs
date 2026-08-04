@@ -16,6 +16,7 @@ use lox_core::time::deltas::TimeDelta;
 use crate::{
     Time,
     offsets::{DefaultOffsetProvider, Offset},
+    time::TimeScaleMismatch,
     time_scales::{ContinuousTimeScale, Tai},
     utc::{Utc, transformations::ToUtc},
 };
@@ -302,6 +303,20 @@ where
     }
 }
 
+impl TimeInterval {
+    /// Creates a time interval, returning an error if the bounds are in
+    /// different time scales.
+    ///
+    /// [`Interval::new`] does not validate this, and every subsequent operation
+    /// on a mismatched interval panics. Prefer this constructor when the bounds
+    /// come from external input.
+    pub fn try_new(start: Time, end: Time) -> Result<Self, TimeScaleMismatch> {
+        // Reuse the comparison check so the two paths cannot disagree.
+        start.checked_cmp(&end)?;
+        Ok(Interval { start, end })
+    }
+}
+
 impl<T> TimeInterval<T>
 where
     T: ToUtc + ContinuousTimeScale + Copy,
@@ -346,9 +361,36 @@ mod tests {
     use alloc::vec;
     use alloc::vec::Vec;
 
-    use crate::{time, time_scales::Tai};
+    use crate::{
+        time,
+        time_scales::{Tai, Tt},
+    };
 
     use super::*;
+
+    #[test]
+    fn test_try_new_same_scale() {
+        let t0 = time!(Tai, 2025, 11, 6).unwrap().into_dynamic();
+        let t1 = time!(Tai, 2025, 11, 7).unwrap().into_dynamic();
+        let iv = TimeInterval::try_new(t0, t1).expect("same scale");
+        assert_eq!(iv.duration(), TimeDelta::from_days(1));
+    }
+
+    #[test]
+    fn test_try_new_different_scale_returns_err() {
+        let t0 = time!(Tai, 2025, 11, 6).unwrap().into_dynamic();
+        let t1 = time!(Tt, 2025, 11, 7).unwrap().into_dynamic();
+        assert!(TimeInterval::try_new(t0, t1).is_err());
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot subtract `Time` objects with different time scales")]
+    fn test_duration_of_mismatched_interval_panics() {
+        let t0 = time!(Tai, 2025, 11, 6).unwrap().into_dynamic();
+        let t1 = time!(Tt, 2025, 11, 7).unwrap().into_dynamic();
+        // `Interval::new` is unvalidated, but every operation on the result is.
+        let _ = TimeInterval::new(t0, t1).duration();
+    }
 
     #[test]
     fn test_time_interval() {

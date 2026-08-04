@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- [**breaking**] `Time - Time` now panics on mismatched time scales instead of silently subtracting raw deltas; the impl gains an `Eq` bound on the scale, consistent with `Ord`
+- add `Time::checked_sub` and `TimeInterval::try_new` for recoverable handling of scale mismatches
+
+### Changed
+
 - [**breaking**] `TimeScale` now serializes as its standard abbreviation (`"TAI"`) rather than its variant name (`"Tai"`), matching the zero-sized scale types so the wire format no longer depends on which representation was used
 
 ### Changed

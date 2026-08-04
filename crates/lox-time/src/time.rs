@@ -312,24 +312,39 @@ impl<T: ContinuousTimeScale + Eq> Ord for Time<T> {
     }
 }
 
-/// Error returned when comparing [`Time`] objects with different time scales.
+/// Error returned when combining [`Time`] objects with different time scales.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
-#[error("cannot compare `Time` objects with different time scales `{lhs}` and `{rhs}`")]
+#[error("cannot combine `Time` objects with different time scales `{lhs}` and `{rhs}`")]
 pub struct TimeScaleMismatch {
     lhs: TimeScale,
     rhs: TimeScale,
+}
+
+impl TimeScaleMismatch {
+    pub(crate) fn new(lhs: TimeScale, rhs: TimeScale) -> Self {
+        Self { lhs, rhs }
+    }
 }
 
 impl Time {
     /// Compares two [`Time`] objects, returning an error if they have different time scales.
     pub fn checked_cmp(&self, other: &Self) -> Result<core::cmp::Ordering, TimeScaleMismatch> {
         if self.scale != other.scale {
-            return Err(TimeScaleMismatch {
-                lhs: self.scale,
-                rhs: other.scale,
-            });
+            return Err(TimeScaleMismatch::new(self.scale, other.scale));
         }
         Ok(self.delta.cmp(&other.delta))
+    }
+
+    /// Returns the interval from `other` to `self`, or an error if they have
+    /// different time scales.
+    ///
+    /// The `Sub` implementation panics on mismatched scales; use this when the
+    /// scales come from external input and a mismatch is recoverable.
+    pub fn checked_sub(&self, other: &Self) -> Result<TimeDelta, TimeScaleMismatch> {
+        if self.scale != other.scale {
+            return Err(TimeScaleMismatch::new(self.scale, other.scale));
+        }
+        Ok(self.delta - other.delta)
     }
 }
 
@@ -435,10 +450,18 @@ impl<T: ContinuousTimeScale> Sub<TimeDelta> for Time<T> {
     }
 }
 
-impl<T: ContinuousTimeScale> Sub<Time<T>> for Time<T> {
+impl<T: ContinuousTimeScale + Eq> Sub<Time<T>> for Time<T> {
     type Output = TimeDelta;
 
+    /// # Panics
+    ///
+    /// Panics if the two times are in different scales, consistent with
+    /// [`Ord`]. Use [`Time::checked_sub`] to handle a mismatch instead.
     fn sub(self, rhs: Time<T>) -> Self::Output {
+        assert!(
+            self.scale == rhs.scale,
+            "cannot subtract `Time` objects with different time scales"
+        );
         self.delta - rhs.delta
     }
 }
@@ -1184,6 +1207,29 @@ mod tests {
         let t_tt = time!(Tt, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dynamic();
         assert!(t_tai.checked_cmp(&t_tt).is_err());
         assert!(t_tt.checked_cmp(&t_tai).is_err());
+    }
+
+    #[test]
+    fn test_checked_sub_same_scale() {
+        let t1 = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dynamic();
+        let t2 = time!(Tai, 2000, 1, 1, 13, 0, 0.0).unwrap().into_dynamic();
+        assert_eq!(t2.checked_sub(&t1), Ok(TimeDelta::from_hours(1)));
+    }
+
+    #[test]
+    fn test_checked_sub_different_scale_returns_err() {
+        let t_tai = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dynamic();
+        let t_tt = time!(Tt, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dynamic();
+        assert!(t_tai.checked_sub(&t_tt).is_err());
+        assert!(t_tt.checked_sub(&t_tai).is_err());
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot subtract `Time` objects with different time scales")]
+    fn test_sub_different_scale_panics() {
+        let t_tai = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dynamic();
+        let t_tt = time!(Tt, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dynamic();
+        let _ = t_tai - t_tt;
     }
 
     #[test]
