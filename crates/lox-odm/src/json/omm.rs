@@ -704,7 +704,7 @@ impl From<&Omm> for OmmJson {
             center_name: omm.metadata.center.name().into_owned(),
             ref_frame: omm.metadata.frame.name().into_owned(),
             ref_frame_epoch,
-            time_system: omm.epoch.time_system().to_string(),
+            time_system: omm.epoch.time_system().abbreviation().to_string(),
             mean_element_theory: omm.metadata.mean_element_theory.clone(),
             epoch: omm.epoch.iso(),
             semi_major_axis,

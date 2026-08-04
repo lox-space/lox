@@ -260,7 +260,7 @@ impl From<&Oem> for OemXml {
             .iter()
             .map(|seg| {
                 let meta = &seg.metadata;
-                let time_system = meta.start_time.time_system();
+                let time_system = meta.start_time.time_system().abbreviation();
 
                 let metadata = OemMetadataXml {
                     comments: meta.comments.clone(),

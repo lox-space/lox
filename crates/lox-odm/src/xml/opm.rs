@@ -363,7 +363,7 @@ impl From<&Opm> for OpmXml {
             center_name: opm.metadata.center.name().into_owned(),
             ref_frame: opm.metadata.frame.name().into_owned(),
             ref_frame_epoch: opm.metadata.frame_epoch.map(|e| e.iso()),
-            time_system: opm.epoch.time_system().to_string(),
+            time_system: opm.epoch.time_system().abbreviation().to_string(),
         };
 
         let pos = opm.state.position();

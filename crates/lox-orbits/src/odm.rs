@@ -27,7 +27,7 @@ use lox_frames::{DynFrame, ReferenceFrame};
 use lox_odm::Format;
 use lox_odm::OdmError;
 use lox_odm::types::common::{
-    OdmCenter, OdmFrame, OdmHeader, OdmTime, OdmTimeError, OdmTimeScale, SpacecraftParameters,
+    OdmCenter, OdmFrame, OdmHeader, OdmTime, OdmTimeError, OdmTimeSystem, SpacecraftParameters,
 };
 use lox_odm::types::oem::{Oem, OemMetadata, OemSegment};
 use lox_odm::types::omm::{Omm, OmmMeanElements, OmmMetadata};
@@ -57,13 +57,13 @@ where
     OdmTime::Time(time.into_dyn())
 }
 
-/// Apply an optional [`OdmTimeScale`] override to an epoch derived from the
+/// Apply an optional [`OdmTimeSystem`] override to an epoch derived from the
 /// orbit/trajectory. Used by the builders so that a UTC-origin OPM round-
 /// trip (read → orbit → write) can re-emit `TIME_SYSTEM = UTC` instead of
 /// silently widening to TAI.
 fn apply_time_system<P: OffsetProvider>(
     epoch: OdmTime,
-    target: Option<OdmTimeScale>,
+    target: Option<OdmTimeSystem>,
     provider: &P,
 ) -> Result<OdmTime, OdmTimeError> {
     match target {
@@ -198,7 +198,7 @@ pub struct OpmBuilder<T: TimeScale, O: Origin, R: ReferenceFrame, P = DefaultOff
     frame_epoch: Option<OdmTime>,
     spacecraft: Option<SpacecraftParameters>,
     user_defined: BTreeMap<String, String>,
-    time_system: Option<OdmTimeScale>,
+    time_system: Option<OdmTimeSystem>,
     provider: P,
 }
 
@@ -290,12 +290,12 @@ where
     /// Use this to preserve the original time system across a round-trip
     /// through a typed orbit: e.g. an OPM read with `TIME_SYSTEM = UTC`
     /// becomes a [`DynCartesianOrbit`] in TAI (because [`DynTimeScale`]
-    /// has no UTC variant), and setting `.time_system(OdmTimeScale::Utc)`
+    /// has no UTC variant), and setting `.time_system(OdmTimeSystem::Utc)`
     /// on the builder restores UTC on output.
     ///
     /// When unset, the builder uses the orbit's native scale. Explicitly-set
     /// epochs (e.g. via [`Self::creation_date`]) are left untouched.
-    pub fn time_system(mut self, scale: OdmTimeScale) -> Self {
+    pub fn time_system(mut self, scale: OdmTimeSystem) -> Self {
         self.time_system = Some(scale);
         self
     }
@@ -514,7 +514,7 @@ pub struct OemBuilder<T: TimeScale, O: Origin, R: ReferenceFrame, P = DefaultOff
     interpolation: Option<String>,
     interpolation_degree: Option<u64>,
     user_defined: BTreeMap<String, String>,
-    time_system: Option<OdmTimeScale>,
+    time_system: Option<OdmTimeSystem>,
     provider: P,
 }
 
@@ -618,7 +618,7 @@ where
     /// `REF_FRAME_EPOCH`) in that scale.
     ///
     /// See [`OpmBuilder::time_system`] for the motivating round-trip case.
-    pub fn time_system(mut self, scale: OdmTimeScale) -> Self {
+    pub fn time_system(mut self, scale: OdmTimeSystem) -> Self {
         self.time_system = Some(scale);
         self
     }
@@ -928,7 +928,7 @@ pub enum OmmWriteError {
 /// Convert an [`OdmTime`] to a UTC-naive timestamp for `sgp4::Elements`.
 fn omm_epoch_to_naive_utc(epoch: OdmTime) -> Result<chrono::NaiveDateTime, OmmFromOdmError> {
     let utc_epoch = epoch
-        .try_in_scale(OdmTimeScale::Utc)
+        .try_in_scale(OdmTimeSystem::Utc)
         .map_err(|e| OmmFromOdmError::EpochConversion(e.to_string()))?;
     // `OdmTime::Utc(_)` is the only variant we expect after `try_in_scale(Utc)`.
     let utc = match utc_epoch {
@@ -1080,7 +1080,7 @@ pub struct OmmBuilder<T: TimeScale, O: Origin, R: ReferenceFrame, P = DefaultOff
     mean_element_theory: String,
     spacecraft: Option<SpacecraftParameters>,
     user_defined: BTreeMap<String, String>,
-    time_system: Option<OdmTimeScale>,
+    time_system: Option<OdmTimeSystem>,
     provider: P,
 }
 
@@ -1170,7 +1170,7 @@ where
 
     /// Forces the wire-format `TIME_SYSTEM` keyword. See
     /// [`OpmBuilder::time_system`] for the round-trip rationale.
-    pub fn time_system(mut self, scale: OdmTimeScale) -> Self {
+    pub fn time_system(mut self, scale: OdmTimeSystem) -> Self {
         self.time_system = Some(scale);
         self
     }
@@ -1600,7 +1600,7 @@ mod tests {
         let err = sample_dyn_orbit()
             .build_opm("SAT", "2024-000A")
             .offset_provider(FailingUt1Provider)
-            .time_system(OdmTimeScale::Ut1)
+            .time_system(OdmTimeSystem::Ut1)
             .build()
             .unwrap_err();
         assert!(
@@ -1617,7 +1617,7 @@ mod tests {
         let err = sample_dyn_orbit()
             .build_opm("SAT", "2024-000A")
             .offset_provider(FailingUt1Provider)
-            .time_system(OdmTimeScale::Ut1)
+            .time_system(OdmTimeSystem::Ut1)
             .write_str(Format::Kvn)
             .unwrap_err();
         assert!(matches!(
@@ -1699,7 +1699,7 @@ mod tests {
         let err = sample_dyn_trajectory()
             .build_oem("SAT", "2024-000A")
             .offset_provider(FailingUt1Provider)
-            .time_system(OdmTimeScale::Ut1)
+            .time_system(OdmTimeSystem::Ut1)
             .build()
             .unwrap_err();
         assert!(matches!(

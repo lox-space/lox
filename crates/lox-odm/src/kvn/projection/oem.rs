@@ -88,7 +88,11 @@ fn build_metadata_section(segment: &OemSegment) -> KvnSection {
         entries.push(fld("REF_FRAME_EPOCH", epoch.iso(), None));
     }
 
-    entries.push(fld("TIME_SYSTEM", meta.start_time.time_system(), None));
+    entries.push(fld(
+        "TIME_SYSTEM",
+        meta.start_time.time_system().abbreviation(),
+        None,
+    ));
     entries.push(fld("START_TIME", meta.start_time.iso(), None));
 
     if let Some(t) = &meta.useable_start_time {
@@ -515,7 +519,12 @@ fn process_entries(
                     span: Span::default(),
                     kind: KvnErrorKind::UnexpectedKeyword("data row before META".to_string()),
                 })?;
-                let time_system = builder.metadata.start_time.time_system().to_string();
+                let time_system = builder
+                    .metadata
+                    .start_time
+                    .time_system()
+                    .abbreviation()
+                    .to_string();
                 let state = process_state_row(row, &time_system)?;
                 builder.states.push(state);
             }
@@ -528,7 +537,12 @@ fn process_entries(
                                 "COVARIANCE before META".to_string(),
                             ),
                         })?;
-                        let time_system = builder.metadata.start_time.time_system().to_string();
+                        let time_system = builder
+                            .metadata
+                            .start_time
+                            .time_system()
+                            .abbreviation()
+                            .to_string();
                         let cov = parse_oem_covariance(&sub.entries, &time_system)?;
                         builder.covariance_history.push(cov);
                     }
@@ -632,7 +646,12 @@ impl TryFrom<KvnDocument> for Oem {
                         span: Span::default(),
                         kind: KvnErrorKind::UnexpectedKeyword("COVARIANCE before META".to_string()),
                     })?;
-                    let time_system = builder.metadata.start_time.time_system().to_string();
+                    let time_system = builder
+                        .metadata
+                        .start_time
+                        .time_system()
+                        .abbreviation()
+                        .to_string();
                     let cov = parse_oem_covariance(&section.entries, &time_system)?;
                     builder.covariance_history.push(cov);
                 }
@@ -657,7 +676,7 @@ impl TryFrom<KvnDocument> for Oem {
         let creation_date_field = require_field(&header_entries, "CREATION_DATE")?;
         let time_system_for_header = segment_builders
             .first()
-            .map(|b| b.metadata.start_time.time_system())
+            .map(|b| b.metadata.start_time.time_system().abbreviation())
             .unwrap_or("UTC");
         let creation_date = parse_epoch(creation_date_field, time_system_for_header)?;
         let originator = parse_string_required(&header_entries, "ORIGINATOR")?;

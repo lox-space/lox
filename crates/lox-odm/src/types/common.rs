@@ -291,17 +291,14 @@ impl OdmTime {
         }
     }
 
-    /// Returns the wire-format `TIME_SYSTEM` keyword for this epoch
-    /// (e.g. `"TAI"`, `"UTC"`, `"GPS"`).
-    pub fn time_system(&self) -> &'static str {
-        self.scale().abbreviation()
-    }
-
-    /// Returns the [`OdmTimeScale`] this epoch is expressed in.
-    pub fn scale(&self) -> OdmTimeScale {
+    /// Returns the [`OdmTimeSystem`] this epoch is expressed in.
+    ///
+    /// Use [`OdmTimeSystem::abbreviation`] for the wire-format `TIME_SYSTEM`
+    /// keyword (e.g. `"TAI"`, `"UTC"`, `"GPS"`).
+    pub fn time_system(&self) -> OdmTimeSystem {
         match self {
-            OdmTime::Time(t) => OdmTimeScale::from(t.scale()),
-            OdmTime::Utc(_) => OdmTimeScale::Utc,
+            OdmTime::Time(t) => OdmTimeSystem::from(t.scale()),
+            OdmTime::Utc(_) => OdmTimeSystem::Utc,
         }
     }
 
@@ -309,7 +306,7 @@ impl OdmTime {
     ///
     /// Convenience wrapper around [`Self::try_in_scale_with`]. See that
     /// method for the conversion semantics and error contract.
-    pub fn try_in_scale(&self, target: OdmTimeScale) -> Result<Self, OdmTimeError> {
+    pub fn try_in_scale(&self, target: OdmTimeSystem) -> Result<Self, OdmTimeError> {
         self.try_in_scale_with(target, &DefaultOffsetProvider)
     }
 
@@ -318,24 +315,24 @@ impl OdmTime {
     /// Continuous-to-continuous conversions route through `provider`
     /// (TAI as a pivot when needed). UTC ↔ continuous conversions apply
     /// the leap-seconds table. A no-op return if `target` already matches
-    /// [`Self::scale`].
+    /// [`Self::time_system`].
     ///
     /// Returns [`OdmTimeError::OffsetUnavailable`] when the provider has
     /// no offset for the requested conversion at this epoch.
     pub fn try_in_scale_with<P: OffsetProvider>(
         &self,
-        target: OdmTimeScale,
+        target: OdmTimeSystem,
         provider: &P,
     ) -> Result<Self, OdmTimeError> {
-        if self.scale() == target {
+        if self.time_system() == target {
             return Ok(*self);
         }
         match target {
-            OdmTimeScale::Utc => Ok(OdmTime::Utc(self.try_tai_pivot_with(provider)?.to_utc())),
+            OdmTimeSystem::Utc => Ok(OdmTime::Utc(self.try_tai_pivot_with(provider)?.to_utc())),
             _ => {
                 let target_dyn = target
                     .as_continuous()
-                    .expect("non-Utc OdmTimeScale always maps to a DynTimeScale");
+                    .expect("non-Utc OdmTimeSystem always maps to a DynTimeScale");
                 let dyn_source = self.to_dyn_time();
                 if dyn_source.scale() == target_dyn {
                     return Ok(OdmTime::Time(dyn_source));
@@ -460,7 +457,7 @@ pub enum OdmTimeError {
 /// Used as the target of [`OdmTime::try_in_scale`] and as the wire-format hint
 /// passed to OPM/OEM builders to control the emitted `TIME_SYSTEM` keyword.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub enum OdmTimeScale {
+pub enum OdmTimeSystem {
     /// International Atomic Time.
     Tai,
     /// Barycentric Coordinate Time.
@@ -479,7 +476,7 @@ pub enum OdmTimeScale {
     Utc,
 }
 
-impl OdmTimeScale {
+impl OdmTimeSystem {
     /// Wire-format `TIME_SYSTEM` keyword (e.g. `"TAI"`, `"UTC"`).
     pub fn abbreviation(&self) -> &'static str {
         match self {
@@ -510,7 +507,7 @@ impl OdmTimeScale {
     }
 }
 
-impl FromStr for OdmTimeScale {
+impl FromStr for OdmTimeSystem {
     type Err = OdmTimeError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_ascii_uppercase().as_str() {
@@ -527,13 +524,13 @@ impl FromStr for OdmTimeScale {
     }
 }
 
-impl Display for OdmTimeScale {
+impl Display for OdmTimeSystem {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_str(self.abbreviation())
     }
 }
 
-impl From<DynTimeScale> for OdmTimeScale {
+impl From<DynTimeScale> for OdmTimeSystem {
     fn from(s: DynTimeScale) -> Self {
         match s {
             DynTimeScale::Tai => Self::Tai,
@@ -781,21 +778,21 @@ mod tests {
     fn odm_time_from_wire_tai() {
         let t = OdmTime::from_wire("TAI", "2024-01-01T00:00:00").unwrap();
         assert!(matches!(t, OdmTime::Time(_)));
-        assert_eq!(t.time_system(), "TAI");
+        assert_eq!(t.time_system().abbreviation(), "TAI");
     }
 
     #[test]
     fn odm_time_from_wire_utc() {
         let t = OdmTime::from_wire("UTC", "2024-01-01T00:00:00").unwrap();
         assert!(matches!(t, OdmTime::Utc(_)));
-        assert_eq!(t.time_system(), "UTC");
+        assert_eq!(t.time_system().abbreviation(), "UTC");
     }
 
     #[test]
     fn odm_time_from_wire_gps() {
         let t = OdmTime::from_wire("GPS", "2024-01-01T00:00:00").unwrap();
         assert!(matches!(t, OdmTime::Time(_)));
-        assert_eq!(t.time_system(), "GPS");
+        assert_eq!(t.time_system().abbreviation(), "GPS");
     }
 
     #[test]
@@ -850,40 +847,43 @@ mod tests {
         );
     }
 
-    // --- OdmTimeScale ------------------------------------------------------
+    // --- OdmTimeSystem ------------------------------------------------------
 
     #[test]
     fn odm_time_scale_from_str_known() {
         for (s, expected) in [
-            ("TAI", OdmTimeScale::Tai),
-            ("UTC", OdmTimeScale::Utc),
-            ("GPS", OdmTimeScale::Gps),
-            ("tt", OdmTimeScale::Tt),
-            ("ut1", OdmTimeScale::Ut1),
+            ("TAI", OdmTimeSystem::Tai),
+            ("UTC", OdmTimeSystem::Utc),
+            ("GPS", OdmTimeSystem::Gps),
+            ("tt", OdmTimeSystem::Tt),
+            ("ut1", OdmTimeSystem::Ut1),
         ] {
-            assert_eq!(s.parse::<OdmTimeScale>().unwrap(), expected);
+            assert_eq!(s.parse::<OdmTimeSystem>().unwrap(), expected);
         }
     }
 
     #[test]
     fn odm_time_scale_from_str_unknown() {
-        assert!("XYZ".parse::<OdmTimeScale>().is_err());
+        assert!("XYZ".parse::<OdmTimeSystem>().is_err());
     }
 
     #[test]
     fn odm_time_scale_abbreviation_matches_wire_keyword() {
         for scale in [
-            OdmTimeScale::Tai,
-            OdmTimeScale::Tcb,
-            OdmTimeScale::Tcg,
-            OdmTimeScale::Tdb,
-            OdmTimeScale::Tt,
-            OdmTimeScale::Ut1,
-            OdmTimeScale::Gps,
-            OdmTimeScale::Utc,
+            OdmTimeSystem::Tai,
+            OdmTimeSystem::Tcb,
+            OdmTimeSystem::Tcg,
+            OdmTimeSystem::Tdb,
+            OdmTimeSystem::Tt,
+            OdmTimeSystem::Ut1,
+            OdmTimeSystem::Gps,
+            OdmTimeSystem::Utc,
         ] {
             // Round-trip through FromStr to be sure.
-            assert_eq!(scale.abbreviation().parse::<OdmTimeScale>().unwrap(), scale);
+            assert_eq!(
+                scale.abbreviation().parse::<OdmTimeSystem>().unwrap(),
+                scale
+            );
         }
     }
 
@@ -892,18 +892,18 @@ mod tests {
     #[test]
     fn odm_time_in_scale_noop_when_target_matches_source() {
         let tai = OdmTime::Time(Time::j2000(DynTimeScale::Tai));
-        assert_eq!(tai.try_in_scale(OdmTimeScale::Tai).unwrap(), tai);
+        assert_eq!(tai.try_in_scale(OdmTimeSystem::Tai).unwrap(), tai);
 
         let utc = OdmTime::from_wire("UTC", "2024-01-01T00:00:00").unwrap();
-        assert_eq!(utc.try_in_scale(OdmTimeScale::Utc).unwrap(), utc);
+        assert_eq!(utc.try_in_scale(OdmTimeSystem::Utc).unwrap(), utc);
     }
 
     #[test]
     fn odm_time_in_scale_tai_to_utc_then_back_is_lossless_for_post_1972_epoch() {
         let utc_in = OdmTime::from_wire("UTC", "2024-06-15T12:34:56").unwrap();
-        let tai = utc_in.try_in_scale(OdmTimeScale::Tai).unwrap();
-        assert_eq!(tai.scale(), OdmTimeScale::Tai);
-        let utc_out = tai.try_in_scale(OdmTimeScale::Utc).unwrap();
+        let tai = utc_in.try_in_scale(OdmTimeSystem::Tai).unwrap();
+        assert_eq!(tai.time_system(), OdmTimeSystem::Tai);
+        let utc_out = tai.try_in_scale(OdmTimeSystem::Utc).unwrap();
         assert_eq!(utc_out, utc_in);
     }
 
@@ -913,19 +913,19 @@ mod tests {
         // converting the same instant to GPS must be 19 s "earlier" in
         // GPS-second-count terms (i.e. GPS reads 19s lower).
         let tai = OdmTime::Time(Time::j2000(DynTimeScale::Tai));
-        let gps = tai.try_in_scale(OdmTimeScale::Gps).unwrap();
-        assert_eq!(gps.scale(), OdmTimeScale::Gps);
+        let gps = tai.try_in_scale(OdmTimeSystem::Gps).unwrap();
+        assert_eq!(gps.time_system(), OdmTimeSystem::Gps);
         // Round-trip through TAI must return the original.
-        let tai_again = gps.try_in_scale(OdmTimeScale::Tai).unwrap();
+        let tai_again = gps.try_in_scale(OdmTimeSystem::Tai).unwrap();
         assert_eq!(tai_again, tai);
     }
 
     #[test]
     fn odm_time_in_scale_utc_to_gps_via_tai_pivot() {
         let utc = OdmTime::from_wire("UTC", "2024-06-15T12:00:00").unwrap();
-        let gps = utc.try_in_scale(OdmTimeScale::Gps).unwrap();
-        assert_eq!(gps.scale(), OdmTimeScale::Gps);
-        let utc_back = gps.try_in_scale(OdmTimeScale::Utc).unwrap();
+        let gps = utc.try_in_scale(OdmTimeSystem::Gps).unwrap();
+        assert_eq!(gps.time_system(), OdmTimeSystem::Gps);
+        let utc_back = gps.try_in_scale(OdmTimeSystem::Utc).unwrap();
         assert_eq!(utc_back, utc);
     }
 
@@ -933,7 +933,7 @@ mod tests {
     fn try_in_scale_with_propagates_offset_failure_from_ut1_source() {
         let ut1 = OdmTime::from_wire("UT1", "2024-06-15T12:00:00").unwrap();
         let err = ut1
-            .try_in_scale_with(OdmTimeScale::Tai, &FailingUt1Provider)
+            .try_in_scale_with(OdmTimeSystem::Tai, &FailingUt1Provider)
             .unwrap_err();
         assert!(
             matches!(
@@ -952,7 +952,7 @@ mod tests {
     fn try_in_scale_with_propagates_offset_failure_for_ut1_target() {
         let tai = OdmTime::Time(Time::j2000(DynTimeScale::Tai));
         let err = tai
-            .try_in_scale_with(OdmTimeScale::Ut1, &FailingUt1Provider)
+            .try_in_scale_with(OdmTimeSystem::Ut1, &FailingUt1Provider)
             .unwrap_err();
         assert!(
             matches!(
@@ -972,7 +972,7 @@ mod tests {
         // UT1 → UTC pivots through TAI; the UT1 → TAI step fails first.
         let ut1 = OdmTime::from_wire("UT1", "2024-06-15T12:00:00").unwrap();
         let err = ut1
-            .try_in_scale_with(OdmTimeScale::Utc, &FailingUt1Provider)
+            .try_in_scale_with(OdmTimeSystem::Utc, &FailingUt1Provider)
             .unwrap_err();
         assert!(matches!(
             err,
@@ -983,10 +983,10 @@ mod tests {
     #[test]
     fn odm_time_scale_accessor_matches_construction() {
         let utc = OdmTime::from_wire("UTC", "2024-01-01T00:00:00").unwrap();
-        assert_eq!(utc.scale(), OdmTimeScale::Utc);
+        assert_eq!(utc.time_system(), OdmTimeSystem::Utc);
         let tai = OdmTime::Time(Time::j2000(DynTimeScale::Tai));
-        assert_eq!(tai.scale(), OdmTimeScale::Tai);
+        assert_eq!(tai.time_system(), OdmTimeSystem::Tai);
         let gps = OdmTime::Time(Time::j2000(DynTimeScale::Gps));
-        assert_eq!(gps.scale(), OdmTimeScale::Gps);
+        assert_eq!(gps.time_system(), OdmTimeSystem::Gps);
     }
 }
