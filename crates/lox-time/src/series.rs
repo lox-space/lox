@@ -24,7 +24,7 @@ pub struct TimeSeries<T: ContinuousTimeScale = crate::time_scales::TimeScale> {
     series: Series,
 }
 
-impl<T: ContinuousTimeScale + Copy> TimeSeries<T> {
+impl<T: ContinuousTimeScale + Copy + Eq> TimeSeries<T> {
     /// Creates a new `TimeSeries` from an epoch and a pre-built [`Series`].
     pub fn new(epoch: Time<T>, series: Series) -> Self {
         Self { epoch, series }
