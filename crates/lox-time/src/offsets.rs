@@ -15,9 +15,9 @@ use crate::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};
 mod impls;
 
 /// Fallible time scale offset computation.
-pub trait TryOffset<CoordinateOrigin, Target>
+pub trait TryOffset<Origin, Target>
 where
-    CoordinateOrigin: ContinuousTimeScale,
+    Origin: ContinuousTimeScale,
     Target: ContinuousTimeScale,
 {
     /// The error type returned when the offset cannot be computed.
@@ -26,29 +26,29 @@ where
     /// Computes the offset from `origin` to `target` at the given `delta` since J2000.
     fn try_offset(
         &self,
-        origin: CoordinateOrigin,
+        origin: Origin,
         target: Target,
         delta: TimeDelta,
     ) -> Result<TimeDelta, Self::Error>;
 }
 
 /// Infallible time scale offset computation.
-pub trait Offset<CoordinateOrigin, Target>
+pub trait Offset<Origin, Target>
 where
-    CoordinateOrigin: ContinuousTimeScale,
+    Origin: ContinuousTimeScale,
     Target: ContinuousTimeScale,
 {
     /// Computes the offset from `origin` to `target` at the given `delta` since J2000.
-    fn offset(&self, origin: CoordinateOrigin, target: Target, delta: TimeDelta) -> TimeDelta;
+    fn offset(&self, origin: Origin, target: Target, delta: TimeDelta) -> TimeDelta;
 }
 
-impl<T, CoordinateOrigin, Target> Offset<CoordinateOrigin, Target> for T
+impl<T, Origin, Target> Offset<Origin, Target> for T
 where
-    CoordinateOrigin: ContinuousTimeScale,
+    Origin: ContinuousTimeScale,
     Target: ContinuousTimeScale,
-    T: TryOffset<CoordinateOrigin, Target, Error = Infallible>,
+    T: TryOffset<Origin, Target, Error = Infallible>,
 {
-    fn offset(&self, origin: CoordinateOrigin, target: Target, delta: TimeDelta) -> TimeDelta {
+    fn offset(&self, origin: Origin, target: Target, delta: TimeDelta) -> TimeDelta {
         self.try_offset(origin, target, delta).unwrap()
     }
 }
