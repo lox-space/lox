@@ -21,27 +21,36 @@ use crate::{
     utc::{Utc, transformations::ToUtc},
 };
 
-/// A half-open interval `[start, end)`.
+/// A half-open interval `[start, start + duration)`.
+///
+/// Stored as an epoch plus a [`TimeDelta`] rather than a pair of bounds, so an
+/// interval cannot straddle two time scales: the scale lives on the epoch alone.
+/// A negative duration denotes a backwards interval.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Interval<T> {
-    start: T,
-    end: T,
+    epoch: T,
+    duration: TimeDelta,
 }
 
-impl<T: ApproxEq + core::fmt::Debug> ApproxEq for Interval<T> {
+impl<T> ApproxEq for Interval<T>
+where
+    T: ApproxEq + core::fmt::Debug + Copy + Add<TimeDelta, Output = T>,
+{
+    /// Compares the observable bounds rather than the stored epoch and duration,
+    /// so the comparison does not depend on the internal representation.
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
         let mut results = ApproxEqResults::new();
-        results.merge("start", self.start.approx_eq(&rhs.start, atol, rtol));
-        results.merge("end", self.end.approx_eq(&rhs.end, atol, rtol));
+        results.merge("start", self.start().approx_eq(&rhs.start(), atol, rtol));
+        results.merge("end", self.end().approx_eq(&rhs.end(), atol, rtol));
         results
     }
 }
 
 impl<T> Interval<T> {
-    /// Creates a new interval from `start` to `end`.
-    pub fn new(start: T, end: T) -> Self {
-        Interval { start, end }
+    /// Creates an interval from an epoch and a duration.
+    pub fn from_duration(epoch: T, duration: TimeDelta) -> Self {
+        Interval { epoch, duration }
     }
 
     /// Returns the start of the interval.
@@ -49,86 +58,104 @@ impl<T> Interval<T> {
     where
         T: Copy,
     {
-        self.start
+        self.epoch
     }
 
+    /// Returns the duration of the interval.
+    pub fn duration(&self) -> TimeDelta {
+        self.duration
+    }
+
+    /// Returns `true` if the interval is empty (its duration is not positive).
+    pub fn is_empty(&self) -> bool {
+        !self.duration.is_positive()
+    }
+}
+
+impl<T> Interval<T>
+where
+    T: Copy + Sub<Output = TimeDelta>,
+{
+    /// Creates a new interval from `start` to `end`.
+    ///
+    /// # Panics
+    ///
+    /// For [`TimeInterval`], panics if the bounds are in different time scales,
+    /// since the duration is derived by subtracting them. Use
+    /// [`TimeInterval::try_new`] to handle that case.
+    pub fn new(start: T, end: T) -> Self {
+        Interval {
+            epoch: start,
+            duration: end - start,
+        }
+    }
+}
+
+impl<T> Interval<T>
+where
+    T: Copy + Add<TimeDelta, Output = T>,
+{
     /// Returns the end of the interval.
-    pub fn end(&self) -> T
-    where
-        T: Copy,
-    {
-        self.end
+    pub fn end(&self) -> T {
+        self.epoch + self.duration
     }
+}
 
-    /// Returns the duration of the interval as a [`TimeDelta`].
-    pub fn duration(&self) -> TimeDelta
-    where
-        T: Sub<Output = TimeDelta> + Copy,
-    {
-        self.end - self.start
-    }
-
-    /// Returns `true` if the interval is empty (`start >= end`).
-    pub fn is_empty(&self) -> bool
-    where
-        T: Ord,
-    {
-        self.start >= self.end
-    }
-
+impl<T> Interval<T>
+where
+    T: Copy + Ord + Add<TimeDelta, Output = T> + Sub<Output = TimeDelta>,
+{
     /// Returns `true` if `time` falls within `[start, end)`.
-    pub fn contains_time(&self, time: T) -> bool
-    where
-        T: Ord,
-    {
-        self.start <= time && time < self.end
+    pub fn contains_time(&self, time: T) -> bool {
+        self.start() <= time && time < self.end()
     }
 
     /// Returns the intersection of `self` and `other`.
-    pub fn intersect(&self, other: Self) -> Self
-    where
-        T: Ord + Copy,
-    {
-        Interval {
-            start: max(self.start, other.start),
-            end: min(self.end, other.end),
-        }
+    pub fn intersect(&self, other: Self) -> Self {
+        Interval::new(
+            max(self.start(), other.start()),
+            min(self.end(), other.end()),
+        )
     }
 
     /// Returns `true` if `self` and `other` overlap.
-    pub fn overlaps(&self, other: Self) -> bool
-    where
-        T: Ord + Copy,
-    {
+    pub fn overlaps(&self, other: Self) -> bool {
         !self.intersect(other).is_empty()
     }
 
+    /// True if self fully contains other.
+    pub fn contains(&self, other: &Self) -> bool {
+        self.start() <= other.start() && self.end() >= other.end()
+    }
+}
+
+impl<T> Interval<T>
+where
+    T: Copy + Add<TimeDelta, Output = T> + PartialOrd,
+{
     /// Returns an iterator of evenly-spaced points from start to end (inclusive)
     /// with the given step size.
     ///
     /// The step sign is automatically adjusted to match the interval direction:
-    /// forward if `start <= end`, backward if `start > end`.
+    /// forward for a positive duration, backward for a negative one.
     ///
     /// # Panics
     ///
     /// Panics if `step` is zero.
-    pub fn step_by(&self, step: TimeDelta) -> IntervalStepIter<T>
-    where
-        T: Copy + Add<TimeDelta, Output = T> + PartialOrd,
-    {
+    pub fn step_by(&self, step: TimeDelta) -> IntervalStepIter<T> {
         assert!(
             step.is_positive() || step.is_negative(),
             "step must be non-zero"
         );
-        let forward = self.start <= self.end;
+        let forward = !self.duration.is_negative();
         let step = if forward == step.is_positive() {
             step
         } else {
             -step
         };
         IntervalStepIter {
-            current: self.start,
-            end: self.end,
+            current: self.epoch,
+            end: self.end(),
             step,
             forward,
         }
@@ -137,24 +164,12 @@ impl<T> Interval<T> {
     /// Returns `n` evenly-spaced points from start to end (inclusive).
     ///
     /// Panics if `n < 2`.
-    pub fn linspace(&self, n: usize) -> Vec<T>
-    where
-        T: Copy + Add<TimeDelta, Output = T> + Sub<Output = TimeDelta>,
-    {
+    pub fn linspace(&self, n: usize) -> Vec<T> {
         assert!(n >= 2, "linspace requires at least 2 points");
-        let duration = self.end - self.start;
-        let step_secs = duration.to_seconds().to_f64() / (n - 1) as f64;
+        let step_secs = self.duration.to_seconds().to_f64() / (n - 1) as f64;
         (0..n)
-            .map(|i| self.start + TimeDelta::from_seconds_f64(step_secs * i as f64))
+            .map(|i| self.epoch + TimeDelta::from_seconds_f64(step_secs * i as f64))
             .collect()
-    }
-
-    /// True if self fully contains other.
-    pub fn contains(&self, other: &Self) -> bool
-    where
-        T: Ord,
-    {
-        self.start <= other.start && self.end >= other.end
     }
 }
 
@@ -188,7 +203,7 @@ where
 }
 
 /// Intersect two sorted lists of intervals.
-pub fn intersect_intervals<T: Ord + Copy>(
+pub fn intersect_intervals<T: Copy + Ord + Add<TimeDelta, Output = T> + Sub<Output = TimeDelta>>(
     a: &[Interval<T>],
     b: &[Interval<T>],
 ) -> Vec<Interval<T>> {
@@ -201,7 +216,7 @@ pub fn intersect_intervals<T: Ord + Copy>(
             result.push(inter);
         }
         // Advance the interval with the smaller end
-        if a[i].end <= b[j].end {
+        if a[i].end() <= b[j].end() {
             i += 1;
         } else {
             j += 1;
@@ -211,13 +226,16 @@ pub fn intersect_intervals<T: Ord + Copy>(
 }
 
 /// Union two sorted lists of intervals (merge overlapping/adjacent).
-pub fn union_intervals<T: Ord + Copy>(a: &[Interval<T>], b: &[Interval<T>]) -> Vec<Interval<T>> {
+pub fn union_intervals<T: Copy + Ord + Add<TimeDelta, Output = T> + Sub<Output = TimeDelta>>(
+    a: &[Interval<T>],
+    b: &[Interval<T>],
+) -> Vec<Interval<T>> {
     // Merge the two sorted lists
     let mut all = Vec::with_capacity(a.len() + b.len());
     let mut i = 0;
     let mut j = 0;
     while i < a.len() && j < b.len() {
-        if a[i].start <= b[j].start {
+        if a[i].start() <= b[j].start() {
             all.push(a[i]);
             i += 1;
         } else {
@@ -232,39 +250,45 @@ pub fn union_intervals<T: Ord + Copy>(a: &[Interval<T>], b: &[Interval<T>]) -> V
 }
 
 /// Complement intervals within a bounding interval.
-pub fn complement_intervals<T: Ord + Copy>(
+pub fn complement_intervals<
+    T: Copy + Ord + Add<TimeDelta, Output = T> + Sub<Output = TimeDelta>,
+>(
     intervals: &[Interval<T>],
     bound: Interval<T>,
 ) -> Vec<Interval<T>> {
     let mut result = Vec::new();
-    let mut cursor = bound.start;
+    let mut cursor = bound.start();
     for iv in intervals {
-        if iv.start > cursor {
-            let gap = Interval::new(cursor, iv.start);
+        if iv.start() > cursor {
+            let gap = Interval::new(cursor, iv.start());
             if !gap.is_empty() {
                 result.push(gap);
             }
         }
-        if iv.end > cursor {
-            cursor = iv.end;
+        if iv.end() > cursor {
+            cursor = iv.end();
         }
     }
-    if cursor < bound.end {
-        result.push(Interval::new(cursor, bound.end));
+    if cursor < bound.end() {
+        result.push(Interval::new(cursor, bound.end()));
     }
     result
 }
 
-fn merge_intervals<T: Ord + Copy>(sorted: Vec<Interval<T>>) -> Vec<Interval<T>> {
+fn merge_intervals<T: Copy + Ord + Add<TimeDelta, Output = T> + Sub<Output = TimeDelta>>(
+    sorted: Vec<Interval<T>>,
+) -> Vec<Interval<T>> {
     let mut result: Vec<Interval<T>> = Vec::new();
     for iv in sorted {
         if iv.is_empty() {
             continue;
         }
         if let Some(last) = result.last_mut()
-            && iv.start <= last.end
+            && iv.start() <= last.end()
         {
-            last.end = max(last.end, iv.end);
+            // Extend in place: the epoch is unchanged, only the duration grows.
+            let end = max(last.end(), iv.end());
+            *last = Interval::new(last.start(), end);
             continue;
         }
         result.push(iv);
@@ -278,10 +302,7 @@ pub type TimeDeltaInterval = Interval<TimeDelta>;
 impl TimeDeltaInterval {
     /// Converts this delta-based interval to a [`TimeInterval`] in the given time scale.
     pub fn to_scale<T: ContinuousTimeScale + Copy>(&self, scale: T) -> TimeInterval<T> {
-        Interval {
-            start: Time::from_delta(scale, self.start),
-            end: Time::from_delta(scale, self.end),
-        }
+        Interval::from_duration(Time::from_delta(scale, self.start()), self.duration())
     }
 }
 
@@ -296,24 +317,20 @@ where
 {
     /// Converts this interval into one whose bounds carry their time scale at runtime.
     pub fn into_dynamic(self) -> TimeInterval {
-        Interval {
-            start: self.start.into_dynamic(),
-            end: self.end.into_dynamic(),
-        }
+        Interval::from_duration(self.epoch.into_dynamic(), self.duration)
     }
 }
 
 impl TimeInterval {
-    /// Creates a time interval, returning an error if the bounds are in
-    /// different time scales.
+    /// Creates a time interval from a pair of bounds, returning an error if they
+    /// are in different time scales.
     ///
-    /// [`Interval::new`] does not validate this, and every subsequent operation
-    /// on a mismatched interval panics. Prefer this constructor when the bounds
-    /// come from external input.
+    /// [`Interval::new`] panics in that case, because it derives the duration by
+    /// subtracting the bounds. Prefer this constructor when they come from
+    /// external input.
     pub fn try_new(start: Time, end: Time) -> Result<Self, TimeScaleMismatch> {
-        // Reuse the comparison check so the two paths cannot disagree.
-        start.checked_cmp(&end)?;
-        Ok(Interval { start, end })
+        let duration = start.checked_sub(&end).map(|d| -d)?;
+        Ok(Interval::from_duration(start, duration))
     }
 }
 
@@ -324,30 +341,48 @@ where
 {
     /// Converts this time interval to a [`UtcInterval`].
     pub fn to_utc(&self) -> UtcInterval {
-        Interval {
-            start: self.start.to_utc(),
-            end: self.end.to_utc(),
+        UtcInterval {
+            start: self.start().to_utc(),
+            end: self.end().to_utc(),
         }
     }
 }
 
 /// An interval of [`Utc`] values.
-pub type UtcInterval = Interval<Utc>;
+///
+/// Unlike [`Interval`], this holds an explicit pair of bounds: UTC has no
+/// well-defined [`TimeDelta`] arithmetic because of leap seconds, so an
+/// epoch-plus-duration representation is not available here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct UtcInterval {
+    start: Utc,
+    end: Utc,
+}
 
 impl UtcInterval {
+    /// Creates a new UTC interval from `start` to `end`.
+    pub fn new(start: Utc, end: Utc) -> Self {
+        UtcInterval { start, end }
+    }
+
+    /// Returns the start of the interval.
+    pub fn start(&self) -> Utc {
+        self.start
+    }
+
+    /// Returns the end of the interval.
+    pub fn end(&self) -> Utc {
+        self.end
+    }
+
     /// Converts this UTC interval to a [`TimeInterval`] in TAI.
     pub fn to_time(&self) -> TimeInterval<Tai> {
-        Interval {
-            start: self.start.to_time(),
-            end: self.end.to_time(),
-        }
+        Interval::new(self.start.to_time(), self.end.to_time())
     }
 }
 
-impl<T> Display for Interval<T>
-where
-    T: Display,
-{
+impl Display for UtcInterval {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.start.fmt(f)?;
         write!(f, " – ")?;
@@ -355,15 +390,31 @@ where
     }
 }
 
+impl<T> Display for Interval<T>
+where
+    T: Display + Copy + Add<TimeDelta, Output = T>,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.epoch.fmt(f)?;
+        write!(f, " – ")?;
+        self.end().fmt(f)
+    }
+}
+
 #[cfg(test)]
 mod tests {
+
+    /// Interval over `TimeDelta` seconds, for the pure interval-algebra tests.
+    fn iv(start: i64, end: i64) -> TimeDeltaInterval {
+        Interval::new(TimeDelta::from_seconds(start), TimeDelta::from_seconds(end))
+    }
     use alloc::format;
     use alloc::vec;
     use alloc::vec::Vec;
 
     use crate::{
         time,
-        time_scales::{Tai, Tt},
+        time_scales::{Tai, Tdb, Tt},
     };
 
     use super::*;
@@ -385,11 +436,21 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "cannot subtract `Time` objects with different time scales")]
-    fn test_duration_of_mismatched_interval_panics() {
+    fn test_mismatched_bounds_panic_at_construction() {
         let t0 = time!(Tai, 2025, 11, 6).unwrap().into_dynamic();
         let t1 = time!(Tt, 2025, 11, 7).unwrap().into_dynamic();
-        // `Interval::new` is unvalidated, but every operation on the result is.
-        let _ = TimeInterval::new(t0, t1).duration();
+        // The duration is derived by subtracting the bounds, so the mismatch is
+        // caught here rather than on first use.
+        let _ = TimeInterval::new(t0, t1);
+    }
+
+    #[test]
+    fn test_interval_carries_a_single_scale() {
+        // An interval holds one epoch, so it cannot straddle two scales at all.
+        let epoch = time!(Tdb, 2025, 11, 6).unwrap().into_dynamic();
+        let iv = TimeInterval::from_duration(epoch, TimeDelta::from_hours(2));
+        assert_eq!(iv.start().scale(), iv.end().scale());
+        assert_eq!(iv.duration(), TimeDelta::from_hours(2));
     }
 
     #[test]
@@ -494,63 +555,56 @@ mod tests {
 
     #[test]
     fn test_contains() {
-        let outer = Interval::new(0, 10);
-        let inner = Interval::new(2, 8);
+        let outer = iv(0, 10);
+        let inner = iv(2, 8);
         assert!(outer.contains(&inner));
         assert!(!inner.contains(&outer));
     }
 
     #[test]
     fn test_intersect_intervals() {
-        let a = vec![Interval::new(0, 5), Interval::new(10, 15)];
-        let b = vec![Interval::new(3, 12)];
+        let a = vec![iv(0, 5), iv(10, 15)];
+        let b = vec![iv(3, 12)];
         let result = intersect_intervals(&a, &b);
-        assert_eq!(result, vec![Interval::new(3, 5), Interval::new(10, 12)]);
+        assert_eq!(result, vec![iv(3, 5), iv(10, 12)]);
     }
 
     #[test]
     fn test_intersect_intervals_no_overlap() {
-        let a = vec![Interval::new(0, 3)];
-        let b = vec![Interval::new(5, 8)];
+        let a = vec![iv(0, 3)];
+        let b = vec![iv(5, 8)];
         let result = intersect_intervals(&a, &b);
         assert!(result.is_empty());
     }
 
     #[test]
     fn test_union_intervals() {
-        let a = vec![Interval::new(0, 5)];
-        let b = vec![Interval::new(3, 8)];
+        let a = vec![iv(0, 5)];
+        let b = vec![iv(3, 8)];
         let result = union_intervals(&a, &b);
-        assert_eq!(result, vec![Interval::new(0, 8)]);
+        assert_eq!(result, vec![iv(0, 8)]);
     }
 
     #[test]
     fn test_union_intervals_disjoint() {
-        let a = vec![Interval::new(0, 3)];
-        let b = vec![Interval::new(5, 8)];
+        let a = vec![iv(0, 3)];
+        let b = vec![iv(5, 8)];
         let result = union_intervals(&a, &b);
-        assert_eq!(result, vec![Interval::new(0, 3), Interval::new(5, 8)]);
+        assert_eq!(result, vec![iv(0, 3), iv(5, 8)]);
     }
 
     #[test]
     fn test_complement_intervals() {
-        let intervals = vec![Interval::new(2, 4), Interval::new(6, 8)];
-        let bound = Interval::new(0, 10);
+        let intervals = vec![iv(2, 4), iv(6, 8)];
+        let bound = iv(0, 10);
         let result = complement_intervals(&intervals, bound);
-        assert_eq!(
-            result,
-            vec![
-                Interval::new(0, 2),
-                Interval::new(4, 6),
-                Interval::new(8, 10),
-            ]
-        );
+        assert_eq!(result, vec![iv(0, 2), iv(4, 6), iv(8, 10),]);
     }
 
     #[test]
     fn test_complement_intervals_full_coverage() {
-        let intervals = vec![Interval::new(0, 10)];
-        let bound = Interval::new(0, 10);
+        let intervals = vec![iv(0, 10)];
+        let bound = iv(0, 10);
         let result = complement_intervals(&intervals, bound);
         assert!(result.is_empty());
     }
