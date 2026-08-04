@@ -21,7 +21,7 @@
 //!   Applications*, 4th ed. pp. 372, 708–710.
 
 use lox_bodies::{
-    DynOrigin, Origin, TryJ2, TryPointMass, TrySpheroid, UndefinedOriginPropertyError,
+    CoordinateOrigin, DynOrigin, TryJ2, TryPointMass, TrySpheroid, UndefinedOriginPropertyError,
 };
 use lox_core::anomalies::AnomalyError;
 use lox_core::elements::{Keplerian, OrbitType};
@@ -29,7 +29,7 @@ use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::{DynTimeScale, TimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
 use thiserror::Error;
 
 use crate::orbits::{CartesianOrbit, KeplerianOrbit, Trajectory, TrajectoryError};
@@ -73,7 +73,11 @@ impl From<std::convert::Infallible> for J2Error {
 /// conversion is performed.
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct J2Propagator<T: TimeScale, O: TryJ2 + TryPointMass + TrySpheroid, R: ReferenceFrame> {
+pub struct J2Propagator<
+    T: ContinuousTimeScale,
+    O: TryJ2 + TryPointMass + TrySpheroid,
+    R: ReferenceFrame,
+> {
     initial_orbit: KeplerianOrbit<T, O, R>,
     kep: Keplerian,
     m0: f64,
@@ -88,8 +92,8 @@ pub type DynJ2Propagator = J2Propagator<DynTimeScale, DynOrigin, DynFrame>;
 
 impl<T, O, R> J2Propagator<T, O, R>
 where
-    T: TimeScale + Copy,
-    O: TryJ2 + TryPointMass + TrySpheroid + Origin + Copy,
+    T: ContinuousTimeScale + Copy,
+    O: TryJ2 + TryPointMass + TrySpheroid + CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     /// Create a new J2 propagator from mean Keplerian elements.
@@ -166,8 +170,8 @@ where
 
 impl<T, O, R> Propagator<T, O> for J2Propagator<T, O, R>
 where
-    T: TimeScale + Copy + Eq,
-    O: TryJ2 + TryPointMass + TrySpheroid + Origin + Copy,
+    T: ContinuousTimeScale + Copy + Eq,
+    O: TryJ2 + TryPointMass + TrySpheroid + CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Frame = R;

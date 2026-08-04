@@ -14,7 +14,7 @@ use thiserror::Error;
 use crate::events::{
     DetectError, DetectFn, EventsToIntervals, IntervalDetector, RootFindingDetector,
 };
-use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid};
+use lox_bodies::{CoordinateOrigin, DynOrigin, TryMeanRadius, TrySpheroid};
 use lox_core::coords::LonLatAlt;
 use lox_core::units::Angle;
 use lox_frames::providers::DefaultRotationProvider;
@@ -178,7 +178,7 @@ fn pass_direction_of(sample: &SubSatSample) -> PassDirection {
 // AccessDetectFn
 // ---------------------------------------------------------------------------
 
-struct AccessDetectFn<'a, P: AccessPayload, O: Origin, R: ReferenceFrame> {
+struct AccessDetectFn<'a, P: AccessPayload, O: CoordinateOrigin, R: ReferenceFrame> {
     payload: P,
     aoi: &'a Aoi,
     trajectory: &'a Trajectory<Tai, O, R>,
@@ -216,7 +216,7 @@ where
 
 /// Generic access analysis: computes per-(spacecraft, AOI) windows for spacecraft
 /// carrying a payload of type `P`.
-pub struct AccessAnalysis<'a, P, O: Origin, R: ReferenceFrame>
+pub struct AccessAnalysis<'a, P, O: CoordinateOrigin, R: ReferenceFrame>
 where
     P: AccessPayload + Copy + Send + Sync,
     Spacecraft: PayloadAccessor<P>,

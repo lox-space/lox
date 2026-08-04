@@ -36,12 +36,12 @@ use crate::subsecond::Subsecond;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_of_day::TimeOfDayError;
+use crate::time_scales::ContinuousTimeScale;
 use crate::time_scales::DynTimeScale;
 use crate::time_scales::Tai;
 use crate::time_scales::Tcb;
 use crate::time_scales::Tcg;
 use crate::time_scales::Tdb;
-use crate::time_scales::TimeScale;
 use crate::time_scales::Tt;
 use crate::time_scales::Ut1;
 
@@ -68,13 +68,13 @@ pub enum TimeError {
     },
 }
 
-/// An instant in time in a given [TimeScale], relative to J2000.
+/// An instant in time in a given [ContinuousTimeScale], relative to J2000.
 ///
 /// `Time` supports femtosecond precision, but be aware that many algorithms operating on `Time`s
 /// are not accurate to this level of precision.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Time<T: TimeScale> {
+pub struct Time<T: ContinuousTimeScale> {
     scale: T,
     delta: TimeDelta,
 }
@@ -82,15 +82,15 @@ pub struct Time<T: TimeScale> {
 /// A [`Time`] with a runtime-determined time scale.
 pub type DynTime = Time<DynTimeScale>;
 
-impl<T: TimeScale> Time<T> {
-    /// Instantiates a [Time] in the given [TimeScale] from the count of seconds since J2000, subdivided
+impl<T: ContinuousTimeScale> Time<T> {
+    /// Instantiates a [Time] in the given [ContinuousTimeScale] from the count of seconds since J2000, subdivided
     /// into integral seconds and [Subsecond].
     pub const fn new(scale: T, seconds: i64, subsecond: Subsecond) -> Self {
         let delta = TimeDelta::new(seconds, subsecond.as_attoseconds());
         Self { scale, delta }
     }
 
-    /// Instantiates a [Time] in the given [TimeScale] from a [Date] and a [TimeOfDay].
+    /// Instantiates a [Time] in the given [ContinuousTimeScale] from a [Date] and a [TimeOfDay].
     ///
     /// # Errors
     ///
@@ -109,7 +109,7 @@ impl<T: TimeScale> Time<T> {
         Ok(Self::new(scale, seconds, time.subsecond()))
     }
 
-    /// Instantiates a [Time] in the given [TimeScale] from an ISO 8601 string.
+    /// Instantiates a [Time] in the given [ContinuousTimeScale] from an ISO 8601 string.
     ///
     /// # Errors
     ///
@@ -135,12 +135,12 @@ impl<T: TimeScale> Time<T> {
         Self::from_date_and_time(scale, date, time)
     }
 
-    /// Instantiates a [Time] in the given [TimeScale] and a [TimeDelta] relative to J2000.
+    /// Instantiates a [Time] in the given [ContinuousTimeScale] and a [TimeDelta] relative to J2000.
     pub const fn from_delta(scale: T, delta: TimeDelta) -> Self {
         Self { scale, delta }
     }
 
-    /// Returns the [Time] at `epoch` in the given [TimeScale].
+    /// Returns the [Time] at `epoch` in the given [ContinuousTimeScale].
     ///
     /// Since [Time] is defined relative to J2000, this is equivalent to the delta between
     /// J2000 and `epoch`.
@@ -165,14 +165,14 @@ impl<T: TimeScale> Time<T> {
         }
     }
 
-    /// Creates a [Time] in the specified [TimeScale], given a Julian date relative to
+    /// Creates a [Time] in the specified [ContinuousTimeScale], given a Julian date relative to
     /// `epoch`.
     pub const fn from_julian_date(scale: T, julian_date: Days, epoch: Epoch) -> Self {
         let delta = TimeDelta::from_julian_date(julian_date, epoch);
         Self { scale, delta }
     }
 
-    /// Try to create a [Time] in the specified [TimeScale], given a Julian date relative to
+    /// Try to create a [Time] in the specified [ContinuousTimeScale], given a Julian date relative to
     /// `epoch`.
     pub fn try_from_julian_date(
         scale: T,
@@ -199,7 +199,7 @@ impl<T: TimeScale> Time<T> {
         Ok(Self { scale, delta })
     }
 
-    /// Returns a [TimeBuilder] for constructing a new [Time] in the given [TimeScale].
+    /// Returns a [TimeBuilder] for constructing a new [Time] in the given [ContinuousTimeScale].
     pub fn builder_with_scale(scale: T) -> TimeBuilder<T> {
         TimeBuilder::new(scale)
     }
@@ -215,7 +215,7 @@ impl<T: TimeScale> Time<T> {
     /// Returns a new [Time] with the delta of `self` but time scale `scale`.
     ///
     /// Note that the underlying delta is simply copied – no time scale transformation takes place.
-    pub fn with_scale<S: TimeScale>(&self, scale: S) -> Time<S> {
+    pub fn with_scale<S: ContinuousTimeScale>(&self, scale: S) -> Time<S> {
         Time::from_delta(scale, self.delta)
     }
 
@@ -223,7 +223,7 @@ impl<T: TimeScale> Time<T> {
     pub fn try_to_scale<S, P>(&self, scale: S, provider: &P) -> Result<Time<S>, P::Error>
     where
         T: Copy,
-        S: TimeScale + Copy,
+        S: ContinuousTimeScale + Copy,
         P: TryOffset<T, S> + ?Sized,
     {
         let offset = provider.try_offset(self.scale, scale, self.to_delta())?;
@@ -234,7 +234,7 @@ impl<T: TimeScale> Time<T> {
     pub fn to_scale<S>(&self, scale: S) -> Time<S>
     where
         T: Copy,
-        S: TimeScale + Copy,
+        S: ContinuousTimeScale + Copy,
         DefaultOffsetProvider: Offset<T, S>,
     {
         let offset = DefaultOffsetProvider.offset(self.scale, scale, self.to_delta());
@@ -245,26 +245,30 @@ impl<T: TimeScale> Time<T> {
     ///
     /// Note that no time scale transformation takes place beyond the adjustment specified by
     /// `delta`.
-    pub fn with_scale_and_delta<S: TimeScale>(&self, scale: S, delta: TimeDelta) -> Time<S> {
+    pub fn with_scale_and_delta<S: ContinuousTimeScale>(
+        &self,
+        scale: S,
+        delta: TimeDelta,
+    ) -> Time<S> {
         Time::from_delta(scale, self.to_delta() + delta)
     }
 
-    /// Returns the Julian epoch as a [Time] in the given [TimeScale].
+    /// Returns the Julian epoch as a [Time] in the given [ContinuousTimeScale].
     pub fn jd0(scale: T) -> Self {
         Self::from_epoch(scale, Epoch::JulianDate)
     }
 
-    /// Returns the modified Julian epoch as a [Time] in the given [TimeScale].
+    /// Returns the modified Julian epoch as a [Time] in the given [ContinuousTimeScale].
     pub fn mjd0(scale: T) -> Self {
         Self::from_epoch(scale, Epoch::ModifiedJulianDate)
     }
 
-    /// Returns the J1950 epoch as a [Time] in the given [TimeScale].
+    /// Returns the J1950 epoch as a [Time] in the given [ContinuousTimeScale].
     pub fn j1950(scale: T) -> Self {
         Self::from_epoch(scale, Epoch::J1950)
     }
 
-    /// Returns the J2000 epoch as a [Time] in the given [TimeScale].
+    /// Returns the J2000 epoch as a [Time] in the given [ContinuousTimeScale].
     pub fn j2000(scale: T) -> Self {
         Self::from_epoch(scale, Epoch::J2000)
     }
@@ -285,20 +289,20 @@ impl<T: TimeScale> Time<T> {
     }
 }
 
-impl<T: TimeScale + Into<DynTimeScale>> Time<T> {
+impl<T: ContinuousTimeScale + Into<DynTimeScale>> Time<T> {
     /// Converts this time into a [`DynTime`] with a runtime time scale.
     pub fn into_dyn(self) -> DynTime {
         Time::from_delta(self.scale.into(), self.delta)
     }
 }
 
-impl<T: TimeScale + Eq> PartialOrd for Time<T> {
+impl<T: ContinuousTimeScale + Eq> PartialOrd for Time<T> {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<T: TimeScale + Eq> Ord for Time<T> {
+impl<T: ContinuousTimeScale + Eq> Ord for Time<T> {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         assert!(
             self.scale == other.scale,
@@ -329,25 +333,25 @@ impl DynTime {
     }
 }
 
-impl<T: TimeScale + core::fmt::Debug> ApproxEq for Time<T> {
+impl<T: ContinuousTimeScale + core::fmt::Debug> ApproxEq for Time<T> {
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
         self.to_delta().approx_eq(&rhs.to_delta(), atol, rtol)
     }
 }
 
-impl<T: TimeScale> ToDelta for Time<T> {
+impl<T: ContinuousTimeScale> ToDelta for Time<T> {
     fn to_delta(&self) -> TimeDelta {
         self.delta
     }
 }
 
-impl<T: TimeScale> JulianDate for Time<T> {
+impl<T: ContinuousTimeScale> JulianDate for Time<T> {
     fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
         self.delta.julian_date(epoch, unit)
     }
 }
 
-impl<T: TimeScale> Display for Time<T> {
+impl<T: ContinuousTimeScale> Display for Time<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let precision = f.precision().unwrap_or(3);
         write!(
@@ -409,7 +413,7 @@ impl FromStr for Time<Ut1> {
     }
 }
 
-impl<T: TimeScale> Add<TimeDelta> for Time<T> {
+impl<T: ContinuousTimeScale> Add<TimeDelta> for Time<T> {
     type Output = Self;
 
     fn add(self, rhs: TimeDelta) -> Self::Output {
@@ -420,7 +424,7 @@ impl<T: TimeScale> Add<TimeDelta> for Time<T> {
     }
 }
 
-impl<T: TimeScale> Sub<TimeDelta> for Time<T> {
+impl<T: ContinuousTimeScale> Sub<TimeDelta> for Time<T> {
     type Output = Self;
 
     fn sub(self, rhs: TimeDelta) -> Self::Output {
@@ -431,7 +435,7 @@ impl<T: TimeScale> Sub<TimeDelta> for Time<T> {
     }
 }
 
-impl<T: TimeScale> Sub<Time<T>> for Time<T> {
+impl<T: ContinuousTimeScale> Sub<Time<T>> for Time<T> {
     type Output = TimeDelta;
 
     fn sub(self, rhs: Time<T>) -> Self::Output {
@@ -439,14 +443,14 @@ impl<T: TimeScale> Sub<Time<T>> for Time<T> {
     }
 }
 
-impl<T: TimeScale> CivilTime for Time<T> {
+impl<T: ContinuousTimeScale> CivilTime for Time<T> {
     fn time(&self) -> TimeOfDay {
         let (seconds, subsecond) = self.as_seconds_and_subsecond();
         TimeOfDay::from_seconds_since_j2000(seconds).with_subsecond(subsecond)
     }
 }
 
-impl<T: TimeScale> CalendarDate for Time<T> {
+impl<T: ContinuousTimeScale> CalendarDate for Time<T> {
     fn date(&self) -> Date {
         let seconds = self.seconds();
         Date::from_seconds_since_j2000(seconds)
@@ -455,14 +459,14 @@ impl<T: TimeScale> CalendarDate for Time<T> {
 
 /// `TimeBuilder` supports the construction of [Time] instances piecewise using the builder pattern.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TimeBuilder<T: TimeScale> {
+pub struct TimeBuilder<T: ContinuousTimeScale> {
     scale: T,
     date: Result<Date, DateError>,
     time: Result<TimeOfDay, TimeOfDayError>,
 }
 
-impl<T: TimeScale> TimeBuilder<T> {
-    /// Returns a new [TimeBuilder], equivalent to a [Time] at J2000 in the given [TimeScale].
+impl<T: ContinuousTimeScale> TimeBuilder<T> {
+    /// Returns a new [TimeBuilder], equivalent to a [Time] at J2000 in the given [ContinuousTimeScale].
     pub fn new(scale: T) -> Self {
         Self {
             scale,

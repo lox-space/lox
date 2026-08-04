@@ -14,7 +14,7 @@ use lox_bodies::TryRotationalElements;
 use lox_time::{
     Time,
     offsets::TryOffset,
-    time_scales::{Tdb, TimeScale, Tt, Ut1},
+    time_scales::{ContinuousTimeScale, Tdb, Tt, Ut1},
 };
 
 use crate::{
@@ -26,7 +26,7 @@ use crate::{
 };
 
 /// A frame that can produce its own rotation to and from ICRF from a provider's data.
-pub trait RotateToIcrf<T: TimeScale, P> {
+pub trait RotateToIcrf<T: ContinuousTimeScale, P> {
     /// The error type returned when the rotation cannot be computed.
     type Error;
 
@@ -45,7 +45,7 @@ pub fn rotation_via_icrf<T, P, O, Tg>(
     time: Time<T>,
 ) -> Result<Rotation, O::Error>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     O: RotateToIcrf<T, P>,
     Tg: RotateToIcrf<T, P, Error = O::Error>,
 {
@@ -57,7 +57,7 @@ where
 /// Blanket rotation between any two frames that know their route to ICRF.
 impl<T, O, Tg, P> TryRotation<O, Tg, T> for P
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     O: ReferenceFrame + RotateToIcrf<T, P, Error = RotationError>,
     Tg: ReferenceFrame + RotateToIcrf<T, P, Error = RotationError>,
 {
@@ -84,7 +84,7 @@ where
 
 impl<T, P> RotateToIcrf<T, P> for Icrf
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     P: RotationProvider<T>,
 {
     type Error = RotationError;
@@ -102,7 +102,7 @@ where
 
 impl<T, P> RotateToIcrf<T, P> for J2000
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     P: RotationProvider<T>,
 {
     type Error = RotationError;
@@ -118,7 +118,7 @@ where
 
 impl<T, P, R> RotateToIcrf<T, P> for Iau<R>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     R: TryRotationalElements + Copy,
     P: RotationProvider<T> + TryOffset<T, Tdb>,
 {
@@ -137,7 +137,7 @@ where
 
 impl<T, P> RotateToIcrf<T, P> for Cirf
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     P: RotationProvider<T> + TryOffset<T, Tdb>,
 {
     type Error = RotationError;
@@ -153,7 +153,7 @@ where
 
 impl<T, P> RotateToIcrf<T, P> for Tirf
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     P: RotationProvider<T> + TryOffset<T, Tdb> + TryOffset<T, Ut1>,
 {
     type Error = RotationError;
@@ -173,7 +173,7 @@ where
 
 impl<T, P> RotateToIcrf<T, P> for Itrf
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     P: RotationProvider<T> + TryOffset<T, Tt> + TryOffset<T, Tdb> + TryOffset<T, Ut1>,
 {
     type Error = RotationError;
@@ -191,7 +191,7 @@ where
 
 impl<T, P, C> RotateToIcrf<T, P> for Mod<C>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     C: IersSystem + Into<ReferenceSystem> + Copy,
     P: RotationProvider<T> + TryOffset<T, Tt>,
 {
@@ -208,7 +208,7 @@ where
 
 impl<T, P, C> RotateToIcrf<T, P> for Tod<C>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     C: IersSystem + Into<ReferenceSystem> + Copy,
     P: RotationProvider<T> + TryOffset<T, Tt> + TryOffset<T, Tdb>,
 {
@@ -233,7 +233,7 @@ where
 
 impl<T, P, C> RotateToIcrf<T, P> for Pef<C>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     C: IersSystem + Into<ReferenceSystem> + Copy,
     P: RotationProvider<T> + TryOffset<T, Tt> + TryOffset<T, Tdb> + TryOffset<T, Ut1>,
 {
@@ -260,7 +260,7 @@ where
 
 impl<T, P> RotateToIcrf<T, P> for Teme
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     P: RotationProvider<T> + TryOffset<T, Tt> + TryOffset<T, Tdb>,
 {
     type Error = RotationError;
@@ -278,7 +278,7 @@ where
 
 impl<T, P> RotateToIcrf<T, P> for DynFrame
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     P: RotationProvider<T> + TryOffset<T, Tt> + TryOffset<T, Tdb> + TryOffset<T, Ut1>,
 {
     type Error = RotationError;

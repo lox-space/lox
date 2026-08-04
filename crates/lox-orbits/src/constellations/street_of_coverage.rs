@@ -8,13 +8,13 @@
 
 use std::f64::consts::PI;
 
-use lox_bodies::Origin;
+use lox_bodies::CoordinateOrigin;
 use lox_core::elements::KeplerianBuilder;
 use lox_core::math::optim::{BrentMinimizer, FindBracketedMinimum};
 use lox_core::units::{Angle, Distance};
 use lox_frames::ReferenceFrame;
 use lox_time::Time;
-use lox_time::time_scales::TimeScale;
+use lox_time::time_scales::ContinuousTimeScale;
 
 use super::{Constellation, ConstellationError, ConstellationSatellite};
 
@@ -182,7 +182,7 @@ impl StreetOfCoverageBuilder {
     }
 
     /// Builds a full [`Constellation`] with the given metadata.
-    pub fn build_constellation<T: TimeScale, O: Origin, R: ReferenceFrame>(
+    pub fn build_constellation<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame>(
         &self,
         name: impl Into<String>,
         epoch: Time<T>,

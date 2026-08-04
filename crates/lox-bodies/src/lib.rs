@@ -42,8 +42,8 @@ impl Display for NaifId {
     }
 }
 
-/// `Origin` is implemented for all bodies and barycenters.
-pub trait Origin {
+/// `CoordinateOrigin` is implemented for all bodies and barycenters.
+pub trait CoordinateOrigin {
     /// Returns the NAIF ID of the origin.
     fn id(&self) -> NaifId;
     /// Returns the name of the origin.
@@ -62,13 +62,13 @@ pub struct UndefinedOriginPropertyError {
 pub type Radii = (Distance, Distance, Distance);
 
 /// Fallible accessor for the triaxial ellipsoid radii of a body.
-pub trait TryTriaxialEllipsoid: Origin {
+pub trait TryTriaxialEllipsoid: CoordinateOrigin {
     /// Returns the triaxial ellipsoid radii, or an error if undefined.
     fn try_radii(&self) -> Result<Radii, UndefinedOriginPropertyError>;
 }
 
 /// Infallible accessor for the triaxial ellipsoid radii of a body.
-pub trait TriaxialEllipsoid: Origin {
+pub trait TriaxialEllipsoid: CoordinateOrigin {
     /// Returns the triaxial ellipsoid radii.
     fn radii(&self) -> Radii;
 }
@@ -151,13 +151,13 @@ impl<T: Spheroid> TrySpheroid for T {
 }
 
 /// Fallible accessor for the mean radius of a body.
-pub trait TryMeanRadius: Origin {
+pub trait TryMeanRadius: CoordinateOrigin {
     /// Returns the mean radius, or an error if undefined.
     fn try_mean_radius(&self) -> Result<Distance, UndefinedOriginPropertyError>;
 }
 
 /// Infallible accessor for the mean radius of a body.
-pub trait MeanRadius: Origin {
+pub trait MeanRadius: CoordinateOrigin {
     /// Returns the mean radius.
     fn mean_radius(&self) -> Distance;
 }
@@ -169,13 +169,13 @@ impl<T: MeanRadius> TryMeanRadius for T {
 }
 
 /// Infallible accessor for the gravitational parameter of a body.
-pub trait PointMass: Origin {
+pub trait PointMass: CoordinateOrigin {
     /// Returns the gravitational parameter.
     fn gravitational_parameter(&self) -> GravitationalParameter;
 }
 
 /// Fallible accessor for the gravitational parameter of a body.
-pub trait TryPointMass: Origin {
+pub trait TryPointMass: CoordinateOrigin {
     /// Returns the gravitational parameter, or an error if undefined.
     fn try_gravitational_parameter(
         &self,
@@ -283,7 +283,7 @@ impl<const N: usize> RotationalElement<N> {
 pub type Elements = (f64, f64, f64);
 
 /// Infallible accessor for the rotational elements of a body.
-pub trait RotationalElements: Origin {
+pub trait RotationalElements: CoordinateOrigin {
     /// Returns the right ascension, declination, and prime meridian at epoch `t` (seconds since J2000 TDB).
     fn rotational_elements(&self, t: f64) -> Elements;
 
@@ -322,7 +322,7 @@ pub trait RotationalElements: Origin {
 }
 
 /// Fallible accessor for the rotational elements of a body.
-pub trait TryRotationalElements: Origin {
+pub trait TryRotationalElements: CoordinateOrigin {
     /// Returns the rotational elements at epoch `t`, or an error if undefined.
     fn try_rotational_elements(&self, t: f64) -> Result<Elements, UndefinedOriginPropertyError>;
 
@@ -442,7 +442,7 @@ mod tests {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     pub struct Jupiter;
 
-    impl Origin for Jupiter {
+    impl CoordinateOrigin for Jupiter {
         fn id(&self) -> NaifId {
             NaifId(599)
         }
@@ -454,7 +454,7 @@ mod tests {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     pub struct Rupert;
 
-    impl Origin for Rupert {
+    impl CoordinateOrigin for Rupert {
         fn id(&self) -> NaifId {
             NaifId(1099)
         }

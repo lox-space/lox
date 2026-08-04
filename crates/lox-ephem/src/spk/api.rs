@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use lox_bodies::Origin;
+use lox_bodies::CoordinateOrigin;
 use lox_core::coords::Cartesian;
 use lox_core::glam::DVec3;
 use lox_core::time::deltas::{Seconds, ToDelta};
@@ -211,7 +211,7 @@ impl Spk {
 impl Ephemeris for Spk {
     type Error = DafSpkError;
 
-    fn state<O1: Origin, O2: Origin>(
+    fn state<O1: CoordinateOrigin, O2: CoordinateOrigin>(
         &self,
         time: Time<Tdb>,
         origin: O1,
@@ -225,7 +225,7 @@ impl Ephemeris for Spk {
         Ok(result)
     }
 
-    fn position<O1: Origin, O2: Origin>(
+    fn position<O1: CoordinateOrigin, O2: CoordinateOrigin>(
         &self,
         time: Time<Tdb>,
         origin: O1,

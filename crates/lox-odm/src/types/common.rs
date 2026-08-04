@@ -15,7 +15,7 @@ use std::borrow::Cow;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use lox_bodies::{DynOrigin, Origin};
+use lox_bodies::{CoordinateOrigin, DynOrigin};
 use lox_core::time::calendar_dates::CalendarDate;
 use lox_core::time::time_of_day::CivilTime;
 use lox_core::units::{Area, Mass};
@@ -23,7 +23,7 @@ use lox_frames::{DynFrame, traits::ReferenceFrame};
 use lox_time::deltas::ToDelta;
 use lox_time::offsets::{DefaultOffsetProvider, OffsetProvider, TryOffset};
 use lox_time::time::{DynTime, Time};
-use lox_time::time_scales::{DynTimeScale, Tai, TimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale, Tai};
 use lox_time::utc::Utc;
 use lox_time::utc::transformations::ToUtc;
 use nalgebra::Matrix6;

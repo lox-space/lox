@@ -8,12 +8,12 @@
 
 use std::f64::consts::{PI, TAU};
 
-use lox_bodies::{Origin, TryMeanRadius, TryPointMass, TryRotationalElements};
+use lox_bodies::{CoordinateOrigin, TryMeanRadius, TryPointMass, TryRotationalElements};
 use lox_core::elements::KeplerianBuilder;
 use lox_core::units::{Angle, Distance};
 use lox_frames::ReferenceFrame;
 use lox_time::Time;
-use lox_time::time_scales::TimeScale;
+use lox_time::time_scales::ContinuousTimeScale;
 
 use super::{Constellation, ConstellationError, ConstellationSatellite};
 
@@ -149,8 +149,8 @@ impl FlowerBuilder {
         frame: R,
     ) -> Result<Constellation<T, O, R>, ConstellationError>
     where
-        T: TimeScale,
-        O: Origin + TryMeanRadius + TryPointMass + TryRotationalElements,
+        T: ContinuousTimeScale,
+        O: CoordinateOrigin + TryMeanRadius + TryPointMass + TryRotationalElements,
         R: ReferenceFrame,
     {
         let (sma, ecc) = match &self.shape {

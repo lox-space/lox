@@ -4,7 +4,8 @@
 
 use crate::bodies::dynamic::{DynOrigin, UnknownOriginId, UnknownOriginName};
 use crate::bodies::{
-    Origin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid, TryTriaxialEllipsoid,
+    CoordinateOrigin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid,
+    TryTriaxialEllipsoid,
 };
 use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyGravitationalParameter};
 use lox_core::types::units::Seconds;
@@ -49,7 +50,7 @@ impl From<PyUnknownOriginName> for PyErr {
 
 /// Represents a celestial body (planet, moon, barycenter, etc.).
 ///
-/// Origin objects represent celestial bodies using NAIF/SPICE identifiers.
+/// CoordinateOrigin objects represent celestial bodies using NAIF/SPICE identifiers.
 /// They provide access to physical properties such as gravitational parameters,
 /// radii, and rotational elements.
 ///

@@ -17,7 +17,8 @@
 //! - Hoots, F. R. & Roehrich, R. L. (1980). Spacetrack Report No. 3.
 
 use lox_bodies::{
-    DynOrigin, Origin, TryJ2, TryJ4, TryPointMass, TrySpheroid, UndefinedOriginPropertyError,
+    CoordinateOrigin, DynOrigin, TryJ2, TryJ4, TryPointMass, TrySpheroid,
+    UndefinedOriginPropertyError,
 };
 use lox_core::anomalies::AnomalyError;
 use lox_core::elements::{Keplerian, OrbitType};
@@ -25,7 +26,7 @@ use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::{DynTimeScale, TimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
 use thiserror::Error;
 
 use crate::orbits::{CartesianOrbit, KeplerianOrbit, Trajectory, TrajectoryError};
@@ -67,7 +68,7 @@ impl From<std::convert::Infallible> for J4Error {
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct J4Propagator<
-    T: TimeScale,
+    T: ContinuousTimeScale,
     O: TryJ2 + TryJ4 + TryPointMass + TrySpheroid,
     R: ReferenceFrame,
 > {
@@ -85,8 +86,8 @@ pub type DynJ4Propagator = J4Propagator<DynTimeScale, DynOrigin, DynFrame>;
 
 impl<T, O, R> J4Propagator<T, O, R>
 where
-    T: TimeScale + Copy,
-    O: TryJ2 + TryJ4 + TryPointMass + TrySpheroid + Origin + Copy,
+    T: ContinuousTimeScale + Copy,
+    O: TryJ2 + TryJ4 + TryPointMass + TrySpheroid + CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     /// Create a new J4 propagator from mean Keplerian elements.
@@ -158,8 +159,8 @@ where
 
 impl<T, O, R> Propagator<T, O> for J4Propagator<T, O, R>
 where
-    T: TimeScale + Copy + Eq,
-    O: TryJ2 + TryJ4 + TryPointMass + TrySpheroid + Origin + Copy,
+    T: ContinuousTimeScale + Copy + Eq,
+    O: TryJ2 + TryJ4 + TryPointMass + TrySpheroid + CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Frame = R;

@@ -6,10 +6,12 @@ use lox_core::coords::Cartesian;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::{DynTimeScale, TimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
 use thiserror::Error;
 
-use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
+use lox_bodies::{
+    CoordinateOrigin, DynOrigin, PointMass, TryPointMass, UndefinedOriginPropertyError,
+};
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
 use crate::propagators::{Propagator, stumpff};
@@ -37,7 +39,7 @@ pub enum ValladoError {
 /// Keplerian orbit propagator using Vallado's universal-variable formulation.
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Vallado<T: TimeScale, O: Origin, R: ReferenceFrame> {
+pub struct Vallado<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> {
     initial_state: CartesianOrbit<T, O, R>,
     max_iter: i32,
     step: Option<TimeDelta>,
@@ -49,7 +51,7 @@ pub type DynVallado = Vallado<DynTimeScale, DynOrigin, DynFrame>;
 // Infallible — static bounds guarantee inertial frame and point mass.
 impl<T, O, R> Vallado<T, O, R>
 where
-    T: TimeScale,
+    T: ContinuousTimeScale,
     O: PointMass + Copy,
     R: QuasiInertial,
 {
@@ -66,7 +68,7 @@ where
 // Fallible — Try* bounds (covers DynOrigin and DynFrame).
 impl<T, O, R> Vallado<T, O, R>
 where
-    T: TimeScale,
+    T: ContinuousTimeScale,
     O: TryPointMass + Copy,
     R: TryQuasiInertial + Copy,
 {
@@ -84,7 +86,7 @@ where
 
 impl<T, O, R> Vallado<T, O, R>
 where
-    T: TimeScale,
+    T: ContinuousTimeScale,
     O: TryPointMass + Copy,
     R: ReferenceFrame,
 {
@@ -205,7 +207,7 @@ where
 // Single impl covers both typed and DynVallado
 impl<T, O, R> Propagator<T, O> for Vallado<T, O, R>
 where
-    T: TimeScale + Copy + Eq,
+    T: ContinuousTimeScale + Copy + Eq,
     O: TryPointMass + Copy,
     R: ReferenceFrame + Copy,
 {

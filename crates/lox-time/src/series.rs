@@ -11,7 +11,7 @@ use lox_core::math::series::{InterpolationType, Series, SeriesError};
 
 use crate::deltas::TimeDelta;
 use crate::time::Time;
-use crate::time_scales::TimeScale;
+use crate::time_scales::ContinuousTimeScale;
 
 /// An interpolated 1-D data series indexed by [`Time`].
 ///
@@ -19,12 +19,12 @@ use crate::time_scales::TimeScale;
 /// by absolute [`Time`] values rather than raw `f64` offsets.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct TimeSeries<T: TimeScale> {
+pub struct TimeSeries<T: ContinuousTimeScale> {
     epoch: Time<T>,
     series: Series,
 }
 
-impl<T: TimeScale + Copy> TimeSeries<T> {
+impl<T: ContinuousTimeScale + Copy> TimeSeries<T> {
     /// Creates a new `TimeSeries` from an epoch and a pre-built [`Series`].
     pub fn new(epoch: Time<T>, series: Series) -> Self {
         Self { epoch, series }

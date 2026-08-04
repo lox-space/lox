@@ -16,7 +16,9 @@ pub use cartesian::StateToDynGroundError;
 pub use ensemble::{DynEnsemble, Ensemble};
 pub use trajectory::{DynTrajectory, Trajectory, TrajectoryError, TrajectoryTransformationError};
 
-use lox_bodies::{DynOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
+use lox_bodies::{
+    CoordinateOrigin, DynOrigin, PointMass, TryPointMass, UndefinedOriginPropertyError,
+};
 use lox_core::{
     coords::Cartesian,
     elements::{GravitationalParameter, Keplerian},
@@ -24,7 +26,7 @@ use lox_core::{
 use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::{
     Time,
-    time_scales::{DynTimeScale, TimeScale},
+    time_scales::{ContinuousTimeScale, DynTimeScale},
 };
 
 /// The state representation of an orbit, either Cartesian or Keplerian.
@@ -38,7 +40,7 @@ pub enum OrbitType {
 /// An orbital state parameterized by state representation, time scale, origin, and reference frame.
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Orbit<S, T: TimeScale, O: Origin, R: ReferenceFrame> {
+pub struct Orbit<S, T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> {
     state: S,
     time: Time<T>,
     origin: O,
@@ -50,8 +52,8 @@ pub type DynOrbit = Orbit<OrbitType, DynTimeScale, DynOrigin, DynFrame>;
 
 impl<S, T, O, R> Orbit<S, T, O, R>
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Constructs an orbit from its state, epoch, origin, and reference frame.
@@ -122,8 +124,8 @@ where
 
 impl<S, T, O, R> Orbit<S, T, O, R>
 where
-    T: TimeScale + Copy + Into<DynTimeScale>,
-    O: Origin + Copy + Into<DynOrigin>,
+    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
+    O: CoordinateOrigin + Copy + Into<DynOrigin>,
     R: ReferenceFrame + Copy + Into<DynFrame>,
 {
     /// Converts this orbit into a dynamically-typed orbit.

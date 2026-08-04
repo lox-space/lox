@@ -16,7 +16,7 @@ use lox_core::time::deltas::TimeDelta;
 use crate::{
     Time,
     offsets::{DefaultOffsetProvider, Offset},
-    time_scales::{Tai, TimeScale},
+    time_scales::{ContinuousTimeScale, Tai},
     utc::{Utc, transformations::ToUtc},
 };
 
@@ -276,7 +276,7 @@ pub type TimeDeltaInterval = Interval<TimeDelta>;
 
 impl TimeDeltaInterval {
     /// Converts this delta-based interval to a [`TimeInterval`] in the given time scale.
-    pub fn to_scale<T: TimeScale + Copy>(&self, scale: T) -> TimeInterval<T> {
+    pub fn to_scale<T: ContinuousTimeScale + Copy>(&self, scale: T) -> TimeInterval<T> {
         Interval {
             start: Time::from_delta(scale, self.start),
             end: Time::from_delta(scale, self.end),
@@ -289,7 +289,7 @@ pub type TimeInterval<T> = Interval<Time<T>>;
 
 impl<T> TimeInterval<T>
 where
-    T: ToUtc + TimeScale + Copy,
+    T: ToUtc + ContinuousTimeScale + Copy,
     DefaultOffsetProvider: Offset<T, Tai>,
 {
     /// Converts this time interval to a [`UtcInterval`].

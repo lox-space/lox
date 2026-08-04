@@ -4,7 +4,9 @@
 
 use std::collections::HashMap;
 
-use lox_bodies::{DynOrigin, Origin, TryMeanRadius, TrySpheroid, UndefinedOriginPropertyError};
+use lox_bodies::{
+    CoordinateOrigin, DynOrigin, TryMeanRadius, TrySpheroid, UndefinedOriginPropertyError,
+};
 use lox_core::glam::DVec3;
 use lox_core::math::series::{InterpolationType, Series, SeriesError};
 use lox_ephem::Ephemeris;
@@ -15,7 +17,7 @@ use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
-use lox_time::time_scales::{DynTimeScale, Tai, Tdb, TimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale, Tai, Tdb};
 use rayon::prelude::*;
 use std::f64::consts::PI;
 use thiserror::Error;
@@ -183,7 +185,7 @@ pub enum PassError {
 /// each observable channel to support interpolation.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Pass<T: TimeScale> {
+pub struct Pass<T: ContinuousTimeScale> {
     interval: TimeInterval<T>,
     times: Vec<Time<T>>,
     observables: Vec<Observables>,
@@ -234,7 +236,7 @@ impl DynPass {
     }
 }
 
-impl<T: TimeScale> Pass<T> {
+impl<T: ContinuousTimeScale> Pass<T> {
     /// Create a new Pass with Series-based interpolation.
     ///
     /// Requires at least 2 data points so that the observables can be
@@ -365,7 +367,7 @@ impl From<RotationError> for EvalError {
 /// 2. Rotates the state into the body-fixed frame via `TryRotation<R, DynFrame, Tai>`
 /// 3. Computes observables (azimuth, elevation, range, range rate)
 /// 4. Returns elevation minus minimum elevation from the mask
-struct ElevationDetectFn<'a, O: Origin, R: ReferenceFrame> {
+struct ElevationDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     gs: &'a DynGroundLocation,
     mask: &'a ElevationMask,
     sc: &'a Trajectory<Tai, O, R>,
@@ -394,7 +396,7 @@ where
 
 /// Line-of-sight between a ground station and spacecraft, relative to an
 /// occulting body.
-struct LineOfSightDetectFn<'a, O: Origin, R: ReferenceFrame, E> {
+struct LineOfSightDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
     gs: &'a DynGroundLocation,
     sc: &'a Trajectory<Tai, O, R>,
     body: DynOrigin,
@@ -434,7 +436,7 @@ where
 
 /// Line-of-sight between two spacecraft, relative to a non-central occulting body. Uses the
 /// ephemeris to compute the body position.
-struct InterSatLosOccluderDetectFn<'a, O: Origin, R: ReferenceFrame, E> {
+struct InterSatLosOccluderDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
     sc1: &'a Trajectory<Tai, O, R>,
     sc2: &'a Trajectory<Tai, O, R>,
     body: DynOrigin,
@@ -443,7 +445,7 @@ struct InterSatLosOccluderDetectFn<'a, O: Origin, R: ReferenceFrame, E> {
 
 impl<O, R, E: Ephemeris> DetectFn<Tai> for InterSatLosOccluderDetectFn<'_, O, R, E>
 where
-    O: Origin + Copy,
+    O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
     E::Error: 'static,
 {
@@ -464,7 +466,7 @@ where
 /// Line-of-sight between two spacecraft when the occluding body is the
 /// trajectories' origin. `r_body == 0` by construction, so no ephemeris
 /// lookup is required.
-struct InterSatLosCentralBodyDetectFn<'a, O: Origin, R: ReferenceFrame> {
+struct InterSatLosCentralBodyDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     sc1: &'a Trajectory<Tai, O, R>,
     sc2: &'a Trajectory<Tai, O, R>,
     body: DynOrigin,
@@ -472,7 +474,7 @@ struct InterSatLosCentralBodyDetectFn<'a, O: Origin, R: ReferenceFrame> {
 
 impl<O, R> DetectFn<Tai> for InterSatLosCentralBodyDetectFn<'_, O, R>
 where
-    O: Origin + Copy,
+    O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Error = EvalError;
@@ -493,7 +495,7 @@ enum RangeDirection {
 }
 
 /// Range threshold detector for inter-satellite pairs.
-struct InterSatelliteRangeDetectFn<'a, O: Origin, R: ReferenceFrame> {
+struct InterSatelliteRangeDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     sc1: &'a Trajectory<Tai, O, R>,
     sc2: &'a Trajectory<Tai, O, R>,
     threshold: Distance,
@@ -502,7 +504,7 @@ struct InterSatelliteRangeDetectFn<'a, O: Origin, R: ReferenceFrame> {
 
 impl<O, R> DetectFn<Tai> for InterSatelliteRangeDetectFn<'_, O, R>
 where
-    O: Origin + Copy,
+    O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Error = EvalError;
@@ -524,7 +526,7 @@ where
 /// The angular rate ω = |r × v| / |r|² is symmetric between the two
 /// spacecraft.  The detector returns `threshold - ω`, positive when the
 /// angular rate is within the limit.
-struct InterSatelliteSlewRateDetectFn<'a, O: Origin, R: ReferenceFrame> {
+struct InterSatelliteSlewRateDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     sc1: &'a Trajectory<Tai, O, R>,
     sc2: &'a Trajectory<Tai, O, R>,
     threshold: AngularRate,
@@ -532,7 +534,7 @@ struct InterSatelliteSlewRateDetectFn<'a, O: Origin, R: ReferenceFrame> {
 
 impl<O, R> DetectFn<Tai> for InterSatelliteSlewRateDetectFn<'_, O, R>
 where
-    O: Origin + Copy,
+    O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Error = EvalError;
@@ -573,7 +575,7 @@ type InterSatelliteFilter<'a> = Box<dyn Fn(&Spacecraft, &Spacecraft) -> bool + '
 /// Parameters shared by the per-pair compute functions, extracted from
 /// `VisibilityAnalysis` so that they can be passed into the parallel section
 /// without borrowing the non-`Send` filter closures.
-struct ComputeParams<'a, O: Origin, R: ReferenceFrame, E> {
+struct ComputeParams<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
     scenario: &'a Scenario<O, R>,
     ensemble: &'a Ensemble<AssetId, Tai, O, R>,
     ephemeris: &'a E,
@@ -911,7 +913,7 @@ pub struct NoEphemeris;
 /// [`with_inter_satellite`](Self::with_inter_satellite).
 ///
 /// Trajectories are looked up from a pre-computed [`Ensemble`] by asset id.
-pub struct VisibilityAnalysis<'a, O: Origin, R: ReferenceFrame, E = NoEphemeris> {
+pub struct VisibilityAnalysis<'a, O: CoordinateOrigin, R: ReferenceFrame, E = NoEphemeris> {
     scenario: &'a Scenario<O, R>,
     ensemble: &'a Ensemble<AssetId, Tai, O, R>,
     ephemeris: E,
@@ -932,7 +934,7 @@ pub struct VisibilityAnalysis<'a, O: Origin, R: ReferenceFrame, E = NoEphemeris>
 
 impl<'a, O, R, E> VisibilityAnalysis<'a, O, R, E>
 where
-    O: Origin,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Enables inter-satellite visibility computation.
@@ -1000,7 +1002,7 @@ where
 
 impl<'a, O, R, E> VisibilityAnalysis<'a, O, R, E>
 where
-    O: Origin + Copy + Send + Sync + Into<DynOrigin>,
+    O: CoordinateOrigin + Copy + Send + Sync + Into<DynOrigin>,
     R: ReferenceFrame + Copy + Send + Sync + Into<DynFrame>,
 {
     /// Convert all ground-space intervals in a [`VisibilityResults`] to passes.
@@ -1057,7 +1059,7 @@ where
 
 impl<'a, O, R> VisibilityAnalysis<'a, O, R, NoEphemeris>
 where
-    O: Origin,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Creates a new visibility analysis without an ephemeris.

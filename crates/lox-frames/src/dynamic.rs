@@ -4,7 +4,7 @@
 
 use std::str::FromStr;
 
-use lox_bodies::{DynOrigin, Origin, TryRotationalElements};
+use lox_bodies::{CoordinateOrigin, DynOrigin, TryRotationalElements};
 use thiserror::Error;
 
 use crate::{

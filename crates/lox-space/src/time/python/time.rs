@@ -406,7 +406,7 @@ impl PyTime {
     /// Return the time scale of this Time object.
     ///
     /// Returns:
-    ///     The TimeScale of this Time.
+    ///     The ContinuousTimeScale of this Time.
     pub fn scale(&self) -> PyTimeScale {
         PyTimeScale(self.0.scale())
     }

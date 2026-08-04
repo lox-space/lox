@@ -4,7 +4,7 @@
 
 use std::num::ParseFloatError;
 
-use lox_bodies::{DynOrigin, Origin};
+use lox_bodies::{CoordinateOrigin, DynOrigin};
 use lox_core::coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian};
 use lox_core::glam::DVec3;
 use lox_ephem::Ephemeris;
@@ -13,7 +13,7 @@ use lox_time::{
     Time,
     deltas::TimeDelta,
     offsets::{DefaultOffsetProvider, Offset},
-    time_scales::{DynTimeScale, Tai, Tdb, TimeScale},
+    time_scales::{ContinuousTimeScale, DynTimeScale, Tai, Tdb},
     utc::Utc,
 };
 use thiserror::Error;
@@ -31,7 +31,7 @@ use super::{CartesianOrbit, Orbit};
 /// analytical derivative of the position spline.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Trajectory<T: TimeScale, O: Origin, R: ReferenceFrame> {
+pub struct Trajectory<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> {
     epoch: Time<T>,
     origin: O,
     frame: R,
@@ -40,8 +40,8 @@ pub struct Trajectory<T: TimeScale, O: Origin, R: ReferenceFrame> {
 
 impl<T, O, R> Trajectory<T, O, R>
 where
-    T: TimeScale + Copy,
-    O: Origin + Copy,
+    T: ContinuousTimeScale + Copy,
+    O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     /// Constructs a trajectory from an iterator of Cartesian orbital states.
@@ -202,8 +202,8 @@ where
 
 impl<T, O, R> Trajectory<T, O, R>
 where
-    T: TimeScale + Copy + Into<DynTimeScale>,
-    O: Origin + Copy + Into<DynOrigin>,
+    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
+    O: CoordinateOrigin + Copy + Into<DynOrigin>,
     R: ReferenceFrame + Copy + Into<DynFrame>,
 {
     /// Converts this trajectory into a dynamically-typed trajectory.
@@ -219,8 +219,8 @@ where
 
 impl<T, O, R> Propagator<T, O> for Trajectory<T, O, R>
 where
-    T: TimeScale + Copy + Eq,
-    O: Origin + Copy,
+    T: ContinuousTimeScale + Copy + Eq,
+    O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Frame = R;
@@ -273,12 +273,12 @@ pub enum TrajectoryTransformationError {
 
 impl<T, O> Trajectory<T, O, Icrf>
 where
-    T: TimeScale + Copy,
-    O: Origin + Copy,
+    T: ContinuousTimeScale + Copy,
+    O: CoordinateOrigin + Copy,
     DefaultOffsetProvider: Offset<T, Tdb>,
 {
     /// Transforms the entire trajectory to a different central body origin using an ephemeris.
-    pub fn to_origin<O1: Origin + Copy, E: Ephemeris>(
+    pub fn to_origin<O1: CoordinateOrigin + Copy, E: Ephemeris>(
         &self,
         target: O1,
         ephemeris: &E,
@@ -306,7 +306,7 @@ where
 
 impl<O, R> Trajectory<Tai, O, R>
 where
-    O: Origin + Copy,
+    O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     /// Parses a trajectory from CSV data with columns `[time, x, y, z, vx, vy, vz]` in km and km/s.
@@ -335,8 +335,8 @@ impl DynTrajectory {
 
 impl<T, O, R> FromIterator<CartesianOrbit<T, O, R>> for Trajectory<T, O, R>
 where
-    T: TimeScale + Copy,
-    O: Origin + Copy,
+    T: ContinuousTimeScale + Copy,
+    O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     /// Delegates to [`Trajectory::new`] and inherits its panic on fewer
@@ -368,7 +368,7 @@ fn parse_csv_vec3(
     ))
 }
 
-fn parse_csv_states<O: Origin + Copy, R: ReferenceFrame + Copy>(
+fn parse_csv_states<O: CoordinateOrigin + Copy, R: ReferenceFrame + Copy>(
     csv: &str,
     origin: O,
     frame: R,

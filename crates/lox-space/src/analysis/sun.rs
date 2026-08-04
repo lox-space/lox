@@ -11,7 +11,7 @@
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 
-use lox_bodies::{NaifId, Origin};
+use lox_bodies::{CoordinateOrigin, NaifId};
 use lox_core::coords::Cartesian;
 use lox_core::glam::DVec3;
 use lox_earth::ephemeris::apparent_sun_position;
@@ -47,7 +47,7 @@ pub struct AnalyticalSunEphemeris;
 impl Ephemeris for AnalyticalSunEphemeris {
     type Error = AnalyticalSunEphemerisError;
 
-    fn state<O1: Origin, O2: Origin>(
+    fn state<O1: CoordinateOrigin, O2: CoordinateOrigin>(
         &self,
         time: Time<Tdb>,
         origin: O1,

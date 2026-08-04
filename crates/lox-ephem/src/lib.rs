@@ -7,7 +7,7 @@
 //! Ephemeris providers for solar system bodies, including SPK/DAF file support.
 
 use arrayvec::ArrayVec;
-use lox_bodies::Origin;
+use lox_bodies::CoordinateOrigin;
 use lox_core::coords::Cartesian;
 use lox_core::glam::DVec3;
 use lox_time::{Time, time_scales::Tdb};
@@ -25,7 +25,7 @@ pub trait Ephemeris {
     type Error: std::error::Error + Send + Sync;
 
     /// Returns the state (position and velocity) of `target` relative to `origin`.
-    fn state<O1: Origin, O2: Origin>(
+    fn state<O1: CoordinateOrigin, O2: CoordinateOrigin>(
         &self,
         time: Time<Tdb>,
         origin: O1,
@@ -34,7 +34,7 @@ pub trait Ephemeris {
 
     /// Returns only the position of `target` relative to `origin`.
     /// Default implementation delegates to `state()`.
-    fn position<O1: Origin, O2: Origin>(
+    fn position<O1: CoordinateOrigin, O2: CoordinateOrigin>(
         &self,
         time: Time<Tdb>,
         origin: O1,

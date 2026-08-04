@@ -5,15 +5,15 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use lox_bodies::{DynOrigin, Origin};
+use lox_bodies::{CoordinateOrigin, DynOrigin};
 use lox_frames::{DynFrame, ReferenceFrame};
-use lox_time::time_scales::{DynTimeScale, TimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
 
 use super::Trajectory;
 
 /// A collection of named trajectories keyed by an identifier type.
 #[derive(Debug, Clone)]
-pub struct Ensemble<K, T: TimeScale, O: Origin, R: ReferenceFrame>(
+pub struct Ensemble<K, T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame>(
     pub HashMap<K, Trajectory<T, O, R>>,
 )
 where
@@ -25,8 +25,8 @@ pub type DynEnsemble<K> = Ensemble<K, DynTimeScale, DynOrigin, DynFrame>;
 impl<K, T, O, R> Ensemble<K, T, O, R>
 where
     K: Eq + Hash,
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Creates a new ensemble from a map of trajectories.

@@ -8,17 +8,17 @@ use lox_core::math::float::sin;
 
 use crate::Time;
 use crate::deltas::TimeDelta;
-use crate::time_scales::{Tai, TimeScale};
+use crate::time_scales::{ContinuousTimeScale, Tai};
 use crate::utc::Utc;
 use crate::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};
 
 mod impls;
 
 /// Fallible time scale offset computation.
-pub trait TryOffset<Origin, Target>
+pub trait TryOffset<CoordinateOrigin, Target>
 where
-    Origin: TimeScale,
-    Target: TimeScale,
+    CoordinateOrigin: ContinuousTimeScale,
+    Target: ContinuousTimeScale,
 {
     /// The error type returned when the offset cannot be computed.
     type Error: core::error::Error + Send + Sync + 'static;
@@ -26,29 +26,29 @@ where
     /// Computes the offset from `origin` to `target` at the given `delta` since J2000.
     fn try_offset(
         &self,
-        origin: Origin,
+        origin: CoordinateOrigin,
         target: Target,
         delta: TimeDelta,
     ) -> Result<TimeDelta, Self::Error>;
 }
 
 /// Infallible time scale offset computation.
-pub trait Offset<Origin, Target>
+pub trait Offset<CoordinateOrigin, Target>
 where
-    Origin: TimeScale,
-    Target: TimeScale,
+    CoordinateOrigin: ContinuousTimeScale,
+    Target: ContinuousTimeScale,
 {
     /// Computes the offset from `origin` to `target` at the given `delta` since J2000.
-    fn offset(&self, origin: Origin, target: Target, delta: TimeDelta) -> TimeDelta;
+    fn offset(&self, origin: CoordinateOrigin, target: Target, delta: TimeDelta) -> TimeDelta;
 }
 
-impl<T, Origin, Target> Offset<Origin, Target> for T
+impl<T, CoordinateOrigin, Target> Offset<CoordinateOrigin, Target> for T
 where
-    Origin: TimeScale,
-    Target: TimeScale,
-    T: TryOffset<Origin, Target, Error = Infallible>,
+    CoordinateOrigin: ContinuousTimeScale,
+    Target: ContinuousTimeScale,
+    T: TryOffset<CoordinateOrigin, Target, Error = Infallible>,
 {
-    fn offset(&self, origin: Origin, target: Target, delta: TimeDelta) -> TimeDelta {
+    fn offset(&self, origin: CoordinateOrigin, target: Target, delta: TimeDelta) -> TimeDelta {
         self.try_offset(origin, target, delta).unwrap()
     }
 }
@@ -233,9 +233,9 @@ fn two_step_offset<P, T1, T2, T3>(
     delta: TimeDelta,
 ) -> TimeDelta
 where
-    T1: TimeScale,
-    T2: TimeScale + Copy,
-    T3: TimeScale,
+    T1: ContinuousTimeScale,
+    T2: ContinuousTimeScale + Copy,
+    T3: ContinuousTimeScale,
     P: Offset<T1, T2> + Offset<T2, T3>,
 {
     let mut offset = provider.offset(origin, via, delta);

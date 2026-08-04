@@ -12,7 +12,7 @@ pub use lox_core::math::zero_crossing::ZeroCrossing;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::TimeScale;
+use lox_time::time_scales::ContinuousTimeScale;
 use thiserror::Error;
 
 // ---------------------------------------------------------------------------
@@ -22,12 +22,12 @@ use thiserror::Error;
 /// A zero-crossing event at a specific time.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Event<T: TimeScale> {
+pub struct Event<T: ContinuousTimeScale> {
     crossing: ZeroCrossing,
     time: Time<T>,
 }
 
-impl<T: TimeScale> Event<T> {
+impl<T: ContinuousTimeScale> Event<T> {
     /// Creates a new event at the given time with the specified crossing direction.
     pub fn new(time: Time<T>, crossing: ZeroCrossing) -> Self {
         Self { crossing, time }
@@ -64,7 +64,7 @@ pub enum DetectError {
 // ---------------------------------------------------------------------------
 
 /// Scalar function whose zero-crossings define events.
-pub trait DetectFn<T: TimeScale> {
+pub trait DetectFn<T: ContinuousTimeScale> {
     /// The error type returned by [`eval`](Self::eval).
     type Error: std::error::Error + Send + Sync + 'static;
     /// Evaluates the detection function at the given time.
@@ -72,13 +72,13 @@ pub trait DetectFn<T: TimeScale> {
 }
 
 /// Detects instantaneous events (zero-crossings) within a time interval.
-pub trait EventDetector<T: TimeScale> {
+pub trait EventDetector<T: ContinuousTimeScale> {
     /// Detects all zero-crossing events within the given time interval.
     fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<Event<T>>, DetectError>;
 }
 
 /// Detects intervals where a condition holds within a time interval.
-pub trait IntervalDetector<T: TimeScale> {
+pub trait IntervalDetector<T: ContinuousTimeScale> {
     /// Detects all sub-intervals where the condition holds.
     fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError>;
 }
@@ -89,26 +89,26 @@ pub trait IntervalDetector<T: TimeScale> {
 
 /// A `Callback`-compatible wrapper that bridges `DetectFn` to the root-finder
 /// interface.
-pub(crate) struct DetectCallback<'a, T: TimeScale, F: DetectFn<T>> {
+pub(crate) struct DetectCallback<'a, T: ContinuousTimeScale, F: DetectFn<T>> {
     func: &'a F,
     start: Time<T>,
 }
 
-impl<T: TimeScale + Copy, F: DetectFn<T>> Clone for DetectCallback<'_, T, F> {
+impl<T: ContinuousTimeScale + Copy, F: DetectFn<T>> Clone for DetectCallback<'_, T, F> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<T: TimeScale + Copy, F: DetectFn<T>> Copy for DetectCallback<'_, T, F> {}
+impl<T: ContinuousTimeScale + Copy, F: DetectFn<T>> Copy for DetectCallback<'_, T, F> {}
 
-impl<'a, T: TimeScale + Copy, F: DetectFn<T>> DetectCallback<'a, T, F> {
+impl<'a, T: ContinuousTimeScale + Copy, F: DetectFn<T>> DetectCallback<'a, T, F> {
     fn new(func: &'a F, start: Time<T>) -> Self {
         Self { func, start }
     }
 }
 
-impl<T: TimeScale + Copy, F: DetectFn<T>> Callback for DetectCallback<'_, T, F> {
+impl<T: ContinuousTimeScale + Copy, F: DetectFn<T>> Callback for DetectCallback<'_, T, F> {
     fn call(&self, v: f64) -> Result<f64, LoxError> {
         let time = self.start + TimeDelta::from_seconds_f64(v);
         self.func.eval(time).map_err(LoxError::new)
@@ -186,7 +186,7 @@ impl<F, R> RootFindingDetector<F, R> {
         interval: TimeInterval<T>,
     ) -> Result<(Vec<Event<T>>, f64), DetectError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         F: DetectFn<T>,
         for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
     {
@@ -214,7 +214,7 @@ impl<F, R> RootFindingDetector<F, R> {
         step_seconds: f64,
     ) -> Result<(Vec<Event<T>>, f64), DetectError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         F: DetectFn<T>,
         for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
     {
@@ -263,7 +263,7 @@ impl<F, R> RootFindingDetector<F, R> {
         coarse_seconds: f64,
     ) -> Result<(Vec<Event<T>>, f64), DetectError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         F: DetectFn<T>,
         for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
     {
@@ -331,7 +331,7 @@ impl<F, R> RootFindingDetector<F, R> {
 
 impl<T, F, R> EventDetector<T> for RootFindingDetector<F, R>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     F: DetectFn<T>,
     for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
 {
@@ -371,7 +371,7 @@ impl<F, R> EventsToIntervals<F, R> {
 
 impl<T, F, R> IntervalDetector<T> for EventsToIntervals<F, R>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     F: DetectFn<T>,
     for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
 {
@@ -430,7 +430,7 @@ pub struct Intersection<A, B> {
 
 impl<T, A, B> IntervalDetector<T> for Intersection<A, B>
 where
-    T: TimeScale + Ord + Copy,
+    T: ContinuousTimeScale + Ord + Copy,
     A: IntervalDetector<T>,
     B: IntervalDetector<T>,
 {
@@ -449,7 +449,7 @@ pub struct Union<A, B> {
 
 impl<T, A, B> IntervalDetector<T> for Union<A, B>
 where
-    T: TimeScale + Ord + Copy,
+    T: ContinuousTimeScale + Ord + Copy,
     A: IntervalDetector<T>,
     B: IntervalDetector<T>,
 {
@@ -467,7 +467,7 @@ pub struct Complement<D> {
 
 impl<T, D> IntervalDetector<T> for Complement<D>
 where
-    T: TimeScale + Ord + Copy,
+    T: ContinuousTimeScale + Ord + Copy,
     D: IntervalDetector<T>,
 {
     fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
@@ -484,7 +484,7 @@ pub struct Chain<A, B> {
 
 impl<T, A, B> IntervalDetector<T> for Chain<A, B>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     A: IntervalDetector<T>,
     B: IntervalDetector<T>,
 {
@@ -503,7 +503,7 @@ where
 // ---------------------------------------------------------------------------
 
 /// Extension trait providing combinator methods for [`IntervalDetector`] implementations.
-pub trait IntervalDetectorExt<T: TimeScale>: IntervalDetector<T> + Sized {
+pub trait IntervalDetectorExt<T: ContinuousTimeScale>: IntervalDetector<T> + Sized {
     /// Returns intervals where both `self` and `other` are active (intersection).
     fn intersect<B>(self, other: B) -> Intersection<Self, B> {
         Intersection { a: self, b: other }
@@ -525,19 +525,19 @@ pub trait IntervalDetectorExt<T: TimeScale>: IntervalDetector<T> + Sized {
     }
 }
 
-impl<T: TimeScale, D: IntervalDetector<T>> IntervalDetectorExt<T> for D {}
+impl<T: ContinuousTimeScale, D: IntervalDetector<T>> IntervalDetectorExt<T> for D {}
 
 // ---------------------------------------------------------------------------
 // IntervalDetector impls for boxed trait objects
 // ---------------------------------------------------------------------------
 
-impl<T: TimeScale> IntervalDetector<T> for Box<dyn IntervalDetector<T> + '_> {
+impl<T: ContinuousTimeScale> IntervalDetector<T> for Box<dyn IntervalDetector<T> + '_> {
     fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
         (**self).detect(interval)
     }
 }
 
-impl<T: TimeScale> IntervalDetector<T> for Box<dyn IntervalDetector<T> + Send + '_> {
+impl<T: ContinuousTimeScale> IntervalDetector<T> for Box<dyn IntervalDetector<T> + Send + '_> {
     fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
         (**self).detect(interval)
     }
@@ -552,7 +552,7 @@ pub struct FnDetect<F>(pub F);
 
 impl<T, F> DetectFn<T> for FnDetect<F>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     F: Fn(Time<T>) -> f64,
 {
     type Error = std::convert::Infallible;
@@ -566,7 +566,7 @@ pub struct TryFnDetect<F>(pub F);
 
 impl<T, F, E> DetectFn<T> for TryFnDetect<F>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     F: Fn(Time<T>) -> Result<f64, E>,
     E: std::error::Error + Send + Sync + 'static,
 {
@@ -593,7 +593,7 @@ mod tests {
 
     impl<'a, T, F> DetectFn<T> for CountingDetectFn<'a, F>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         F: Fn(Time<T>) -> f64,
     {
         type Error = std::convert::Infallible;

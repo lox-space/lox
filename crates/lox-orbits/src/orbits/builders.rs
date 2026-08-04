@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_bodies::{Earth, Origin, TryMeanRadius, TrySpheroid};
+use lox_bodies::{CoordinateOrigin, Earth, TryMeanRadius, TrySpheroid};
 use lox_core::elements::{KeplerianBuilder, KeplerianError};
 use lox_core::units::{Angle, Distance};
 use lox_frames::Icrf;
 use lox_time::Time;
-use lox_time::time_scales::{Tai, TimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, Tai};
 use thiserror::Error;
 
 use crate::orbits::KeplerianOrbit;
@@ -46,7 +46,7 @@ enum Shape {
 
 /// Builder for constructing Keplerian orbits from orbital elements.
 #[derive(Debug, Clone)]
-pub struct KeplerianOrbitBuilder<T: TimeScale, O: Origin> {
+pub struct KeplerianOrbitBuilder<T: ContinuousTimeScale, O: CoordinateOrigin> {
     time: Time<T>,
     origin: O,
     shape: Option<Shape>,
@@ -80,9 +80,9 @@ impl KeplerianOrbitBuilder<Tai, Earth> {
 }
 
 // Typestate: change time scale
-impl<S: TimeScale, O: Origin> KeplerianOrbitBuilder<S, O> {
+impl<S: ContinuousTimeScale, O: CoordinateOrigin> KeplerianOrbitBuilder<S, O> {
     /// Sets the epoch and changes the time scale.
-    pub fn with_time<T: TimeScale>(self, time: Time<T>) -> KeplerianOrbitBuilder<T, O> {
+    pub fn with_time<T: ContinuousTimeScale>(self, time: Time<T>) -> KeplerianOrbitBuilder<T, O> {
         KeplerianOrbitBuilder {
             time,
             origin: self.origin,
@@ -96,7 +96,7 @@ impl<S: TimeScale, O: Origin> KeplerianOrbitBuilder<S, O> {
     }
 
     /// Sets the central body origin.
-    pub fn with_origin<N: Origin>(self, origin: N) -> KeplerianOrbitBuilder<S, N> {
+    pub fn with_origin<N: CoordinateOrigin>(self, origin: N) -> KeplerianOrbitBuilder<S, N> {
         KeplerianOrbitBuilder {
             time: self.time,
             origin,
@@ -110,7 +110,7 @@ impl<S: TimeScale, O: Origin> KeplerianOrbitBuilder<S, O> {
     }
 }
 
-impl<T: TimeScale, O: Origin> KeplerianOrbitBuilder<T, O> {
+impl<T: ContinuousTimeScale, O: CoordinateOrigin> KeplerianOrbitBuilder<T, O> {
     /// Sets the orbital shape via semi-major axis and eccentricity.
     pub fn with_semi_major_axis(mut self, semi_major_axis: Distance, eccentricity: f64) -> Self {
         self.shape = Some(Shape::SemiMajorAxis(semi_major_axis, eccentricity));
@@ -221,7 +221,7 @@ enum CircularSize {
 
 /// Builder for constructing circular orbits (eccentricity = 0).
 #[derive(Debug, Clone)]
-pub struct CircularBuilder<T: TimeScale, O: Origin> {
+pub struct CircularBuilder<T: ContinuousTimeScale, O: CoordinateOrigin> {
     time: Time<T>,
     origin: O,
     size: Option<CircularSize>,
@@ -251,9 +251,9 @@ impl CircularBuilder<Tai, Earth> {
 }
 
 // Typestate: change time scale
-impl<S: TimeScale, O: Origin> CircularBuilder<S, O> {
+impl<S: ContinuousTimeScale, O: CoordinateOrigin> CircularBuilder<S, O> {
     /// Sets the epoch and changes the time scale.
-    pub fn with_time<T: TimeScale>(self, time: Time<T>) -> CircularBuilder<T, O> {
+    pub fn with_time<T: ContinuousTimeScale>(self, time: Time<T>) -> CircularBuilder<T, O> {
         CircularBuilder {
             time,
             origin: self.origin,
@@ -265,7 +265,7 @@ impl<S: TimeScale, O: Origin> CircularBuilder<S, O> {
     }
 
     /// Sets the central body origin.
-    pub fn with_origin<N: Origin>(self, origin: N) -> CircularBuilder<S, N> {
+    pub fn with_origin<N: CoordinateOrigin>(self, origin: N) -> CircularBuilder<S, N> {
         CircularBuilder {
             time: self.time,
             origin,
@@ -277,7 +277,7 @@ impl<S: TimeScale, O: Origin> CircularBuilder<S, O> {
     }
 }
 
-impl<T: TimeScale, O: Origin> CircularBuilder<T, O> {
+impl<T: ContinuousTimeScale, O: CoordinateOrigin> CircularBuilder<T, O> {
     /// Sets the orbit size via semi-major axis.
     pub fn with_semi_major_axis(mut self, semi_major_axis: Distance) -> Self {
         self.size = Some(CircularSize::SemiMajorAxis(semi_major_axis));
