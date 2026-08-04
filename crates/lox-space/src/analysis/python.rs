@@ -43,7 +43,7 @@ use lox_orbits::orbits::Ensemble;
 use lox_orbits::propagators::OrbitSource;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
-use lox_time::time_scales::{Tai, TimeScale};
+use lox_time::time_scales::Tai;
 use lox_units::{Angle, Distance, Velocity};
 
 use numpy::{PyArray1, PyArrayMethods};
@@ -79,7 +79,7 @@ impl From<PyElevationMaskError> for PyErr {
 ///     crossing: The crossing direction ("up" or "down").
 #[pyclass(name = "Event", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
-pub struct PyEvent(pub Event<TimeScale>);
+pub struct PyEvent(pub Event);
 
 #[pymethods]
 impl PyEvent {
@@ -1369,9 +1369,8 @@ impl PyPowerBudgetAnalysis {
 }
 
 /// Convert a `TimeSeries<Tai>` to a `PyTimeSeries` (which uses `TimeScale`).
-fn to_py_time_series(ts: &TimeSeries<Tai>) -> PyTimeSeries {
-    let dynamic_ts = TimeSeries::new(ts.epoch().into_dynamic(), ts.series().clone());
-    PyTimeSeries(dynamic_ts)
+fn to_py_time_series(ts: &TimeSeries) -> PyTimeSeries {
+    PyTimeSeries(ts.clone())
 }
 
 /// Results of a power budget analysis.
