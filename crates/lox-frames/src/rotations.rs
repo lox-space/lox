@@ -18,7 +18,6 @@ use thiserror::Error;
 
 use crate::{
     Iau, ReferenceFrame,
-    iau::icrf_to_iau,
     iers::{
         Corrections, ReferenceSystem,
         cio::CioLocator,
@@ -27,8 +26,11 @@ use crate::{
         polar_motion::PoleCoords,
         precession::frame_bias,
     },
+    rotations::to_iau::icrf_to_iau,
 };
 
+/// IAU body-fixed frame rotation calculations.
+pub mod to_iau;
 /// Hub-based rotation composition through ICRF.
 pub mod to_icrf;
 

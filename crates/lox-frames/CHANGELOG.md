@@ -10,6 +10,10 @@ SPDX-License-Identifier: MPL-2.0
 
 ### Changed
 
+- [**breaking**] move the top-level `iau` module to `rotations::to_iau`, beside `rotations::to_icrf`
+
+### Changed
+
 - merge the `Frame` enum into the `frames` module; the crate no longer has a `frame` module beside `frames`
 
 ### Changed
