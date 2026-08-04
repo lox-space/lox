@@ -9,8 +9,6 @@
 /// Reference frame types: the zero-sized marker types and the [`frames::Frame`]
 /// enum covering the same set at runtime.
 pub mod frames;
-/// IAU body-fixed frame rotation calculations.
-pub mod iau;
 /// IERS reference systems, conventions, and Earth orientation sub-models.
 pub mod iers;
 /// Default rotation provider (no EOP data).
