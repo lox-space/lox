@@ -77,7 +77,11 @@ fn build_metadata_section(opm: &Opm) -> KvnSection {
         entries.push(fld("REF_FRAME_EPOCH", epoch.iso(), None));
     }
 
-    entries.push(fld("TIME_SYSTEM", opm.epoch.time_system(), None));
+    entries.push(fld(
+        "TIME_SYSTEM",
+        opm.epoch.time_system().abbreviation(),
+        None,
+    ));
 
     KvnSection {
         keyword: "METADATA".to_string(),

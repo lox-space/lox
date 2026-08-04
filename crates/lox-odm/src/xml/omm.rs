@@ -349,7 +349,7 @@ impl From<&Omm> for OmmXml {
             center_name: omm.metadata.center.name().into_owned(),
             ref_frame: omm.metadata.frame.name().into_owned(),
             ref_frame_epoch: omm.metadata.frame_epoch.map(|e| e.iso()),
-            time_system: omm.epoch.time_system().to_string(),
+            time_system: omm.epoch.time_system().abbreviation().to_string(),
             mean_element_theory: omm.metadata.mean_element_theory.clone(),
         };
 

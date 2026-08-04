@@ -18,7 +18,7 @@ use lox_core::units::Angle;
 use lox_core::units::{Distance, Velocity};
 use lox_frames::DynFrame;
 use lox_odm::Format;
-use lox_odm::types::common::OdmTimeScale;
+use lox_odm::types::common::OdmTimeSystem;
 use lox_orbits::odm::{OmmBuildError, OmmWriteError};
 use lox_orbits::orbits::{DynCartesianOrbit, DynKeplerianOrbit, DynTrajectory, Orbit, Trajectory};
 use lox_orbits::propagators::sgp4::Sgp4;
@@ -260,11 +260,11 @@ fn opm_utc_silently_widens_to_tai_without_override() {
 
     let reparsed = lox_odm::read_opm(&kvn).unwrap();
     // Source was UTC; default round-trip lands in TAI.
-    assert_eq!(reparsed.epoch.scale(), OdmTimeScale::Tai);
+    assert_eq!(reparsed.epoch.time_system(), OdmTimeSystem::Tai);
     assert!(kvn.contains("TIME_SYSTEM = TAI"));
 }
 
-/// With `.time_system(OdmTimeScale::Utc)`, the same round-trip preserves the
+/// With `.time_system(OdmTimeSystem::Utc)`, the same round-trip preserves the
 /// original UTC wire-format. This is the documented escape hatch from the
 /// review's NEW-I2 finding.
 #[test]
@@ -273,12 +273,12 @@ fn opm_time_system_override_preserves_utc() {
     let kvn = orbit
         .build_opm("EUTELSAT W4", "2021-028A")
         .originator("ROUND_TRIP")
-        .time_system(OdmTimeScale::Utc)
+        .time_system(OdmTimeSystem::Utc)
         .write_str(Format::Kvn)
         .unwrap();
 
     let reparsed = lox_odm::read_opm(&kvn).unwrap();
-    assert_eq!(reparsed.epoch.scale(), OdmTimeScale::Utc);
+    assert_eq!(reparsed.epoch.time_system(), OdmTimeSystem::Utc);
     assert!(kvn.contains("TIME_SYSTEM = UTC"), "got:\n{kvn}");
 
     // EPOCH itself round-trips losslessly under UTC.
@@ -293,12 +293,12 @@ fn opm_time_system_override_to_gps() {
     let kvn = orbit
         .build_opm("EUTELSAT W4", "2021-028A")
         .originator("ROUND_TRIP")
-        .time_system(OdmTimeScale::Gps)
+        .time_system(OdmTimeSystem::Gps)
         .write_str(Format::Kvn)
         .unwrap();
 
     let reparsed = lox_odm::read_opm(&kvn).unwrap();
-    assert_eq!(reparsed.epoch.scale(), OdmTimeScale::Gps);
+    assert_eq!(reparsed.epoch.time_system(), OdmTimeSystem::Gps);
     assert!(kvn.contains("TIME_SYSTEM = GPS"));
 }
 
@@ -308,14 +308,14 @@ fn oem_time_system_override_preserves_utc() {
     let kvn = sample_dyn_trajectory()
         .build_oem("TEST-SAT", "2024-IT-001A")
         .originator("ROUND_TRIP")
-        .time_system(OdmTimeScale::Utc)
+        .time_system(OdmTimeSystem::Utc)
         .write_str(Format::Kvn)
         .unwrap();
 
     let reparsed = lox_odm::read_oem(&kvn).unwrap();
     let seg = &reparsed.segments[0];
-    assert_eq!(seg.metadata.start_time.scale(), OdmTimeScale::Utc);
-    assert_eq!(seg.metadata.stop_time.scale(), OdmTimeScale::Utc);
+    assert_eq!(seg.metadata.start_time.time_system(), OdmTimeSystem::Utc);
+    assert_eq!(seg.metadata.stop_time.time_system(), OdmTimeSystem::Utc);
     assert!(kvn.contains("TIME_SYSTEM = UTC"));
 }
 

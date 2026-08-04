@@ -80,7 +80,11 @@ fn build_metadata_section(omm: &Omm) -> KvnSection {
         entries.push(fld("REF_FRAME_EPOCH", epoch.iso(), None));
     }
 
-    entries.push(fld("TIME_SYSTEM", omm.epoch.time_system(), None));
+    entries.push(fld(
+        "TIME_SYSTEM",
+        omm.epoch.time_system().abbreviation(),
+        None,
+    ));
     entries.push(fld(
         "MEAN_ELEMENT_THEORY",
         &omm.metadata.mean_element_theory,
