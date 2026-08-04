@@ -40,7 +40,7 @@ pub struct PyTimeScale(pub TimeScale);
 #[pymethods]
 impl PyTimeScale {
     #[new]
-    /// Constructs a `ContinuousTimeScale` from its abbreviation string (e.g., `"TAI"`).
+    /// Constructs a `TimeScale` from its abbreviation string (e.g., `"TAI"`).
     pub fn new(abbreviation: &str) -> PyResult<Self> {
         Ok(PyTimeScale(
             abbreviation.parse().map_err(PyUnknownTimeScaleError)?,
@@ -50,12 +50,12 @@ impl PyTimeScale {
         (self.abbreviation(),)
     }
 
-    /// Returns the developer representation of the `ContinuousTimeScale`.
+    /// Returns the developer representation of the `TimeScale`.
     pub fn __repr__(&self) -> String {
         format!("TimeScale(\"{}\")", self.0)
     }
 
-    /// Returns the abbreviation string of the `ContinuousTimeScale`.
+    /// Returns the abbreviation string of the `TimeScale`.
     pub fn __str__(&self) -> String {
         format!("{}", self.0)
     }

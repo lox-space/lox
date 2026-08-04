@@ -16,7 +16,12 @@ use crate::{
     },
 };
 
-/// Enum representation of all known reference frames, for dynamic dispatch.
+/// A reference frame determined at runtime.
+///
+/// Covers the same set of frames as the zero-sized frame types, as a single
+/// closed enum. Because the frame is not known statically, frame properties
+/// are reached through the fallible checks ([`TryQuasiInertial`],
+/// [`TryBodyFixed`]) rather than the marker traits.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Frame {

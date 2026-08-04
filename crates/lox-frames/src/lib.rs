@@ -6,8 +6,7 @@
 
 //! Reference frames, rotations, and coordinate transformations.
 
-/// Dynamic dispatch enum for reference frames.
-pub mod dynamic;
+mod frame;
 /// Concrete reference frame marker types.
 pub mod frames;
 /// IAU body-fixed frame rotation calculations.
@@ -21,7 +20,7 @@ pub mod rotations;
 /// Core reference frame traits.
 pub mod traits;
 
-pub use dynamic::{Frame, UnknownFrameError};
+pub use frame::{Frame, UnknownFrameError};
 pub use frames::{Cirf, Iau, Icrf, Itrf, J2000, Teme, Tirf};
 pub use traits::{
     BodyFixed, NonBodyFixedFrameError, NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame,

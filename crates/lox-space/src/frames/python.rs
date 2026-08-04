@@ -2,10 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::frames::{
-    dynamic::{Frame, UnknownFrameError},
-    traits::ReferenceFrame,
-};
+use crate::frames::{Frame, UnknownFrameError, traits::ReferenceFrame};
 use lox_frames::rotations::RotationError;
 use pyo3::{
     PyErr, PyResult, create_exception,
@@ -14,7 +11,7 @@ use pyo3::{
     pyclass, pymethods,
 };
 
-/// PyO3 error wrapper for [`lox_frames::dynamic::UnknownFrameError`].
+/// PyO3 error wrapper for [`lox_frames::UnknownFrameError`].
 pub struct PyUnknownFrameError(pub UnknownFrameError);
 
 impl From<PyUnknownFrameError> for PyErr {

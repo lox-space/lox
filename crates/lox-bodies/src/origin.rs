@@ -19,7 +19,13 @@ pub struct UnknownOriginName(String);
 #[error("no origin with NAIF ID `{0}` is known")]
 pub struct UnknownOriginId(i32);
 
-/// Enum representation of all known origins, for use in dynamic dispatch contexts.
+/// An origin determined at runtime.
+///
+/// Covers the same set of bodies and barycenters as the zero-sized origin
+/// types, as a single closed enum. Because the origin is not known
+/// statically, physical properties are reached through the fallible
+/// accessors ([`crate::TryPointMass`], [`crate::TrySpheroid`], …) rather than their
+/// infallible counterparts.
 #[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(i32)]
