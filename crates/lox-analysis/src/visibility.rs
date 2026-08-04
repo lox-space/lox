@@ -24,10 +24,12 @@ use thiserror::Error;
 
 use lox_core::units::{AngularRate, Distance};
 
+use lox_core::error::LoxError;
+
 use crate::assets::{AssetId, GroundStation, Scenario, Spacecraft};
 use crate::events::{
-    DetectError, DetectFn, EventsToIntervals, IntervalDetector, IntervalDetectorExt,
-    RootFindingDetector,
+    AdaptiveSampler, DetectError, DetectFn, DetectFnExt as _, Differentiable, IntervalIterExt as _,
+    RateBounded, UniformSampler,
 };
 use lox_orbits::ground::{GroundLocation, Observables};
 use lox_orbits::orbits::{Ensemble, Trajectory};
@@ -343,6 +345,14 @@ pub enum EvalError {
     Ephemeris(Box<dyn std::error::Error + Send + Sync>),
 }
 
+// `events::DetectFn` requires `Error: Into<LoxError>` so the lazy machinery can
+// erase detector-specific errors.
+impl From<EvalError> for LoxError {
+    fn from(e: EvalError) -> Self {
+        LoxError::new(e)
+    }
+}
+
 impl From<RotationError> for EvalError {
     fn from(e: RotationError) -> Self {
         EvalError::Rotation(Box::new(e))
@@ -387,6 +397,50 @@ where
     }
 }
 
+impl<O, R> RateBounded for ElevationDetectFn<'_, O, R>
+where
+    O: TrySpheroid + Copy,
+    R: ReferenceFrame + Copy,
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
+    <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
+        std::error::Error + Send + Sync + 'static,
+{
+    fn eval_bounded(&self, time: Time) -> Result<(f64, f64), Self::Error> {
+        let sc = self.sc.at(time);
+        let sc = sc
+            .try_to_frame(self.body_fixed_frame, &DefaultRotationProvider)
+            .map_err(|e| EvalError::Rotation(Box::new(e)))?;
+        let obs = self.gs.compute_observables(sc.position(), sc.velocity());
+        let value = obs.elevation() - self.mask.min_elevation(obs.azimuth());
+
+        // The topocentric elevation-angle rate is bounded by the transverse
+        // angular rate of the line-of-sight vector, |v_bf| / range (the
+        // body-fixed velocity is the analytic derivative of the interpolated
+        // position). A fixed mask contributes no azimuth-dependent term, so
+        // this bounds the whole crossing function. Azimuth-varying masks would
+        // additionally need the mask slope; until that is modelled they report
+        // an unbounded rate, which degrades adaptive stepping to the fixed step.
+        let bound = match self.mask {
+            ElevationMask::Fixed(_) => {
+                let range = obs.range();
+                if range > 0.0 {
+                    sc.velocity().length() / range
+                } else {
+                    f64::INFINITY
+                }
+            }
+            ElevationMask::Variable(_) => f64::INFINITY,
+        };
+        Ok((value, bound))
+    }
+}
+
+/// Computes visibility windows for a (ground, space) pair via the lazy
+/// [`events`] scan.
+///
+/// Mirrors the elevation-only eager path, including the `min_pass_duration` →
+/// coarse-step conversion. With `adaptive`, the scan strides by the detect
+/// function's rate bound and `step` acts as the minimum stride.
 /// Line-of-sight between a ground station and spacecraft, relative to an
 /// occulting body.
 struct LineOfSightDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
@@ -514,6 +568,51 @@ where
     }
 }
 
+impl<O, R> RateBounded for InterSatelliteRangeDetectFn<'_, O, R>
+where
+    O: CoordinateOrigin + Copy,
+    R: ReferenceFrame + Copy,
+{
+    fn eval_bounded(&self, time: Time) -> Result<(f64, f64), Self::Error> {
+        let s1 = self.sc1.at(time);
+        let s2 = self.sc2.at(time);
+        let range = (s1.position() - s2.position()).length();
+        let threshold = self.threshold.to_meters();
+        let value = match self.direction {
+            RangeDirection::Max => threshold - range,
+            RangeDirection::Min => range - threshold,
+        };
+        // d/dt (±range) = ±(r·v)/|r|, so |d/dt| ≤ |v_rel| by Cauchy–Schwarz.
+        // Velocity is the analytic derivative of the position interpolant, so
+        // this bound comes free from the same `at` lookups.
+        let bound = (s1.velocity() - s2.velocity()).length();
+        Ok((value, bound))
+    }
+}
+
+impl<O, R> Differentiable for InterSatelliteRangeDetectFn<'_, O, R>
+where
+    O: CoordinateOrigin + Copy,
+    R: ReferenceFrame + Copy,
+{
+    fn eval_derivative(&self, time: Time) -> Result<(f64, f64), Self::Error> {
+        let s1 = self.sc1.at(time);
+        let s2 = self.sc2.at(time);
+        let r = s1.position() - s2.position();
+        let v = s1.velocity() - s2.velocity();
+        let range = r.length();
+        // d/dt |r| = (r·v)/|r|; zero relative separation has no well-defined
+        // rate, so report a flat derivative there.
+        let d_range = if range > 0.0 { r.dot(v) / range } else { 0.0 };
+        let threshold = self.threshold.to_meters();
+        let (value, derivative) = match self.direction {
+            RangeDirection::Max => (threshold - range, -d_range),
+            RangeDirection::Min => (range - threshold, d_range),
+        };
+        Ok((value, derivative))
+    }
+}
+
 /// Slew rate (angular rate) threshold detector for inter-satellite pairs.
 ///
 /// The angular rate ω = |r × v| / |r|² is symmetric between the two
@@ -577,6 +676,7 @@ struct ComputeParams<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
     min_pass_duration: Option<TimeDelta>,
     min_range: Option<Distance>,
     max_range: Option<Distance>,
+    adaptive: bool,
 }
 
 impl<O, R, E> ComputeParams<'_, O, R, E>
@@ -591,18 +691,14 @@ where
     <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
-    /// Apply `min_pass_duration` → `coarse_step` conversion to a detector.
-    fn apply_coarse_step<F>(&self, det: RootFindingDetector<F>) -> RootFindingDetector<F> {
+    /// The scan step, widened when `min_pass_duration` allows a coarser sweep.
+    ///
+    /// A pass shorter than the step can be missed, so half the minimum pass
+    /// duration is the coarsest safe stride.
+    fn scan_step(&self) -> TimeDelta {
         match self.min_pass_duration {
-            Some(d) => {
-                let coarse = TimeDelta::from_seconds_f64(d.to_seconds().to_f64() / 2.0);
-                if coarse > self.step {
-                    det.with_coarse_step(coarse)
-                } else {
-                    det
-                }
-            }
-            None => det,
+            Some(d) if 0.5 * d > self.step => 0.5 * d,
+            _ => self.step,
         }
     }
 
@@ -614,43 +710,56 @@ where
         interval: TimeInterval,
     ) -> Result<Vec<TimeInterval>, VisibilityError> {
         let body_fixed_frame = gs.body_fixed_frame();
+        let step = self.scan_step();
 
-        let make_elev = || {
-            let det = RootFindingDetector::new(
-                ElevationDetectFn {
-                    gs: gs.location(),
-                    mask: gs.mask(),
-                    sc: sc_traj,
-                    body_fixed_frame,
-                },
-                self.step,
-            );
-            EventsToIntervals::new(self.apply_coarse_step(det))
+        let elev = ElevationDetectFn {
+            gs: gs.location(),
+            mask: gs.mask(),
+            sc: sc_traj,
+            body_fixed_frame,
         };
+
+        // Elevation is the cheap constraint and always runs over the whole
+        // window; `adaptive` lets it stride by its own rate bound.
+        let elev_windows: Box<dyn Iterator<Item = Result<TimeInterval, DetectError>> + '_> =
+            if self.adaptive {
+                Box::new(elev.into_intervals(
+                    AdaptiveSampler::new(step, interval.duration().max(step)),
+                    interval,
+                ))
+            } else {
+                Box::new(elev.into_intervals(UniformSampler::new(step), interval))
+            };
 
         if self.occulting_bodies.is_empty() {
-            return Ok(make_elev().detect(interval)?);
+            return Ok(elev_windows.collect::<Result<_, _>>()?);
         }
 
-        let make_los = |body: Origin| {
-            EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
+        // Line of sight needs an ephemeris lookup per sample, so it runs only
+        // inside the windows elevation already admitted.
+        let occulters = self.occulting_bodies;
+        let ephemeris = self.ephemeris;
+        let location = gs.location();
+        let windows = elev_windows.then_within(move |window| {
+            let make_los = |body: Origin| {
                 LineOfSightDetectFn {
-                    gs: gs.location(),
+                    gs: location,
                     sc: sc_traj,
                     body,
-                    ephemeris: self.ephemeris,
+                    ephemeris,
                     body_fixed_frame,
-                },
-                self.step,
-            )))
-        };
+                }
+                .into_intervals(UniformSampler::new(step), window)
+            };
+            let mut los: Box<dyn Iterator<Item = Result<TimeInterval, DetectError>> + '_> =
+                Box::new(make_los(occulters[0]));
+            for &body in &occulters[1..] {
+                los = Box::new(los.intersect(make_los(body)));
+            }
+            los
+        });
 
-        let mut los: Box<dyn IntervalDetector + '_> = Box::new(make_los(self.occulting_bodies[0]));
-        for &body in &self.occulting_bodies[1..] {
-            los = Box::new(los.intersect(make_los(body)));
-        }
-
-        Ok(make_elev().chain(los).detect(interval)?)
+        Ok(windows.collect::<Result<_, _>>()?)
     }
 
     /// Compute LOS intervals for a single inter-satellite pair,
@@ -678,89 +787,74 @@ where
             (None, None) => None,
         };
 
-        let make_range = |threshold: Distance, direction: RangeDirection| {
-            EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
+        let step = self.scan_step();
+        let ephemeris = self.ephemeris;
+        let central_body: Origin = self.scenario.origin().into();
+
+        let make_range =
+            move |threshold: Distance, direction: RangeDirection, window: TimeInterval| {
                 InterSatelliteRangeDetectFn {
                     sc1: traj1,
                     sc2: traj2,
                     threshold,
                     direction,
-                },
-                self.step,
-            )))
-        };
+                }
+                .into_intervals(UniformSampler::new(step), window)
+            };
 
-        let make_los_central_body = || {
-            EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
-                InterSatLosCentralBodyDetectFn {
-                    sc1: traj1,
-                    sc2: traj2,
-                    body: self.scenario.origin().into(),
-                },
-                self.step,
-            )))
-        };
+        // The stages run cheapest-first, each scanning only inside the windows
+        // the previous one admitted. Seeding with the whole interval lets every
+        // stage be applied uniformly, whether or not range limits are set.
+        let mut windows: Box<dyn Iterator<Item = Result<TimeInterval, DetectError>> + '_> =
+            match (self.max_range, self.min_range) {
+                (Some(max), Some(min)) => Box::new(
+                    make_range(max, RangeDirection::Max, interval).intersect(make_range(
+                        min,
+                        RangeDirection::Min,
+                        interval,
+                    )),
+                ),
+                (Some(max), None) => Box::new(make_range(max, RangeDirection::Max, interval)),
+                (None, Some(min)) => Box::new(make_range(min, RangeDirection::Min, interval)),
+                (None, None) => Box::new(std::iter::once(Ok(interval))),
+            };
 
-        let make_los = |body: Origin| {
-            EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
-                InterSatLosOccluderDetectFn {
-                    sc1: traj1,
-                    sc2: traj2,
-                    body,
-                    ephemeris: self.ephemeris,
-                },
-                self.step,
-            )))
-        };
-
-        // Start with range constraints (cheapest: position-only).
-        let mut detector: Option<Box<dyn IntervalDetector + '_>> = None;
-
-        if let Some(max) = self.max_range {
-            detector = Some(Box::new(make_range(max, RangeDirection::Max)));
-        }
-        if let Some(min) = self.min_range {
-            let min_det = make_range(min, RangeDirection::Min);
-            detector = Some(match detector {
-                Some(d) => Box::new(d.intersect(min_det)),
-                None => Box::new(min_det),
-            });
-        }
-
-        // Slew rate constraint (medium cost: position + velocity).
+        // Slew rate: position and velocity, no ephemeris.
         if let Some(threshold) = effective_slew_rate {
-            let slew = EventsToIntervals::new(self.apply_coarse_step(RootFindingDetector::new(
+            windows = Box::new(windows.then_within(move |window| {
                 InterSatelliteSlewRateDetectFn {
                     sc1: traj1,
                     sc2: traj2,
                     threshold,
-                },
-                self.step,
-            )));
-            detector = Some(match detector {
-                Some(d) => Box::new(d.chain(slew)),
-                None => Box::new(slew),
-            });
+                }
+                .into_intervals(UniformSampler::new(step), window)
+            }));
         }
 
-        // Chain LOS detectors onto previous windows (most expensive: requires ephemeris).
-        // Always check the central body first, then any additional occulting bodies.
-        // Central body LOS — use ephemeris-free variant:
-        let los = make_los_central_body();
-        detector = Some(match detector {
-            Some(d) => Box::new(d.chain(los)),
-            None => Box::new(los),
-        });
-        // Additional occulting bodies — still uses ephemeris:
+        // Central-body occultation always applies, and needs no ephemeris.
+        windows = Box::new(windows.then_within(move |window| {
+            InterSatLosCentralBodyDetectFn {
+                sc1: traj1,
+                sc2: traj2,
+                body: central_body,
+            }
+            .into_intervals(UniformSampler::new(step), window)
+        }));
+
+        // Additional occulters are the most expensive: ephemeris per sample.
         for &body in self.occulting_bodies {
-            let los = make_los(body);
-            detector = Some(match detector {
-                Some(d) => Box::new(d.chain(los)),
-                None => Box::new(los),
-            });
+            windows = Box::new(windows.then_within(move |window| {
+                InterSatLosOccluderDetectFn {
+                    sc1: traj1,
+                    sc2: traj2,
+                    body,
+                    ephemeris,
+                }
+                .into_intervals(UniformSampler::new(step), window)
+            }));
         }
 
-        Ok(detector.unwrap().detect(interval)?)
+        Ok(windows.collect::<Result<_, _>>()?)
     }
 }
 
@@ -917,6 +1011,7 @@ pub struct VisibilityAnalysis<'a, O: CoordinateOrigin, R: ReferenceFrame, E = No
     inter_satellite_filter: Option<InterSatelliteFilter<'a>>,
     min_range: Option<Distance>,
     max_range: Option<Distance>,
+    adaptive: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -983,6 +1078,14 @@ where
     /// Sets the maximum range filter for inter-satellite links.
     pub fn with_max_range(mut self, max_range: Distance) -> Self {
         self.max_range = Some(max_range);
+        self
+    }
+
+    /// Drives the scan with the detect function's rate bound instead of a
+    /// fixed step, taking large strides far from a crossing. The configured
+    /// step acts as the minimum stride.
+    pub fn with_adaptive_detection(mut self) -> Self {
+        self.adaptive = true;
         self
     }
 
@@ -1064,6 +1167,7 @@ where
             inter_satellite_filter: None,
             min_range: None,
             max_range: None,
+            adaptive: false,
         }
     }
 
@@ -1093,6 +1197,7 @@ where
             inter_satellite_filter: self.inter_satellite_filter,
             min_range: self.min_range,
             max_range: self.max_range,
+            adaptive: self.adaptive,
         }
     }
 }
@@ -1157,6 +1262,7 @@ where
 
         // Extract references needed in the parallel closure without borrowing self.
         let ensemble = self.ensemble;
+        let adaptive = self.adaptive;
 
         let compute_one = |(gs, sc): &(&GroundStation, &Spacecraft)| {
             let key = (gs.id().clone(), sc.id().clone());
@@ -1164,27 +1270,24 @@ where
                 "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
             );
             let body_fixed_frame = gs.body_fixed_frame();
-            let det = RootFindingDetector::new(
-                ElevationDetectFn {
-                    gs: gs.location(),
-                    mask: gs.mask(),
-                    sc: sc_traj,
-                    body_fixed_frame,
-                },
-                step,
-            );
-            let det = match min_pass_duration {
-                Some(d) => {
-                    let coarse = TimeDelta::from_seconds_f64(d.to_seconds().to_f64() / 2.0);
-                    if coarse > step {
-                        det.with_coarse_step(coarse)
-                    } else {
-                        det
-                    }
-                }
-                None => det,
+            let step = match min_pass_duration {
+                Some(d) if 0.5 * d > step => 0.5 * d,
+                _ => step,
             };
-            let windows = EventsToIntervals::new(det).detect(interval)?;
+            let elev = ElevationDetectFn {
+                gs: gs.location(),
+                mask: gs.mask(),
+                sc: sc_traj,
+                body_fixed_frame,
+            };
+            let windows = if adaptive {
+                elev.intervals(
+                    AdaptiveSampler::new(step, interval.duration().max(step)),
+                    interval,
+                )?
+            } else {
+                elev.intervals(UniformSampler::new(step), interval)?
+            };
             Ok((key, windows))
         };
 
@@ -1235,24 +1338,10 @@ where
         let max_range = self.max_range;
         let ensemble = self.ensemble;
 
-        // Inline coarse-step helper: avoids closure type-inference lock-in
-        // when the same RootFindingDetector::new generic is called with
-        // different F types below.
-        macro_rules! apply_coarse {
-            ($det:expr) => {
-                match min_pass_duration {
-                    Some(d) => {
-                        let coarse = TimeDelta::from_seconds_f64(d.to_seconds().to_f64() / 2.0);
-                        if coarse > step {
-                            $det.with_coarse_step(coarse)
-                        } else {
-                            $det
-                        }
-                    }
-                    None => $det,
-                }
-            };
-        }
+        let step = match min_pass_duration {
+            Some(d) if 0.5 * d > step => 0.5 * d,
+            _ => step,
+        };
 
         let results: Result<Vec<_>, VisibilityError> = pairs
             .par_iter()
@@ -1280,66 +1369,57 @@ where
                     (None, None) => None,
                 };
 
-                let mut detector: Option<Box<dyn IntervalDetector + '_>> = None;
+                let make_range =
+                    move |threshold: Distance, direction: RangeDirection, window: TimeInterval| {
+                        InterSatelliteRangeDetectFn {
+                            sc1: traj1,
+                            sc2: traj2,
+                            threshold,
+                            direction,
+                        }
+                        .into_intervals(UniformSampler::new(step), window)
+                    };
 
-                if let Some(max) = max_range {
-                    let det = apply_coarse!(RootFindingDetector::new(
-                        InterSatelliteRangeDetectFn {
-                            sc1: traj1,
-                            sc2: traj2,
-                            threshold: max,
-                            direction: RangeDirection::Max,
-                        },
-                        step,
-                    ));
-                    detector = Some(Box::new(EventsToIntervals::new(det)));
-                }
-                if let Some(min) = min_range {
-                    let det = apply_coarse!(RootFindingDetector::new(
-                        InterSatelliteRangeDetectFn {
-                            sc1: traj1,
-                            sc2: traj2,
-                            threshold: min,
-                            direction: RangeDirection::Min,
-                        },
-                        step,
-                    ));
-                    let min_det = EventsToIntervals::new(det);
-                    detector = Some(match detector {
-                        Some(d) => Box::new(d.intersect(min_det)),
-                        None => Box::new(min_det),
-                    });
-                }
+                // Cheapest-first staging, seeded with the whole interval so
+                // every later stage applies uniformly.
+                let mut windows: Box<dyn Iterator<Item = Result<TimeInterval, DetectError>> + '_> =
+                    match (max_range, min_range) {
+                        (Some(max), Some(min)) => {
+                            Box::new(
+                                make_range(max, RangeDirection::Max, interval)
+                                    .intersect(make_range(min, RangeDirection::Min, interval)),
+                            )
+                        }
+                        (Some(max), None) => {
+                            Box::new(make_range(max, RangeDirection::Max, interval))
+                        }
+                        (None, Some(min)) => {
+                            Box::new(make_range(min, RangeDirection::Min, interval))
+                        }
+                        (None, None) => Box::new(std::iter::once(Ok(interval))),
+                    };
+
                 if let Some(threshold) = effective_slew_rate {
-                    let det = apply_coarse!(RootFindingDetector::new(
+                    windows = Box::new(windows.then_within(move |window| {
                         InterSatelliteSlewRateDetectFn {
                             sc1: traj1,
                             sc2: traj2,
                             threshold,
-                        },
-                        step,
-                    ));
-                    let slew = EventsToIntervals::new(det);
-                    detector = Some(match detector {
-                        Some(d) => Box::new(d.chain(slew)),
-                        None => Box::new(slew),
-                    });
+                        }
+                        .into_intervals(UniformSampler::new(step), window)
+                    }));
                 }
 
-                let los = EventsToIntervals::new(apply_coarse!(RootFindingDetector::new(
+                windows = Box::new(windows.then_within(move |window| {
                     InterSatLosCentralBodyDetectFn {
                         sc1: traj1,
                         sc2: traj2,
                         body: central_body,
-                    },
-                    step,
-                )));
-                detector = Some(match detector {
-                    Some(d) => Box::new(d.chain(los)),
-                    None => Box::new(los),
-                });
+                    }
+                    .into_intervals(UniformSampler::new(step), window)
+                }));
 
-                let windows = detector.unwrap().detect(interval)?;
+                let windows = windows.collect::<Result<_, _>>()?;
                 Ok((key, windows))
             })
             .collect();
@@ -1426,6 +1506,7 @@ where
             min_pass_duration: self.min_pass_duration,
             min_range: self.min_range,
             max_range: self.max_range,
+            adaptive: self.adaptive,
         };
 
         const PARALLEL_THRESHOLD: usize = 100;
@@ -1489,6 +1570,7 @@ where
             min_pass_duration: self.min_pass_duration,
             min_range: self.min_range,
             max_range: self.max_range,
+            adaptive: self.adaptive,
         };
 
         let results: Result<Vec<_>, VisibilityError> = pairs
@@ -1814,6 +1896,35 @@ mod tests {
             intervals.push(TimeInterval::new(start, end));
         }
         intervals
+    }
+
+    #[test]
+    fn test_visibility_adaptive_matches_uniform() {
+        let gs_loc = location_dynamic();
+        let mask = ElevationMask::with_fixed_elevation(0.0);
+        let sc_traj = spacecraft_trajectory_dynamic();
+        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
+        let ground_assets = [gs.clone()];
+        let space_assets = [sc.clone()];
+        let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
+        let (scenario, ensemble) =
+            make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
+
+        let uniform = VisibilityAnalysis::new(&scenario, &ensemble)
+            .compute()
+            .expect("uniform visibility");
+        let adaptive = VisibilityAnalysis::new(&scenario, &ensemble)
+            .with_adaptive_detection()
+            .compute()
+            .expect("adaptive visibility");
+
+        // Adaptive strides by the detect function's rate bound, so it samples
+        // far fewer points; it must still bracket the same crossings.
+        let uniform = uniform.intervals_for(gs.id(), sc.id()).expect("pair");
+        let adaptive = adaptive.intervals_for(gs.id(), sc.id()).expect("pair");
+        assert_eq!(uniform.len(), adaptive.len());
+        assert_approx_eq!(uniform.to_vec(), adaptive.to_vec(), rtol <= 1e-6);
     }
 
     #[test]

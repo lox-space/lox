@@ -11,9 +11,7 @@ use lox_core::glam::DVec3;
 use rayon::prelude::*;
 use thiserror::Error;
 
-use crate::events::{
-    DetectError, DetectFn, EventsToIntervals, IntervalDetector, RootFindingDetector,
-};
+use crate::events::{DetectError, DetectFn, DetectFnExt as _, UniformSampler};
 use lox_bodies::{CoordinateOrigin, Origin, TryMeanRadius, TrySpheroid};
 use lox_core::coords::LonLatAlt;
 use lox_core::units::Angle;
@@ -297,8 +295,7 @@ where
                 origin: self.scenario.origin(),
                 body_fixed_frame: self.body_fixed_frame,
             };
-            let detector = RootFindingDetector::new(detect_fn, self.step);
-            let intervals = EventsToIntervals::new(detector).detect(interval.into_dynamic())?;
+            let intervals = detect_fn.intervals(UniformSampler::new(self.step), interval)?;
             let origin = self.scenario.origin();
             let body_fixed_frame = self.body_fixed_frame;
             let mut windows: Vec<AccessWindow> = Vec::with_capacity(intervals.len());

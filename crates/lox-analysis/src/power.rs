@@ -17,14 +17,14 @@ use lox_core::units::ASTRONOMICAL_UNIT;
 use lox_ephem::Ephemeris;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
-use lox_time::intervals::{self, TimeInterval};
+use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
 use lox_time::time_scales::Tdb;
 use rayon::prelude::*;
 use thiserror::Error;
 
 use crate::assets::{AssetId, ConstellationId, Scenario, Spacecraft};
-use crate::events::{DetectFn, EventsToIntervals, IntervalDetector, RootFindingDetector};
+use crate::events::{DetectFn, DetectFnExt as _, IntervalIterExt as _, UniformSampler};
 use crate::visibility::{EvalError, LineOfSight};
 use lox_frames::ReferenceFrame;
 use lox_orbits::orbits::{Ensemble, Trajectory};
@@ -103,7 +103,7 @@ where
             .ephemeris
             .position(tdb, self.sc.origin(), Sun)
             .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
-        let r_sc = self.sc.at(time.into_dynamic()).position();
+        let r_sc = self.sc.at(time).position();
         // line_of_sight returns positive when the two vectors have mutual LOS
         // (spacecraft is sunlit) and negative when occluded (eclipse).
         Ok(self.sc.origin().line_of_sight(r_sc, r_sun)?)
@@ -281,13 +281,12 @@ where
             sc: sc_traj,
             ephemeris: self.ephemeris,
         };
-        let detector = RootFindingDetector::new(eclipse_fn, self.step);
-        // EventsToIntervals gives intervals where the function is positive
-        // (sunlit). We need the complement → eclipse intervals.
-        let sunlit_intervals = EventsToIntervals::new(detector).detect(interval)?;
-
-        // Complement sunlit intervals to get eclipse intervals
-        let eclipse_intervals = intervals::complement_intervals(&sunlit_intervals, interval);
+        // The scan yields intervals where the function is positive (sunlit);
+        // complementing them within the scan window gives the eclipses.
+        let eclipse_intervals: Vec<TimeInterval> = eclipse_fn
+            .iter_intervals(UniformSampler::new(self.step), interval)
+            .complement(interval)
+            .collect::<Result<_, _>>()?;
 
         // 2. Beta angle + solar flux sampled at `step`
         let epoch = interval.start();
