@@ -2,60 +2,80 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Root-finding algorithms: Steffensen, Newton, and Brent methods.
+//! Root-finding algorithms: Steffensen, Newton, safeguarded Newton, and Brent
+//! methods.
 
 use lox_approx::approx_eq;
 use thiserror::Error;
 
 use crate::error::LoxError;
-use crate::math::callback::Callback;
+use crate::math::callback::{Callback, CallbackWithDerivative};
 use crate::math::float::{abs, powi, sqrt};
 
 /// Finds a root of `f` starting from an initial guess.
-pub trait FindRoot<F>
-where
-    F: Callback,
-{
+pub trait FindRoot {
     /// Finds a root of `f` starting from `initial_guess`.
-    fn find(&self, f: F, initial_guess: f64) -> Result<f64, RootFinderError>;
+    fn find(&self, f: impl Callback, initial_guess: f64) -> Result<f64, RootFinderError>;
 }
 
 /// Finds a root of `f` using both the function and its derivative.
-pub trait FindRootWithDerivative<F, D>
-where
-    F: Callback,
-    D: Callback,
-{
+pub trait FindRootWithDerivative {
     /// Finds a root of `f` using `derivative`, starting from `initial_guess`.
     fn find_with_derivative(
         &self,
-        f: F,
-        derivative: D,
+        f: impl Callback,
+        derivative: impl Callback,
         initial_guess: f64,
     ) -> Result<f64, RootFinderError>;
 }
 
 /// Finds a root of `f` within a bracket `(a, b)`.
-pub trait FindBracketedRoot<F>
-where
-    F: Callback,
-{
+pub trait FindBracketedRoot {
     /// Finds a root of `f` within `bracket`, reusing the function values at the
     /// bracket endpoints instead of evaluating them again.
     ///
     /// `values` must equal `(f(bracket.0), f(bracket.1))`.
     fn find_in_bracket_with_values(
         &self,
-        f: F,
+        f: impl Callback,
         bracket: (f64, f64),
         values: (f64, f64),
     ) -> Result<f64, RootFinderError>;
 
     /// Finds a root of `f` within the given `bracket`.
-    fn find_in_bracket(&self, f: F, bracket: (f64, f64)) -> Result<f64, RootFinderError> {
+    fn find_in_bracket(
+        &self,
+        f: impl Callback,
+        bracket: (f64, f64),
+    ) -> Result<f64, RootFinderError> {
         let fa = f.call(bracket.0)?;
         let fb = f.call(bracket.1)?;
         self.find_in_bracket_with_values(f, bracket, (fa, fb))
+    }
+}
+
+/// Finds a root of `f` within a bracket `(a, b)`, using its derivative.
+pub trait FindBracketedRootWithDerivative {
+    /// Finds a root of `f` within `bracket`, reusing the function values at the
+    /// bracket endpoints instead of evaluating them again.
+    ///
+    /// `values` must equal `(f(bracket.0), f(bracket.1))`.
+    fn find_in_bracket_with_derivative_values(
+        &self,
+        f: impl CallbackWithDerivative,
+        bracket: (f64, f64),
+        values: (f64, f64),
+    ) -> Result<f64, RootFinderError>;
+
+    /// Finds a root of `f` within the given `bracket`.
+    fn find_in_bracket_with_derivative(
+        &self,
+        f: impl CallbackWithDerivative,
+        bracket: (f64, f64),
+    ) -> Result<f64, RootFinderError> {
+        let (fa, _) = f.call(bracket.0)?;
+        let (fb, _) = f.call(bracket.1)?;
+        self.find_in_bracket_with_derivative_values(f, bracket, (fa, fb))
     }
 }
 
@@ -113,6 +133,22 @@ fn eval_finite<F: Callback>(f: &F, x: f64) -> Result<f64, RootFinderError> {
     Ok(value)
 }
 
+/// Evaluates `f` and its derivative at `x`, mapping a callback failure or a
+/// non-finite function value to the corresponding [`RootFinderError`].
+///
+/// A non-finite *derivative* is not an error here: safeguarded methods fall
+/// back to bisection when the derivative is unusable.
+fn eval_finite_with_derivative<F: CallbackWithDerivative>(
+    f: &F,
+    x: f64,
+) -> Result<(f64, f64), RootFinderError> {
+    let (value, derivative) = f.call(x)?;
+    if !value.is_finite() {
+        return Err(RootFinderError::NonFinite { x, value });
+    }
+    Ok((value, derivative))
+}
+
 /// Steffensen's method for root-finding (derivative-free).
 ///
 /// The tolerances bound the iteration step, not the residual: near steep
@@ -158,11 +194,8 @@ impl Steffensen {
     }
 }
 
-impl<F> FindRoot<F> for Steffensen
-where
-    F: Callback,
-{
-    fn find(&self, f: F, initial_guess: f64) -> Result<f64, RootFinderError> {
+impl FindRoot for Steffensen {
+    fn find(&self, f: impl Callback, initial_guess: f64) -> Result<f64, RootFinderError> {
         let mut p0 = initial_guess;
         let mut last: Option<(f64, f64)> = None;
         for _ in 0..self.max_iter {
@@ -247,15 +280,11 @@ impl Newton {
     }
 }
 
-impl<F, D> FindRootWithDerivative<F, D> for Newton
-where
-    F: Callback,
-    D: Callback,
-{
+impl FindRootWithDerivative for Newton {
     fn find_with_derivative(
         &self,
-        f: F,
-        derivative: D,
+        f: impl Callback,
+        derivative: impl Callback,
         initial_guess: f64,
     ) -> Result<f64, RootFinderError> {
         let mut p0 = initial_guess;
@@ -342,13 +371,10 @@ impl Brent {
     }
 }
 
-impl<F> FindBracketedRoot<F> for Brent
-where
-    F: Callback,
-{
+impl FindBracketedRoot for Brent {
     fn find_in_bracket_with_values(
         &self,
-        f: F,
+        f: impl Callback,
         bracket: (f64, f64),
         values: (f64, f64),
     ) -> Result<f64, RootFinderError> {
@@ -455,6 +481,162 @@ where
             iterations: self.max_iter,
             x: xcur,
             residual: fcur,
+        })
+    }
+}
+
+/// Safeguarded ("rtsafe") Newton method for bracketed root-finding.
+///
+/// Takes a Newton step when it lands inside the current bracket and shrinks the
+/// interval quickly enough; otherwise bisects. This retains the guaranteed
+/// convergence of bisection while gaining Newton's quadratic rate near the
+/// root. A zero, non-finite, or otherwise unhelpful derivative simply yields a
+/// bisection step, so the method never fails as long as a valid bracket is
+/// maintained.
+///
+/// The tolerances bound the root location `x`, not the residual `f(x)`: the
+/// returned root is accurate to within `abs_tol + rel_tol * |x|`, independent of
+/// how the objective is scaled.
+///
+/// # References
+///
+/// - Press et al., *Numerical Recipes*, 3rd ed., §9.4 ("Newton-Raphson Method
+///   Using Derivative", `rtsafe`).
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct BracketedNewton {
+    max_iter: u32,
+    /// Absolute tolerance on the root location.
+    abs_tol: f64,
+    /// Relative tolerance on the root location.
+    rel_tol: f64,
+}
+
+impl Default for BracketedNewton {
+    fn default() -> Self {
+        Self {
+            max_iter: 100,
+            abs_tol: 1e-6,
+            rel_tol: sqrt(f64::EPSILON),
+        }
+    }
+}
+
+impl BracketedNewton {
+    /// Sets the maximum number of iterations.
+    pub fn with_max_iter(mut self, max_iter: u32) -> Self {
+        self.max_iter = max_iter;
+        self
+    }
+
+    /// Sets the absolute tolerance on the root location.
+    pub fn with_abs_tol(mut self, abs_tol: f64) -> Self {
+        self.abs_tol = abs_tol;
+        self
+    }
+
+    /// Sets the relative tolerance on the root location.
+    pub fn with_rel_tol(mut self, rel_tol: f64) -> Self {
+        self.rel_tol = rel_tol;
+        self
+    }
+}
+
+impl FindBracketedRootWithDerivative for BracketedNewton {
+    fn find_in_bracket_with_derivative_values(
+        &self,
+        f: impl CallbackWithDerivative,
+        bracket: (f64, f64),
+        values: (f64, f64),
+    ) -> Result<f64, RootFinderError> {
+        let (x1, x2) = bracket;
+        let (f1, f2) = values;
+
+        if !f1.is_finite() {
+            return Err(RootFinderError::NonFinite { x: x1, value: f1 });
+        }
+        if !f2.is_finite() {
+            return Err(RootFinderError::NonFinite { x: x2, value: f2 });
+        }
+
+        // An endpoint that is exactly a root is returned directly.
+        if f1 == 0.0 {
+            return Ok(x1);
+        }
+        if f2 == 0.0 {
+            return Ok(x2);
+        }
+
+        // The endpoints must straddle the root. Comparing sign bits avoids the
+        // underflow that loses the sign of very small opposite-sign residuals.
+        if f1.is_sign_negative() == f2.is_sign_negative() {
+            return Err(RootFinderError::NotInBracket);
+        }
+
+        // Orient the bracket so that `f(xl) < 0 < f(xh)`.
+        let (mut xl, mut xh) = if f1.is_sign_negative() {
+            (x1, x2)
+        } else {
+            (x2, x1)
+        };
+
+        let mut rts = 0.5 * (x1 + x2);
+        let mut dx_old = abs(x2 - x1);
+        let mut dx = dx_old;
+        let (mut fx, mut dfx) = eval_finite_with_derivative(&f, rts)?;
+        // The midpoint may already be the root, in which case the derivative is
+        // never used (and could give a 0/0 step if it also vanishes there).
+        if fx == 0.0 {
+            return Ok(rts);
+        }
+
+        for _ in 0..self.max_iter {
+            let delta = self.abs_tol + self.rel_tol * abs(rts);
+
+            // Bisect when the derivative is unusable, when the Newton iterate
+            // would leave the bracket, or when it is not shrinking the interval
+            // fast enough; otherwise take the Newton step.
+            let bisect = !dfx.is_finite()
+                || ((rts - xh) * dfx - fx) * ((rts - xl) * dfx - fx) > 0.0
+                || abs(2.0 * fx) > abs(dx_old * dfx);
+
+            if bisect {
+                dx_old = dx;
+                dx = 0.5 * (xh - xl);
+                rts = xl + dx;
+                // The bisection step is below the representable resolution.
+                if xl == rts {
+                    return Ok(rts);
+                }
+            } else {
+                dx_old = dx;
+                dx = fx / dfx;
+                let prev = rts;
+                rts -= dx;
+                if prev == rts {
+                    return Ok(rts);
+                }
+            }
+
+            if abs(dx) < delta {
+                return Ok(rts);
+            }
+
+            (fx, dfx) = eval_finite_with_derivative(&f, rts)?;
+            if fx == 0.0 {
+                return Ok(rts);
+            }
+            // Maintain the sign-oriented bracket around the new iterate.
+            if fx.is_sign_negative() {
+                xl = rts;
+            } else {
+                xh = rts;
+            }
+        }
+
+        Err(RootFinderError::NotConverged {
+            iterations: self.max_iter,
+            x: rts,
+            residual: fx,
         })
     }
 }
@@ -991,6 +1173,183 @@ mod tests {
                 (-1.0, 2.0),
                 (-1.0, 2.0),
             )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::Callback(_)));
+    }
+
+    // -----------------------------------------------------------------------
+    // BracketedNewton (safeguarded Newton / rtsafe)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_bracketed_newton_cubic() {
+        let solver = BracketedNewton::default();
+        let act = solver
+            .find_in_bracket_with_derivative(
+                |x: f64| {
+                    (
+                        powi(x, 3) + 4.0 * powi(x, 2) - 10.0,
+                        3.0 * powi(x, 2) + 8.0 * x,
+                    )
+                },
+                (1.0, 1.5),
+            )
+            .expect("should converge");
+        assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-8);
+    }
+
+    #[test]
+    fn test_bracketed_newton_matches_brent() {
+        // On a smooth function both solvers must land on the same root.
+        let f = |x: f64| powi(x, 3) + 4.0 * powi(x, 2) - 10.0;
+        let bracket = (1.0, 2.0);
+
+        let newton = BracketedNewton::default()
+            .find_in_bracket_with_derivative(
+                |x: f64| {
+                    (
+                        powi(x, 3) + 4.0 * powi(x, 2) - 10.0,
+                        3.0 * powi(x, 2) + 8.0 * x,
+                    )
+                },
+                bracket,
+            )
+            .expect("should converge");
+        let brent = Brent::default()
+            .find_in_bracket(f, bracket)
+            .expect("should converge");
+        assert_approx_eq!(newton, brent, rtol <= 1e-9);
+    }
+
+    #[test]
+    fn test_bracketed_newton_reuses_endpoints() {
+        use core::cell::Cell;
+
+        let (a, b) = (1.0, 1.5);
+        let fa = powi(a, 3) + 4.0 * powi(a, 2) - 10.0;
+        let fb = powi(b, 3) + 4.0 * powi(b, 2) - 10.0;
+
+        let count = Cell::new(0usize);
+        let counting = |x: f64| {
+            if x == a || x == b {
+                count.set(count.get() + 1);
+            }
+            powi(x, 3) + 4.0 * powi(x, 2) - 10.0
+        };
+        BracketedNewton::default()
+            .find_in_bracket_with_derivative_values(
+                |x: f64| (counting(x), 3.0 * powi(x, 2) + 8.0 * x),
+                (a, b),
+                (fa, fb),
+            )
+            .expect("should converge");
+        assert_eq!(count.get(), 0, "endpoints must not be re-evaluated");
+    }
+
+    #[test]
+    fn test_bracketed_newton_endpoint_is_root() {
+        let solver = BracketedNewton::default();
+        let lo = solver
+            .find_in_bracket_with_derivative_values(|x: f64| (x, 1.0), (0.0, 1.0), (0.0, 1.0))
+            .expect("lower endpoint is the root");
+        assert_eq!(lo, 0.0);
+    }
+
+    #[test]
+    fn test_bracketed_newton_rejects_non_bracket() {
+        let solver = BracketedNewton::default();
+        let err = solver
+            .find_in_bracket_with_derivative_values(
+                |x: f64| (x * x + 1.0, 2.0 * x),
+                (1.0, 2.0),
+                (2.0, 5.0),
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NotInBracket));
+    }
+
+    #[test]
+    fn test_bracketed_newton_zero_derivative_bisects() {
+        // A derivative that is zero at the midpoint would give a 0/0 Newton
+        // step; the safeguard must fall back to bisection and still converge.
+        // f(x) = x^3 has f'(0) = 0 exactly at the bracket midpoint (-1, 1).
+        let solver = BracketedNewton::default();
+        let act = solver
+            .find_in_bracket_with_derivative(|x: f64| (powi(x, 3), 3.0 * powi(x, 2)), (-1.0, 1.0))
+            .expect("should converge via bisection fallback");
+        assert_approx_eq!(act, 0.0, atol <= 1e-6);
+    }
+
+    #[test]
+    fn test_bracketed_newton_non_finite_derivative_bisects() {
+        // A derivative that blows up must not fail the solve: the safeguard
+        // bisects instead, keeping the bracket and converging on the root.
+        let solver = BracketedNewton::default();
+        let act = solver
+            .find_in_bracket_with_derivative(|x: f64| (x - 0.5, f64::INFINITY), (0.0, 1.0))
+            .expect("should converge despite non-finite derivative");
+        assert_approx_eq!(act, 0.5, atol <= 1e-6);
+    }
+
+    #[test]
+    fn test_bracketed_newton_scale_independent() {
+        // A heavily down-scaled objective must not be mistaken for a root by a
+        // residual tolerance; the true root is at x = 1e6.
+        let solver = BracketedNewton::default();
+        let act = solver
+            .find_in_bracket_with_derivative(|x: f64| (1e-12 * (x - 1e6), 1e-12), (0.0, 2e6))
+            .expect("should converge");
+        assert_approx_eq!(act, 1e6, rtol <= 1e-5);
+    }
+
+    #[test]
+    fn test_bracketed_newton_rejects_non_finite_endpoint() {
+        let solver = BracketedNewton::default();
+        let err = solver
+            .find_in_bracket_with_derivative_values(
+                |_x: f64| (1.0, 1.0),
+                (0.0, 1.0),
+                (f64::NAN, 1.0),
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NonFinite { .. }));
+    }
+
+    #[test]
+    fn test_bracketed_newton_not_converged() {
+        // A single iteration cannot narrow a wide bracket below the tolerance.
+        let solver = BracketedNewton::default().with_max_iter(1);
+        let err = solver
+            .find_in_bracket_with_derivative(
+                |x: f64| (powi(x, 3) - 0.5, 3.0 * powi(x, 2)),
+                (-1e6, 1e6),
+            )
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            RootFinderError::NotConverged { iterations: 1, .. }
+        ));
+    }
+
+    #[test]
+    fn test_bracketed_newton_in_loop_callback_error() {
+        // Endpoints evaluate cleanly, but an interior evaluation fails; the
+        // callback error must propagate.
+        struct FailsInterior;
+
+        impl CallbackWithDerivative for FailsInterior {
+            fn call(&self, x: f64) -> core::result::Result<(f64, f64), LoxError> {
+                if x == -1.0 || x == 2.0 {
+                    Ok((x * x - 2.0, 2.0 * x))
+                } else {
+                    Err("interior failure".into())
+                }
+            }
+        }
+
+        let solver = BracketedNewton::default();
+        let err = solver
+            .find_in_bracket_with_derivative_values(FailsInterior, (-1.0, 2.0), (-1.0, 2.0))
             .unwrap_err();
         assert!(matches!(err, RootFinderError::Callback(_)));
     }

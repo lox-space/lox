@@ -35,3 +35,23 @@ where
         (self.0)(v).map_err(LoxError::from)
     }
 }
+
+/// A callable scalar function that evaluates its value and derivative
+/// together.
+///
+/// Value and derivative usually share the expensive part of their computation,
+/// so algorithms that need both at the same point take this trait and make a
+/// single call per point.
+pub trait CallbackWithDerivative {
+    /// Evaluates the function and its derivative at `v`.
+    fn call(&self, v: f64) -> Result<(f64, f64), LoxError>;
+}
+
+impl<F> CallbackWithDerivative for F
+where
+    F: Fn(f64) -> (f64, f64),
+{
+    fn call(&self, v: f64) -> Result<(f64, f64), LoxError> {
+        Ok(self(v))
+    }
+}

@@ -54,6 +54,12 @@ impl From<BoxedError> for LoxError {
     }
 }
 
+impl From<core::convert::Infallible> for LoxError {
+    fn from(x: core::convert::Infallible) -> Self {
+        match x {}
+    }
+}
+
 /// Searches `err` and its source chain for an error of type `E`.
 ///
 /// Transparent wrappers (thiserror's `#[error(transparent)]`) forward `source`
