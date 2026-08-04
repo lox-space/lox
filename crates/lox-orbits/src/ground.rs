@@ -14,7 +14,7 @@ use lox_frames::{DynFrame, Iau, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::TimeScale;
+use lox_time::time_scales::ContinuousTimeScale;
 use thiserror::Error;
 
 /// Topocentric observation of a satellite from a ground location.
@@ -165,7 +165,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
     }
 
     /// Computes topocentric observables from a Cartesian orbit in the body-fixed frame.
-    pub fn observables<T: TimeScale + Copy>(
+    pub fn observables<T: ContinuousTimeScale + Copy>(
         &self,
         state: CartesianOrbit<T, B, Iau<B>>,
     ) -> Observables
@@ -248,7 +248,7 @@ impl<B: TrySpheroid, R: ReferenceFrame> GroundPropagator<B, R> {
     }
 
     /// Compute the body-fixed state at a single time.
-    pub fn state_at<T: TimeScale + Copy>(&self, time: Time<T>) -> CartesianOrbit<T, B, R>
+    pub fn state_at<T: ContinuousTimeScale + Copy>(&self, time: Time<T>) -> CartesianOrbit<T, B, R>
     where
         B: Copy,
         R: Copy,
@@ -266,8 +266,8 @@ impl<B: TrySpheroid, R: ReferenceFrame> GroundPropagator<B, R> {
 /// Single `Propagator` impl covers both typed and Dyn paths.
 impl<T, B, R> Propagator<T, B> for GroundPropagator<B, R>
 where
-    T: TimeScale + Copy + Eq,
-    B: TrySpheroid + lox_bodies::Origin + Copy,
+    T: ContinuousTimeScale + Copy + Eq,
+    B: TrySpheroid + lox_bodies::CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Frame = R;

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::time::time_scales::{DynTimeScale, TimeScale, UnknownTimeScaleError};
+use crate::time::time_scales::{ContinuousTimeScale, DynTimeScale, UnknownTimeScaleError};
 use pyo3::{
     Bound, PyAny, PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods,
     types::PyAnyMethods,
@@ -40,7 +40,7 @@ pub struct PyTimeScale(pub DynTimeScale);
 #[pymethods]
 impl PyTimeScale {
     #[new]
-    /// Constructs a `TimeScale` from its abbreviation string (e.g., `"TAI"`).
+    /// Constructs a `ContinuousTimeScale` from its abbreviation string (e.g., `"TAI"`).
     pub fn new(abbreviation: &str) -> PyResult<Self> {
         Ok(PyTimeScale(
             abbreviation.parse().map_err(PyUnknownTimeScaleError)?,
@@ -50,12 +50,12 @@ impl PyTimeScale {
         (self.abbreviation(),)
     }
 
-    /// Returns the developer representation of the `TimeScale`.
+    /// Returns the developer representation of the `ContinuousTimeScale`.
     pub fn __repr__(&self) -> String {
         format!("TimeScale(\"{}\")", self.0)
     }
 
-    /// Returns the abbreviation string of the `TimeScale`.
+    /// Returns the abbreviation string of the `ContinuousTimeScale`.
     pub fn __str__(&self) -> String {
         format!("{}", self.0)
     }

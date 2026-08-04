@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt;
 
-use lox_bodies::{DynOrigin, Origin};
+use lox_bodies::{CoordinateOrigin, DynOrigin};
 use lox_core::units::AngularRate;
 
 #[cfg(feature = "imaging")]
@@ -378,7 +378,7 @@ impl Spacecraft {
 /// reference frame. For dynamic dispatch (e.g. via Python), use `DynScenario`.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Scenario<O: Origin, R: ReferenceFrame> {
+pub struct Scenario<O: CoordinateOrigin, R: ReferenceFrame> {
     interval: TimeInterval<Tai>,
     origin: O,
     frame: R,
@@ -415,7 +415,9 @@ pub enum ScenarioPropagateError {
     FrameTransformation(AssetId, String),
 }
 
-impl<O: Origin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync> Scenario<O, R> {
+impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send + Sync>
+    Scenario<O, R>
+{
     /// Creates a new scenario from start/end times, origin, and frame.
     pub fn new(start_time: Time<Tai>, end_time: Time<Tai>, origin: O, frame: R) -> Self {
         let interval = TimeInterval::new(start_time, end_time);

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::{Earth, J2, J4, NaifId, Origin, TryJ2, TryJ4, UndefinedOriginPropertyError};
+use crate::{CoordinateOrigin, Earth, J2, J4, NaifId, TryJ2, TryJ4, UndefinedOriginPropertyError};
 use alloc::borrow::ToOwned;
 use alloc::string::{String, ToString};
 use core::fmt::{Display, Formatter};
@@ -415,7 +415,7 @@ pub enum DynOrigin {
     Bennu = 2101955,
 }
 
-impl Origin for DynOrigin {
+impl CoordinateOrigin for DynOrigin {
     fn id(&self) -> NaifId {
         NaifId(*self as i32)
     }

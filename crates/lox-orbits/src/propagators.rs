@@ -2,11 +2,11 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_bodies::Origin;
+use lox_bodies::CoordinateOrigin;
 use lox_frames::ReferenceFrame;
 use lox_time::Time;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::{DynTimeScale, TimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
 
 use crate::orbits::{CartesianOrbit, DynTrajectory, Trajectory, TrajectoryError};
 
@@ -33,8 +33,8 @@ mod stumpff;
 /// Common interface for orbit propagators.
 pub trait Propagator<T, O>
 where
-    T: TimeScale + Copy,
-    O: Origin + Copy,
+    T: ContinuousTimeScale + Copy,
+    O: CoordinateOrigin + Copy,
 {
     /// The propagator's native reference frame.
     type Frame: ReferenceFrame + Copy;

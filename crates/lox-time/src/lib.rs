@@ -10,9 +10,9 @@
     # Overview
 
     `lox_time` exposes:
-    - the marker trait [TimeScale](time_scales::TimeScale) and zero-sized implementations
+    - the marker trait [ContinuousTimeScale](time_scales::ContinuousTimeScale) and zero-sized implementations
       representing the most common, continuous astronomical time scales;
-    - the concrete type [Time] representing an instant in a [TimeScale](time_scales::TimeScale);
+    - the concrete type [Time] representing an instant in a [ContinuousTimeScale](time_scales::ContinuousTimeScale);
     - [Utc](utc::Utc), the only discontinuous time representation supported by Lox;
     - the [`TryOffset`](offsets::TryOffset) and [`Offset`](offsets::Offset) traits, supporting
       transformations between pairs of time scales;
@@ -22,7 +22,7 @@
 
     Internally, Lox uses only continuous time scales (i.e. time scales without leap seconds). An
     instance of [Time] represents an instant in time generic over a continuous
-    [TimeScale](time_scales::TimeScale).
+    [ContinuousTimeScale](time_scales::ContinuousTimeScale).
 
     [Utc](utc::Utc) is used strictly as an I/O time format, which must be transformed into a continuous time
     scale before use in the wider Lox ecosystem.

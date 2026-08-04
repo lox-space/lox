@@ -15,11 +15,11 @@ mod flower;
 mod street_of_coverage;
 mod walker;
 
-use lox_bodies::{DynOrigin, Origin};
+use lox_bodies::{CoordinateOrigin, DynOrigin};
 use lox_core::elements::{Keplerian, KeplerianError};
 use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::Time;
-use lox_time::time_scales::{DynTimeScale, TimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
 use thiserror::Error;
 
 pub use flower::FlowerBuilder;
@@ -100,7 +100,7 @@ pub enum ConstellationPropagator {
 /// combined with the epoch, origin, and frame needed to create propagatable orbits.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Constellation<T: TimeScale, O: Origin, R: ReferenceFrame> {
+pub struct Constellation<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> {
     name: String,
     epoch: Time<T>,
     origin: O,
@@ -112,7 +112,7 @@ pub struct Constellation<T: TimeScale, O: Origin, R: ReferenceFrame> {
 /// Type alias for a constellation with fully dynamic time scale, origin, and frame.
 pub type DynConstellation = Constellation<DynTimeScale, DynOrigin, DynFrame>;
 
-impl<T: TimeScale, O: Origin, R: ReferenceFrame> Constellation<T, O, R> {
+impl<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> Constellation<T, O, R> {
     /// Creates a new constellation from precomputed satellites.
     pub fn new(
         name: impl Into<String>,
@@ -189,8 +189,8 @@ impl<T: TimeScale, O: Origin, R: ReferenceFrame> Constellation<T, O, R> {
 
 impl<T, O, R> Constellation<T, O, R>
 where
-    T: TimeScale + Copy + Into<DynTimeScale>,
-    O: Origin + Copy + Into<DynOrigin>,
+    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
+    O: CoordinateOrigin + Copy + Into<DynOrigin>,
     R: ReferenceFrame + Copy + Into<DynFrame>,
 {
     /// Converts the constellation into a fully dynamic representation.

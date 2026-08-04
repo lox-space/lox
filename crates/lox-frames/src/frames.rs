@@ -2,7 +2,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_bodies::{Origin, RotationalElements, TryRotationalElements, UndefinedOriginPropertyError};
+use lox_bodies::{
+    CoordinateOrigin, RotationalElements, TryRotationalElements, UndefinedOriginPropertyError,
+};
 
 use crate::{
     iers::{IersSystem, ReferenceSystem},
@@ -317,7 +319,7 @@ pub(crate) fn iau_abbreviation(body: &str) -> String {
 
 impl<T> ReferenceFrame for Iau<T>
 where
-    T: TryRotationalElements + Origin,
+    T: TryRotationalElements + CoordinateOrigin,
 {
     fn name(&self) -> String {
         iau_name(self.0.name())

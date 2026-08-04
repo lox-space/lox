@@ -8,7 +8,7 @@ use lox_time::{
     Time,
     deltas::TimeDelta,
     offsets::OffsetProvider,
-    time_scales::{Tai, TimeScale},
+    time_scales::{ContinuousTimeScale, Tai},
     utc::{
         Utc,
         leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider},
@@ -40,7 +40,7 @@ impl OffsetProvider for DefaultRotationProvider {
 
 impl<T> RotationProvider<T> for DefaultRotationProvider
 where
-    T: TimeScale,
+    T: ContinuousTimeScale,
 {
     type EopError = Infallible;
 

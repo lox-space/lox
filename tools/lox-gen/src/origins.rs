@@ -1004,7 +1004,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
         use crate::Elements;
         use crate::MeanRadius;
         use crate::NaifId;
-        use crate::Origin;
+        use crate::CoordinateOrigin;
         use crate::PointMass;
         use crate::Radii;
         use crate::RotationalElement;
@@ -1055,7 +1055,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
             #[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
             pub struct #ident;
 
-            impl Origin for #ident {
+            impl CoordinateOrigin for #ident {
                 fn id(&self) -> NaifId {
                     NaifId(#id)
                 }

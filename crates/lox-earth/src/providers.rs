@@ -9,7 +9,7 @@ use lox_frames::rotations::RotationProvider;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::offsets::{OffsetProvider, TryOffset};
-use lox_time::time_scales::{Tai, TimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, Tai};
 use lox_time::utc::Utc;
 use lox_time::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};
 use lox_time::utc::transformations::ToUtc;
@@ -58,7 +58,7 @@ impl OffsetProvider for EopProvider {
 
 impl<T> RotationProvider<T> for EopProvider
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     Self: TryOffset<T, Tai>,
 {
     type EopError = EopProviderError;

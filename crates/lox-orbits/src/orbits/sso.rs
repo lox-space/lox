@@ -19,7 +19,7 @@ use lox_frames::iers::fundamental::iers03::lp_iers03;
 use lox_time::Time;
 use lox_time::offsets::{DefaultOffsetProvider, TryOffset};
 use lox_time::time_of_day::TimeOfDayError;
-use lox_time::time_scales::{Tai, Tdb, TimeScale, Ut1};
+use lox_time::time_scales::{ContinuousTimeScale, Tai, Tdb, Ut1};
 use thiserror::Error;
 
 use crate::orbits::{KeplerianOrbit, Orbit};
@@ -120,7 +120,7 @@ fn longitude_of_ascending_node_sso<T, P>(
     provider: &P,
 ) -> Result<Angle, SsoError>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
 {
     let tdb = time
@@ -194,7 +194,7 @@ fn keplerian_from_sso<T, P>(
     provider: &P,
 ) -> Result<Keplerian, SsoError>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
 {
     let semi_major_axis = semi_major_axis_or_inclination.semi_major_axis(eccentricity);
@@ -215,7 +215,7 @@ where
 
 impl<T> KeplerianOrbit<T, Earth, Icrf>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
 {
     fn from_sso<P>(
         time: Time<T>,
@@ -244,7 +244,7 @@ where
 
 /// Builder for constructing sun-synchronous orbits around Earth.
 #[derive(Debug, Clone)]
-pub struct SsoBuilder<'a, T: TimeScale + Copy, P: TryOffset<T, Ut1> + TryOffset<T, Tdb>> {
+pub struct SsoBuilder<'a, T: ContinuousTimeScale + Copy, P: TryOffset<T, Ut1> + TryOffset<T, Tdb>> {
     time: Time<T>,
     semi_major_axis: Option<SemiMajorAxis>,
     eccentricity: Result<Eccentricity, NegativeEccentricityError>,
@@ -279,7 +279,7 @@ impl<'a> Default for SsoBuilder<'a, Tai, DefaultOffsetProvider> {
 
 impl<'a, T, U> SsoBuilder<'a, T, U>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     U: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
 {
     /// Sets the time scale offset provider.
@@ -302,11 +302,11 @@ where
 
 impl<'a, S, P> SsoBuilder<'a, S, P>
 where
-    S: TimeScale + Copy,
+    S: ContinuousTimeScale + Copy,
     P: TryOffset<S, Ut1> + TryOffset<S, Tdb>,
 {
     /// Sets the epoch and changes the time scale.
-    pub fn with_time<T: TimeScale + Copy>(self, time: Time<T>) -> SsoBuilder<'a, T, P>
+    pub fn with_time<T: ContinuousTimeScale + Copy>(self, time: Time<T>) -> SsoBuilder<'a, T, P>
     where
         P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
     {
@@ -325,7 +325,7 @@ where
 
 impl<'a, T, P> SsoBuilder<'a, T, P>
 where
-    T: TimeScale + Copy,
+    T: ContinuousTimeScale + Copy,
     P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
 {
     /// Sets the semi-major axis (mutually exclusive with inclination).

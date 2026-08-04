@@ -12,7 +12,7 @@ use differential_equations::{
     traits::State,
 };
 use lox_bodies::{
-    DynOrigin, J2, Origin, PointMass, Spheroid, TryJ2, TryPointMass, TrySpheroid,
+    CoordinateOrigin, DynOrigin, J2, PointMass, Spheroid, TryJ2, TryPointMass, TrySpheroid,
     UndefinedOriginPropertyError,
 };
 use lox_core::coords::Cartesian;
@@ -21,7 +21,7 @@ use lox_frames::{DynFrame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::{DynTimeScale, TimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
 use thiserror::Error;
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
@@ -52,7 +52,7 @@ pub enum NumericalError {
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NumericalPropagator<
-    T: TimeScale,
+    T: ContinuousTimeScale,
     O: TryJ2 + TryPointMass + TrySpheroid,
     R: ReferenceFrame,
 > {
@@ -74,7 +74,7 @@ fn default_h_max(position: DVec3, velocity: DVec3) -> f64 {
 // Infallible — static bounds
 impl<T, O, R> NumericalPropagator<T, O, R>
 where
-    T: TimeScale,
+    T: ContinuousTimeScale,
     O: J2 + PointMass + Spheroid + Copy,
     R: ReferenceFrame,
 {
@@ -95,7 +95,7 @@ where
 // Fallible — Try* bounds (covers DynOrigin)
 impl<T, O, R> NumericalPropagator<T, O, R>
 where
-    T: TimeScale,
+    T: ContinuousTimeScale,
     O: TryJ2 + TryPointMass + TrySpheroid + Copy,
     R: ReferenceFrame,
 {
@@ -121,7 +121,7 @@ where
 
 impl<T, O, R> NumericalPropagator<T, O, R>
 where
-    T: TimeScale,
+    T: ContinuousTimeScale,
     O: TryJ2 + TryPointMass + TrySpheroid + Copy,
     R: ReferenceFrame,
 {
@@ -211,7 +211,7 @@ where
 
 impl<T, O, R> ODE<f64, CartesianState> for NumericalPropagator<T, O, R>
 where
-    T: TimeScale,
+    T: ContinuousTimeScale,
     O: TryJ2 + TryPointMass + TrySpheroid + Copy,
     R: ReferenceFrame,
 {
@@ -234,8 +234,8 @@ where
 
 impl<T, O, R> Propagator<T, O> for NumericalPropagator<T, O, R>
 where
-    T: TimeScale + Copy + Eq,
-    O: TryJ2 + TryPointMass + TrySpheroid + Origin + Copy,
+    T: ContinuousTimeScale + Copy + Eq,
+    O: TryJ2 + TryPointMass + TrySpheroid + CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Frame = R;
@@ -465,8 +465,8 @@ impl Neg for CartesianState {
 
 impl<T, O, R> From<CartesianOrbit<T, O, R>> for CartesianState
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     fn from(orbit: CartesianOrbit<T, O, R>) -> Self {

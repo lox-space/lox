@@ -10,7 +10,7 @@
 
 use std::collections::HashMap;
 
-use lox_bodies::{DynOrigin, Origin, Sun, TryMeanRadius, TrySpheroid};
+use lox_bodies::{CoordinateOrigin, DynOrigin, Sun, TryMeanRadius, TrySpheroid};
 use lox_core::glam::DVec3;
 use lox_core::math::series::InterpolationType;
 use lox_core::units::ASTRONOMICAL_UNIT;
@@ -89,7 +89,7 @@ pub enum PowerError {
 
 /// Eclipse detect function: positive when the spacecraft is sunlit, negative
 /// when it is in eclipse (cylindrical shadow model, umbra only).
-struct EclipseDetectFn<'a, O: Origin, R: ReferenceFrame, E> {
+struct EclipseDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
     sc: &'a Trajectory<Tai, O, R>,
     ephemeris: &'a E,
 }
@@ -186,7 +186,7 @@ pub enum SpacecraftFilter {
 ///
 /// Generic over origin `O`, reference frame `R`, and ephemeris `E`.
 /// The shadow model is cylindrical (umbra only) — penumbra is not modelled.
-pub struct PowerBudgetAnalysis<'a, O: Origin, R: ReferenceFrame, E> {
+pub struct PowerBudgetAnalysis<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
     scenario: &'a Scenario<O, R>,
     ensemble: &'a Ensemble<AssetId, Tai, O, R>,
     ephemeris: &'a E,

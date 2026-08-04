@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Module s06 exposes a function for calculating the Celestial Intermediate Origin (CIO) locator,
+//! Module s06 exposes a function for calculating the Celestial Intermediate CoordinateOrigin (CIO) locator,
 //! s, using IAU 2006 precession and IAU 2000A nutation.
 
 use fast_polynomial::poly_array;
@@ -36,7 +36,7 @@ impl CioLocator {
 /// l, l', F, D, Ω, LVe, LE and pA.
 type FundamentalArgs = [Angle; 8];
 
-/// Computes the Celestial Intermediate Origin (CIO) locator s, in radians, given the (X, Y)
+/// Computes the Celestial Intermediate CoordinateOrigin (CIO) locator s, in radians, given the (X, Y)
 /// coordinates of the Celestial Intermediate Pole (CIP).
 pub fn cio_locator(
     centuries_since_j2000_tdb: JulianCenturies,

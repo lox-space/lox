@@ -8,7 +8,9 @@ use std::{
 };
 
 use super::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
-use lox_bodies::{Origin, PointMass, TryMeanRadius, TryPointMass, UndefinedOriginPropertyError};
+use lox_bodies::{
+    CoordinateOrigin, PointMass, TryMeanRadius, TryPointMass, UndefinedOriginPropertyError,
+};
 use lox_core::units::{AngleUnits, Distance};
 use lox_core::{
     anomalies::{EccentricAnomaly, TrueAnomaly},
@@ -19,7 +21,7 @@ use lox_core::{
     utils::Linspace,
 };
 use lox_frames::{NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial};
-use lox_time::{deltas::TimeDelta, time_scales::TimeScale};
+use lox_time::{deltas::TimeDelta, time_scales::ContinuousTimeScale};
 use thiserror::Error;
 
 /// Errors that can occur when constructing a Keplerian orbit.
@@ -36,8 +38,8 @@ pub enum KeplerianOrbitError {
 
 impl<T, O, R> KeplerianOrbit<T, O, R>
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Constructs a new Keplerian orbit in a quasi-inertial frame.
@@ -187,8 +189,8 @@ where
 
 impl<T, O, R> TryFrom<KeplerianOrbit<T, O, R>> for CartesianOrbit<T, O, R>
 where
-    T: TimeScale + Copy,
-    O: Origin + TryPointMass + Copy,
+    T: ContinuousTimeScale + Copy,
+    O: CoordinateOrigin + TryPointMass + Copy,
     R: ReferenceFrame + Copy,
 {
     type Error = UndefinedOriginPropertyError;

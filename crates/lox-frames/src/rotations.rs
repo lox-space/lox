@@ -12,7 +12,7 @@ use lox_time::{
     Time,
     julian_dates::JulianDate,
     offsets::{OffsetProvider, TryOffset},
-    time_scales::{Tdb, TimeScale, Tt, Ut1},
+    time_scales::{ContinuousTimeScale, Tdb, Tt, Ut1},
 };
 use thiserror::Error;
 
@@ -33,11 +33,11 @@ use crate::{
 pub mod to_icrf;
 
 /// Computes the rotation from one reference frame to another at a given time.
-pub trait TryRotation<Origin, Target, T>
+pub trait TryRotation<CoordinateOrigin, Target, T>
 where
-    Origin: ReferenceFrame,
+    CoordinateOrigin: ReferenceFrame,
     Target: ReferenceFrame,
-    T: TimeScale,
+    T: ContinuousTimeScale,
 {
     /// The error type returned when the rotation cannot be computed.
     type Error: std::error::Error + Send + Sync + 'static;
@@ -45,7 +45,7 @@ where
     /// Computes the rotation from `origin` to `target` at the given `time`.
     fn try_rotation(
         &self,
-        origin: Origin,
+        origin: CoordinateOrigin,
         target: Target,
         time: Time<T>,
     ) -> Result<Rotation, Self::Error>;
@@ -79,7 +79,7 @@ impl RotationError {
 }
 
 /// Provides Earth orientation data and frame rotation methods for a given time scale.
-pub trait RotationProvider<T: TimeScale>: OffsetProvider {
+pub trait RotationProvider<T: ContinuousTimeScale>: OffsetProvider {
     /// The error type for EOP lookups.
     type EopError: std::error::Error + Send + Sync + 'static;
 
@@ -95,7 +95,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from ICRF to an IAU body-fixed frame.
     fn icrf_to_iau<R>(&self, time: Time<T>, frame: Iau<R>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         R: TryRotationalElements,
         Self: TryOffset<T, Tdb>,
     {
@@ -111,7 +111,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from an IAU body-fixed frame to ICRF.
     fn iau_to_icrf<R>(&self, time: Time<T>, frame: Iau<R>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         R: TryRotationalElements,
         Self: TryOffset<T, Tdb>,
     {
@@ -121,7 +121,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from ICRF to ITRF (via CIO-based path).
     fn icrf_to_itrf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tdb> + TryOffset<T, Tt> + TryOffset<T, Ut1>,
     {
         Ok(self
@@ -132,7 +132,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from ITRF to ICRF.
     fn itrf_to_icrf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tdb> + TryOffset<T, Tt> + TryOffset<T, Ut1>,
     {
         Ok(self.icrf_to_itrf(time)?.transpose())
@@ -151,7 +151,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from J2000 to Mean of Date.
     fn j2000_to_mod(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tt>,
     {
         let time = time.try_to_scale(Tt, self).map_err(RotationError::offset)?;
@@ -161,7 +161,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from Mean of Date to J2000.
     fn mod_to_j2000(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tt>,
     {
         Ok(self.j2000_to_mod(time, sys)?.transpose())
@@ -170,7 +170,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from ICRF to Mean of Date (bias + precession).
     fn icrf_to_mod(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tt>,
     {
         let time = time.try_to_scale(Tt, self).map_err(RotationError::offset)?;
@@ -179,7 +179,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from Mean of Date to ICRF.
     fn mod_to_icrf(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tt>,
     {
         Ok(self.icrf_to_mod(time, sys)?.transpose())
@@ -188,7 +188,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from Mean of Date to True of Date (nutation).
     fn mod_to_tod(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tdb>,
     {
         let tdb = time
@@ -200,7 +200,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from True of Date to Mean of Date.
     fn tod_to_mod(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tdb>,
     {
         Ok(self.mod_to_tod(time, sys)?.transpose())
@@ -209,7 +209,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from True of Date to Pseudo-Earth Fixed (Earth rotation).
     fn tod_to_pef(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tt> + TryOffset<T, Ut1>,
     {
         let tt = time.try_to_scale(Tt, self).map_err(RotationError::offset)?;
@@ -228,7 +228,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from Pseudo-Earth Fixed to True of Date.
     fn pef_to_tod(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tt> + TryOffset<T, Ut1>,
     {
         Ok(self.tod_to_pef(time, sys)?.transpose())
@@ -237,7 +237,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from Pseudo-Earth Fixed to ITRF (polar motion).
     fn pef_to_itrf(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tt>,
     {
         let tt = time.try_to_scale(Tt, self).map_err(RotationError::offset)?;
@@ -248,7 +248,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from ITRF to Pseudo-Earth Fixed.
     fn itrf_to_pef(&self, time: Time<T>, sys: ReferenceSystem) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tt>,
     {
         Ok(self.pef_to_itrf(time, sys)?.transpose())
@@ -257,7 +257,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from True of Date to TEME.
     fn tod_to_teme(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tdb>,
     {
         let tdb = time
@@ -273,7 +273,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from TEME to True of Date.
     fn teme_to_tod(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tdb>,
     {
         Ok(self.tod_to_teme(time)?.transpose())
@@ -282,7 +282,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from ICRF to TEME (classical FK5 chain).
     fn icrf_to_teme(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tt> + TryOffset<T, Tdb>,
     {
         let sys = ReferenceSystem::Iers1996;
@@ -305,7 +305,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from TEME to ICRF.
     fn teme_to_icrf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tt> + TryOffset<T, Tdb>,
     {
         Ok(self.icrf_to_teme(time)?.transpose())
@@ -314,7 +314,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from ICRF to CIRF (CIP + CIO).
     fn icrf_to_cirf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tdb>,
     {
         let tdb = time
@@ -332,7 +332,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from CIRF to ICRF.
     fn cirf_to_icrf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tdb>,
     {
         Ok(self.icrf_to_cirf(time)?.transpose())
@@ -341,7 +341,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from CIRF to TIRF (Earth rotation angle).
     fn cirf_to_tirf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Ut1>,
     {
         let time = time
@@ -359,7 +359,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from TIRF to CIRF.
     fn tirf_to_cirf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Ut1>,
     {
         Ok(self.cirf_to_tirf(time)?.transpose())
@@ -368,7 +368,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from TIRF to ITRF (polar motion).
     fn tirf_to_itrf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tt>,
     {
         let tt = time.try_to_scale(Tt, self).map_err(RotationError::offset)?;
@@ -381,7 +381,7 @@ pub trait RotationProvider<T: TimeScale>: OffsetProvider {
     /// Rotation from ITRF to TIRF.
     fn itrf_to_tirf(&self, time: Time<T>) -> Result<Rotation, RotationError>
     where
-        T: TimeScale + Copy,
+        T: ContinuousTimeScale + Copy,
         Self: TryOffset<T, Tt>,
     {
         Ok(self.tirf_to_itrf(time)?.transpose())
@@ -533,7 +533,7 @@ mod tests {
 
     impl<T> RotationProvider<T> for TestRotationProvider
     where
-        T: TimeScale,
+        T: ContinuousTimeScale,
     {
         type EopError = Infallible;
 

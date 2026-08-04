@@ -5,8 +5,8 @@
 use std::ops::Sub;
 
 use lox_bodies::{
-    DynOrigin, Origin, PointMass, RotationalElements, Spheroid, TryPointMass, TrySpheroid,
-    UndefinedOriginPropertyError,
+    CoordinateOrigin, DynOrigin, PointMass, RotationalElements, Spheroid, TryPointMass,
+    TrySpheroid, UndefinedOriginPropertyError,
 };
 use lox_core::coords::Cartesian;
 use lox_core::coords::FromBodyFixedError;
@@ -17,7 +17,7 @@ use lox_frames::{
     DynFrame, Iau, Icrf, ReferenceFrame, TryBodyFixed, rotations::TryRotation, traits::frame_key,
 };
 use lox_time::offsets::{DefaultOffsetProvider, Offset};
-use lox_time::time_scales::{Tdb, TimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, Tdb};
 use thiserror::Error;
 
 use crate::ground::{DynGroundLocation, GroundLocation};
@@ -26,8 +26,8 @@ use super::{CartesianOrbit, DynCartesianOrbit, KeplerianOrbit, Orbit};
 
 impl<T, O, R> CartesianOrbit<T, O, R>
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Constructs a new Cartesian orbit from position/velocity state, epoch, origin, and frame.
@@ -112,8 +112,8 @@ where
 
 impl<T, O> CartesianOrbit<T, O, Iau<O>>
 where
-    T: TimeScale,
-    O: Origin + RotationalElements + Spheroid + Copy,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin + RotationalElements + Spheroid + Copy,
 {
     /// Converts this body-fixed Cartesian orbit to a ground location.
     pub fn to_ground_location(&self) -> Result<GroundLocation<O>, FromBodyFixedError> {
@@ -148,8 +148,8 @@ fn rotation_lvlh(position: DVec3, velocity: DVec3) -> DMat3 {
 
 impl<T, O> CartesianOrbit<T, O, Icrf>
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
 {
     /// Returns the rotation matrix from ICRF to the Local Vertical Local Horizontal (LVLH) frame.
     pub fn rotation_lvlh(&self) -> DMat3 {
@@ -159,11 +159,11 @@ where
 
 impl<T, O> CartesianOrbit<T, O, Icrf>
 where
-    T: TimeScale + Copy,
-    O: Origin + Copy,
+    T: ContinuousTimeScale + Copy,
+    O: CoordinateOrigin + Copy,
 {
     /// Transforms this orbit to a different central body origin using an ephemeris.
-    pub fn to_origin<O1: Origin + Copy, E: Ephemeris>(
+    pub fn to_origin<O1: CoordinateOrigin + Copy, E: Ephemeris>(
         &self,
         target: O1,
         ephemeris: &E,
@@ -241,8 +241,8 @@ impl DynCartesianOrbit {
 
 impl<T, O, R> Sub for CartesianOrbit<T, O, R>
 where
-    T: TimeScale + Copy,
-    O: Origin + Copy,
+    T: ContinuousTimeScale + Copy,
+    O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Output = Self;
@@ -258,8 +258,8 @@ where
 
 impl<T, O, R> TryFrom<CartesianOrbit<T, O, R>> for KeplerianOrbit<T, O, R>
 where
-    T: TimeScale + Copy,
-    O: Origin + TryPointMass + Copy,
+    T: ContinuousTimeScale + Copy,
+    O: CoordinateOrigin + TryPointMass + Copy,
     R: ReferenceFrame + Copy,
 {
     type Error = UndefinedOriginPropertyError;

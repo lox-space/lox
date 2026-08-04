@@ -10,7 +10,7 @@
     # Utc
 
     As a discontinuous time scale, [Utc](crate::utc::Utc) does not implement
-    [TimeScale](crate::time_scales::TimeScale) and is treated by Lox exclusively as an IO format.
+    [ContinuousTimeScale](crate::time_scales::ContinuousTimeScale) and is treated by Lox exclusively as an IO format.
 */
 
 use alloc::borrow::ToOwned;
@@ -21,7 +21,7 @@ use core::str::FromStr;
 use thiserror::Error;
 
 /// Marker trait denoting a continuous astronomical time scale.
-pub trait TimeScale {
+pub trait ContinuousTimeScale {
     /// Returns the standard abbreviation of this time scale (e.g. `"TAI"`).
     fn abbreviation(&self) -> &'static str;
     /// Returns the full name of this time scale (e.g. `"International Atomic Time"`).
@@ -34,7 +34,7 @@ pub trait TimeScale {
 #[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tai;
 
-impl TimeScale for Tai {
+impl ContinuousTimeScale for Tai {
     fn abbreviation(&self) -> &'static str {
         "TAI"
     }
@@ -55,7 +55,7 @@ impl Display for Tai {
 #[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tcb;
 
-impl TimeScale for Tcb {
+impl ContinuousTimeScale for Tcb {
     fn abbreviation(&self) -> &'static str {
         "TCB"
     }
@@ -76,7 +76,7 @@ impl Display for Tcb {
 #[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tcg;
 
-impl TimeScale for Tcg {
+impl ContinuousTimeScale for Tcg {
     fn abbreviation(&self) -> &'static str {
         "TCG"
     }
@@ -97,7 +97,7 @@ impl Display for Tcg {
 #[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tdb;
 
-impl TimeScale for Tdb {
+impl ContinuousTimeScale for Tdb {
     fn abbreviation(&self) -> &'static str {
         "TDB"
     }
@@ -119,7 +119,7 @@ impl Display for Tdb {
 #[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Gps;
 
-impl TimeScale for Gps {
+impl ContinuousTimeScale for Gps {
     fn abbreviation(&self) -> &'static str {
         "GPS"
     }
@@ -140,7 +140,7 @@ impl Display for Gps {
 #[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Tt;
 
-impl TimeScale for Tt {
+impl ContinuousTimeScale for Tt {
     fn abbreviation(&self) -> &'static str {
         "TT"
     }
@@ -161,7 +161,7 @@ impl Display for Tt {
 #[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub struct Ut1;
 
-impl TimeScale for Ut1 {
+impl ContinuousTimeScale for Ut1 {
     fn abbreviation(&self) -> &'static str {
         "UT1"
     }
@@ -230,7 +230,7 @@ pub enum DynTimeScale {
     Ut1,
 }
 
-impl TimeScale for DynTimeScale {
+impl ContinuousTimeScale for DynTimeScale {
     fn abbreviation(&self) -> &'static str {
         match self {
             DynTimeScale::Gps => Gps.abbreviation(),
@@ -340,7 +340,7 @@ mod tests {
     #[case(Tdb, "TDB", "Barycentric Dynamical Time")]
     #[case(Tt, "TT", "Terrestrial Time")]
     #[case(Ut1, "UT1", "Universal Time")]
-    fn test_time_scales<T: TimeScale + ToString>(
+    fn test_time_scales<T: ContinuousTimeScale + ToString>(
         #[case] scale: T,
         #[case] abbreviation: &'static str,
         #[case] name: &'static str,

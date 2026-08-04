@@ -12,7 +12,7 @@ use std::path::Path;
 use std::f64::consts::PI;
 
 use chrono::{DateTime, Utc as ChronoUtc};
-use lox_bodies::{DynOrigin, Origin};
+use lox_bodies::{CoordinateOrigin, DynOrigin};
 use lox_core::anomalies::{AnomalyError, MeanAnomaly};
 use lox_core::coords::Cartesian;
 use lox_core::elements::{
@@ -34,7 +34,7 @@ use lox_odm::types::omm::{Omm, OmmMeanElements, OmmMetadata};
 use lox_odm::types::opm::{Opm, OpmMetadata};
 use lox_time::offsets::{DefaultOffsetProvider, OffsetProvider};
 use lox_time::time::DynTime;
-use lox_time::time_scales::{DynTimeScale, TimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
 
 use crate::orbits::{
     CartesianOrbit, DynCartesianOrbit, DynKeplerianOrbit, DynTrajectory, KeplerianOrbit, Orbit,
@@ -52,7 +52,7 @@ const DEFAULT_ORIGINATOR: &str = "Lox (https://lox.rs)";
 
 fn orbit_epoch_to_odm_time<T>(time: lox_time::Time<T>) -> OdmTime
 where
-    T: TimeScale + Copy + Into<DynTimeScale>,
+    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
 {
     OdmTime::Time(time.into_dyn())
 }
@@ -184,7 +184,12 @@ pub enum OemWriteError {
 /// [`DefaultOffsetProvider`]; swap it via
 /// [`offset_provider`](Self::offset_provider) if you need a custom UT1
 /// table or a stricter error policy.
-pub struct OpmBuilder<T: TimeScale, O: Origin, R: ReferenceFrame, P = DefaultOffsetProvider> {
+pub struct OpmBuilder<
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
+    R: ReferenceFrame,
+    P = DefaultOffsetProvider,
+> {
     orbit: Orbit<Cartesian, T, O, R>,
     originator: String,
     object_name: String,
@@ -204,8 +209,8 @@ pub struct OpmBuilder<T: TimeScale, O: Origin, R: ReferenceFrame, P = DefaultOff
 
 impl<T, O, R> OpmBuilder<T, O, R, DefaultOffsetProvider>
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     fn new(
@@ -235,8 +240,8 @@ where
 
 impl<T, O, R, P> OpmBuilder<T, O, R, P>
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Replaces the [`OffsetProvider`] used by [`time_system`](Self::time_system).
@@ -351,8 +356,8 @@ where
 
 impl<T, O, R, P> OpmBuilder<T, O, R, P>
 where
-    T: TimeScale + Copy + Into<DynTimeScale>,
-    O: Origin + Copy + Into<DynOrigin>,
+    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
+    O: CoordinateOrigin + Copy + Into<DynOrigin>,
     R: ReferenceFrame + Copy + Into<DynFrame>,
     P: OffsetProvider,
 {
@@ -429,8 +434,8 @@ where
 
 impl<T, O, R> Orbit<Cartesian, T, O, R>
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Opens an [`OpmBuilder`] for this orbit. `object_name` and
@@ -497,7 +502,12 @@ impl DynCartesianOrbit {
 /// [`OffsetProvider`] used by
 /// [`time_system`](Self::time_system) conversions; see
 /// [`offset_provider`](Self::offset_provider).
-pub struct OemBuilder<T: TimeScale, O: Origin, R: ReferenceFrame, P = DefaultOffsetProvider> {
+pub struct OemBuilder<
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
+    R: ReferenceFrame,
+    P = DefaultOffsetProvider,
+> {
     trajectory: Trajectory<T, O, R>,
     originator: String,
     object_name: String,
@@ -520,8 +530,8 @@ pub struct OemBuilder<T: TimeScale, O: Origin, R: ReferenceFrame, P = DefaultOff
 
 impl<T, O, R> OemBuilder<T, O, R, DefaultOffsetProvider>
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     fn new(
@@ -554,8 +564,8 @@ where
 
 impl<T, O, R, P> OemBuilder<T, O, R, P>
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Replaces the [`OffsetProvider`] used by [`time_system`](Self::time_system).
@@ -682,8 +692,8 @@ where
 
 impl<T, O, R, P> OemBuilder<T, O, R, P>
 where
-    T: TimeScale + Copy + Into<DynTimeScale>,
-    O: Origin + Copy + Into<DynOrigin>,
+    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
+    O: CoordinateOrigin + Copy + Into<DynOrigin>,
     R: ReferenceFrame + Copy + Into<DynFrame>,
     P: OffsetProvider,
 {
@@ -784,8 +794,8 @@ where
 
 impl<T, O, R> Trajectory<T, O, R>
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Opens an [`OemBuilder`] for this trajectory. `object_name` and
@@ -1065,7 +1075,12 @@ impl Sgp4 {
 /// The builder is generic over an [`OffsetProvider`] used by
 /// [`time_system`](Self::time_system) conversions; see
 /// [`offset_provider`](Self::offset_provider).
-pub struct OmmBuilder<T: TimeScale, O: Origin, R: ReferenceFrame, P = DefaultOffsetProvider> {
+pub struct OmmBuilder<
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
+    R: ReferenceFrame,
+    P = DefaultOffsetProvider,
+> {
     orbit: KeplerianOrbit<T, O, R>,
     originator: String,
     object_name: String,
@@ -1086,8 +1101,8 @@ pub struct OmmBuilder<T: TimeScale, O: Origin, R: ReferenceFrame, P = DefaultOff
 
 impl<T, O, R> OmmBuilder<T, O, R, DefaultOffsetProvider>
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     fn new(
@@ -1118,8 +1133,8 @@ where
 
 impl<T, O, R, P> OmmBuilder<T, O, R, P>
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Replaces the [`OffsetProvider`] used by [`time_system`](Self::time_system).
@@ -1232,8 +1247,8 @@ where
 
 impl<T, O, R, P> OmmBuilder<T, O, R, P>
 where
-    T: TimeScale + Copy + Into<DynTimeScale>,
-    O: Origin + Copy + Into<DynOrigin>,
+    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
+    O: CoordinateOrigin + Copy + Into<DynOrigin>,
     R: ReferenceFrame + Copy + Into<DynFrame>,
     P: OffsetProvider,
 {
@@ -1324,8 +1339,8 @@ where
 
 impl<T, O, R> KeplerianOrbit<T, O, R>
 where
-    T: TimeScale,
-    O: Origin,
+    T: ContinuousTimeScale,
+    O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Opens an [`OmmBuilder`] for this orbit. `object_name` and
