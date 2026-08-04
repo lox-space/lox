@@ -13,13 +13,7 @@ use lox_approx::ApproxEq;
 use lox_approx::ApproxEqResults;
 use lox_core::time::deltas::TimeDelta;
 
-use crate::{
-    Time,
-    offsets::{DefaultOffsetProvider, Offset},
-    time::TimeScaleMismatch,
-    time_scales::{ContinuousTimeScale, Tai},
-    utc::{Utc, transformations::ToUtc},
-};
+use crate::{Time, time::TimeScaleMismatch, time_scales::ContinuousTimeScale};
 
 /// A half-open interval `[start, start + duration)`.
 ///
@@ -331,62 +325,6 @@ impl TimeInterval {
     pub fn try_new(start: Time, end: Time) -> Result<Self, TimeScaleMismatch> {
         let duration = start.checked_sub(&end).map(|d| -d)?;
         Ok(Interval::from_duration(start, duration))
-    }
-}
-
-impl<T> TimeInterval<T>
-where
-    T: ToUtc + ContinuousTimeScale + Copy,
-    DefaultOffsetProvider: Offset<T, Tai>,
-{
-    /// Converts this time interval to a [`UtcInterval`].
-    pub fn to_utc(&self) -> UtcInterval {
-        UtcInterval {
-            start: self.start().to_utc(),
-            end: self.end().to_utc(),
-        }
-    }
-}
-
-/// An interval of [`Utc`] values.
-///
-/// Unlike [`Interval`], this holds an explicit pair of bounds: UTC has no
-/// well-defined [`TimeDelta`] arithmetic because of leap seconds, so an
-/// epoch-plus-duration representation is not available here.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct UtcInterval {
-    start: Utc,
-    end: Utc,
-}
-
-impl UtcInterval {
-    /// Creates a new UTC interval from `start` to `end`.
-    pub fn new(start: Utc, end: Utc) -> Self {
-        UtcInterval { start, end }
-    }
-
-    /// Returns the start of the interval.
-    pub fn start(&self) -> Utc {
-        self.start
-    }
-
-    /// Returns the end of the interval.
-    pub fn end(&self) -> Utc {
-        self.end
-    }
-
-    /// Converts this UTC interval to a [`TimeInterval`] in TAI.
-    pub fn to_time(&self) -> TimeInterval<Tai> {
-        Interval::new(self.start.to_time(), self.end.to_time())
-    }
-}
-
-impl Display for UtcInterval {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        self.start.fmt(f)?;
-        write!(f, " – ")?;
-        self.end.fmt(f)
     }
 }
 
