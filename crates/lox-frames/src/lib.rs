@@ -6,8 +6,8 @@
 
 //! Reference frames, rotations, and coordinate transformations.
 
-mod frame;
-/// Concrete reference frame marker types.
+/// Reference frame types: the zero-sized marker types and the [`frames::Frame`]
+/// enum covering the same set at runtime.
 pub mod frames;
 /// IAU body-fixed frame rotation calculations.
 pub mod iau;
@@ -20,8 +20,7 @@ pub mod rotations;
 /// Core reference frame traits.
 pub mod traits;
 
-pub use frame::{Frame, UnknownFrameError};
-pub use frames::{Cirf, Iau, Icrf, Itrf, J2000, Teme, Tirf};
+pub use frames::{Cirf, Frame, Iau, Icrf, Itrf, J2000, Teme, Tirf, UnknownFrameError};
 pub use traits::{
     BodyFixed, NonBodyFixedFrameError, NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame,
     TryBodyFixed, TryQuasiInertial,

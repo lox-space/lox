@@ -10,6 +10,10 @@ SPDX-License-Identifier: MPL-2.0
 
 ### Changed
 
+- merge the `Frame` enum into the `frames` module; the crate no longer has a `frame` module beside `frames`
+
+### Changed
+
 - [**breaking**] rename the `DynFrame` enum to `Frame`
 - [**breaking**] the `dynamic` module is now private; `Frame` and `UnknownFrameError` are re-exported at the crate root
 
