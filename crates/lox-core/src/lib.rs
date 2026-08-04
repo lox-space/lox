@@ -23,6 +23,7 @@ pub mod glam;
 pub mod i32;
 pub mod i64;
 pub mod math;
+pub mod sync;
 pub mod time;
 pub mod types;
 pub mod units;
