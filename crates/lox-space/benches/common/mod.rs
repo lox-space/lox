@@ -33,7 +33,7 @@ use lox_space::orbits::propagators::{OrbitSource, Propagator};
 use lox_space::orbits::{Ensemble, Trajectory};
 use lox_space::time::deltas::TimeDelta;
 use lox_space::time::intervals::{Interval, TimeInterval};
-use lox_space::time::time_scales::{Tai, TimeScale};
+use lox_space::time::time_scales::TimeScale;
 
 pub type DynamicEnsemble = Ensemble<AssetId, Origin, Frame>;
 pub type MonoEnsemble = Ensemble<AssetId, Earth, Icrf>;
@@ -72,14 +72,9 @@ pub fn setup_dynamic() -> (Scenario, DynamicEnsemble) {
     let gs = GroundStation::new("cebreros", gs_loc, mask);
     let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
     let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj));
-    let scenario = Scenario::new(
-        interval.start().to_scale(Tai),
-        interval.end().to_scale(Tai),
-        Origin::Earth,
-        Frame::Icrf,
-    )
-    .with_spacecraft(&[sc])
-    .with_ground_stations(&[gs]);
+    let scenario = Scenario::new(interval.start(), interval.end(), Origin::Earth, Frame::Icrf)
+        .with_spacecraft(&[sc])
+        .with_ground_stations(&[gs]);
     let ensemble = scenario.propagate(&DefaultRotationProvider).unwrap();
     (scenario, ensemble)
 }
@@ -107,14 +102,9 @@ pub fn setup_mono() -> (Scenario<Earth, Icrf>, MonoEnsemble) {
     let interval = TimeInterval::new(traj.start_time(), traj.end_time());
     let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(traj.into_dynamic()));
     let gs = GroundStation::new("cebreros", gs_loc.into_dynamic(), mask);
-    let scenario = Scenario::new(
-        interval.start().to_scale(Tai),
-        interval.end().to_scale(Tai),
-        Earth,
-        Icrf,
-    )
-    .with_spacecraft(&[sc])
-    .with_ground_stations(&[gs]);
+    let scenario = Scenario::new(interval.start(), interval.end(), Earth, Icrf)
+        .with_spacecraft(&[sc])
+        .with_ground_stations(&[gs]);
     let ensemble = scenario.propagate(&DefaultRotationProvider).unwrap();
     (scenario, ensemble)
 }
@@ -186,8 +176,7 @@ pub fn assemble_scenario(
     ground_stations: &[GroundStation],
 ) -> (Scenario, DynamicEnsemble) {
     let interval = TimeInterval::new(trajectories[0].start_time(), trajectories[0].end_time());
-    let tai_interval =
-        TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
+    let tai_interval = interval;
     let scenario = Scenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
         .with_spacecraft(&spacecraft)
         .with_ground_stations(ground_stations);

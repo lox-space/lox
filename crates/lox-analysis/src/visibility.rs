@@ -409,7 +409,7 @@ where
     type Error = EvalError;
 
     fn eval(&self, time: Time) -> Result<f64, Self::Error> {
-        // Convert Tai → Tdb for ephemeris lookup (infallible via DefaultOffsetProvider).
+        // Convert to TDB for ephemeris lookup (infallible via DefaultOffsetProvider).
         let tdb = time.to_scale(Tdb);
         let r_body = self
             .ephemeris
@@ -1019,15 +1019,11 @@ where
                 let passes: Vec<Pass> = intervals
                     .iter()
                     .filter_map(|interval| {
-                        // Convert Tai interval to TimeScale for Pass::from_interval
-                        let dynamic_interval = TimeInterval::new(
-                            interval.start().into_dynamic(),
-                            interval.end().into_dynamic(),
-                        );
-                        // Convert typed trajectory to Trajectory for pass computation
+                        // The trajectory may carry typed origin/frame; erase them
+                        // for pass computation.
                         let dynamic_traj = sc_traj.clone().into_dynamic();
                         Pass::from_interval(
-                            dynamic_interval,
+                            *interval,
                             self.step,
                             gs.location(),
                             gs.mask(),
@@ -1556,9 +1552,8 @@ mod tests {
         space_assets: &[Spacecraft],
         interval: TimeInterval<TimeScale>,
     ) -> (Scenario<Origin, Frame>, Ensemble<AssetId, Origin, Frame>) {
-        let tai_interval =
-            TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
-        let scenario = Scenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
+        let scenario_interval = TimeInterval::new(interval.start(), interval.end());
+        let scenario = Scenario::with_interval(scenario_interval, Origin::Earth, Frame::Icrf)
             .with_ground_stations(ground_assets)
             .with_spacecraft(space_assets);
         // Build ensemble from OrbitSource::Trajectory entries
@@ -1633,7 +1628,7 @@ mod tests {
             sc: &typed_sc,
             body_fixed_frame: Frame::Iau(Origin::Earth),
         };
-        // Use the ground station trajectory times converted to Tai
+        // Use the ground station trajectory times
         let actual: Vec<f64> = gs_traj
             .times()
             .iter()
@@ -1836,18 +1831,13 @@ mod tests {
             .expect("pair not found");
         // Colocated spacecraft are always visible to each other.
         assert_eq!(intervals.len(), 1);
-        let tai_interval =
-            TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
+        let scenario_interval = TimeInterval::new(interval.start(), interval.end());
         assert_approx_eq!(
             intervals[0].start(),
-            tai_interval.start().into_dynamic(),
+            scenario_interval.start(),
             rtol <= 1e-10
         );
-        assert_approx_eq!(
-            intervals[0].end(),
-            tai_interval.end().into_dynamic(),
-            rtol <= 1e-10
-        );
+        assert_approx_eq!(intervals[0].end(), scenario_interval.end(), rtol <= 1e-10);
     }
 
     #[test]
@@ -1868,19 +1858,14 @@ mod tests {
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
             .expect("pair not found");
-        let tai_interval =
-            TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
+        let scenario_interval = TimeInterval::new(interval.start(), interval.end());
         assert_eq!(intervals.len(), 1);
         assert_approx_eq!(
             intervals[0].start(),
-            tai_interval.start().into_dynamic(),
+            scenario_interval.start(),
             rtol <= 1e-10
         );
-        assert_approx_eq!(
-            intervals[0].end(),
-            tai_interval.end().into_dynamic(),
-            rtol <= 1e-10
-        );
+        assert_approx_eq!(intervals[0].end(), scenario_interval.end(), rtol <= 1e-10);
 
         // A min_range filter with a positive threshold should exclude colocated
         // spacecraft entirely (range = 0 < threshold at all times).
@@ -1952,20 +1937,15 @@ mod tests {
         let intervals = results
             .intervals_for(sc1.id(), sc2.id())
             .expect("pair not found");
-        let tai_interval =
-            TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
+        let scenario_interval = TimeInterval::new(interval.start(), interval.end());
         // ω = 0 everywhere, so full interval should be returned.
         assert_eq!(intervals.len(), 1);
         assert_approx_eq!(
             intervals[0].start(),
-            tai_interval.start().into_dynamic(),
+            scenario_interval.start(),
             rtol <= 1e-10
         );
-        assert_approx_eq!(
-            intervals[0].end(),
-            tai_interval.end().into_dynamic(),
-            rtol <= 1e-10
-        );
+        assert_approx_eq!(intervals[0].end(), scenario_interval.end(), rtol <= 1e-10);
     }
 
     #[test]
@@ -2393,10 +2373,10 @@ mod tests {
         // Overlap the ISS propagation with the lunar trajectory's time range.
         let t0 = lunar_traj.start_time().max(sgp4.time().into_dynamic());
         let t1 = t0 + TimeDelta::from_hours(24);
-        let tai_interval = Interval::new(t0.to_scale(Tai), t1.to_scale(Tai));
+        let scenario_interval = Interval::new(t0.to_scale(Tai), t1.to_scale(Tai));
         let iss_traj = sgp4
             .with_step(TimeDelta::from_seconds(30))
-            .propagate(tai_interval.into_dynamic())
+            .propagate(scenario_interval.into_dynamic())
             .unwrap()
             .into_dynamic();
 

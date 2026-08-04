@@ -17,6 +17,7 @@ use lox_space::orbits::ground::GroundLocation;
 use lox_space::time::Time;
 use lox_space::time::intervals::TimeInterval;
 use lox_space::time::time_scales::Tai;
+use lox_space::time::time_scales::TimeScale;
 use lox_space::units::*;
 use serde::de::DeserializeOwned;
 
@@ -284,13 +285,13 @@ fn test_dynamic_origin() {
 
 #[test]
 fn test_time_tai() {
-    let t = Time::new(Tai, 0, Default::default());
+    let t = Time::new(TimeScale::Tai, 0, Default::default());
     round_trip(&t);
 }
 
 #[test]
 fn test_time_with_offset() {
-    let t = Time::new(Tai, 86400, Default::default());
+    let t = Time::new(TimeScale::Tai, 86400, Default::default());
     round_trip(&t);
 }
 
@@ -358,7 +359,7 @@ fn test_rotation() {
 
 #[test]
 fn test_state() {
-    let t = Time::new(Tai, 0, Default::default());
+    let t = Time::new(TimeScale::Tai, 0, Default::default());
     let pos = DVec3::new(6778.0, 0.0, 0.0);
     let vel = DVec3::new(0.0, 7.5, 0.0);
     let state = CartesianOrbit::new(
@@ -379,8 +380,8 @@ fn test_ground_location() {
 
 #[test]
 fn test_time_interval() {
-    let t0 = Time::new(Tai, 0, Default::default());
-    let t1 = Time::new(Tai, 3600, Default::default());
+    let t0 = Time::new(TimeScale::Tai, 0, Default::default());
+    let t1 = Time::new(TimeScale::Tai, 3600, Default::default());
     let i = TimeInterval::new(t0, t1);
     round_trip(&i);
 }
@@ -405,7 +406,7 @@ where
 fn test_vallado() {
     use lox_space::orbits::propagators::semi_analytical::Vallado;
 
-    let t = Time::new(Tai, 0, Default::default());
+    let t = Time::new(TimeScale::Tai, 0, Default::default());
     let orbit = CartesianOrbit::new(
         Cartesian::from_vecs(
             DVec3::new(6_778_000.0, 0.0, 0.0),
@@ -423,7 +424,7 @@ fn test_vallado() {
 fn test_numerical_propagator() {
     use lox_space::orbits::propagators::numerical::NumericalPropagator;
 
-    let t = Time::new(Tai, 0, Default::default());
+    let t = Time::new(TimeScale::Tai, 0, Default::default());
     let orbit = CartesianOrbit::new(
         Cartesian::from_vecs(
             DVec3::new(6_778_000.0, 0.0, 0.0),
@@ -441,7 +442,7 @@ fn test_numerical_propagator() {
 fn test_j2_propagator() {
     use lox_space::orbits::propagators::j2::J2Propagator;
 
-    let t = Time::new(Tai, 0, Default::default());
+    let t = Time::new(TimeScale::Tai, 0, Default::default());
     let orbit = CartesianOrbit::new(
         Cartesian::from_vecs(
             DVec3::new(6_778_000.0, 0.0, 0.0),
@@ -459,7 +460,7 @@ fn test_j2_propagator() {
 fn test_j4_propagator() {
     use lox_space::orbits::propagators::j4::J4Propagator;
 
-    let t = Time::new(Tai, 0, Default::default());
+    let t = Time::new(TimeScale::Tai, 0, Default::default());
     let orbit = CartesianOrbit::new(
         Cartesian::from_vecs(
             DVec3::new(6_778_000.0, 0.0, 0.0),
@@ -519,7 +520,7 @@ fn test_orbit_source_vallado() {
     use lox_space::orbits::propagators::OrbitSource;
     use lox_space::orbits::propagators::semi_analytical::Vallado;
 
-    let t = Time::new(Tai, 0, Default::default());
+    let t = Time::new(TimeScale::Tai, 0, Default::default());
     let orbit = CartesianOrbit::new(
         Cartesian::from_vecs(
             DVec3::new(6_778_000.0, 0.0, 0.0),
@@ -553,7 +554,7 @@ fn test_orbit_source_numerical() {
     use lox_space::orbits::propagators::OrbitSource;
     use lox_space::orbits::propagators::numerical::NumericalPropagator;
 
-    let t = Time::new(Tai, 0, Default::default());
+    let t = Time::new(TimeScale::Tai, 0, Default::default());
     let orbit = CartesianOrbit::new(
         Cartesian::from_vecs(
             DVec3::new(6_778_000.0, 0.0, 0.0),
@@ -572,7 +573,7 @@ fn test_orbit_source_j2() {
     use lox_space::orbits::propagators::OrbitSource;
     use lox_space::orbits::propagators::j2::J2Propagator;
 
-    let t = Time::new(Tai, 0, Default::default());
+    let t = Time::new(TimeScale::Tai, 0, Default::default());
     let orbit = CartesianOrbit::new(
         Cartesian::from_vecs(
             DVec3::new(6_778_000.0, 0.0, 0.0),
@@ -591,7 +592,7 @@ fn test_orbit_source_j4() {
     use lox_space::orbits::propagators::OrbitSource;
     use lox_space::orbits::propagators::j4::J4Propagator;
 
-    let t = Time::new(Tai, 0, Default::default());
+    let t = Time::new(TimeScale::Tai, 0, Default::default());
     let orbit = CartesianOrbit::new(
         Cartesian::from_vecs(
             DVec3::new(6_778_000.0, 0.0, 0.0),
@@ -623,7 +624,7 @@ fn test_constellation_propagator() {
 fn test_constellation_satellite() {
     use lox_space::orbits::constellations::WalkerDeltaBuilder;
 
-    let t = Time::new(Tai, 0, Default::default());
+    let t = Time::new(TimeScale::Tai, 0, Default::default());
     let constellation = WalkerDeltaBuilder::new(6, 3)
         .with_semi_major_axis(Distance::kilometers(7000.0), 0.0)
         .with_inclination(Angle::degrees(53.0))
@@ -637,7 +638,7 @@ fn test_constellation_satellite() {
 fn test_constellation() {
     use lox_space::orbits::constellations::WalkerDeltaBuilder;
 
-    let t = Time::new(Tai, 0, Default::default());
+    let t = Time::new(TimeScale::Tai, 0, Default::default());
     let constellation = WalkerDeltaBuilder::new(6, 3)
         .with_semi_major_axis(Distance::kilometers(7000.0), 0.0)
         .with_inclination(Angle::degrees(53.0))
@@ -791,8 +792,8 @@ fn test_scenario() {
     use lox_space::orbits::ground::GroundLocation;
     use lox_space::orbits::propagators::OrbitSource;
 
-    let t0 = Time::new(Tai, 0, Default::default());
-    let t1 = Time::new(Tai, 86400, Default::default());
+    let t0 = Time::new(TimeScale::Tai, 0, Default::default());
+    let t1 = Time::new(TimeScale::Tai, 86400, Default::default());
 
     let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
     let loc = GroundLocation::try_new(coords, Origin::Earth).unwrap();
@@ -816,7 +817,7 @@ fn test_scenario() {
 
 #[test]
 fn test_state_json_structure() {
-    let t = Time::new(Tai, 100, Default::default());
+    let t = Time::new(TimeScale::Tai, 100, Default::default());
     let state = CartesianOrbit::new(
         Cartesian::from_vecs(DVec3::new(6778.0, 0.0, 0.0), DVec3::new(0.0, 7.5, 0.0)),
         t.into_dynamic(),
@@ -834,8 +835,8 @@ fn test_state_json_structure() {
 fn test_scenario_json_structure() {
     use lox_space::analysis::assets::Scenario;
 
-    let t0 = Time::new(Tai, 0, Default::default());
-    let t1 = Time::new(Tai, 86400, Default::default());
+    let t0 = Time::new(TimeScale::Tai, 0, Default::default());
+    let t1 = Time::new(TimeScale::Tai, 86400, Default::default());
     let scenario = Scenario::new(t0, t1, Earth, Icrf);
     let json: serde_json::Value = serde_json::to_value(scenario).expect("serialize");
     assert_eq!(json.get("origin").unwrap(), "Earth");
@@ -850,8 +851,8 @@ fn test_scenario_json_structure() {
 fn test_scenario_dynamic_json_structure() {
     use lox_space::analysis::assets::Scenario;
 
-    let t0 = Time::new(Tai, 0, Default::default());
-    let t1 = Time::new(Tai, 86400, Default::default());
+    let t0 = Time::new(TimeScale::Tai, 0, Default::default());
+    let t1 = Time::new(TimeScale::Tai, 86400, Default::default());
     let scenario = Scenario::new(t0, t1, Origin::Earth, Frame::Icrf);
     let json: serde_json::Value = serde_json::to_value(scenario).expect("serialize");
     assert_eq!(json.get("origin").unwrap(), "Earth");
@@ -860,7 +861,7 @@ fn test_scenario_dynamic_json_structure() {
 
 #[test]
 fn test_time_json_structure() {
-    let t = Time::new(Tai, 100, Default::default());
+    let t = Time::new(TimeScale::Tai, 100, Default::default());
     let json: serde_json::Value = serde_json::to_value(t).expect("serialize");
     assert_eq!(json.get("scale").unwrap(), "TAI");
 }

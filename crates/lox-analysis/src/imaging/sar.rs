@@ -310,7 +310,7 @@ mod integration_tests {
     use lox_orbits::propagators::sgp4::{Elements, Sgp4};
     use lox_time::deltas::TimeDelta;
     use lox_time::intervals::{Interval, TimeInterval};
-    use lox_time::time_scales::{Tai, TimeScale};
+    use lox_time::time_scales::TimeScale;
 
     use crate::assets::{AssetId, Scenario, Spacecraft};
     use crate::imaging::AccessWindow;
@@ -354,9 +354,8 @@ mod integration_tests {
         spacecraft: &[Spacecraft],
         interval: TimeInterval<TimeScale>,
     ) -> (Scenario, Ensemble<AssetId, Origin, Frame>) {
-        let tai_interval =
-            TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
-        let scenario = Scenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
+        let scenario_interval = TimeInterval::new(interval.start(), interval.end());
+        let scenario = Scenario::with_interval(scenario_interval, Origin::Earth, Frame::Icrf)
             .with_spacecraft(spacecraft);
         let mut map = HashMap::new();
         for sc in spacecraft {

@@ -335,7 +335,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use lox_time::time_scales::{Tai, TimeScale};
+    use lox_time::time_scales::TimeScale;
     use std::f64::consts::{FRAC_PI_2, PI};
     use std::sync::OnceLock;
 
@@ -416,13 +416,10 @@ mod tests {
             .unwrap()
             .into_dynamic();
 
-        let tai_interval = TimeInterval::new(
-            sc_traj.start_time().to_scale(Tai),
-            sc_traj.end_time().to_scale(Tai),
-        );
+        let scenario_interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
 
         let sc = Spacecraft::new("ISS", OrbitSource::Trajectory(sc_traj.clone()));
-        let scenario = Scenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
+        let scenario = Scenario::with_interval(scenario_interval, Origin::Earth, Frame::Icrf)
             .with_spacecraft(std::slice::from_ref(&sc));
 
         // Build ensemble

@@ -20,7 +20,7 @@ use lox_frames::rotations::TryRotation;
 use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::{Tai, TimeScale};
+use lox_time::time_scales::TimeScale;
 use rayon::prelude::*;
 
 #[cfg(feature = "comms")]
@@ -381,7 +381,7 @@ impl Spacecraft {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Scenario<O: CoordinateOrigin = Origin, R: ReferenceFrame = Frame> {
-    interval: TimeInterval<Tai>,
+    interval: TimeInterval,
     origin: O,
     frame: R,
     ground_stations: Vec<GroundStation>,
@@ -418,13 +418,13 @@ impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send +
     Scenario<O, R>
 {
     /// Creates a new scenario from start/end times, origin, and frame.
-    pub fn new(start_time: Time<Tai>, end_time: Time<Tai>, origin: O, frame: R) -> Self {
+    pub fn new(start_time: Time, end_time: Time, origin: O, frame: R) -> Self {
         let interval = TimeInterval::new(start_time, end_time);
         Self::with_interval(interval, origin, frame)
     }
 
     /// Creates a new scenario from a time interval, origin, and frame.
-    pub fn with_interval(interval: TimeInterval<Tai>, origin: O, frame: R) -> Self {
+    pub fn with_interval(interval: TimeInterval, origin: O, frame: R) -> Self {
         Self {
             interval,
             origin,
@@ -448,7 +448,7 @@ impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send +
     }
 
     /// Returns the scenario time interval.
-    pub fn interval(&self) -> &TimeInterval<Tai> {
+    pub fn interval(&self) -> &TimeInterval {
         &self.interval
     }
 
@@ -786,7 +786,7 @@ mod tests {
             GroundStation::new("gs1", dummy_location(), dummy_mask()).with_network_id("estrack");
         assert_eq!(gs.network_id(), Some(&NetworkId::new("estrack")));
         // Verify network via filter_by_networks round-trip.
-        let start = Time::j2000(Tai);
+        let start = Time::j2000(TimeScale::Tai);
         let end = start + TimeDelta::from_seconds(86400);
         let scenario =
             Scenario::new(start, end, Origin::Earth, Frame::Icrf).with_ground_stations(&[gs]);
@@ -866,7 +866,7 @@ mod tests {
 
     #[test]
     fn test_scenario_construction() {
-        let start = Time::j2000(Tai);
+        let start = Time::j2000(TimeScale::Tai);
         let end = start + TimeDelta::from_seconds(86400);
         let scenario = Scenario::new(start, end, Origin::Earth, Frame::Icrf);
         assert_eq!(scenario.origin(), Origin::Earth);
@@ -877,7 +877,7 @@ mod tests {
 
     #[test]
     fn test_scenario_with_assets() {
-        let start = Time::j2000(Tai);
+        let start = Time::j2000(TimeScale::Tai);
         let end = start + TimeDelta::from_seconds(86400);
         let gs = GroundStation::new("gs1", dummy_location(), dummy_mask());
         let traj = lox_orbits::orbits::Trajectory::from_csv_dynamic(
@@ -896,7 +896,7 @@ mod tests {
 
     #[test]
     fn test_scenario_filter_by_constellations() {
-        let start = Time::j2000(Tai);
+        let start = Time::j2000(TimeScale::Tai);
         let end = start + TimeDelta::from_seconds(86400);
         let traj = lox_orbits::orbits::Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
@@ -916,7 +916,7 @@ mod tests {
 
     #[test]
     fn test_scenario_filter_by_networks() {
-        let start = Time::j2000(Tai);
+        let start = Time::j2000(TimeScale::Tai);
         let end = start + TimeDelta::from_seconds(86400);
         let gs1 =
             GroundStation::new("gs1", dummy_location(), dummy_mask()).with_network_id("estrack");
@@ -933,7 +933,7 @@ mod tests {
         use lox_core::units::{AngleUnits, DistanceUnits};
         use lox_orbits::constellations::WalkerDeltaBuilder;
 
-        let start = Time::j2000(Tai);
+        let start = Time::j2000(TimeScale::Tai);
         let end = start + TimeDelta::from_seconds(86400);
         let scenario = Scenario::new(start, end, Origin::Earth, Frame::Icrf);
 
@@ -954,7 +954,7 @@ mod tests {
 
     #[test]
     fn test_scenario_interval() {
-        let start = Time::j2000(Tai);
+        let start = Time::j2000(TimeScale::Tai);
         let end = start + TimeDelta::from_seconds(86400);
         let scenario = Scenario::new(start, end, Origin::Earth, Frame::Icrf);
         assert_eq!(scenario.interval().start(), start);
@@ -969,8 +969,8 @@ mod tests {
             Frame::Icrf,
         )
         .unwrap();
-        let start = traj.start_time().to_scale(Tai);
-        let end = traj.end_time().to_scale(Tai);
+        let start = traj.start_time();
+        let end = traj.end_time();
         let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(traj));
         let scenario = Scenario::new(start, end, Origin::Earth, Frame::Icrf).with_spacecraft(&[sc]);
         let ensemble = scenario

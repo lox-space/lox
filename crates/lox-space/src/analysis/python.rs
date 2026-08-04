@@ -43,7 +43,6 @@ use lox_orbits::orbits::Ensemble;
 use lox_orbits::propagators::OrbitSource;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
-use lox_time::time_scales::Tai;
 use lox_units::{Angle, Distance, Velocity};
 
 use numpy::{PyArray1, PyArrayMethods};
@@ -361,9 +360,7 @@ impl PyScenario {
         spacecraft: Option<Vec<PySpacecraft>>,
         ground_stations: Option<Vec<PyGroundStation>>,
     ) -> Self {
-        let tai_start = start.0.to_scale(Tai);
-        let tai_end = end.0.to_scale(Tai);
-        let mut scenario = Scenario::new(tai_start, tai_end, Origin::Earth, Frame::Icrf);
+        let mut scenario = Scenario::new(start.0, end.0, Origin::Earth, Frame::Icrf);
         if let Some(sc) = spacecraft {
             let sc_vec: Vec<Spacecraft> = sc.into_iter().map(|s| s.0).collect();
             scenario = scenario.with_spacecraft(&sc_vec);

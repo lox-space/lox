@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- [**breaking**] `TimeScale` now serializes as its standard abbreviation (`"TAI"`) rather than its variant name (`"Tai"`), matching the zero-sized scale types so the wire format no longer depends on which representation was used
+
+### Changed
+
 - `TimeInterval` and `TimeSeries` now default their scale parameter to `TimeScale`
 - add `TimeInterval::into_dynamic`, mirroring `Time::into_dynamic`
 

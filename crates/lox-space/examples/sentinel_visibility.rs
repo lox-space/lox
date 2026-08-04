@@ -24,7 +24,6 @@ use lox_space::orbits::propagators::OrbitSource;
 use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
 use lox_space::time::deltas::TimeDelta;
 use lox_space::time::intervals::TimeInterval;
-use lox_space::time::time_scales::Tai;
 
 const SENTINEL_1A_NAME: &str = "SENTINEL-1A";
 const SENTINEL_1A_LINE_1: &[u8] =
@@ -58,7 +57,7 @@ fn format_duration(d: TimeDelta) -> String {
     format!("{hours}h {minutes:02}m {seconds:02}s")
 }
 
-fn print_summary(results: &VisibilityResults, interval: TimeInterval<Tai>) {
+fn print_summary(results: &VisibilityResults, interval: TimeInterval) {
     let title = format!(
         "Sentinel visibility — {} → {} ({}h window)",
         interval.start(),
@@ -93,7 +92,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // are valid throughout) and run for WINDOW_HOURS.
     let t0 = s1a_prop.time().max(s2a_prop.time());
     let t1 = t0 + TimeDelta::from_hours(WINDOW_HOURS);
-    let interval = TimeInterval::new(t0, t1);
+    let interval = TimeInterval::new(t0, t1).into_dynamic();
 
     // 2. Build ground stations.
     let mask = ElevationMask::with_fixed_elevation(ELEVATION_MASK_DEG.to_radians());
