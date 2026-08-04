@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [**breaking**] `Interval` is now represented as an epoch plus a `TimeDelta` instead of a pair of bounds, so a `TimeInterval` cannot straddle two time scales. `Interval::new(start, end)` still exists and derives the duration, which means a scale mismatch now panics at construction. Adds `Interval::from_duration`.
 - [**breaking**] `Interval::new`, `end`, `contains_time`, `intersect`, `overlaps`, `contains`, `step_by` and `linspace` now require `T: Add<TimeDelta>` and/or `T: Sub<Output = TimeDelta>`, so `Interval` no longer works over bound types without time-delta arithmetic
-- [**breaking**] `UtcInterval` is a distinct struct holding explicit bounds rather than `Interval<Utc>`, because UTC has no well-defined `TimeDelta` arithmetic
+- [**breaking**] remove `UtcInterval` and `TimeInterval::to_utc`; UTC has no well-defined `TimeDelta` arithmetic, and both were unused. Convert the bounds individually with `Time::to_utc` if needed.
 
 ### Changed
 
