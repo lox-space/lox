@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+
+SPDX-License-Identifier: MPL-2.0
+-->
+
 # Changelog
 All notable changes to this project will be documented in this file.
 
@@ -5,6 +11,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+
+- [**breaking**] `Orbit`, `Trajectory`, `Ensemble`, `Constellation`, `GroundLocation`, `GroundPropagator` and the propagators now default their time scale, origin and frame parameters to the runtime enums; the `Dyn*` aliases are removed
+- [**breaking**] rename `into_dyn` to `into_dynamic`, `from_csv_dyn` to `from_csv_dynamic`, `new_dyn` to `new_dynamic` and `observables_dyn` to `observables_dynamic`
+- [**breaking**] rename `StateToDynGroundError` to `StateToGroundError`
 
 ## [0.1.0-alpha.39](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.38...lox-orbits-v0.1.0-alpha.39) - 2026-05-26
 

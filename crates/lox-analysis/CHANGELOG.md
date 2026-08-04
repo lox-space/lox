@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+
+SPDX-License-Identifier: MPL-2.0
+-->
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -6,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+
+- [**breaking**] `Scenario` and `Pass` now default their origin, frame and time scale parameters to the runtime enums; the `DynScenario` and `DynPass` aliases are removed
 
 ## [0.1.0-alpha.14](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.13...lox-analysis-v0.1.0-alpha.14) - 2026-06-08
 

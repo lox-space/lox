@@ -94,8 +94,9 @@ Key details:
 
 ### Architecture Patterns
 
-- **Generic orbit type**: `Orbit<S, T, O, R>` parameterized on state, timescale, origin, and frame. `DynOrbit` provides runtime polymorphism when needed.
-- **Time representation**: `Time<T: TimeScale>` with femtosecond precision (i64 seconds + attoseconds). Continuous time scales are the default; leap seconds are handled strictly at the UTC I/O boundary.
+- **Generic orbit type**: `Orbit<S, T, O, R>` parameterized on state, timescale, origin, and frame. `T`, `O`, and `R` default to the runtime-determined `TimeScale`, `Origin`, and `Frame` enums, so plain `Orbit<Cartesian>` (or `CartesianOrbit`) is the runtime-polymorphic form; name the zero-sized types — `Orbit<Cartesian, Tai, Earth, Icrf>` — to have the compiler track them.
+- **Runtime vs. static types**: each of the three axes has a trait (`ContinuousTimeScale`, `CoordinateOrigin`, `ReferenceFrame`) implemented both by zero-sized marker types and by a closed enum (`TimeScale`, `Origin`, `Frame`) covering the same set. The enums are the defaults, so the fallible accessors (`TryPointMass`, `TryQuasiInertial`, …) are the common path.
+- **Time representation**: `Time<T: ContinuousTimeScale = TimeScale>` with femtosecond precision (i64 seconds + attoseconds). Continuous time scales are the default; leap seconds are handled strictly at the UTC I/O boundary.
 - **Frame transformations**: Matrix-based rotation pipelines. Transformation chains: ICRF <-> J2000, and CIO-based (CIRF -> TIRF -> ITRF) or equinox-based (MOD -> TOD -> PEF) paths.
 - **Dual orbit representations**: Cartesian (position/velocity vectors via `glam::DVec3`) and Keplerian (classical orbital elements), with conversions between them.
 

@@ -1,4 +1,17 @@
+<!--
+SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+
+SPDX-License-Identifier: MPL-2.0
+-->
+
 # Changelog
+
+## [Unreleased]
+
+### Changed
+
+- [**breaking**] rename the `DynFrame` enum to `Frame`
+- [**breaking**] the `dynamic` module is now private; `Frame` and `UnknownFrameError` are re-exported at the crate root
 
 ## [0.1.0-alpha.20](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.19...lox-frames-v0.1.0-alpha.20) - 2026-05-26
 

@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+
+SPDX-License-Identifier: MPL-2.0
+-->
+
 # Changelog
 All notable changes to this project will be documented in this file.
 
@@ -5,6 +11,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+
+- [**breaking**] rename the `Origin` trait to `CoordinateOrigin`
+- [**breaking**] rename the `DynOrigin` enum to `Origin`
+- [**breaking**] the `dynamic` module is now private; `Origin`, `UnknownOriginId` and `UnknownOriginName` are re-exported at the crate root
 
 ## [0.1.0-alpha.26](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.25...lox-bodies-v0.1.0-alpha.26) - 2026-05-26
 
