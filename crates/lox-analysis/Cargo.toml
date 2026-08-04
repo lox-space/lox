@@ -48,8 +48,13 @@ serde = [
 
 [dev-dependencies]
 csv.workspace = true
+divan.workspace = true
 lox-approx = { workspace = true, features = ["std", "glam"] }
 lox-test-utils.workspace = true
 
 [lib]
 doctest = false
+
+[[bench]]
+name = "visibility"
+harness = false
