@@ -7,7 +7,7 @@
 
 #![cfg(feature = "odm")]
 
-use lox_bodies::DynOrigin;
+use lox_bodies::Origin;
 use lox_core::anomalies::TrueAnomaly;
 use lox_core::coords::Cartesian;
 use lox_core::elements::Keplerian;
@@ -16,7 +16,7 @@ use lox_core::elements::keplerian::{
 };
 use lox_core::units::Angle;
 use lox_core::units::{Distance, Velocity};
-use lox_frames::DynFrame;
+use lox_frames::Frame;
 use lox_odm::Format;
 use lox_odm::types::common::OdmTimeSystem;
 use lox_orbits::odm::{OmmBuildError, OmmWriteError};
@@ -24,7 +24,7 @@ use lox_orbits::orbits::{DynCartesianOrbit, DynKeplerianOrbit, DynTrajectory, Or
 use lox_orbits::propagators::sgp4::Sgp4;
 use lox_time::deltas::TimeDelta;
 use lox_time::time::Time;
-use lox_time::time_scales::DynTimeScale;
+use lox_time::time_scales::TimeScale;
 
 // ---------------------------------------------------------------------------
 // Inline fixtures (KVN form — same wire text used in lox-odm's own tests)
@@ -92,7 +92,7 @@ META_STOP
 // ---------------------------------------------------------------------------
 
 fn sample_dyn_orbit() -> DynCartesianOrbit {
-    let t = Time::j2000(DynTimeScale::Tai);
+    let t = Time::j2000(TimeScale::Tai);
     Orbit::from_state(
         Cartesian::new(
             Distance::kilometers(7000.0),
@@ -103,13 +103,13 @@ fn sample_dyn_orbit() -> DynCartesianOrbit {
             Velocity::kilometers_per_second(0.0),
         ),
         t,
-        DynOrigin::Earth,
-        DynFrame::Icrf,
+        Origin::Earth,
+        Frame::Icrf,
     )
 }
 
 fn sample_dyn_trajectory() -> DynTrajectory {
-    let t0 = Time::j2000(DynTimeScale::Tai);
+    let t0 = Time::j2000(TimeScale::Tai);
     let t1 = t0 + TimeDelta::from_seconds(60);
     let t2 = t0 + TimeDelta::from_seconds(120);
     let mk = |t, x_km: f64| {
@@ -123,8 +123,8 @@ fn sample_dyn_trajectory() -> DynTrajectory {
                 Velocity::kilometers_per_second(0.0),
             ),
             t,
-            DynOrigin::Earth,
-            DynFrame::Icrf,
+            Origin::Earth,
+            Frame::Icrf,
         )
     };
     Trajectory::new(vec![mk(t0, 7000.0), mk(t1, 6999.0), mk(t2, 6996.0)])
@@ -140,11 +140,11 @@ fn sample_dyn_trajectory() -> DynTrajectory {
 fn gsoc_opm_to_dyn_orbit() {
     let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
     // EARTH center → Earth origin
-    assert_eq!(orbit.origin(), DynOrigin::Earth);
-    // TOD frame — DynFrame::Tod wraps a ReferenceSystem, so check via the
+    assert_eq!(orbit.origin(), Origin::Earth);
+    // TOD frame — Frame::Tod wraps a ReferenceSystem, so check via the
     // abbreviation string rather than a direct variant comparison.
     assert!(
-        matches!(orbit.reference_frame(), DynFrame::Tod(_)),
+        matches!(orbit.reference_frame(), Frame::Tod(_)),
         "expected a TOD frame, got {:?}",
         orbit.reference_frame()
     );
@@ -207,8 +207,8 @@ fn jpl_oem_to_dyn_trajectory_segment_count() {
 
     // First segment → DynTrajectory via from_oem
     let traj = DynTrajectory::from_oem(&oem).unwrap();
-    assert_eq!(traj.origin(), DynOrigin::MarsBarycenter);
-    assert_eq!(traj.reference_frame(), DynFrame::J2000);
+    assert_eq!(traj.origin(), Origin::MarsBarycenter);
+    assert_eq!(traj.reference_frame(), Frame::J2000);
     assert_eq!(traj.states().len(), 4);
 }
 
@@ -238,7 +238,7 @@ fn from_oem_segment_second_segment() {
     let seg = &oem.segments[1];
     let traj = DynTrajectory::from_oem_segment(seg).unwrap();
     assert_eq!(traj.states().len(), 3);
-    assert_eq!(traj.origin(), DynOrigin::MarsBarycenter);
+    assert_eq!(traj.origin(), Origin::MarsBarycenter);
 }
 
 // ---------------------------------------------------------------------------
@@ -410,7 +410,7 @@ fn keplerian_orbit_to_omm_round_trip_iss() {
 #[test]
 fn dyn_keplerian_orbit_from_omm_iss() {
     let orbit = DynKeplerianOrbit::from_omm_str(ISS_OMM_JSON).expect("from_omm_str");
-    assert_eq!(orbit.origin(), DynOrigin::Earth);
+    assert_eq!(orbit.origin(), Origin::Earth);
     let inc_deg = orbit.inclination().as_f64().to_degrees();
     assert!(
         (inc_deg - 51.6410).abs() < 1e-9,
@@ -436,12 +436,8 @@ fn omm_builder_returns_typed_error_for_hyperbolic_beyond_asymptote() {
         ArgumentOfPeriapsis::try_new(Angle::radians(0.2)).unwrap(),
         TrueAnomaly::new(Angle::radians(170.0_f64.to_radians())),
     );
-    let orbit: DynKeplerianOrbit = Orbit::from_state(
-        kep,
-        Time::j2000(DynTimeScale::Tai),
-        DynOrigin::Earth,
-        DynFrame::Icrf,
-    );
+    let orbit: DynKeplerianOrbit =
+        Orbit::from_state(kep, Time::j2000(TimeScale::Tai), Origin::Earth, Frame::Icrf);
 
     let err = orbit
         .build_omm("HYPER", "2024-HYP-001A")

@@ -6,7 +6,7 @@ use lox_bodies::CoordinateOrigin;
 use lox_frames::ReferenceFrame;
 use lox_time::Time;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 
 use crate::orbits::{CartesianOrbit, DynTrajectory, Trajectory, TrajectoryError};
 
@@ -111,7 +111,7 @@ impl OrbitSource {
     /// [`DynTrajectory`] in the source's native reference frame.
     pub fn propagate(
         &self,
-        interval: TimeInterval<DynTimeScale>,
+        interval: TimeInterval<TimeScale>,
     ) -> Result<DynTrajectory, PropagateError> {
         match self {
             Self::Sgp4(sgp4) => {
@@ -134,15 +134,15 @@ impl OrbitSource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lox_bodies::DynOrigin;
-    use lox_frames::DynFrame;
-    use lox_time::time_scales::DynTimeScale;
+    use lox_bodies::Origin;
+    use lox_frames::Frame;
+    use lox_time::time_scales::TimeScale;
 
     fn make_trajectory() -> DynTrajectory {
         DynTrajectory::from_csv_dyn(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
-            DynOrigin::Earth,
-            DynFrame::Icrf,
+            Origin::Earth,
+            Frame::Icrf,
         )
         .unwrap()
     }
@@ -151,8 +151,8 @@ mod tests {
     fn test_orbit_source_trajectory_propagate() {
         let traj = make_trajectory();
         let interval = TimeInterval::new(
-            traj.start_time().to_scale(DynTimeScale::Tai),
-            traj.end_time().to_scale(DynTimeScale::Tai),
+            traj.start_time().to_scale(TimeScale::Tai),
+            traj.end_time().to_scale(TimeScale::Tai),
         );
         let source = OrbitSource::Trajectory(traj.clone());
         let result = source.propagate(interval).unwrap();

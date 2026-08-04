@@ -7,7 +7,7 @@ use crate::bodies::TryPointMass;
 use crate::bodies::python::{PyOrigin, PyUndefinedOriginPropertyError};
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::ephem::python::{PyDafSpkError, PySpk};
-use crate::frames::DynFrame;
+use crate::frames::Frame;
 use crate::frames::python::{PyFrame, PyRotationError};
 use crate::orbits::ground::{
     DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables,
@@ -320,7 +320,7 @@ impl PyCartesian {
     ///     ValueError: If the state is not in an inertial frame.
     ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
     fn to_keplerian(&self) -> PyResult<PyKeplerian> {
-        if self.0.reference_frame() != DynFrame::Icrf {
+        if self.0.reference_frame() != Frame::Icrf {
             return Err(PyValueError::new_err(
                 "only inertial frames are supported for conversion to Keplerian elements",
             ));
@@ -340,7 +340,7 @@ impl PyCartesian {
     /// Raises:
     ///     ValueError: If the state is not in an inertial frame.
     fn rotation_lvlh<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
-        if self.0.reference_frame() != DynFrame::Icrf {
+        if self.0.reference_frame() != Frame::Icrf {
             return Err(PyValueError::new_err(
                 "only inertial frames are supported for the LVLH rotation matrix",
             ));
@@ -436,14 +436,14 @@ impl PyCartesian {
         ephemeris: &Bound<'_, PySpk>,
     ) -> PyResult<Self> {
         let frame = self.reference_frame();
-        let s = if frame.0 != DynFrame::Icrf {
-            self.to_frame_inner(PyFrame(DynFrame::Icrf), None)?
+        let s = if frame.0 != Frame::Icrf {
+            self.to_frame_inner(PyFrame(Frame::Icrf), None)?
         } else {
             self.clone()
         };
         let spk = &ephemeris.borrow().0;
         let mut s1 = Self(s.0.try_to_origin(target.0, spk).map_err(PyDafSpkError)?);
-        if frame.0 != DynFrame::Icrf {
+        if frame.0 != Frame::Icrf {
             s1 = s1.to_frame_inner(frame, None)?
         }
         Ok(s1)
@@ -928,7 +928,7 @@ impl PyModifiedEquinoctial {
         let frame = frame
             .map(PyFrame::try_from)
             .transpose()?
-            .unwrap_or(PyFrame(DynFrame::Icrf));
+            .unwrap_or(PyFrame(Frame::Icrf));
 
         let state = lox_core::elements::modified_equinoctial::ModifiedEquinoctial::new(
             p.0, f, g, h, k, l.0,
@@ -1620,7 +1620,7 @@ impl PyGroundLocation {
         let frame = frame
             .map(PyFrame::try_from)
             .transpose()?
-            .unwrap_or(PyFrame(DynFrame::Iau(state.0.origin())));
+            .unwrap_or(PyFrame(Frame::Iau(state.0.origin())));
         let state = state.to_frame_inner(frame, provider)?;
         let rot = self.0.rotation_to_topocentric();
         let position = rot * (state.0.position() - self.0.body_fixed_position());

@@ -13,7 +13,7 @@
 
 use divan::{Bencher, black_box};
 use lox_space::analysis::visibility::VisibilityAnalysis;
-use lox_space::bodies::DynOrigin;
+use lox_space::bodies::Origin;
 use lox_space::core::units::{AngularRate, Distance};
 use lox_space::time::deltas::TimeDelta;
 
@@ -55,7 +55,7 @@ fn visibility_single_pair_with_los(bencher: Bencher) {
     let (scenario, ensemble) = common::setup_dyn();
     bencher.bench(|| {
         VisibilityAnalysis::new(&scenario, &ensemble)
-            .with_occulting_bodies(spk, vec![DynOrigin::Moon])
+            .with_occulting_bodies(spk, vec![Origin::Moon])
             .compute()
             .unwrap()
     });
@@ -67,7 +67,7 @@ fn visibility_single_pair_with_los_min_pass_5m(bencher: Bencher) {
     let (scenario, ensemble) = common::setup_dyn();
     bencher.bench(|| {
         VisibilityAnalysis::new(&scenario, &ensemble)
-            .with_occulting_bodies(spk, vec![DynOrigin::Moon])
+            .with_occulting_bodies(spk, vec![Origin::Moon])
             .with_min_pass_duration(TimeDelta::from_seconds(300))
             .compute()
             .unwrap()
@@ -75,7 +75,7 @@ fn visibility_single_pair_with_los_min_pass_5m(bencher: Bencher) {
 }
 
 // ---------------------------------------------------------------------------
-// Ground-space single pair — monomorphic (concrete types, no DynFrame dispatch)
+// Ground-space single pair — monomorphic (concrete types, no Frame dispatch)
 // ---------------------------------------------------------------------------
 
 #[divan::bench]
@@ -105,7 +105,7 @@ fn visibility_single_pair_mono_with_los(bencher: Bencher) {
     let (scenario, ensemble) = common::setup_mono();
     bencher.bench(|| {
         VisibilityAnalysis::new(&scenario, &ensemble)
-            .with_occulting_bodies(spk, vec![DynOrigin::Moon])
+            .with_occulting_bodies(spk, vec![Origin::Moon])
             .compute()
             .unwrap()
     });
@@ -117,7 +117,7 @@ fn visibility_single_pair_mono_with_los_min_pass_5m(bencher: Bencher) {
     let (scenario, ensemble) = common::setup_mono();
     bencher.bench(|| {
         VisibilityAnalysis::new(&scenario, &ensemble)
-            .with_occulting_bodies(spk, vec![DynOrigin::Moon])
+            .with_occulting_bodies(spk, vec![Origin::Moon])
             .with_min_pass_duration(TimeDelta::from_seconds(300))
             .compute()
             .unwrap()
@@ -183,7 +183,7 @@ fn intersat_pair_with_los(bencher: Bencher) {
     bencher.bench(|| {
         VisibilityAnalysis::new(&scenario, &ensemble)
             .with_inter_satellite()
-            .with_occulting_bodies(spk, vec![DynOrigin::Moon])
+            .with_occulting_bodies(spk, vec![Origin::Moon])
             .compute()
             .unwrap()
     });

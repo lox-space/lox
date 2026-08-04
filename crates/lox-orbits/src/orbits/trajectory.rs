@@ -4,16 +4,16 @@
 
 use std::num::ParseFloatError;
 
-use lox_bodies::{CoordinateOrigin, DynOrigin};
+use lox_bodies::{CoordinateOrigin, Origin};
 use lox_core::coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian};
 use lox_core::glam::DVec3;
 use lox_ephem::Ephemeris;
-use lox_frames::{DynFrame, Icrf, ReferenceFrame, rotations::TryRotation, traits::frame_key};
+use lox_frames::{Frame, Icrf, ReferenceFrame, rotations::TryRotation, traits::frame_key};
 use lox_time::{
     Time,
     deltas::TimeDelta,
     offsets::{DefaultOffsetProvider, Offset},
-    time_scales::{ContinuousTimeScale, DynTimeScale, Tai, Tdb},
+    time_scales::{ContinuousTimeScale, Tai, Tdb, TimeScale},
     utc::Utc,
 };
 use thiserror::Error;
@@ -202,9 +202,9 @@ where
 
 impl<T, O, R> Trajectory<T, O, R>
 where
-    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
-    O: CoordinateOrigin + Copy + Into<DynOrigin>,
-    R: ReferenceFrame + Copy + Into<DynFrame>,
+    T: ContinuousTimeScale + Copy + Into<TimeScale>,
+    O: CoordinateOrigin + Copy + Into<Origin>,
+    R: ReferenceFrame + Copy + Into<Frame>,
 {
     /// Converts this trajectory into a dynamically-typed trajectory.
     pub fn into_dyn(self) -> DynTrajectory {
@@ -320,14 +320,14 @@ where
 }
 
 /// A dynamically-typed trajectory with runtime time scale, origin, and frame.
-pub type DynTrajectory = Trajectory<DynTimeScale, DynOrigin, DynFrame>;
+pub type DynTrajectory = Trajectory<TimeScale, Origin, Frame>;
 
 impl DynTrajectory {
     /// Parses a dynamically-typed trajectory from CSV data.
     pub fn from_csv_dyn(
         csv: &str,
-        origin: DynOrigin,
-        frame: DynFrame,
+        origin: Origin,
+        frame: Frame,
     ) -> Result<DynTrajectory, TrajectoryError> {
         Ok(Trajectory::from_csv(csv, origin, frame)?.into_dyn())
     }
@@ -397,10 +397,10 @@ fn parse_csv_states<O: CoordinateOrigin + Copy, R: ReferenceFrame + Copy>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lox_bodies::{DynOrigin, Earth};
+    use lox_bodies::{Earth, Origin};
     use lox_core::glam::DVec3;
-    use lox_frames::{DynFrame, Icrf};
-    use lox_time::time_scales::DynTimeScale;
+    use lox_frames::{Frame, Icrf};
+    use lox_time::time_scales::TimeScale;
     use lox_time::{time, time_scales::Tdb};
 
     fn sample_trajectory() -> Trajectory<Tdb, Earth, Icrf> {
@@ -440,11 +440,11 @@ mod tests {
         let first_pos = traj.states().first().unwrap().position();
         let dyn_traj = traj.into_dyn();
 
-        assert_eq!(dyn_traj.origin(), DynOrigin::Earth);
-        assert_eq!(dyn_traj.reference_frame(), DynFrame::Icrf);
+        assert_eq!(dyn_traj.origin(), Origin::Earth);
+        assert_eq!(dyn_traj.reference_frame(), Frame::Icrf);
         assert_eq!(
             dyn_traj.states().first().unwrap().time().scale(),
-            DynTimeScale::Tdb
+            TimeScale::Tdb
         );
         assert_eq!(dyn_traj.states().first().unwrap().position(), first_pos);
     }

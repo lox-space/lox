@@ -212,7 +212,7 @@ impl_time_scale_serde!(Ut1, "UT1");
 /// Dynamic time scale selector for runtime-determined time scales.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum DynTimeScale {
+pub enum TimeScale {
     /// GPS Time.
     Gps,
     /// International Atomic Time.
@@ -230,69 +230,69 @@ pub enum DynTimeScale {
     Ut1,
 }
 
-impl ContinuousTimeScale for DynTimeScale {
+impl ContinuousTimeScale for TimeScale {
     fn abbreviation(&self) -> &'static str {
         match self {
-            DynTimeScale::Gps => Gps.abbreviation(),
-            DynTimeScale::Tai => Tai.abbreviation(),
-            DynTimeScale::Tcb => Tcb.abbreviation(),
-            DynTimeScale::Tcg => Tcg.abbreviation(),
-            DynTimeScale::Tdb => Tdb.abbreviation(),
-            DynTimeScale::Tt => Tt.abbreviation(),
-            DynTimeScale::Ut1 => Ut1.abbreviation(),
+            TimeScale::Gps => Gps.abbreviation(),
+            TimeScale::Tai => Tai.abbreviation(),
+            TimeScale::Tcb => Tcb.abbreviation(),
+            TimeScale::Tcg => Tcg.abbreviation(),
+            TimeScale::Tdb => Tdb.abbreviation(),
+            TimeScale::Tt => Tt.abbreviation(),
+            TimeScale::Ut1 => Ut1.abbreviation(),
         }
     }
 
     fn name(&self) -> &'static str {
         match self {
-            DynTimeScale::Gps => Gps.name(),
-            DynTimeScale::Tai => Tai.name(),
-            DynTimeScale::Tcb => Tcb.name(),
-            DynTimeScale::Tcg => Tcg.name(),
-            DynTimeScale::Tdb => Tdb.name(),
-            DynTimeScale::Tt => Tt.name(),
-            DynTimeScale::Ut1 => Ut1.name(),
+            TimeScale::Gps => Gps.name(),
+            TimeScale::Tai => Tai.name(),
+            TimeScale::Tcb => Tcb.name(),
+            TimeScale::Tcg => Tcg.name(),
+            TimeScale::Tdb => Tdb.name(),
+            TimeScale::Tt => Tt.name(),
+            TimeScale::Ut1 => Ut1.name(),
         }
     }
 }
 
-impl From<Gps> for DynTimeScale {
+impl From<Gps> for TimeScale {
     fn from(_: Gps) -> Self {
         Self::Gps
     }
 }
 
-impl From<Tai> for DynTimeScale {
+impl From<Tai> for TimeScale {
     fn from(_: Tai) -> Self {
         Self::Tai
     }
 }
 
-impl From<Tcb> for DynTimeScale {
+impl From<Tcb> for TimeScale {
     fn from(_: Tcb) -> Self {
         Self::Tcb
     }
 }
 
-impl From<Tcg> for DynTimeScale {
+impl From<Tcg> for TimeScale {
     fn from(_: Tcg) -> Self {
         Self::Tcg
     }
 }
 
-impl From<Tdb> for DynTimeScale {
+impl From<Tdb> for TimeScale {
     fn from(_: Tdb) -> Self {
         Self::Tdb
     }
 }
 
-impl From<Tt> for DynTimeScale {
+impl From<Tt> for TimeScale {
     fn from(_: Tt) -> Self {
         Self::Tt
     }
 }
 
-impl From<Ut1> for DynTimeScale {
+impl From<Ut1> for TimeScale {
     fn from(_: Ut1) -> Self {
         Self::Ut1
     }
@@ -303,24 +303,24 @@ impl From<Ut1> for DynTimeScale {
 #[error("unknown time scale: {0}")]
 pub struct UnknownTimeScaleError(String);
 
-impl FromStr for DynTimeScale {
+impl FromStr for TimeScale {
     type Err = UnknownTimeScaleError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "gps" | "GPS" => Ok(DynTimeScale::Gps),
-            "tai" | "TAI" => Ok(DynTimeScale::Tai),
-            "tcb" | "TCB" => Ok(DynTimeScale::Tcb),
-            "tcg" | "TCG" => Ok(DynTimeScale::Tcg),
-            "tdb" | "TDB" => Ok(DynTimeScale::Tdb),
-            "tt" | "TT" => Ok(DynTimeScale::Tt),
-            "ut1" | "UT1" => Ok(DynTimeScale::Ut1),
+            "gps" | "GPS" => Ok(TimeScale::Gps),
+            "tai" | "TAI" => Ok(TimeScale::Tai),
+            "tcb" | "TCB" => Ok(TimeScale::Tcb),
+            "tcg" | "TCG" => Ok(TimeScale::Tcg),
+            "tdb" | "TDB" => Ok(TimeScale::Tdb),
+            "tt" | "TT" => Ok(TimeScale::Tt),
+            "ut1" | "UT1" => Ok(TimeScale::Ut1),
             _ => Err(UnknownTimeScaleError(s.to_owned())),
         }
     }
 }
 
-impl Display for DynTimeScale {
+impl Display for TimeScale {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.abbreviation())
     }
@@ -358,7 +358,7 @@ mod tests {
     #[case("TT", "Terrestrial Time")]
     #[case("UT1", "Universal Time")]
     fn test_dyn_time_scale(#[case] abbreviation: &str, #[case] name: &str) {
-        let scale: DynTimeScale = abbreviation.parse().unwrap();
+        let scale: TimeScale = abbreviation.parse().unwrap();
         assert_eq!(scale.abbreviation(), abbreviation);
         assert_eq!(scale.to_string(), abbreviation);
         assert_eq!(scale.name(), name);
@@ -366,7 +366,7 @@ mod tests {
 
     #[test]
     fn test_dyn_time_scale_invalid() {
-        let scale: Result<DynTimeScale, UnknownTimeScaleError> = "NTS".parse();
+        let scale: Result<TimeScale, UnknownTimeScaleError> = "NTS".parse();
         assert_eq!(scale, Err(UnknownTimeScaleError("NTS".to_owned())))
     }
 
@@ -378,17 +378,17 @@ mod tests {
 
     #[test]
     fn dyn_time_scale_gps_abbreviation() {
-        assert_eq!(DynTimeScale::Gps.abbreviation(), "GPS");
+        assert_eq!(TimeScale::Gps.abbreviation(), "GPS");
     }
 
     #[test]
     fn dyn_time_scale_parses_gps_both_cases() {
-        assert_eq!("GPS".parse::<DynTimeScale>().unwrap(), DynTimeScale::Gps);
-        assert_eq!("gps".parse::<DynTimeScale>().unwrap(), DynTimeScale::Gps);
+        assert_eq!("GPS".parse::<TimeScale>().unwrap(), TimeScale::Gps);
+        assert_eq!("gps".parse::<TimeScale>().unwrap(), TimeScale::Gps);
     }
 
     #[test]
     fn dyn_time_scale_rejects_unknown() {
-        assert!("XYZ".parse::<DynTimeScale>().is_err());
+        assert!("XYZ".parse::<TimeScale>().is_err());
     }
 }

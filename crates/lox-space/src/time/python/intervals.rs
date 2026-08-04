@@ -4,7 +4,7 @@
 
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
-use crate::time::time_scales::DynTimeScale;
+use crate::time::time_scales::TimeScale;
 use lox_time::intervals::{
     TimeInterval, complement_intervals, intersect_intervals, union_intervals,
 };
@@ -21,7 +21,7 @@ use pyo3::prelude::*;
 ///     end: The end time of the interval.
 #[pyclass(name = "Interval", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
-pub struct PyInterval(pub TimeInterval<DynTimeScale>);
+pub struct PyInterval(pub TimeInterval<TimeScale>);
 
 #[pymethods]
 impl PyInterval {

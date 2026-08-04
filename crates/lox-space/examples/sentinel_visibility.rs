@@ -15,9 +15,9 @@ use std::error::Error;
 
 use lox_space::analysis::assets::{GroundStation, Scenario, Spacecraft};
 use lox_space::analysis::visibility::{ElevationMask, VisibilityAnalysis, VisibilityResults};
-use lox_space::bodies::DynOrigin;
+use lox_space::bodies::Origin;
 use lox_space::core::coords::LonLatAlt;
-use lox_space::frames::DynFrame;
+use lox_space::frames::Frame;
 use lox_space::frames::providers::DefaultRotationProvider;
 use lox_space::orbits::ground::GroundLocation;
 use lox_space::orbits::propagators::OrbitSource;
@@ -102,7 +102,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             "svalbard",
             GroundLocation::try_new(
                 LonLatAlt::from_degrees(15.4078, 78.2297, 450.0)?,
-                DynOrigin::Earth,
+                Origin::Earth,
             )?,
             mask.clone(),
         ),
@@ -110,7 +110,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             "maspalomas",
             GroundLocation::try_new(
                 LonLatAlt::from_degrees(-15.6336, 27.7629, 205.0)?,
-                DynOrigin::Earth,
+                Origin::Earth,
             )?,
             mask,
         ),
@@ -124,7 +124,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ];
 
     // 4. Assemble the scenario.
-    let scenario = Scenario::with_interval(interval, DynOrigin::Earth, DynFrame::Icrf)
+    let scenario = Scenario::with_interval(interval, Origin::Earth, Frame::Icrf)
         .with_ground_stations(&stations)
         .with_spacecraft(&spacecraft);
 

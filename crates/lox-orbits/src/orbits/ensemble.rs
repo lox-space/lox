@@ -5,9 +5,9 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use lox_bodies::{CoordinateOrigin, DynOrigin};
-use lox_frames::{DynFrame, ReferenceFrame};
-use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
+use lox_bodies::{CoordinateOrigin, Origin};
+use lox_frames::{Frame, ReferenceFrame};
+use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 
 use super::Trajectory;
 
@@ -20,7 +20,7 @@ where
     K: Eq + Hash;
 
 /// A dynamically-typed ensemble with runtime time scale, origin, and frame.
-pub type DynEnsemble<K> = Ensemble<K, DynTimeScale, DynOrigin, DynFrame>;
+pub type DynEnsemble<K> = Ensemble<K, TimeScale, Origin, Frame>;
 
 impl<K, T, O, R> Ensemble<K, T, O, R>
 where
@@ -63,17 +63,17 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lox_bodies::DynOrigin;
-    use lox_frames::DynFrame;
-    use lox_time::time_scales::DynTimeScale;
+    use lox_bodies::Origin;
+    use lox_frames::Frame;
+    use lox_time::time_scales::TimeScale;
 
-    type TestEnsemble = Ensemble<String, DynTimeScale, DynOrigin, DynFrame>;
+    type TestEnsemble = Ensemble<String, TimeScale, Origin, Frame>;
 
-    fn make_trajectory() -> Trajectory<DynTimeScale, DynOrigin, DynFrame> {
+    fn make_trajectory() -> Trajectory<TimeScale, Origin, Frame> {
         Trajectory::from_csv_dyn(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
-            DynOrigin::Earth,
-            DynFrame::Icrf,
+            Origin::Earth,
+            Frame::Icrf,
         )
         .unwrap()
     }

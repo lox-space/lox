@@ -18,7 +18,7 @@ use lox_time::{
 };
 
 use crate::{
-    DynFrame,
+    Frame,
     frames::{Cirf, Iau, Icrf, Itrf, J2000, Mod, Pef, Teme, Tirf, Tod},
     iers::{IersSystem, ReferenceSystem},
     rotations::{Rotation, RotationError, RotationProvider, TryRotation},
@@ -276,7 +276,7 @@ where
 
 // ---- dynamic dispatch ------------------------------------------------------
 
-impl<T, P> RotateToIcrf<T, P> for DynFrame
+impl<T, P> RotateToIcrf<T, P> for Frame
 where
     T: ContinuousTimeScale + Copy,
     P: RotationProvider<T> + TryOffset<T, Tt> + TryOffset<T, Tdb> + TryOffset<T, Ut1>,
@@ -285,31 +285,31 @@ where
 
     fn rotation_to_icrf(&self, provider: &P, time: Time<T>) -> Result<Rotation, Self::Error> {
         match *self {
-            DynFrame::Icrf => Icrf.rotation_to_icrf(provider, time),
-            DynFrame::J2000 => J2000.rotation_to_icrf(provider, time),
-            DynFrame::Cirf => Cirf.rotation_to_icrf(provider, time),
-            DynFrame::Tirf => Tirf.rotation_to_icrf(provider, time),
-            DynFrame::Itrf => Itrf.rotation_to_icrf(provider, time),
-            DynFrame::Iau(origin) => Iau::try_new(origin)?.rotation_to_icrf(provider, time),
-            DynFrame::Mod(sys) => Mod(sys).rotation_to_icrf(provider, time),
-            DynFrame::Tod(sys) => Tod(sys).rotation_to_icrf(provider, time),
-            DynFrame::Pef(sys) => Pef(sys).rotation_to_icrf(provider, time),
-            DynFrame::Teme => Teme.rotation_to_icrf(provider, time),
+            Frame::Icrf => Icrf.rotation_to_icrf(provider, time),
+            Frame::J2000 => J2000.rotation_to_icrf(provider, time),
+            Frame::Cirf => Cirf.rotation_to_icrf(provider, time),
+            Frame::Tirf => Tirf.rotation_to_icrf(provider, time),
+            Frame::Itrf => Itrf.rotation_to_icrf(provider, time),
+            Frame::Iau(origin) => Iau::try_new(origin)?.rotation_to_icrf(provider, time),
+            Frame::Mod(sys) => Mod(sys).rotation_to_icrf(provider, time),
+            Frame::Tod(sys) => Tod(sys).rotation_to_icrf(provider, time),
+            Frame::Pef(sys) => Pef(sys).rotation_to_icrf(provider, time),
+            Frame::Teme => Teme.rotation_to_icrf(provider, time),
         }
     }
 
     fn rotation_from_icrf(&self, provider: &P, time: Time<T>) -> Result<Rotation, Self::Error> {
         match *self {
-            DynFrame::Icrf => Icrf.rotation_from_icrf(provider, time),
-            DynFrame::J2000 => J2000.rotation_from_icrf(provider, time),
-            DynFrame::Cirf => Cirf.rotation_from_icrf(provider, time),
-            DynFrame::Tirf => Tirf.rotation_from_icrf(provider, time),
-            DynFrame::Itrf => Itrf.rotation_from_icrf(provider, time),
-            DynFrame::Iau(origin) => Iau::try_new(origin)?.rotation_from_icrf(provider, time),
-            DynFrame::Mod(sys) => Mod(sys).rotation_from_icrf(provider, time),
-            DynFrame::Tod(sys) => Tod(sys).rotation_from_icrf(provider, time),
-            DynFrame::Pef(sys) => Pef(sys).rotation_from_icrf(provider, time),
-            DynFrame::Teme => Teme.rotation_from_icrf(provider, time),
+            Frame::Icrf => Icrf.rotation_from_icrf(provider, time),
+            Frame::J2000 => J2000.rotation_from_icrf(provider, time),
+            Frame::Cirf => Cirf.rotation_from_icrf(provider, time),
+            Frame::Tirf => Tirf.rotation_from_icrf(provider, time),
+            Frame::Itrf => Itrf.rotation_from_icrf(provider, time),
+            Frame::Iau(origin) => Iau::try_new(origin)?.rotation_from_icrf(provider, time),
+            Frame::Mod(sys) => Mod(sys).rotation_from_icrf(provider, time),
+            Frame::Tod(sys) => Tod(sys).rotation_from_icrf(provider, time),
+            Frame::Pef(sys) => Pef(sys).rotation_from_icrf(provider, time),
+            Frame::Teme => Teme.rotation_from_icrf(provider, time),
         }
     }
 }
@@ -319,7 +319,7 @@ mod tests {
     use lox_approx::assert_approx_eq;
     use lox_core::glam::DMat3;
 
-    use lox_bodies::DynOrigin;
+    use lox_bodies::Origin;
     use lox_time::time_scales::Tai;
 
     use crate::iers::{Iau2000Model, Iers2003};
@@ -362,12 +362,12 @@ mod tests {
     #[test]
     fn dyn_rotates_between_two_non_icrf_frames() {
         let t = epoch();
-        let tod = DynFrame::Tod(ReferenceSystem::Iers2003(Iau2000Model::A));
+        let tod = Frame::Tod(ReferenceSystem::Iers2003(Iau2000Model::A));
         let fwd = DefaultRotationProvider
-            .try_rotation(tod, DynFrame::Itrf, t)
+            .try_rotation(tod, Frame::Itrf, t)
             .unwrap();
         let bwd = DefaultRotationProvider
-            .try_rotation(DynFrame::Itrf, tod, t)
+            .try_rotation(Frame::Itrf, tod, t)
             .unwrap();
         assert_approx_eq!(fwd.m * bwd.m, DMat3::IDENTITY, atol <= 1e-14);
     }
@@ -401,7 +401,7 @@ mod tests {
         assert!(max_abs_diff(tod_a.m, tod_b.m) > 1e-9);
     }
 
-    // ---- mixed concrete <-> DynFrame, served by the blanket impl -----------
+    // ---- mixed concrete <-> Frame, served by the blanket impl -----------
 
     fn tai_j2000() -> Time<Tai> {
         Time::j2000(Tai)
@@ -410,7 +410,7 @@ mod tests {
     #[test]
     fn mixed_icrf_to_dynframe() {
         let rot = DefaultRotationProvider
-            .try_rotation(Icrf, DynFrame::Icrf, tai_j2000())
+            .try_rotation(Icrf, Frame::Icrf, tai_j2000())
             .unwrap();
         assert!(rot.m.abs_diff_eq(DMat3::IDENTITY, 1e-14));
     }
@@ -418,19 +418,19 @@ mod tests {
     #[test]
     fn mixed_dynframe_to_icrf() {
         let rot = DefaultRotationProvider
-            .try_rotation(DynFrame::Icrf, Icrf, tai_j2000())
+            .try_rotation(Frame::Icrf, Icrf, tai_j2000())
             .unwrap();
         assert!(rot.m.abs_diff_eq(DMat3::IDENTITY, 1e-14));
     }
 
     #[test]
     fn mixed_iau_dynorigin_and_dynframe() {
-        let iau_earth = Iau::try_new(DynOrigin::Earth).unwrap();
+        let iau_earth = Iau::try_new(Origin::Earth).unwrap();
         let fwd = DefaultRotationProvider
-            .try_rotation(Icrf, DynFrame::Iau(DynOrigin::Earth), tai_j2000())
+            .try_rotation(Icrf, Frame::Iau(Origin::Earth), tai_j2000())
             .unwrap();
         let bwd = DefaultRotationProvider
-            .try_rotation(iau_earth, DynFrame::Icrf, tai_j2000())
+            .try_rotation(iau_earth, Frame::Icrf, tai_j2000())
             .unwrap();
         // Non-trivial body-fixed rotation, with a clean round-trip across the
         // concrete↔dynamic boundary.

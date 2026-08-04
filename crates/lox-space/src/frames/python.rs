@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::frames::{
-    dynamic::{DynFrame, UnknownFrameError},
+    dynamic::{Frame, UnknownFrameError},
     traits::ReferenceFrame,
 };
 use lox_frames::rotations::RotationError;
@@ -63,7 +63,7 @@ impl From<PyRotationError> for PyErr {
 #[pyclass(name = "Frame", module = "lox_space", frozen, from_py_object)]
 #[pyo3(eq)]
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
-pub struct PyFrame(pub DynFrame);
+pub struct PyFrame(pub Frame);
 
 #[pymethods]
 impl PyFrame {

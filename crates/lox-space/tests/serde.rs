@@ -275,9 +275,9 @@ fn test_naif_id() {
 
 #[test]
 fn test_dyn_origin() {
-    round_trip(&DynOrigin::Earth);
-    round_trip(&DynOrigin::Moon);
-    round_trip(&DynOrigin::Sun);
+    round_trip(&Origin::Earth);
+    round_trip(&Origin::Moon);
+    round_trip(&Origin::Sun);
 }
 
 // -- lox-time types --
@@ -340,9 +340,9 @@ fn test_frame_zsts_serialize_as_abbreviation() {
 
 #[test]
 fn test_dyn_frame() {
-    round_trip(&DynFrame::Icrf);
-    round_trip(&DynFrame::Itrf);
-    round_trip(&DynFrame::Iau(DynOrigin::Earth));
+    round_trip(&Frame::Icrf);
+    round_trip(&Frame::Itrf);
+    round_trip(&Frame::Iau(Origin::Earth));
 }
 
 #[test]
@@ -488,8 +488,8 @@ fn test_trajectory() {
 
     let traj = DynTrajectory::from_csv_dyn(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
-        DynOrigin::Earth,
-        DynFrame::Icrf,
+        Origin::Earth,
+        Frame::Icrf,
     )
     .unwrap();
     round_trip_no_eq(&traj);
@@ -502,8 +502,8 @@ fn test_orbit_source_trajectory() {
 
     let traj = DynTrajectory::from_csv_dyn(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
-        DynOrigin::Earth,
-        DynFrame::Icrf,
+        Origin::Earth,
+        Frame::Icrf,
     )
     .unwrap();
     round_trip_no_eq(&OrbitSource::Trajectory(traj));
@@ -730,7 +730,7 @@ fn test_ground_station() {
     use lox_space::orbits::ground::GroundLocation;
 
     let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
-    let loc = GroundLocation::try_new(coords, DynOrigin::Earth).unwrap();
+    let loc = GroundLocation::try_new(coords, Origin::Earth).unwrap();
     let mask = ElevationMask::with_fixed_elevation(5.0);
     let gs = GroundStation::new("madrid", loc, mask).with_network_id("estrack");
     round_trip_no_eq(&gs);
@@ -744,8 +744,8 @@ fn test_spacecraft() {
 
     let traj = DynTrajectory::from_csv_dyn(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
-        DynOrigin::Earth,
-        DynFrame::Icrf,
+        Origin::Earth,
+        Frame::Icrf,
     )
     .unwrap();
     let sc = Spacecraft::new("sc-1", OrbitSource::Trajectory(traj)).with_constellation_id("test");
@@ -761,8 +761,8 @@ fn test_spacecraft_with_payloads() {
 
     let traj = DynTrajectory::from_csv_dyn(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
-        DynOrigin::Earth,
-        DynFrame::Icrf,
+        Origin::Earth,
+        Frame::Icrf,
     )
     .unwrap();
     let optical = OpticalPayload::off_nadir(Distance::kilometers(50.0), Angle::degrees(30.0));
@@ -790,18 +790,18 @@ fn test_scenario() {
     let t1 = Time::new(Tai, 86400, Default::default());
 
     let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
-    let loc = GroundLocation::try_new(coords, DynOrigin::Earth).unwrap();
+    let loc = GroundLocation::try_new(coords, Origin::Earth).unwrap();
     let gs = GroundStation::new("madrid", loc, ElevationMask::with_fixed_elevation(5.0));
 
     let traj = DynTrajectory::from_csv_dyn(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
-        DynOrigin::Earth,
-        DynFrame::Icrf,
+        Origin::Earth,
+        Frame::Icrf,
     )
     .unwrap();
     let sc = Spacecraft::new("sc-1", OrbitSource::Trajectory(traj));
 
-    let scenario = Scenario::new(t0, t1, DynOrigin::Earth, DynFrame::Icrf)
+    let scenario = Scenario::new(t0, t1, Origin::Earth, Frame::Icrf)
         .with_ground_stations(&[gs])
         .with_spacecraft(&[sc]);
     round_trip_no_eq(&scenario);
@@ -847,7 +847,7 @@ fn test_scenario_dyn_json_structure() {
 
     let t0 = Time::new(Tai, 0, Default::default());
     let t1 = Time::new(Tai, 86400, Default::default());
-    let scenario = Scenario::new(t0, t1, DynOrigin::Earth, DynFrame::Icrf);
+    let scenario = Scenario::new(t0, t1, Origin::Earth, Frame::Icrf);
     let json: serde_json::Value = serde_json::to_value(scenario).expect("serialize");
     assert_eq!(json.get("origin").unwrap(), "Earth");
     assert_eq!(json.get("frame").unwrap(), "Icrf");

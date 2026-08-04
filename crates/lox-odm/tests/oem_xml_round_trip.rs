@@ -294,11 +294,11 @@ fn multi_segment_count_and_state_count() {
     // Center body correctly parsed for each segment
     assert_eq!(
         oem.segments[0].metadata.center,
-        lox_odm::types::common::OdmCenter::Known(lox_bodies::DynOrigin::Earth)
+        lox_odm::types::common::OdmCenter::Known(lox_bodies::Origin::Earth)
     );
     assert_eq!(
         oem.segments[1].metadata.center,
-        lox_odm::types::common::OdmCenter::Known(lox_bodies::DynOrigin::Moon)
+        lox_odm::types::common::OdmCenter::Known(lox_bodies::Origin::Moon)
     );
 
     // Double round-trip stable

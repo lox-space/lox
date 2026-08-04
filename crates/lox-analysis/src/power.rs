@@ -10,7 +10,7 @@
 
 use std::collections::HashMap;
 
-use lox_bodies::{CoordinateOrigin, DynOrigin, Sun, TryMeanRadius, TrySpheroid};
+use lox_bodies::{CoordinateOrigin, Origin, Sun, TryMeanRadius, TrySpheroid};
 use lox_core::glam::DVec3;
 use lox_core::math::series::InterpolationType;
 use lox_core::units::ASTRONOMICAL_UNIT;
@@ -196,7 +196,7 @@ pub struct PowerBudgetAnalysis<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
 
 impl<'a, O, R, E> PowerBudgetAnalysis<'a, O, R, E>
 where
-    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<DynOrigin>,
+    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<Origin>,
     R: ReferenceFrame + Copy + Send + Sync,
     E: Ephemeris + Send + Sync,
     E::Error: 'static,
@@ -344,10 +344,10 @@ mod tests {
     use std::sync::OnceLock;
 
     use lox_approx::assert_approx_eq;
-    use lox_bodies::DynOrigin;
+    use lox_bodies::Origin;
     use lox_core::glam::DVec3;
     use lox_ephem::spk::parser::Spk;
-    use lox_frames::DynFrame;
+    use lox_frames::Frame;
     use lox_orbits::propagators::sgp4::{Elements, Sgp4};
     use lox_orbits::propagators::{OrbitSource, Propagator};
     use lox_test_utils::data_file;
@@ -426,7 +426,7 @@ mod tests {
         );
 
         let sc = Spacecraft::new("ISS", OrbitSource::Trajectory(sc_traj.clone()));
-        let scenario = Scenario::with_interval(tai_interval, DynOrigin::Earth, DynFrame::Icrf)
+        let scenario = Scenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
             .with_spacecraft(std::slice::from_ref(&sc));
 
         // Build ensemble

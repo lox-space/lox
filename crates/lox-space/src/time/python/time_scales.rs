@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::time::time_scales::{ContinuousTimeScale, DynTimeScale, UnknownTimeScaleError};
+use crate::time::time_scales::{ContinuousTimeScale, TimeScale, UnknownTimeScaleError};
 use pyo3::{
     Bound, PyAny, PyErr, PyResult, exceptions::PyValueError, pyclass, pymethods,
     types::PyAnyMethods,
@@ -35,7 +35,7 @@ impl From<PyUnknownTimeScaleError> for PyErr {
 ///     ValueError: If the abbreviation is not recognized.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[pyclass(name = "TimeScale", module = "lox_space", frozen, eq, from_py_object)]
-pub struct PyTimeScale(pub DynTimeScale);
+pub struct PyTimeScale(pub TimeScale);
 
 #[pymethods]
 impl PyTimeScale {

@@ -336,30 +336,30 @@ where
 
 #[cfg(all(test, feature = "serde"))]
 mod serde_tests {
-    use lox_bodies::DynOrigin;
+    use lox_bodies::Origin;
 
     use super::Iau;
 
     #[test]
     fn deserialize_valid_body() {
-        let json = serde_json::to_string(&DynOrigin::Earth).unwrap();
-        let frame: Iau<DynOrigin> = serde_json::from_str(&json).unwrap();
-        assert_eq!(frame.body(), DynOrigin::Earth);
+        let json = serde_json::to_string(&Origin::Earth).unwrap();
+        let frame: Iau<Origin> = serde_json::from_str(&json).unwrap();
+        assert_eq!(frame.body(), Origin::Earth);
     }
 
     #[test]
     fn deserialize_rejects_undefined_elements() {
         // Sycorax has no rotational elements; deserializing it as an IAU frame
         // must fail rather than yield a frame that panics on first use.
-        let json = serde_json::to_string(&DynOrigin::Sycorax).unwrap();
-        let result: Result<Iau<DynOrigin>, _> = serde_json::from_str(&json);
+        let json = serde_json::to_string(&Origin::Sycorax).unwrap();
+        let result: Result<Iau<Origin>, _> = serde_json::from_str(&json);
         assert!(result.is_err());
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use lox_bodies::DynOrigin;
+    use lox_bodies::Origin;
 
     use crate::traits::frame_key;
 
@@ -384,8 +384,8 @@ mod tests {
     #[test]
     fn iau_frame_naming() {
         // Sun/Moon take the "the" article; other bodies do not.
-        let sun = Iau::try_new(DynOrigin::Sun).unwrap();
-        let earth = Iau::try_new(DynOrigin::Earth).unwrap();
+        let sun = Iau::try_new(Origin::Sun).unwrap();
+        let earth = Iau::try_new(Origin::Earth).unwrap();
         assert!(sun.name().contains("for the Sun"));
         assert!(earth.name().contains("for Earth"));
         assert_eq!(earth.abbreviation(), "IAU_EARTH");

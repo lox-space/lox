@@ -1059,10 +1059,10 @@ mod tests {
     use std::f64::consts::PI;
 
     use lox_approx::assert_approx_eq;
-    use lox_bodies::DynOrigin;
+    use lox_bodies::Origin;
     use lox_core::elements::{GravitationalParameter, MeanElements};
     use lox_core::units::{Area, AreaToMass, Mass};
-    use lox_frames::DynFrame;
+    use lox_frames::Frame;
     use nalgebra::Matrix6;
 
     use crate::json::error::JsonError;
@@ -1077,7 +1077,7 @@ mod tests {
 
     fn sample_epoch() -> OdmTime {
         OdmTime::Time(lox_time::time::Time::j2000(
-            lox_time::time_scales::DynTimeScale::Tai,
+            lox_time::time_scales::TimeScale::Tai,
         ))
     }
 
@@ -1095,8 +1095,8 @@ mod tests {
                 comments: Vec::new(),
                 object_name: "TEST-SAT".to_string(),
                 object_id: "2024-000A".to_string(),
-                center: OdmCenter::Known(DynOrigin::Earth),
-                frame: OdmFrame::Known(DynFrame::Teme),
+                center: OdmCenter::Known(Origin::Earth),
+                frame: OdmFrame::Known(Frame::Teme),
                 frame_epoch: None,
                 mean_element_theory: "SGP4".to_string(),
             },
@@ -1260,7 +1260,7 @@ mod tests {
             "MEAN_ANOMALY": 0.0
         }"#;
         let omm = read_omm(json).expect("parse failed");
-        let mu = DynOrigin::Earth
+        let mu = Origin::Earth
             .try_gravitational_parameter()
             .unwrap()
             .as_f64();

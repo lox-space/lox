@@ -16,17 +16,15 @@ pub use cartesian::StateToDynGroundError;
 pub use ensemble::{DynEnsemble, Ensemble};
 pub use trajectory::{DynTrajectory, Trajectory, TrajectoryError, TrajectoryTransformationError};
 
-use lox_bodies::{
-    CoordinateOrigin, DynOrigin, PointMass, TryPointMass, UndefinedOriginPropertyError,
-};
+use lox_bodies::{CoordinateOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
 use lox_core::{
     coords::Cartesian,
     elements::{GravitationalParameter, Keplerian},
 };
-use lox_frames::{DynFrame, ReferenceFrame};
+use lox_frames::{Frame, ReferenceFrame};
 use lox_time::{
     Time,
-    time_scales::{ContinuousTimeScale, DynTimeScale},
+    time_scales::{ContinuousTimeScale, TimeScale},
 };
 
 /// The state representation of an orbit, either Cartesian or Keplerian.
@@ -48,7 +46,7 @@ pub struct Orbit<S, T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFra
 }
 
 /// A dynamically-typed orbit with runtime time scale, origin, and frame.
-pub type DynOrbit = Orbit<OrbitType, DynTimeScale, DynOrigin, DynFrame>;
+pub type DynOrbit = Orbit<OrbitType, TimeScale, Origin, Frame>;
 
 impl<S, T, O, R> Orbit<S, T, O, R>
 where
@@ -124,12 +122,12 @@ where
 
 impl<S, T, O, R> Orbit<S, T, O, R>
 where
-    T: ContinuousTimeScale + Copy + Into<DynTimeScale>,
-    O: CoordinateOrigin + Copy + Into<DynOrigin>,
-    R: ReferenceFrame + Copy + Into<DynFrame>,
+    T: ContinuousTimeScale + Copy + Into<TimeScale>,
+    O: CoordinateOrigin + Copy + Into<Origin>,
+    R: ReferenceFrame + Copy + Into<Frame>,
 {
     /// Converts this orbit into a dynamically-typed orbit.
-    pub fn into_dyn(self) -> Orbit<S, DynTimeScale, DynOrigin, DynFrame> {
+    pub fn into_dyn(self) -> Orbit<S, TimeScale, Origin, Frame> {
         Orbit::from_state(
             self.state,
             self.time.into_dyn(),
@@ -142,9 +140,9 @@ where
 /// An orbit with Cartesian position and velocity state.
 pub type CartesianOrbit<T, O, R> = Orbit<Cartesian, T, O, R>;
 /// A dynamically-typed Cartesian orbit.
-pub type DynCartesianOrbit = Orbit<Cartesian, DynTimeScale, DynOrigin, DynFrame>;
+pub type DynCartesianOrbit = Orbit<Cartesian, TimeScale, Origin, Frame>;
 
 /// An orbit with classical Keplerian elements state.
 pub type KeplerianOrbit<T, O, R> = Orbit<Keplerian, T, O, R>;
 /// A dynamically-typed Keplerian orbit.
-pub type DynKeplerianOrbit = Orbit<Keplerian, DynTimeScale, DynOrigin, DynFrame>;
+pub type DynKeplerianOrbit = Orbit<Keplerian, TimeScale, Origin, Frame>;

@@ -139,16 +139,16 @@ impl Opm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lox_bodies::DynOrigin;
+    use lox_bodies::Origin;
     use lox_core::elements::GravitationalParameter;
     use lox_core::units::{Angle, Distance};
-    use lox_frames::DynFrame;
+    use lox_frames::Frame;
     use nalgebra::Matrix6;
 
     #[test]
     fn maneuver_impulsive() {
         let epoch = OdmTime::Time(lox_time::time::Time::j2000(
-            lox_time::time_scales::DynTimeScale::Tai,
+            lox_time::time_scales::TimeScale::Tai,
         ));
         let m = Maneuver {
             comments: Vec::new(),
@@ -173,12 +173,12 @@ mod tests {
             comments: Vec::new(),
             object_name: "ISS".to_string(),
             object_id: "1998-067A".to_string(),
-            center: OdmCenter::Known(DynOrigin::Earth),
-            frame: OdmFrame::Known(DynFrame::Icrf),
+            center: OdmCenter::Known(Origin::Earth),
+            frame: OdmFrame::Known(Frame::Icrf),
             frame_epoch: None,
         };
         assert_eq!(m.object_name, "ISS");
-        assert_eq!(m.center, OdmCenter::Known(DynOrigin::Earth));
+        assert_eq!(m.center, OdmCenter::Known(Origin::Earth));
         assert!(m.frame_epoch.is_none());
     }
 
@@ -198,15 +198,15 @@ mod tests {
     fn opm_covariance_with_frame_override() {
         let cov = Covariance {
             comments: Vec::new(),
-            frame: Some(OdmFrame::Known(DynFrame::Itrf)),
+            frame: Some(OdmFrame::Known(Frame::Itrf)),
             matrix: Matrix6::zeros(),
         };
-        assert_eq!(cov.frame, Some(OdmFrame::Known(DynFrame::Itrf)));
+        assert_eq!(cov.frame, Some(OdmFrame::Known(Frame::Itrf)));
         assert_eq!(cov.matrix[(5, 5)], 0.0);
     }
 
     fn sample_opm(center: OdmCenter, frame: OdmFrame) -> Opm {
-        let time = lox_time::time::Time::j2000(lox_time::time_scales::DynTimeScale::Tai);
+        let time = lox_time::time::Time::j2000(lox_time::time_scales::TimeScale::Tai);
         let epoch = OdmTime::Time(time);
         Opm {
             header: crate::types::common::OdmHeader {
@@ -245,8 +245,8 @@ mod tests {
     #[test]
     fn opm_construction() {
         let opm = sample_opm(
-            OdmCenter::Known(DynOrigin::Earth),
-            OdmFrame::Known(DynFrame::Icrf),
+            OdmCenter::Known(Origin::Earth),
+            OdmFrame::Known(Frame::Icrf),
         );
         assert_eq!(opm.metadata.object_name, "TEST-SAT");
         assert!(opm.maneuvers.is_empty());
@@ -256,8 +256,8 @@ mod tests {
     #[test]
     fn opm_gm_prefers_wire_value() {
         let mut opm = sample_opm(
-            OdmCenter::Known(DynOrigin::Earth),
-            OdmFrame::Known(DynFrame::Icrf),
+            OdmCenter::Known(Origin::Earth),
+            OdmFrame::Known(Frame::Icrf),
         );
         let wire_gm = GravitationalParameter::km3_per_s2(398600.4415);
         let elements = Keplerian::builder()
@@ -280,10 +280,10 @@ mod tests {
     fn opm_gm_falls_back_to_canonical_for_known_center() {
         use lox_bodies::TryPointMass;
         let opm = sample_opm(
-            OdmCenter::Known(DynOrigin::Earth),
-            OdmFrame::Known(DynFrame::Icrf),
+            OdmCenter::Known(Origin::Earth),
+            OdmFrame::Known(Frame::Icrf),
         );
-        let expected = DynOrigin::Earth.try_gravitational_parameter().ok();
+        let expected = Origin::Earth.try_gravitational_parameter().ok();
         assert_eq!(opm.gm(), expected);
         assert!(opm.gm().is_some());
     }
@@ -292,7 +292,7 @@ mod tests {
     fn opm_gm_returns_none_for_custom_center_without_wire_gm() {
         let opm = sample_opm(
             OdmCenter::Custom("APOPHIS".to_string()),
-            OdmFrame::Known(DynFrame::Icrf),
+            OdmFrame::Known(Frame::Icrf),
         );
         assert_eq!(opm.gm(), None);
     }

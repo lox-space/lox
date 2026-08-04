@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_frames::DynFrame;
+use lox_frames::Frame;
 use lox_orbits::constellations::{
     ConstellationError, ConstellationPropagator,
     ConstellationSatellite as RustConstellationSatellite, DynConstellation, FlowerBuilder,
@@ -127,7 +127,7 @@ impl PyConstellation {
             .with_phasing(phasing)
             .with_argument_of_periapsis(aop)
             .with_longitude_of_ascending_node(lan)
-            .build_constellation(name, epoch, origin.0, DynFrame::Icrf)
+            .build_constellation(name, epoch, origin.0, Frame::Icrf)
             .map_err(PyConstellationError)?;
 
         Ok(PyConstellation(
@@ -181,7 +181,7 @@ impl PyConstellation {
             .with_phasing(phasing)
             .with_argument_of_periapsis(aop)
             .with_longitude_of_ascending_node(lan)
-            .build_constellation(name, epoch, origin.0, DynFrame::Icrf)
+            .build_constellation(name, epoch, origin.0, Frame::Icrf)
             .map_err(PyConstellationError)?;
 
         Ok(PyConstellation(
@@ -235,7 +235,7 @@ impl PyConstellation {
             .with_coverage_fold(coverage_fold)
             .with_argument_of_periapsis(aop)
             .with_longitude_of_ascending_node(lan)
-            .build_constellation(name, epoch, origin.0, DynFrame::Icrf)
+            .build_constellation(name, epoch, origin.0, Frame::Icrf)
             .map_err(PyConstellationError)?;
 
         Ok(PyConstellation(
@@ -323,7 +323,7 @@ impl PyConstellation {
         }
 
         let constellation = builder
-            .build_constellation(name, epoch, origin.0, DynFrame::Icrf)
+            .build_constellation(name, epoch, origin.0, Frame::Icrf)
             .map_err(PyConstellationError)?;
 
         Ok(PyConstellation(

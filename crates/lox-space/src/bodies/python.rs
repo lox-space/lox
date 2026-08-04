@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::bodies::dynamic::{DynOrigin, UnknownOriginId, UnknownOriginName};
+use crate::bodies::dynamic::{Origin, UnknownOriginId, UnknownOriginName};
 use crate::bodies::{
     CoordinateOrigin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid,
     TryTriaxialEllipsoid,
@@ -62,7 +62,7 @@ impl From<PyUnknownOriginName> for PyErr {
 ///     TypeError: If the argument is neither a string nor an integer.
 #[pyclass(name = "Origin", module = "lox_space", frozen, eq, from_py_object)]
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct PyOrigin(pub DynOrigin);
+pub struct PyOrigin(pub Origin);
 
 #[pymethods]
 impl PyOrigin {
@@ -72,9 +72,7 @@ impl PyOrigin {
             return Ok(Self(origin.try_into().map_err(PyUnknownOriginId)?));
         }
         if let Ok(origin) = origin.extract::<&str>() {
-            return Ok(Self(
-                DynOrigin::from_str(origin).map_err(PyUnknownOriginName)?,
-            ));
+            return Ok(Self(Origin::from_str(origin).map_err(PyUnknownOriginName)?));
         }
         Err(PyTypeError::new_err(
             "`origin` must be either a string or an integer",
@@ -289,9 +287,7 @@ impl TryFrom<&Bound<'_, PyAny>> for PyOrigin {
             return Ok(origin);
         }
         if let Ok(name) = value.extract::<&str>() {
-            return Ok(Self(
-                DynOrigin::from_str(name).map_err(PyUnknownOriginName)?,
-            ));
+            return Ok(Self(Origin::from_str(name).map_err(PyUnknownOriginName)?));
         }
         if let Ok(id) = value.extract::<i32>() {
             return Ok(Self(id.try_into().map_err(PyUnknownOriginId)?));

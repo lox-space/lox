@@ -21,12 +21,12 @@ use std::sync::OnceLock;
 
 use lox_space::analysis::assets::{AssetId, DynScenario, GroundStation, Scenario, Spacecraft};
 use lox_space::analysis::visibility::ElevationMask;
-use lox_space::bodies::{DynOrigin, Earth};
+use lox_space::bodies::{Earth, Origin};
 use lox_space::core::coords::LonLatAlt;
 use lox_space::core::units::AngularRate;
 use lox_space::ephem::spk::parser::Spk;
 use lox_space::frames::providers::DefaultRotationProvider;
-use lox_space::frames::{DynFrame, Icrf};
+use lox_space::frames::{Frame, Icrf};
 use lox_space::orbits::ground::GroundLocation;
 use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
 use lox_space::orbits::propagators::{OrbitSource, Propagator};
@@ -35,7 +35,7 @@ use lox_space::time::deltas::TimeDelta;
 use lox_space::time::intervals::{Interval, TimeInterval};
 use lox_space::time::time_scales::Tai;
 
-pub type DynEnsemble = Ensemble<AssetId, Tai, DynOrigin, DynFrame>;
+pub type DynEnsemble = Ensemble<AssetId, Tai, Origin, Frame>;
 pub type MonoEnsemble = Ensemble<AssetId, Tai, Earth, Icrf>;
 /// A parsed TLE: `(name, line1, line2)`.
 pub type TleEntry = (String, Vec<u8>, Vec<u8>);
@@ -53,15 +53,15 @@ pub fn ephemeris() -> &'static Spk {
 fn spacecraft_trajectory_dyn() -> DynTrajectory {
     DynTrajectory::from_csv_dyn(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
-        DynOrigin::Earth,
-        DynFrame::Icrf,
+        Origin::Earth,
+        Frame::Icrf,
     )
     .unwrap()
 }
 
-fn ground_location_dyn() -> GroundLocation<DynOrigin> {
+fn ground_location_dyn() -> GroundLocation<Origin> {
     let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
-    GroundLocation::try_new(coords, DynOrigin::Earth).unwrap()
+    GroundLocation::try_new(coords, Origin::Earth).unwrap()
 }
 
 /// Ground-space scenario over the lunar trajectory using dynamic dispatch.
@@ -75,8 +75,8 @@ pub fn setup_dyn() -> (DynScenario, DynEnsemble) {
     let scenario = DynScenario::new(
         interval.start().to_scale(Tai),
         interval.end().to_scale(Tai),
-        DynOrigin::Earth,
-        DynFrame::Icrf,
+        Origin::Earth,
+        Frame::Icrf,
     )
     .with_spacecraft(&[sc])
     .with_ground_stations(&[gs]);
@@ -99,7 +99,7 @@ fn ground_location_mono() -> GroundLocation<Earth> {
 }
 
 /// Ground-space scenario over the lunar trajectory using concrete types
-/// (no `DynFrame` dispatch).
+/// (no `Frame` dispatch).
 pub fn setup_mono() -> (Scenario<Earth, Icrf>, MonoEnsemble) {
     let traj = spacecraft_trajectory_mono();
     let gs_loc = ground_location_mono();
@@ -183,7 +183,7 @@ pub fn assemble_scenario(
     let interval = TimeInterval::new(trajectories[0].start_time(), trajectories[0].end_time());
     let tai_interval =
         TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
-    let scenario = DynScenario::with_interval(tai_interval, DynOrigin::Earth, DynFrame::Icrf)
+    let scenario = DynScenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
         .with_spacecraft(&spacecraft)
         .with_ground_stations(ground_stations);
     let mut map = HashMap::new();
@@ -227,7 +227,7 @@ fn scaling_ground_stations() -> Vec<GroundStation> {
         .iter()
         .map(|&(id, lon, lat)| {
             let coords = LonLatAlt::from_degrees(lon, lat, 0.0).unwrap();
-            let loc = GroundLocation::try_new(coords, DynOrigin::Earth).unwrap();
+            let loc = GroundLocation::try_new(coords, Origin::Earth).unwrap();
             GroundStation::new(id, loc, ElevationMask::with_fixed_elevation(0.0))
         })
         .collect()

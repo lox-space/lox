@@ -18,7 +18,7 @@ use crate::analysis::visibility::{
     DynPass, ElevationMask, ElevationMaskError, PairType, Pass, VisibilityAnalysis,
     VisibilityError, VisibilityResults,
 };
-use crate::bodies::DynOrigin;
+use crate::bodies::Origin;
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
     build_rx_terminal, build_tx_terminal, rx_terminal_to_py, tx_terminal_to_py,
@@ -37,13 +37,13 @@ use crate::time::python::intervals::PyInterval;
 use crate::time::python::time::PyTime;
 use crate::time::python::time_series::PyTimeSeries;
 use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyVelocity};
-use lox_frames::DynFrame;
+use lox_frames::Frame;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_orbits::orbits::Ensemble;
 use lox_orbits::propagators::OrbitSource;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
-use lox_time::time_scales::{DynTimeScale, Tai};
+use lox_time::time_scales::{Tai, TimeScale};
 use lox_units::{Angle, Distance, Velocity};
 
 use numpy::{PyArray1, PyArrayMethods};
@@ -79,7 +79,7 @@ impl From<PyElevationMaskError> for PyErr {
 ///     crossing: The crossing direction ("up" or "down").
 #[pyclass(name = "Event", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
-pub struct PyEvent(pub Event<DynTimeScale>);
+pub struct PyEvent(pub Event<TimeScale>);
 
 #[pymethods]
 impl PyEvent {
@@ -363,7 +363,7 @@ impl PyScenario {
     ) -> Self {
         let tai_start = start.0.to_scale(Tai);
         let tai_end = end.0.to_scale(Tai);
-        let mut scenario = DynScenario::new(tai_start, tai_end, DynOrigin::Earth, DynFrame::Icrf);
+        let mut scenario = DynScenario::new(tai_start, tai_end, Origin::Earth, Frame::Icrf);
         if let Some(sc) = spacecraft {
             let sc_vec: Vec<Spacecraft> = sc.into_iter().map(|s| s.0).collect();
             scenario = scenario.with_spacecraft(&sc_vec);
@@ -422,7 +422,7 @@ impl PyScenario {
 /// A collection of propagated trajectories keyed by spacecraft id.
 #[pyclass(name = "Ensemble", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
-pub struct PyEnsemble(pub Ensemble<AssetId, Tai, DynOrigin, DynFrame>);
+pub struct PyEnsemble(pub Ensemble<AssetId, Tai, Origin, Frame>);
 
 #[pymethods]
 impl PyEnsemble {
@@ -472,8 +472,8 @@ impl PyEnsemble {
 #[pyclass(name = "VisibilityAnalysis", module = "lox_space", frozen)]
 pub struct PyVisibilityAnalysis {
     scenario: DynScenario,
-    ensemble: Option<Ensemble<AssetId, Tai, DynOrigin, DynFrame>>,
-    occulting_bodies: Vec<DynOrigin>,
+    ensemble: Option<Ensemble<AssetId, Tai, Origin, Frame>>,
+    occulting_bodies: Vec<Origin>,
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
     inter_satellite: bool,
@@ -501,7 +501,7 @@ impl PyVisibilityAnalysis {
         min_range: Option<PyDistance>,
         max_range: Option<PyDistance>,
     ) -> PyResult<Self> {
-        let occulting_bodies: Vec<DynOrigin> = occulting_bodies
+        let occulting_bodies: Vec<Origin> = occulting_bodies
             .unwrap_or_default()
             .iter()
             .map(|b| Ok(PyOrigin::try_from(b)?.0))
@@ -708,7 +708,7 @@ impl PyVisibilityAnalysis {
 pub struct PyVisibilityResults {
     results: VisibilityResults,
     scenario: DynScenario,
-    ensemble: Ensemble<AssetId, Tai, DynOrigin, DynFrame>,
+    ensemble: Ensemble<AssetId, Tai, Origin, Frame>,
     step: TimeDelta,
 }
 
@@ -1246,7 +1246,7 @@ impl From<PyPowerError> for PyErr {
 #[pyclass(name = "PowerBudgetAnalysis", module = "lox_space", frozen)]
 pub struct PyPowerBudgetAnalysis {
     scenario: DynScenario,
-    ensemble: Option<Ensemble<AssetId, Tai, DynOrigin, DynFrame>>,
+    ensemble: Option<Ensemble<AssetId, Tai, Origin, Frame>>,
     step: TimeDelta,
     filter: Option<SpacecraftFilter>,
 }
@@ -1356,7 +1356,7 @@ impl PyPowerBudgetAnalysis {
     }
 }
 
-/// Convert a `TimeSeries<Tai>` to a `PyTimeSeries` (which uses `DynTimeScale`).
+/// Convert a `TimeSeries<Tai>` to a `PyTimeSeries` (which uses `TimeScale`).
 fn to_py_time_series(ts: &TimeSeries<Tai>) -> PyTimeSeries {
     let dyn_ts = TimeSeries::new(ts.epoch().into_dyn(), ts.series().clone());
     PyTimeSeries(dyn_ts)
@@ -1563,9 +1563,9 @@ impl PyOpticalPayload {
 pub struct PyOpticalAccessAnalysis {
     scenario: DynScenario,
     aois: Vec<(AoiId, Aoi)>,
-    ensemble: Option<Ensemble<AssetId, Tai, DynOrigin, DynFrame>>,
+    ensemble: Option<Ensemble<AssetId, Tai, Origin, Frame>>,
     step: TimeDelta,
-    body_fixed_frame: Option<DynFrame>,
+    body_fixed_frame: Option<Frame>,
 }
 
 #[pymethods]
@@ -1900,9 +1900,9 @@ impl PySarPayload {
 pub struct PySarAccessAnalysis {
     scenario: DynScenario,
     aois: Vec<(AoiId, Aoi)>,
-    ensemble: Option<Ensemble<AssetId, Tai, DynOrigin, DynFrame>>,
+    ensemble: Option<Ensemble<AssetId, Tai, Origin, Frame>>,
     step: TimeDelta,
-    body_fixed_frame: Option<DynFrame>,
+    body_fixed_frame: Option<Frame>,
 }
 
 #[pymethods]

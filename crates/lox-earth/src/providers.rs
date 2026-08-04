@@ -105,7 +105,7 @@ mod tests {
     use lox_time::offsets::TryOffset;
     use lox_time::subsecond::Subsecond;
     use lox_time::time;
-    use lox_time::time_scales::DynTimeScale;
+    use lox_time::time_scales::TimeScale;
     use lox_time::time_scales::{Tai, Ut1};
     use lox_time::utc::transformations::ToUtc;
     use lox_time::{DynTime, calendar_dates::Date, time_of_day::TimeOfDay};
@@ -256,8 +256,8 @@ mod tests {
         #[case] exp: f64,
         provider: &EopProvider,
     ) {
-        let scale1: DynTimeScale = scale1.parse().unwrap();
-        let scale2: DynTimeScale = scale2.parse().unwrap();
+        let scale1: TimeScale = scale1.parse().unwrap();
+        let scale2: TimeScale = scale2.parse().unwrap();
         let date = Date::new(2024, 12, 30).unwrap();
         let time = TimeOfDay::from_hms(10, 27, 13.145).unwrap();
         let dt = DynTime::from_date_and_time(scale1, date, time)

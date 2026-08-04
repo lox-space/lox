@@ -21,15 +21,15 @@
 //!   Applications*, 4th ed. pp. 372, 708–710.
 
 use lox_bodies::{
-    CoordinateOrigin, DynOrigin, TryJ2, TryPointMass, TrySpheroid, UndefinedOriginPropertyError,
+    CoordinateOrigin, Origin, TryJ2, TryPointMass, TrySpheroid, UndefinedOriginPropertyError,
 };
 use lox_core::anomalies::AnomalyError;
 use lox_core::elements::{Keplerian, OrbitType};
-use lox_frames::{DynFrame, ReferenceFrame};
+use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::{ContinuousTimeScale, DynTimeScale};
+use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 use thiserror::Error;
 
 use crate::orbits::{CartesianOrbit, KeplerianOrbit, Trajectory, TrajectoryError};
@@ -88,7 +88,7 @@ pub struct J2Propagator<
 }
 
 /// Type alias for a [`J2Propagator`] using dynamic time scale, origin, and frame.
-pub type DynJ2Propagator = J2Propagator<DynTimeScale, DynOrigin, DynFrame>;
+pub type DynJ2Propagator = J2Propagator<TimeScale, Origin, Frame>;
 
 impl<T, O, R> J2Propagator<T, O, R>
 where
