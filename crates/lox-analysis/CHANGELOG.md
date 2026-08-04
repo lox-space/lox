@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- [**breaking**] drop the time-scale type parameter from event detection: `Event`, `DetectFn`, `EventDetector`, `IntervalDetector` and `IntervalDetectorExt` now work in runtime-scaled `Time`, matching the events2 rewrite. Detection outputs (`TimeSeries`, `TimeInterval`, `AccessWindow`) follow.
+
+### Changed
+
 - [**breaking**] `Pass` is no longer parametrised on the time scale. The analysis layer keeps its internal TAI axis; `events` stays generic over the scale because it is a general-purpose root-finding utility.
 
 ### Changed

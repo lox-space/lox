@@ -12,7 +12,6 @@ pub use lox_core::math::zero_crossing::ZeroCrossing;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::ContinuousTimeScale;
 use thiserror::Error;
 
 // ---------------------------------------------------------------------------
@@ -22,22 +21,20 @@ use thiserror::Error;
 /// A zero-crossing event at a specific time.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Event<T: ContinuousTimeScale> {
+pub struct Event {
     crossing: ZeroCrossing,
-    time: Time<T>,
+    time: Time,
 }
 
-impl<T: ContinuousTimeScale> Event<T> {
+impl Event {
     /// Creates a new event at the given time with the specified crossing direction.
-    pub fn new(time: Time<T>, crossing: ZeroCrossing) -> Self {
+    pub fn new(time: Time, crossing: ZeroCrossing) -> Self {
         Self { crossing, time }
     }
 
     /// Returns the time of the event.
-    pub fn time(&self) -> Time<T>
-    where
-        T: Copy,
-    {
+    pub fn time(&self) -> Time
+where {
         self.time
     }
 
@@ -64,23 +61,23 @@ pub enum DetectError {
 // ---------------------------------------------------------------------------
 
 /// Scalar function whose zero-crossings define events.
-pub trait DetectFn<T: ContinuousTimeScale> {
+pub trait DetectFn {
     /// The error type returned by [`eval`](Self::eval).
     type Error: std::error::Error + Send + Sync + 'static;
     /// Evaluates the detection function at the given time.
-    fn eval(&self, time: Time<T>) -> Result<f64, Self::Error>;
+    fn eval(&self, time: Time) -> Result<f64, Self::Error>;
 }
 
 /// Detects instantaneous events (zero-crossings) within a time interval.
-pub trait EventDetector<T: ContinuousTimeScale> {
+pub trait EventDetector {
     /// Detects all zero-crossing events within the given time interval.
-    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<Event<T>>, DetectError>;
+    fn detect(&self, interval: TimeInterval) -> Result<Vec<Event>, DetectError>;
 }
 
 /// Detects intervals where a condition holds within a time interval.
-pub trait IntervalDetector<T: ContinuousTimeScale> {
+pub trait IntervalDetector {
     /// Detects all sub-intervals where the condition holds.
-    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError>;
+    fn detect(&self, interval: TimeInterval) -> Result<Vec<TimeInterval>, DetectError>;
 }
 
 // ---------------------------------------------------------------------------
@@ -89,26 +86,26 @@ pub trait IntervalDetector<T: ContinuousTimeScale> {
 
 /// A `Callback`-compatible wrapper that bridges `DetectFn` to the root-finder
 /// interface.
-pub(crate) struct DetectCallback<'a, T: ContinuousTimeScale, F: DetectFn<T>> {
+pub(crate) struct DetectCallback<'a, F: DetectFn> {
     func: &'a F,
-    start: Time<T>,
+    start: Time,
 }
 
-impl<T: ContinuousTimeScale + Copy, F: DetectFn<T>> Clone for DetectCallback<'_, T, F> {
+impl<F: DetectFn> Clone for DetectCallback<'_, F> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<T: ContinuousTimeScale + Copy, F: DetectFn<T>> Copy for DetectCallback<'_, T, F> {}
+impl<F: DetectFn> Copy for DetectCallback<'_, F> {}
 
-impl<'a, T: ContinuousTimeScale + Copy, F: DetectFn<T>> DetectCallback<'a, T, F> {
-    fn new(func: &'a F, start: Time<T>) -> Self {
+impl<'a, F: DetectFn> DetectCallback<'a, F> {
+    fn new(func: &'a F, start: Time) -> Self {
         Self { func, start }
     }
 }
 
-impl<T: ContinuousTimeScale + Copy, F: DetectFn<T>> Callback for DetectCallback<'_, T, F> {
+impl<F: DetectFn> Callback for DetectCallback<'_, F> {
     fn call(&self, v: f64) -> Result<f64, LoxError> {
         let time = self.start + TimeDelta::from_seconds_f64(v);
         self.func.eval(time).map_err(LoxError::new)
@@ -181,14 +178,13 @@ impl<F, R> RootFindingDetector<F, R> {
     /// The start value is needed by [`EventsToIntervals`] to determine whether
     /// the condition holds throughout when no zero-crossings are found.
     /// Returning it here avoids a redundant function evaluation.
-    pub(crate) fn detect_with_start_value<T>(
+    pub(crate) fn detect_with_start_value(
         &self,
-        interval: TimeInterval<T>,
-    ) -> Result<(Vec<Event<T>>, f64), DetectError>
+        interval: TimeInterval,
+    ) -> Result<(Vec<Event>, f64), DetectError>
     where
-        T: ContinuousTimeScale + Copy,
-        F: DetectFn<T>,
-        for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
+        F: DetectFn,
+        for<'a> R: FindBracketedRoot<DetectCallback<'a, F>>,
     {
         let start = interval.start();
         let end = interval.end();
@@ -206,17 +202,16 @@ impl<F, R> RootFindingDetector<F, R> {
     }
 
     /// Single-level detection: evaluate at every fine step then root-find.
-    fn detect_single_level<T>(
+    fn detect_single_level(
         &self,
-        callback: DetectCallback<'_, T, F>,
-        start: Time<T>,
+        callback: DetectCallback<'_, F>,
+        start: Time,
         total_seconds: f64,
         step_seconds: f64,
-    ) -> Result<(Vec<Event<T>>, f64), DetectError>
+    ) -> Result<(Vec<Event>, f64), DetectError>
     where
-        T: ContinuousTimeScale + Copy,
-        F: DetectFn<T>,
-        for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
+        F: DetectFn,
+        for<'a> R: FindBracketedRoot<DetectCallback<'a, F>>,
     {
         let steps = build_time_grid(total_seconds, step_seconds);
 
@@ -254,18 +249,17 @@ impl<F, R> RootFindingDetector<F, R> {
 
     /// Two-level detection: coarse grid to find sign-change brackets, then
     /// fine grid within each bracket to locate precise crossings.
-    fn detect_two_level<T>(
+    fn detect_two_level(
         &self,
-        callback: DetectCallback<'_, T, F>,
-        start: Time<T>,
+        callback: DetectCallback<'_, F>,
+        start: Time,
         total_seconds: f64,
         step_seconds: f64,
         coarse_seconds: f64,
-    ) -> Result<(Vec<Event<T>>, f64), DetectError>
+    ) -> Result<(Vec<Event>, f64), DetectError>
     where
-        T: ContinuousTimeScale + Copy,
-        F: DetectFn<T>,
-        for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
+        F: DetectFn,
+        for<'a> R: FindBracketedRoot<DetectCallback<'a, F>>,
     {
         // 1. Build coarse grid and evaluate function values.
         let coarse_grid = build_time_grid(total_seconds, coarse_seconds);
@@ -329,13 +323,12 @@ impl<F, R> RootFindingDetector<F, R> {
     }
 }
 
-impl<T, F, R> EventDetector<T> for RootFindingDetector<F, R>
+impl<F, R> EventDetector for RootFindingDetector<F, R>
 where
-    T: ContinuousTimeScale + Copy,
-    F: DetectFn<T>,
-    for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
+    F: DetectFn,
+    for<'a> R: FindBracketedRoot<DetectCallback<'a, F>>,
 {
-    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<Event<T>>, DetectError> {
+    fn detect(&self, interval: TimeInterval) -> Result<Vec<Event>, DetectError> {
         self.detect_with_start_value(interval)
             .map(|(events, _)| events)
     }
@@ -369,13 +362,12 @@ impl<F, R> EventsToIntervals<F, R> {
     }
 }
 
-impl<T, F, R> IntervalDetector<T> for EventsToIntervals<F, R>
+impl<F, R> IntervalDetector for EventsToIntervals<F, R>
 where
-    T: ContinuousTimeScale + Copy,
-    F: DetectFn<T>,
-    for<'a> R: FindBracketedRoot<DetectCallback<'a, T, F>>,
+    F: DetectFn,
+    for<'a> R: FindBracketedRoot<DetectCallback<'a, F>>,
 {
-    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
+    fn detect(&self, interval: TimeInterval) -> Result<Vec<TimeInterval>, DetectError> {
         let start = interval.start();
         let end = interval.end();
 
@@ -391,7 +383,7 @@ where
             };
         }
 
-        let mut events: VecDeque<Event<T>> = events.into();
+        let mut events: VecDeque<Event> = events.into();
 
         if events.front().unwrap().crossing == ZeroCrossing::Down {
             events.push_front(Event {
@@ -428,13 +420,12 @@ pub struct Intersection<A, B> {
     b: B,
 }
 
-impl<T, A, B> IntervalDetector<T> for Intersection<A, B>
+impl<A, B> IntervalDetector for Intersection<A, B>
 where
-    T: ContinuousTimeScale + Ord + Copy,
-    A: IntervalDetector<T>,
-    B: IntervalDetector<T>,
+    A: IntervalDetector,
+    B: IntervalDetector,
 {
-    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
+    fn detect(&self, interval: TimeInterval) -> Result<Vec<TimeInterval>, DetectError> {
         let a = self.a.detect(interval)?;
         let b = self.b.detect(interval)?;
         Ok(lox_time::intervals::intersect_intervals(&a, &b))
@@ -447,13 +438,12 @@ pub struct Union<A, B> {
     b: B,
 }
 
-impl<T, A, B> IntervalDetector<T> for Union<A, B>
+impl<A, B> IntervalDetector for Union<A, B>
 where
-    T: ContinuousTimeScale + Ord + Copy,
-    A: IntervalDetector<T>,
-    B: IntervalDetector<T>,
+    A: IntervalDetector,
+    B: IntervalDetector,
 {
-    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
+    fn detect(&self, interval: TimeInterval) -> Result<Vec<TimeInterval>, DetectError> {
         let a = self.a.detect(interval)?;
         let b = self.b.detect(interval)?;
         Ok(lox_time::intervals::union_intervals(&a, &b))
@@ -465,12 +455,11 @@ pub struct Complement<D> {
     detector: D,
 }
 
-impl<T, D> IntervalDetector<T> for Complement<D>
+impl<D> IntervalDetector for Complement<D>
 where
-    T: ContinuousTimeScale + Ord + Copy,
-    D: IntervalDetector<T>,
+    D: IntervalDetector,
 {
-    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
+    fn detect(&self, interval: TimeInterval) -> Result<Vec<TimeInterval>, DetectError> {
         let inner = self.detector.detect(interval)?;
         Ok(lox_time::intervals::complement_intervals(&inner, interval))
     }
@@ -482,13 +471,12 @@ pub struct Chain<A, B> {
     b: B,
 }
 
-impl<T, A, B> IntervalDetector<T> for Chain<A, B>
+impl<A, B> IntervalDetector for Chain<A, B>
 where
-    T: ContinuousTimeScale + Copy,
-    A: IntervalDetector<T>,
-    B: IntervalDetector<T>,
+    A: IntervalDetector,
+    B: IntervalDetector,
 {
-    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
+    fn detect(&self, interval: TimeInterval) -> Result<Vec<TimeInterval>, DetectError> {
         let a_intervals = self.a.detect(interval)?;
         let mut result = Vec::new();
         for sub in a_intervals {
@@ -503,7 +491,7 @@ where
 // ---------------------------------------------------------------------------
 
 /// Extension trait providing combinator methods for [`IntervalDetector`] implementations.
-pub trait IntervalDetectorExt<T: ContinuousTimeScale>: IntervalDetector<T> + Sized {
+pub trait IntervalDetectorExt: IntervalDetector + Sized {
     /// Returns intervals where both `self` and `other` are active (intersection).
     fn intersect<B>(self, other: B) -> Intersection<Self, B> {
         Intersection { a: self, b: other }
@@ -525,20 +513,20 @@ pub trait IntervalDetectorExt<T: ContinuousTimeScale>: IntervalDetector<T> + Siz
     }
 }
 
-impl<T: ContinuousTimeScale, D: IntervalDetector<T>> IntervalDetectorExt<T> for D {}
+impl<D: IntervalDetector> IntervalDetectorExt for D {}
 
 // ---------------------------------------------------------------------------
 // IntervalDetector impls for boxed trait objects
 // ---------------------------------------------------------------------------
 
-impl<T: ContinuousTimeScale> IntervalDetector<T> for Box<dyn IntervalDetector<T> + '_> {
-    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
+impl IntervalDetector for Box<dyn IntervalDetector + '_> {
+    fn detect(&self, interval: TimeInterval) -> Result<Vec<TimeInterval>, DetectError> {
         (**self).detect(interval)
     }
 }
 
-impl<T: ContinuousTimeScale> IntervalDetector<T> for Box<dyn IntervalDetector<T> + Send + '_> {
-    fn detect(&self, interval: TimeInterval<T>) -> Result<Vec<TimeInterval<T>>, DetectError> {
+impl IntervalDetector for Box<dyn IntervalDetector + Send + '_> {
+    fn detect(&self, interval: TimeInterval) -> Result<Vec<TimeInterval>, DetectError> {
         (**self).detect(interval)
     }
 }
@@ -550,13 +538,12 @@ impl<T: ContinuousTimeScale> IntervalDetector<T> for Box<dyn IntervalDetector<T>
 /// Wraps an infallible closure into a [`DetectFn`].
 pub struct FnDetect<F>(pub F);
 
-impl<T, F> DetectFn<T> for FnDetect<F>
+impl<F> DetectFn for FnDetect<F>
 where
-    T: ContinuousTimeScale + Copy,
-    F: Fn(Time<T>) -> f64,
+    F: Fn(Time) -> f64,
 {
     type Error = std::convert::Infallible;
-    fn eval(&self, time: Time<T>) -> Result<f64, Self::Error> {
+    fn eval(&self, time: Time) -> Result<f64, Self::Error> {
         Ok((self.0)(time))
     }
 }
@@ -564,14 +551,13 @@ where
 /// Wraps a fallible closure into a [`DetectFn`].
 pub struct TryFnDetect<F>(pub F);
 
-impl<T, F, E> DetectFn<T> for TryFnDetect<F>
+impl<F, E> DetectFn for TryFnDetect<F>
 where
-    T: ContinuousTimeScale + Copy,
-    F: Fn(Time<T>) -> Result<f64, E>,
+    F: Fn(Time) -> Result<f64, E>,
     E: std::error::Error + Send + Sync + 'static,
 {
     type Error = E;
-    fn eval(&self, time: Time<T>) -> Result<f64, Self::Error> {
+    fn eval(&self, time: Time) -> Result<f64, Self::Error> {
         (self.0)(time)
     }
 }
@@ -591,13 +577,12 @@ mod tests {
         counter: &'a AtomicUsize,
     }
 
-    impl<'a, T, F> DetectFn<T> for CountingDetectFn<'a, F>
+    impl<'a, F> DetectFn for CountingDetectFn<'a, F>
     where
-        T: ContinuousTimeScale + Copy,
-        F: Fn(Time<T>) -> f64,
+        F: Fn(Time) -> f64,
     {
         type Error = std::convert::Infallible;
-        fn eval(&self, time: Time<T>) -> Result<f64, Self::Error> {
+        fn eval(&self, time: Time) -> Result<f64, Self::Error> {
             self.counter.fetch_add(1, Ordering::Relaxed);
             Ok((self.inner)(time))
         }
@@ -605,11 +590,11 @@ mod tests {
 
     #[test]
     fn test_events() {
-        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap().into_dynamic();
         let end = start + TimeDelta::from_seconds(7);
         let interval = TimeInterval::new(start, end);
 
-        let detect_fn = FnDetect(|t: Time<Tai>| (t - start).to_seconds().to_f64().sin());
+        let detect_fn = FnDetect(|t: Time| (t - start).to_seconds().to_f64().sin());
         let detector = RootFindingDetector::new(detect_fn, TimeDelta::from_seconds(1));
         let events = detector.detect(interval).unwrap();
 
@@ -630,17 +615,17 @@ mod tests {
 
     #[test]
     fn test_windows() {
-        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap().into_dynamic();
         let end = start + TimeDelta::from_seconds(7);
         let interval = TimeInterval::new(start, end);
 
-        let detect_fn = FnDetect(|t: Time<Tai>| (t - start).to_seconds().to_f64().sin());
+        let detect_fn = FnDetect(|t: Time| (t - start).to_seconds().to_f64().sin());
         let detector = RootFindingDetector::new(detect_fn, TimeDelta::from_seconds(1));
         let intervals_detector = EventsToIntervals::new(detector);
-        let windows = intervals_detector.detect(interval).unwrap();
+        let windows = intervals_detector.detect(interval.into_dynamic()).unwrap();
 
         assert_eq!(windows.len(), 2);
-        assert_eq!(windows[0].start(), start);
+        assert_eq!(windows[0].start(), start.into_dynamic());
         assert_approx_eq!(
             windows[0].end(),
             start + TimeDelta::from_seconds_f64(PI),
@@ -650,32 +635,32 @@ mod tests {
 
     #[test]
     fn test_windows_no_windows() {
-        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap().into_dynamic();
         let end = start + TimeDelta::from_seconds(7);
         let interval = TimeInterval::new(start, end);
 
-        let detect_fn = FnDetect(|_t: Time<Tai>| -1.0);
+        let detect_fn = FnDetect(|_t: Time| -1.0);
         let detector = RootFindingDetector::new(detect_fn, TimeDelta::from_seconds(1));
         let intervals_detector = EventsToIntervals::new(detector);
-        let windows = intervals_detector.detect(interval).unwrap();
+        let windows = intervals_detector.detect(interval.into_dynamic()).unwrap();
 
         assert!(windows.is_empty());
     }
 
     #[test]
     fn test_windows_full_coverage() {
-        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap().into_dynamic();
         let end = start + TimeDelta::from_seconds(7);
         let interval = TimeInterval::new(start, end);
 
-        let detect_fn = FnDetect(|_t: Time<Tai>| 1.0);
+        let detect_fn = FnDetect(|_t: Time| 1.0);
         let detector = RootFindingDetector::new(detect_fn, TimeDelta::from_seconds(1));
         let intervals_detector = EventsToIntervals::new(detector);
-        let windows = intervals_detector.detect(interval).unwrap();
+        let windows = intervals_detector.detect(interval.into_dynamic()).unwrap();
 
         assert_eq!(windows.len(), 1);
-        assert_eq!(windows[0].start(), start);
-        assert_eq!(windows[0].end(), end);
+        assert_eq!(windows[0].start(), start.into_dynamic());
+        assert_eq!(windows[0].end(), end.into_dynamic());
     }
 
     // -----------------------------------------------------------------------
@@ -686,19 +671,19 @@ mod tests {
     fn test_two_level_matches_single_level() {
         // sin(t) over [0, 7]: zero crossings at PI and TAU.
         // Two-level with coarse_step=3s, fine step=1s should find the same events.
-        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap().into_dynamic();
         let end = start + TimeDelta::from_seconds(7);
         let interval = TimeInterval::new(start, end);
 
         let single = RootFindingDetector::new(
-            FnDetect(move |t: Time<Tai>| (t - start).to_seconds().to_f64().sin()),
+            FnDetect(move |t: Time| (t - start).to_seconds().to_f64().sin()),
             TimeDelta::from_seconds(1),
         )
         .detect(interval)
         .unwrap();
 
         let two_level = RootFindingDetector::new(
-            FnDetect(move |t: Time<Tai>| (t - start).to_seconds().to_f64().sin()),
+            FnDetect(move |t: Time| (t - start).to_seconds().to_f64().sin()),
             TimeDelta::from_seconds(1),
         )
         .with_coarse_step(TimeDelta::from_seconds(3))
@@ -718,11 +703,11 @@ mod tests {
         // zero crossings (at t ≈ 2.64, 5.78, 8.92). The bracket has a sign
         // change (sin(0.5) > 0, sin(10.5) < 0) so the fine grid is applied
         // and all 3 crossings are found.
-        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap().into_dynamic();
         let end = start + TimeDelta::from_seconds(10);
         let interval = TimeInterval::new(start, end);
 
-        let func = move |t: Time<Tai>| ((t - start).to_seconds().to_f64() + 0.5).sin();
+        let func = move |t: Time| ((t - start).to_seconds().to_f64() + 0.5).sin();
 
         let single = RootFindingDetector::new(FnDetect(func), TimeDelta::from_seconds(1))
             .detect(interval)
@@ -744,15 +729,16 @@ mod tests {
     #[test]
     fn test_two_level_no_events() {
         // Constant negative function — no events, correct start_value.
-        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap().into_dynamic();
         let end = start + TimeDelta::from_seconds(10);
         let interval = TimeInterval::new(start, end);
 
-        let det =
-            RootFindingDetector::new(FnDetect(|_t: Time<Tai>| -1.0), TimeDelta::from_seconds(1))
-                .with_coarse_step(TimeDelta::from_seconds(3));
+        let det = RootFindingDetector::new(FnDetect(|_t: Time| -1.0), TimeDelta::from_seconds(1))
+            .with_coarse_step(TimeDelta::from_seconds(3));
 
-        let (events, start_value) = det.detect_with_start_value(interval).unwrap();
+        let (events, start_value) = det
+            .detect_with_start_value(interval.into_dynamic())
+            .unwrap();
         assert!(events.is_empty());
         assert!(start_value < 0.0);
     }
@@ -761,12 +747,12 @@ mod tests {
     fn test_two_level_windows_roundtrip() {
         // EventsToIntervals with a coarse-stepped detector produces the same
         // windows as without for sin(t) over [0, 7].
-        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap().into_dynamic();
         let end = start + TimeDelta::from_seconds(7);
         let interval = TimeInterval::new(start, end);
 
         let single_windows = EventsToIntervals::new(RootFindingDetector::new(
-            FnDetect(move |t: Time<Tai>| (t - start).to_seconds().to_f64().sin()),
+            FnDetect(move |t: Time| (t - start).to_seconds().to_f64().sin()),
             TimeDelta::from_seconds(1),
         ))
         .detect(interval)
@@ -774,12 +760,12 @@ mod tests {
 
         let two_level_windows = EventsToIntervals::new(
             RootFindingDetector::new(
-                FnDetect(move |t: Time<Tai>| (t - start).to_seconds().to_f64().sin()),
+                FnDetect(move |t: Time| (t - start).to_seconds().to_f64().sin()),
                 TimeDelta::from_seconds(1),
             )
             .with_coarse_step(TimeDelta::from_seconds(3)),
         )
-        .detect(interval)
+        .detect(interval.into_dynamic())
         .unwrap();
 
         assert_eq!(single_windows.len(), two_level_windows.len());
@@ -793,12 +779,12 @@ mod tests {
     fn test_two_level_eval_count_reduction() {
         // Verify that two-level stepping uses fewer evaluations than single-level
         // for a long interval with sparse events.
-        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap().into_dynamic();
         let end = start + TimeDelta::from_seconds(1000);
         let interval = TimeInterval::new(start, end);
 
         // sin(t/100) — two crossings in [0, 1000] at ~314s and ~628s.
-        let func = move |t: Time<Tai>| ((t - start).to_seconds().to_f64() / 100.0).sin();
+        let func = move |t: Time| ((t - start).to_seconds().to_f64() / 100.0).sin();
 
         let counter_single = AtomicUsize::new(0);
         let single = RootFindingDetector::new(
@@ -842,7 +828,7 @@ mod tests {
     // -----------------------------------------------------------------------
 
     /// Helper: build an `EventsToIntervals` detector from an infallible closure.
-    fn make_window_detector<F: Fn(Time<Tai>) -> f64>(
+    fn make_window_detector<F: Fn(Time) -> f64>(
         func: F,
         step: TimeDelta,
     ) -> EventsToIntervals<FnDetect<F>> {
@@ -850,25 +836,25 @@ mod tests {
     }
 
     /// sin(t) is positive on (0, PI) within [0, 7].
-    fn sin_detector(start: Time<Tai>) -> EventsToIntervals<FnDetect<impl Fn(Time<Tai>) -> f64>> {
+    fn sin_detector(start: Time) -> EventsToIntervals<FnDetect<impl Fn(Time) -> f64>> {
         make_window_detector(
-            move |t: Time<Tai>| (t - start).to_seconds().to_f64().sin(),
+            move |t: Time| (t - start).to_seconds().to_f64().sin(),
             TimeDelta::from_seconds(1),
         )
     }
 
     /// cos(t) is positive on [0, PI/2) and (3PI/2, 7] within [0, 7].
-    fn cos_detector(start: Time<Tai>) -> EventsToIntervals<FnDetect<impl Fn(Time<Tai>) -> f64>> {
+    fn cos_detector(start: Time) -> EventsToIntervals<FnDetect<impl Fn(Time) -> f64>> {
         make_window_detector(
-            move |t: Time<Tai>| (t - start).to_seconds().to_f64().cos(),
+            move |t: Time| (t - start).to_seconds().to_f64().cos(),
             TimeDelta::from_seconds(1),
         )
     }
 
-    fn test_interval() -> (Time<Tai>, TimeInterval<Tai>) {
-        let start = time!(Tai, 2000, 1, 1, 12).unwrap();
+    fn test_interval() -> (Time, TimeInterval) {
+        let start = time!(Tai, 2000, 1, 1, 12).unwrap().into_dynamic();
         let end = start + TimeDelta::from_seconds(7);
-        (start, TimeInterval::new(start, end))
+        (start.into_dynamic(), TimeInterval::new(start, end))
     }
 
     #[test]
@@ -962,10 +948,10 @@ mod tests {
         // Use a constant-negative A to prove B is never called.
         let (start, interval) = test_interval();
         let counter = AtomicUsize::new(0);
-        let a = make_window_detector(|_t: Time<Tai>| -1.0, TimeDelta::from_seconds(1));
+        let a = make_window_detector(|_t: Time| -1.0, TimeDelta::from_seconds(1));
         let b = EventsToIntervals::new(RootFindingDetector::new(
             CountingDetectFn {
-                inner: move |t: Time<Tai>| (t - start).to_seconds().to_f64().sin(),
+                inner: move |t: Time| (t - start).to_seconds().to_f64().sin(),
                 counter: &counter,
             },
             TimeDelta::from_seconds(1),
@@ -982,7 +968,7 @@ mod tests {
     #[test]
     fn test_boxed_interval_detector() {
         let (start, interval) = test_interval();
-        let det: Box<dyn IntervalDetector<Tai>> = Box::new(sin_detector(start));
+        let det: Box<dyn IntervalDetector> = Box::new(sin_detector(start));
         let windows = det.detect(interval).unwrap();
         // sin > 0 on (0, PI) and (TAU, 7)
         assert_eq!(windows.len(), 2);
@@ -996,7 +982,7 @@ mod tests {
     #[test]
     fn test_boxed_send_interval_detector() {
         let (start, interval) = test_interval();
-        let det: Box<dyn IntervalDetector<Tai> + Send> = Box::new(sin_detector(start));
+        let det: Box<dyn IntervalDetector + Send> = Box::new(sin_detector(start));
         let windows = det.detect(interval).unwrap();
         assert_eq!(windows.len(), 2);
     }
@@ -1010,12 +996,12 @@ mod tests {
         // sin > 0 on (0, PI) ∪ (TAU, 7)
         // cos > 0 on [0, PI/2) ∪ (3PI/2, 7]
         // intersection: [0, PI/2) ∪ (TAU, 7] (approximately)
-        let detectors: Vec<Box<dyn IntervalDetector<Tai>>> =
+        let detectors: Vec<Box<dyn IntervalDetector>> =
             vec![Box::new(sin_detector(start)), Box::new(cos_detector(start))];
 
-        let mut combined: Box<dyn IntervalDetector<Tai>> = detectors.into_iter().next().unwrap();
+        let mut combined: Box<dyn IntervalDetector> = detectors.into_iter().next().unwrap();
 
-        let det = Box::new(cos_detector(start)) as Box<dyn IntervalDetector<Tai>>;
+        let det = Box::new(cos_detector(start)) as Box<dyn IntervalDetector>;
         combined = Box::new(combined.intersect(det));
 
         let windows = combined.detect(interval).unwrap();

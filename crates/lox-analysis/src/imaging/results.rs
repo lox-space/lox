@@ -5,7 +5,6 @@
 use std::collections::HashMap;
 
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::Tai;
 
 use crate::assets::AssetId;
 use crate::imaging::aoi::AoiId;
@@ -28,7 +27,7 @@ pub enum PassDirection {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AccessWindow {
     /// The access time interval.
-    pub interval: TimeInterval<Tai>,
+    pub interval: TimeInterval,
     /// Spacecraft pass direction at the interval midpoint.
     pub direction: PassDirection,
 }
@@ -72,6 +71,7 @@ impl AccessResults {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lox_time::time_scales::TimeScale;
 
     use lox_time::Time;
     use lox_time::deltas::TimeDelta;
@@ -83,14 +83,14 @@ mod tests {
 
     #[test]
     fn access_window_carries_interval_and_direction() {
-        let start = Time::j2000(Tai);
+        let start = Time::j2000(TimeScale::Tai);
         let end = start + TimeDelta::from_seconds(60);
         let interval = TimeInterval::new(start, end);
         let window = AccessWindow {
-            interval,
+            interval: interval.into_dynamic(),
             direction: PassDirection::Ascending,
         };
         assert_eq!(window.direction, PassDirection::Ascending);
-        assert_eq!(window.interval.start(), start);
+        assert_eq!(window.interval.start(), start.into_dynamic());
     }
 }

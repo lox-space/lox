@@ -714,7 +714,7 @@ fn test_access_window() {
     use lox_space::analysis::imaging::{AccessWindow, PassDirection};
     use lox_space::time::deltas::TimeDelta;
 
-    let start = Time::j2000(Tai);
+    let start = Time::j2000(Tai).into_dynamic();
     let end = start + TimeDelta::from_seconds(120);
     let interval = TimeInterval::new(start, end);
 

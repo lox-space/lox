@@ -17,7 +17,7 @@ use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
-use lox_time::time_scales::{Tai, Tdb, TimeScale};
+use lox_time::time_scales::{Tdb, TimeScale};
 use rayon::prelude::*;
 use std::f64::consts::PI;
 use thiserror::Error;
@@ -367,7 +367,7 @@ struct ElevationDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     body_fixed_frame: Frame,
 }
 
-impl<O, R> DetectFn<Tai> for ElevationDetectFn<'_, O, R>
+impl<O, R> DetectFn for ElevationDetectFn<'_, O, R>
 where
     O: TrySpheroid + Copy,
     R: ReferenceFrame + Copy,
@@ -377,7 +377,7 @@ where
 {
     type Error = EvalError;
 
-    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
+    fn eval(&self, time: Time) -> Result<f64, Self::Error> {
         let sc = self.sc.at(time.into_dynamic());
         let sc = sc
             .try_to_frame(self.body_fixed_frame, &DefaultRotationProvider)
@@ -397,18 +397,18 @@ struct LineOfSightDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
     body_fixed_frame: Frame,
 }
 
-impl<O, R, E: Ephemeris> DetectFn<Tai> for LineOfSightDetectFn<'_, O, R, E>
+impl<O, R, E: Ephemeris> DetectFn for LineOfSightDetectFn<'_, O, R, E>
 where
     O: TrySpheroid + Copy,
     R: ReferenceFrame + Copy,
     E::Error: 'static,
-    DefaultRotationProvider: TryRotation<Frame, R, Tai>,
-    <DefaultRotationProvider as TryRotation<Frame, R, Tai>>::Error:
+    DefaultRotationProvider: TryRotation<Frame, R, TimeScale>,
+    <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
     type Error = EvalError;
 
-    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
+    fn eval(&self, time: Time) -> Result<f64, Self::Error> {
         // Convert Tai → Tdb for ephemeris lookup (infallible via DefaultOffsetProvider).
         let tdb = time.to_scale(Tdb);
         let r_body = self
@@ -436,7 +436,7 @@ struct InterSatLosOccluderDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E
     ephemeris: &'a E,
 }
 
-impl<O, R, E: Ephemeris> DetectFn<Tai> for InterSatLosOccluderDetectFn<'_, O, R, E>
+impl<O, R, E: Ephemeris> DetectFn for InterSatLosOccluderDetectFn<'_, O, R, E>
 where
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
@@ -444,7 +444,7 @@ where
 {
     type Error = EvalError;
 
-    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
+    fn eval(&self, time: Time) -> Result<f64, Self::Error> {
         let tdb = time.to_scale(Tdb);
         let r_body = self
             .ephemeris
@@ -465,14 +465,14 @@ struct InterSatLosCentralBodyDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame
     body: Origin,
 }
 
-impl<O, R> DetectFn<Tai> for InterSatLosCentralBodyDetectFn<'_, O, R>
+impl<O, R> DetectFn for InterSatLosCentralBodyDetectFn<'_, O, R>
 where
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Error = EvalError;
 
-    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
+    fn eval(&self, time: Time) -> Result<f64, Self::Error> {
         let r_sc1 = self.sc1.at(time.into_dynamic()).position();
         let r_sc2 = self.sc2.at(time.into_dynamic()).position();
         Ok(self.body.line_of_sight(r_sc1, r_sc2)?)
@@ -495,14 +495,14 @@ struct InterSatelliteRangeDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     direction: RangeDirection,
 }
 
-impl<O, R> DetectFn<Tai> for InterSatelliteRangeDetectFn<'_, O, R>
+impl<O, R> DetectFn for InterSatelliteRangeDetectFn<'_, O, R>
 where
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Error = EvalError;
 
-    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
+    fn eval(&self, time: Time) -> Result<f64, Self::Error> {
         let r1 = self.sc1.at(time.into_dynamic()).position();
         let r2 = self.sc2.at(time.into_dynamic()).position();
         let range = (r1 - r2).length();
@@ -525,14 +525,14 @@ struct InterSatelliteSlewRateDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame
     threshold: AngularRate,
 }
 
-impl<O, R> DetectFn<Tai> for InterSatelliteSlewRateDetectFn<'_, O, R>
+impl<O, R> DetectFn for InterSatelliteSlewRateDetectFn<'_, O, R>
 where
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Error = EvalError;
 
-    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
+    fn eval(&self, time: Time) -> Result<f64, Self::Error> {
         let s1 = self.sc1.at(time.into_dynamic());
         let s2 = self.sc2.at(time.into_dynamic());
         let r = s2.position() - s1.position();
@@ -560,7 +560,7 @@ pub enum PairType {
     InterSatellite,
 }
 
-type IntervalMap = HashMap<(AssetId, AssetId), Vec<TimeInterval<Tai>>>;
+type IntervalMap = HashMap<(AssetId, AssetId), Vec<TimeInterval>>;
 type PairTypeMap = HashMap<(AssetId, AssetId), PairType>;
 type GroundSpaceFilter<'a> = Box<dyn Fn(&GroundStation, &Spacecraft) -> bool + 'a>;
 type InterSatelliteFilter<'a> = Box<dyn Fn(&Spacecraft, &Spacecraft) -> bool + 'a>;
@@ -585,10 +585,10 @@ where
     R: ReferenceFrame + Copy + Send + Sync + Into<Frame>,
     E: Ephemeris + Send + Sync,
     E::Error: 'static,
-    DefaultRotationProvider: TryRotation<R, Frame, TimeScale> + TryRotation<Frame, R, Tai>,
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale> + TryRotation<Frame, R, TimeScale>,
     <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
-    <DefaultRotationProvider as TryRotation<Frame, R, Tai>>::Error:
+    <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
     /// Apply `min_pass_duration` → `coarse_step` conversion to a detector.
@@ -611,8 +611,8 @@ where
         &self,
         gs: &GroundStation,
         sc_traj: &Trajectory<O, R>,
-        interval: TimeInterval<Tai>,
-    ) -> Result<Vec<TimeInterval<Tai>>, VisibilityError> {
+        interval: TimeInterval,
+    ) -> Result<Vec<TimeInterval>, VisibilityError> {
         let body_fixed_frame = gs.body_fixed_frame();
 
         let make_elev = || {
@@ -645,8 +645,7 @@ where
             )))
         };
 
-        let mut los: Box<dyn IntervalDetector<Tai> + '_> =
-            Box::new(make_los(self.occulting_bodies[0]));
+        let mut los: Box<dyn IntervalDetector + '_> = Box::new(make_los(self.occulting_bodies[0]));
         for &body in &self.occulting_bodies[1..] {
             los = Box::new(los.intersect(make_los(body)));
         }
@@ -665,8 +664,8 @@ where
         sc2: &Spacecraft,
         traj1: &Trajectory<O, R>,
         traj2: &Trajectory<O, R>,
-        interval: TimeInterval<Tai>,
-    ) -> Result<Vec<TimeInterval<Tai>>, VisibilityError> {
+        interval: TimeInterval,
+    ) -> Result<Vec<TimeInterval>, VisibilityError> {
         // Resolve per-pair slew rate limit: min of both assets' limits.
         let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
             (Some(a), Some(b)) => Some(if a.to_radians_per_second() < b.to_radians_per_second() {
@@ -715,7 +714,7 @@ where
         };
 
         // Start with range constraints (cheapest: position-only).
-        let mut detector: Option<Box<dyn IntervalDetector<Tai> + '_>> = None;
+        let mut detector: Option<Box<dyn IntervalDetector + '_>> = None;
 
         if let Some(max) = self.max_range {
             detector = Some(Box::new(make_range(max, RangeDirection::Max)));
@@ -777,7 +776,7 @@ pub struct VisibilityResults {
 
 impl VisibilityResults {
     /// Return all intervals for a specific pair.
-    pub fn intervals_for(&self, id1: &AssetId, id2: &AssetId) -> Option<&[TimeInterval<Tai>]> {
+    pub fn intervals_for(&self, id1: &AssetId, id2: &AssetId) -> Option<&[TimeInterval]> {
         let key = (id1.clone(), id2.clone());
         self.intervals.get(&key).map(|v| v.as_slice())
     }
@@ -1112,10 +1111,10 @@ impl<'a, O, R> VisibilityAnalysis<'a, O, R, NoEphemeris>
 where
     O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<Origin>,
     R: ReferenceFrame + Copy + Send + Sync + Into<Frame>,
-    DefaultRotationProvider: TryRotation<R, Frame, TimeScale> + TryRotation<Frame, R, Tai>,
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale> + TryRotation<Frame, R, TimeScale>,
     <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
-    <DefaultRotationProvider as TryRotation<Frame, R, Tai>>::Error:
+    <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
     /// Compute visibility intervals for all pairs without an ephemeris.
@@ -1127,13 +1126,13 @@ where
         let mut pair_types = HashMap::new();
 
         if !self.scenario.ground_stations().is_empty() {
-            let gs_results = self.compute_ground_space_no_eph(interval)?;
+            let gs_results = self.compute_ground_space_no_eph(interval.into_dynamic())?;
             let (gs_intervals, gs_pair_types) = gs_results.into_parts();
             intervals.extend(gs_intervals);
             pair_types.extend(gs_pair_types);
         }
         if self.inter_satellite {
-            let is_results = self.compute_inter_satellite_no_eph(interval)?;
+            let is_results = self.compute_inter_satellite_no_eph(interval.into_dynamic())?;
             let (is_intervals, is_pair_types) = is_results.into_parts();
             intervals.extend(is_intervals);
             pair_types.extend(is_pair_types);
@@ -1147,7 +1146,7 @@ where
     /// Compute ground-to-space visibility without occulting-body checks.
     fn compute_ground_space_no_eph(
         &self,
-        interval: TimeInterval<Tai>,
+        interval: TimeInterval,
     ) -> Result<VisibilityResults, VisibilityError> {
         let ground_stations = self.scenario.ground_stations();
         let spacecraft = self.scenario.spacecraft();
@@ -1215,7 +1214,7 @@ where
     /// Compute inter-satellite visibility against the central body only.
     fn compute_inter_satellite_no_eph(
         &self,
-        interval: TimeInterval<Tai>,
+        interval: TimeInterval,
     ) -> Result<VisibilityResults, VisibilityError> {
         let spacecraft = self.scenario.spacecraft();
         let n = spacecraft.len();
@@ -1285,7 +1284,7 @@ where
                     (None, None) => None,
                 };
 
-                let mut detector: Option<Box<dyn IntervalDetector<Tai> + '_>> = None;
+                let mut detector: Option<Box<dyn IntervalDetector + '_>> = None;
 
                 if let Some(max) = max_range {
                     let det = apply_coarse!(RootFindingDetector::new(
@@ -1372,10 +1371,10 @@ where
     R: ReferenceFrame + Copy + Send + Sync + Into<Frame>,
     E: Ephemeris + Send + Sync,
     E::Error: 'static,
-    DefaultRotationProvider: TryRotation<R, Frame, TimeScale> + TryRotation<Frame, R, Tai>,
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale> + TryRotation<Frame, R, TimeScale>,
     <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
-    <DefaultRotationProvider as TryRotation<Frame, R, Tai>>::Error:
+    <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
     /// Compute visibility intervals for all pairs.
@@ -1386,14 +1385,14 @@ where
         let mut pair_types = HashMap::new();
 
         if !self.scenario.ground_stations().is_empty() {
-            let gs_results = self.compute_ground_space(interval)?;
+            let gs_results = self.compute_ground_space(interval.into_dynamic())?;
             let (gs_intervals, gs_pair_types) = gs_results.into_parts();
             intervals.extend(gs_intervals);
             pair_types.extend(gs_pair_types);
         }
 
         if self.inter_satellite {
-            let is_results = self.compute_inter_satellite(interval)?;
+            let is_results = self.compute_inter_satellite(interval.into_dynamic())?;
             let (is_intervals, is_pair_types) = is_results.into_parts();
             intervals.extend(is_intervals);
             pair_types.extend(is_pair_types);
@@ -1408,7 +1407,7 @@ where
     /// Compute ground-to-space visibility for all (ground, space) pairs.
     fn compute_ground_space(
         &self,
-        interval: TimeInterval<Tai>,
+        interval: TimeInterval,
     ) -> Result<VisibilityResults, VisibilityError> {
         let ground_stations = self.scenario.ground_stations();
         let spacecraft = self.scenario.spacecraft();
@@ -1465,7 +1464,7 @@ where
     /// Compute LOS visibility for all unique spacecraft pairs (i, j) where i < j.
     fn compute_inter_satellite(
         &self,
-        interval: TimeInterval<Tai>,
+        interval: TimeInterval,
     ) -> Result<VisibilityResults, VisibilityError> {
         let spacecraft = self.scenario.spacecraft();
         let n = spacecraft.len();
@@ -1640,7 +1639,7 @@ mod tests {
             .iter()
             .map(|t| {
                 let tai_time = t.to_scale(Tai);
-                elev_fn.eval(tai_time).unwrap()
+                elev_fn.eval(tai_time.into_dynamic()).unwrap()
             })
             .collect();
         assert_approx_eq!(actual, expected, atol <= 1e-1);
@@ -1792,7 +1791,7 @@ mod tests {
         GroundLocation::try_new(coords, Origin::Earth).unwrap()
     }
 
-    fn contacts_tai() -> Vec<TimeInterval<Tai>> {
+    fn contacts_tai() -> Vec<TimeInterval> {
         let mut intervals = vec![];
         let mut reader = csv::ReaderBuilder::new()
             .trim(csv::Trim::All)
@@ -1800,8 +1799,8 @@ mod tests {
             .unwrap();
         for result in reader.records() {
             let record = result.unwrap();
-            let start = record[0].parse::<Utc>().unwrap().to_time();
-            let end = record[1].parse::<Utc>().unwrap().to_time();
+            let start = record[0].parse::<Utc>().unwrap().to_dynamic_time();
+            let end = record[1].parse::<Utc>().unwrap().to_dynamic_time();
             intervals.push(TimeInterval::new(start, end));
         }
         intervals
@@ -1839,8 +1838,16 @@ mod tests {
         assert_eq!(intervals.len(), 1);
         let tai_interval =
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
-        assert_approx_eq!(intervals[0].start(), tai_interval.start(), rtol <= 1e-10);
-        assert_approx_eq!(intervals[0].end(), tai_interval.end(), rtol <= 1e-10);
+        assert_approx_eq!(
+            intervals[0].start(),
+            tai_interval.start().into_dynamic(),
+            rtol <= 1e-10
+        );
+        assert_approx_eq!(
+            intervals[0].end(),
+            tai_interval.end().into_dynamic(),
+            rtol <= 1e-10
+        );
     }
 
     #[test]
@@ -1864,8 +1871,16 @@ mod tests {
         let tai_interval =
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
         assert_eq!(intervals.len(), 1);
-        assert_approx_eq!(intervals[0].start(), tai_interval.start(), rtol <= 1e-10);
-        assert_approx_eq!(intervals[0].end(), tai_interval.end(), rtol <= 1e-10);
+        assert_approx_eq!(
+            intervals[0].start(),
+            tai_interval.start().into_dynamic(),
+            rtol <= 1e-10
+        );
+        assert_approx_eq!(
+            intervals[0].end(),
+            tai_interval.end().into_dynamic(),
+            rtol <= 1e-10
+        );
 
         // A min_range filter with a positive threshold should exclude colocated
         // spacecraft entirely (range = 0 < threshold at all times).
@@ -1897,7 +1912,7 @@ mod tests {
             threshold,
         };
         let time = typed.start_time();
-        let val = detect.eval(time.to_scale(Tai)).unwrap();
+        let val = detect.eval(time).unwrap();
         // ω = 0 for colocated → threshold - 0 = threshold
         assert_approx_eq!(val, threshold.to_radians_per_second(), rtol <= 1e-10);
     }
@@ -1913,7 +1928,7 @@ mod tests {
             body: Origin::Earth,
         };
         let time = typed.start_time();
-        let val = detect.eval(time.to_scale(Tai)).unwrap();
+        let val = detect.eval(time).unwrap();
         // Colocated spacecraft -> dot(r1, r2) = |r|^2 -> theta = 0,
         // theta1 == theta2 == acos(R/|r|) -> result = 2*acos(R/|r|) > 0.
         assert!(val > 0.0);
@@ -1941,8 +1956,16 @@ mod tests {
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
         // ω = 0 everywhere, so full interval should be returned.
         assert_eq!(intervals.len(), 1);
-        assert_approx_eq!(intervals[0].start(), tai_interval.start(), rtol <= 1e-10);
-        assert_approx_eq!(intervals[0].end(), tai_interval.end(), rtol <= 1e-10);
+        assert_approx_eq!(
+            intervals[0].start(),
+            tai_interval.start().into_dynamic(),
+            rtol <= 1e-10
+        );
+        assert_approx_eq!(
+            intervals[0].end(),
+            tai_interval.end().into_dynamic(),
+            rtol <= 1e-10
+        );
     }
 
     #[test]

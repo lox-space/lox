@@ -23,7 +23,7 @@ use lox_frames::{Frame, ReferenceFrame};
 use lox_orbits::orbits::{Ensemble, Trajectory};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
-use lox_time::time_scales::{Tai, TimeScale};
+use lox_time::time_scales::TimeScale;
 
 use crate::assets::{AssetId, Scenario, Spacecraft};
 use crate::imaging::aoi::{Aoi, AoiId};
@@ -126,7 +126,7 @@ struct SubSatSample {
 /// (per-window post-detection).
 fn sub_sat_sample<O, R>(
     trajectory: &Trajectory<O, R>,
-    time: Time<Tai>,
+    time: Time,
     origin: O,
     body_fixed_frame: Frame,
 ) -> Result<SubSatSample, EvalError>
@@ -186,7 +186,7 @@ struct AccessDetectFn<'a, P: AccessPayload, O: CoordinateOrigin, R: ReferenceFra
     body_fixed_frame: Frame,
 }
 
-impl<P, O, R> DetectFn<Tai> for AccessDetectFn<'_, P, O, R>
+impl<P, O, R> DetectFn for AccessDetectFn<'_, P, O, R>
 where
     P: AccessPayload + Copy,
     O: TrySpheroid + TryMeanRadius + Copy,
@@ -197,7 +197,7 @@ where
 {
     type Error = EvalError;
 
-    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
+    fn eval(&self, time: Time) -> Result<f64, Self::Error> {
         let sample = sub_sat_sample(self.trajectory, time, self.origin, self.body_fixed_frame)?;
         let az = if self.payload.needs_ground_track_azimuth() {
             ground_track_azimuth(sample.lla, sample.vel_bf)
@@ -298,7 +298,7 @@ where
                 body_fixed_frame: self.body_fixed_frame,
             };
             let detector = RootFindingDetector::new(detect_fn, self.step);
-            let intervals = EventsToIntervals::new(detector).detect(interval)?;
+            let intervals = EventsToIntervals::new(detector).detect(interval.into_dynamic())?;
             let origin = self.scenario.origin();
             let body_fixed_frame = self.body_fixed_frame;
             let mut windows: Vec<AccessWindow> = Vec::with_capacity(intervals.len());

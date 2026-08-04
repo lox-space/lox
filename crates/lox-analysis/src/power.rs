@@ -19,7 +19,7 @@ use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::{self, TimeInterval};
 use lox_time::series::TimeSeries;
-use lox_time::time_scales::{Tai, Tdb};
+use lox_time::time_scales::Tdb;
 use rayon::prelude::*;
 use thiserror::Error;
 
@@ -69,12 +69,7 @@ pub fn solar_flux(distance_m: f64) -> f64 {
 // ---------------------------------------------------------------------------
 
 /// Per-spacecraft power-budget output tuple.
-type SpacecraftPowerData = (
-    AssetId,
-    Vec<TimeInterval<Tai>>,
-    TimeSeries<Tai>,
-    TimeSeries<Tai>,
-);
+type SpacecraftPowerData = (AssetId, Vec<TimeInterval>, TimeSeries, TimeSeries);
 
 /// Errors from power-budget analysis.
 #[derive(Debug, Error)]
@@ -94,7 +89,7 @@ struct EclipseDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
     ephemeris: &'a E,
 }
 
-impl<O, R, E: Ephemeris> DetectFn<Tai> for EclipseDetectFn<'_, O, R, E>
+impl<O, R, E: Ephemeris> DetectFn for EclipseDetectFn<'_, O, R, E>
 where
     O: TrySpheroid + TryMeanRadius + Copy,
     R: ReferenceFrame + Copy,
@@ -102,7 +97,7 @@ where
 {
     type Error = EvalError;
 
-    fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
+    fn eval(&self, time: Time) -> Result<f64, Self::Error> {
         let tdb = time.to_scale(Tdb);
         let r_sun = self
             .ephemeris
@@ -124,20 +119,20 @@ where
 /// Contains eclipse intervals, beta-angle time series, and solar-flux time
 /// series for each spacecraft.
 pub struct PowerBudgetResults {
-    eclipse_intervals: HashMap<AssetId, Vec<TimeInterval<Tai>>>,
-    beta_angles: HashMap<AssetId, TimeSeries<Tai>>,
-    solar_fluxes: HashMap<AssetId, TimeSeries<Tai>>,
+    eclipse_intervals: HashMap<AssetId, Vec<TimeInterval>>,
+    beta_angles: HashMap<AssetId, TimeSeries>,
+    solar_fluxes: HashMap<AssetId, TimeSeries>,
     scenario_duration: f64,
 }
 
 impl PowerBudgetResults {
     /// Eclipse intervals for a given spacecraft.
-    pub fn eclipse_intervals_for(&self, id: &AssetId) -> Option<&[TimeInterval<Tai>]> {
+    pub fn eclipse_intervals_for(&self, id: &AssetId) -> Option<&[TimeInterval]> {
         self.eclipse_intervals.get(id).map(|v| v.as_slice())
     }
 
     /// All eclipse intervals keyed by spacecraft id.
-    pub fn all_eclipse_intervals(&self) -> &HashMap<AssetId, Vec<TimeInterval<Tai>>> {
+    pub fn all_eclipse_intervals(&self) -> &HashMap<AssetId, Vec<TimeInterval>> {
         &self.eclipse_intervals
     }
 
@@ -158,12 +153,12 @@ impl PowerBudgetResults {
     }
 
     /// Beta-angle time series for a given spacecraft (radians).
-    pub fn beta_angles_for(&self, id: &AssetId) -> Option<&TimeSeries<Tai>> {
+    pub fn beta_angles_for(&self, id: &AssetId) -> Option<&TimeSeries> {
         self.beta_angles.get(id)
     }
 
     /// Solar-flux time series for a given spacecraft (W/m²).
-    pub fn solar_flux_for(&self, id: &AssetId) -> Option<&TimeSeries<Tai>> {
+    pub fn solar_flux_for(&self, id: &AssetId) -> Option<&TimeSeries> {
         self.solar_fluxes.get(id)
     }
 }
@@ -250,7 +245,7 @@ where
 
         let results: Result<Vec<_>, PowerError> = spacecraft
             .par_iter()
-            .map(|sc| self.compute_spacecraft(sc, interval))
+            .map(|sc| self.compute_spacecraft(sc, interval.into_dynamic()))
             .collect();
 
         let mut eclipse_intervals = HashMap::new();
@@ -275,7 +270,7 @@ where
     fn compute_spacecraft(
         &self,
         sc: &Spacecraft,
-        interval: TimeInterval<Tai>,
+        interval: TimeInterval,
     ) -> Result<SpacecraftPowerData, PowerError> {
         let sc_traj = self.ensemble.get(sc.id()).expect(
             "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
@@ -340,7 +335,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use lox_time::time_scales::TimeScale;
+    use lox_time::time_scales::{Tai, TimeScale};
     use std::f64::consts::{FRAC_PI_2, PI};
     use std::sync::OnceLock;
 
