@@ -124,13 +124,16 @@ impl OffsetProvider for DefaultOffsetProvider {
     type Error = Infallible;
 
     fn tai_to_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        // Without EOP data UT1 is approximated by UTC, good to
+        // |UT1 - UTC| <= 0.9 s. The contract is the offset *to* the target
+        // scale, i.e. UT1 - TAI, so the leap-second count must be negated.
         let tai = Time::from_delta(Tai, delta);
-        Ok(DefaultLeapSecondsProvider.delta_tai_utc(tai))
+        Ok(-DefaultLeapSecondsProvider.delta_tai_utc(tai))
     }
 
     fn ut1_to_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
         let utc = Utc::from_delta(delta);
-        Ok(DefaultLeapSecondsProvider.delta_utc_tai(utc))
+        Ok(-DefaultLeapSecondsProvider.delta_utc_tai(utc))
     }
 }
 
@@ -252,6 +255,41 @@ mod tests {
     use crate::offsets::TryOffset;
     use crate::time_scales::TimeScale;
     use crate::{Time, calendar_dates::Date, deltas::ToDelta, time_of_day::TimeOfDay};
+
+    /// Without EOP data UT1 is approximated by UTC, so the TAI->UT1 offset is
+    /// the *negated* leap-second count. Getting the sign wrong puts UT1 out by
+    /// twice the leap-second count (74 s in 2022) and silently rotates the
+    /// Earth too far in every UT1-dependent frame (ITRF, TIRF, PEF).
+    #[test]
+    fn test_default_provider_tai_to_ut1_sign() {
+        use crate::time_scales::Ut1;
+        use crate::utc::Utc;
+
+        let utc: Utc = "2022-02-01T00:00:00.000".parse().unwrap();
+        let tai = utc.to_time();
+        let offset = DefaultOffsetProvider
+            .try_offset(Tai, Ut1, tai.to_delta())
+            .unwrap();
+        assert_approx_eq!(offset.to_seconds().to_f64(), -37.0, rtol <= 1e-9);
+
+        // UT1 must land back on the UTC wall clock, not 74 s past it.
+        let ut1 = tai.to_scale(Ut1);
+        assert_approx_eq!(
+            ut1.to_delta().to_seconds().to_f64(),
+            utc.to_delta().to_seconds().to_f64(),
+            atol <= 1e-9
+        );
+    }
+
+    #[test]
+    fn test_default_provider_ut1_tai_round_trip() {
+        use crate::time_scales::Ut1;
+        use crate::utc::Utc;
+
+        let tai = "2022-02-01T00:00:00.000".parse::<Utc>().unwrap().to_time();
+        let back = tai.to_scale(Ut1).to_scale(Tai);
+        assert_eq!(tai.to_delta(), back.to_delta());
+    }
 
     const DEFAULT_TOL: f64 = 1e-7;
     const TCB_TOL: f64 = 1e-4;
