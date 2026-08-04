@@ -58,12 +58,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
-name = "either"
-version = "1.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
-
-[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -80,9 +74,9 @@ dependencies = [
 
 [[package]]
 name = "glam"
-version = "0.30.9"
+version = "0.33.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd47b05dddf0005d850e5644cae7f2b14ac3df487979dbfff3b56f20b1a6ae46"
+checksum = "7360bd2cd76e0cd9032d42cf2922155cecea2685b0cfa4630c3246df030bcfd6"
 
 [[package]]
 name = "hashbrown"
@@ -124,15 +118,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itertools"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "js-sys"
 version = "0.3.77"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -155,13 +140,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30bde2b3dc3671ae49d8e2e9f044c7c005836e7a023ee57cffa25ab82764bb9e"
 
 [[package]]
+name = "lox-approx"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "lox-derive",
+]
+
+[[package]]
 name = "lox-core"
-version = "0.1.0-alpha.11"
+version = "0.1.0-alpha.14"
 dependencies = [
  "chrono",
  "fast_polynomial",
  "glam",
- "lox-test-utils",
+ "lox-approx",
  "nom",
  "serde",
  "thiserror",
@@ -169,7 +162,7 @@ dependencies = [
 
 [[package]]
 name = "lox-derive"
-version = "0.1.0-alpha.9"
+version = "0.1.0-alpha.12"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -190,7 +183,7 @@ dependencies = [
 
 [[package]]
 name = "lox-io"
-version = "0.1.0-alpha.21"
+version = "0.1.0-alpha.24"
 dependencies = [
  "lox-core",
  "lox-time",
@@ -199,20 +192,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "lox-test-utils"
-version = "0.1.0-alpha.6"
-dependencies = [
- "glam",
- "lox-derive",
-]
-
-[[package]]
 name = "lox-time"
-version = "0.1.0-alpha.23"
+version = "0.1.0-alpha.26"
 dependencies = [
- "itertools",
+ "lox-approx",
  "lox-core",
- "lox-test-utils",
+ "serde",
  "thiserror",
 ]
 

@@ -8,963 +8,963 @@ use proc_macro2::Ident;
 use quote::{format_ident, quote};
 use std::path::Path;
 
-struct Origin {
+struct OriginData {
     name: &'static str,
     id: i32,
     mean_radius: Option<f64>,
 }
 
-const ORIGINS: [Origin; 190] = [
-    Origin {
+const ORIGINS: [OriginData; 190] = [
+    OriginData {
         name: "Sun",
         id: 10,
         mean_radius: None,
     },
     // Planets.
-    Origin {
+    OriginData {
         name: "Mercury",
         id: 199,
         mean_radius: Some(2439.4),
     },
-    Origin {
+    OriginData {
         name: "Venus",
         id: 299,
         mean_radius: Some(6051.8),
     },
-    Origin {
+    OriginData {
         name: "Earth",
         id: 399,
         mean_radius: Some(6371.0084),
     },
-    Origin {
+    OriginData {
         name: "Mars",
         id: 499,
         mean_radius: Some(3389.5),
     },
-    Origin {
+    OriginData {
         name: "Jupiter",
         id: 599,
         mean_radius: Some(69911.0),
     },
-    Origin {
+    OriginData {
         name: "Saturn",
         id: 699,
         mean_radius: Some(58232.0),
     },
-    Origin {
+    OriginData {
         name: "Uranus",
         id: 799,
         mean_radius: Some(25362.0),
     },
-    Origin {
+    OriginData {
         name: "Neptune",
         id: 899,
         mean_radius: Some(24622.0),
     },
-    Origin {
+    OriginData {
         name: "Pluto",
         id: 999,
         mean_radius: Some(1188.3),
     },
     // Barycenters.
-    Origin {
+    OriginData {
         name: "Solar System Barycenter",
         id: 0,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Mercury Barycenter",
         id: 1,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Venus Barycenter",
         id: 2,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Earth Barycenter",
         id: 3,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Mars Barycenter",
         id: 4,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Jupiter Barycenter",
         id: 5,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Saturn Barycenter",
         id: 6,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Uranus Barycenter",
         id: 7,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Neptune Barycenter",
         id: 8,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Pluto Barycenter",
         id: 9,
         mean_radius: None,
     },
     // Satellites.
-    Origin {
+    OriginData {
         name: "Moon",
         id: 301,
         mean_radius: Some(1737.4),
     },
-    Origin {
+    OriginData {
         name: "Phobos",
         id: 401,
         mean_radius: Some(11.08),
     },
-    Origin {
+    OriginData {
         name: "Deimos",
         id: 402,
         mean_radius: Some(6.2),
     },
-    Origin {
+    OriginData {
         name: "Io",
         id: 501,
         mean_radius: Some(1821.49),
     },
-    Origin {
+    OriginData {
         name: "Europa",
         id: 502,
         mean_radius: Some(1560.8),
     },
-    Origin {
+    OriginData {
         name: "Ganymede",
         id: 503,
         mean_radius: Some(2631.2),
     },
-    Origin {
+    OriginData {
         name: "Callisto",
         id: 504,
         mean_radius: Some(2410.3),
     },
-    Origin {
+    OriginData {
         name: "Amalthea",
         id: 505,
         mean_radius: Some(83.5),
     },
-    Origin {
+    OriginData {
         name: "Himalia",
         id: 506,
         mean_radius: Some(85.0),
     },
-    Origin {
+    OriginData {
         name: "Elara",
         id: 507,
         mean_radius: Some(40.0),
     },
-    Origin {
+    OriginData {
         name: "Pasiphae",
         id: 508,
         mean_radius: Some(18.0),
     },
-    Origin {
+    OriginData {
         name: "Sinope",
         id: 509,
         mean_radius: Some(14.0),
     },
-    Origin {
+    OriginData {
         name: "Lysithea",
         id: 510,
         mean_radius: Some(12.0),
     },
-    Origin {
+    OriginData {
         name: "Carme",
         id: 511,
         mean_radius: Some(15.0),
     },
-    Origin {
+    OriginData {
         name: "Ananke",
         id: 512,
         mean_radius: Some(10.0),
     },
-    Origin {
+    OriginData {
         name: "Leda",
         id: 513,
         mean_radius: Some(5.0),
     },
-    Origin {
+    OriginData {
         name: "Thebe",
         id: 514,
         mean_radius: Some(49.3),
     },
-    Origin {
+    OriginData {
         name: "Adrastea",
         id: 515,
         mean_radius: Some(8.2),
     },
-    Origin {
+    OriginData {
         name: "Metis",
         id: 516,
         mean_radius: Some(21.5),
     },
-    Origin {
+    OriginData {
         name: "Callirrhoe",
         id: 517,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Themisto",
         id: 518,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Magaclite",
         id: 519,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Taygete",
         id: 520,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Chaldene",
         id: 521,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Harpalyke",
         id: 522,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Kalyke",
         id: 523,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Iocaste",
         id: 524,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Erinome",
         id: 525,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Isonoe",
         id: 526,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Praxidike",
         id: 527,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Autonoe",
         id: 528,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Thyone",
         id: 529,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Hermippe",
         id: 530,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Aitne",
         id: 531,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Eurydome",
         id: 532,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Euanthe",
         id: 533,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Euporie",
         id: 534,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Orthosie",
         id: 535,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Sponde",
         id: 536,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Kale",
         id: 537,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Pasithee",
         id: 538,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Hegemone",
         id: 539,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Mneme",
         id: 540,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Aoede",
         id: 541,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Thelxinoe",
         id: 542,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Arche",
         id: 543,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Kallichore",
         id: 544,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Helike",
         id: 545,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Carpo",
         id: 546,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Eukelade",
         id: 547,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Cyllene",
         id: 548,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Kore",
         id: 549,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Herse",
         id: 550,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Dia",
         id: 553,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Mimas",
         id: 601,
         mean_radius: Some(198.2),
     },
-    Origin {
+    OriginData {
         name: "Enceladus",
         id: 602,
         mean_radius: Some(252.1),
     },
-    Origin {
+    OriginData {
         name: "Tethys",
         id: 603,
         mean_radius: Some(531.0),
     },
-    Origin {
+    OriginData {
         name: "Dione",
         id: 604,
         mean_radius: Some(561.4),
     },
-    Origin {
+    OriginData {
         name: "Rhea",
         id: 605,
         mean_radius: Some(763.5),
     },
-    Origin {
+    OriginData {
         name: "Titan",
         id: 606,
         mean_radius: Some(2575.0),
     },
-    Origin {
+    OriginData {
         name: "Hyperion",
         id: 607,
         mean_radius: Some(135.0),
     },
-    Origin {
+    OriginData {
         name: "Iapetus",
         id: 608,
         mean_radius: Some(734.3),
     },
-    Origin {
+    OriginData {
         name: "Phoebe",
         id: 609,
         mean_radius: Some(106.5),
     },
-    Origin {
+    OriginData {
         name: "Janus",
         id: 610,
         mean_radius: Some(89.2),
     },
-    Origin {
+    OriginData {
         name: "Epimetheus",
         id: 611,
         mean_radius: Some(58.2),
     },
-    Origin {
+    OriginData {
         name: "Helene",
         id: 612,
         mean_radius: Some(18.0),
     },
-    Origin {
+    OriginData {
         name: "Telesto",
         id: 613,
         mean_radius: Some(12.4),
     },
-    Origin {
+    OriginData {
         name: "Calypso",
         id: 614,
         mean_radius: Some(9.6),
     },
-    Origin {
+    OriginData {
         name: "Atlas",
         id: 615,
         mean_radius: Some(15.1),
     },
-    Origin {
+    OriginData {
         name: "Prometheus",
         id: 616,
         mean_radius: Some(43.1),
     },
-    Origin {
+    OriginData {
         name: "Pandora",
         id: 617,
         mean_radius: Some(40.6),
     },
-    Origin {
+    OriginData {
         name: "Pan",
         id: 618,
         mean_radius: Some(14.0),
     },
-    Origin {
+    OriginData {
         name: "Ymir",
         id: 619,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Paaliaq",
         id: 620,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Tarvos",
         id: 621,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Ijiraq",
         id: 622,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Suttungr",
         id: 623,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Kiviuq",
         id: 624,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Mundilfari",
         id: 625,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Albiorix",
         id: 626,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Skathi",
         id: 627,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Erriapus",
         id: 628,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Siarnaq",
         id: 629,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Thrymr",
         id: 630,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Narvi",
         id: 631,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Methone",
         id: 632,
         mean_radius: Some(1.45),
     },
-    Origin {
+    OriginData {
         name: "Pallene",
         id: 633,
         mean_radius: Some(2.23),
     },
-    Origin {
+    OriginData {
         name: "Polydeuces",
         id: 634,
         mean_radius: Some(1.3),
     },
-    Origin {
+    OriginData {
         name: "Daphnis",
         id: 635,
         mean_radius: Some(3.8),
     },
-    Origin {
+    OriginData {
         name: "Aegir",
         id: 636,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Bebhionn",
         id: 637,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Bergelmir",
         id: 638,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Bestla",
         id: 639,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Farbauti",
         id: 640,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Fenrir",
         id: 641,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Fornjot",
         id: 642,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Hati",
         id: 643,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Hyrrokkin",
         id: 644,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Kari",
         id: 645,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Loge",
         id: 646,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Skoll",
         id: 647,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Surtur",
         id: 648,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Anthe",
         id: 649,
         mean_radius: Some(0.5),
     },
-    Origin {
+    OriginData {
         name: "Jarnsaxa",
         id: 650,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Greip",
         id: 651,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Tarqeq",
         id: 652,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Aegaeon",
         id: 653,
         mean_radius: Some(0.33),
     },
-    Origin {
+    OriginData {
         name: "Ariel",
         id: 701,
         mean_radius: Some(578.9),
     },
-    Origin {
+    OriginData {
         name: "Umbriel",
         id: 702,
         mean_radius: Some(584.7),
     },
-    Origin {
+    OriginData {
         name: "Titania",
         id: 703,
         mean_radius: Some(788.9),
     },
-    Origin {
+    OriginData {
         name: "Oberon",
         id: 704,
         mean_radius: Some(761.4),
     },
-    Origin {
+    OriginData {
         name: "Miranda",
         id: 705,
         mean_radius: Some(235.8),
     },
-    Origin {
+    OriginData {
         name: "Cordelia",
         id: 706,
         mean_radius: Some(13.0),
     },
-    Origin {
+    OriginData {
         name: "Ophelia",
         id: 707,
         mean_radius: Some(15.0),
     },
-    Origin {
+    OriginData {
         name: "Bianca",
         id: 708,
         mean_radius: Some(21.0),
     },
-    Origin {
+    OriginData {
         name: "Cressida",
         id: 709,
         mean_radius: Some(31.0),
     },
-    Origin {
+    OriginData {
         name: "Desdemona",
         id: 710,
         mean_radius: Some(27.0),
     },
-    Origin {
+    OriginData {
         name: "Juliet",
         id: 711,
         mean_radius: Some(42.0),
     },
-    Origin {
+    OriginData {
         name: "Portia",
         id: 712,
         mean_radius: Some(54.0),
     },
-    Origin {
+    OriginData {
         name: "Rosalind",
         id: 713,
         mean_radius: Some(27.0),
     },
-    Origin {
+    OriginData {
         name: "Belinda",
         id: 714,
         mean_radius: Some(33.0),
     },
-    Origin {
+    OriginData {
         name: "Puck",
         id: 715,
         mean_radius: Some(77.0),
     },
-    Origin {
+    OriginData {
         name: "Caliban",
         id: 716,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Sycorax",
         id: 717,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Prospero",
         id: 718,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Setebos",
         id: 719,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Stephano",
         id: 720,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Trinculo",
         id: 721,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Francisco",
         id: 722,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Margaret",
         id: 723,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Ferdinand",
         id: 724,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Perdita",
         id: 725,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Mab",
         id: 726,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Cupid",
         id: 727,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Triton",
         id: 801,
         mean_radius: Some(1352.6),
     },
-    Origin {
+    OriginData {
         name: "Nereid",
         id: 802,
         mean_radius: Some(170.0),
     },
-    Origin {
+    OriginData {
         name: "Naiad",
         id: 803,
         mean_radius: Some(29.0),
     },
-    Origin {
+    OriginData {
         name: "Thalassa",
         id: 804,
         mean_radius: Some(40.0),
     },
-    Origin {
+    OriginData {
         name: "Despina",
         id: 805,
         mean_radius: Some(74.0),
     },
-    Origin {
+    OriginData {
         name: "Galatea",
         id: 806,
         mean_radius: Some(79.0),
     },
-    Origin {
+    OriginData {
         name: "Larissa",
         id: 807,
         mean_radius: Some(96.0),
     },
-    Origin {
+    OriginData {
         name: "Proteus",
         id: 808,
         mean_radius: Some(208.0),
     },
-    Origin {
+    OriginData {
         name: "Halimede",
         id: 809,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Psamathe",
         id: 810,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Sao",
         id: 811,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Laomedeia",
         id: 812,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Neso",
         id: 813,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Charon",
         id: 901,
         mean_radius: Some(606.0),
     },
-    Origin {
+    OriginData {
         name: "Nix",
         id: 902,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Hydra",
         id: 903,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Kerberos",
         id: 904,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Styx",
         id: 905,
         mean_radius: None,
     },
     // Minor bodies.
-    Origin {
+    OriginData {
         name: "Gaspra",
         id: 9511010,
         mean_radius: Some(6.1),
     },
-    Origin {
+    OriginData {
         name: "Ida",
         id: 2431010,
         mean_radius: Some(15.65),
     },
-    Origin {
+    OriginData {
         name: "Dactyl",
         id: 2431011,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Ceres",
         id: 2000001,
         mean_radius: Some(470.0),
     },
-    Origin {
+    OriginData {
         name: "Pallas",
         id: 2000002,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Vesta",
         id: 2000004,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Psyche",
         id: 2000016,
         mean_radius: Some(113.0),
     },
-    Origin {
+    OriginData {
         name: "Lutetia",
         id: 2000021,
         mean_radius: Some(52.5),
     },
-    Origin {
+    OriginData {
         name: "Kleopatra",
         id: 2000216,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Eros",
         id: 2000433,
         mean_radius: Some(8.45),
     },
-    Origin {
+    OriginData {
         name: "Davida",
         id: 2000511,
         mean_radius: Some(150.0),
     },
-    Origin {
+    OriginData {
         name: "Mathilde",
         id: 2000253,
         mean_radius: Some(26.5),
     },
-    Origin {
+    OriginData {
         name: "Steins",
         id: 2002867,
         mean_radius: Some(2.7),
     },
-    Origin {
+    OriginData {
         name: "Braille",
         id: 2009969,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Wilson-Harrington",
         id: 2004015,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Toutatis",
         id: 2004179,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Itokawa",
         id: 2025143,
         mean_radius: None,
     },
-    Origin {
+    OriginData {
         name: "Bennu",
         id: 2101955,
         mean_radius: None,
@@ -1037,7 +1037,7 @@ pub fn generate_bodies(path: &Path, pck: &Kernel, gm: &Kernel) {
 
     let mut tests = quote! {};
 
-    for Origin {
+    for OriginData {
         name,
         id,
         mean_radius,
