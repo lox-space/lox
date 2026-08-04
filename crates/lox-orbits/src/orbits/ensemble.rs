@@ -13,14 +13,14 @@ use super::Trajectory;
 
 /// A collection of named trajectories keyed by an identifier type.
 #[derive(Debug, Clone)]
-pub struct Ensemble<K, T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame>(
-    pub HashMap<K, Trajectory<T, O, R>>,
-)
+pub struct Ensemble<
+    K,
+    T: ContinuousTimeScale = TimeScale,
+    O: CoordinateOrigin = Origin,
+    R: ReferenceFrame = Frame,
+>(pub HashMap<K, Trajectory<T, O, R>>)
 where
     K: Eq + Hash;
-
-/// A dynamically-typed ensemble with runtime time scale, origin, and frame.
-pub type DynEnsemble<K> = Ensemble<K, TimeScale, Origin, Frame>;
 
 impl<K, T, O, R> Ensemble<K, T, O, R>
 where
@@ -70,7 +70,7 @@ mod tests {
     type TestEnsemble = Ensemble<String, TimeScale, Origin, Frame>;
 
     fn make_trajectory() -> Trajectory<TimeScale, Origin, Frame> {
-        Trajectory::from_csv_dyn(
+        Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
             Frame::Icrf,

@@ -100,7 +100,11 @@ pub enum ConstellationPropagator {
 /// combined with the epoch, origin, and frame needed to create propagatable orbits.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Constellation<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> {
+pub struct Constellation<
+    T: ContinuousTimeScale = TimeScale,
+    O: CoordinateOrigin = Origin,
+    R: ReferenceFrame = Frame,
+> {
     name: String,
     epoch: Time<T>,
     origin: O,
@@ -108,9 +112,6 @@ pub struct Constellation<T: ContinuousTimeScale, O: CoordinateOrigin, R: Referen
     satellites: Vec<ConstellationSatellite>,
     propagator: ConstellationPropagator,
 }
-
-/// Type alias for a constellation with fully dynamic time scale, origin, and frame.
-pub type DynConstellation = Constellation<TimeScale, Origin, Frame>;
 
 impl<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> Constellation<T, O, R> {
     /// Creates a new constellation from precomputed satellites.
@@ -194,10 +195,10 @@ where
     R: ReferenceFrame + Copy + Into<Frame>,
 {
     /// Converts the constellation into a fully dynamic representation.
-    pub fn into_dyn(self) -> DynConstellation {
+    pub fn into_dynamic(self) -> Constellation {
         Constellation {
             name: self.name,
-            epoch: self.epoch.into_dyn(),
+            epoch: self.epoch.into_dynamic(),
             origin: self.origin.into(),
             frame: self.frame.into(),
             satellites: self.satellites,
@@ -261,14 +262,14 @@ mod tests {
     }
 
     #[test]
-    fn test_constellation_into_dyn() {
+    fn test_constellation_into_dynamic() {
         let c = make_constellation().with_propagator(ConstellationPropagator::Numerical);
-        let dyn_c = c.into_dyn();
-        assert_eq!(dyn_c.name(), "test");
-        assert_eq!(dyn_c.len(), 6);
-        assert_eq!(dyn_c.origin(), Origin::Earth);
-        assert_eq!(dyn_c.frame(), Frame::Icrf);
-        assert_eq!(dyn_c.propagator(), ConstellationPropagator::Numerical);
+        let dynamic_c = c.into_dynamic();
+        assert_eq!(dynamic_c.name(), "test");
+        assert_eq!(dynamic_c.len(), 6);
+        assert_eq!(dynamic_c.origin(), Origin::Earth);
+        assert_eq!(dynamic_c.frame(), Frame::Icrf);
+        assert_eq!(dynamic_c.propagator(), ConstellationPropagator::Numerical);
     }
 
     #[test]

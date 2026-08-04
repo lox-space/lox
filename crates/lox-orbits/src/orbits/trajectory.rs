@@ -31,7 +31,11 @@ use super::{CartesianOrbit, Orbit};
 /// analytical derivative of the position spline.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Trajectory<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> {
+pub struct Trajectory<
+    T: ContinuousTimeScale = TimeScale,
+    O: CoordinateOrigin = Origin,
+    R: ReferenceFrame = Frame,
+> {
     epoch: Time<T>,
     origin: O,
     frame: R,
@@ -207,9 +211,9 @@ where
     R: ReferenceFrame + Copy + Into<Frame>,
 {
     /// Converts this trajectory into a dynamically-typed trajectory.
-    pub fn into_dyn(self) -> DynTrajectory {
+    pub fn into_dynamic(self) -> Trajectory {
         Trajectory::from_parts(
-            self.epoch.into_dyn(),
+            self.epoch.into_dynamic(),
             self.origin.into(),
             self.frame.into(),
             self.data,
@@ -319,17 +323,14 @@ where
     }
 }
 
-/// A dynamically-typed trajectory with runtime time scale, origin, and frame.
-pub type DynTrajectory = Trajectory<TimeScale, Origin, Frame>;
-
-impl DynTrajectory {
+impl Trajectory {
     /// Parses a dynamically-typed trajectory from CSV data.
-    pub fn from_csv_dyn(
+    pub fn from_csv_dynamic(
         csv: &str,
         origin: Origin,
         frame: Frame,
-    ) -> Result<DynTrajectory, TrajectoryError> {
-        Ok(Trajectory::from_csv(csv, origin, frame)?.into_dyn())
+    ) -> Result<Trajectory, TrajectoryError> {
+        Ok(Trajectory::from_csv(csv, origin, frame)?.into_dynamic())
     }
 }
 
@@ -435,18 +436,18 @@ mod tests {
     }
 
     #[test]
-    fn test_trajectory_into_dyn() {
+    fn test_trajectory_into_dynamic() {
         let traj = sample_trajectory();
         let first_pos = traj.states().first().unwrap().position();
-        let dyn_traj = traj.into_dyn();
+        let dynamic_traj = traj.into_dynamic();
 
-        assert_eq!(dyn_traj.origin(), Origin::Earth);
-        assert_eq!(dyn_traj.reference_frame(), Frame::Icrf);
+        assert_eq!(dynamic_traj.origin(), Origin::Earth);
+        assert_eq!(dynamic_traj.reference_frame(), Frame::Icrf);
         assert_eq!(
-            dyn_traj.states().first().unwrap().time().scale(),
+            dynamic_traj.states().first().unwrap().time().scale(),
             TimeScale::Tdb
         );
-        assert_eq!(dyn_traj.states().first().unwrap().position(), first_pos);
+        assert_eq!(dynamic_traj.states().first().unwrap().position(), first_pos);
     }
 
     #[test]

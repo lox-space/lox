@@ -418,7 +418,7 @@ mod tests {
             .with_step(TimeDelta::from_seconds(30))
             .propagate(Interval::new(t0, t1))
             .unwrap()
-            .into_dyn();
+            .into_dynamic();
 
         let tai_interval = TimeInterval::new(
             sc_traj.start_time().to_scale(Tai),

@@ -1271,7 +1271,7 @@ mod tests {
     #[case(Origin::Toutatis)]
     #[case(Origin::Itokawa)]
     #[case(Origin::Bennu)]
-    fn test_dyn_origin(#[case] exp: Origin) {
+    fn test_dynamic_origin(#[case] exp: Origin) {
         let act = Origin::try_from(exp as i32).unwrap();
         assert_eq!(act, exp);
         let act = Origin::try_from(exp.id()).unwrap();
@@ -1281,7 +1281,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dyn_origin_unknown_name() {
+    fn test_dynamic_origin_unknown_name() {
         assert_eq!(
             Origin::from_str("Rupert"),
             Err(UnknownOriginName("Rupert".to_string()))
@@ -1289,7 +1289,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dyn_origin_unknown_id() {
+    fn test_dynamic_origin_unknown_id() {
         assert_eq!(Origin::try_from(666), Err(UnknownOriginId(666)))
     }
 

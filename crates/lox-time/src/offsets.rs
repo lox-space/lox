@@ -251,7 +251,7 @@ mod tests {
     use super::*;
     use crate::offsets::TryOffset;
     use crate::time_scales::TimeScale;
-    use crate::{DynTime, calendar_dates::Date, deltas::ToDelta, time_of_day::TimeOfDay};
+    use crate::{Time, calendar_dates::Date, deltas::ToDelta, time_of_day::TimeOfDay};
 
     const DEFAULT_TOL: f64 = 1e-7;
     const TCB_TOL: f64 = 1e-4;
@@ -287,7 +287,7 @@ mod tests {
     #[case::tt_tcg("TT", "TCG", 1.055589313464182, None)]
     #[case::tt_tdb("TT", "TDB", -1.1768579472004603E-4, None)]
     #[case::tt_tt("TT", "TT", 0.0, None)]
-    fn test_dyn_time_scale_offsets_new(
+    fn test_dynamic_time_scale_offsets_new(
         #[case] scale1: &str,
         #[case] scale2: &str,
         #[case] exp: f64,
@@ -298,7 +298,7 @@ mod tests {
         let scale2: TimeScale = scale2.parse().unwrap();
         let date = Date::new(2024, 12, 30).unwrap();
         let time = TimeOfDay::from_hms(10, 27, 13.145).unwrap();
-        let dt = DynTime::from_date_and_time(scale1, date, time)
+        let dt = Time::from_date_and_time(scale1, date, time)
             .unwrap()
             .to_delta();
         let act = provider
@@ -321,7 +321,7 @@ mod tests {
         let scale2: TimeScale = scale2.parse().unwrap();
         let date = Date::new(2024, 12, 30).unwrap();
         let time = TimeOfDay::from_hms(10, 27, 13.145).unwrap();
-        let original_delta = DynTime::from_date_and_time(scale1, date, time)
+        let original_delta = Time::from_date_and_time(scale1, date, time)
             .unwrap()
             .to_delta();
 

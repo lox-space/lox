@@ -29,7 +29,7 @@ mod tests {
     use lox_bodies::Origin;
     use lox_core::units::{Angle, Distance};
     use lox_frames::Frame;
-    use lox_orbits::orbits::{DynTrajectory, Ensemble};
+    use lox_orbits::orbits::{Ensemble, Trajectory};
     use lox_orbits::propagators::OrbitSource;
     use lox_time::deltas::TimeDelta;
     use lox_time::intervals::TimeInterval;
@@ -42,8 +42,8 @@ mod tests {
     // Integration tests — full OpticalAccessAnalysis pipeline with Sentinel-2 TLEs
     // -----------------------------------------------------------------------
 
-    /// Propagate a Sentinel-2 TLE into a DynTrajectory over a 6-hour window.
-    fn sentinel2_trajectory(name: &str, line1: &[u8], line2: &[u8]) -> DynTrajectory {
+    /// Propagate a Sentinel-2 TLE into a Trajectory over a 6-hour window.
+    fn sentinel2_trajectory(name: &str, line1: &[u8], line2: &[u8]) -> Trajectory {
         use lox_orbits::propagators::Propagator;
         use lox_orbits::propagators::sgp4::{Elements, Sgp4};
         use lox_time::intervals::Interval;
@@ -55,10 +55,10 @@ mod tests {
         sgp4.with_step(TimeDelta::from_seconds(10))
             .propagate(Interval::new(t0, t1))
             .unwrap()
-            .into_dyn()
+            .into_dynamic()
     }
 
-    fn sentinel2a_trajectory() -> DynTrajectory {
+    fn sentinel2a_trajectory() -> Trajectory {
         sentinel2_trajectory(
             "SENTINEL-2A",
             b"1 40697U 15028A   26079.19377485 -.00000072  00000+0 -11026-4 0  9994",
@@ -66,7 +66,7 @@ mod tests {
         )
     }
 
-    fn sentinel2b_trajectory() -> DynTrajectory {
+    fn sentinel2b_trajectory() -> Trajectory {
         sentinel2_trajectory(
             "SENTINEL-2B",
             b"1 42063U 17013A   26079.18648189  .00000015  00000+0  22231-4 0  9995",

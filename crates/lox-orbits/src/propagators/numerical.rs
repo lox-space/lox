@@ -52,9 +52,9 @@ pub enum NumericalError {
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NumericalPropagator<
-    T: ContinuousTimeScale,
-    O: TryJ2 + TryPointMass + TrySpheroid,
-    R: ReferenceFrame,
+    T: ContinuousTimeScale = TimeScale,
+    O: TryJ2 + TryPointMass + TrySpheroid = Origin,
+    R: ReferenceFrame = Frame,
 > {
     initial_state: CartesianOrbit<T, O, R>,
     rtol: f64,
@@ -63,9 +63,6 @@ pub struct NumericalPropagator<
     h_min: f64,
     max_steps: usize,
 }
-
-/// Type alias for a [`NumericalPropagator`] using dynamic time scale, origin, and frame.
-pub type DynNumericalPropagator = NumericalPropagator<TimeScale, Origin, Frame>;
 
 fn default_h_max(position: DVec3, velocity: DVec3) -> f64 {
     position.length() / velocity.length() / H_MAX_STEPS_PER_TIMESCALE

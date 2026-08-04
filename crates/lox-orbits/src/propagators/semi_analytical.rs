@@ -37,14 +37,15 @@ pub enum ValladoError {
 /// Keplerian orbit propagator using Vallado's universal-variable formulation.
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Vallado<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> {
+pub struct Vallado<
+    T: ContinuousTimeScale = TimeScale,
+    O: CoordinateOrigin = Origin,
+    R: ReferenceFrame = Frame,
+> {
     initial_state: CartesianOrbit<T, O, R>,
     max_iter: i32,
     step: Option<TimeDelta>,
 }
-
-/// Type alias for a [`Vallado`] propagator using dynamic time scale, origin, and frame.
-pub type DynVallado = Vallado<TimeScale, Origin, Frame>;
 
 // Infallible — static bounds guarantee inertial frame and point mass.
 impl<T, O, R> Vallado<T, O, R>
@@ -202,7 +203,7 @@ where
     }
 }
 
-// Single impl covers both typed and DynVallado
+// Single impl covers both typed and Vallado
 impl<T, O, R> Propagator<T, O> for Vallado<T, O, R>
 where
     T: ContinuousTimeScale + Copy + Eq,
@@ -361,7 +362,7 @@ mod tests {
         use lox_bodies::Origin;
 
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
-        let time = utc.to_dyn_time();
+        let time = utc.to_dynamic_time();
         let pos = DVec3::new(-1076225.32, -6765896.36, -332308.78);
         let vel = DVec3::new(9356.86, -3312.35, -1188.02);
         let s0 = CartesianOrbit::new(
@@ -379,7 +380,7 @@ mod tests {
         use lox_bodies::Origin;
 
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
-        let time = utc.to_dyn_time();
+        let time = utc.to_dynamic_time();
         let pos = DVec3::new(-1076225.32, -6765896.36, -332308.78);
         let vel = DVec3::new(9356.86, -3312.35, -1188.02);
         let s0 = CartesianOrbit::new(

@@ -4,7 +4,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::analysis::assets::{AssetId, ConstellationId, DynScenario, GroundStation, Spacecraft};
+use crate::analysis::assets::{AssetId, ConstellationId, GroundStation, Scenario, Spacecraft};
 use crate::analysis::events::{Event, ZeroCrossing};
 use crate::analysis::imaging::{
     AccessError, Aoi, AoiId, LookSide, OpticalAccessAnalysis, OpticalPayload, SarAccessAnalysis,
@@ -15,8 +15,8 @@ use crate::analysis::power::{
 };
 use crate::analysis::sun::AnalyticalSunEphemeris;
 use crate::analysis::visibility::{
-    DynPass, ElevationMask, ElevationMaskError, PairType, Pass, VisibilityAnalysis,
-    VisibilityError, VisibilityResults,
+    ElevationMask, ElevationMaskError, PairType, Pass, VisibilityAnalysis, VisibilityError,
+    VisibilityResults,
 };
 use crate::bodies::Origin;
 use crate::bodies::python::PyOrigin;
@@ -349,7 +349,7 @@ impl PySpacecraft {
 ///     ground_stations: List of GroundStation objects.
 #[pyclass(name = "Scenario", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
-pub struct PyScenario(pub DynScenario);
+pub struct PyScenario(pub Scenario);
 
 #[pymethods]
 impl PyScenario {
@@ -363,7 +363,7 @@ impl PyScenario {
     ) -> Self {
         let tai_start = start.0.to_scale(Tai);
         let tai_end = end.0.to_scale(Tai);
-        let mut scenario = DynScenario::new(tai_start, tai_end, Origin::Earth, Frame::Icrf);
+        let mut scenario = Scenario::new(tai_start, tai_end, Origin::Earth, Frame::Icrf);
         if let Some(sc) = spacecraft {
             let sc_vec: Vec<Spacecraft> = sc.into_iter().map(|s| s.0).collect();
             scenario = scenario.with_spacecraft(&sc_vec);
@@ -388,7 +388,7 @@ impl PyScenario {
 
     /// Return the start time.
     fn start(&self) -> PyTime {
-        PyTime(self.0.interval().start().into_dyn())
+        PyTime(self.0.interval().start().into_dynamic())
     }
 
     /// Add a constellation to the scenario, converting all its satellites
@@ -407,7 +407,7 @@ impl PyScenario {
 
     /// Return the end time.
     fn end(&self) -> PyTime {
-        PyTime(self.0.interval().end().into_dyn())
+        PyTime(self.0.interval().end().into_dynamic())
     }
 
     fn __repr__(&self) -> String {
@@ -430,7 +430,7 @@ impl PyEnsemble {
     fn get(&self, id: &str) -> Option<PyTrajectory> {
         self.0
             .get(&AssetId::new(id))
-            .map(|t| PyTrajectory(t.clone().into_dyn()))
+            .map(|t| PyTrajectory(t.clone().into_dynamic()))
     }
 
     fn __len__(&self) -> usize {
@@ -471,7 +471,7 @@ impl PyEnsemble {
 ///     max_range: Optional maximum range constraint for inter-satellite pairs.
 #[pyclass(name = "VisibilityAnalysis", module = "lox_space", frozen)]
 pub struct PyVisibilityAnalysis {
-    scenario: DynScenario,
+    scenario: Scenario,
     ensemble: Option<Ensemble<AssetId, Tai, Origin, Frame>>,
     occulting_bodies: Vec<Origin>,
     step: TimeDelta,
@@ -707,7 +707,7 @@ impl PyVisibilityAnalysis {
 #[pyclass(name = "VisibilityResults", module = "lox_space", frozen)]
 pub struct PyVisibilityResults {
     results: VisibilityResults,
-    scenario: DynScenario,
+    scenario: Scenario,
     ensemble: Ensemble<AssetId, Tai, Origin, Frame>,
     step: TimeDelta,
 }
@@ -731,7 +731,10 @@ impl PyVisibilityResults {
                 intervals
                     .iter()
                     .map(|i| {
-                        PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn()))
+                        PyInterval(TimeInterval::new(
+                            i.start().into_dynamic(),
+                            i.end().into_dynamic(),
+                        ))
                     })
                     .collect()
             })
@@ -752,7 +755,10 @@ impl PyVisibilityResults {
                     intervals
                         .iter()
                         .map(|i| {
-                            PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn()))
+                            PyInterval(TimeInterval::new(
+                                i.start().into_dynamic(),
+                                i.end().into_dynamic(),
+                            ))
                         })
                         .collect(),
                 )
@@ -775,7 +781,10 @@ impl PyVisibilityResults {
                     intervals
                         .iter()
                         .map(|i| {
-                            PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn()))
+                            PyInterval(TimeInterval::new(
+                                i.start().into_dynamic(),
+                                i.end().into_dynamic(),
+                            ))
                         })
                         .collect(),
                 ))
@@ -798,7 +807,10 @@ impl PyVisibilityResults {
                     intervals
                         .iter()
                         .map(|i| {
-                            PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn()))
+                            PyInterval(TimeInterval::new(
+                                i.start().into_dynamic(),
+                                i.end().into_dynamic(),
+                            ))
                         })
                         .collect(),
                 ))
@@ -840,7 +852,7 @@ impl PyVisibilityResults {
         let sc_traj = self.ensemble.get(&sc_id);
         match (gs, sc_traj) {
             (Some(gs), Some(sc_traj)) => {
-                let dyn_traj = sc_traj.clone().into_dyn();
+                let dynamic_traj = sc_traj.clone().into_dynamic();
                 let passes = self
                     .results
                     .to_passes(
@@ -848,7 +860,7 @@ impl PyVisibilityResults {
                         &sc_id,
                         gs.location(),
                         gs.mask(),
-                        &dyn_traj,
+                        &dynamic_traj,
                         self.step,
                         gs.body_fixed_frame(),
                     )
@@ -880,21 +892,21 @@ impl PyVisibilityResults {
             .filter_map(|(gs_id, sc_id)| {
                 let gs = gs_map.get(gs_id)?;
                 let sc_traj = self.ensemble.get(sc_id)?;
-                let dyn_traj = sc_traj.clone().into_dyn();
+                let dynamic_traj = sc_traj.clone().into_dynamic();
                 let intervals = self.results.intervals_for(gs_id, sc_id)?;
                 let passes: Vec<PyPass> = intervals
                     .iter()
                     .filter_map(|interval| {
-                        let dyn_interval = TimeInterval::new(
-                            interval.start().into_dyn(),
-                            interval.end().into_dyn(),
+                        let dynamic_interval = TimeInterval::new(
+                            interval.start().into_dynamic(),
+                            interval.end().into_dynamic(),
                         );
-                        DynPass::from_interval(
-                            dyn_interval,
+                        Pass::from_interval(
+                            dynamic_interval,
                             self.step,
                             gs.location(),
                             gs.mask(),
-                            &dyn_traj,
+                            &dynamic_traj,
                             gs.body_fixed_frame(),
                         )
                     })
@@ -1157,7 +1169,7 @@ impl PyObservables {
 /// observables computed at regular intervals throughout the pass.
 #[pyclass(name = "Pass", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
-pub struct PyPass(pub DynPass);
+pub struct PyPass(pub Pass);
 
 #[pymethods]
 impl PyPass {
@@ -1167,7 +1179,7 @@ impl PyPass {
         times: Vec<PyTime>,
         observables: Vec<PyObservables>,
     ) -> PyResult<Self> {
-        let times: Vec<crate::time::DynTime> = times.into_iter().map(|t| t.0).collect();
+        let times: Vec<crate::time::Time> = times.into_iter().map(|t| t.0).collect();
         let observables: Vec<Observables> = observables.into_iter().map(|o| o.0).collect();
 
         let pass = Pass::try_new(interval.0, times, observables)
@@ -1245,7 +1257,7 @@ impl From<PyPowerError> for PyErr {
 ///         ``spacecraft_ids``.
 #[pyclass(name = "PowerBudgetAnalysis", module = "lox_space", frozen)]
 pub struct PyPowerBudgetAnalysis {
-    scenario: DynScenario,
+    scenario: Scenario,
     ensemble: Option<Ensemble<AssetId, Tai, Origin, Frame>>,
     step: TimeDelta,
     filter: Option<SpacecraftFilter>,
@@ -1358,8 +1370,8 @@ impl PyPowerBudgetAnalysis {
 
 /// Convert a `TimeSeries<Tai>` to a `PyTimeSeries` (which uses `TimeScale`).
 fn to_py_time_series(ts: &TimeSeries<Tai>) -> PyTimeSeries {
-    let dyn_ts = TimeSeries::new(ts.epoch().into_dyn(), ts.series().clone());
-    PyTimeSeries(dyn_ts)
+    let dynamic_ts = TimeSeries::new(ts.epoch().into_dynamic(), ts.series().clone());
+    PyTimeSeries(dynamic_ts)
 }
 
 /// Results of a power budget analysis.
@@ -1388,7 +1400,10 @@ impl PyPowerBudgetResults {
                 intervals
                     .iter()
                     .map(|i| {
-                        PyInterval(TimeInterval::new(i.start().into_dyn(), i.end().into_dyn()))
+                        PyInterval(TimeInterval::new(
+                            i.start().into_dynamic(),
+                            i.end().into_dynamic(),
+                        ))
                     })
                     .collect()
             })
@@ -1561,7 +1576,7 @@ impl PyOpticalPayload {
 ///         Defaults to IAU frame of the scenario's origin.
 #[pyclass(name = "OpticalAccessAnalysis", module = "lox_space", frozen)]
 pub struct PyOpticalAccessAnalysis {
-    scenario: DynScenario,
+    scenario: Scenario,
     aois: Vec<(AoiId, Aoi)>,
     ensemble: Option<Ensemble<AssetId, Tai, Origin, Frame>>,
     step: TimeDelta,
@@ -1687,8 +1702,8 @@ impl PyAccessWindow {
     /// The access time interval.
     fn interval(&self) -> PyInterval {
         PyInterval(TimeInterval::new(
-            self.0.interval.start().into_dyn(),
-            self.0.interval.end().into_dyn(),
+            self.0.interval.start().into_dynamic(),
+            self.0.interval.end().into_dynamic(),
         ))
     }
 
@@ -1898,7 +1913,7 @@ impl PySarPayload {
 ///         Defaults to IAU frame of the scenario's origin.
 #[pyclass(name = "SarAccessAnalysis", module = "lox_space", frozen)]
 pub struct PySarAccessAnalysis {
-    scenario: DynScenario,
+    scenario: Scenario,
     aois: Vec<(AoiId, Aoi)>,
     ensemble: Option<Ensemble<AssetId, Tai, Origin, Frame>>,
     step: TimeDelta,

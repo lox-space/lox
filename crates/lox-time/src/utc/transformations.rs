@@ -7,7 +7,6 @@ use crate::deltas::TimeDelta;
 use crate::deltas::ToDelta;
 use crate::offsets::DefaultOffsetProvider;
 use crate::offsets::Offset;
-use crate::time::DynTime;
 use crate::time::Time;
 use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
@@ -43,15 +42,15 @@ impl Utc {
         self.to_time_with_provider(&DefaultLeapSecondsProvider)
     }
 
-    /// Converts this UTC instant to a [`DynTime`] in TAI using the given provider.
-    pub fn to_dyn_time_with_provider(&self, provider: &impl LeapSecondsProvider) -> DynTime {
+    /// Converts this UTC instant to a [`Time`] in TAI using the given provider.
+    pub fn to_dynamic_time_with_provider(&self, provider: &impl LeapSecondsProvider) -> Time {
         let offset = self.offset_tai(provider);
         Time::from_delta(TimeScale::Tai, self.to_delta() - offset)
     }
 
-    /// Converts this UTC instant to a [`DynTime`] in TAI using the built-in table.
-    pub fn to_dyn_time(&self) -> DynTime {
-        self.to_dyn_time_with_provider(&DefaultLeapSecondsProvider)
+    /// Converts this UTC instant to a [`Time`] in TAI using the built-in table.
+    pub fn to_dynamic_time(&self) -> Time {
+        self.to_dynamic_time_with_provider(&DefaultLeapSecondsProvider)
     }
 }
 

@@ -362,7 +362,7 @@ mod tests {
     #[case("TDB", "Barycentric Dynamical Time")]
     #[case("TT", "Terrestrial Time")]
     #[case("UT1", "Universal Time")]
-    fn test_dyn_time_scale(#[case] abbreviation: &str, #[case] name: &str) {
+    fn test_dynamic_time_scale(#[case] abbreviation: &str, #[case] name: &str) {
         let scale: TimeScale = abbreviation.parse().unwrap();
         assert_eq!(scale.abbreviation(), abbreviation);
         assert_eq!(scale.to_string(), abbreviation);
@@ -370,7 +370,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dyn_time_scale_invalid() {
+    fn test_dynamic_time_scale_invalid() {
         let scale: Result<TimeScale, UnknownTimeScaleError> = "NTS".parse();
         assert_eq!(scale, Err(UnknownTimeScaleError("NTS".to_owned())))
     }
@@ -382,18 +382,18 @@ mod tests {
     }
 
     #[test]
-    fn dyn_time_scale_gps_abbreviation() {
+    fn dynamic_time_scale_gps_abbreviation() {
         assert_eq!(TimeScale::Gps.abbreviation(), "GPS");
     }
 
     #[test]
-    fn dyn_time_scale_parses_gps_both_cases() {
+    fn dynamic_time_scale_parses_gps_both_cases() {
         assert_eq!("GPS".parse::<TimeScale>().unwrap(), TimeScale::Gps);
         assert_eq!("gps".parse::<TimeScale>().unwrap(), TimeScale::Gps);
     }
 
     #[test]
-    fn dyn_time_scale_rejects_unknown() {
+    fn dynamic_time_scale_rejects_unknown() {
         assert!("XYZ".parse::<TimeScale>().is_err());
     }
 }

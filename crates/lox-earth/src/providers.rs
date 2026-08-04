@@ -108,7 +108,7 @@ mod tests {
     use lox_time::time_scales::TimeScale;
     use lox_time::time_scales::{Tai, Ut1};
     use lox_time::utc::transformations::ToUtc;
-    use lox_time::{DynTime, calendar_dates::Date, time_of_day::TimeOfDay};
+    use lox_time::{calendar_dates::Date, time_of_day::TimeOfDay};
     use rstest::{fixture, rstest};
 
     #[rstest]
@@ -250,7 +250,7 @@ mod tests {
     #[case::ut1_tdb("UT1", "TDB", 69.13340387022173)]
     #[case::ut1_tt("UT1", "TT", 69.13352153286931)]
     #[case::ut1_ut1("UT1", "UT1", 0.0)]
-    fn test_dyn_time_scale_ut1(
+    fn test_dynamic_time_scale_ut1(
         #[case] scale1: &str,
         #[case] scale2: &str,
         #[case] exp: f64,
@@ -260,7 +260,7 @@ mod tests {
         let scale2: TimeScale = scale2.parse().unwrap();
         let date = Date::new(2024, 12, 30).unwrap();
         let time = TimeOfDay::from_hms(10, 27, 13.145).unwrap();
-        let dt = DynTime::from_date_and_time(scale1, date, time)
+        let dt = Time::from_date_and_time(scale1, date, time)
             .unwrap()
             .to_delta();
         let act = provider

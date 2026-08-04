@@ -70,17 +70,17 @@ pub enum TimeError {
 
 /// An instant in time in a given [ContinuousTimeScale], relative to J2000.
 ///
+/// The scale defaults to [`TimeScale`], which is determined at runtime. Name a
+/// zero-sized scale explicitly — `Time<Tai>` — to have the compiler track it.
+///
 /// `Time` supports femtosecond precision, but be aware that many algorithms operating on `Time`s
 /// are not accurate to this level of precision.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Time<T: ContinuousTimeScale> {
+pub struct Time<T: ContinuousTimeScale = TimeScale> {
     scale: T,
     delta: TimeDelta,
 }
-
-/// A [`Time`] with a runtime-determined time scale.
-pub type DynTime = Time<TimeScale>;
 
 impl<T: ContinuousTimeScale> Time<T> {
     /// Instantiates a [Time] in the given [ContinuousTimeScale] from the count of seconds since J2000, subdivided
@@ -290,8 +290,8 @@ impl<T: ContinuousTimeScale> Time<T> {
 }
 
 impl<T: ContinuousTimeScale + Into<TimeScale>> Time<T> {
-    /// Converts this time into a [`DynTime`] with a runtime time scale.
-    pub fn into_dyn(self) -> DynTime {
+    /// Converts this time into a [`Time`] with a runtime time scale.
+    pub fn into_dynamic(self) -> Time {
         Time::from_delta(self.scale.into(), self.delta)
     }
 }
@@ -312,7 +312,7 @@ impl<T: ContinuousTimeScale + Eq> Ord for Time<T> {
     }
 }
 
-/// Error returned when comparing [`DynTime`] objects with different time scales.
+/// Error returned when comparing [`Time`] objects with different time scales.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 #[error("cannot compare `Time` objects with different time scales `{lhs}` and `{rhs}`")]
 pub struct TimeScaleMismatch {
@@ -320,8 +320,8 @@ pub struct TimeScaleMismatch {
     rhs: TimeScale,
 }
 
-impl DynTime {
-    /// Compares two [`DynTime`] objects, returning an error if they have different time scales.
+impl Time {
+    /// Compares two [`Time`] objects, returning an error if they have different time scales.
     pub fn checked_cmp(&self, other: &Self) -> Result<core::cmp::Ordering, TimeScaleMismatch> {
         if self.scale != other.scale {
             return Err(TimeScaleMismatch {
@@ -1157,22 +1157,22 @@ mod tests {
     }
 
     #[test]
-    fn test_time_into_dyn() {
+    fn test_time_into_dynamic() {
         let time = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap();
-        let dyn_time = time.into_dyn();
-        assert_eq!(dyn_time.scale(), TimeScale::Tai);
-        assert_eq!(dyn_time.to_delta(), time.to_delta());
+        let dynamic_time = time.into_dynamic();
+        assert_eq!(dynamic_time.scale(), TimeScale::Tai);
+        assert_eq!(dynamic_time.to_delta(), time.to_delta());
 
         let tdb_time = time!(Tdb, 2023, 6, 15, 10, 30, 0.0).unwrap();
-        let dyn_tdb = tdb_time.into_dyn();
-        assert_eq!(dyn_tdb.scale(), TimeScale::Tdb);
-        assert_eq!(dyn_tdb.to_delta(), tdb_time.to_delta());
+        let dynamic_tdb = tdb_time.into_dynamic();
+        assert_eq!(dynamic_tdb.scale(), TimeScale::Tdb);
+        assert_eq!(dynamic_tdb.to_delta(), tdb_time.to_delta());
     }
 
     #[test]
     fn test_checked_cmp_same_scale() {
-        let t1 = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dyn();
-        let t2 = time!(Tai, 2000, 1, 1, 13, 0, 0.0).unwrap().into_dyn();
+        let t1 = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dynamic();
+        let t2 = time!(Tai, 2000, 1, 1, 13, 0, 0.0).unwrap().into_dynamic();
         assert_eq!(t1.checked_cmp(&t2), Ok(Ordering::Less));
         assert_eq!(t2.checked_cmp(&t1), Ok(Ordering::Greater));
         assert_eq!(t1.checked_cmp(&t1), Ok(Ordering::Equal));
@@ -1180,8 +1180,8 @@ mod tests {
 
     #[test]
     fn test_checked_cmp_different_scale_returns_err() {
-        let t_tai = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dyn();
-        let t_tt = time!(Tt, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dyn();
+        let t_tai = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dynamic();
+        let t_tt = time!(Tt, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dynamic();
         assert!(t_tai.checked_cmp(&t_tt).is_err());
         assert!(t_tt.checked_cmp(&t_tai).is_err());
     }
@@ -1189,8 +1189,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "cannot compare `Time` objects with different time scales")]
     fn test_ord_different_scale_panics() {
-        let t_tai = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dyn();
-        let t_tt = time!(Tt, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dyn();
+        let t_tai = time!(Tai, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dynamic();
+        let t_tt = time!(Tt, 2000, 1, 1, 12, 0, 0.0).unwrap().into_dynamic();
         let _ = t_tai < t_tt;
     }
 }

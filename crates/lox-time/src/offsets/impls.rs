@@ -409,7 +409,7 @@ where
     }
 }
 
-macro_rules! impl_dyn {
+macro_rules! impl_dynamic {
     ($($scale:ident),*) => {
         $(
             impl<T> TryOffset<$scale, TimeScale> for T
@@ -449,7 +449,7 @@ macro_rules! impl_dyn {
     };
 }
 
-impl_dyn!(Gps, Tai, Tcb, Tcg, Tdb, Tt, Ut1);
+impl_dynamic!(Gps, Tai, Tcb, Tcg, Tdb, Tt, Ut1);
 
 #[cfg(test)]
 mod tests {

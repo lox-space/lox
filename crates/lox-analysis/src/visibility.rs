@@ -29,7 +29,7 @@ use crate::events::{
     DetectError, DetectFn, EventsToIntervals, IntervalDetector, IntervalDetectorExt,
     RootFindingDetector,
 };
-use lox_orbits::ground::{DynGroundLocation, Observables};
+use lox_orbits::ground::{GroundLocation, Observables};
 use lox_orbits::orbits::{Ensemble, Trajectory};
 
 // ---------------------------------------------------------------------------
@@ -185,7 +185,7 @@ pub enum PassError {
 /// each observable channel to support interpolation.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Pass<T: ContinuousTimeScale> {
+pub struct Pass<T: ContinuousTimeScale = TimeScale> {
     interval: TimeInterval<T>,
     times: Vec<Time<T>>,
     observables: Vec<Observables>,
@@ -195,10 +195,7 @@ pub struct Pass<T: ContinuousTimeScale> {
     range_rate_series: TimeSeries<T>,
 }
 
-/// A visibility pass using a dynamic time scale.
-pub type DynPass = Pass<TimeScale>;
-
-impl DynPass {
+impl Pass {
     /// Create a Pass from an interval, calculating observables for times when
     /// the satellite is above the elevation mask.
     ///
@@ -206,11 +203,11 @@ impl DynPass {
     pub fn from_interval(
         interval: TimeInterval<TimeScale>,
         time_resolution: TimeDelta,
-        gs: &DynGroundLocation,
+        gs: &GroundLocation,
         mask: &ElevationMask,
-        sc: &lox_orbits::orbits::DynTrajectory,
+        sc: &lox_orbits::orbits::Trajectory,
         body_fixed_frame: Frame,
-    ) -> Option<DynPass> {
+    ) -> Option<Pass> {
         let mut pass_times = Vec::new();
         let mut pass_observables = Vec::new();
 
@@ -219,7 +216,7 @@ impl DynPass {
             let state_bf = state
                 .try_to_frame(body_fixed_frame, &DefaultRotationProvider)
                 .unwrap();
-            let obs = gs.observables_dyn(state_bf);
+            let obs = gs.observables_dynamic(state_bf);
 
             let min_elev = mask.min_elevation(obs.azimuth());
             if obs.elevation() >= min_elev {
@@ -368,7 +365,7 @@ impl From<RotationError> for EvalError {
 /// 3. Computes observables (azimuth, elevation, range, range rate)
 /// 4. Returns elevation minus minimum elevation from the mask
 struct ElevationDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    gs: &'a DynGroundLocation,
+    gs: &'a GroundLocation,
     mask: &'a ElevationMask,
     sc: &'a Trajectory<Tai, O, R>,
     body_fixed_frame: Frame,
@@ -397,7 +394,7 @@ where
 /// Line-of-sight between a ground station and spacecraft, relative to an
 /// occulting body.
 struct LineOfSightDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    gs: &'a DynGroundLocation,
+    gs: &'a GroundLocation,
     sc: &'a Trajectory<Tai, O, R>,
     body: Origin,
     ephemeris: &'a E,
@@ -852,12 +849,12 @@ impl VisibilityResults {
         &self,
         ground_id: &AssetId,
         space_id: &AssetId,
-        gs: &DynGroundLocation,
+        gs: &GroundLocation,
         mask: &ElevationMask,
-        sc: &lox_orbits::orbits::DynTrajectory,
+        sc: &lox_orbits::orbits::Trajectory,
         time_resolution: TimeDelta,
         body_fixed_frame: Frame,
-    ) -> Result<Vec<DynPass>, PassError> {
+    ) -> Result<Vec<Pass>, PassError> {
         let key = (ground_id.clone(), space_id.clone());
         if self.pair_types.get(&key) == Some(&PairType::InterSatellite) {
             return Err(PassError::InterSatellitePair(
@@ -872,12 +869,12 @@ impl VisibilityResults {
                 intervals
                     .iter()
                     .filter_map(|interval| {
-                        let dyn_interval = TimeInterval::new(
-                            interval.start().into_dyn(),
-                            interval.end().into_dyn(),
+                        let dynamic_interval = TimeInterval::new(
+                            interval.start().into_dynamic(),
+                            interval.end().into_dynamic(),
                         );
-                        DynPass::from_interval(
-                            dyn_interval,
+                        Pass::from_interval(
+                            dynamic_interval,
                             time_resolution,
                             gs,
                             mask,
@@ -1009,10 +1006,7 @@ where
     ///
     /// Inter-satellite pairs are skipped since passes with ground-station
     /// observables are not meaningful for them.
-    pub fn to_passes(
-        &self,
-        results: &VisibilityResults,
-    ) -> HashMap<(AssetId, AssetId), Vec<DynPass>> {
+    pub fn to_passes(&self, results: &VisibilityResults) -> HashMap<(AssetId, AssetId), Vec<Pass>> {
         let gs_map: HashMap<&AssetId, &GroundStation> = self
             .scenario
             .ground_stations()
@@ -1027,22 +1021,22 @@ where
                 let gs = gs_map.get(gs_id)?;
                 let sc_traj = self.ensemble.get(sc_id)?;
                 let intervals = results.intervals_for(gs_id, sc_id)?;
-                let passes: Vec<DynPass> = intervals
+                let passes: Vec<Pass> = intervals
                     .iter()
                     .filter_map(|interval| {
-                        // Convert Tai interval to TimeScale for DynPass::from_interval
-                        let dyn_interval = TimeInterval::new(
-                            interval.start().into_dyn(),
-                            interval.end().into_dyn(),
+                        // Convert Tai interval to TimeScale for Pass::from_interval
+                        let dynamic_interval = TimeInterval::new(
+                            interval.start().into_dynamic(),
+                            interval.end().into_dynamic(),
                         );
-                        // Convert typed trajectory to DynTrajectory for pass computation
-                        let dyn_traj = sc_traj.clone().into_dyn();
-                        DynPass::from_interval(
-                            dyn_interval,
+                        // Convert typed trajectory to Trajectory for pass computation
+                        let dynamic_traj = sc_traj.clone().into_dynamic();
+                        Pass::from_interval(
+                            dynamic_interval,
                             self.step,
                             gs.location(),
                             gs.mask(),
-                            &dyn_traj,
+                            &dynamic_traj,
                             gs.body_fixed_frame(),
                         )
                     })
@@ -1559,9 +1553,9 @@ mod tests {
     use super::*;
     use lox_frames::Icrf;
     use lox_orbits::ground::GroundLocation;
-    use lox_orbits::orbits::{DynTrajectory, Trajectory};
+    use lox_orbits::orbits::Trajectory;
 
-    /// Build a DynScenario + DynEnsemble from ground/space assets and a TimeScale interval.
+    /// Build a Scenario + Ensemble from ground/space assets and a TimeScale interval.
     fn make_scenario_and_ensemble(
         ground_assets: &[GroundStation],
         space_assets: &[Spacecraft],
@@ -1579,7 +1573,7 @@ mod tests {
         let mut map = HashMap::new();
         for sc in space_assets {
             if let OrbitSource::Trajectory(traj) = sc.orbit() {
-                // Re-tag DynTrajectory as Ensemble<Tai, Origin, Frame>
+                // Re-tag Trajectory as Ensemble<Tai, Origin, Frame>
                 let (epoch, origin, frame, data) = traj.clone().into_parts();
                 let typed = Trajectory::from_parts(epoch.with_scale(Tai), origin, frame, data);
                 map.insert(sc.id().clone(), typed);
@@ -1629,9 +1623,9 @@ mod tests {
 
     #[test]
     fn test_elevation() {
-        let sc = spacecraft_trajectory_dyn();
+        let sc = spacecraft_trajectory_dynamic();
         let gs_traj = ground_station_trajectory();
-        let gs = location_dyn();
+        let gs = location_dynamic();
         let mask = ElevationMask::with_fixed_elevation(0.0);
         let expected: Vec<f64> = read_data_file("elevation.csv")
             .lines()
@@ -1679,9 +1673,9 @@ mod tests {
 
     #[test]
     fn test_visibility() {
-        let gs_loc = location_dyn();
+        let gs_loc = location_dynamic();
         let mask = ElevationMask::with_fixed_elevation(0.0);
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let gs = GroundStation::new("cebreros", gs_loc, mask);
         let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
         let spk = ephemeris();
@@ -1703,9 +1697,9 @@ mod tests {
 
     #[test]
     fn test_visibility_no_ephemeris() {
-        let gs_loc = location_dyn();
+        let gs_loc = location_dynamic();
         let mask = ElevationMask::with_fixed_elevation(0.0);
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let gs = GroundStation::new("cebreros", gs_loc, mask);
         let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
         let ground_assets = [gs.clone()];
@@ -1728,9 +1722,9 @@ mod tests {
 
     #[test]
     fn test_visibility_combined() {
-        let gs_loc = location_dyn();
+        let gs_loc = location_dynamic();
         let mask = ElevationMask::with_fixed_elevation(0.0);
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let gs = GroundStation::new("cebreros", gs_loc, mask);
         let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
         let spk = ephemeris();
@@ -1755,9 +1749,9 @@ mod tests {
 
     #[test]
     fn test_pass_observables_above_mask() {
-        let gs_loc = location_dyn();
+        let gs_loc = location_dynamic();
         let mask = ElevationMask::with_fixed_elevation(10.0_f64.to_radians());
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let gs = GroundStation::new("cebreros", gs_loc, mask);
         let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
         let ground_assets = [gs.clone()];
@@ -1790,8 +1784,8 @@ mod tests {
         Trajectory::from_csv(&read_data_file("trajectory_cebr.csv"), Earth, Icrf).unwrap()
     }
 
-    fn spacecraft_trajectory_dyn() -> DynTrajectory {
-        DynTrajectory::from_csv_dyn(
+    fn spacecraft_trajectory_dynamic() -> Trajectory {
+        Trajectory::from_csv_dynamic(
             &read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
             Frame::Icrf,
@@ -1799,7 +1793,7 @@ mod tests {
         .unwrap()
     }
 
-    fn location_dyn() -> GroundLocation<Origin> {
+    fn location_dynamic() -> GroundLocation<Origin> {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         GroundLocation::try_new(coords, Origin::Earth).unwrap()
     }
@@ -1827,8 +1821,8 @@ mod tests {
             .unwrap();
         for result in reader.records() {
             let record = result.unwrap();
-            let start = record[0].parse::<Utc>().unwrap().to_dyn_time();
-            let end = record[1].parse::<Utc>().unwrap().to_dyn_time();
+            let start = record[0].parse::<Utc>().unwrap().to_dynamic_time();
+            let end = record[1].parse::<Utc>().unwrap().to_dynamic_time();
             intervals.push(TimeInterval::new(start, end));
         }
         intervals
@@ -1836,7 +1830,7 @@ mod tests {
 
     #[test]
     fn test_inter_satellite_visibility() {
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
@@ -1857,7 +1851,7 @@ mod tests {
 
     #[test]
     fn test_inter_satellite_visibility_with_range_filter() {
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
@@ -1899,7 +1893,7 @@ mod tests {
     #[test]
     fn test_slew_rate_detect_fn() {
         // Two colocated trajectories have zero angular rate → always within limit.
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let (epoch, origin, frame, data) = sc_traj.into_parts();
         let typed = Trajectory::from_parts(epoch.with_scale(Tai), origin, frame, data);
         let threshold = AngularRate::degrees_per_second(1.0);
@@ -1916,7 +1910,7 @@ mod tests {
 
     #[test]
     fn test_inter_sat_los_central_body_detect_fn() {
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let (epoch, origin, frame, data) = sc_traj.clone().into_parts();
         let typed = Trajectory::from_parts(epoch.with_scale(Tai), origin, frame, data);
         let detect = InterSatLosCentralBodyDetectFn {
@@ -1933,7 +1927,7 @@ mod tests {
 
     #[test]
     fn test_inter_satellite_visibility_with_slew_rate() {
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
 
         // Colocated spacecraft have ω = 0. A generous slew rate limit should
@@ -1959,7 +1953,7 @@ mod tests {
 
     #[test]
     fn test_space_asset_max_slew_rate() {
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj));
         assert!(sc.max_slew_rate().is_none());
 
@@ -1976,7 +1970,7 @@ mod tests {
     // ONEWEB-0012: RAAN 343.68°, ONEWEB-0017: RAAN 151.03°
     // Their crossing orbits produce high angular rates during close approaches.
 
-    fn oneweb_trajectories() -> (DynTrajectory, DynTrajectory) {
+    fn oneweb_trajectories() -> (Trajectory, Trajectory) {
         use lox_orbits::propagators::Propagator;
         use lox_orbits::propagators::sgp4::{Elements, Sgp4};
         use lox_time::intervals::Interval;
@@ -2006,12 +2000,12 @@ mod tests {
             .with_step(TimeDelta::from_seconds(10))
             .propagate(interval)
             .unwrap()
-            .into_dyn();
+            .into_dynamic();
         let traj2 = sgp4_2
             .with_step(TimeDelta::from_seconds(10))
             .propagate(interval)
             .unwrap()
-            .into_dyn();
+            .into_dynamic();
 
         (traj1, traj2)
     }
@@ -2064,7 +2058,7 @@ mod tests {
 
     #[test]
     fn test_inter_satellite_asymmetric_slew_rate_sc1_only() {
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
 
         // Only sc1 has a slew rate limit — exercises the (Some(a), None) branch.
@@ -2084,7 +2078,7 @@ mod tests {
 
     #[test]
     fn test_inter_satellite_asymmetric_slew_rate_sc2_only() {
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
 
         // Only sc2 has a slew rate limit — exercises the (None, Some(b)) branch.
@@ -2124,11 +2118,11 @@ mod tests {
 
     #[test]
     fn test_ground_space_filter() {
-        let gs_loc = location_dyn();
+        let gs_loc = location_dynamic();
         let mask = ElevationMask::with_fixed_elevation(0.0);
         let gs1 = GroundStation::new("cebreros", gs_loc.clone(), mask.clone());
         let gs2 = GroundStation::new("malargue", gs_loc, mask);
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
@@ -2151,7 +2145,7 @@ mod tests {
 
     #[test]
     fn test_inter_satellite_filter() {
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj.clone()));
@@ -2175,11 +2169,11 @@ mod tests {
 
     #[test]
     fn test_both_filters_combined_with_ground_space() {
-        let gs_loc = location_dyn();
+        let gs_loc = location_dynamic();
         let mask = ElevationMask::with_fixed_elevation(0.0);
         let gs1 = GroundStation::new("cebreros", gs_loc.clone(), mask.clone());
         let gs2 = GroundStation::new("malargue", gs_loc, mask);
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj.clone()));
@@ -2209,10 +2203,10 @@ mod tests {
 
     #[test]
     fn test_min_pass_duration_filters_short_passes() {
-        let gs_loc = location_dyn();
+        let gs_loc = location_dynamic();
         let mask = ElevationMask::with_fixed_elevation(0.0);
         let gs = GroundStation::new("cebreros", gs_loc, mask);
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj));
         let ground_assets = [gs];
@@ -2251,7 +2245,7 @@ mod tests {
 
     #[test]
     fn test_to_passes_rejects_inter_satellite_pair() {
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
@@ -2263,9 +2257,9 @@ mod tests {
             .compute()
             .unwrap();
 
-        let gs_loc = location_dyn();
+        let gs_loc = location_dynamic();
         let mask = ElevationMask::with_fixed_elevation(0.0);
-        let dummy_traj = DynTrajectory::from_csv_dyn(
+        let dummy_traj = Trajectory::from_csv_dynamic(
             &read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
             Frame::Icrf,
@@ -2288,10 +2282,10 @@ mod tests {
 
     #[test]
     fn test_to_passes_unknown_pair_returns_empty() {
-        let gs_loc = location_dyn();
+        let gs_loc = location_dynamic();
         let mask = ElevationMask::with_fixed_elevation(0.0);
         let gs = GroundStation::new("cebreros", gs_loc.clone(), mask.clone());
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj));
         let (scenario, ensemble) = make_scenario_and_ensemble(&[gs], &[sc], interval);
@@ -2300,7 +2294,7 @@ mod tests {
             .compute()
             .unwrap();
 
-        let dummy_traj = DynTrajectory::from_csv_dyn(
+        let dummy_traj = Trajectory::from_csv_dynamic(
             &read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
             Frame::Icrf,
@@ -2324,10 +2318,10 @@ mod tests {
 
     #[test]
     fn test_combined_ground_and_inter_satellite() {
-        let gs_loc = location_dyn();
+        let gs_loc = location_dynamic();
         let mask = ElevationMask::with_fixed_elevation(0.0);
         let gs = GroundStation::new("cebreros", gs_loc, mask);
-        let sc_traj = spacecraft_trajectory_dyn();
+        let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(sc_traj));
@@ -2377,17 +2371,17 @@ mod tests {
         .unwrap();
         let sgp4 = Sgp4::new(iss_tle).unwrap();
 
-        let lunar_traj = spacecraft_trajectory_dyn();
+        let lunar_traj = spacecraft_trajectory_dynamic();
 
         // Overlap the ISS propagation with the lunar trajectory's time range.
-        let t0 = lunar_traj.start_time().max(sgp4.time().into_dyn());
+        let t0 = lunar_traj.start_time().max(sgp4.time().into_dynamic());
         let t1 = t0 + TimeDelta::from_hours(24);
         let tai_interval = Interval::new(t0.to_scale(Tai), t1.to_scale(Tai));
         let iss_traj = sgp4
             .with_step(TimeDelta::from_seconds(30))
             .propagate(tai_interval)
             .unwrap()
-            .into_dyn();
+            .into_dynamic();
 
         let inter_interval = TimeInterval::new(t0, t1);
         let sc_iss = Spacecraft::new("iss", OrbitSource::Trajectory(iss_traj));

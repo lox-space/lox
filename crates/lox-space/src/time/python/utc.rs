@@ -196,10 +196,10 @@ impl PyUtc {
         let time = match provider {
             Some(provider) => self
                 .0
-                .to_dyn_time()
+                .to_dynamic_time()
                 .try_to_scale(scale.0, provider)
                 .map_err(PyEopProviderError)?,
-            None => self.0.to_dyn_time().to_scale(scale.0),
+            None => self.0.to_dynamic_time().to_scale(scale.0),
         };
         Ok(PyTime(time))
     }

@@ -21,20 +21,20 @@ fn main() {
 mod imaging_benches {
     use divan::Bencher;
     use geo::{LineString, Polygon};
-    use lox_space::analysis::assets::{DynScenario, Spacecraft};
+    use lox_space::analysis::assets::{Scenario, Spacecraft};
     use lox_space::analysis::imaging::{
         Aoi, AoiId, LookSide, OpticalAccessAnalysis, OpticalPayload, SarAccessAnalysis, SarPayload,
     };
     use lox_space::core::units::{Angle, Distance};
-    use lox_space::orbits::DynTrajectory;
+    use lox_space::orbits::Trajectory;
     use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
     use lox_space::orbits::propagators::{OrbitSource, Propagator};
     use lox_space::time::deltas::TimeDelta;
     use lox_space::time::intervals::Interval;
 
-    use super::common::{self, DynEnsemble};
+    use super::common::{self, DynamicEnsemble};
 
-    fn sentinel2_trajectory(name: &str, line1: &[u8], line2: &[u8]) -> DynTrajectory {
+    fn sentinel2_trajectory(name: &str, line1: &[u8], line2: &[u8]) -> Trajectory {
         let tle = Elements::from_tle(Some(name.to_string()), line1, line2).unwrap();
         let sgp4 = Sgp4::new(tle).unwrap();
         let t0 = sgp4.time();
@@ -42,10 +42,10 @@ mod imaging_benches {
         sgp4.with_step(TimeDelta::from_seconds(10))
             .propagate(Interval::new(t0, t1))
             .unwrap()
-            .into_dyn()
+            .into_dynamic()
     }
 
-    fn sentinel2a_trajectory() -> DynTrajectory {
+    fn sentinel2a_trajectory() -> Trajectory {
         sentinel2_trajectory(
             "SENTINEL-2A",
             b"1 40697U 15028A   26079.19377485 -.00000072  00000+0 -11026-4 0  9994",
@@ -90,7 +90,7 @@ mod imaging_benches {
 
     /// `n` OneWeb spacecraft each carrying the given optical payload, plus a
     /// scenario/ensemble assembled via the shared fixtures.
-    fn oneweb_optical_scenario(n: usize, payload: OpticalPayload) -> (DynScenario, DynEnsemble) {
+    fn oneweb_optical_scenario(n: usize, payload: OpticalPayload) -> (Scenario, DynamicEnsemble) {
         let trajs = common::propagate_oneweb_trajectories(n, 6);
         let spacecraft: Vec<Spacecraft> = trajs
             .iter()
@@ -99,11 +99,11 @@ mod imaging_benches {
                     .with_optical_payload(payload)
             })
             .collect();
-        let trajectories: Vec<DynTrajectory> = trajs.into_iter().map(|(_, t)| t).collect();
+        let trajectories: Vec<Trajectory> = trajs.into_iter().map(|(_, t)| t).collect();
         common::assemble_scenario(spacecraft, trajectories, &[])
     }
 
-    fn optical_setup(payload: OpticalPayload) -> (DynScenario, DynEnsemble) {
+    fn optical_setup(payload: OpticalPayload) -> (Scenario, DynamicEnsemble) {
         let traj = sentinel2a_trajectory();
         let sc = Spacecraft::new("s2a", OrbitSource::Trajectory(traj.clone()))
             .with_optical_payload(payload);

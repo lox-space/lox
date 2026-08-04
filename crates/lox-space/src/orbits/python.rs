@@ -9,22 +9,15 @@ use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::ephem::python::{PyDafSpkError, PySpk};
 use crate::frames::Frame;
 use crate::frames::python::{PyFrame, PyRotationError};
-use crate::orbits::ground::{
-    DynGroundLocation, DynGroundPropagator, GroundPropagatorError, Observables,
-};
+use crate::orbits::ground::{GroundLocation, GroundPropagator, GroundPropagatorError, Observables};
 use crate::orbits::propagators::Propagator;
-use crate::orbits::propagators::j2::DynJ2Propagator;
-use crate::orbits::propagators::j4::DynJ4Propagator;
-use crate::orbits::propagators::numerical::{
-    DynNumericalPropagator, NumericalError, NumericalPropagator,
-};
-use crate::orbits::propagators::semi_analytical::{DynVallado, Vallado, ValladoError};
+use crate::orbits::propagators::j2::J2Propagator;
+use crate::orbits::propagators::j4::J4Propagator;
+use crate::orbits::propagators::numerical::{NumericalError, NumericalPropagator};
+use crate::orbits::propagators::semi_analytical::{Vallado, ValladoError};
 use crate::orbits::propagators::sgp4::{Sgp4, Sgp4Error};
-use crate::orbits::{
-    CartesianOrbit, DynCartesianOrbit, DynTrajectory, TrajectoryError,
-    TrajectoryTransformationError,
-};
-use crate::time::DynTime;
+use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError, TrajectoryTransformationError};
+use crate::time::Time;
 use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
@@ -70,9 +63,9 @@ impl From<PySsoError> for PyErr {
     }
 }
 
-/// Convert a `DynTime` to TAI, using the EOP provider if available.
+/// Convert a `Time` to TAI, using the EOP provider if available.
 fn to_tai(
-    time: DynTime,
+    time: Time,
     eop: Option<&lox_earth::eop::EopProvider>,
 ) -> PyResult<crate::time::Time<Tai>> {
     match eop {
@@ -86,16 +79,16 @@ fn to_tai(
 /// Shared dispatch for the three-mode `propagate` pattern used by Vallado, J2,
 /// and GroundPropagator.
 ///
-/// `state_at` produces a single `DynCartesianOrbit` for a given `DynTime`.
-/// `propagate_interval` produces a `DynTrajectory` for a given interval.
+/// `state_at` produces a single `CartesianOrbit` for a given `Time`.
+/// `propagate_interval` produces a `Trajectory` for a given interval.
 fn propagate_dispatch<'py>(
     py: Python<'py>,
     steps: &Bound<'py, PyAny>,
     end: Option<PyTime>,
     frame: Option<PyFrame>,
     provider: Option<&Bound<'_, PyEopProvider>>,
-    state_at: impl Fn(DynTime) -> PyResult<DynCartesianOrbit>,
-    propagate_interval: impl Fn(Interval<DynTime>) -> PyResult<DynTrajectory>,
+    state_at: impl Fn(Time) -> PyResult<CartesianOrbit>,
+    propagate_interval: impl Fn(Interval<Time>) -> PyResult<Trajectory>,
 ) -> PyResult<Bound<'py, PyAny>> {
     if let Some(end) = end {
         let start = steps.extract::<PyTime>()?;
@@ -115,7 +108,7 @@ fn propagate_dispatch<'py>(
     }
     if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
         let states: Result<Vec<_>, _> = steps.into_iter().map(|s| state_at(s.0)).collect();
-        let traj = PyTrajectory(DynTrajectory::new(states?));
+        let traj = PyTrajectory(Trajectory::new(states?));
         return match frame {
             Some(frame) => Ok(Bound::new(py, traj.to_frame_inner(frame, provider)?)?.into_any()),
             None => Ok(Bound::new(py, traj)?.into_any()),
@@ -140,7 +133,7 @@ fn propagate_dispatch<'py>(
 ///     frame: Reference frame (default: ICRF).
 #[pyclass(name = "Cartesian", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
-pub struct PyCartesian(pub DynCartesianOrbit);
+pub struct PyCartesian(pub CartesianOrbit);
 
 #[pymethods]
 impl PyCartesian {
@@ -475,7 +468,7 @@ impl PyCartesian {
 ///     apoapsis_altitude: Apoapsis altitude as Distance (keyword-only).
 ///     mean_anomaly: Mean anomaly as Angle (keyword-only, mutually exclusive with true_anomaly).
 #[pyclass(name = "Keplerian", module = "lox_space", frozen)]
-pub struct PyKeplerian(pub crate::orbits::DynKeplerianOrbit);
+pub struct PyKeplerian(pub crate::orbits::KeplerianOrbit);
 
 #[pymethods]
 impl PyKeplerian {
@@ -583,7 +576,7 @@ impl PyKeplerian {
             .build()
             .map_err(|err| PyValueError::new_err(err.to_string()))?;
 
-        Ok(PyKeplerian(orbit.into_dyn()))
+        Ok(PyKeplerian(orbit.into_dynamic()))
     }
 
     /// Construct a circular orbit.
@@ -664,7 +657,7 @@ impl PyKeplerian {
             .build()
             .map_err(|err| PyValueError::new_err(err.to_string()))?;
 
-        Ok(PyKeplerian(orbit.into_dyn()))
+        Ok(PyKeplerian(orbit.into_dynamic()))
     }
 
     /// Construct a Sun-synchronous orbit.
@@ -769,7 +762,7 @@ impl PyKeplerian {
             None => configure_and_build!(SsoBuilder::default().with_time(tai)),
         };
 
-        Ok(PyKeplerian(orbit.into_dyn()))
+        Ok(PyKeplerian(orbit.into_dynamic()))
     }
 
     /// Return the epoch of these elements.
@@ -1008,7 +1001,7 @@ impl PyModifiedEquinoctial {
             .try_gravitational_parameter()
             .map_err(PyUndefinedOriginPropertyError)?;
         let cart = self.state.to_cartesian(mu).unwrap();
-        Ok(PyCartesian(crate::orbits::DynCartesianOrbit::from_state(
+        Ok(PyCartesian(crate::orbits::CartesianOrbit::from_state(
             cart,
             self.time.0,
             self.origin.0,
@@ -1026,7 +1019,7 @@ impl PyModifiedEquinoctial {
                 PyValueError::new_err(e.to_string())
             },
         )?;
-        Ok(PyKeplerian(crate::orbits::DynKeplerianOrbit::from_state(
+        Ok(PyKeplerian(crate::orbits::KeplerianOrbit::from_state(
             kep,
             self.time.0,
             self.origin.0,
@@ -1063,7 +1056,7 @@ impl PyModifiedEquinoctial {
 ///     states: List of State objects in chronological order.
 #[pyclass(name = "Trajectory", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
-pub struct PyTrajectory(pub DynTrajectory);
+pub struct PyTrajectory(pub Trajectory);
 
 pub(crate) struct PyTrajectoryError(pub TrajectoryError);
 
@@ -1078,9 +1071,9 @@ impl PyTrajectory {
     #[new]
     fn new(states: &Bound<'_, PyList>) -> PyResult<Self> {
         let states: Vec<PyCartesian> = states.extract()?;
-        let states: Vec<DynCartesianOrbit> = states.into_iter().map(|s| s.0).collect();
+        let states: Vec<CartesianOrbit> = states.into_iter().map(|s| s.0).collect();
         Ok(PyTrajectory(
-            DynTrajectory::try_new(states).map_err(PyTrajectoryError)?,
+            Trajectory::try_new(states).map_err(PyTrajectoryError)?,
         ))
     }
 
@@ -1118,7 +1111,7 @@ impl PyTrajectory {
         if array.ncols() != 7 {
             return Err(PyValueError::new_err("invalid shape"));
         }
-        let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(array.nrows());
+        let mut states: Vec<CartesianOrbit> = Vec::with_capacity(array.nrows());
         for row in array.rows() {
             let delta = TimeDelta::try_from_seconds_f64(row[0])
                 .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -1133,7 +1126,7 @@ impl PyTrajectory {
             ));
         }
         Ok(PyTrajectory(
-            DynTrajectory::try_new(states).map_err(PyTrajectoryError)?,
+            Trajectory::try_new(states).map_err(PyTrajectoryError)?,
         ))
     }
 
@@ -1209,11 +1202,11 @@ impl PyTrajectory {
     ///     A new Trajectory relative to the target origin.
     fn to_origin(&self, target: &Bound<'_, PyAny>, ephemeris: &Bound<'_, PySpk>) -> PyResult<Self> {
         let target: PyOrigin = target.try_into()?;
-        let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(self.states().len());
+        let mut states: Vec<CartesianOrbit> = Vec::with_capacity(self.states().len());
         for s in self.states() {
             states.push(s.to_origin_inner(target.clone(), ephemeris)?.0);
         }
-        Ok(Self(DynTrajectory::new(states)))
+        Ok(Self(Trajectory::new(states)))
     }
 
     /// Return the developer-facing string representation of this trajectory.
@@ -1233,11 +1226,11 @@ impl PyTrajectory {
         frame: PyFrame,
         provider: Option<&Bound<'_, PyEopProvider>>,
     ) -> PyResult<Self> {
-        let mut states: Vec<DynCartesianOrbit> = Vec::with_capacity(self.0.states().len());
+        let mut states: Vec<CartesianOrbit> = Vec::with_capacity(self.0.states().len());
         for s in self.0.states() {
             states.push(PyCartesian(s).to_frame_inner(frame.clone(), provider)?.0);
         }
-        Ok(PyTrajectory(DynTrajectory::new(states)))
+        Ok(PyTrajectory(Trajectory::new(states)))
     }
 }
 
@@ -1252,7 +1245,7 @@ impl PyTrajectory {
 ///     max_iter: Maximum iterations for Kepler's equation solver (default: 50).
 #[pyclass(name = "Vallado", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
-pub struct PyVallado(pub DynVallado);
+pub struct PyVallado(pub Vallado);
 
 /// Error wrapper converting `ValladoError` into a Python `ValueError`.
 pub struct PyValladoError(pub ValladoError);
@@ -1347,7 +1340,7 @@ impl From<PyNumericalError> for PyErr {
 ///     max_steps: Maximum number of integration steps (default: 100000).
 #[pyclass(name = "Numerical", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
-pub struct PyNumericalPropagator(pub DynNumericalPropagator);
+pub struct PyNumericalPropagator(pub NumericalPropagator);
 
 #[pymethods]
 impl PyNumericalPropagator {
@@ -1437,7 +1430,7 @@ impl PyNumericalPropagator {
 ///     step: Fixed time step for interval propagation (default: 60 seconds).
 #[pyclass(name = "J2", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
-pub struct PyJ2Propagator(pub DynJ2Propagator);
+pub struct PyJ2Propagator(pub J2Propagator);
 
 #[pymethods]
 impl PyJ2Propagator {
@@ -1448,7 +1441,7 @@ impl PyJ2Propagator {
         osculating: bool,
         step: Option<PyTimeDelta>,
     ) -> PyResult<Self> {
-        let mut propagator = DynJ2Propagator::try_new(initial_state.0)
+        let mut propagator = J2Propagator::try_new(initial_state.0)
             .map_err(|e| PyValueError::new_err(e.to_string()))?
             .with_osculating(osculating);
         if let Some(step) = step {
@@ -1505,7 +1498,7 @@ impl PyJ2Propagator {
 ///     step: Fixed time step for interval propagation (default: 60 seconds).
 #[pyclass(name = "J4", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
-pub struct PyJ4Propagator(pub DynJ4Propagator);
+pub struct PyJ4Propagator(pub J4Propagator);
 
 #[pymethods]
 impl PyJ4Propagator {
@@ -1516,7 +1509,7 @@ impl PyJ4Propagator {
         osculating: bool,
         step: Option<PyTimeDelta>,
     ) -> PyResult<Self> {
-        let mut propagator = DynJ4Propagator::try_new(initial_state.0)
+        let mut propagator = J4Propagator::try_new(initial_state.0)
             .map_err(|e| PyValueError::new_err(e.to_string()))?
             .with_osculating(osculating);
         if let Some(step) = step {
@@ -1577,7 +1570,7 @@ impl PyJ4Propagator {
 ///     altitude: Altitude above the reference ellipsoid as Distance.
 #[pyclass(name = "GroundLocation", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
-pub struct PyGroundLocation(pub DynGroundLocation);
+pub struct PyGroundLocation(pub GroundLocation);
 
 #[pymethods]
 impl PyGroundLocation {
@@ -1596,7 +1589,7 @@ impl PyGroundLocation {
             .build()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(PyGroundLocation(
-            DynGroundLocation::try_new(coordinates, origin.0)
+            GroundLocation::try_new(coordinates, origin.0)
                 .map_err(PyUndefinedOriginPropertyError)?,
         ))
     }
@@ -1684,7 +1677,7 @@ impl PyGroundLocation {
 /// Args:
 ///     location: The ground location to propagate.
 #[pyclass(name = "GroundPropagator", module = "lox_space", frozen)]
-pub struct PyGroundPropagator(DynGroundPropagator);
+pub struct PyGroundPropagator(GroundPropagator);
 
 /// Error wrapper converting `GroundPropagatorError` into a Python `ValueError`.
 pub struct PyGroundPropagatorError(pub GroundPropagatorError);
@@ -1699,7 +1692,7 @@ impl From<PyGroundPropagatorError> for PyErr {
 impl PyGroundPropagator {
     #[new]
     fn new(location: PyGroundLocation) -> Self {
-        PyGroundPropagator(DynGroundPropagator::new_dyn(location.0))
+        PyGroundPropagator(GroundPropagator::new_dynamic(location.0))
     }
 
     /// Propagate the ground station.
@@ -1827,7 +1820,7 @@ impl PyTle {
     /// TLE epoch as a Time (TAI scale).
     fn epoch(&self) -> PyTime {
         let tai: lox_time::time::Time<Tai> = self.elements.datetime.and_utc().into();
-        PyTime(tai.into_dyn())
+        PyTime(tai.into_dynamic())
     }
 
     /// Orbital inclination.
@@ -1991,7 +1984,11 @@ impl PySgp4 {
             provider,
             |t| {
                 let tai = to_tai(t, eop)?;
-                Ok(self.inner.state_at(tai).map_err(PySgp4Error)?.into_dyn())
+                Ok(self
+                    .inner
+                    .state_at(tai)
+                    .map_err(PySgp4Error)?
+                    .into_dynamic())
             },
             |i| {
                 let interval = Interval::new(to_tai(i.start(), eop)?, to_tai(i.end(), eop)?);
@@ -1999,7 +1996,7 @@ impl PySgp4 {
                     .inner
                     .propagate(interval)
                     .map_err(PySgp4Error)?
-                    .into_dyn())
+                    .into_dynamic())
             },
         )
     }

@@ -22,7 +22,7 @@ use lox_core::units::{Area, Mass};
 use lox_frames::{Frame, traits::ReferenceFrame};
 use lox_time::deltas::ToDelta;
 use lox_time::offsets::{DefaultOffsetProvider, OffsetProvider, TryOffset};
-use lox_time::time::{DynTime, Time};
+use lox_time::time::Time;
 use lox_time::time_scales::{ContinuousTimeScale, Tai, TimeScale};
 use lox_time::utc::Utc;
 use lox_time::utc::transformations::ToUtc;
@@ -255,14 +255,14 @@ pub struct Covariance {
 ///
 /// CCSDS `TIME_SYSTEM` permits both continuous atomic scales (TAI, TCB,
 /// TCG, TDB, TT, UT1, GPS) and the discontinuous UTC scale with leap
-/// seconds. Continuous scales fit naturally into [`DynTime`]; UTC needs
+/// seconds. Continuous scales fit naturally into [`Time`]; UTC needs
 /// special handling because of its non-monotonic seconds during leap
 /// events. `OdmTime` preserves the wire-format choice so that
 /// `read → write` round-trips emit the same `TIME_SYSTEM` keyword.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OdmTime {
     /// Continuous time scale: TAI, TCB, TCG, TDB, TT, UT1, or GPS.
-    Time(DynTime),
+    Time(Time),
     /// UTC — leap seconds make it discontinuous.
     Utc(Utc),
 }
@@ -282,12 +282,12 @@ impl OdmTime {
         Ok(OdmTime::Time(t))
     }
 
-    /// Returns the continuous-scale [`DynTime`] view of this epoch. UTC
+    /// Returns the continuous-scale [`Time`] view of this epoch. UTC
     /// times are converted to TAI via the built-in leap-seconds table.
-    pub fn to_dyn_time(&self) -> DynTime {
+    pub fn to_dynamic_time(&self) -> Time {
         match self {
             OdmTime::Time(t) => *t,
-            OdmTime::Utc(u) => u.to_dyn_time(),
+            OdmTime::Utc(u) => u.to_dynamic_time(),
         }
     }
 
@@ -330,23 +330,27 @@ impl OdmTime {
         match target {
             OdmTimeSystem::Utc => Ok(OdmTime::Utc(self.try_tai_pivot_with(provider)?.to_utc())),
             _ => {
-                let target_dyn = target
+                let target_dynamic = target
                     .as_continuous()
                     .expect("non-Utc OdmTimeSystem always maps to a TimeScale");
-                let dyn_source = self.to_dyn_time();
-                if dyn_source.scale() == target_dyn {
-                    return Ok(OdmTime::Time(dyn_source));
+                let dynamic_source = self.to_dynamic_time();
+                if dynamic_source.scale() == target_dynamic {
+                    return Ok(OdmTime::Time(dynamic_source));
                 }
                 let offset = provider
-                    .try_offset(dyn_source.scale(), target_dyn, dyn_source.to_delta())
+                    .try_offset(
+                        dynamic_source.scale(),
+                        target_dynamic,
+                        dynamic_source.to_delta(),
+                    )
                     .map_err(|e| OdmTimeError::OffsetUnavailable {
-                        from: dyn_source.scale().abbreviation(),
-                        to: target_dyn.abbreviation(),
+                        from: dynamic_source.scale().abbreviation(),
+                        to: target_dynamic.abbreviation(),
                         reason: e.to_string(),
                     })?;
                 Ok(OdmTime::Time(Time::from_delta(
-                    target_dyn,
-                    dyn_source.to_delta() + offset,
+                    target_dynamic,
+                    dynamic_source.to_delta() + offset,
                 )))
             }
         }
@@ -412,8 +416,8 @@ impl std::fmt::Display for OdmTime {
     }
 }
 
-impl From<DynTime> for OdmTime {
-    fn from(t: DynTime) -> Self {
+impl From<Time> for OdmTime {
+    fn from(t: Time) -> Self {
         OdmTime::Time(t)
     }
 }
@@ -628,7 +632,7 @@ mod tests {
     }
 
     #[test]
-    fn odm_center_known_returns_dyn_origin() {
+    fn odm_center_known_returns_dynamic_origin() {
         let c = OdmCenter::Known(Origin::Moon);
         assert_eq!(c.known(), Some(Origin::Moon));
     }
@@ -648,7 +652,7 @@ mod tests {
     }
 
     #[test]
-    fn odm_center_from_dyn_origin() {
+    fn odm_center_from_dynamic_origin() {
         let c: OdmCenter = Origin::Venus.into();
         assert_eq!(c, OdmCenter::Known(Origin::Venus));
     }
@@ -690,7 +694,7 @@ mod tests {
     }
 
     #[test]
-    fn odm_frame_known_returns_dyn_frame() {
+    fn odm_frame_known_returns_dynamic_frame() {
         let f = OdmFrame::Known(Frame::Teme);
         assert_eq!(f.known(), Some(Frame::Teme));
     }
@@ -702,7 +706,7 @@ mod tests {
     }
 
     #[test]
-    fn odm_frame_from_dyn_frame() {
+    fn odm_frame_from_dynamic_frame() {
         let f: OdmFrame = Frame::J2000.into();
         assert_eq!(f, OdmFrame::Known(Frame::J2000));
     }
@@ -811,14 +815,14 @@ mod tests {
     }
 
     #[test]
-    fn odm_time_to_dyn_time_passes_through_for_continuous_scale() {
+    fn odm_time_to_dynamic_time_passes_through_for_continuous_scale() {
         let original = Time::j2000(TimeScale::Tai);
         let odm = OdmTime::Time(original);
-        assert_eq!(odm.to_dyn_time(), original);
+        assert_eq!(odm.to_dynamic_time(), original);
     }
 
     #[test]
-    fn odm_time_from_dyn_time_via_into() {
+    fn odm_time_from_dynamic_time_via_into() {
         let t: OdmTime = Time::j2000(TimeScale::Tai).into();
         assert!(matches!(t, OdmTime::Time(_)));
     }

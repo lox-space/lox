@@ -74,9 +74,9 @@ impl From<std::convert::Infallible> for J2Error {
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct J2Propagator<
-    T: ContinuousTimeScale,
-    O: TryJ2 + TryPointMass + TrySpheroid,
-    R: ReferenceFrame,
+    T: ContinuousTimeScale = TimeScale,
+    O: TryJ2 + TryPointMass + TrySpheroid = Origin,
+    R: ReferenceFrame = Frame,
 > {
     initial_orbit: KeplerianOrbit<T, O, R>,
     kep: Keplerian,
@@ -86,9 +86,6 @@ pub struct J2Propagator<
     osculating: bool,
     step: TimeDelta,
 }
-
-/// Type alias for a [`J2Propagator`] using dynamic time scale, origin, and frame.
-pub type DynJ2Propagator = J2Propagator<TimeScale, Origin, Frame>;
 
 impl<T, O, R> J2Propagator<T, O, R>
 where
