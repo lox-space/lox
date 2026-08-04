@@ -13,7 +13,7 @@
 
 extern crate alloc;
 
-pub use crate::dynamic::Origin;
+pub use crate::origin::{Origin, UnknownOriginId, UnknownOriginName};
 use alloc::borrow::ToOwned;
 use alloc::string::String;
 use core::fmt::{Display, Formatter};
@@ -25,10 +25,9 @@ use lox_core::math::float::{cos, powi, sin};
 use lox_core::units::Distance;
 use thiserror::Error;
 
-/// Dynamic dispatch variants of origin types.
-pub mod dynamic;
 #[allow(clippy::approx_constant)]
 mod generated;
+mod origin;
 
 /// A NAIF ID code identifying a celestial body or barycenter.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

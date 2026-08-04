@@ -209,7 +209,12 @@ impl_time_scale_serde!(Gps, "GPS");
 impl_time_scale_serde!(Tt, "TT");
 impl_time_scale_serde!(Ut1, "UT1");
 
-/// Dynamic time scale selector for runtime-determined time scales.
+/// A continuous time scale determined at runtime.
+///
+/// Covers every scale that implements [`ContinuousTimeScale`] as a single
+/// closed enum. Unlike the zero-sized scale types, the scale of a
+/// [`Time<TimeScale>`](crate::time::Time) is not known statically, so
+/// conversions between scales are checked at runtime.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TimeScale {

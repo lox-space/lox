@@ -2,10 +2,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::bodies::dynamic::{Origin, UnknownOriginId, UnknownOriginName};
 use crate::bodies::{
-    CoordinateOrigin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid,
-    TryTriaxialEllipsoid,
+    CoordinateOrigin, Origin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid,
+    TryTriaxialEllipsoid, UnknownOriginId, UnknownOriginName,
 };
 use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyGravitationalParameter};
 use lox_core::types::units::Seconds;
@@ -31,7 +30,7 @@ impl From<PyUndefinedOriginPropertyError> for PyErr {
     }
 }
 
-/// PyO3 error wrapper for [`lox_bodies::dynamic::UnknownOriginId`].
+/// PyO3 error wrapper for [`lox_bodies::UnknownOriginId`].
 pub struct PyUnknownOriginId(pub UnknownOriginId);
 
 impl From<PyUnknownOriginId> for PyErr {
@@ -50,7 +49,7 @@ impl From<PyUnknownOriginName> for PyErr {
 
 /// Represents a celestial body (planet, moon, barycenter, etc.).
 ///
-/// CoordinateOrigin objects represent celestial bodies using NAIF/SPICE identifiers.
+/// Origin objects represent celestial bodies using NAIF/SPICE identifiers.
 /// They provide access to physical properties such as gravitational parameters,
 /// radii, and rotational elements.
 ///
