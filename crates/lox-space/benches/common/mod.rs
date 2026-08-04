@@ -33,10 +33,10 @@ use lox_space::orbits::propagators::{OrbitSource, Propagator};
 use lox_space::orbits::{Ensemble, Trajectory};
 use lox_space::time::deltas::TimeDelta;
 use lox_space::time::intervals::{Interval, TimeInterval};
-use lox_space::time::time_scales::Tai;
+use lox_space::time::time_scales::{Tai, TimeScale};
 
-pub type DynamicEnsemble = Ensemble<AssetId, Tai, Origin, Frame>;
-pub type MonoEnsemble = Ensemble<AssetId, Tai, Earth, Icrf>;
+pub type DynamicEnsemble = Ensemble<AssetId, Origin, Frame>;
+pub type MonoEnsemble = Ensemble<AssetId, Earth, Icrf>;
 /// A parsed TLE: `(name, line1, line2)`.
 pub type TleEntry = (String, Vec<u8>, Vec<u8>);
 
@@ -84,7 +84,7 @@ pub fn setup_dynamic() -> (Scenario, DynamicEnsemble) {
     (scenario, ensemble)
 }
 
-fn spacecraft_trajectory_mono() -> Trajectory<Tai, Earth, Icrf> {
+fn spacecraft_trajectory_mono() -> Trajectory<Earth, Icrf> {
     Trajectory::from_csv(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
         Earth,
@@ -107,9 +107,14 @@ pub fn setup_mono() -> (Scenario<Earth, Icrf>, MonoEnsemble) {
     let interval = TimeInterval::new(traj.start_time(), traj.end_time());
     let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(traj.into_dynamic()));
     let gs = GroundStation::new("cebreros", gs_loc.into_dynamic(), mask);
-    let scenario = Scenario::new(interval.start(), interval.end(), Earth, Icrf)
-        .with_spacecraft(&[sc])
-        .with_ground_stations(&[gs]);
+    let scenario = Scenario::new(
+        interval.start().to_scale(Tai),
+        interval.end().to_scale(Tai),
+        Earth,
+        Icrf,
+    )
+    .with_spacecraft(&[sc])
+    .with_ground_stations(&[gs]);
     let ensemble = scenario.propagate(&DefaultRotationProvider).unwrap();
     (scenario, ensemble)
 }
@@ -165,7 +170,7 @@ pub fn propagate_oneweb_trajectories(n: usize, window_hours: i64) -> Vec<(String
         .map(|(name, p)| {
             let traj = p
                 .with_step(TimeDelta::from_seconds(10))
-                .propagate(interval)
+                .propagate(interval.into_dynamic())
                 .unwrap()
                 .into_dynamic();
             (name, traj)
@@ -189,7 +194,7 @@ pub fn assemble_scenario(
     let mut map = HashMap::new();
     for (sc, traj) in spacecraft.iter().zip(trajectories) {
         let (epoch, origin, frame, data) = traj.into_parts();
-        let typed = Trajectory::from_parts(epoch.with_scale(Tai), origin, frame, data);
+        let typed = Trajectory::from_parts(epoch.with_scale(TimeScale::Tai), origin, frame, data);
         map.insert(sc.id().clone(), typed);
     }
     (scenario, Ensemble::new(map))
@@ -270,12 +275,12 @@ fn oneweb_pair_trajectories() -> (Trajectory, Trajectory) {
     let interval = Interval::new(t0, t1);
     let traj1 = sgp4_1
         .with_step(TimeDelta::from_seconds(10))
-        .propagate(interval)
+        .propagate(interval.into_dynamic())
         .unwrap()
         .into_dynamic();
     let traj2 = sgp4_2
         .with_step(TimeDelta::from_seconds(10))
-        .propagate(interval)
+        .propagate(interval.into_dynamic())
         .unwrap()
         .into_dynamic();
     (traj1, traj2)

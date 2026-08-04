@@ -6,7 +6,6 @@ use lox_bodies::CoordinateOrigin;
 use lox_frames::ReferenceFrame;
 use lox_time::Time;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
 
@@ -31,9 +30,8 @@ pub mod sgp4;
 mod stumpff;
 
 /// Common interface for orbit propagators.
-pub trait Propagator<T, O>
+pub trait Propagator<O>
 where
-    T: ContinuousTimeScale + Copy,
     O: CoordinateOrigin + Copy,
 {
     /// The propagator's native reference frame.
@@ -42,20 +40,17 @@ where
     type Error: std::error::Error + 'static;
 
     /// Evaluate the state at a single time.
-    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, Self::Frame>, Self::Error>;
+    fn state_at(&self, time: Time) -> Result<CartesianOrbit<O, Self::Frame>, Self::Error>;
 
     /// Propagate over the given interval in the native frame.
     /// The propagator chooses the time steps.
-    fn propagate(
-        &self,
-        interval: TimeInterval<T>,
-    ) -> Result<Trajectory<T, O, Self::Frame>, Self::Error>;
+    fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<O, Self::Frame>, Self::Error>;
 
     /// Propagate to an iterable of caller-chosen times.
     fn propagate_to(
         &self,
-        times: impl IntoIterator<Item = Time<T>>,
-    ) -> Result<Trajectory<T, O, Self::Frame>, Self::Error>
+        times: impl IntoIterator<Item = Time>,
+    ) -> Result<Trajectory<O, Self::Frame>, Self::Error>
     where
         Self::Error: From<TrajectoryError>,
     {
@@ -109,19 +104,9 @@ pub enum PropagateError {
 impl OrbitSource {
     /// Propagate the orbit source over the given interval, returning a
     /// [`Trajectory`] in the source's native reference frame.
-    pub fn propagate(
-        &self,
-        interval: TimeInterval<TimeScale>,
-    ) -> Result<Trajectory, PropagateError> {
+    pub fn propagate(&self, interval: TimeInterval) -> Result<Trajectory, PropagateError> {
         match self {
-            Self::Sgp4(sgp4) => {
-                let tai_interval = TimeInterval::new(
-                    interval.start().to_scale(lox_time::time_scales::Tai),
-                    interval.end().to_scale(lox_time::time_scales::Tai),
-                );
-                let traj = Propagator::propagate(sgp4, tai_interval)?;
-                Ok(traj.into_dynamic())
-            }
+            Self::Sgp4(sgp4) => Ok(Propagator::propagate(sgp4, interval)?.into_dynamic()),
             Self::Vallado(v) => Ok(Propagator::propagate(v, interval)?),
             Self::Numerical(n) => Ok(Propagator::propagate(n, interval)?),
             Self::J2(p) => Ok(Propagator::propagate(p, interval)?),

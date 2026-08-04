@@ -19,7 +19,7 @@ use lox_frames::iers::fundamental::iers03::lp_iers03;
 use lox_time::Time;
 use lox_time::offsets::{DefaultOffsetProvider, TryOffset};
 use lox_time::time_of_day::TimeOfDayError;
-use lox_time::time_scales::{ContinuousTimeScale, Tai, Tdb, Ut1};
+use lox_time::time_scales::{Tdb, TimeScale, Ut1};
 use thiserror::Error;
 
 use crate::orbits::{KeplerianOrbit, Orbit};
@@ -114,14 +114,13 @@ fn right_ascension_sun(time: Time<Tdb>) -> Angle {
     sun.azimuth().mod_two_pi()
 }
 
-fn longitude_of_ascending_node_sso<T, P>(
-    time: Time<T>,
+fn longitude_of_ascending_node_sso<P>(
+    time: Time,
     ltan: LocalTimeOfNode,
     provider: &P,
 ) -> Result<Angle, SsoError>
 where
-    T: ContinuousTimeScale + Copy,
-    P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
+    P: TryOffset<TimeScale, Ut1> + TryOffset<TimeScale, Tdb>,
 {
     let tdb = time
         .try_to_scale(Tdb, provider)
@@ -184,8 +183,8 @@ impl SemiMajorAxisOrInclination {
     }
 }
 
-fn keplerian_from_sso<T, P>(
-    time: Time<T>,
+fn keplerian_from_sso<P>(
+    time: Time,
     semi_major_axis_or_inclination: SemiMajorAxisOrInclination,
     eccentricity: Eccentricity,
     ltan: LocalTimeOfNode,
@@ -194,8 +193,7 @@ fn keplerian_from_sso<T, P>(
     provider: &P,
 ) -> Result<Keplerian, SsoError>
 where
-    T: ContinuousTimeScale + Copy,
-    P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
+    P: TryOffset<TimeScale, Ut1> + TryOffset<TimeScale, Tdb>,
 {
     let semi_major_axis = semi_major_axis_or_inclination.semi_major_axis(eccentricity);
     let inclination = semi_major_axis_or_inclination.inclination(eccentricity)?;
@@ -213,12 +211,9 @@ where
     ))
 }
 
-impl<T> KeplerianOrbit<T, Earth, Icrf>
-where
-    T: ContinuousTimeScale + Copy,
-{
+impl KeplerianOrbit<Earth, Icrf> {
     fn from_sso<P>(
-        time: Time<T>,
+        time: Time,
         semi_major_axis_or_inclination: SemiMajorAxisOrInclination,
         eccentricity: Eccentricity,
         ltan: LocalTimeOfNode,
@@ -227,7 +222,7 @@ where
         provider: &P,
     ) -> Result<Self, SsoError>
     where
-        P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
+        P: TryOffset<TimeScale, Ut1> + TryOffset<TimeScale, Tdb>,
     {
         let state = keplerian_from_sso(
             time,
@@ -244,8 +239,8 @@ where
 
 /// Builder for constructing sun-synchronous orbits around Earth.
 #[derive(Debug, Clone)]
-pub struct SsoBuilder<'a, T: ContinuousTimeScale + Copy, P: TryOffset<T, Ut1> + TryOffset<T, Tdb>> {
-    time: Time<T>,
+pub struct SsoBuilder<'a, P: TryOffset<TimeScale, Ut1> + TryOffset<TimeScale, Tdb>> {
+    time: Time,
     semi_major_axis: Option<SemiMajorAxis>,
     eccentricity: Result<Eccentricity, NegativeEccentricityError>,
     inclination: Option<Result<Inclination, InclinationError>>,
@@ -255,7 +250,7 @@ pub struct SsoBuilder<'a, T: ContinuousTimeScale + Copy, P: TryOffset<T, Ut1> + 
     provider: Option<&'a P>,
 }
 
-impl<'a> SsoBuilder<'a, Tai, DefaultOffsetProvider> {
+impl<'a> SsoBuilder<'a, DefaultOffsetProvider> {
     /// Creates a new SSO builder with default TAI time scale and offset provider.
     pub fn new() -> Self {
         Self {
@@ -271,21 +266,20 @@ impl<'a> SsoBuilder<'a, Tai, DefaultOffsetProvider> {
     }
 }
 
-impl<'a> Default for SsoBuilder<'a, Tai, DefaultOffsetProvider> {
+impl<'a> Default for SsoBuilder<'a, DefaultOffsetProvider> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a, T, U> SsoBuilder<'a, T, U>
+impl<'a, U> SsoBuilder<'a, U>
 where
-    T: ContinuousTimeScale + Copy,
-    U: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
+    U: TryOffset<TimeScale, Ut1> + TryOffset<TimeScale, Tdb>,
 {
     /// Sets the time scale offset provider.
-    pub fn with_provider<P>(self, provider: &'a P) -> SsoBuilder<'a, T, P>
+    pub fn with_provider<P>(self, provider: &'a P) -> SsoBuilder<'a, P>
     where
-        P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
+        P: TryOffset<TimeScale, Ut1> + TryOffset<TimeScale, Tdb>,
     {
         SsoBuilder {
             time: self.time,
@@ -300,15 +294,14 @@ where
     }
 }
 
-impl<'a, S, P> SsoBuilder<'a, S, P>
+impl<'a, P> SsoBuilder<'a, P>
 where
-    S: ContinuousTimeScale + Copy,
-    P: TryOffset<S, Ut1> + TryOffset<S, Tdb>,
+    P: TryOffset<TimeScale, Ut1> + TryOffset<TimeScale, Tdb>,
 {
     /// Sets the epoch and changes the time scale.
-    pub fn with_time<T: ContinuousTimeScale + Copy>(self, time: Time<T>) -> SsoBuilder<'a, T, P>
+    pub fn with_time(self, time: Time) -> SsoBuilder<'a, P>
     where
-        P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
+        P: TryOffset<TimeScale, Ut1> + TryOffset<TimeScale, Tdb>,
     {
         SsoBuilder {
             time,
@@ -323,10 +316,9 @@ where
     }
 }
 
-impl<'a, T, P> SsoBuilder<'a, T, P>
+impl<'a, P> SsoBuilder<'a, P>
 where
-    T: ContinuousTimeScale + Copy,
-    P: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
+    P: TryOffset<TimeScale, Ut1> + TryOffset<TimeScale, Tdb>,
 {
     /// Sets the semi-major axis (mutually exclusive with inclination).
     pub fn with_semi_major_axis(mut self, semi_major_axis: SemiMajorAxis) -> Self {
@@ -380,9 +372,9 @@ where
     }
 
     /// Builds the sun-synchronous Keplerian orbit in the ICRF frame around Earth.
-    pub fn build(self) -> Result<KeplerianOrbit<T, Earth, Icrf>, SsoError>
+    pub fn build(self) -> Result<KeplerianOrbit<Earth, Icrf>, SsoError>
     where
-        DefaultOffsetProvider: TryOffset<T, Ut1> + TryOffset<T, Tdb>,
+        DefaultOffsetProvider: TryOffset<TimeScale, Ut1> + TryOffset<TimeScale, Tdb>,
     {
         let semi_major_axis_or_inclination = match (self.semi_major_axis, self.inclination) {
             (None, Some(inclination)) => SemiMajorAxisOrInclination::Inclination(inclination?),
@@ -464,10 +456,11 @@ mod tests {
         let jd1 = 2458849.5;
         let jd2 = 49.78099017 - 1.0;
         let epoch = Utc::from_delta(TimeDelta::from_two_part_julian_date(jd1, jd2))
-            .to_time()
+            .to_dynamic_time()
             .to_scale(Tdb);
         let ltan = LocalTimeOfNode::LTAN(TimeOfDay::from_hour_and_minute(13, 30).unwrap());
-        let act = longitude_of_ascending_node_sso(epoch, ltan, eop_provider()).unwrap();
+        let act =
+            longitude_of_ascending_node_sso(epoch.into_dynamic(), ltan, eop_provider()).unwrap();
         assert_approx_eq!(exp, act, atol <= 4e-3);
     }
 
@@ -477,7 +470,7 @@ mod tests {
         let jd1 = 2458849.5;
         let jd2 = 49.78099017 - 1.0;
         let epoch = Utc::from_delta(TimeDelta::from_two_part_julian_date(jd1, jd2))
-            .to_time()
+            .to_dynamic_time()
             .to_scale(Tdb);
 
         let exp_node = LongitudeOfAscendingNode::try_new(350.5997.deg()).unwrap();
@@ -488,7 +481,7 @@ mod tests {
             .with_semi_major_axis(semi_major_axis)
             .with_eccentricity(Eccentricity::default().as_f64())
             .with_true_anomaly(Angle::ZERO)
-            .with_time(epoch)
+            .with_time(epoch.into_dynamic())
             .with_ltan(13, 30)
             .build()
             .unwrap();
@@ -501,7 +494,7 @@ mod tests {
         let sso = SsoBuilder::default()
             .with_provider(eop_provider())
             .with_altitude(altitude)
-            .with_time(epoch)
+            .with_time(epoch.into_dynamic())
             .with_ltdn(1, 30)
             .build()
             .unwrap();

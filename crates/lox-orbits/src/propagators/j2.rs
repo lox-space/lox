@@ -29,7 +29,6 @@ use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 use thiserror::Error;
 
 use crate::orbits::{CartesianOrbit, KeplerianOrbit, Trajectory, TrajectoryError};
@@ -73,12 +72,8 @@ impl From<std::convert::Infallible> for J2Error {
 /// conversion is performed.
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct J2Propagator<
-    T: ContinuousTimeScale = TimeScale,
-    O: TryJ2 + TryPointMass + TrySpheroid = Origin,
-    R: ReferenceFrame = Frame,
-> {
-    initial_orbit: KeplerianOrbit<T, O, R>,
+pub struct J2Propagator<O: TryJ2 + TryPointMass + TrySpheroid = Origin, R: ReferenceFrame = Frame> {
+    initial_orbit: KeplerianOrbit<O, R>,
     kep: Keplerian,
     m0: f64,
     rates: SecularRates,
@@ -87,9 +82,8 @@ pub struct J2Propagator<
     step: TimeDelta,
 }
 
-impl<T, O, R> J2Propagator<T, O, R>
+impl<O, R> J2Propagator<O, R>
 where
-    T: ContinuousTimeScale + Copy,
     O: TryJ2 + TryPointMass + TrySpheroid + CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
@@ -102,7 +96,7 @@ where
     /// Accepts any orbit type convertible to [`KeplerianOrbit`], including
     /// [`CartesianOrbit`].
     pub fn try_new(
-        orbit: impl TryInto<KeplerianOrbit<T, O, R>, Error: Into<J2Error>>,
+        orbit: impl TryInto<KeplerianOrbit<O, R>, Error: Into<J2Error>>,
     ) -> Result<Self, J2Error> {
         let orbit = orbit.try_into().map_err(Into::into)?;
         let body = BodyConstants {
@@ -150,12 +144,12 @@ where
     }
 
     /// Return the initial mean Keplerian orbit.
-    pub fn initial_orbit(&self) -> &KeplerianOrbit<T, O, R> {
+    pub fn initial_orbit(&self) -> &KeplerianOrbit<O, R> {
         &self.initial_orbit
     }
 
     /// Return the epoch.
-    pub fn epoch(&self) -> Time<T> {
+    pub fn epoch(&self) -> Time {
         self.initial_orbit.time()
     }
 
@@ -165,16 +159,15 @@ where
     }
 }
 
-impl<T, O, R> Propagator<T, O> for J2Propagator<T, O, R>
+impl<O, R> Propagator<O> for J2Propagator<O, R>
 where
-    T: ContinuousTimeScale + Copy + Eq,
     O: TryJ2 + TryPointMass + TrySpheroid + CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Frame = R;
     type Error = J2Error;
 
-    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, J2Error> {
+    fn state_at(&self, time: Time) -> Result<CartesianOrbit<O, R>, J2Error> {
         let dt = (time - self.initial_orbit.time()).to_seconds().to_f64();
         let el = kozai::propagate_mean(&self.kep, self.m0, &self.rates, dt);
         let cartesian = if self.osculating {
@@ -190,7 +183,7 @@ where
         ))
     }
 
-    fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, J2Error> {
+    fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<O, R>, J2Error> {
         let states: Result<Vec<_>, _> = interval
             .step_by(self.step)
             .map(|t| self.state_at(t))
@@ -214,7 +207,7 @@ mod tests {
     use super::*;
     use crate::orbits::KeplerianOrbit;
 
-    fn sso_orbit() -> KeplerianOrbit<Tdb, Earth, Icrf> {
+    fn sso_orbit() -> KeplerianOrbit<Earth, Icrf> {
         let time = time!(Tdb, 2025, 6, 1).unwrap();
         let kep = Keplerian::builder()
             .with_semi_major_axis(Distance::new(6_878_137.0), 0.001)
@@ -224,7 +217,7 @@ mod tests {
             .with_true_anomaly(0.0.rad())
             .build()
             .unwrap();
-        KeplerianOrbit::new(kep, time, Earth, Icrf)
+        KeplerianOrbit::new(kep, time.into_dynamic(), Earth, Icrf)
     }
 
     #[test]
@@ -247,7 +240,7 @@ mod tests {
                 .with_true_anomaly((ta_deg as f64).to_radians().rad())
                 .build()
                 .unwrap();
-            let orbit = KeplerianOrbit::new(kep, time, Earth, Icrf);
+            let orbit = KeplerianOrbit::new(kep, time.into_dynamic(), Earth, Icrf);
 
             let sec = J2Propagator::try_new(orbit);
             assert!(
@@ -295,7 +288,7 @@ mod tests {
             .with_true_anomaly(0.0.rad())
             .build()
             .unwrap();
-        let orbit = KeplerianOrbit::new(kep, time, Earth, Icrf);
+        let orbit = KeplerianOrbit::new(kep, time.into_dynamic(), Earth, Icrf);
         let err = J2Propagator::try_new(orbit).unwrap_err();
         assert!(matches!(err, J2Error::NonElliptic(_)));
     }

@@ -34,7 +34,6 @@ use lox_odm::types::omm::{Omm, OmmMeanElements, OmmMetadata};
 use lox_odm::types::opm::{Opm, OpmMetadata};
 use lox_time::offsets::{DefaultOffsetProvider, OffsetProvider};
 use lox_time::time::Time;
-use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 
 use crate::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
 use crate::propagators::sgp4::{Sgp4, Sgp4Error};
@@ -44,13 +43,10 @@ use crate::propagators::sgp4::{Sgp4, Sgp4Error};
 const DEFAULT_ORIGINATOR: &str = "Lox (https://lox.rs)";
 
 // ----------------------------------------------------------------------------
-// Helper: convert a `Time<T>` (where T: Into<TimeScale>) to `OdmTime`
+// Helper: convert a `Time` (where T: Into<TimeScale>) to `OdmTime`
 // ----------------------------------------------------------------------------
 
-fn orbit_epoch_to_odm_time<T>(time: lox_time::Time<T>) -> OdmTime
-where
-    T: ContinuousTimeScale + Copy + Into<TimeScale>,
-{
+fn orbit_epoch_to_odm_time(time: lox_time::Time) -> OdmTime {
     OdmTime::Time(time.into_dynamic())
 }
 
@@ -181,13 +177,8 @@ pub enum OemWriteError {
 /// [`DefaultOffsetProvider`]; swap it via
 /// [`offset_provider`](Self::offset_provider) if you need a custom UT1
 /// table or a stricter error policy.
-pub struct OpmBuilder<
-    T: ContinuousTimeScale,
-    O: CoordinateOrigin,
-    R: ReferenceFrame,
-    P = DefaultOffsetProvider,
-> {
-    orbit: Orbit<Cartesian, T, O, R>,
+pub struct OpmBuilder<O: CoordinateOrigin, R: ReferenceFrame, P = DefaultOffsetProvider> {
+    orbit: Orbit<Cartesian, O, R>,
     originator: String,
     object_name: String,
     object_id: String,
@@ -204,14 +195,13 @@ pub struct OpmBuilder<
     provider: P,
 }
 
-impl<T, O, R> OpmBuilder<T, O, R, DefaultOffsetProvider>
+impl<O, R> OpmBuilder<O, R, DefaultOffsetProvider>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     fn new(
-        orbit: Orbit<Cartesian, T, O, R>,
+        orbit: Orbit<Cartesian, O, R>,
         object_name: impl Into<String>,
         object_id: impl Into<String>,
     ) -> Self {
@@ -235,14 +225,13 @@ where
     }
 }
 
-impl<T, O, R, P> OpmBuilder<T, O, R, P>
+impl<O, R, P> OpmBuilder<O, R, P>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Replaces the [`OffsetProvider`] used by [`time_system`](Self::time_system).
-    pub fn offset_provider<P2>(self, provider: P2) -> OpmBuilder<T, O, R, P2> {
+    pub fn offset_provider<P2>(self, provider: P2) -> OpmBuilder<O, R, P2> {
         OpmBuilder {
             orbit: self.orbit,
             originator: self.originator,
@@ -291,8 +280,9 @@ where
     ///
     /// Use this to preserve the original time system across a round-trip
     /// through a typed orbit: e.g. an OPM read with `TIME_SYSTEM = UTC`
-    /// becomes a [`CartesianOrbit`] in TAI (because [`TimeScale`]
-    /// has no UTC variant), and setting `.time_system(OdmTimeSystem::Utc)`
+    /// becomes a [`CartesianOrbit`] in TAI (because
+    /// [`TimeScale`](lox_time::time_scales::TimeScale) has no UTC variant),
+    /// and setting `.time_system(OdmTimeSystem::Utc)`
     /// on the builder restores UTC on output.
     ///
     /// When unset, the builder uses the orbit's native scale. Explicitly-set
@@ -351,9 +341,8 @@ where
     }
 }
 
-impl<T, O, R, P> OpmBuilder<T, O, R, P>
+impl<O, R, P> OpmBuilder<O, R, P>
 where
-    T: ContinuousTimeScale + Copy + Into<TimeScale>,
     O: CoordinateOrigin + Copy + Into<Origin>,
     R: ReferenceFrame + Copy + Into<Frame>,
     P: OffsetProvider,
@@ -429,9 +418,8 @@ where
 // Orbit::build_opm
 // ----------------------------------------------------------------------------
 
-impl<T, O, R> Orbit<Cartesian, T, O, R>
+impl<O, R> Orbit<Cartesian, O, R>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
@@ -444,7 +432,7 @@ where
         self,
         object_name: impl Into<String>,
         object_id: impl Into<String>,
-    ) -> OpmBuilder<T, O, R, DefaultOffsetProvider> {
+    ) -> OpmBuilder<O, R, DefaultOffsetProvider> {
         OpmBuilder::new(self, object_name, object_id)
     }
 }
@@ -499,13 +487,8 @@ impl CartesianOrbit {
 /// [`OffsetProvider`] used by
 /// [`time_system`](Self::time_system) conversions; see
 /// [`offset_provider`](Self::offset_provider).
-pub struct OemBuilder<
-    T: ContinuousTimeScale,
-    O: CoordinateOrigin,
-    R: ReferenceFrame,
-    P = DefaultOffsetProvider,
-> {
-    trajectory: Trajectory<T, O, R>,
+pub struct OemBuilder<O: CoordinateOrigin, R: ReferenceFrame, P = DefaultOffsetProvider> {
+    trajectory: Trajectory<O, R>,
     originator: String,
     object_name: String,
     object_id: String,
@@ -525,14 +508,13 @@ pub struct OemBuilder<
     provider: P,
 }
 
-impl<T, O, R> OemBuilder<T, O, R, DefaultOffsetProvider>
+impl<O, R> OemBuilder<O, R, DefaultOffsetProvider>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     fn new(
-        trajectory: Trajectory<T, O, R>,
+        trajectory: Trajectory<O, R>,
         object_name: impl Into<String>,
         object_id: impl Into<String>,
     ) -> Self {
@@ -559,14 +541,13 @@ where
     }
 }
 
-impl<T, O, R, P> OemBuilder<T, O, R, P>
+impl<O, R, P> OemBuilder<O, R, P>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Replaces the [`OffsetProvider`] used by [`time_system`](Self::time_system).
-    pub fn offset_provider<P2>(self, provider: P2) -> OemBuilder<T, O, R, P2> {
+    pub fn offset_provider<P2>(self, provider: P2) -> OemBuilder<O, R, P2> {
         OemBuilder {
             trajectory: self.trajectory,
             originator: self.originator,
@@ -687,9 +668,8 @@ where
     }
 }
 
-impl<T, O, R, P> OemBuilder<T, O, R, P>
+impl<O, R, P> OemBuilder<O, R, P>
 where
-    T: ContinuousTimeScale + Copy + Into<TimeScale>,
     O: CoordinateOrigin + Copy + Into<Origin>,
     R: ReferenceFrame + Copy + Into<Frame>,
     P: OffsetProvider,
@@ -789,9 +769,8 @@ where
 // Trajectory::build_oem
 // ----------------------------------------------------------------------------
 
-impl<T, O, R> Trajectory<T, O, R>
+impl<O, R> Trajectory<O, R>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
@@ -804,7 +783,7 @@ where
         self,
         object_name: impl Into<String>,
         object_id: impl Into<String>,
-    ) -> OemBuilder<T, O, R, DefaultOffsetProvider> {
+    ) -> OemBuilder<O, R, DefaultOffsetProvider> {
         OemBuilder::new(self, object_name, object_id)
     }
 }
@@ -836,7 +815,7 @@ impl Trajectory {
             return Err(OemFromOdmError::InsufficientStates(segment.states.len()));
         }
 
-        let orbits: Vec<CartesianOrbit<TimeScale, Origin, Frame>> = segment
+        let orbits: Vec<CartesianOrbit<Origin, Frame>> = segment
             .states
             .iter()
             .map(|(odm_time, state)| {
@@ -1072,13 +1051,8 @@ impl Sgp4 {
 /// The builder is generic over an [`OffsetProvider`] used by
 /// [`time_system`](Self::time_system) conversions; see
 /// [`offset_provider`](Self::offset_provider).
-pub struct OmmBuilder<
-    T: ContinuousTimeScale,
-    O: CoordinateOrigin,
-    R: ReferenceFrame,
-    P = DefaultOffsetProvider,
-> {
-    orbit: KeplerianOrbit<T, O, R>,
+pub struct OmmBuilder<O: CoordinateOrigin, R: ReferenceFrame, P = DefaultOffsetProvider> {
+    orbit: KeplerianOrbit<O, R>,
     originator: String,
     object_name: String,
     object_id: String,
@@ -1096,14 +1070,13 @@ pub struct OmmBuilder<
     provider: P,
 }
 
-impl<T, O, R> OmmBuilder<T, O, R, DefaultOffsetProvider>
+impl<O, R> OmmBuilder<O, R, DefaultOffsetProvider>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     fn new(
-        orbit: KeplerianOrbit<T, O, R>,
+        orbit: KeplerianOrbit<O, R>,
         object_name: impl Into<String>,
         object_id: impl Into<String>,
     ) -> Self {
@@ -1128,14 +1101,13 @@ where
     }
 }
 
-impl<T, O, R, P> OmmBuilder<T, O, R, P>
+impl<O, R, P> OmmBuilder<O, R, P>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Replaces the [`OffsetProvider`] used by [`time_system`](Self::time_system).
-    pub fn offset_provider<P2>(self, provider: P2) -> OmmBuilder<T, O, R, P2> {
+    pub fn offset_provider<P2>(self, provider: P2) -> OmmBuilder<O, R, P2> {
         OmmBuilder {
             orbit: self.orbit,
             originator: self.originator,
@@ -1242,9 +1214,8 @@ where
     }
 }
 
-impl<T, O, R, P> OmmBuilder<T, O, R, P>
+impl<O, R, P> OmmBuilder<O, R, P>
 where
-    T: ContinuousTimeScale + Copy + Into<TimeScale>,
     O: CoordinateOrigin + Copy + Into<Origin>,
     R: ReferenceFrame + Copy + Into<Frame>,
     P: OffsetProvider,
@@ -1334,9 +1305,8 @@ where
 // KeplerianOrbit::build_omm
 // ----------------------------------------------------------------------------
 
-impl<T, O, R> KeplerianOrbit<T, O, R>
+impl<O, R> KeplerianOrbit<O, R>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
@@ -1349,7 +1319,7 @@ where
         self,
         object_name: impl Into<String>,
         object_id: impl Into<String>,
-    ) -> OmmBuilder<T, O, R, DefaultOffsetProvider> {
+    ) -> OmmBuilder<O, R, DefaultOffsetProvider> {
         OmmBuilder::new(self, object_name, object_id)
     }
 }
@@ -1474,8 +1444,8 @@ mod tests {
         )
     }
 
-    fn sample_epoch_tai() -> Time<Tai> {
-        time!(Tai, 2024, 1, 1, 0, 0, 0.0).unwrap()
+    fn sample_epoch_tai() -> Time {
+        time!(Tai, 2024, 1, 1, 0, 0, 0.0).unwrap().into_dynamic()
     }
 
     fn sample_dynamic_orbit() -> CartesianOrbit {
@@ -1487,7 +1457,7 @@ mod tests {
         )
     }
 
-    fn sample_static_orbit() -> CartesianOrbit<Tai, Earth, Icrf> {
+    fn sample_static_orbit() -> CartesianOrbit<Earth, Icrf> {
         Orbit::from_state(sample_cartesian(), sample_epoch_tai(), Earth, Icrf)
     }
 

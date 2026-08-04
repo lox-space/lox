@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- [**breaking**] drop the time-scale type parameter from the orbit layer: `Orbit`, `Trajectory`, `Ensemble`, `Constellation`, the propagators and the builders now carry their epoch as a runtime-scaled `Time`. Origin and frame stay in the type system.
+- [**breaking**] `Propagator<T, O>` is now `Propagator<O>`; `Sgp4` converts to TAI at its own boundary rather than requiring a `Time<Tai>` from the caller
+
+### Changed
+
 - [**breaking**] `Orbit`, `Trajectory`, `Ensemble`, `Constellation`, `GroundLocation`, `GroundPropagator` and the propagators now default their time scale, origin and frame parameters to the runtime enums; the `Dyn*` aliases are removed
 - [**breaking**] rename `into_dyn` to `into_dynamic`, `from_csv_dyn` to `from_csv_dynamic`, `new_dyn` to `new_dynamic` and `observables_dyn` to `observables_dynamic`
 - [**breaking**] rename `StateToDynGroundError` to `StateToGroundError`

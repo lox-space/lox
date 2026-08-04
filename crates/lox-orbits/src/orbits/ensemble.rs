@@ -7,45 +7,40 @@ use std::hash::Hash;
 
 use lox_bodies::{CoordinateOrigin, Origin};
 use lox_frames::{Frame, ReferenceFrame};
-use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 
 use super::Trajectory;
 
 /// A collection of named trajectories keyed by an identifier type.
 #[derive(Debug, Clone)]
-pub struct Ensemble<
-    K,
-    T: ContinuousTimeScale = TimeScale,
-    O: CoordinateOrigin = Origin,
-    R: ReferenceFrame = Frame,
->(pub HashMap<K, Trajectory<T, O, R>>)
+pub struct Ensemble<K, O: CoordinateOrigin = Origin, R: ReferenceFrame = Frame>(
+    pub HashMap<K, Trajectory<O, R>>,
+)
 where
     K: Eq + Hash;
 
-impl<K, T, O, R> Ensemble<K, T, O, R>
+impl<K, O, R> Ensemble<K, O, R>
 where
     K: Eq + Hash,
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Creates a new ensemble from a map of trajectories.
-    pub fn new(map: HashMap<K, Trajectory<T, O, R>>) -> Self {
+    pub fn new(map: HashMap<K, Trajectory<O, R>>) -> Self {
         Self(map)
     }
 
     /// Returns a reference to the trajectory for the given key, if present.
-    pub fn get(&self, key: &K) -> Option<&Trajectory<T, O, R>> {
+    pub fn get(&self, key: &K) -> Option<&Trajectory<O, R>> {
         self.0.get(key)
     }
 
     /// Inserts a trajectory with the given key.
-    pub fn insert(&mut self, key: K, trajectory: Trajectory<T, O, R>) {
+    pub fn insert(&mut self, key: K, trajectory: Trajectory<O, R>) {
         self.0.insert(key, trajectory);
     }
 
     /// Returns an iterator over all key-trajectory pairs.
-    pub fn iter(&self) -> impl Iterator<Item = (&K, &Trajectory<T, O, R>)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&K, &Trajectory<O, R>)> {
         self.0.iter()
     }
 
@@ -65,11 +60,10 @@ mod tests {
     use super::*;
     use lox_bodies::Origin;
     use lox_frames::Frame;
-    use lox_time::time_scales::TimeScale;
 
-    type TestEnsemble = Ensemble<String, TimeScale, Origin, Frame>;
+    type TestEnsemble = Ensemble<String, Origin, Frame>;
 
-    fn make_trajectory() -> Trajectory<TimeScale, Origin, Frame> {
+    fn make_trajectory() -> Trajectory<Origin, Frame> {
         Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
             Origin::Earth,

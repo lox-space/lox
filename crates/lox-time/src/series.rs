@@ -19,7 +19,7 @@ use crate::time_scales::ContinuousTimeScale;
 /// by absolute [`Time`] values rather than raw `f64` offsets.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct TimeSeries<T: ContinuousTimeScale> {
+pub struct TimeSeries<T: ContinuousTimeScale = crate::time_scales::TimeScale> {
     epoch: Time<T>,
     series: Series,
 }

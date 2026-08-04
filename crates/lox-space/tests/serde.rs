@@ -361,7 +361,12 @@ fn test_state() {
     let t = Time::new(Tai, 0, Default::default());
     let pos = DVec3::new(6778.0, 0.0, 0.0);
     let vel = DVec3::new(0.0, 7.5, 0.0);
-    let state = CartesianOrbit::new(Cartesian::from_vecs(pos, vel), t, Earth, Icrf);
+    let state = CartesianOrbit::new(
+        Cartesian::from_vecs(pos, vel),
+        t.into_dynamic(),
+        Earth,
+        Icrf,
+    );
     round_trip(&state);
 }
 
@@ -406,7 +411,7 @@ fn test_vallado() {
             DVec3::new(6_778_000.0, 0.0, 0.0),
             DVec3::new(0.0, 7500.0, 0.0),
         ),
-        t,
+        t.into_dynamic(),
         Earth,
         Icrf,
     );
@@ -424,7 +429,7 @@ fn test_numerical_propagator() {
             DVec3::new(6_778_000.0, 0.0, 0.0),
             DVec3::new(0.0, 7500.0, 0.0),
         ),
-        t,
+        t.into_dynamic(),
         Earth,
         Icrf,
     );
@@ -442,7 +447,7 @@ fn test_j2_propagator() {
             DVec3::new(6_778_000.0, 0.0, 0.0),
             DVec3::new(0.0, 7500.0, 0.0),
         ),
-        t,
+        t.into_dynamic(),
         Earth,
         Icrf,
     );
@@ -460,7 +465,7 @@ fn test_j4_propagator() {
             DVec3::new(6_778_000.0, 0.0, 0.0),
             DVec3::new(0.0, 7500.0, 0.0),
         ),
-        t,
+        t.into_dynamic(),
         Earth,
         Icrf,
     );
@@ -520,7 +525,7 @@ fn test_orbit_source_vallado() {
             DVec3::new(6_778_000.0, 0.0, 0.0),
             DVec3::new(0.0, 7500.0, 0.0),
         ),
-        t,
+        t.into_dynamic(),
         Earth,
         Icrf,
     );
@@ -554,7 +559,7 @@ fn test_orbit_source_numerical() {
             DVec3::new(6_778_000.0, 0.0, 0.0),
             DVec3::new(0.0, 7500.0, 0.0),
         ),
-        t,
+        t.into_dynamic(),
         Earth,
         Icrf,
     );
@@ -573,7 +578,7 @@ fn test_orbit_source_j2() {
             DVec3::new(6_778_000.0, 0.0, 0.0),
             DVec3::new(0.0, 7500.0, 0.0),
         ),
-        t,
+        t.into_dynamic(),
         Earth,
         Icrf,
     );
@@ -592,7 +597,7 @@ fn test_orbit_source_j4() {
             DVec3::new(6_778_000.0, 0.0, 0.0),
             DVec3::new(0.0, 7500.0, 0.0),
         ),
-        t,
+        t.into_dynamic(),
         Earth,
         Icrf,
     );
@@ -622,7 +627,7 @@ fn test_constellation_satellite() {
     let constellation = WalkerDeltaBuilder::new(6, 3)
         .with_semi_major_axis(Distance::kilometers(7000.0), 0.0)
         .with_inclination(Angle::degrees(53.0))
-        .build_constellation("test", t, Earth, Icrf)
+        .build_constellation("test", t.into_dynamic(), Earth, Icrf)
         .unwrap();
     let sat = &constellation.satellites()[0];
     round_trip(sat);
@@ -636,7 +641,7 @@ fn test_constellation() {
     let constellation = WalkerDeltaBuilder::new(6, 3)
         .with_semi_major_axis(Distance::kilometers(7000.0), 0.0)
         .with_inclination(Angle::degrees(53.0))
-        .build_constellation("test", t, Earth, Icrf)
+        .build_constellation("test", t.into_dynamic(), Earth, Icrf)
         .unwrap();
     round_trip_no_eq(&constellation);
 }
@@ -814,7 +819,7 @@ fn test_state_json_structure() {
     let t = Time::new(Tai, 100, Default::default());
     let state = CartesianOrbit::new(
         Cartesian::from_vecs(DVec3::new(6778.0, 0.0, 0.0), DVec3::new(0.0, 7.5, 0.0)),
-        t,
+        t.into_dynamic(),
         Earth,
         Icrf,
     );

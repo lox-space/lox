@@ -14,7 +14,6 @@ use lox_core::math::optim::{BrentMinimizer, FindBracketedMinimum};
 use lox_core::units::{Angle, Distance};
 use lox_frames::ReferenceFrame;
 use lox_time::Time;
-use lox_time::time_scales::ContinuousTimeScale;
 
 use super::{Constellation, ConstellationError, ConstellationSatellite};
 
@@ -182,13 +181,13 @@ impl StreetOfCoverageBuilder {
     }
 
     /// Builds a full [`Constellation`] with the given metadata.
-    pub fn build_constellation<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame>(
+    pub fn build_constellation<O: CoordinateOrigin, R: ReferenceFrame>(
         &self,
         name: impl Into<String>,
-        epoch: Time<T>,
+        epoch: Time,
         origin: O,
         frame: R,
-    ) -> Result<Constellation<T, O, R>, ConstellationError> {
+    ) -> Result<Constellation<O, R>, ConstellationError> {
         let satellites = self.build()?;
         Ok(Constellation::new(name, epoch, origin, frame, satellites))
     }
@@ -196,6 +195,7 @@ impl StreetOfCoverageBuilder {
 
 #[cfg(test)]
 mod tests {
+    use lox_time::time_scales::TimeScale;
     use std::collections::HashSet;
 
     use lox_units::{AngleUnits, DistanceUnits};
@@ -337,9 +337,8 @@ mod tests {
         use lox_bodies::Earth;
         use lox_frames::Icrf;
         use lox_time::Time;
-        use lox_time::time_scales::Tai;
 
-        let epoch = Time::j2000(Tai);
+        let epoch = Time::j2000(TimeScale::Tai);
         let c = StreetOfCoverageBuilder::new(24, 4)
             .with_semi_major_axis(7159.0.km(), 0.0)
             .with_inclination(53.0.deg())

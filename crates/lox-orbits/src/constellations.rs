@@ -19,7 +19,6 @@ use lox_bodies::{CoordinateOrigin, Origin};
 use lox_core::elements::{Keplerian, KeplerianError};
 use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
-use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 use thiserror::Error;
 
 pub use flower::FlowerBuilder;
@@ -100,24 +99,20 @@ pub enum ConstellationPropagator {
 /// combined with the epoch, origin, and frame needed to create propagatable orbits.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Constellation<
-    T: ContinuousTimeScale = TimeScale,
-    O: CoordinateOrigin = Origin,
-    R: ReferenceFrame = Frame,
-> {
+pub struct Constellation<O: CoordinateOrigin = Origin, R: ReferenceFrame = Frame> {
     name: String,
-    epoch: Time<T>,
+    epoch: Time,
     origin: O,
     frame: R,
     satellites: Vec<ConstellationSatellite>,
     propagator: ConstellationPropagator,
 }
 
-impl<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> Constellation<T, O, R> {
+impl<O: CoordinateOrigin, R: ReferenceFrame> Constellation<O, R> {
     /// Creates a new constellation from precomputed satellites.
     pub fn new(
         name: impl Into<String>,
-        epoch: Time<T>,
+        epoch: Time,
         origin: O,
         frame: R,
         satellites: Vec<ConstellationSatellite>,
@@ -144,10 +139,7 @@ impl<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> Constellati
     }
 
     /// Returns the reference epoch.
-    pub fn epoch(&self) -> Time<T>
-    where
-        T: Copy,
-    {
+    pub fn epoch(&self) -> Time {
         self.epoch
     }
 
@@ -188,9 +180,8 @@ impl<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame> Constellati
     }
 }
 
-impl<T, O, R> Constellation<T, O, R>
+impl<O, R> Constellation<O, R>
 where
-    T: ContinuousTimeScale + Copy + Into<TimeScale>,
     O: CoordinateOrigin + Copy + Into<Origin>,
     R: ReferenceFrame + Copy + Into<Frame>,
 {
@@ -213,20 +204,21 @@ mod tests {
     use lox_bodies::Earth;
     use lox_frames::Icrf;
     use lox_time::Time;
-    use lox_time::time_scales::Tai;
+
+    use lox_time::time_scales::TimeScale;
     use lox_units::{AngleUnits, DistanceUnits};
 
-    fn make_constellation() -> Constellation<Tai, Earth, Icrf> {
+    fn make_constellation() -> Constellation<Earth, Icrf> {
         WalkerDeltaBuilder::new(6, 3)
             .with_semi_major_axis(7000.0.km(), 0.0)
             .with_inclination(53.0.deg())
-            .build_constellation("test", Time::j2000(Tai), Earth, Icrf)
+            .build_constellation("test", Time::j2000(TimeScale::Tai), Earth, Icrf)
             .unwrap()
     }
 
     #[test]
     fn test_constellation_new() {
-        let epoch = Time::j2000(Tai);
+        let epoch = Time::j2000(TimeScale::Tai);
         let sats = vec![];
         let c = Constellation::new("empty", epoch, Earth, Icrf, sats);
         assert_eq!(c.name(), "empty");
@@ -238,7 +230,7 @@ mod tests {
     fn test_constellation_getters() {
         let c = make_constellation();
         assert_eq!(c.name(), "test");
-        assert_eq!(c.epoch(), Time::j2000(Tai));
+        assert_eq!(c.epoch(), Time::j2000(TimeScale::Tai));
         assert_eq!(c.origin(), Earth);
         assert_eq!(c.frame(), Icrf);
         assert_eq!(c.len(), 6);

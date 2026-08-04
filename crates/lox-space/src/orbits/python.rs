@@ -518,7 +518,7 @@ impl PyKeplerian {
 
         let tai = to_tai(time.0, None)?;
         let mut builder = KeplerianOrbitBuilder::new()
-            .with_time(tai)
+            .with_time(tai.into_dynamic())
             .with_origin(origin);
 
         match (
@@ -627,7 +627,9 @@ impl PyKeplerian {
 
         let tai = to_tai(time.0, None)?;
 
-        let mut builder = CircularBuilder::new().with_time(tai).with_origin(origin);
+        let mut builder = CircularBuilder::new()
+            .with_time(tai.into_dynamic())
+            .with_origin(origin);
 
         match (semi_major_axis, altitude) {
             (Some(sma), None) => {
@@ -756,10 +758,10 @@ impl PyKeplerian {
                 configure_and_build!(
                     SsoBuilder::default()
                         .with_provider(&p.get().0)
-                        .with_time(tai)
+                        .with_time(tai.into_dynamic())
                 )
             }
-            None => configure_and_build!(SsoBuilder::default().with_time(tai)),
+            None => configure_and_build!(SsoBuilder::default().with_time(tai.into_dynamic())),
         };
 
         Ok(PyKeplerian(orbit.into_dynamic()))
@@ -1994,7 +1996,7 @@ impl PySgp4 {
                 let interval = Interval::new(to_tai(i.start(), eop)?, to_tai(i.end(), eop)?);
                 Ok(self
                     .inner
-                    .propagate(interval)
+                    .propagate(interval.into_dynamic())
                     .map_err(PySgp4Error)?
                     .into_dynamic())
             },

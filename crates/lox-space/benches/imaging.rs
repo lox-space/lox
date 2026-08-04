@@ -40,7 +40,7 @@ mod imaging_benches {
         let t0 = sgp4.time();
         let t1 = t0 + TimeDelta::from_hours(6);
         sgp4.with_step(TimeDelta::from_seconds(10))
-            .propagate(Interval::new(t0, t1))
+            .propagate(Interval::new(t0, t1).into_dynamic())
             .unwrap()
             .into_dynamic()
     }

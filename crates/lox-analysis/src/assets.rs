@@ -548,11 +548,11 @@ impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send +
     /// Internally, each spacecraft's `OrbitSource` produces a `Trajectory`
     /// which is then rotated into the concrete frame `R` via the mixed
     /// `TryRotation<Frame, R, T>` impls, and finally re-tagged to
-    /// `Trajectory<Tai, O, R>`.
+    /// `Trajectory<O, R>`.
     pub fn propagate<P>(
         &self,
         provider: &P,
-    ) -> Result<Ensemble<AssetId, Tai, O, R>, ScenarioPropagateError>
+    ) -> Result<Ensemble<AssetId, O, R>, ScenarioPropagateError>
     where
         R: Into<Frame>,
         P: TryRotation<Frame, R, TimeScale> + Send + Sync,
@@ -580,7 +580,7 @@ impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send +
                 // Re-tag origin and time scale (data unchanged, just type markers).
                 let (epoch, _origin, frame, data) = rotated.into_parts();
                 let typed = lox_orbits::orbits::Trajectory::from_parts(
-                    epoch.with_scale(Tai),
+                    epoch.with_scale(TimeScale::Tai),
                     origin,
                     frame,
                     data,
@@ -940,7 +940,7 @@ mod tests {
         let constellation = WalkerDeltaBuilder::new(6, 3)
             .with_semi_major_axis(7000.0_f64.km(), 0.0)
             .with_inclination(53.0_f64.deg())
-            .build_constellation("test", start, Origin::Earth, Frame::Icrf)
+            .build_constellation("test", start.into_dynamic(), Origin::Earth, Frame::Icrf)
             .unwrap()
             .into_dynamic();
 

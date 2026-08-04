@@ -22,10 +22,7 @@ use lox_core::{
     elements::{GravitationalParameter, Keplerian},
 };
 use lox_frames::{Frame, ReferenceFrame};
-use lox_time::{
-    Time,
-    time_scales::{ContinuousTimeScale, TimeScale},
-};
+use lox_time::Time;
 
 /// The state representation of an orbit, either Cartesian or Keplerian.
 pub enum OrbitType {
@@ -35,34 +32,29 @@ pub enum OrbitType {
     Keplerian(Keplerian),
 }
 
-/// An orbital state parameterized by state representation, time scale, origin, and reference frame.
+/// An orbital state parameterized by state representation, origin, and reference frame.
 ///
-/// The time scale, origin, and frame default to the runtime-determined
-/// [`TimeScale`], [`Origin`], and [`Frame`]. Name them explicitly —
-/// `Orbit<Cartesian, Tai, Earth, Icrf>` — to have the compiler track them.
+/// The epoch carries its time scale at runtime as a [`Time`]; the orbit layer does
+/// not track it in the type system. The origin and frame default to the
+/// runtime-determined [`Origin`] and [`Frame`] — name them explicitly,
+/// `Orbit<Cartesian, Earth, Icrf>`, to have the compiler track them.
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Orbit<
-    S,
-    T: ContinuousTimeScale = TimeScale,
-    O: CoordinateOrigin = Origin,
-    R: ReferenceFrame = Frame,
-> {
+pub struct Orbit<S, O: CoordinateOrigin = Origin, R: ReferenceFrame = Frame> {
     state: S,
-    time: Time<T>,
+    time: Time,
     origin: O,
     frame: R,
 }
 
-impl<S, T, O, R> Orbit<S, T, O, R>
+impl<S, O, R> Orbit<S, O, R>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Constructs an orbit from its state, epoch, origin, and reference frame.
     #[inline]
-    pub const fn from_state(state: S, time: Time<T>, origin: O, frame: R) -> Self {
+    pub const fn from_state(state: S, time: Time, origin: O, frame: R) -> Self {
         Self {
             state,
             time,
@@ -82,10 +74,7 @@ where
 
     /// Returns the epoch of this orbit.
     #[inline]
-    pub fn time(&self) -> Time<T>
-    where
-        T: Copy,
-    {
+    pub fn time(&self) -> Time {
         self.time
     }
 
@@ -126,25 +115,22 @@ where
     }
 }
 
-impl<S, T, O, R> Orbit<S, T, O, R>
+impl<S, O, R> Orbit<S, O, R>
 where
-    T: ContinuousTimeScale + Copy + Into<TimeScale>,
     O: CoordinateOrigin + Copy + Into<Origin>,
     R: ReferenceFrame + Copy + Into<Frame>,
 {
-    /// Converts this orbit into a dynamically-typed orbit.
-    pub fn into_dynamic(self) -> Orbit<S, TimeScale, Origin, Frame> {
-        Orbit::from_state(
-            self.state,
-            self.time.into_dynamic(),
-            self.origin.into(),
-            self.frame.into(),
-        )
+    /// Converts this orbit into one with a runtime-determined origin and frame.
+    ///
+    /// The epoch is unaffected: the orbit layer already carries its time scale
+    /// at runtime.
+    pub fn into_dynamic(self) -> Orbit<S, Origin, Frame> {
+        Orbit::from_state(self.state, self.time, self.origin.into(), self.frame.into())
     }
 }
 
 /// An orbit with Cartesian position and velocity state.
-pub type CartesianOrbit<T = TimeScale, O = Origin, R = Frame> = Orbit<Cartesian, T, O, R>;
+pub type CartesianOrbit<O = Origin, R = Frame> = Orbit<Cartesian, O, R>;
 
 /// An orbit with classical Keplerian elements state.
-pub type KeplerianOrbit<T = TimeScale, O = Origin, R = Frame> = Orbit<Keplerian, T, O, R>;
+pub type KeplerianOrbit<O = Origin, R = Frame> = Orbit<Keplerian, O, R>;

@@ -12,7 +12,6 @@ use lox_frames::{Frame, Iau, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::ContinuousTimeScale;
 use thiserror::Error;
 
 /// Topocentric observation of a satellite from a ground location.
@@ -160,10 +159,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
     }
 
     /// Computes topocentric observables from a Cartesian orbit in the body-fixed frame.
-    pub fn observables<T: ContinuousTimeScale + Copy>(
-        &self,
-        state: CartesianOrbit<T, B, Iau<B>>,
-    ) -> Observables
+    pub fn observables(&self, state: CartesianOrbit<B, Iau<B>>) -> Observables
     where
         B: RotationalElements + Copy,
     {
@@ -240,7 +236,7 @@ impl<B: TrySpheroid, R: ReferenceFrame> GroundPropagator<B, R> {
     }
 
     /// Compute the body-fixed state at a single time.
-    pub fn state_at<T: ContinuousTimeScale + Copy>(&self, time: Time<T>) -> CartesianOrbit<T, B, R>
+    pub fn state_at(&self, time: Time) -> CartesianOrbit<B, R>
     where
         B: Copy,
         R: Copy,
@@ -256,20 +252,19 @@ impl<B: TrySpheroid, R: ReferenceFrame> GroundPropagator<B, R> {
 }
 
 /// Single `Propagator` impl covers both typed and Dyn paths.
-impl<T, B, R> Propagator<T, B> for GroundPropagator<B, R>
+impl<B, R> Propagator<B> for GroundPropagator<B, R>
 where
-    T: ContinuousTimeScale + Copy + Eq,
     B: TrySpheroid + lox_bodies::CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Frame = R;
     type Error = GroundPropagatorError;
 
-    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, B, R>, GroundPropagatorError> {
+    fn state_at(&self, time: Time) -> Result<CartesianOrbit<B, R>, GroundPropagatorError> {
         Ok(self.state_at(time))
     }
 
-    fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, B, R>, Self::Error> {
+    fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<B, R>, Self::Error> {
         let pos = self.location.body_fixed_position();
         let step = self.step.unwrap_or(TimeDelta::from_seconds(60));
         let states: Vec<_> = interval
@@ -334,7 +329,7 @@ mod tests {
         let time = time!(Tdb, 2012, 7, 1).unwrap();
         let state = CartesianOrbit::new(
             Cartesian::from_vecs(position, velocity),
-            time,
+            time.into_dynamic(),
             Earth,
             Iau::new(Earth),
         );
@@ -354,7 +349,7 @@ mod tests {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::new(coords, Earth);
         let propagator = GroundPropagator::new(location.clone());
-        let time = utc!(2022, 1, 31, 23).unwrap().to_time();
+        let time = utc!(2022, 1, 31, 23).unwrap().to_dynamic_time();
         let t1 = time + TimeDelta::from_minutes(5);
         let interval = Interval::new(time, t1);
         let traj = propagator.propagate(interval).unwrap();
@@ -371,7 +366,7 @@ mod tests {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::new(coords, Earth);
         let propagator = GroundPropagator::new(location);
-        let time = utc!(2022, 1, 31, 23).unwrap().to_time();
+        let time = utc!(2022, 1, 31, 23).unwrap().to_dynamic_time();
         let t1 = time + TimeDelta::from_minutes(5);
         let interval = Interval::new(time, t1);
         let traj = propagator
@@ -422,7 +417,7 @@ mod tests {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::try_new(coords, Origin::Earth).unwrap();
         let propagator = GroundPropagator::new_dynamic(location);
-        let time = utc!(2022, 1, 31, 23).unwrap().to_time();
+        let time = utc!(2022, 1, 31, 23).unwrap().to_dynamic_time();
         let t1 = time + TimeDelta::from_minutes(5);
         let interval = Interval::new(time, t1);
         let traj = propagator

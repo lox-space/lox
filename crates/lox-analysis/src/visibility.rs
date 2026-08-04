@@ -17,7 +17,7 @@ use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
-use lox_time::time_scales::{ContinuousTimeScale, Tai, Tdb, TimeScale};
+use lox_time::time_scales::{Tai, Tdb, TimeScale};
 use rayon::prelude::*;
 use std::f64::consts::PI;
 use thiserror::Error;
@@ -185,14 +185,14 @@ pub enum PassError {
 /// each observable channel to support interpolation.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Pass<T: ContinuousTimeScale = TimeScale> {
-    interval: TimeInterval<T>,
-    times: Vec<Time<T>>,
+pub struct Pass {
+    interval: TimeInterval,
+    times: Vec<Time>,
     observables: Vec<Observables>,
-    azimuth_series: TimeSeries<T>,
-    elevation_series: TimeSeries<T>,
-    range_series: TimeSeries<T>,
-    range_rate_series: TimeSeries<T>,
+    azimuth_series: TimeSeries,
+    elevation_series: TimeSeries,
+    range_series: TimeSeries,
+    range_rate_series: TimeSeries,
 }
 
 impl Pass {
@@ -233,19 +233,17 @@ impl Pass {
     }
 }
 
-impl<T: ContinuousTimeScale> Pass<T> {
+impl Pass {
     /// Create a new Pass with Series-based interpolation.
     ///
     /// Requires at least 2 data points so that the observables can be
     /// interpolated. Returns `Err(SeriesError::InsufficientPoints)` otherwise.
     pub fn try_new(
-        interval: TimeInterval<T>,
-        times: Vec<Time<T>>,
+        interval: TimeInterval,
+        times: Vec<Time>,
         observables: Vec<Observables>,
     ) -> Result<Self, SeriesError>
-    where
-        T: Copy,
-    {
+where {
         if times.len() < 2 {
             return Err(SeriesError::InsufficientPoints(times.len()));
         }
@@ -293,12 +291,12 @@ impl<T: ContinuousTimeScale> Pass<T> {
     }
 
     /// Returns the time interval of this pass.
-    pub fn interval(&self) -> &TimeInterval<T> {
+    pub fn interval(&self) -> &TimeInterval {
         &self.interval
     }
 
     /// Returns the sampled time points within the pass.
-    pub fn times(&self) -> &[Time<T>] {
+    pub fn times(&self) -> &[Time] {
         &self.times
     }
 
@@ -308,10 +306,8 @@ impl<T: ContinuousTimeScale> Pass<T> {
     }
 
     /// Interpolates observables at the given time, or `None` if outside the pass interval.
-    pub fn interpolate(&self, time: Time<T>) -> Option<Observables>
-    where
-        T: Copy + Eq,
-    {
+    pub fn interpolate(&self, time: Time) -> Option<Observables>
+where {
         if time < self.interval.start() || time > self.interval.end() {
             return None;
         }
@@ -361,13 +357,13 @@ impl From<RotationError> for EvalError {
 ///
 /// Generic over origin `O` and frame `R`. The detect function:
 /// 1. Interpolates the spacecraft trajectory at the given time
-/// 2. Rotates the state into the body-fixed frame via `TryRotation<R, Frame, Tai>`
+/// 2. Rotates the state into the body-fixed frame via `TryRotation<R, Frame, TimeScale>`
 /// 3. Computes observables (azimuth, elevation, range, range rate)
 /// 4. Returns elevation minus minimum elevation from the mask
 struct ElevationDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     gs: &'a GroundLocation,
     mask: &'a ElevationMask,
-    sc: &'a Trajectory<Tai, O, R>,
+    sc: &'a Trajectory<O, R>,
     body_fixed_frame: Frame,
 }
 
@@ -375,14 +371,14 @@ impl<O, R> DetectFn<Tai> for ElevationDetectFn<'_, O, R>
 where
     O: TrySpheroid + Copy,
     R: ReferenceFrame + Copy,
-    DefaultRotationProvider: TryRotation<R, Frame, Tai>,
-    <DefaultRotationProvider as TryRotation<R, Frame, Tai>>::Error:
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
+    <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
     type Error = EvalError;
 
     fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
-        let sc = self.sc.at(time);
+        let sc = self.sc.at(time.into_dynamic());
         let sc = sc
             .try_to_frame(self.body_fixed_frame, &DefaultRotationProvider)
             .map_err(|e| EvalError::Rotation(Box::new(e)))?;
@@ -395,7 +391,7 @@ where
 /// occulting body.
 struct LineOfSightDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
     gs: &'a GroundLocation,
-    sc: &'a Trajectory<Tai, O, R>,
+    sc: &'a Trajectory<O, R>,
     body: Origin,
     ephemeris: &'a E,
     body_fixed_frame: Frame,
@@ -419,7 +415,7 @@ where
             .ephemeris
             .position(tdb, self.sc.origin(), self.body)
             .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
-        let r_sc = self.sc.at(time).position() - r_body;
+        let r_sc = self.sc.at(time.into_dynamic()).position() - r_body;
         // Compute ground station position in the scenario frame R by rotating
         // from body-fixed → R.
         let rot = DefaultRotationProvider
@@ -434,8 +430,8 @@ where
 /// Line-of-sight between two spacecraft, relative to a non-central occulting body. Uses the
 /// ephemeris to compute the body position.
 struct InterSatLosOccluderDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    sc1: &'a Trajectory<Tai, O, R>,
-    sc2: &'a Trajectory<Tai, O, R>,
+    sc1: &'a Trajectory<O, R>,
+    sc2: &'a Trajectory<O, R>,
     body: Origin,
     ephemeris: &'a E,
 }
@@ -454,8 +450,8 @@ where
             .ephemeris
             .position(tdb, self.sc1.origin(), self.body)
             .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
-        let r_sc1 = self.sc1.at(time).position() - r_body;
-        let r_sc2 = self.sc2.at(time).position() - r_body;
+        let r_sc1 = self.sc1.at(time.into_dynamic()).position() - r_body;
+        let r_sc2 = self.sc2.at(time.into_dynamic()).position() - r_body;
         Ok(self.body.line_of_sight(r_sc1, r_sc2)?)
     }
 }
@@ -464,8 +460,8 @@ where
 /// trajectories' origin. `r_body == 0` by construction, so no ephemeris
 /// lookup is required.
 struct InterSatLosCentralBodyDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    sc1: &'a Trajectory<Tai, O, R>,
-    sc2: &'a Trajectory<Tai, O, R>,
+    sc1: &'a Trajectory<O, R>,
+    sc2: &'a Trajectory<O, R>,
     body: Origin,
 }
 
@@ -477,8 +473,8 @@ where
     type Error = EvalError;
 
     fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
-        let r_sc1 = self.sc1.at(time).position();
-        let r_sc2 = self.sc2.at(time).position();
+        let r_sc1 = self.sc1.at(time.into_dynamic()).position();
+        let r_sc2 = self.sc2.at(time.into_dynamic()).position();
         Ok(self.body.line_of_sight(r_sc1, r_sc2)?)
     }
 }
@@ -493,8 +489,8 @@ enum RangeDirection {
 
 /// Range threshold detector for inter-satellite pairs.
 struct InterSatelliteRangeDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    sc1: &'a Trajectory<Tai, O, R>,
-    sc2: &'a Trajectory<Tai, O, R>,
+    sc1: &'a Trajectory<O, R>,
+    sc2: &'a Trajectory<O, R>,
     threshold: Distance,
     direction: RangeDirection,
 }
@@ -507,8 +503,8 @@ where
     type Error = EvalError;
 
     fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
-        let r1 = self.sc1.at(time).position();
-        let r2 = self.sc2.at(time).position();
+        let r1 = self.sc1.at(time.into_dynamic()).position();
+        let r2 = self.sc2.at(time.into_dynamic()).position();
         let range = (r1 - r2).length();
         let threshold = self.threshold.to_meters();
         Ok(match self.direction {
@@ -524,8 +520,8 @@ where
 /// spacecraft.  The detector returns `threshold - ω`, positive when the
 /// angular rate is within the limit.
 struct InterSatelliteSlewRateDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    sc1: &'a Trajectory<Tai, O, R>,
-    sc2: &'a Trajectory<Tai, O, R>,
+    sc1: &'a Trajectory<O, R>,
+    sc2: &'a Trajectory<O, R>,
     threshold: AngularRate,
 }
 
@@ -537,8 +533,8 @@ where
     type Error = EvalError;
 
     fn eval(&self, time: Time<Tai>) -> Result<f64, Self::Error> {
-        let s1 = self.sc1.at(time);
-        let s2 = self.sc2.at(time);
+        let s1 = self.sc1.at(time.into_dynamic());
+        let s2 = self.sc2.at(time.into_dynamic());
         let r = s2.position() - s1.position();
         let v = s2.velocity() - s1.velocity();
         let r_len_sq = r.length_squared();
@@ -574,7 +570,7 @@ type InterSatelliteFilter<'a> = Box<dyn Fn(&Spacecraft, &Spacecraft) -> bool + '
 /// without borrowing the non-`Send` filter closures.
 struct ComputeParams<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
     scenario: &'a Scenario<O, R>,
-    ensemble: &'a Ensemble<AssetId, Tai, O, R>,
+    ensemble: &'a Ensemble<AssetId, O, R>,
     ephemeris: &'a E,
     occulting_bodies: &'a [Origin],
     step: TimeDelta,
@@ -589,8 +585,8 @@ where
     R: ReferenceFrame + Copy + Send + Sync + Into<Frame>,
     E: Ephemeris + Send + Sync,
     E::Error: 'static,
-    DefaultRotationProvider: TryRotation<R, Frame, Tai> + TryRotation<Frame, R, Tai>,
-    <DefaultRotationProvider as TryRotation<R, Frame, Tai>>::Error:
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale> + TryRotation<Frame, R, Tai>,
+    <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
     <DefaultRotationProvider as TryRotation<Frame, R, Tai>>::Error:
         std::error::Error + Send + Sync + 'static,
@@ -614,7 +610,7 @@ where
     fn compute_ground_space_pair(
         &self,
         gs: &GroundStation,
-        sc_traj: &Trajectory<Tai, O, R>,
+        sc_traj: &Trajectory<O, R>,
         interval: TimeInterval<Tai>,
     ) -> Result<Vec<TimeInterval<Tai>>, VisibilityError> {
         let body_fixed_frame = gs.body_fixed_frame();
@@ -667,8 +663,8 @@ where
         &self,
         sc1: &Spacecraft,
         sc2: &Spacecraft,
-        traj1: &Trajectory<Tai, O, R>,
-        traj2: &Trajectory<Tai, O, R>,
+        traj1: &Trajectory<O, R>,
+        traj2: &Trajectory<O, R>,
         interval: TimeInterval<Tai>,
     ) -> Result<Vec<TimeInterval<Tai>>, VisibilityError> {
         // Resolve per-pair slew rate limit: min of both assets' limits.
@@ -912,7 +908,7 @@ pub struct NoEphemeris;
 /// Trajectories are looked up from a pre-computed [`Ensemble`] by asset id.
 pub struct VisibilityAnalysis<'a, O: CoordinateOrigin, R: ReferenceFrame, E = NoEphemeris> {
     scenario: &'a Scenario<O, R>,
-    ensemble: &'a Ensemble<AssetId, Tai, O, R>,
+    ensemble: &'a Ensemble<AssetId, O, R>,
     ephemeris: E,
     occulting_bodies: Vec<Origin>,
     step: TimeDelta,
@@ -1060,7 +1056,7 @@ where
     ///
     /// Use [`with_occulting_bodies`](Self::with_occulting_bodies) to bind
     /// an ephemeris when occulting-body checks are required.
-    pub fn new(scenario: &'a Scenario<O, R>, ensemble: &'a Ensemble<AssetId, Tai, O, R>) -> Self {
+    pub fn new(scenario: &'a Scenario<O, R>, ensemble: &'a Ensemble<AssetId, O, R>) -> Self {
         Self {
             scenario,
             ensemble,
@@ -1116,8 +1112,8 @@ impl<'a, O, R> VisibilityAnalysis<'a, O, R, NoEphemeris>
 where
     O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<Origin>,
     R: ReferenceFrame + Copy + Send + Sync + Into<Frame>,
-    DefaultRotationProvider: TryRotation<R, Frame, Tai> + TryRotation<Frame, R, Tai>,
-    <DefaultRotationProvider as TryRotation<R, Frame, Tai>>::Error:
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale> + TryRotation<Frame, R, Tai>,
+    <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
     <DefaultRotationProvider as TryRotation<Frame, R, Tai>>::Error:
         std::error::Error + Send + Sync + 'static,
@@ -1376,8 +1372,8 @@ where
     R: ReferenceFrame + Copy + Send + Sync + Into<Frame>,
     E: Ephemeris + Send + Sync,
     E::Error: 'static,
-    DefaultRotationProvider: TryRotation<R, Frame, Tai> + TryRotation<Frame, R, Tai>,
-    <DefaultRotationProvider as TryRotation<R, Frame, Tai>>::Error:
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale> + TryRotation<Frame, R, Tai>,
+    <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
     <DefaultRotationProvider as TryRotation<Frame, R, Tai>>::Error:
         std::error::Error + Send + Sync + 'static,
@@ -1560,10 +1556,7 @@ mod tests {
         ground_assets: &[GroundStation],
         space_assets: &[Spacecraft],
         interval: TimeInterval<TimeScale>,
-    ) -> (
-        Scenario<Origin, Frame>,
-        Ensemble<AssetId, Tai, Origin, Frame>,
-    ) {
+    ) -> (Scenario<Origin, Frame>, Ensemble<AssetId, Origin, Frame>) {
         let tai_interval =
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
         let scenario = Scenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
@@ -1573,9 +1566,10 @@ mod tests {
         let mut map = HashMap::new();
         for sc in space_assets {
             if let OrbitSource::Trajectory(traj) = sc.orbit() {
-                // Re-tag Trajectory as Ensemble<Tai, Origin, Frame>
+                // Re-tag Trajectory as Ensemble<Origin, Frame>
                 let (epoch, origin, frame, data) = traj.clone().into_parts();
-                let typed = Trajectory::from_parts(epoch.with_scale(Tai), origin, frame, data);
+                let typed =
+                    Trajectory::from_parts(epoch.with_scale(TimeScale::Tai), origin, frame, data);
                 map.insert(sc.id().clone(), typed);
             }
         }
@@ -1633,7 +1627,7 @@ mod tests {
             .collect();
         // Build a typed trajectory for the ElevationDetectFn
         let (epoch, o, f, data) = sc.clone().into_parts();
-        let typed_sc = Trajectory::from_parts(epoch.with_scale(Tai), o, f, data);
+        let typed_sc = Trajectory::from_parts(epoch.with_scale(TimeScale::Tai), o, f, data);
         let elev_fn = ElevationDetectFn {
             gs: &gs,
             mask: &mask,
@@ -1780,7 +1774,7 @@ mod tests {
         }
     }
 
-    fn ground_station_trajectory() -> Trajectory<Tai, Earth, Icrf> {
+    fn ground_station_trajectory() -> Trajectory<Earth, Icrf> {
         Trajectory::from_csv(&read_data_file("trajectory_cebr.csv"), Earth, Icrf).unwrap()
     }
 
@@ -1895,7 +1889,7 @@ mod tests {
         // Two colocated trajectories have zero angular rate → always within limit.
         let sc_traj = spacecraft_trajectory_dynamic();
         let (epoch, origin, frame, data) = sc_traj.into_parts();
-        let typed = Trajectory::from_parts(epoch.with_scale(Tai), origin, frame, data);
+        let typed = Trajectory::from_parts(epoch.with_scale(TimeScale::Tai), origin, frame, data);
         let threshold = AngularRate::degrees_per_second(1.0);
         let detect = InterSatelliteSlewRateDetectFn {
             sc1: &typed,
@@ -1903,7 +1897,7 @@ mod tests {
             threshold,
         };
         let time = typed.start_time();
-        let val = detect.eval(time).unwrap();
+        let val = detect.eval(time.to_scale(Tai)).unwrap();
         // ω = 0 for colocated → threshold - 0 = threshold
         assert_approx_eq!(val, threshold.to_radians_per_second(), rtol <= 1e-10);
     }
@@ -1912,14 +1906,14 @@ mod tests {
     fn test_inter_sat_los_central_body_detect_fn() {
         let sc_traj = spacecraft_trajectory_dynamic();
         let (epoch, origin, frame, data) = sc_traj.clone().into_parts();
-        let typed = Trajectory::from_parts(epoch.with_scale(Tai), origin, frame, data);
+        let typed = Trajectory::from_parts(epoch.with_scale(TimeScale::Tai), origin, frame, data);
         let detect = InterSatLosCentralBodyDetectFn {
             sc1: &typed,
             sc2: &typed,
             body: Origin::Earth,
         };
         let time = typed.start_time();
-        let val = detect.eval(time).unwrap();
+        let val = detect.eval(time.to_scale(Tai)).unwrap();
         // Colocated spacecraft -> dot(r1, r2) = |r|^2 -> theta = 0,
         // theta1 == theta2 == acos(R/|r|) -> result = 2*acos(R/|r|) > 0.
         assert!(val > 0.0);
@@ -1998,12 +1992,12 @@ mod tests {
 
         let traj1 = sgp4_1
             .with_step(TimeDelta::from_seconds(10))
-            .propagate(interval)
+            .propagate(interval.into_dynamic())
             .unwrap()
             .into_dynamic();
         let traj2 = sgp4_2
             .with_step(TimeDelta::from_seconds(10))
-            .propagate(interval)
+            .propagate(interval.into_dynamic())
             .unwrap()
             .into_dynamic();
 
@@ -2379,7 +2373,7 @@ mod tests {
         let tai_interval = Interval::new(t0.to_scale(Tai), t1.to_scale(Tai));
         let iss_traj = sgp4
             .with_step(TimeDelta::from_seconds(30))
-            .propagate(tai_interval)
+            .propagate(tai_interval.into_dynamic())
             .unwrap()
             .into_dynamic();
 

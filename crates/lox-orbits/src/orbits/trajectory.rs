@@ -9,13 +9,7 @@ use lox_core::coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian};
 use lox_core::glam::DVec3;
 use lox_ephem::Ephemeris;
 use lox_frames::{Frame, Icrf, ReferenceFrame, rotations::TryRotation, traits::frame_key};
-use lox_time::{
-    Time,
-    deltas::TimeDelta,
-    offsets::{DefaultOffsetProvider, Offset},
-    time_scales::{ContinuousTimeScale, Tai, Tdb, TimeScale},
-    utc::Utc,
-};
+use lox_time::{Time, deltas::TimeDelta, time_scales::TimeScale, utc::Utc};
 use thiserror::Error;
 
 use lox_time::intervals::TimeInterval;
@@ -31,20 +25,15 @@ use super::{CartesianOrbit, Orbit};
 /// analytical derivative of the position spline.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Trajectory<
-    T: ContinuousTimeScale = TimeScale,
-    O: CoordinateOrigin = Origin,
-    R: ReferenceFrame = Frame,
-> {
-    epoch: Time<T>,
+pub struct Trajectory<O: CoordinateOrigin = Origin, R: ReferenceFrame = Frame> {
+    epoch: Time,
     origin: O,
     frame: R,
     data: CartesianTrajectory,
 }
 
-impl<T, O, R> Trajectory<T, O, R>
+impl<O, R> Trajectory<O, R>
 where
-    T: ContinuousTimeScale + Copy,
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
@@ -55,7 +44,7 @@ where
     /// Panics if the iterator yields fewer than 2 states. The Hermite cubic
     /// spline requires at least two knots; callers responsible for that
     /// invariant should use [`Self::try_new`] for a fallible variant.
-    pub fn new(states: impl IntoIterator<Item = CartesianOrbit<T, O, R>>) -> Self {
+    pub fn new(states: impl IntoIterator<Item = CartesianOrbit<O, R>>) -> Self {
         let mut states = states.into_iter().peekable();
         let first = states.peek().unwrap();
         let epoch = first.time();
@@ -74,7 +63,7 @@ where
     }
 
     /// Constructs a trajectory from its constituent parts.
-    pub fn from_parts(epoch: Time<T>, origin: O, frame: R, data: CartesianTrajectory) -> Self {
+    pub fn from_parts(epoch: Time, origin: O, frame: R, data: CartesianTrajectory) -> Self {
         Self {
             epoch,
             origin,
@@ -84,13 +73,13 @@ where
     }
 
     /// Decomposes this trajectory into its constituent parts.
-    pub fn into_parts(self) -> (Time<T>, O, R, CartesianTrajectory) {
+    pub fn into_parts(self) -> (Time, O, R, CartesianTrajectory) {
         (self.epoch, self.origin, self.frame, self.data)
     }
 
     /// Constructs a trajectory, returning an error if fewer than 2 states are provided.
     pub fn try_new(
-        states: impl IntoIterator<Item = CartesianOrbit<T, O, R>>,
+        states: impl IntoIterator<Item = CartesianOrbit<O, R>>,
     ) -> Result<Self, TrajectoryError> {
         let mut iter = states.into_iter();
         let first = iter.next().ok_or(TrajectoryError::InsufficientStates(0))?;
@@ -99,26 +88,22 @@ where
     }
 
     /// Interpolates the trajectory at the given absolute time.
-    pub fn at(&self, time: Time<T>) -> CartesianOrbit<T, O, R> {
+    pub fn at(&self, time: Time) -> CartesianOrbit<O, R> {
         self.at_delta(time - self.epoch)
     }
 
     /// Interpolates the trajectory at the given time delta from the trajectory start.
-    pub fn at_delta(&self, dt: TimeDelta) -> CartesianOrbit<T, O, R> {
+    pub fn at_delta(&self, dt: TimeDelta) -> CartesianOrbit<O, R> {
         let t = dt.to_seconds().to_f64();
         let state = self.data.at(t);
         Orbit::from_state(state, self.epoch + dt, self.origin, self.frame)
     }
 
     /// Transforms the entire trajectory into a different reference frame.
-    pub fn into_frame<R1, P>(
-        self,
-        frame: R1,
-        provider: &P,
-    ) -> Result<Trajectory<T, O, R1>, P::Error>
+    pub fn into_frame<R1, P>(self, frame: R1, provider: &P) -> Result<Trajectory<O, R1>, P::Error>
     where
         R1: ReferenceFrame + Copy,
-        P: TryRotation<R, R1, T>,
+        P: TryRotation<R, R1, TimeScale>,
     {
         if frame_key(&self.frame) == frame_key(&frame) {
             return Ok(Trajectory::from_parts(
@@ -162,19 +147,19 @@ where
     }
 
     /// Returns the start time of the trajectory.
-    pub fn start_time(&self) -> Time<T> {
+    pub fn start_time(&self) -> Time {
         self.epoch
     }
 
     /// Returns the end time of the trajectory.
-    pub fn end_time(&self) -> Time<T> {
+    pub fn end_time(&self) -> Time {
         let time_steps = self.data.time_steps();
         let last = time_steps.last().copied().unwrap_or(0.0);
         self.epoch + TimeDelta::from_seconds_f64(last)
     }
 
     /// Returns the absolute times of all data points in the trajectory.
-    pub fn times(&self) -> Vec<Time<T>> {
+    pub fn times(&self) -> Vec<Time> {
         let time_steps = self.data.time_steps();
         time_steps
             .iter()
@@ -183,7 +168,7 @@ where
     }
 
     /// Returns all orbital states at the original data points.
-    pub fn states(&self) -> Vec<CartesianOrbit<T, O, R>> {
+    pub fn states(&self) -> Vec<CartesianOrbit<O, R>> {
         self.data
             .clone()
             .into_iter()
@@ -204,9 +189,8 @@ where
     }
 }
 
-impl<T, O, R> Trajectory<T, O, R>
+impl<O, R> Trajectory<O, R>
 where
-    T: ContinuousTimeScale + Copy + Into<TimeScale>,
     O: CoordinateOrigin + Copy + Into<Origin>,
     R: ReferenceFrame + Copy + Into<Frame>,
 {
@@ -221,20 +205,19 @@ where
     }
 }
 
-impl<T, O, R> Propagator<T, O> for Trajectory<T, O, R>
+impl<O, R> Propagator<O> for Trajectory<O, R>
 where
-    T: ContinuousTimeScale + Copy + Eq,
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Frame = R;
     type Error = TrajectoryError;
 
-    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, TrajectoryError> {
+    fn state_at(&self, time: Time) -> Result<CartesianOrbit<O, R>, TrajectoryError> {
         Ok(self.at(time))
     }
 
-    fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, Self::Error> {
+    fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<O, R>, Self::Error> {
         let mut states = Vec::new();
         states.push(self.at(interval.start()));
         for s in self.states() {
@@ -275,18 +258,16 @@ pub enum TrajectoryTransformationError {
     StateTransformationError(String),
 }
 
-impl<T, O> Trajectory<T, O, Icrf>
+impl<O> Trajectory<O, Icrf>
 where
-    T: ContinuousTimeScale + Copy,
     O: CoordinateOrigin + Copy,
-    DefaultOffsetProvider: Offset<T, Tdb>,
 {
     /// Transforms the entire trajectory to a different central body origin using an ephemeris.
     pub fn to_origin<O1: CoordinateOrigin + Copy, E: Ephemeris>(
         &self,
         target: O1,
         ephemeris: &E,
-    ) -> Result<Trajectory<T, O1, Icrf>, TrajectoryTransformationError> {
+    ) -> Result<Trajectory<O1, Icrf>, TrajectoryTransformationError> {
         if self.origin().id() == target.id() {
             return Ok(Trajectory::from_parts(
                 self.epoch,
@@ -308,7 +289,7 @@ where
     }
 }
 
-impl<O, R> Trajectory<Tai, O, R>
+impl<O, R> Trajectory<O, R>
 where
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
@@ -334,16 +315,15 @@ impl Trajectory {
     }
 }
 
-impl<T, O, R> FromIterator<CartesianOrbit<T, O, R>> for Trajectory<T, O, R>
+impl<O, R> FromIterator<CartesianOrbit<O, R>> for Trajectory<O, R>
 where
-    T: ContinuousTimeScale + Copy,
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     /// Delegates to [`Trajectory::new`] and inherits its panic on fewer
     /// than 2 states. Callers without that guarantee should collect into
     /// a `Vec` first and use [`Trajectory::try_new`].
-    fn from_iter<U: IntoIterator<Item = CartesianOrbit<T, O, R>>>(iter: U) -> Self {
+    fn from_iter<U: IntoIterator<Item = CartesianOrbit<O, R>>>(iter: U) -> Self {
         Self::new(iter)
     }
 }
@@ -373,7 +353,7 @@ fn parse_csv_states<O: CoordinateOrigin + Copy, R: ReferenceFrame + Copy>(
     csv: &str,
     origin: O,
     frame: R,
-) -> Result<Vec<CartesianOrbit<Tai, O, R>>, TrajectoryError> {
+) -> Result<Vec<CartesianOrbit<O, R>>, TrajectoryError> {
     let mut reader = csv::Reader::from_reader(csv.as_bytes());
     let mut states = Vec::new();
     for result in reader.records() {
@@ -383,9 +363,9 @@ fn parse_csv_states<O: CoordinateOrigin + Copy, R: ReferenceFrame + Copy>(
                 "invalid record length".to_string(),
             ));
         }
-        let time: Time<Tai> = Utc::from_iso(record.get(0).unwrap())
+        let time = Utc::from_iso(record.get(0).unwrap())
             .map_err(|e| TrajectoryError::CsvError(e.to_string()))?
-            .to_time();
+            .to_dynamic_time();
         // CSV data is in km and km/s, convert to m and m/s
         let position = parse_csv_vec3(&record, 1, 2, 3)? * 1e3;
         let velocity = parse_csv_vec3(&record, 4, 5, 6)? * 1e3;
@@ -404,13 +384,13 @@ mod tests {
     use lox_time::time_scales::TimeScale;
     use lox_time::{time, time_scales::Tdb};
 
-    fn sample_trajectory() -> Trajectory<Tdb, Earth, Icrf> {
+    fn sample_trajectory() -> Trajectory<Earth, Icrf> {
         let t0 = time!(Tdb, 2023, 1, 1, 12).unwrap();
         let t1 = t0 + lox_time::deltas::TimeDelta::from_seconds(60);
         let t2 = t0 + lox_time::deltas::TimeDelta::from_seconds(120);
         let s0 = CartesianOrbit::new(
             Cartesian::from_vecs(DVec3::new(7000e3, 0.0, 0.0), DVec3::new(0.0, 7500.0, 0.0)),
-            t0,
+            t0.into_dynamic(),
             Earth,
             Icrf,
         );
@@ -419,7 +399,7 @@ mod tests {
                 DVec3::new(6999e3, 100e3, 0.0),
                 DVec3::new(-10.0, 7499.0, 0.0),
             ),
-            t1,
+            t1.into_dynamic(),
             Earth,
             Icrf,
         );
@@ -428,7 +408,7 @@ mod tests {
                 DVec3::new(6996e3, 200e3, 0.0),
                 DVec3::new(-20.0, 7498.0, 0.0),
             ),
-            t2,
+            t2.into_dynamic(),
             Earth,
             Icrf,
         );
