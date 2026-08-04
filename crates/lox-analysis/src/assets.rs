@@ -27,13 +27,13 @@ use rayon::prelude::*;
 use lox_comms::terminal::{RxTerminal, TxTerminal};
 
 use crate::visibility::ElevationMask;
-use lox_orbits::constellations::{ConstellationPropagator, DynConstellation};
-use lox_orbits::ground::DynGroundLocation;
+use lox_orbits::constellations::{Constellation, ConstellationPropagator};
+use lox_orbits::ground::GroundLocation;
 use lox_orbits::orbits::{Ensemble, KeplerianOrbit};
-use lox_orbits::propagators::j2::DynJ2Propagator;
-use lox_orbits::propagators::j4::DynJ4Propagator;
-use lox_orbits::propagators::numerical::DynNumericalPropagator;
-use lox_orbits::propagators::semi_analytical::DynVallado;
+use lox_orbits::propagators::j2::J2Propagator;
+use lox_orbits::propagators::j4::J4Propagator;
+use lox_orbits::propagators::numerical::NumericalPropagator;
+use lox_orbits::propagators::semi_analytical::Vallado;
 use lox_orbits::propagators::{OrbitSource, PropagateError};
 
 /// Unique identifier for a ground station or spacecraft.
@@ -110,7 +110,7 @@ impl fmt::Display for NetworkId {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GroundStation {
     id: AssetId,
-    location: DynGroundLocation,
+    location: GroundLocation,
     mask: ElevationMask,
     body_fixed_frame: Frame,
     network: Option<NetworkId>,
@@ -122,7 +122,7 @@ pub struct GroundStation {
 
 impl GroundStation {
     /// Creates a new ground station with the given location and elevation mask.
-    pub fn new(id: impl Into<String>, location: DynGroundLocation, mask: ElevationMask) -> Self {
+    pub fn new(id: impl Into<String>, location: GroundLocation, mask: ElevationMask) -> Self {
         let body_fixed_frame = Frame::Iau(location.origin());
         Self {
             id: AssetId::new(id),
@@ -181,7 +181,7 @@ impl GroundStation {
     }
 
     /// Returns the ground location.
-    pub fn location(&self) -> &DynGroundLocation {
+    pub fn location(&self) -> &GroundLocation {
         &self.location
     }
 
@@ -375,20 +375,17 @@ impl Spacecraft {
 /// and the assets (ground stations and spacecraft) involved.
 ///
 /// The type parameters `O` and `R` specify the "native" origin body and
-/// reference frame. For dynamic dispatch (e.g. via Python), use `DynScenario`.
+/// reference frame. For dynamic dispatch (e.g. via Python), use `Scenario`.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Scenario<O: CoordinateOrigin, R: ReferenceFrame> {
+pub struct Scenario<O: CoordinateOrigin = Origin, R: ReferenceFrame = Frame> {
     interval: TimeInterval<Tai>,
     origin: O,
     frame: R,
     ground_stations: Vec<GroundStation>,
     spacecraft: Vec<Spacecraft>,
-    constellations: Vec<DynConstellation>,
+    constellations: Vec<Constellation>,
 }
-
-/// Dynamic scenario — preserves backward compatibility and serves the Python API.
-pub type DynScenario = Scenario<Origin, Frame>;
 
 /// Errors from converting a constellation into individual [`Spacecraft`].
 #[derive(Debug, thiserror::Error)]
@@ -467,7 +464,7 @@ impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send +
     /// [`Spacecraft`] using the constellation's selected propagator.
     pub fn with_constellation(
         mut self,
-        constellation: DynConstellation,
+        constellation: Constellation,
     ) -> Result<Self, ConstellationConvertError> {
         let epoch = constellation.epoch();
         let origin = constellation.origin();
@@ -485,33 +482,33 @@ impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send +
 
             let orbit_source = match propagator_kind {
                 ConstellationPropagator::Vallado => {
-                    let v = DynVallado::try_new(cartesian_orbit)
+                    let v = Vallado::try_new(cartesian_orbit)
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
                     OrbitSource::Vallado(v)
                 }
                 ConstellationPropagator::Numerical => {
-                    let n = DynNumericalPropagator::try_new(cartesian_orbit)
+                    let n = NumericalPropagator::try_new(cartesian_orbit)
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
                     OrbitSource::Numerical(n)
                 }
                 ConstellationPropagator::J2 => {
-                    let p = DynJ2Propagator::try_new(cartesian_orbit)
+                    let p = J2Propagator::try_new(cartesian_orbit)
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
                     OrbitSource::J2(p)
                 }
                 ConstellationPropagator::J2Osc => {
-                    let p = DynJ2Propagator::try_new(cartesian_orbit)
+                    let p = J2Propagator::try_new(cartesian_orbit)
                         .map(|p| p.with_osculating(true))
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
                     OrbitSource::J2(p)
                 }
                 ConstellationPropagator::J4 => {
-                    let p = DynJ4Propagator::try_new(cartesian_orbit)
+                    let p = J4Propagator::try_new(cartesian_orbit)
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
                     OrbitSource::J4(p)
                 }
                 ConstellationPropagator::J4Osc => {
-                    let p = DynJ4Propagator::try_new(cartesian_orbit)
+                    let p = J4Propagator::try_new(cartesian_orbit)
                         .map(|p| p.with_osculating(true))
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
                     OrbitSource::J4(p)
@@ -528,7 +525,7 @@ impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send +
     }
 
     /// Returns the constellations in this scenario.
-    pub fn constellations(&self) -> &[DynConstellation] {
+    pub fn constellations(&self) -> &[Constellation] {
         &self.constellations
     }
 
@@ -546,7 +543,7 @@ impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send +
     /// trajectories to the scenario's frame using the provided rotation
     /// `provider`.
     ///
-    /// Internally, each spacecraft's `OrbitSource` produces a `DynTrajectory`
+    /// Internally, each spacecraft's `OrbitSource` produces a `Trajectory`
     /// which is then rotated into the concrete frame `R` via the mixed
     /// `TryRotation<Frame, R, T>` impls, and finally re-tagged to
     /// `Trajectory<Tai, O, R>`.
@@ -559,9 +556,9 @@ impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send +
         P: TryRotation<Frame, R, TimeScale> + Send + Sync,
         P::Error: std::fmt::Display,
     {
-        let dyn_interval = TimeInterval::new(
-            self.interval.start().into_dyn(),
-            self.interval.end().into_dyn(),
+        let dynamic_interval = TimeInterval::new(
+            self.interval.start().into_dynamic(),
+            self.interval.end().into_dynamic(),
         );
         let origin = self.origin;
         let frame = self.frame;
@@ -571,9 +568,9 @@ impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send +
             .map(|sc| {
                 let traj = sc
                     .orbit
-                    .propagate(dyn_interval)
+                    .propagate(dynamic_interval)
                     .map_err(|e| ScenarioPropagateError::Propagate(sc.id.clone(), e))?;
-                // Rotate DynTrajectory directly into concrete frame R
+                // Rotate Trajectory directly into concrete frame R
                 // (uses mixed TryRotation<Frame, R, TimeScale>).
                 let rotated = traj.into_frame(frame, provider).map_err(|e| {
                     ScenarioPropagateError::FrameTransformation(sc.id.clone(), e.to_string())
@@ -651,7 +648,7 @@ mod tests {
     use lox_orbits::ground::GroundLocation;
     use lox_time::deltas::TimeDelta;
 
-    fn dummy_location() -> DynGroundLocation {
+    fn dummy_location() -> GroundLocation {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         GroundLocation::try_new(coords, Origin::Earth).unwrap()
     }
@@ -710,7 +707,7 @@ mod tests {
     #[cfg(feature = "comms")]
     #[test]
     fn test_spacecraft_terminals() {
-        let traj = lox_orbits::orbits::DynTrajectory::from_csv_dyn(
+        let traj = lox_orbits::orbits::Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
             Frame::Icrf,
@@ -790,7 +787,7 @@ mod tests {
         let start = Time::j2000(Tai);
         let end = start + TimeDelta::from_seconds(86400);
         let scenario =
-            DynScenario::new(start, end, Origin::Earth, Frame::Icrf).with_ground_stations(&[gs]);
+            Scenario::new(start, end, Origin::Earth, Frame::Icrf).with_ground_stations(&[gs]);
         let filtered = scenario.filter_by_networks(&[NetworkId::new("estrack")]);
         assert_eq!(filtered.ground_stations().len(), 1);
     }
@@ -813,7 +810,7 @@ mod tests {
 
     #[test]
     fn test_spacecraft_new() {
-        let traj = lox_orbits::orbits::DynTrajectory::from_csv_dyn(
+        let traj = lox_orbits::orbits::Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
             Frame::Icrf,
@@ -827,7 +824,7 @@ mod tests {
 
     #[test]
     fn test_spacecraft_with_max_slew_rate() {
-        let traj = lox_orbits::orbits::DynTrajectory::from_csv_dyn(
+        let traj = lox_orbits::orbits::Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
             Frame::Icrf,
@@ -840,7 +837,7 @@ mod tests {
 
     #[test]
     fn test_spacecraft_with_constellation_id() {
-        let traj = lox_orbits::orbits::DynTrajectory::from_csv_dyn(
+        let traj = lox_orbits::orbits::Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
             Frame::Icrf,
@@ -853,7 +850,7 @@ mod tests {
 
     #[test]
     fn test_spacecraft_orbit_getter() {
-        let traj = lox_orbits::orbits::DynTrajectory::from_csv_dyn(
+        let traj = lox_orbits::orbits::Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
             Frame::Icrf,
@@ -869,7 +866,7 @@ mod tests {
     fn test_scenario_construction() {
         let start = Time::j2000(Tai);
         let end = start + TimeDelta::from_seconds(86400);
-        let scenario = DynScenario::new(start, end, Origin::Earth, Frame::Icrf);
+        let scenario = Scenario::new(start, end, Origin::Earth, Frame::Icrf);
         assert_eq!(scenario.origin(), Origin::Earth);
         assert_eq!(scenario.frame(), Frame::Icrf);
         assert!(scenario.spacecraft().is_empty());
@@ -881,14 +878,14 @@ mod tests {
         let start = Time::j2000(Tai);
         let end = start + TimeDelta::from_seconds(86400);
         let gs = GroundStation::new("gs1", dummy_location(), dummy_mask());
-        let traj = lox_orbits::orbits::DynTrajectory::from_csv_dyn(
+        let traj = lox_orbits::orbits::Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
             Frame::Icrf,
         )
         .unwrap();
         let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(traj));
-        let scenario = DynScenario::new(start, end, Origin::Earth, Frame::Icrf)
+        let scenario = Scenario::new(start, end, Origin::Earth, Frame::Icrf)
             .with_ground_stations(&[gs])
             .with_spacecraft(&[sc]);
         assert_eq!(scenario.ground_stations().len(), 1);
@@ -899,7 +896,7 @@ mod tests {
     fn test_scenario_filter_by_constellations() {
         let start = Time::j2000(Tai);
         let end = start + TimeDelta::from_seconds(86400);
-        let traj = lox_orbits::orbits::DynTrajectory::from_csv_dyn(
+        let traj = lox_orbits::orbits::Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
             Frame::Icrf,
@@ -909,7 +906,7 @@ mod tests {
             .with_constellation_id("oneweb");
         let sc2 = Spacecraft::new("sc2", OrbitSource::Trajectory(traj));
         let scenario =
-            DynScenario::new(start, end, Origin::Earth, Frame::Icrf).with_spacecraft(&[sc1, sc2]);
+            Scenario::new(start, end, Origin::Earth, Frame::Icrf).with_spacecraft(&[sc1, sc2]);
         let filtered = scenario.filter_by_constellations(&[ConstellationId::new("oneweb")]);
         assert_eq!(filtered.spacecraft().len(), 1);
         assert_eq!(filtered.spacecraft()[0].id().as_str(), "sc1");
@@ -922,8 +919,8 @@ mod tests {
         let gs1 =
             GroundStation::new("gs1", dummy_location(), dummy_mask()).with_network_id("estrack");
         let gs2 = GroundStation::new("gs2", dummy_location(), dummy_mask());
-        let scenario = DynScenario::new(start, end, Origin::Earth, Frame::Icrf)
-            .with_ground_stations(&[gs1, gs2]);
+        let scenario =
+            Scenario::new(start, end, Origin::Earth, Frame::Icrf).with_ground_stations(&[gs1, gs2]);
         let filtered = scenario.filter_by_networks(&[NetworkId::new("estrack")]);
         assert_eq!(filtered.ground_stations().len(), 1);
         assert_eq!(filtered.ground_stations()[0].id().as_str(), "gs1");
@@ -936,14 +933,14 @@ mod tests {
 
         let start = Time::j2000(Tai);
         let end = start + TimeDelta::from_seconds(86400);
-        let scenario = DynScenario::new(start, end, Origin::Earth, Frame::Icrf);
+        let scenario = Scenario::new(start, end, Origin::Earth, Frame::Icrf);
 
         let constellation = WalkerDeltaBuilder::new(6, 3)
             .with_semi_major_axis(7000.0_f64.km(), 0.0)
             .with_inclination(53.0_f64.deg())
             .build_constellation("test", start, Origin::Earth, Frame::Icrf)
             .unwrap()
-            .into_dyn();
+            .into_dynamic();
 
         let scenario = scenario.with_constellation(constellation).unwrap();
         assert_eq!(scenario.spacecraft().len(), 6);
@@ -957,14 +954,14 @@ mod tests {
     fn test_scenario_interval() {
         let start = Time::j2000(Tai);
         let end = start + TimeDelta::from_seconds(86400);
-        let scenario = DynScenario::new(start, end, Origin::Earth, Frame::Icrf);
+        let scenario = Scenario::new(start, end, Origin::Earth, Frame::Icrf);
         assert_eq!(scenario.interval().start(), start);
         assert_eq!(scenario.interval().end(), end);
     }
 
     #[test]
     fn test_scenario_propagate() {
-        let traj = lox_orbits::orbits::DynTrajectory::from_csv_dyn(
+        let traj = lox_orbits::orbits::Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
             Frame::Icrf,
@@ -973,8 +970,7 @@ mod tests {
         let start = traj.start_time().to_scale(Tai);
         let end = traj.end_time().to_scale(Tai);
         let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(traj));
-        let scenario =
-            DynScenario::new(start, end, Origin::Earth, Frame::Icrf).with_spacecraft(&[sc]);
+        let scenario = Scenario::new(start, end, Origin::Earth, Frame::Icrf).with_spacecraft(&[sc]);
         let ensemble = scenario
             .propagate(&lox_frames::providers::DefaultRotationProvider)
             .unwrap();

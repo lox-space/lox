@@ -170,21 +170,21 @@ mod frame_benches {
     // Difference vs. the typed group is the dispatch overhead (Python's path).
 
     #[divan::bench]
-    fn dyn_icrf_to_itrf(bencher: Bencher) {
+    fn dynamic_icrf_to_itrf(bencher: Bencher) {
         let t = epoch();
         bencher
             .bench(|| DefaultRotationProvider.try_rotation(Frame::Icrf, Frame::Itrf, black_box(t)));
     }
 
     #[divan::bench]
-    fn dyn_icrf_to_tod(bencher: Bencher) {
+    fn dynamic_icrf_to_tod(bencher: Bencher) {
         let t = epoch();
         let target = Frame::Tod(ReferenceSystem::Iers2003(Iau2000Model::A));
         bencher.bench(|| DefaultRotationProvider.try_rotation(Frame::Icrf, target, black_box(t)));
     }
 
     #[divan::bench]
-    fn dyn_icrf_to_iau_earth(bencher: Bencher) {
+    fn dynamic_icrf_to_iau_earth(bencher: Bencher) {
         let t = epoch();
         let target = Frame::Iau(Earth.into());
         bencher.bench(|| DefaultRotationProvider.try_rotation(Frame::Icrf, target, black_box(t)));
@@ -192,7 +192,7 @@ mod frame_benches {
 
     // The SGP4 hot path: TEME state (dynamic frame) converted to ICRF.
     #[divan::bench]
-    fn dyn_teme_to_icrf(bencher: Bencher) {
+    fn dynamic_teme_to_icrf(bencher: Bencher) {
         let t = epoch();
         bencher
             .bench(|| DefaultRotationProvider.try_rotation(Frame::Teme, Frame::Icrf, black_box(t)));

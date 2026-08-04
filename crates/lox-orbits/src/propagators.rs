@@ -8,12 +8,12 @@ use lox_time::Time;
 use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 
-use crate::orbits::{CartesianOrbit, DynTrajectory, Trajectory, TrajectoryError};
+use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
 
-use self::j2::{DynJ2Propagator, J2Error};
-use self::j4::{DynJ4Propagator, J4Error};
-use self::numerical::{DynNumericalPropagator, NumericalError};
-use self::semi_analytical::{DynVallado, ValladoError};
+use self::j2::{J2Error, J2Propagator};
+use self::j4::{J4Error, J4Propagator};
+use self::numerical::{NumericalError, NumericalPropagator};
+use self::semi_analytical::{Vallado, ValladoError};
 use self::sgp4::{Sgp4, Sgp4Error};
 
 /// Analytical J2 orbit propagators (Kozai secular ± Kwok short-period).
@@ -65,7 +65,7 @@ where
 }
 
 /// An orbit source that can be propagated over a time interval to produce
-/// a [`DynTrajectory`].
+/// a [`Trajectory`].
 ///
 /// Wraps the concrete propagator types (SGP4, Vallado, Numerical) or a
 /// pre-computed trajectory.
@@ -75,15 +75,15 @@ pub enum OrbitSource {
     /// SGP4 propagator initialized from a TLE.
     Sgp4(Sgp4),
     /// Vallado universal-variable Keplerian propagator.
-    Vallado(DynVallado),
+    Vallado(Vallado),
     /// Numerical orbit propagator.
-    Numerical(DynNumericalPropagator),
+    Numerical(NumericalPropagator),
     /// Kozai J2 propagator (secular, optionally osculating).
-    J2(DynJ2Propagator),
+    J2(J2Propagator),
     /// Kozai J4 propagator (secular, optionally osculating).
-    J4(DynJ4Propagator),
+    J4(J4Propagator),
     /// Pre-computed trajectory used as-is.
-    Trajectory(DynTrajectory),
+    Trajectory(Trajectory),
 }
 
 /// Errors that can occur when propagating an [`OrbitSource`].
@@ -108,11 +108,11 @@ pub enum PropagateError {
 
 impl OrbitSource {
     /// Propagate the orbit source over the given interval, returning a
-    /// [`DynTrajectory`] in the source's native reference frame.
+    /// [`Trajectory`] in the source's native reference frame.
     pub fn propagate(
         &self,
         interval: TimeInterval<TimeScale>,
-    ) -> Result<DynTrajectory, PropagateError> {
+    ) -> Result<Trajectory, PropagateError> {
         match self {
             Self::Sgp4(sgp4) => {
                 let tai_interval = TimeInterval::new(
@@ -120,7 +120,7 @@ impl OrbitSource {
                     interval.end().to_scale(lox_time::time_scales::Tai),
                 );
                 let traj = Propagator::propagate(sgp4, tai_interval)?;
-                Ok(traj.into_dyn())
+                Ok(traj.into_dynamic())
             }
             Self::Vallado(v) => Ok(Propagator::propagate(v, interval)?),
             Self::Numerical(n) => Ok(Propagator::propagate(n, interval)?),
@@ -138,8 +138,8 @@ mod tests {
     use lox_frames::Frame;
     use lox_time::time_scales::TimeScale;
 
-    fn make_trajectory() -> DynTrajectory {
-        DynTrajectory::from_csv_dyn(
+    fn make_trajectory() -> Trajectory {
+        Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
             Frame::Icrf,

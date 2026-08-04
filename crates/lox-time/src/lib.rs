@@ -62,4 +62,4 @@ pub mod time_scales;
 /// Coordinated Universal Time (UTC) with leap-second support.
 pub mod utc;
 
-pub use time::{DynTime, Time, TimeBuilder, TimeError, TimeScaleMismatch};
+pub use time::{Time, TimeBuilder, TimeError, TimeScaleMismatch};

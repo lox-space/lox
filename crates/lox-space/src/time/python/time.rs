@@ -20,7 +20,7 @@ use crate::time::python::deltas::{PyInvalidFloatSeconds, PyTimeDelta};
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
 use crate::time::time_scales::Tai;
 use crate::time::utc::transformations::ToUtc;
-use crate::time::{DynTime, Time, TimeError, TimeScaleMismatch};
+use crate::time::{Time, TimeError, TimeScaleMismatch};
 
 use super::time_scales::PyTimeScale;
 use super::utc::PyUtc;
@@ -97,7 +97,7 @@ impl FromStr for PyUnit {
 ///     UTC: For UTC time with leap second handling.
 #[pyclass(name = "Time", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug, Eq, PartialEq, ApproxEq)]
-pub struct PyTime(pub DynTime);
+pub struct PyTime(pub Time);
 
 #[pymethods]
 impl PyTime {

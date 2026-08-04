@@ -20,9 +20,9 @@ use lox_time::offsets::{DefaultOffsetProvider, Offset};
 use lox_time::time_scales::{ContinuousTimeScale, Tdb};
 use thiserror::Error;
 
-use crate::ground::{DynGroundLocation, GroundLocation};
+use crate::ground::GroundLocation;
 
-use super::{CartesianOrbit, DynCartesianOrbit, KeplerianOrbit, Orbit};
+use super::{CartesianOrbit, KeplerianOrbit, Orbit};
 
 impl<T, O, R> CartesianOrbit<T, O, R>
 where
@@ -125,7 +125,7 @@ where
 
 /// Errors that can occur when converting a dynamic Cartesian orbit to a ground location.
 #[derive(Debug, Error)]
-pub enum StateToDynGroundError {
+pub enum StateToGroundError {
     /// The origin body does not define equatorial radius and flattening.
     #[error("equatorial radius and flattening factor are not available for origin `{}`", .0.name())]
     UndefinedSpheroid(Origin),
@@ -185,13 +185,13 @@ where
     }
 }
 
-impl DynCartesianOrbit {
+impl CartesianOrbit {
     /// Transforms this dynamic orbit to a different central body origin using an ephemeris.
     pub fn try_to_origin<E: Ephemeris>(
         &self,
         target: Origin,
         ephemeris: &E,
-    ) -> Result<DynCartesianOrbit, E::Error> {
+    ) -> Result<CartesianOrbit, E::Error> {
         if self.origin() == target {
             return Ok(CartesianOrbit::new(
                 self.state(),
@@ -214,20 +214,20 @@ impl DynCartesianOrbit {
     }
 
     /// Converts this dynamic Cartesian orbit to a ground location.
-    pub fn try_to_ground_location(&self) -> Result<DynGroundLocation, StateToDynGroundError> {
+    pub fn try_to_ground_location(&self) -> Result<GroundLocation, StateToGroundError> {
         let frame = self.reference_frame();
         let origin = self.origin();
         if frame.try_body_fixed().is_err() {
-            return Err(StateToDynGroundError::NonBodyFixedFrame(
+            return Err(StateToGroundError::NonBodyFixedFrame(
                 frame.name().to_string(),
             ));
         }
         let ellipsoid = origin
             .try_ellipsoid()
-            .map_err(|_| StateToDynGroundError::UndefinedSpheroid(origin))?;
+            .map_err(|_| StateToGroundError::UndefinedSpheroid(origin))?;
 
         let coords = LonLatAlt::from_body_fixed(self.position(), &ellipsoid)?;
-        Ok(DynGroundLocation::try_new(coords, origin).unwrap())
+        Ok(GroundLocation::try_new(coords, origin).unwrap())
     }
 
     /// Returns the LVLH rotation matrix, returning an error if the frame is not ICRF.
@@ -413,7 +413,7 @@ mod tests {
     }
 
     #[test]
-    fn test_into_dyn() {
+    fn test_into_dynamic() {
         use lox_bodies::Origin;
         use lox_frames::Frame;
         use lox_time::time_scales::TimeScale;
@@ -422,13 +422,13 @@ mod tests {
         let pos = DVec3::new(1000.0, 2000.0, 3000.0);
         let vel = DVec3::new(1.0, 2.0, 3.0);
         let state = CartesianOrbit::new(Cartesian::from_vecs(pos, vel), time, Earth, Icrf);
-        let dyn_state = state.into_dyn();
+        let dynamic_state = state.into_dynamic();
 
-        assert_eq!(dyn_state.origin(), Origin::Earth);
-        assert_eq!(dyn_state.reference_frame(), Frame::Icrf);
-        assert_eq!(dyn_state.time().scale(), TimeScale::Tdb);
-        assert_approx_eq!(dyn_state.position(), pos);
-        assert_approx_eq!(dyn_state.velocity(), vel);
+        assert_eq!(dynamic_state.origin(), Origin::Earth);
+        assert_eq!(dynamic_state.reference_frame(), Frame::Icrf);
+        assert_eq!(dynamic_state.time().scale(), TimeScale::Tdb);
+        assert_approx_eq!(dynamic_state.position(), pos);
+        assert_approx_eq!(dynamic_state.velocity(), vel);
     }
 
     #[test]
@@ -438,7 +438,7 @@ mod tests {
 
         let time = Utc::from_iso("2024-07-05T09:09:18.173")
             .unwrap()
-            .to_dyn_time();
+            .to_dynamic_time();
         let pos = DVec3::new(6068.27927, -1692.84394, -2516.61918);
         let vel = DVec3::new(-0.660415582, 5.495938726, -5.303093233);
         let state = CartesianOrbit::new(
@@ -478,7 +478,7 @@ mod tests {
         let r = DVec3::new(6068279.27, -1692843.94, -2516619.18);
         let v = DVec3::new(-660.415582, 5495.938726, -5303.093233);
         let utc = Utc::from_iso("2016-05-30T12:00:00.000").unwrap();
-        let time = utc.to_dyn_time();
+        let time = utc.to_dynamic_time();
 
         let state =
             CartesianOrbit::new(Cartesian::from_vecs(r, v), time, Origin::Earth, Frame::Icrf);

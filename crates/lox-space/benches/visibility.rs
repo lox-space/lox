@@ -30,7 +30,7 @@ fn main() {
 
 #[divan::bench]
 fn visibility_single_pair(bencher: Bencher) {
-    let (scenario, ensemble) = common::setup_dyn();
+    let (scenario, ensemble) = common::setup_dynamic();
     bencher.bench(|| {
         VisibilityAnalysis::new(&scenario, &ensemble)
             .compute()
@@ -40,7 +40,7 @@ fn visibility_single_pair(bencher: Bencher) {
 
 #[divan::bench]
 fn visibility_single_pair_min_pass_5m(bencher: Bencher) {
-    let (scenario, ensemble) = common::setup_dyn();
+    let (scenario, ensemble) = common::setup_dynamic();
     bencher.bench(|| {
         VisibilityAnalysis::new(&scenario, &ensemble)
             .with_min_pass_duration(TimeDelta::from_seconds(300))
@@ -52,7 +52,7 @@ fn visibility_single_pair_min_pass_5m(bencher: Bencher) {
 #[divan::bench]
 fn visibility_single_pair_with_los(bencher: Bencher) {
     let spk = common::ephemeris();
-    let (scenario, ensemble) = common::setup_dyn();
+    let (scenario, ensemble) = common::setup_dynamic();
     bencher.bench(|| {
         VisibilityAnalysis::new(&scenario, &ensemble)
             .with_occulting_bodies(spk, vec![Origin::Moon])
@@ -64,7 +64,7 @@ fn visibility_single_pair_with_los(bencher: Bencher) {
 #[divan::bench]
 fn visibility_single_pair_with_los_min_pass_5m(bencher: Bencher) {
     let spk = common::ephemeris();
-    let (scenario, ensemble) = common::setup_dyn();
+    let (scenario, ensemble) = common::setup_dynamic();
     bencher.bench(|| {
         VisibilityAnalysis::new(&scenario, &ensemble)
             .with_occulting_bodies(spk, vec![Origin::Moon])
@@ -241,7 +241,7 @@ fn groundspace_scaling(bencher: Bencher, n: usize) {
 // `results` is computed once, outside the timed region).
 #[divan::bench]
 fn to_passes(bencher: Bencher) {
-    let (scenario, ensemble) = common::setup_dyn();
+    let (scenario, ensemble) = common::setup_dynamic();
     let results = VisibilityAnalysis::new(&scenario, &ensemble)
         .compute()
         .unwrap();
@@ -250,7 +250,7 @@ fn to_passes(bencher: Bencher) {
 
 #[divan::bench(sample_size = 1000)]
 fn pass_interpolate(bencher: Bencher) {
-    let (scenario, ensemble) = common::setup_dyn();
+    let (scenario, ensemble) = common::setup_dynamic();
     let analysis = VisibilityAnalysis::new(&scenario, &ensemble);
     let results = analysis.compute().unwrap();
     let passes = analysis.to_passes(&results);

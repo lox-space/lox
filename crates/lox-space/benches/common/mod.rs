@@ -19,7 +19,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use lox_space::analysis::assets::{AssetId, DynScenario, GroundStation, Scenario, Spacecraft};
+use lox_space::analysis::assets::{AssetId, GroundStation, Scenario, Spacecraft};
 use lox_space::analysis::visibility::ElevationMask;
 use lox_space::bodies::{Earth, Origin};
 use lox_space::core::coords::LonLatAlt;
@@ -30,12 +30,12 @@ use lox_space::frames::{Frame, Icrf};
 use lox_space::orbits::ground::GroundLocation;
 use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
 use lox_space::orbits::propagators::{OrbitSource, Propagator};
-use lox_space::orbits::{DynTrajectory, Ensemble, Trajectory};
+use lox_space::orbits::{Ensemble, Trajectory};
 use lox_space::time::deltas::TimeDelta;
 use lox_space::time::intervals::{Interval, TimeInterval};
 use lox_space::time::time_scales::Tai;
 
-pub type DynEnsemble = Ensemble<AssetId, Tai, Origin, Frame>;
+pub type DynamicEnsemble = Ensemble<AssetId, Tai, Origin, Frame>;
 pub type MonoEnsemble = Ensemble<AssetId, Tai, Earth, Icrf>;
 /// A parsed TLE: `(name, line1, line2)`.
 pub type TleEntry = (String, Vec<u8>, Vec<u8>);
@@ -47,11 +47,11 @@ pub fn ephemeris() -> &'static Spk {
 }
 
 // ---------------------------------------------------------------------------
-// Single ground-space pair (lunar trajectory + Cebreros) — dyn and mono
+// Single ground-space pair (lunar trajectory + Cebreros) — dynamic and mono
 // ---------------------------------------------------------------------------
 
-fn spacecraft_trajectory_dyn() -> DynTrajectory {
-    DynTrajectory::from_csv_dyn(
+fn spacecraft_trajectory_dynamic() -> Trajectory {
+    Trajectory::from_csv_dynamic(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
         Origin::Earth,
         Frame::Icrf,
@@ -59,20 +59,20 @@ fn spacecraft_trajectory_dyn() -> DynTrajectory {
     .unwrap()
 }
 
-fn ground_location_dyn() -> GroundLocation<Origin> {
+fn ground_location_dynamic() -> GroundLocation<Origin> {
     let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
     GroundLocation::try_new(coords, Origin::Earth).unwrap()
 }
 
 /// Ground-space scenario over the lunar trajectory using dynamic dispatch.
-pub fn setup_dyn() -> (DynScenario, DynEnsemble) {
-    let sc_traj = spacecraft_trajectory_dyn();
-    let gs_loc = ground_location_dyn();
+pub fn setup_dynamic() -> (Scenario, DynamicEnsemble) {
+    let sc_traj = spacecraft_trajectory_dynamic();
+    let gs_loc = ground_location_dynamic();
     let mask = ElevationMask::with_fixed_elevation(0.0);
     let gs = GroundStation::new("cebreros", gs_loc, mask);
     let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
     let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj));
-    let scenario = DynScenario::new(
+    let scenario = Scenario::new(
         interval.start().to_scale(Tai),
         interval.end().to_scale(Tai),
         Origin::Earth,
@@ -105,8 +105,8 @@ pub fn setup_mono() -> (Scenario<Earth, Icrf>, MonoEnsemble) {
     let gs_loc = ground_location_mono();
     let mask = ElevationMask::with_fixed_elevation(0.0);
     let interval = TimeInterval::new(traj.start_time(), traj.end_time());
-    let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(traj.into_dyn()));
-    let gs = GroundStation::new("cebreros", gs_loc.into_dyn(), mask);
+    let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(traj.into_dynamic()));
+    let gs = GroundStation::new("cebreros", gs_loc.into_dynamic(), mask);
     let scenario = Scenario::new(interval.start(), interval.end(), Earth, Icrf)
         .with_spacecraft(&[sc])
         .with_ground_stations(&[gs]);
@@ -140,9 +140,9 @@ pub fn oneweb_tles() -> &'static Vec<TleEntry> {
 
 /// SGP4-propagate the first `n` OneWeb spacecraft over a `window_hours` window.
 ///
-/// Returns the propagated `DynTrajectory` for each, sharing a common interval
+/// Returns the propagated `Trajectory` for each, sharing a common interval
 /// (the latest TLE epoch as start, so every element is valid).
-pub fn propagate_oneweb_trajectories(n: usize, window_hours: i64) -> Vec<(String, DynTrajectory)> {
+pub fn propagate_oneweb_trajectories(n: usize, window_hours: i64) -> Vec<(String, Trajectory)> {
     let tles = oneweb_tles();
     let n = n.min(tles.len());
     let propagators: Vec<(String, Sgp4)> = tles[..n]
@@ -167,23 +167,23 @@ pub fn propagate_oneweb_trajectories(n: usize, window_hours: i64) -> Vec<(String
                 .with_step(TimeDelta::from_seconds(10))
                 .propagate(interval)
                 .unwrap()
-                .into_dyn();
+                .into_dynamic();
             (name, traj)
         })
         .collect()
 }
 
-/// Assemble a `DynScenario` + ensemble from named spacecraft (each carrying a
+/// Assemble a `Scenario` + ensemble from named spacecraft (each carrying a
 /// pre-propagated trajectory). Ground stations, if any, are added verbatim.
 pub fn assemble_scenario(
     spacecraft: Vec<Spacecraft>,
-    trajectories: Vec<DynTrajectory>,
+    trajectories: Vec<Trajectory>,
     ground_stations: &[GroundStation],
-) -> (DynScenario, DynEnsemble) {
+) -> (Scenario, DynamicEnsemble) {
     let interval = TimeInterval::new(trajectories[0].start_time(), trajectories[0].end_time());
     let tai_interval =
         TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
-    let scenario = DynScenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
+    let scenario = Scenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
         .with_spacecraft(&spacecraft)
         .with_ground_stations(ground_stations);
     let mut map = HashMap::new();
@@ -197,9 +197,9 @@ pub fn assemble_scenario(
 
 /// `n`-spacecraft OneWeb constellation, no ground stations. Used for both
 /// inter-satellite visibility scaling and power-budget scaling.
-pub fn propagate_oneweb(n: usize, window_hours: i64) -> (DynScenario, DynEnsemble) {
+pub fn propagate_oneweb(n: usize, window_hours: i64) -> (Scenario, DynamicEnsemble) {
     let trajs = propagate_oneweb_trajectories(n, window_hours);
-    let (names, trajectories): (Vec<String>, Vec<DynTrajectory>) = trajs.into_iter().unzip();
+    let (names, trajectories): (Vec<String>, Vec<Trajectory>) = trajs.into_iter().unzip();
     let spacecraft: Vec<Spacecraft> = names
         .into_iter()
         .zip(trajectories.iter())
@@ -210,7 +210,7 @@ pub fn propagate_oneweb(n: usize, window_hours: i64) -> (DynScenario, DynEnsembl
 
 /// Alias for `propagate_oneweb` with a 24 h window — the natural span for a
 /// power-budget (eclipse) analysis.
-pub fn build_power_scenario(n: usize) -> (DynScenario, DynEnsemble) {
+pub fn build_power_scenario(n: usize) -> (Scenario, DynamicEnsemble) {
     propagate_oneweb(n, 24)
 }
 
@@ -235,9 +235,9 @@ fn scaling_ground_stations() -> Vec<GroundStation> {
 
 /// `n`-spacecraft OneWeb constellation plus a 5-station ground network
 /// (`5 * n` ground-space pairs) for ground-space scaling.
-pub fn build_groundspace_scenario(n: usize) -> (DynScenario, DynEnsemble) {
+pub fn build_groundspace_scenario(n: usize) -> (Scenario, DynamicEnsemble) {
     let trajs = propagate_oneweb_trajectories(n, 2);
-    let (names, trajectories): (Vec<String>, Vec<DynTrajectory>) = trajs.into_iter().unzip();
+    let (names, trajectories): (Vec<String>, Vec<Trajectory>) = trajs.into_iter().unzip();
     let spacecraft: Vec<Spacecraft> = names
         .into_iter()
         .zip(trajectories.iter())
@@ -250,7 +250,7 @@ pub fn build_groundspace_scenario(n: usize) -> (DynScenario, DynEnsemble) {
 // Inter-satellite pair (two crossing-orbit OneWeb spacecraft)
 // ---------------------------------------------------------------------------
 
-fn oneweb_pair_trajectories() -> (DynTrajectory, DynTrajectory) {
+fn oneweb_pair_trajectories() -> (Trajectory, Trajectory) {
     let tle1 = Elements::from_tle(
         Some("ONEWEB-0012".to_string()),
         b"1 44057U 19010A   24322.58825131  .00000088  00000+0  19693-3 0  9993",
@@ -272,18 +272,18 @@ fn oneweb_pair_trajectories() -> (DynTrajectory, DynTrajectory) {
         .with_step(TimeDelta::from_seconds(10))
         .propagate(interval)
         .unwrap()
-        .into_dyn();
+        .into_dynamic();
     let traj2 = sgp4_2
         .with_step(TimeDelta::from_seconds(10))
         .propagate(interval)
         .unwrap()
-        .into_dyn();
+        .into_dynamic();
     (traj1, traj2)
 }
 
 /// Two-spacecraft inter-satellite scenario. When `slew_rate` is `Some`, both
 /// spacecraft carry that maximum slew-rate limit.
-pub fn setup_intersat_pair(slew_rate: Option<AngularRate>) -> (DynScenario, DynEnsemble) {
+pub fn setup_intersat_pair(slew_rate: Option<AngularRate>) -> (Scenario, DynamicEnsemble) {
     let (traj1, traj2) = oneweb_pair_trajectories();
     let mut sc1 = Spacecraft::new("oneweb-0012", OrbitSource::Trajectory(traj1.clone()));
     let mut sc2 = Spacecraft::new("oneweb-0017", OrbitSource::Trajectory(traj2.clone()));

@@ -4,9 +4,9 @@
 
 use lox_frames::Frame;
 use lox_orbits::constellations::{
-    ConstellationError, ConstellationPropagator,
-    ConstellationSatellite as RustConstellationSatellite, DynConstellation, FlowerBuilder,
-    StreetOfCoverageBuilder, WalkerDeltaBuilder, WalkerStarBuilder,
+    Constellation, ConstellationError, ConstellationPropagator,
+    ConstellationSatellite as RustConstellationSatellite, FlowerBuilder, StreetOfCoverageBuilder,
+    WalkerDeltaBuilder, WalkerStarBuilder,
 };
 use lox_time::time_scales::Tai;
 use lox_units::Angle;
@@ -77,7 +77,7 @@ impl PyConstellationSatellite {
 /// A named collection of satellites produced by a constellation design algorithm.
 #[pyclass(name = "Constellation", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
-pub struct PyConstellation(pub DynConstellation);
+pub struct PyConstellation(pub Constellation);
 
 #[pymethods]
 impl PyConstellation {
@@ -131,7 +131,7 @@ impl PyConstellation {
             .map_err(PyConstellationError)?;
 
         Ok(PyConstellation(
-            constellation.with_propagator(prop).into_dyn(),
+            constellation.with_propagator(prop).into_dynamic(),
         ))
     }
 
@@ -185,7 +185,7 @@ impl PyConstellation {
             .map_err(PyConstellationError)?;
 
         Ok(PyConstellation(
-            constellation.with_propagator(prop).into_dyn(),
+            constellation.with_propagator(prop).into_dynamic(),
         ))
     }
 
@@ -239,7 +239,7 @@ impl PyConstellation {
             .map_err(PyConstellationError)?;
 
         Ok(PyConstellation(
-            constellation.with_propagator(prop).into_dyn(),
+            constellation.with_propagator(prop).into_dynamic(),
         ))
     }
 
@@ -327,7 +327,7 @@ impl PyConstellation {
             .map_err(PyConstellationError)?;
 
         Ok(PyConstellation(
-            constellation.with_propagator(prop).into_dyn(),
+            constellation.with_propagator(prop).into_dynamic(),
         ))
     }
 

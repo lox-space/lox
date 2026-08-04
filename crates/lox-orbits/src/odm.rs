@@ -33,13 +33,10 @@ use lox_odm::types::oem::{Oem, OemMetadata, OemSegment};
 use lox_odm::types::omm::{Omm, OmmMeanElements, OmmMetadata};
 use lox_odm::types::opm::{Opm, OpmMetadata};
 use lox_time::offsets::{DefaultOffsetProvider, OffsetProvider};
-use lox_time::time::DynTime;
+use lox_time::time::Time;
 use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 
-use crate::orbits::{
-    CartesianOrbit, DynCartesianOrbit, DynKeplerianOrbit, DynTrajectory, KeplerianOrbit, Orbit,
-    Trajectory,
-};
+use crate::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
 use crate::propagators::sgp4::{Sgp4, Sgp4Error};
 
 /// Default value for the CCSDS `ORIGINATOR` header field used by all
@@ -54,7 +51,7 @@ fn orbit_epoch_to_odm_time<T>(time: lox_time::Time<T>) -> OdmTime
 where
     T: ContinuousTimeScale + Copy + Into<TimeScale>,
 {
-    OdmTime::Time(time.into_dyn())
+    OdmTime::Time(time.into_dynamic())
 }
 
 /// Apply an optional [`OdmTimeSystem`] override to an epoch derived from the
@@ -76,7 +73,7 @@ fn apply_time_system<P: OffsetProvider>(
 // Conversion errors
 // ----------------------------------------------------------------------------
 
-/// Error when converting an OPM to a [`DynCartesianOrbit`].
+/// Error when converting an OPM to a [`CartesianOrbit`].
 #[derive(Debug, thiserror::Error)]
 pub enum OpmFromOdmError {
     /// The OPM center body is a free-form custom name, not a known body.
@@ -87,7 +84,7 @@ pub enum OpmFromOdmError {
     CustomFrame(String),
 }
 
-/// Composite error for `DynCartesianOrbit::from_opm_str` / `from_opm_file`.
+/// Composite error for `CartesianOrbit::from_opm_str` / `from_opm_file`.
 #[derive(Debug, thiserror::Error)]
 pub enum OpmReadError {
     /// The underlying ODM parsing or I/O failed.
@@ -118,7 +115,7 @@ pub enum OpmWriteError {
     Odm(#[from] OdmError),
 }
 
-/// Error when converting an OEM segment to a [`DynTrajectory`].
+/// Error when converting an OEM segment to a [`Trajectory`].
 #[derive(Debug, thiserror::Error)]
 pub enum OemFromOdmError {
     /// The OEM center body is a free-form custom name.
@@ -135,7 +132,7 @@ pub enum OemFromOdmError {
     InsufficientStates(usize),
 }
 
-/// Composite error for `DynTrajectory::from_oem_str` / `from_oem_file`.
+/// Composite error for `Trajectory::from_oem_str` / `from_oem_file`.
 #[derive(Debug, thiserror::Error)]
 pub enum OemReadError {
     /// The underlying ODM parsing or I/O failed.
@@ -294,7 +291,7 @@ where
     ///
     /// Use this to preserve the original time system across a round-trip
     /// through a typed orbit: e.g. an OPM read with `TIME_SYSTEM = UTC`
-    /// becomes a [`DynCartesianOrbit`] in TAI (because [`TimeScale`]
+    /// becomes a [`CartesianOrbit`] in TAI (because [`TimeScale`]
     /// has no UTC variant), and setting `.time_system(OdmTimeSystem::Utc)`
     /// on the builder restores UTC on output.
     ///
@@ -372,7 +369,7 @@ where
     /// have included — `keplerian`, `covariance`, and the `maneuvers` list —
     /// are not represented in the orbit and are therefore emitted as
     /// empty/`None` regardless of what the original message contained.
-    /// Round-tripping `OPM(with maneuvers) → DynCartesianOrbit → OpmBuilder`
+    /// Round-tripping `OPM(with maneuvers) → CartesianOrbit → OpmBuilder`
     /// drops those sections.
     pub fn build(self) -> Result<Opm, OpmBuildError> {
         let epoch = apply_time_system(
@@ -453,11 +450,11 @@ where
 }
 
 // ----------------------------------------------------------------------------
-// DynCartesianOrbit from_opm methods
+// CartesianOrbit from_opm methods
 // ----------------------------------------------------------------------------
 
-impl DynCartesianOrbit {
-    /// Constructs a [`DynCartesianOrbit`] from a typed OPM.
+impl CartesianOrbit {
+    /// Constructs a [`CartesianOrbit`] from a typed OPM.
     ///
     /// Returns an error if the OPM's center or frame is `Custom` (free-form)
     /// because such names cannot be mapped to a `Origin` / `Frame`.
@@ -469,19 +466,19 @@ impl DynCartesianOrbit {
             opm.metadata.frame.known().ok_or_else(|| {
                 OpmFromOdmError::CustomFrame(opm.metadata.frame.name().into_owned())
             })?;
-        let epoch = opm.epoch.to_dyn_time();
+        let epoch = opm.epoch.to_dynamic_time();
         Ok(Orbit::from_state(opm.state, epoch, origin, frame))
     }
 
     /// Parses an OPM from `input` (auto-detecting wire format) and converts it
-    /// to a [`DynCartesianOrbit`].
+    /// to a [`CartesianOrbit`].
     pub fn from_opm_str(input: &str) -> Result<Self, OpmReadError> {
         let opm = lox_odm::read_opm(input)?;
         Ok(Self::from_opm(&opm)?)
     }
 
     /// Reads an OPM from a file (auto-detecting format) and converts it to a
-    /// [`DynCartesianOrbit`].
+    /// [`CartesianOrbit`].
     pub fn from_opm_file(path: impl AsRef<Path>) -> Result<Self, OpmReadError> {
         let opm = lox_odm::read_opm_file(path)?;
         Ok(Self::from_opm(&opm)?)
@@ -813,11 +810,11 @@ where
 }
 
 // ----------------------------------------------------------------------------
-// DynTrajectory from_oem methods
+// Trajectory from_oem methods
 // ----------------------------------------------------------------------------
 
-impl DynTrajectory {
-    /// Constructs a [`DynTrajectory`] from a typed OEM (first segment).
+impl Trajectory {
+    /// Constructs a [`Trajectory`] from a typed OEM (first segment).
     ///
     /// Returns an error if the OEM has no segments or fewer than 2 state
     /// vectors in the first segment.
@@ -826,7 +823,7 @@ impl DynTrajectory {
         Self::from_oem_segment(segment)
     }
 
-    /// Constructs a [`DynTrajectory`] from a specific OEM segment.
+    /// Constructs a [`Trajectory`] from a specific OEM segment.
     pub fn from_oem_segment(segment: &OemSegment) -> Result<Self, OemFromOdmError> {
         let origin = segment.metadata.center.known().ok_or_else(|| {
             OemFromOdmError::CustomCenter(segment.metadata.center.name().into_owned())
@@ -843,7 +840,7 @@ impl DynTrajectory {
             .states
             .iter()
             .map(|(odm_time, state)| {
-                let epoch: DynTime = odm_time.to_dyn_time();
+                let epoch: Time = odm_time.to_dynamic_time();
                 Orbit::from_state(*state, epoch, origin, frame)
             })
             .collect();
@@ -852,14 +849,14 @@ impl DynTrajectory {
     }
 
     /// Parses an OEM from `input` (auto-detecting wire format) and converts it
-    /// to a [`DynTrajectory`] (first segment).
+    /// to a [`Trajectory`] (first segment).
     pub fn from_oem_str(input: &str) -> Result<Self, OemReadError> {
         let oem = lox_odm::read_oem(input)?;
         Ok(Self::from_oem(&oem)?)
     }
 
     /// Reads an OEM from a file (auto-detecting format) and converts it to a
-    /// [`DynTrajectory`] (first segment).
+    /// [`Trajectory`] (first segment).
     pub fn from_oem_file(path: impl AsRef<Path>) -> Result<Self, OemReadError> {
         let oem = lox_odm::read_oem_file(path)?;
         Ok(Self::from_oem(&oem)?)
@@ -894,7 +891,7 @@ pub enum OmmFromOdmError {
 }
 
 /// Composite error for `Sgp4::from_omm_str` / `from_omm_file` and the
-/// analogous `DynKeplerianOrbit::from_omm_*` constructors.
+/// analogous `KeplerianOrbit::from_omm_*` constructors.
 #[derive(Debug, thiserror::Error)]
 pub enum OmmReadError {
     /// The underlying ODM parsing or I/O failed.
@@ -1358,11 +1355,11 @@ where
 }
 
 // ----------------------------------------------------------------------------
-// DynKeplerianOrbit::from_omm
+// KeplerianOrbit::from_omm
 // ----------------------------------------------------------------------------
 
-impl DynKeplerianOrbit {
-    /// Constructs a [`DynKeplerianOrbit`] from a typed OMM by treating the
+impl KeplerianOrbit {
+    /// Constructs a [`KeplerianOrbit`] from a typed OMM by treating the
     /// stored mean elements as Keplerian orbital elements.
     ///
     /// **Caveat:** OMM mean elements are tuned for a specific propagation
@@ -1403,19 +1400,19 @@ impl DynKeplerianOrbit {
         // Use raw `Orbit::from_state` because TEME is not in
         // `Frame::TryQuasiInertial`'s permitted set, but for typed-view
         // purposes we still want to allow construction.
-        let time = omm.epoch.to_dyn_time();
+        let time = omm.epoch.to_dynamic_time();
         Ok(Orbit::from_state(kep, time, origin, frame))
     }
 
     /// Parses an OMM from `input` (auto-detecting wire format) and converts
-    /// it to a [`DynKeplerianOrbit`].
+    /// it to a [`KeplerianOrbit`].
     pub fn from_omm_str(input: &str) -> Result<Self, OmmReadError> {
         let omm = lox_odm::read_omm(input)?;
         Ok(Self::from_omm(&omm)?)
     }
 
     /// Reads an OMM from a file (auto-detecting format) and converts it to
-    /// a [`DynKeplerianOrbit`].
+    /// a [`KeplerianOrbit`].
     pub fn from_omm_file(path: impl AsRef<Path>) -> Result<Self, OmmReadError> {
         let omm = lox_odm::read_omm_file(path)?;
         Ok(Self::from_omm(&omm)?)
@@ -1481,10 +1478,10 @@ mod tests {
         time!(Tai, 2024, 1, 1, 0, 0, 0.0).unwrap()
     }
 
-    fn sample_dyn_orbit() -> DynCartesianOrbit {
+    fn sample_dynamic_orbit() -> CartesianOrbit {
         Orbit::from_state(
             sample_cartesian(),
-            sample_epoch_tai().into_dyn(),
+            sample_epoch_tai().into_dynamic(),
             Origin::Earth,
             Frame::Icrf,
         )
@@ -1494,9 +1491,9 @@ mod tests {
         Orbit::from_state(sample_cartesian(), sample_epoch_tai(), Earth, Icrf)
     }
 
-    fn sample_dyn_trajectory() -> DynTrajectory {
+    fn sample_dynamic_trajectory() -> Trajectory {
         use lox_time::deltas::TimeDelta;
-        let t0 = sample_epoch_tai().into_dyn();
+        let t0 = sample_epoch_tai().into_dynamic();
         let t1 = t0 + TimeDelta::from_seconds(60);
         let t2 = t0 + TimeDelta::from_seconds(120);
         let s0 = Orbit::from_state(sample_cartesian(), t0, Origin::Earth, Frame::Icrf);
@@ -1534,8 +1531,8 @@ mod tests {
     // -------------------------------------------------------------------------
 
     #[test]
-    fn to_opm_from_dyn_orbit() {
-        let orbit = sample_dyn_orbit();
+    fn to_opm_from_dynamic_orbit() {
+        let orbit = sample_dynamic_orbit();
         let opm = orbit
             .build_opm("TEST-SAT", "2024-000A")
             .originator("TEST_ORG")
@@ -1551,7 +1548,7 @@ mod tests {
 
     #[test]
     fn opm_builder_uses_default_originator() {
-        let opm = sample_dyn_orbit()
+        let opm = sample_dynamic_orbit()
             .build_opm("TEST-SAT", "2024-000A")
             .build()
             .unwrap();
@@ -1573,7 +1570,7 @@ mod tests {
 
     #[test]
     fn to_opm_str_round_trip_kvn() {
-        let orbit = sample_dyn_orbit();
+        let orbit = sample_dynamic_orbit();
         let kvn = orbit
             .build_opm("TEST-SAT", "2024-000A")
             .originator("TEST_ORG")
@@ -1585,14 +1582,14 @@ mod tests {
     }
 
     #[test]
-    fn from_opm_reconstructs_dyn_orbit() {
-        let orbit = sample_dyn_orbit();
+    fn from_opm_reconstructs_dynamic_orbit() {
+        let orbit = sample_dynamic_orbit();
         let opm = orbit
             .build_opm("TEST-SAT", "2024-000A")
             .originator("TEST_ORG")
             .build()
             .unwrap();
-        let reconstructed = DynCartesianOrbit::from_opm(&opm).unwrap();
+        let reconstructed = CartesianOrbit::from_opm(&opm).unwrap();
         assert_eq!(reconstructed.origin(), Origin::Earth);
         assert_eq!(reconstructed.reference_frame(), Frame::Icrf);
         assert_eq!(reconstructed.state(), orbit.state());
@@ -1600,19 +1597,19 @@ mod tests {
 
     #[test]
     fn from_opm_str_kvn() {
-        let orbit = sample_dyn_orbit();
+        let orbit = sample_dynamic_orbit();
         let kvn = orbit
             .build_opm("TEST-SAT", "2024-000A")
             .originator("TEST_ORG")
             .write_str(Format::Kvn)
             .unwrap();
-        let reconstructed = DynCartesianOrbit::from_opm_str(&kvn).unwrap();
+        let reconstructed = CartesianOrbit::from_opm_str(&kvn).unwrap();
         assert_eq!(reconstructed.state(), orbit.state());
     }
 
     #[test]
     fn opm_builder_propagates_offset_provider_failure() {
-        let err = sample_dyn_orbit()
+        let err = sample_dynamic_orbit()
             .build_opm("SAT", "2024-000A")
             .offset_provider(FailingUt1Provider)
             .time_system(OdmTimeSystem::Ut1)
@@ -1629,7 +1626,7 @@ mod tests {
 
     #[test]
     fn opm_builder_write_str_propagates_offset_provider_failure() {
-        let err = sample_dyn_orbit()
+        let err = sample_dynamic_orbit()
             .build_opm("SAT", "2024-000A")
             .offset_provider(FailingUt1Provider)
             .time_system(OdmTimeSystem::Ut1)
@@ -1645,7 +1642,7 @@ mod tests {
     fn from_opm_errors_on_custom_center() {
         use lox_odm::types::opm::OpmMetadata;
         use std::collections::BTreeMap;
-        let time = sample_epoch_tai().into_dyn();
+        let time = sample_epoch_tai().into_dynamic();
         let epoch = OdmTime::Time(time);
         let opm = Opm {
             header: OdmHeader {
@@ -1672,7 +1669,7 @@ mod tests {
             maneuvers: Vec::new(),
             user_defined: BTreeMap::new(),
         };
-        let err = DynCartesianOrbit::from_opm(&opm).unwrap_err();
+        let err = CartesianOrbit::from_opm(&opm).unwrap_err();
         assert!(matches!(err, OpmFromOdmError::CustomCenter(_)));
     }
 
@@ -1681,8 +1678,8 @@ mod tests {
     // -------------------------------------------------------------------------
 
     #[test]
-    fn to_oem_from_dyn_trajectory() {
-        let oem = sample_dyn_trajectory()
+    fn to_oem_from_dynamic_trajectory() {
+        let oem = sample_dynamic_trajectory()
             .build_oem("TEST-SAT", "2024-000A")
             .originator("TEST_ORG")
             .build()
@@ -1695,15 +1692,15 @@ mod tests {
     }
 
     #[test]
-    fn from_oem_reconstructs_dyn_trajectory() {
-        let traj = sample_dyn_trajectory();
+    fn from_oem_reconstructs_dynamic_trajectory() {
+        let traj = sample_dynamic_trajectory();
         let expected_len = traj.states().len();
         let oem = traj
             .build_oem("TEST-SAT", "2024-000A")
             .originator("TEST_ORG")
             .build()
             .unwrap();
-        let reconstructed = DynTrajectory::from_oem(&oem).unwrap();
+        let reconstructed = Trajectory::from_oem(&oem).unwrap();
         assert_eq!(reconstructed.origin(), Origin::Earth);
         assert_eq!(reconstructed.reference_frame(), Frame::Icrf);
         assert_eq!(reconstructed.states().len(), expected_len);
@@ -1711,7 +1708,7 @@ mod tests {
 
     #[test]
     fn oem_builder_propagates_offset_provider_failure() {
-        let err = sample_dyn_trajectory()
+        let err = sample_dynamic_trajectory()
             .build_oem("SAT", "2024-000A")
             .offset_provider(FailingUt1Provider)
             .time_system(OdmTimeSystem::Ut1)
@@ -1727,7 +1724,7 @@ mod tests {
     fn from_oem_segment_specific_segment() {
         use lox_odm::types::oem::OemMetadata;
         use lox_time::deltas::TimeDelta;
-        let t0 = sample_epoch_tai().into_dyn();
+        let t0 = sample_epoch_tai().into_dynamic();
         let t1 = t0 + TimeDelta::from_seconds(60);
         let epoch0 = OdmTime::Time(t0);
         let epoch1 = OdmTime::Time(t1);
@@ -1751,14 +1748,14 @@ mod tests {
             states: vec![(epoch0, state), (epoch1, state)],
             covariance_history: Vec::new(),
         };
-        let traj = DynTrajectory::from_oem_segment(&seg).unwrap();
+        let traj = Trajectory::from_oem_segment(&seg).unwrap();
         assert_eq!(traj.states().len(), 2);
         assert_eq!(traj.origin(), Origin::Earth);
     }
 
     #[test]
     fn oem_builder_fluent_setters() {
-        let traj = sample_dyn_trajectory();
+        let traj = sample_dynamic_trajectory();
         let start_time = orbit_epoch_to_odm_time(traj.start_time());
         let stop_time = orbit_epoch_to_odm_time(traj.end_time());
         let oem = traj

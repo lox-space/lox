@@ -59,13 +59,10 @@ impl Observables {
 /// A location on the surface of a celestial body.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct GroundLocation<B: TrySpheroid> {
+pub struct GroundLocation<B: TrySpheroid = Origin> {
     coordinates: LonLatAlt,
     body: B,
 }
-
-/// Type alias for a ground location with a dynamic origin.
-pub type DynGroundLocation = GroundLocation<Origin>;
 
 /// Infallible constructor — requires compile-time `Spheroid` guarantee.
 impl<B: Spheroid> GroundLocation<B> {
@@ -88,7 +85,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
 
 impl<B: TrySpheroid + Into<Origin>> GroundLocation<B> {
     /// Converts the ground location into a dynamic representation.
-    pub fn into_dyn(self) -> DynGroundLocation {
+    pub fn into_dynamic(self) -> GroundLocation {
         GroundLocation {
             coordinates: self.coordinates,
             body: self.body.into(),
@@ -174,7 +171,7 @@ impl<B: TrySpheroid> GroundLocation<B> {
     }
 
     /// Computes topocentric observables from a dynamic Cartesian orbit.
-    pub fn observables_dyn(&self, state: crate::orbits::DynCartesianOrbit) -> Observables {
+    pub fn observables_dynamic(&self, state: crate::orbits::CartesianOrbit) -> Observables {
         self.compute_observables(state.position(), state.velocity())
     }
 }
@@ -191,14 +188,11 @@ pub enum GroundPropagatorError {
 }
 
 /// Propagator that produces a stationary body-fixed trajectory for a ground location.
-pub struct GroundPropagator<B: TrySpheroid, R: ReferenceFrame> {
+pub struct GroundPropagator<B: TrySpheroid = Origin, R: ReferenceFrame = Frame> {
     location: GroundLocation<B>,
     frame: R,
     step: Option<TimeDelta>,
 }
-
-/// Type alias for a ground propagator with dynamic origin and frame.
-pub type DynGroundPropagator = GroundPropagator<Origin, Frame>;
 
 /// Typed constructor -- for static bodies with `Spheroid + RotationalElements`.
 impl<B: Spheroid + RotationalElements> GroundPropagator<B, Iau<B>> {
@@ -223,7 +217,7 @@ impl<B: Spheroid + RotationalElements> GroundPropagator<B, Iau<B>> {
 /// is always possible.
 impl GroundPropagator<Origin, Frame> {
     /// Creates a new ground propagator for a dynamic-origin ground location.
-    pub fn new_dyn(location: GroundLocation<Origin>) -> Self {
+    pub fn new_dynamic(location: GroundLocation<Origin>) -> Self {
         let frame = Frame::Iau(location.body);
         GroundPropagator {
             location,
@@ -400,7 +394,7 @@ mod tests {
     }
 
     #[test]
-    fn test_try_new_with_dyn_origin() {
+    fn test_try_new_with_dynamic_origin() {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::try_new(coords, Origin::Earth).unwrap();
         assert_eq!(location.origin(), Origin::Earth);
@@ -414,20 +408,20 @@ mod tests {
     }
 
     #[test]
-    fn test_into_dyn_ground_location() {
+    fn test_into_dynamic_ground_location() {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::new(coords, Earth);
-        let dyn_location = location.into_dyn();
-        assert_eq!(dyn_location.origin(), Origin::Earth);
-        assert_approx_eq!(dyn_location.longitude(), -4.3676f64.to_radians());
-        assert_approx_eq!(dyn_location.latitude(), 40.4527f64.to_radians());
+        let dynamic_location = location.into_dynamic();
+        assert_eq!(dynamic_location.origin(), Origin::Earth);
+        assert_approx_eq!(dynamic_location.longitude(), -4.3676f64.to_radians());
+        assert_approx_eq!(dynamic_location.latitude(), 40.4527f64.to_radians());
     }
 
     #[test]
-    fn test_ground_propagator_try_new_with_dyn_origin() {
+    fn test_ground_propagator_try_new_with_dynamic_origin() {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::try_new(coords, Origin::Earth).unwrap();
-        let propagator = GroundPropagator::new_dyn(location);
+        let propagator = GroundPropagator::new_dynamic(location);
         let time = utc!(2022, 1, 31, 23).unwrap().to_time();
         let t1 = time + TimeDelta::from_minutes(5);
         let interval = Interval::new(time, t1);

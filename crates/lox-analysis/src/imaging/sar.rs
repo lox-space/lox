@@ -304,7 +304,7 @@ mod integration_tests {
 
     use lox_bodies::Origin;
     use lox_frames::Frame;
-    use lox_orbits::orbits::{DynTrajectory, Ensemble};
+    use lox_orbits::orbits::{Ensemble, Trajectory};
     use lox_orbits::propagators::OrbitSource;
     use lox_orbits::propagators::Propagator;
     use lox_orbits::propagators::sgp4::{Elements, Sgp4};
@@ -312,7 +312,7 @@ mod integration_tests {
     use lox_time::intervals::{Interval, TimeInterval};
     use lox_time::time_scales::{Tai, TimeScale};
 
-    use crate::assets::{AssetId, DynScenario, Spacecraft};
+    use crate::assets::{AssetId, Scenario, Spacecraft};
     use crate::imaging::AccessWindow;
     use crate::imaging::PassDirection;
     use crate::imaging::analysis::SarAccessAnalysis;
@@ -326,7 +326,7 @@ mod integration_tests {
     const S1A_LINE2: &[u8] =
         b"2 39634  98.1817 105.0000 0001300  90.0000 270.0000 14.59197557600008";
 
-    fn s1a_trajectory() -> DynTrajectory {
+    fn s1a_trajectory() -> Trajectory {
         let tle = Elements::from_tle(Some(S1A_NAME.to_string()), S1A_LINE1, S1A_LINE2).unwrap();
         let sgp4 = Sgp4::new(tle).unwrap();
         let t0 = sgp4.time();
@@ -334,7 +334,7 @@ mod integration_tests {
         sgp4.with_step(TimeDelta::from_seconds(10))
             .propagate(Interval::new(t0, t1))
             .unwrap()
-            .into_dyn()
+            .into_dynamic()
     }
 
     fn western_europe_aoi() -> Aoi {
@@ -353,10 +353,10 @@ mod integration_tests {
     fn make_scenario(
         spacecraft: &[Spacecraft],
         interval: TimeInterval<TimeScale>,
-    ) -> (DynScenario, Ensemble<AssetId, Tai, Origin, Frame>) {
+    ) -> (Scenario, Ensemble<AssetId, Tai, Origin, Frame>) {
         let tai_interval =
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
-        let scenario = DynScenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
+        let scenario = Scenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
             .with_spacecraft(spacecraft);
         let mut map = HashMap::new();
         for sc in spacecraft {
@@ -477,7 +477,7 @@ mod integration_tests {
         );
     }
 
-    fn s1a_trajectory_12h() -> DynTrajectory {
+    fn s1a_trajectory_12h() -> Trajectory {
         let tle = Elements::from_tle(Some(S1A_NAME.to_string()), S1A_LINE1, S1A_LINE2).unwrap();
         let sgp4 = Sgp4::new(tle).unwrap();
         let t0 = sgp4.time();
@@ -485,7 +485,7 @@ mod integration_tests {
         sgp4.with_step(TimeDelta::from_seconds(10))
             .propagate(Interval::new(t0, t1))
             .unwrap()
-            .into_dyn()
+            .into_dynamic()
     }
 
     #[test]

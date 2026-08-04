@@ -274,7 +274,7 @@ fn test_naif_id() {
 }
 
 #[test]
-fn test_dyn_origin() {
+fn test_dynamic_origin() {
     round_trip(&Origin::Earth);
     round_trip(&Origin::Moon);
     round_trip(&Origin::Sun);
@@ -339,7 +339,7 @@ fn test_frame_zsts_serialize_as_abbreviation() {
 }
 
 #[test]
-fn test_dyn_frame() {
+fn test_dynamic_frame() {
     round_trip(&Frame::Icrf);
     round_trip(&Frame::Itrf);
     round_trip(&Frame::Iau(Origin::Earth));
@@ -484,9 +484,9 @@ fn test_sgp4() {
 
 #[test]
 fn test_trajectory() {
-    use lox_space::orbits::DynTrajectory;
+    use lox_space::orbits::Trajectory;
 
-    let traj = DynTrajectory::from_csv_dyn(
+    let traj = Trajectory::from_csv_dynamic(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
         Origin::Earth,
         Frame::Icrf,
@@ -497,10 +497,10 @@ fn test_trajectory() {
 
 #[test]
 fn test_orbit_source_trajectory() {
-    use lox_space::orbits::DynTrajectory;
+    use lox_space::orbits::Trajectory;
     use lox_space::orbits::propagators::OrbitSource;
 
-    let traj = DynTrajectory::from_csv_dyn(
+    let traj = Trajectory::from_csv_dynamic(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
         Origin::Earth,
         Frame::Icrf,
@@ -512,7 +512,7 @@ fn test_orbit_source_trajectory() {
 #[test]
 fn test_orbit_source_vallado() {
     use lox_space::orbits::propagators::OrbitSource;
-    use lox_space::orbits::propagators::semi_analytical::DynVallado;
+    use lox_space::orbits::propagators::semi_analytical::Vallado;
 
     let t = Time::new(Tai, 0, Default::default());
     let orbit = CartesianOrbit::new(
@@ -524,7 +524,7 @@ fn test_orbit_source_vallado() {
         Earth,
         Icrf,
     );
-    let v = DynVallado::try_new(orbit.into_dyn()).unwrap();
+    let v = Vallado::try_new(orbit.into_dynamic()).unwrap();
     round_trip_no_eq(&OrbitSource::Vallado(v));
 }
 
@@ -546,7 +546,7 @@ fn test_orbit_source_sgp4() {
 #[test]
 fn test_orbit_source_numerical() {
     use lox_space::orbits::propagators::OrbitSource;
-    use lox_space::orbits::propagators::numerical::DynNumericalPropagator;
+    use lox_space::orbits::propagators::numerical::NumericalPropagator;
 
     let t = Time::new(Tai, 0, Default::default());
     let orbit = CartesianOrbit::new(
@@ -558,14 +558,14 @@ fn test_orbit_source_numerical() {
         Earth,
         Icrf,
     );
-    let p = DynNumericalPropagator::try_new(orbit.into_dyn()).unwrap();
+    let p = NumericalPropagator::try_new(orbit.into_dynamic()).unwrap();
     round_trip_no_eq(&OrbitSource::Numerical(p));
 }
 
 #[test]
 fn test_orbit_source_j2() {
     use lox_space::orbits::propagators::OrbitSource;
-    use lox_space::orbits::propagators::j2::DynJ2Propagator;
+    use lox_space::orbits::propagators::j2::J2Propagator;
 
     let t = Time::new(Tai, 0, Default::default());
     let orbit = CartesianOrbit::new(
@@ -577,14 +577,14 @@ fn test_orbit_source_j2() {
         Earth,
         Icrf,
     );
-    let p = DynJ2Propagator::try_new(orbit.into_dyn()).unwrap();
+    let p = J2Propagator::try_new(orbit.into_dynamic()).unwrap();
     round_trip_no_eq(&OrbitSource::J2(p));
 }
 
 #[test]
 fn test_orbit_source_j4() {
     use lox_space::orbits::propagators::OrbitSource;
-    use lox_space::orbits::propagators::j4::DynJ4Propagator;
+    use lox_space::orbits::propagators::j4::J4Propagator;
 
     let t = Time::new(Tai, 0, Default::default());
     let orbit = CartesianOrbit::new(
@@ -596,7 +596,7 @@ fn test_orbit_source_j4() {
         Earth,
         Icrf,
     );
-    let p = DynJ4Propagator::try_new(orbit.into_dyn()).unwrap();
+    let p = J4Propagator::try_new(orbit.into_dynamic()).unwrap();
     round_trip_no_eq(&OrbitSource::J4(p));
 }
 
@@ -739,10 +739,10 @@ fn test_ground_station() {
 #[test]
 fn test_spacecraft() {
     use lox_space::analysis::assets::Spacecraft;
-    use lox_space::orbits::DynTrajectory;
+    use lox_space::orbits::Trajectory;
     use lox_space::orbits::propagators::OrbitSource;
 
-    let traj = DynTrajectory::from_csv_dyn(
+    let traj = Trajectory::from_csv_dynamic(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
         Origin::Earth,
         Frame::Icrf,
@@ -756,10 +756,10 @@ fn test_spacecraft() {
 fn test_spacecraft_with_payloads() {
     use lox_space::analysis::assets::Spacecraft;
     use lox_space::analysis::imaging::{LookSide, OpticalPayload, SarPayload};
-    use lox_space::orbits::DynTrajectory;
+    use lox_space::orbits::Trajectory;
     use lox_space::orbits::propagators::OrbitSource;
 
-    let traj = DynTrajectory::from_csv_dyn(
+    let traj = Trajectory::from_csv_dynamic(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
         Origin::Earth,
         Frame::Icrf,
@@ -782,7 +782,7 @@ fn test_spacecraft_with_payloads() {
 fn test_scenario() {
     use lox_space::analysis::assets::{GroundStation, Scenario, Spacecraft};
     use lox_space::analysis::visibility::ElevationMask;
-    use lox_space::orbits::DynTrajectory;
+    use lox_space::orbits::Trajectory;
     use lox_space::orbits::ground::GroundLocation;
     use lox_space::orbits::propagators::OrbitSource;
 
@@ -793,7 +793,7 @@ fn test_scenario() {
     let loc = GroundLocation::try_new(coords, Origin::Earth).unwrap();
     let gs = GroundStation::new("madrid", loc, ElevationMask::with_fixed_elevation(5.0));
 
-    let traj = DynTrajectory::from_csv_dyn(
+    let traj = Trajectory::from_csv_dynamic(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
         Origin::Earth,
         Frame::Icrf,
@@ -842,7 +842,7 @@ fn test_scenario_json_structure() {
 }
 
 #[test]
-fn test_scenario_dyn_json_structure() {
+fn test_scenario_dynamic_json_structure() {
     use lox_space::analysis::assets::Scenario;
 
     let t0 = Time::new(Tai, 0, Default::default());

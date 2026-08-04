@@ -360,7 +360,7 @@ mod tests {
     }
 
     #[test]
-    fn dyn_rotates_between_two_non_icrf_frames() {
+    fn dynamic_rotates_between_two_non_icrf_frames() {
         let t = epoch();
         let tod = Frame::Tod(ReferenceSystem::Iers2003(Iau2000Model::A));
         let fwd = DefaultRotationProvider

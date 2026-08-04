@@ -20,7 +20,7 @@ use lox_frames::Frame;
 use lox_odm::Format;
 use lox_odm::types::common::OdmTimeSystem;
 use lox_orbits::odm::{OmmBuildError, OmmWriteError};
-use lox_orbits::orbits::{DynCartesianOrbit, DynKeplerianOrbit, DynTrajectory, Orbit, Trajectory};
+use lox_orbits::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
 use lox_orbits::propagators::sgp4::Sgp4;
 use lox_time::deltas::TimeDelta;
 use lox_time::time::Time;
@@ -91,7 +91,7 @@ META_STOP
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn sample_dyn_orbit() -> DynCartesianOrbit {
+fn sample_dynamic_orbit() -> CartesianOrbit {
     let t = Time::j2000(TimeScale::Tai);
     Orbit::from_state(
         Cartesian::new(
@@ -108,7 +108,7 @@ fn sample_dyn_orbit() -> DynCartesianOrbit {
     )
 }
 
-fn sample_dyn_trajectory() -> DynTrajectory {
+fn sample_dynamic_trajectory() -> Trajectory {
     let t0 = Time::j2000(TimeScale::Tai);
     let t1 = t0 + TimeDelta::from_seconds(60);
     let t2 = t0 + TimeDelta::from_seconds(120);
@@ -137,8 +137,8 @@ fn sample_dyn_trajectory() -> DynTrajectory {
 /// Parse a realistic GSOC OPM KVN fixture and verify the projected orbit's
 /// state, origin, and frame.
 #[test]
-fn gsoc_opm_to_dyn_orbit() {
-    let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
+fn gsoc_opm_to_dynamic_orbit() {
+    let orbit = CartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
     // EARTH center → Earth origin
     assert_eq!(orbit.origin(), Origin::Earth);
     // TOD frame — Frame::Tod wraps a ReferenceSystem, so check via the
@@ -154,17 +154,17 @@ fn gsoc_opm_to_dyn_orbit() {
     assert!((x_km - 6655.9942).abs() < 0.01, "x_km = {x_km}");
 }
 
-/// Round-trip: DynCartesianOrbit → OPM → KVN → re-parse → structural equality.
+/// Round-trip: CartesianOrbit → OPM → KVN → re-parse → structural equality.
 #[test]
-fn dyn_orbit_opm_kvn_round_trip() {
-    let orbit = sample_dyn_orbit();
+fn dynamic_orbit_opm_kvn_round_trip() {
+    let orbit = sample_dynamic_orbit();
     let kvn = orbit
         .build_opm("TEST-SAT", "2024-IT-001A")
         .originator("INTEGRATION_TEST")
         .write_str(Format::Kvn)
         .unwrap();
 
-    let reparsed = DynCartesianOrbit::from_opm_str(&kvn).unwrap();
+    let reparsed = CartesianOrbit::from_opm_str(&kvn).unwrap();
     assert_eq!(reparsed.origin(), orbit.origin());
     assert_eq!(reparsed.reference_frame(), orbit.reference_frame());
 
@@ -177,15 +177,15 @@ fn dyn_orbit_opm_kvn_round_trip() {
 
 /// Same round-trip via XML.
 #[test]
-fn dyn_orbit_opm_xml_round_trip() {
-    let orbit = sample_dyn_orbit();
+fn dynamic_orbit_opm_xml_round_trip() {
+    let orbit = sample_dynamic_orbit();
     let xml = orbit
         .build_opm("TEST-SAT", "2024-IT-001A")
         .originator("INTEGRATION_TEST")
         .write_str(Format::Xml)
         .unwrap();
 
-    let reparsed = DynCartesianOrbit::from_opm_str(&xml).unwrap();
+    let reparsed = CartesianOrbit::from_opm_str(&xml).unwrap();
     assert_eq!(reparsed.origin(), orbit.origin());
     assert_eq!(reparsed.reference_frame(), orbit.reference_frame());
     let diff_pos = (reparsed.position() - orbit.position()).length();
@@ -199,23 +199,23 @@ fn dyn_orbit_opm_xml_round_trip() {
 /// Parse the multi-segment JPL OEM KVN fixture. The first segment should
 /// have 4 states; the second should have 3.
 #[test]
-fn jpl_oem_to_dyn_trajectory_segment_count() {
+fn jpl_oem_to_dynamic_trajectory_segment_count() {
     let oem = lox_odm::read_oem(JPL_OEM_KVN).unwrap();
     assert_eq!(oem.segments.len(), 2, "expected 2 segments");
     assert_eq!(oem.segments[0].states.len(), 4);
     assert_eq!(oem.segments[1].states.len(), 3);
 
-    // First segment → DynTrajectory via from_oem
-    let traj = DynTrajectory::from_oem(&oem).unwrap();
+    // First segment → Trajectory via from_oem
+    let traj = Trajectory::from_oem(&oem).unwrap();
     assert_eq!(traj.origin(), Origin::MarsBarycenter);
     assert_eq!(traj.reference_frame(), Frame::J2000);
     assert_eq!(traj.states().len(), 4);
 }
 
-/// Round-trip: DynTrajectory → OEM → KVN → re-parse → structural equality.
+/// Round-trip: Trajectory → OEM → KVN → re-parse → structural equality.
 #[test]
-fn dyn_trajectory_oem_kvn_round_trip() {
-    let traj = sample_dyn_trajectory();
+fn dynamic_trajectory_oem_kvn_round_trip() {
+    let traj = sample_dynamic_trajectory();
     let n_states = traj.states().len();
     let origin = traj.origin();
     let frame = traj.reference_frame();
@@ -225,7 +225,7 @@ fn dyn_trajectory_oem_kvn_round_trip() {
         .write_str(Format::Kvn)
         .unwrap();
 
-    let reparsed = DynTrajectory::from_oem_str(&kvn).unwrap();
+    let reparsed = Trajectory::from_oem_str(&kvn).unwrap();
     assert_eq!(reparsed.origin(), origin);
     assert_eq!(reparsed.reference_frame(), frame);
     assert_eq!(reparsed.states().len(), n_states);
@@ -236,7 +236,7 @@ fn dyn_trajectory_oem_kvn_round_trip() {
 fn from_oem_segment_second_segment() {
     let oem = lox_odm::read_oem(JPL_OEM_KVN).unwrap();
     let seg = &oem.segments[1];
-    let traj = DynTrajectory::from_oem_segment(seg).unwrap();
+    let traj = Trajectory::from_oem_segment(seg).unwrap();
     assert_eq!(traj.states().len(), 3);
     assert_eq!(traj.origin(), Origin::MarsBarycenter);
 }
@@ -246,12 +246,12 @@ fn from_oem_segment_second_segment() {
 // ---------------------------------------------------------------------------
 
 /// Without `.time_system(...)`, a UTC-origin OPM silently widens to TAI on
-/// re-emission because the intermediate `DynCartesianOrbit` cannot represent
+/// re-emission because the intermediate `CartesianOrbit` cannot represent
 /// UTC. This baseline is intentionally tested so that any future change to
 /// the default conversion path is observable.
 #[test]
 fn opm_utc_silently_widens_to_tai_without_override() {
-    let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
+    let orbit = CartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
     let kvn = orbit
         .build_opm("EUTELSAT W4", "2021-028A")
         .originator("ROUND_TRIP")
@@ -269,7 +269,7 @@ fn opm_utc_silently_widens_to_tai_without_override() {
 /// review's NEW-I2 finding.
 #[test]
 fn opm_time_system_override_preserves_utc() {
-    let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
+    let orbit = CartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
     let kvn = orbit
         .build_opm("EUTELSAT W4", "2021-028A")
         .originator("ROUND_TRIP")
@@ -289,7 +289,7 @@ fn opm_time_system_override_preserves_utc() {
 /// `.time_system(Gps)` re-expresses the orbit's TAI epoch as GPS (TAI−GPS=19s).
 #[test]
 fn opm_time_system_override_to_gps() {
-    let orbit = DynCartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
+    let orbit = CartesianOrbit::from_opm_str(GSOC_OPM_KVN).unwrap();
     let kvn = orbit
         .build_opm("EUTELSAT W4", "2021-028A")
         .originator("ROUND_TRIP")
@@ -305,7 +305,7 @@ fn opm_time_system_override_to_gps() {
 /// OEM analogue: trajectory round-trip preserves UTC when `.time_system(Utc)` is set.
 #[test]
 fn oem_time_system_override_preserves_utc() {
-    let kvn = sample_dyn_trajectory()
+    let kvn = sample_dynamic_trajectory()
         .build_oem("TEST-SAT", "2024-IT-001A")
         .originator("ROUND_TRIP")
         .time_system(OdmTimeSystem::Utc)
@@ -373,7 +373,7 @@ fn sgp4_from_omm_str_iss() {
 /// Round-trip: KeplerianOrbit → OMM → KeplerianOrbit preserves mean elements.
 #[test]
 fn keplerian_orbit_to_omm_round_trip_iss() {
-    let orbit = DynKeplerianOrbit::from_omm_str(ISS_OMM_JSON).expect("from_omm_str");
+    let orbit = KeplerianOrbit::from_omm_str(ISS_OMM_JSON).expect("from_omm_str");
     let original = orbit.state();
     let kvn = orbit
         .build_omm("ISS (ZARYA)", "1998-067A")
@@ -405,11 +405,11 @@ fn keplerian_orbit_to_omm_round_trip_iss() {
     assert_eq!(reparsed.metadata.mean_element_theory, "SGP/SGP4");
 }
 
-/// `DynKeplerianOrbit::from_omm_str` exposes the mean elements as a typed
+/// `KeplerianOrbit::from_omm_str` exposes the mean elements as a typed
 /// Keplerian view (does *not* claim physical osculating accuracy in TEME).
 #[test]
-fn dyn_keplerian_orbit_from_omm_iss() {
-    let orbit = DynKeplerianOrbit::from_omm_str(ISS_OMM_JSON).expect("from_omm_str");
+fn dynamic_keplerian_orbit_from_omm_iss() {
+    let orbit = KeplerianOrbit::from_omm_str(ISS_OMM_JSON).expect("from_omm_str");
     assert_eq!(orbit.origin(), Origin::Earth);
     let inc_deg = orbit.inclination().as_f64().to_degrees();
     assert!(
@@ -436,7 +436,7 @@ fn omm_builder_returns_typed_error_for_hyperbolic_beyond_asymptote() {
         ArgumentOfPeriapsis::try_new(Angle::radians(0.2)).unwrap(),
         TrueAnomaly::new(Angle::radians(170.0_f64.to_radians())),
     );
-    let orbit: DynKeplerianOrbit =
+    let orbit: KeplerianOrbit =
         Orbit::from_state(kep, Time::j2000(TimeScale::Tai), Origin::Earth, Frame::Icrf);
 
     let err = orbit

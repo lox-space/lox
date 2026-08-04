@@ -56,7 +56,7 @@ impl ReferenceFrame for Frame {
             Frame::Cirf => Cirf.name(),
             Frame::Tirf => Tirf.name(),
             Frame::Itrf => Itrf.name(),
-            Frame::Iau(dyn_origin) => iau_name(dyn_origin.name()),
+            Frame::Iau(dynamic_origin) => iau_name(dynamic_origin.name()),
             Frame::Mod(sys) => Mod(*sys).name(),
             Frame::Tod(sys) => Tod(*sys).name(),
             Frame::Pef(sys) => Pef(*sys).name(),
@@ -71,7 +71,7 @@ impl ReferenceFrame for Frame {
             Frame::Cirf => Cirf.abbreviation(),
             Frame::Tirf => Tirf.abbreviation(),
             Frame::Itrf => Itrf.abbreviation(),
-            Frame::Iau(dyn_origin) => iau_abbreviation(dyn_origin.name()),
+            Frame::Iau(dynamic_origin) => iau_abbreviation(dynamic_origin.name()),
             Frame::Mod(sys) => Mod(*sys).abbreviation(),
             Frame::Tod(sys) => Tod(*sys).abbreviation(),
             Frame::Pef(sys) => Pef(*sys).abbreviation(),
@@ -86,7 +86,7 @@ impl ReferenceFrame for Frame {
             Frame::Cirf => frame_key(&Cirf),
             Frame::Tirf => frame_key(&Tirf),
             Frame::Itrf => frame_key(&Itrf),
-            Frame::Iau(dyn_origin) => Some(FrameKey::Iau(dyn_origin.id())),
+            Frame::Iau(dynamic_origin) => Some(FrameKey::Iau(dynamic_origin.id())),
             Frame::Mod(sys) => frame_key(&Mod(*sys)),
             Frame::Tod(sys) => frame_key(&Tod(*sys)),
 
@@ -298,7 +298,7 @@ mod tests {
     fn test_icrf_to_bodyfixed(#[case] frame: Frame, #[case] r_exp: DVec3, #[case] v_exp: DVec3) {
         let time = Utc::from_iso("2024-07-05T09:09:18.173")
             .unwrap()
-            .to_dyn_time();
+            .to_dynamic_time();
         let r = DVec3::new(-5530.01774359, -3487.0895338, -1850.03476185);
         let v = DVec3::new(1.29534407, -5.02456882, 5.6391936);
         let rot = DefaultRotationProvider
