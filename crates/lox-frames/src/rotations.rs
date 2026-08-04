@@ -35,9 +35,9 @@ pub mod to_iau;
 pub mod to_icrf;
 
 /// Computes the rotation from one reference frame to another at a given time.
-pub trait TryRotation<CoordinateOrigin, Target, T>
+pub trait TryRotation<Origin, Target, T>
 where
-    CoordinateOrigin: ReferenceFrame,
+    Origin: ReferenceFrame,
     Target: ReferenceFrame,
     T: ContinuousTimeScale,
 {
@@ -47,7 +47,7 @@ where
     /// Computes the rotation from `origin` to `target` at the given `time`.
     fn try_rotation(
         &self,
-        origin: CoordinateOrigin,
+        origin: Origin,
         target: Target,
         time: Time<T>,
     ) -> Result<Rotation, Self::Error>;
