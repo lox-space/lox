@@ -90,7 +90,7 @@ pub enum PowerError {
 /// Eclipse detect function: positive when the spacecraft is sunlit, negative
 /// when it is in eclipse (cylindrical shadow model, umbra only).
 struct EclipseDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    sc: &'a Trajectory<Tai, O, R>,
+    sc: &'a Trajectory<O, R>,
     ephemeris: &'a E,
 }
 
@@ -108,7 +108,7 @@ where
             .ephemeris
             .position(tdb, self.sc.origin(), Sun)
             .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
-        let r_sc = self.sc.at(time).position();
+        let r_sc = self.sc.at(time.into_dynamic()).position();
         // line_of_sight returns positive when the two vectors have mutual LOS
         // (spacecraft is sunlit) and negative when occluded (eclipse).
         Ok(self.sc.origin().line_of_sight(r_sc, r_sun)?)
@@ -188,7 +188,7 @@ pub enum SpacecraftFilter {
 /// The shadow model is cylindrical (umbra only) — penumbra is not modelled.
 pub struct PowerBudgetAnalysis<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
     scenario: &'a Scenario<O, R>,
-    ensemble: &'a Ensemble<AssetId, Tai, O, R>,
+    ensemble: &'a Ensemble<AssetId, O, R>,
     ephemeris: &'a E,
     step: TimeDelta,
     filter: Option<SpacecraftFilter>,
@@ -204,7 +204,7 @@ where
     /// Creates a new power-budget analysis.
     pub fn new(
         scenario: &'a Scenario<O, R>,
-        ensemble: &'a Ensemble<AssetId, Tai, O, R>,
+        ensemble: &'a Ensemble<AssetId, O, R>,
         ephemeris: &'a E,
     ) -> Self {
         Self {
@@ -302,7 +302,7 @@ where
 
         for time in interval.step_by(self.step) {
             let tdb = time.to_scale(Tdb);
-            let state = sc_traj.at(time);
+            let state = sc_traj.at(time.into_dynamic());
             let r = state.position();
             let v = state.velocity();
             let h = r.cross(v);
@@ -340,6 +340,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use lox_time::time_scales::TimeScale;
     use std::f64::consts::{FRAC_PI_2, PI};
     use std::sync::OnceLock;
 
@@ -416,7 +417,7 @@ mod tests {
         let t1 = t0 + TimeDelta::from_hours(24);
         let sc_traj = sgp4
             .with_step(TimeDelta::from_seconds(30))
-            .propagate(Interval::new(t0, t1))
+            .propagate(Interval::new(t0, t1).into_dynamic())
             .unwrap()
             .into_dynamic();
 
@@ -431,7 +432,7 @@ mod tests {
 
         // Build ensemble
         let (epoch, origin, frame, data) = sc_traj.into_parts();
-        let typed = Trajectory::from_parts(epoch.with_scale(Tai), origin, frame, data);
+        let typed = Trajectory::from_parts(epoch.with_scale(TimeScale::Tai), origin, frame, data);
         let mut map = HashMap::new();
         map.insert(sc.id().clone(), typed);
         let ensemble = Ensemble::new(map);

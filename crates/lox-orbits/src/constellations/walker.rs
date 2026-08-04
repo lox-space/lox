@@ -11,7 +11,6 @@ use lox_core::elements::KeplerianBuilder;
 use lox_core::units::{Angle, Distance};
 use lox_frames::ReferenceFrame;
 use lox_time::Time;
-use lox_time::time_scales::ContinuousTimeScale;
 
 use super::{Constellation, ConstellationError, ConstellationSatellite};
 
@@ -166,13 +165,13 @@ impl WalkerDeltaBuilder {
     }
 
     /// Builds a full [`Constellation`] with the given metadata.
-    pub fn build_constellation<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame>(
+    pub fn build_constellation<O: CoordinateOrigin, R: ReferenceFrame>(
         &self,
         name: impl Into<String>,
-        epoch: Time<T>,
+        epoch: Time,
         origin: O,
         frame: R,
-    ) -> Result<Constellation<T, O, R>, ConstellationError> {
+    ) -> Result<Constellation<O, R>, ConstellationError> {
         let satellites = self.build()?;
         Ok(Constellation::new(name, epoch, origin, frame, satellites))
     }
@@ -228,13 +227,13 @@ impl WalkerStarBuilder {
     }
 
     /// Builds a full [`Constellation`] with the given metadata.
-    pub fn build_constellation<T: ContinuousTimeScale, O: CoordinateOrigin, R: ReferenceFrame>(
+    pub fn build_constellation<O: CoordinateOrigin, R: ReferenceFrame>(
         &self,
         name: impl Into<String>,
-        epoch: Time<T>,
+        epoch: Time,
         origin: O,
         frame: R,
-    ) -> Result<Constellation<T, O, R>, ConstellationError> {
+    ) -> Result<Constellation<O, R>, ConstellationError> {
         let satellites = self.build()?;
         Ok(Constellation::new(name, epoch, origin, frame, satellites))
     }
@@ -242,6 +241,7 @@ impl WalkerStarBuilder {
 
 #[cfg(test)]
 mod tests {
+    use lox_time::time_scales::TimeScale;
     use std::collections::HashSet;
 
     use lox_approx::assert_approx_eq;
@@ -349,9 +349,8 @@ mod tests {
     fn test_walker_build_constellation() {
         use lox_bodies::Earth;
         use lox_frames::Icrf;
-        use lox_time::time_scales::Tai;
 
-        let epoch = Time::j2000(Tai);
+        let epoch = Time::j2000(TimeScale::Tai);
         let c = WalkerDeltaBuilder::new(6, 3)
             .with_semi_major_axis(7000.0.km(), 0.0)
             .with_inclination(53.0.deg())
@@ -406,9 +405,8 @@ mod tests {
     fn test_walker_star_build_constellation() {
         use lox_bodies::Earth;
         use lox_frames::Icrf;
-        use lox_time::time_scales::Tai;
 
-        let epoch = Time::j2000(Tai);
+        let epoch = Time::j2000(TimeScale::Tai);
         let c = WalkerStarBuilder::new(8, 4)
             .with_semi_major_axis(7000.0.km(), 0.0)
             .with_inclination(90.0.deg())

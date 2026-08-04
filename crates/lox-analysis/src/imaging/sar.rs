@@ -332,7 +332,7 @@ mod integration_tests {
         let t0 = sgp4.time();
         let t1 = t0 + TimeDelta::from_hours(6);
         sgp4.with_step(TimeDelta::from_seconds(10))
-            .propagate(Interval::new(t0, t1))
+            .propagate(Interval::new(t0, t1).into_dynamic())
             .unwrap()
             .into_dynamic()
     }
@@ -353,7 +353,7 @@ mod integration_tests {
     fn make_scenario(
         spacecraft: &[Spacecraft],
         interval: TimeInterval<TimeScale>,
-    ) -> (Scenario, Ensemble<AssetId, Tai, Origin, Frame>) {
+    ) -> (Scenario, Ensemble<AssetId, Origin, Frame>) {
         let tai_interval =
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
         let scenario = Scenario::with_interval(tai_interval, Origin::Earth, Frame::Icrf)
@@ -363,7 +363,7 @@ mod integration_tests {
             if let OrbitSource::Trajectory(traj) = sc.orbit() {
                 let (epoch, origin, frame, data) = traj.clone().into_parts();
                 let typed = lox_orbits::orbits::Trajectory::from_parts(
-                    epoch.with_scale(Tai),
+                    epoch.with_scale(TimeScale::Tai),
                     origin,
                     frame,
                     data,
@@ -483,7 +483,7 @@ mod integration_tests {
         let t0 = sgp4.time();
         let t1 = t0 + TimeDelta::from_hours(12);
         sgp4.with_step(TimeDelta::from_seconds(10))
-            .propagate(Interval::new(t0, t1))
+            .propagate(Interval::new(t0, t1).into_dynamic())
             .unwrap()
             .into_dynamic()
     }

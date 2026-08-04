@@ -285,7 +285,22 @@ impl TimeDeltaInterval {
 }
 
 /// An interval of [`Time`] values in a given time scale.
-pub type TimeInterval<T> = Interval<Time<T>>;
+///
+/// The scale defaults to the runtime-determined [`TimeScale`](crate::time_scales::TimeScale).
+pub type TimeInterval<T = crate::time_scales::TimeScale> = Interval<Time<T>>;
+
+impl<T> TimeInterval<T>
+where
+    T: ContinuousTimeScale + Copy + Into<crate::time_scales::TimeScale>,
+{
+    /// Converts this interval into one whose bounds carry their time scale at runtime.
+    pub fn into_dynamic(self) -> TimeInterval {
+        Interval {
+            start: self.start.into_dynamic(),
+            end: self.end.into_dynamic(),
+        }
+    }
+}
 
 impl<T> TimeInterval<T>
 where

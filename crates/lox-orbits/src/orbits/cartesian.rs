@@ -16,22 +16,21 @@ use lox_ephem::Ephemeris;
 use lox_frames::{
     Frame, Iau, Icrf, ReferenceFrame, TryBodyFixed, rotations::TryRotation, traits::frame_key,
 };
-use lox_time::offsets::{DefaultOffsetProvider, Offset};
-use lox_time::time_scales::{ContinuousTimeScale, Tdb};
+use lox_time::offsets::DefaultOffsetProvider;
+use lox_time::time_scales::{Tdb, TimeScale};
 use thiserror::Error;
 
 use crate::ground::GroundLocation;
 
 use super::{CartesianOrbit, KeplerianOrbit, Orbit};
 
-impl<T, O, R> CartesianOrbit<T, O, R>
+impl<O, R> CartesianOrbit<O, R>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Constructs a new Cartesian orbit from position/velocity state, epoch, origin, and frame.
-    pub const fn new(cartesian: Cartesian, time: lox_time::Time<T>, origin: O, frame: R) -> Self {
+    pub const fn new(cartesian: Cartesian, time: lox_time::Time, origin: O, frame: R) -> Self {
         Self::from_state(cartesian, time, origin, frame)
     }
 
@@ -46,9 +45,8 @@ where
     }
 
     /// Converts this Cartesian orbit to Keplerian elements.
-    pub fn to_keplerian(&self) -> KeplerianOrbit<T, O, R>
+    pub fn to_keplerian(&self) -> KeplerianOrbit<O, R>
     where
-        T: Copy,
         O: Copy + PointMass,
         R: Copy,
     {
@@ -61,9 +59,8 @@ where
     }
 
     /// Converts this Cartesian orbit to Keplerian elements, returning an error if the gravitational parameter is undefined.
-    pub fn try_to_keplerian(&self) -> Result<KeplerianOrbit<T, O, R>, UndefinedOriginPropertyError>
+    pub fn try_to_keplerian(&self) -> Result<KeplerianOrbit<O, R>, UndefinedOriginPropertyError>
     where
-        T: Copy,
         O: Copy + TryPointMass,
         R: Copy,
     {
@@ -81,13 +78,12 @@ where
         &self,
         frame: R1,
         provider: &P,
-    ) -> Result<CartesianOrbit<T, O, R1>, P::Error>
+    ) -> Result<CartesianOrbit<O, R1>, P::Error>
     where
         R: Copy,
-        P: TryRotation<R, R1, T>,
+        P: TryRotation<R, R1, TimeScale>,
         R1: ReferenceFrame + Copy,
         O: Copy,
-        T: Copy,
     {
         if let (Some(id0), Some(id1)) = (frame_key(&self.reference_frame()), frame_key(&frame))
             && id0 == id1
@@ -110,9 +106,8 @@ where
     }
 }
 
-impl<T, O> CartesianOrbit<T, O, Iau<O>>
+impl<O> CartesianOrbit<O, Iau<O>>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin + RotationalElements + Spheroid + Copy,
 {
     /// Converts this body-fixed Cartesian orbit to a ground location.
@@ -146,9 +141,8 @@ fn rotation_lvlh(position: DVec3, velocity: DVec3) -> DMat3 {
     DMat3::from_cols(x, y, z)
 }
 
-impl<T, O> CartesianOrbit<T, O, Icrf>
+impl<O> CartesianOrbit<O, Icrf>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
 {
     /// Returns the rotation matrix from ICRF to the Local Vertical Local Horizontal (LVLH) frame.
@@ -157,9 +151,8 @@ where
     }
 }
 
-impl<T, O> CartesianOrbit<T, O, Icrf>
+impl<O> CartesianOrbit<O, Icrf>
 where
-    T: ContinuousTimeScale + Copy,
     O: CoordinateOrigin + Copy,
 {
     /// Transforms this orbit to a different central body origin using an ephemeris.
@@ -167,10 +160,7 @@ where
         &self,
         target: O1,
         ephemeris: &E,
-    ) -> Result<CartesianOrbit<T, O1, Icrf>, E::Error>
-    where
-        DefaultOffsetProvider: Offset<T, Tdb>,
-    {
+    ) -> Result<CartesianOrbit<O1, Icrf>, E::Error> {
         if self.origin().id() == target.id() {
             return Ok(CartesianOrbit::new(self.state(), self.time(), target, Icrf));
         }
@@ -239,9 +229,8 @@ impl CartesianOrbit {
     }
 }
 
-impl<T, O, R> Sub for CartesianOrbit<T, O, R>
+impl<O, R> Sub for CartesianOrbit<O, R>
 where
-    T: ContinuousTimeScale + Copy,
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
@@ -256,15 +245,14 @@ where
     }
 }
 
-impl<T, O, R> TryFrom<CartesianOrbit<T, O, R>> for KeplerianOrbit<T, O, R>
+impl<O, R> TryFrom<CartesianOrbit<O, R>> for KeplerianOrbit<O, R>
 where
-    T: ContinuousTimeScale + Copy,
     O: CoordinateOrigin + TryPointMass + Copy,
     R: ReferenceFrame + Copy,
 {
     type Error = UndefinedOriginPropertyError;
 
-    fn try_from(orbit: CartesianOrbit<T, O, R>) -> Result<Self, Self::Error> {
+    fn try_from(orbit: CartesianOrbit<O, R>) -> Result<Self, Self::Error> {
         orbit.try_to_keplerian()
     }
 }
@@ -295,7 +283,12 @@ mod tests {
         let v1 = DVec3::new(-1.852284168309543, -0.8227941105651749, -7.14175174489828);
 
         let tdb = time!(Tdb, 2000, 1, 1, 12).unwrap();
-        let s = CartesianOrbit::new(Cartesian::from_vecs(r0, v0), tdb, Jupiter, Icrf);
+        let s = CartesianOrbit::new(
+            Cartesian::from_vecs(r0, v0),
+            tdb.into_dynamic(),
+            Jupiter,
+            Icrf,
+        );
         let s1 = s
             .try_to_frame(iau_jupiter, &DefaultRotationProvider)
             .unwrap();
@@ -322,10 +315,15 @@ mod tests {
             -0.118801577532701e4,
         );
 
-        let cartesian = CartesianOrbit::new(Cartesian::from_vecs(pos, vel), time, Earth, Icrf);
+        let cartesian = CartesianOrbit::new(
+            Cartesian::from_vecs(pos, vel),
+            time.into_dynamic(),
+            Earth,
+            Icrf,
+        );
         let cartesian1 = cartesian.to_keplerian().to_cartesian();
 
-        assert_eq!(cartesian1.time(), time);
+        assert_eq!(cartesian1.time(), time.into_dynamic());
         assert_eq!(cartesian1.origin(), Earth);
         assert_eq!(cartesian1.reference_frame(), Icrf);
 
@@ -344,7 +342,7 @@ mod tests {
         let time = time!(Tdb, 2012, 7, 1).unwrap();
         let state = CartesianOrbit::new(
             Cartesian::from_vecs(position, velocity),
-            time,
+            time.into_dynamic(),
             Earth,
             Iau::new(Earth),
         );
@@ -360,7 +358,7 @@ mod tests {
         let v = DVec3::new(-660.415582, 5495.938726, -5303.093233);
 
         let utc = Utc::from_iso("2016-05-30T12:00:00.000").unwrap();
-        let tai = utc.to_time();
+        let tai = utc.to_dynamic_time();
         let tdb = tai.to_scale(Tdb);
 
         // Compute the expected ephemeris delta using the new trait directly
@@ -381,7 +379,12 @@ mod tests {
         let pos = DVec3::new(6678.0, 0.0, 0.0);
         let vel = DVec3::new(0.0, 7.73, 0.0);
 
-        let state = CartesianOrbit::new(Cartesian::from_vecs(pos, vel), time, Earth, Icrf);
+        let state = CartesianOrbit::new(
+            Cartesian::from_vecs(pos, vel),
+            time.into_dynamic(),
+            Earth,
+            Icrf,
+        );
         let rot = state.rotation_lvlh();
 
         // For a prograde equatorial orbit at x-axis, LVLH z should point to -x (nadir),
@@ -397,13 +400,13 @@ mod tests {
         let time = time!(Tdb, 2023, 3, 25, 21, 8, 0.0).unwrap();
         let s1 = CartesianOrbit::new(
             Cartesian::from_vecs(DVec3::new(10.0, 20.0, 30.0), DVec3::new(1.0, 2.0, 3.0)),
-            time,
+            time.into_dynamic(),
             Earth,
             Icrf,
         );
         let s2 = CartesianOrbit::new(
             Cartesian::from_vecs(DVec3::new(3.0, 5.0, 7.0), DVec3::new(0.5, 1.0, 1.5)),
-            time,
+            time.into_dynamic(),
             Earth,
             Icrf,
         );
@@ -421,7 +424,12 @@ mod tests {
         let time = time!(Tdb, 2023, 3, 25, 21, 8, 0.0).unwrap();
         let pos = DVec3::new(1000.0, 2000.0, 3000.0);
         let vel = DVec3::new(1.0, 2.0, 3.0);
-        let state = CartesianOrbit::new(Cartesian::from_vecs(pos, vel), time, Earth, Icrf);
+        let state = CartesianOrbit::new(
+            Cartesian::from_vecs(pos, vel),
+            time.into_dynamic(),
+            Earth,
+            Icrf,
+        );
         let dynamic_state = state.into_dynamic();
 
         assert_eq!(dynamic_state.origin(), Origin::Earth);
@@ -461,7 +469,7 @@ mod tests {
         let r = DVec3::new(6068279.27, -1692843.94, -2516619.18);
         let v = DVec3::new(-660.415582, 5495.938726, -5303.093233);
         let utc = Utc::from_iso("2016-05-30T12:00:00.000").unwrap();
-        let tai = utc.to_time();
+        let tai = utc.to_dynamic_time();
 
         let state = CartesianOrbit::new(Cartesian::from_vecs(r, v), tai, Earth, Icrf);
         // Same origin should return identical state without needing ephemeris

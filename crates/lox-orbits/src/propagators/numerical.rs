@@ -21,7 +21,6 @@ use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 use thiserror::Error;
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
@@ -52,11 +51,10 @@ pub enum NumericalError {
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NumericalPropagator<
-    T: ContinuousTimeScale = TimeScale,
     O: TryJ2 + TryPointMass + TrySpheroid = Origin,
     R: ReferenceFrame = Frame,
 > {
-    initial_state: CartesianOrbit<T, O, R>,
+    initial_state: CartesianOrbit<O, R>,
     rtol: f64,
     atol: f64,
     h_max: f64,
@@ -69,14 +67,13 @@ fn default_h_max(position: DVec3, velocity: DVec3) -> f64 {
 }
 
 // Infallible — static bounds
-impl<T, O, R> NumericalPropagator<T, O, R>
+impl<O, R> NumericalPropagator<O, R>
 where
-    T: ContinuousTimeScale,
     O: J2 + PointMass + Spheroid + Copy,
     R: ReferenceFrame,
 {
     /// Create a new J2 propagator from the given initial state.
-    pub fn new(initial_state: CartesianOrbit<T, O, R>) -> Self {
+    pub fn new(initial_state: CartesianOrbit<O, R>) -> Self {
         let h_max = default_h_max(initial_state.position(), initial_state.velocity());
         Self {
             initial_state,
@@ -90,15 +87,14 @@ where
 }
 
 // Fallible — Try* bounds (covers Origin)
-impl<T, O, R> NumericalPropagator<T, O, R>
+impl<O, R> NumericalPropagator<O, R>
 where
-    T: ContinuousTimeScale,
     O: TryJ2 + TryPointMass + TrySpheroid + Copy,
     R: ReferenceFrame,
 {
     /// Try to create a new J2 propagator, returning an error if the origin lacks required properties.
     pub fn try_new(
-        initial_state: CartesianOrbit<T, O, R>,
+        initial_state: CartesianOrbit<O, R>,
     ) -> Result<Self, UndefinedOriginPropertyError> {
         initial_state.origin().try_gravitational_parameter()?;
         initial_state.origin().try_j2()?;
@@ -116,9 +112,8 @@ where
     }
 }
 
-impl<T, O, R> NumericalPropagator<T, O, R>
+impl<O, R> NumericalPropagator<O, R>
 where
-    T: ContinuousTimeScale,
     O: TryJ2 + TryPointMass + TrySpheroid + Copy,
     R: ReferenceFrame,
 {
@@ -153,7 +148,7 @@ where
     }
 
     /// Return a reference to the initial orbital state.
-    pub fn initial_state(&self) -> &CartesianOrbit<T, O, R> {
+    pub fn initial_state(&self) -> &CartesianOrbit<O, R> {
         &self.initial_state
     }
 
@@ -206,9 +201,8 @@ where
     }
 }
 
-impl<T, O, R> ODE<f64, CartesianState> for NumericalPropagator<T, O, R>
+impl<O, R> ODE<f64, CartesianState> for NumericalPropagator<O, R>
 where
-    T: ContinuousTimeScale,
     O: TryJ2 + TryPointMass + TrySpheroid + Copy,
     R: ReferenceFrame,
 {
@@ -229,16 +223,15 @@ where
     }
 }
 
-impl<T, O, R> Propagator<T, O> for NumericalPropagator<T, O, R>
+impl<O, R> Propagator<O> for NumericalPropagator<O, R>
 where
-    T: ContinuousTimeScale + Copy + Eq,
     O: TryJ2 + TryPointMass + TrySpheroid + CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
     type Frame = R;
     type Error = NumericalError;
 
-    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, NumericalError> {
+    fn state_at(&self, time: Time) -> Result<CartesianOrbit<O, R>, NumericalError> {
         let epoch = self.initial_state.time();
         let t0 = 0.0_f64;
         let t1 = (time - epoch).to_seconds().to_f64();
@@ -259,7 +252,7 @@ where
         Ok(CartesianOrbit::new(final_state.0, time, origin, frame))
     }
 
-    fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, NumericalError> {
+    fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<O, R>, NumericalError> {
         let start = interval.start();
 
         // Propagate to start of interval
@@ -290,9 +283,9 @@ where
 
     fn propagate_to(
         &self,
-        times: impl IntoIterator<Item = Time<T>>,
-    ) -> Result<Trajectory<T, O, Self::Frame>, Self::Error> {
-        let times: Vec<Time<T>> = times.into_iter().collect();
+        times: impl IntoIterator<Item = Time>,
+    ) -> Result<Trajectory<O, Self::Frame>, Self::Error> {
+        let times: Vec<Time> = times.into_iter().collect();
         if times.len() < 2 {
             return Err(NumericalError::InvalidTimeSteps);
         }
@@ -460,13 +453,12 @@ impl Neg for CartesianState {
     }
 }
 
-impl<T, O, R> From<CartesianOrbit<T, O, R>> for CartesianState
+impl<O, R> From<CartesianOrbit<O, R>> for CartesianState
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
-    fn from(orbit: CartesianOrbit<T, O, R>) -> Self {
+    fn from(orbit: CartesianOrbit<O, R>) -> Self {
         Self(orbit.state())
     }
 }
@@ -483,7 +475,7 @@ mod tests {
 
     use super::*;
 
-    fn initial_state() -> CartesianOrbit<Tdb, Earth, Icrf> {
+    fn initial_state() -> CartesianOrbit<Earth, Icrf> {
         let time = time!(Tdb, 2023, 1, 1).unwrap();
         CartesianOrbit::new(
             Cartesian::new(
@@ -494,7 +486,7 @@ mod tests {
                 4.30333.kps(),
                 2.42879.kps(),
             ),
-            time,
+            time.into_dynamic(),
             Earth,
             Icrf,
         )

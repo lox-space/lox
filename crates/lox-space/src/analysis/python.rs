@@ -422,7 +422,7 @@ impl PyScenario {
 /// A collection of propagated trajectories keyed by spacecraft id.
 #[pyclass(name = "Ensemble", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone, Debug)]
-pub struct PyEnsemble(pub Ensemble<AssetId, Tai, Origin, Frame>);
+pub struct PyEnsemble(pub Ensemble<AssetId, Origin, Frame>);
 
 #[pymethods]
 impl PyEnsemble {
@@ -472,7 +472,7 @@ impl PyEnsemble {
 #[pyclass(name = "VisibilityAnalysis", module = "lox_space", frozen)]
 pub struct PyVisibilityAnalysis {
     scenario: Scenario,
-    ensemble: Option<Ensemble<AssetId, Tai, Origin, Frame>>,
+    ensemble: Option<Ensemble<AssetId, Origin, Frame>>,
     occulting_bodies: Vec<Origin>,
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
@@ -708,7 +708,7 @@ impl PyVisibilityAnalysis {
 pub struct PyVisibilityResults {
     results: VisibilityResults,
     scenario: Scenario,
-    ensemble: Ensemble<AssetId, Tai, Origin, Frame>,
+    ensemble: Ensemble<AssetId, Origin, Frame>,
     step: TimeDelta,
 }
 
@@ -1258,7 +1258,7 @@ impl From<PyPowerError> for PyErr {
 #[pyclass(name = "PowerBudgetAnalysis", module = "lox_space", frozen)]
 pub struct PyPowerBudgetAnalysis {
     scenario: Scenario,
-    ensemble: Option<Ensemble<AssetId, Tai, Origin, Frame>>,
+    ensemble: Option<Ensemble<AssetId, Origin, Frame>>,
     step: TimeDelta,
     filter: Option<SpacecraftFilter>,
 }
@@ -1578,7 +1578,7 @@ impl PyOpticalPayload {
 pub struct PyOpticalAccessAnalysis {
     scenario: Scenario,
     aois: Vec<(AoiId, Aoi)>,
-    ensemble: Option<Ensemble<AssetId, Tai, Origin, Frame>>,
+    ensemble: Option<Ensemble<AssetId, Origin, Frame>>,
     step: TimeDelta,
     body_fixed_frame: Option<Frame>,
 }
@@ -1915,7 +1915,7 @@ impl PySarPayload {
 pub struct PySarAccessAnalysis {
     scenario: Scenario,
     aois: Vec<(AoiId, Aoi)>,
-    ensemble: Option<Ensemble<AssetId, Tai, Origin, Frame>>,
+    ensemble: Option<Ensemble<AssetId, Origin, Frame>>,
     step: TimeDelta,
     body_fixed_frame: Option<Frame>,
 }

@@ -7,7 +7,6 @@ use lox_core::elements::{KeplerianBuilder, KeplerianError};
 use lox_core::units::{Angle, Distance};
 use lox_frames::Icrf;
 use lox_time::Time;
-use lox_time::time_scales::{ContinuousTimeScale, Tai};
 use thiserror::Error;
 
 use crate::orbits::KeplerianOrbit;
@@ -46,8 +45,8 @@ enum Shape {
 
 /// Builder for constructing Keplerian orbits from orbital elements.
 #[derive(Debug, Clone)]
-pub struct KeplerianOrbitBuilder<T: ContinuousTimeScale, O: CoordinateOrigin> {
-    time: Time<T>,
+pub struct KeplerianOrbitBuilder<O: CoordinateOrigin> {
+    time: Time,
     origin: O,
     shape: Option<Shape>,
     inclination: Angle,
@@ -57,13 +56,13 @@ pub struct KeplerianOrbitBuilder<T: ContinuousTimeScale, O: CoordinateOrigin> {
     mean_anomaly: Option<Angle>,
 }
 
-impl Default for KeplerianOrbitBuilder<Tai, Earth> {
+impl Default for KeplerianOrbitBuilder<Earth> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl KeplerianOrbitBuilder<Tai, Earth> {
+impl KeplerianOrbitBuilder<Earth> {
     /// Creates a new builder with default TAI time scale and Earth origin.
     pub fn new() -> Self {
         Self {
@@ -80,9 +79,9 @@ impl KeplerianOrbitBuilder<Tai, Earth> {
 }
 
 // Typestate: change time scale
-impl<S: ContinuousTimeScale, O: CoordinateOrigin> KeplerianOrbitBuilder<S, O> {
+impl<O: CoordinateOrigin> KeplerianOrbitBuilder<O> {
     /// Sets the epoch and changes the time scale.
-    pub fn with_time<T: ContinuousTimeScale>(self, time: Time<T>) -> KeplerianOrbitBuilder<T, O> {
+    pub fn with_time(self, time: Time) -> KeplerianOrbitBuilder<O> {
         KeplerianOrbitBuilder {
             time,
             origin: self.origin,
@@ -96,7 +95,7 @@ impl<S: ContinuousTimeScale, O: CoordinateOrigin> KeplerianOrbitBuilder<S, O> {
     }
 
     /// Sets the central body origin.
-    pub fn with_origin<N: CoordinateOrigin>(self, origin: N) -> KeplerianOrbitBuilder<S, N> {
+    pub fn with_origin<N: CoordinateOrigin>(self, origin: N) -> KeplerianOrbitBuilder<N> {
         KeplerianOrbitBuilder {
             time: self.time,
             origin,
@@ -110,7 +109,7 @@ impl<S: ContinuousTimeScale, O: CoordinateOrigin> KeplerianOrbitBuilder<S, O> {
     }
 }
 
-impl<T: ContinuousTimeScale, O: CoordinateOrigin> KeplerianOrbitBuilder<T, O> {
+impl<O: CoordinateOrigin> KeplerianOrbitBuilder<O> {
     /// Sets the orbital shape via semi-major axis and eccentricity.
     pub fn with_semi_major_axis(mut self, semi_major_axis: Distance, eccentricity: f64) -> Self {
         self.shape = Some(Shape::SemiMajorAxis(semi_major_axis, eccentricity));
@@ -164,10 +163,9 @@ impl<T: ContinuousTimeScale, O: CoordinateOrigin> KeplerianOrbitBuilder<T, O> {
     }
 
     /// Builds the Keplerian orbit in the ICRF frame.
-    pub fn build(self) -> Result<KeplerianOrbit<T, O, Icrf>, OrbitBuilderError>
+    pub fn build(self) -> Result<KeplerianOrbit<O, Icrf>, OrbitBuilderError>
     where
         O: TryMeanRadius + TrySpheroid + Copy,
-        T: Copy,
     {
         if self.true_anomaly.is_some() && self.mean_anomaly.is_some() {
             return Err(OrbitBuilderError::AmbiguousAnomaly);
@@ -221,8 +219,8 @@ enum CircularSize {
 
 /// Builder for constructing circular orbits (eccentricity = 0).
 #[derive(Debug, Clone)]
-pub struct CircularBuilder<T: ContinuousTimeScale, O: CoordinateOrigin> {
-    time: Time<T>,
+pub struct CircularBuilder<O: CoordinateOrigin> {
+    time: Time,
     origin: O,
     size: Option<CircularSize>,
     inclination: Angle,
@@ -230,13 +228,13 @@ pub struct CircularBuilder<T: ContinuousTimeScale, O: CoordinateOrigin> {
     true_anomaly: Angle,
 }
 
-impl Default for CircularBuilder<Tai, Earth> {
+impl Default for CircularBuilder<Earth> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl CircularBuilder<Tai, Earth> {
+impl CircularBuilder<Earth> {
     /// Creates a new circular orbit builder with default TAI time scale and Earth origin.
     pub fn new() -> Self {
         Self {
@@ -251,9 +249,9 @@ impl CircularBuilder<Tai, Earth> {
 }
 
 // Typestate: change time scale
-impl<S: ContinuousTimeScale, O: CoordinateOrigin> CircularBuilder<S, O> {
+impl<O: CoordinateOrigin> CircularBuilder<O> {
     /// Sets the epoch and changes the time scale.
-    pub fn with_time<T: ContinuousTimeScale>(self, time: Time<T>) -> CircularBuilder<T, O> {
+    pub fn with_time(self, time: Time) -> CircularBuilder<O> {
         CircularBuilder {
             time,
             origin: self.origin,
@@ -265,7 +263,7 @@ impl<S: ContinuousTimeScale, O: CoordinateOrigin> CircularBuilder<S, O> {
     }
 
     /// Sets the central body origin.
-    pub fn with_origin<N: CoordinateOrigin>(self, origin: N) -> CircularBuilder<S, N> {
+    pub fn with_origin<N: CoordinateOrigin>(self, origin: N) -> CircularBuilder<N> {
         CircularBuilder {
             time: self.time,
             origin,
@@ -277,7 +275,7 @@ impl<S: ContinuousTimeScale, O: CoordinateOrigin> CircularBuilder<S, O> {
     }
 }
 
-impl<T: ContinuousTimeScale, O: CoordinateOrigin> CircularBuilder<T, O> {
+impl<O: CoordinateOrigin> CircularBuilder<O> {
     /// Sets the orbit size via semi-major axis.
     pub fn with_semi_major_axis(mut self, semi_major_axis: Distance) -> Self {
         self.size = Some(CircularSize::SemiMajorAxis(semi_major_axis));
@@ -309,10 +307,9 @@ impl<T: ContinuousTimeScale, O: CoordinateOrigin> CircularBuilder<T, O> {
     }
 
     /// Builds the circular Keplerian orbit in the ICRF frame.
-    pub fn build(self) -> Result<KeplerianOrbit<T, O, Icrf>, OrbitBuilderError>
+    pub fn build(self) -> Result<KeplerianOrbit<O, Icrf>, OrbitBuilderError>
     where
         O: TryMeanRadius + TrySpheroid + Copy,
-        T: Copy,
     {
         let size = self.size.ok_or(OrbitBuilderError::MissingShape)?;
 
@@ -353,10 +350,11 @@ mod tests {
     const JD1: f64 = 2458849.5;
     const JD2: f64 = 49.78099017 - 1.0;
 
-    fn epoch() -> Time<Tdb> {
+    fn epoch() -> Time {
         Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2))
-            .to_time()
+            .to_dynamic_time()
             .to_scale(Tdb)
+            .into_dynamic()
     }
 
     #[test]

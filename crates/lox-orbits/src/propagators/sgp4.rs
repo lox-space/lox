@@ -73,7 +73,7 @@ impl Sgp4 {
     }
 
     /// Propagate to a single time, returning a TEME state.
-    pub fn state_at(&self, time: Time<Tai>) -> Result<CartesianOrbit<Tai, Earth, Teme>, Sgp4Error> {
+    pub fn state_at(&self, time: Time<Tai>) -> Result<CartesianOrbit<Earth, Teme>, Sgp4Error> {
         let dt = (time - self.time).to_seconds().to_f64() / SECONDS_PER_MINUTE;
         let prediction = self.constants.propagate(MinutesSinceEpoch(dt))?;
         // sgp4 crate returns km and km/s, convert to m and m/s
@@ -81,25 +81,26 @@ impl Sgp4 {
         let velocity = DVec3::from_array(prediction.velocity) * 1e3;
         Ok(CartesianOrbit::new(
             Cartesian::from_vecs(position, velocity),
-            time,
+            time.into_dynamic(),
             Earth,
             Teme,
         ))
     }
 }
 
-impl Propagator<Tai, Earth> for Sgp4 {
+impl Propagator<Earth> for Sgp4 {
     type Frame = Teme;
     type Error = Sgp4Error;
 
-    fn state_at(&self, time: Time<Tai>) -> Result<CartesianOrbit<Tai, Earth, Teme>, Sgp4Error> {
-        self.state_at(time)
+    fn state_at(&self, time: Time) -> Result<CartesianOrbit<Earth, Teme>, Sgp4Error> {
+        self.state_at(time.to_scale(Tai))
     }
 
-    fn propagate(
-        &self,
-        interval: TimeInterval<Tai>,
-    ) -> Result<Trajectory<Tai, Earth, Teme>, Sgp4Error> {
+    fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<Earth, Teme>, Sgp4Error> {
+        // SGP4 epoch arithmetic is TAI-based; convert the interval once rather
+        // than per step.
+        let interval =
+            TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
         let step = self.step.unwrap_or(TimeDelta::from_seconds(60));
         let states = interval
             .step_by(step)
@@ -152,7 +153,7 @@ mod tests {
         let t0 = sgp4.time();
         let t1 = t0 + TimeDelta::from_minutes_f64(92.821);
         let interval = Interval::new(t0, t1);
-        let traj = sgp4.propagate(interval).unwrap();
+        let traj = sgp4.propagate(interval.into_dynamic()).unwrap();
         // With 60s default step over ~93 min, we should have ~94 points
         assert!(traj.states().len() > 90);
     }
@@ -170,7 +171,7 @@ mod tests {
         let t1 = t0 + TimeDelta::from_minutes(10);
         let interval = Interval::new(t0, t1);
         let traj = sgp4
-            .propagate(interval)
+            .propagate(interval.into_dynamic())
             .unwrap()
             .into_frame(Icrf, &DefaultRotationProvider)
             .unwrap();

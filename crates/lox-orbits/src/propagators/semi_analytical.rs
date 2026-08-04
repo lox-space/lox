@@ -6,7 +6,6 @@ use lox_core::coords::Cartesian;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
-use lox_time::time_scales::{ContinuousTimeScale, TimeScale};
 use thiserror::Error;
 
 use lox_bodies::{CoordinateOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
@@ -37,25 +36,20 @@ pub enum ValladoError {
 /// Keplerian orbit propagator using Vallado's universal-variable formulation.
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Vallado<
-    T: ContinuousTimeScale = TimeScale,
-    O: CoordinateOrigin = Origin,
-    R: ReferenceFrame = Frame,
-> {
-    initial_state: CartesianOrbit<T, O, R>,
+pub struct Vallado<O: CoordinateOrigin = Origin, R: ReferenceFrame = Frame> {
+    initial_state: CartesianOrbit<O, R>,
     max_iter: i32,
     step: Option<TimeDelta>,
 }
 
 // Infallible — static bounds guarantee inertial frame and point mass.
-impl<T, O, R> Vallado<T, O, R>
+impl<O, R> Vallado<O, R>
 where
-    T: ContinuousTimeScale,
     O: PointMass + Copy,
     R: QuasiInertial,
 {
     /// Create a new Vallado propagator from the given initial state.
-    pub fn new(initial_state: CartesianOrbit<T, O, R>) -> Self {
+    pub fn new(initial_state: CartesianOrbit<O, R>) -> Self {
         Self {
             initial_state,
             max_iter: 300,
@@ -65,14 +59,13 @@ where
 }
 
 // Fallible — Try* bounds (covers Origin and Frame).
-impl<T, O, R> Vallado<T, O, R>
+impl<O, R> Vallado<O, R>
 where
-    T: ContinuousTimeScale,
     O: TryPointMass + Copy,
     R: TryQuasiInertial + Copy,
 {
     /// Try to create a new Vallado propagator, returning an error if the origin or frame is invalid.
-    pub fn try_new(initial_state: CartesianOrbit<T, O, R>) -> Result<Self, ValladoError> {
+    pub fn try_new(initial_state: CartesianOrbit<O, R>) -> Result<Self, ValladoError> {
         initial_state.origin().try_gravitational_parameter()?;
         initial_state.reference_frame().try_quasi_inertial()?;
         Ok(Self {
@@ -83,9 +76,8 @@ where
     }
 }
 
-impl<T, O, R> Vallado<T, O, R>
+impl<O, R> Vallado<O, R>
 where
-    T: ContinuousTimeScale,
     O: TryPointMass + Copy,
     R: ReferenceFrame,
 {
@@ -115,7 +107,7 @@ where
     }
 
     /// Return a reference to the initial orbital state.
-    pub fn initial_state(&self) -> &CartesianOrbit<T, O, R> {
+    pub fn initial_state(&self) -> &CartesianOrbit<O, R> {
         &self.initial_state
     }
 
@@ -133,9 +125,8 @@ where
     }
 
     /// Propagate to a single time.
-    pub fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, ValladoError>
+    pub fn state_at(&self, time: Time) -> Result<CartesianOrbit<O, R>, ValladoError>
     where
-        T: Copy,
         R: Copy,
     {
         let frame = self.reference_frame();
@@ -204,20 +195,19 @@ where
 }
 
 // Single impl covers both typed and Vallado
-impl<T, O, R> Propagator<T, O> for Vallado<T, O, R>
+impl<O, R> Propagator<O> for Vallado<O, R>
 where
-    T: ContinuousTimeScale + Copy + Eq,
     O: TryPointMass + Copy,
     R: ReferenceFrame + Copy,
 {
     type Frame = R;
     type Error = ValladoError;
 
-    fn state_at(&self, time: Time<T>) -> Result<CartesianOrbit<T, O, R>, ValladoError> {
+    fn state_at(&self, time: Time) -> Result<CartesianOrbit<O, R>, ValladoError> {
         self.state_at(time)
     }
 
-    fn propagate(&self, interval: TimeInterval<T>) -> Result<Trajectory<T, O, R>, ValladoError> {
+    fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<O, R>, ValladoError> {
         let step = self.step.unwrap_or(TimeDelta::from_seconds(1));
         let states = interval
             .step_by(step)
@@ -244,7 +234,7 @@ mod tests {
     #[test]
     fn test_vallado_state_at() {
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
-        let time = utc.to_time().to_scale(Tdb);
+        let time = utc.to_dynamic_time().to_scale(Tdb);
         let semi_major = 24464.560;
         let eccentricity = 0.7311;
         let inclination = 0.122138;
@@ -262,12 +252,14 @@ mod tests {
             .unwrap();
 
         let mu = Earth.gravitational_parameter();
-        let s0 = CartesianOrbit::new(k0.to_cartesian(mu), time, Earth, Icrf);
+        let s0 = CartesianOrbit::new(k0.to_cartesian(mu), time.into_dynamic(), Earth, Icrf);
         let period = k0.orbital_period(mu).unwrap();
         let t1 = time + period;
 
         let propagator = Vallado::new(s0);
-        let s1 = propagator.state_at(t1).expect("propagator should converge");
+        let s1 = propagator
+            .state_at(t1.into_dynamic())
+            .expect("propagator should converge");
 
         let k1 = s1.to_keplerian();
         assert_approx_eq!(
@@ -288,13 +280,13 @@ mod tests {
             rtol <= 1e-8
         );
         assert_approx_eq!(k1.true_anomaly().as_f64(), true_anomaly, rtol <= 1e-8);
-        assert_approx_eq!(k1.time(), t1);
+        assert_approx_eq!(k1.time(), t1.into_dynamic());
     }
 
     #[test]
     fn test_vallado_propagate() {
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
-        let time = utc.to_time().to_scale(Tdb);
+        let time = utc.to_dynamic_time().to_scale(Tdb);
         let semi_major = 24464.560;
         let eccentricity = 0.7311;
         let inclination = 0.122138;
@@ -312,11 +304,11 @@ mod tests {
             .unwrap();
 
         let mu = Earth.gravitational_parameter();
-        let s0 = CartesianOrbit::new(k0.to_cartesian(mu), time, Earth, Icrf);
+        let s0 = CartesianOrbit::new(k0.to_cartesian(mu), time.into_dynamic(), Earth, Icrf);
         let period = k0.orbital_period(mu).unwrap();
         let t_end = time + period;
         let interval = Interval::new(time, t_end);
-        let trajectory = Vallado::new(s0).propagate(interval).unwrap();
+        let trajectory = Vallado::new(s0).propagate(interval.into_dynamic()).unwrap();
         let s1 = trajectory.at_delta(period);
         let k1 = s1.to_keplerian();
 
@@ -343,12 +335,12 @@ mod tests {
     #[test]
     fn test_try_new_with_static_types() {
         let utc = utc!(2023, 3, 25, 21, 8, 0.0).unwrap();
-        let time = utc.to_time().to_scale(Tdb);
+        let time = utc.to_dynamic_time().to_scale(Tdb);
         let pos = DVec3::new(-1076225.32, -6765896.36, -332308.78);
         let vel = DVec3::new(9356.86, -3312.35, -1188.02);
         let s0 = CartesianOrbit::new(
             lox_core::coords::Cartesian::from_vecs(pos, vel),
-            time,
+            time.into_dynamic(),
             Earth,
             Icrf,
         );

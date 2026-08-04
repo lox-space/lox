@@ -23,7 +23,7 @@ use lox_frames::{Frame, ReferenceFrame};
 use lox_orbits::orbits::{Ensemble, Trajectory};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
-use lox_time::time_scales::Tai;
+use lox_time::time_scales::{Tai, TimeScale};
 
 use crate::assets::{AssetId, Scenario, Spacecraft};
 use crate::imaging::aoi::{Aoi, AoiId};
@@ -125,7 +125,7 @@ struct SubSatSample {
 /// [`AccessDetectFn::eval`] (per-sample detection) and pass-direction sampling
 /// (per-window post-detection).
 fn sub_sat_sample<O, R>(
-    trajectory: &Trajectory<Tai, O, R>,
+    trajectory: &Trajectory<O, R>,
     time: Time<Tai>,
     origin: O,
     body_fixed_frame: Frame,
@@ -133,11 +133,11 @@ fn sub_sat_sample<O, R>(
 where
     O: TrySpheroid + TryMeanRadius + Copy,
     R: ReferenceFrame + Copy,
-    DefaultRotationProvider: TryRotation<R, Frame, Tai>,
-    <DefaultRotationProvider as TryRotation<R, Frame, Tai>>::Error:
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
+    <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         core::error::Error + Send + Sync + 'static,
 {
-    let state = trajectory.at(time);
+    let state = trajectory.at(time.into_dynamic());
     let state_bf = state
         .try_to_frame(body_fixed_frame, &DefaultRotationProvider)
         .map_err(|e| EvalError::Rotation(Box::new(e)))?;
@@ -181,7 +181,7 @@ fn pass_direction_of(sample: &SubSatSample) -> PassDirection {
 struct AccessDetectFn<'a, P: AccessPayload, O: CoordinateOrigin, R: ReferenceFrame> {
     payload: P,
     aoi: &'a Aoi,
-    trajectory: &'a Trajectory<Tai, O, R>,
+    trajectory: &'a Trajectory<O, R>,
     origin: O,
     body_fixed_frame: Frame,
 }
@@ -191,8 +191,8 @@ where
     P: AccessPayload + Copy,
     O: TrySpheroid + TryMeanRadius + Copy,
     R: ReferenceFrame + Copy,
-    DefaultRotationProvider: TryRotation<R, Frame, Tai>,
-    <DefaultRotationProvider as TryRotation<R, Frame, Tai>>::Error:
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
+    <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         core::error::Error + Send + Sync + 'static,
 {
     type Error = EvalError;
@@ -222,7 +222,7 @@ where
     Spacecraft: PayloadAccessor<P>,
 {
     scenario: &'a Scenario<O, R>,
-    ensemble: &'a Ensemble<AssetId, Tai, O, R>,
+    ensemble: &'a Ensemble<AssetId, O, R>,
     aois: Vec<(AoiId, Aoi)>,
     step: TimeDelta,
     body_fixed_frame: Frame,
@@ -235,15 +235,15 @@ where
     Spacecraft: PayloadAccessor<P>,
     O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<Origin>,
     R: ReferenceFrame + Copy + Send + Sync + Into<Frame>,
-    DefaultRotationProvider: TryRotation<R, Frame, Tai>,
-    <DefaultRotationProvider as TryRotation<R, Frame, Tai>>::Error:
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
+    <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         core::error::Error + Send + Sync + 'static,
 {
     /// Creates a new access analysis. The body-fixed frame defaults to the
     /// scenario origin's IAU frame.
     pub fn new(
         scenario: &'a Scenario<O, R>,
-        ensemble: &'a Ensemble<AssetId, Tai, O, R>,
+        ensemble: &'a Ensemble<AssetId, O, R>,
         aois: Vec<(AoiId, Aoi)>,
     ) -> Self {
         let body_fixed_frame = Frame::Iau(scenario.origin().into());

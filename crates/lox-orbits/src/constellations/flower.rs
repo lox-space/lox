@@ -13,7 +13,6 @@ use lox_core::elements::KeplerianBuilder;
 use lox_core::units::{Angle, Distance};
 use lox_frames::ReferenceFrame;
 use lox_time::Time;
-use lox_time::time_scales::ContinuousTimeScale;
 
 use super::{Constellation, ConstellationError, ConstellationSatellite};
 
@@ -141,15 +140,14 @@ impl FlowerBuilder {
 
     /// Build the constellation, resolving body parameters from the origin
     /// when using perigee altitude.
-    pub fn build_constellation<T, O, R>(
+    pub fn build_constellation<O, R>(
         &self,
         name: impl Into<String>,
-        epoch: Time<T>,
+        epoch: Time,
         origin: O,
         frame: R,
-    ) -> Result<Constellation<T, O, R>, ConstellationError>
+    ) -> Result<Constellation<O, R>, ConstellationError>
     where
-        T: ContinuousTimeScale,
         O: CoordinateOrigin + TryMeanRadius + TryPointMass + TryRotationalElements,
         R: ReferenceFrame,
     {
@@ -191,14 +189,15 @@ mod tests {
     use lox_bodies::PointMass;
     use lox_bodies::RotationalElements;
     use lox_frames::Icrf;
-    use lox_time::time_scales::Tai;
+
+    use lox_time::time_scales::TimeScale;
     use lox_units::{AngleUnits, DistanceUnits};
 
     use super::*;
 
     #[test]
     fn test_flower_basic() {
-        let epoch = Time::j2000(Tai);
+        let epoch = Time::j2000(TimeScale::Tai);
         let c = FlowerBuilder::new(14, 1, 28, 1, 28)
             .with_perigee_altitude(780.0.km())
             .with_inclination(53.0.deg())
@@ -220,7 +219,7 @@ mod tests {
         let expected_sma = (earth_mu.as_f64() * period.powi(2) / (4.0 * PI * PI)).cbrt();
         let expected_ecc = 1.0 - (earth_r.as_f64() + 780.0e3) / expected_sma;
 
-        let epoch = Time::j2000(Tai);
+        let epoch = Time::j2000(TimeScale::Tai);
         let c = FlowerBuilder::new(14, 1, 2, 1, 28)
             .with_perigee_altitude(780.0.km())
             .with_inclination(53.0.deg())
@@ -241,7 +240,7 @@ mod tests {
 
     #[test]
     fn test_flower_with_sma() {
-        let epoch = Time::j2000(Tai);
+        let epoch = Time::j2000(TimeScale::Tai);
         let c = FlowerBuilder::new(14, 1, 5, 1, 28)
             .with_semi_major_axis(7000.0.km(), 0.01)
             .with_inclination(53.0.deg())
@@ -253,7 +252,7 @@ mod tests {
 
     #[test]
     fn test_flower_missing_shape() {
-        let epoch = Time::j2000(Tai);
+        let epoch = Time::j2000(TimeScale::Tai);
         let result = FlowerBuilder::new(14, 1, 5, 1, 28)
             .with_inclination(53.0.deg())
             .build_constellation("flower", epoch, Earth, Icrf);
@@ -263,7 +262,7 @@ mod tests {
 
     #[test]
     fn test_flower_zero_satellites() {
-        let epoch = Time::j2000(Tai);
+        let epoch = Time::j2000(TimeScale::Tai);
         let result = FlowerBuilder::new(14, 1, 0, 1, 28)
             .with_perigee_altitude(780.0.km())
             .with_inclination(53.0.deg())
@@ -274,7 +273,7 @@ mod tests {
 
     #[test]
     fn test_flower_with_argument_of_periapsis() {
-        let epoch = Time::j2000(Tai);
+        let epoch = Time::j2000(TimeScale::Tai);
         let c = FlowerBuilder::new(14, 1, 5, 1, 28)
             .with_perigee_altitude(780.0.km())
             .with_inclination(53.0.deg())
@@ -292,7 +291,7 @@ mod tests {
 
     #[test]
     fn test_flower_with_longitude_of_ascending_node() {
-        let epoch = Time::j2000(Tai);
+        let epoch = Time::j2000(TimeScale::Tai);
         let c = FlowerBuilder::new(14, 1, 5, 1, 28)
             .with_semi_major_axis(7000.0.km(), 0.01)
             .with_inclination(53.0.deg())
@@ -315,7 +314,7 @@ mod tests {
     fn test_flower_large_phasing_normalizes() {
         // Use phasing values that trigger the modulo normalization
         // delta_raan = -TAU * 3 / 2 = -3*PI, abs > TAU so %= TAU
-        let epoch = Time::j2000(Tai);
+        let epoch = Time::j2000(TimeScale::Tai);
         let c = FlowerBuilder::new(14, 1, 4, 3, 2)
             .with_semi_major_axis(7000.0.km(), 0.01)
             .with_inclination(53.0.deg())

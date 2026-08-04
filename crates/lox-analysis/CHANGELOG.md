@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- [**breaking**] `Pass` is no longer parametrised on the time scale. The analysis layer keeps its internal TAI axis; `events` stays generic over the scale because it is a general-purpose root-finding utility.
+
+### Changed
+
 - [**breaking**] `Scenario` and `Pass` now default their origin, frame and time scale parameters to the runtime enums; the `DynScenario` and `DynPass` aliases are removed
 
 ## [0.1.0-alpha.14](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.13...lox-analysis-v0.1.0-alpha.14) - 2026-06-08

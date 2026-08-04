@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `TimeInterval` and `TimeSeries` now default their scale parameter to `TimeScale`
+- add `TimeInterval::into_dynamic`, mirroring `Time::into_dynamic`
+
+### Changed
+
 - [**breaking**] rename the `TimeScale` trait to `ContinuousTimeScale`
 - [**breaking**] rename the `DynTimeScale` enum to `TimeScale`
 - [**breaking**] `Time<T>` now defaults to `Time<TimeScale>`; the `DynTime` alias is removed

@@ -21,7 +21,7 @@ use lox_core::{
     utils::Linspace,
 };
 use lox_frames::{NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial};
-use lox_time::{deltas::TimeDelta, time_scales::ContinuousTimeScale};
+use lox_time::deltas::TimeDelta;
 use thiserror::Error;
 
 /// Errors that can occur when constructing a Keplerian orbit.
@@ -36,14 +36,13 @@ pub enum KeplerianOrbitError {
     PerigeeCrossesBodyRadius,
 }
 
-impl<T, O, R> KeplerianOrbit<T, O, R>
+impl<O, R> KeplerianOrbit<O, R>
 where
-    T: ContinuousTimeScale,
     O: CoordinateOrigin,
     R: ReferenceFrame,
 {
     /// Constructs a new Keplerian orbit in a quasi-inertial frame.
-    pub const fn new(keplerian: Keplerian, time: lox_time::Time<T>, origin: O, frame: R) -> Self
+    pub const fn new(keplerian: Keplerian, time: lox_time::Time, origin: O, frame: R) -> Self
     where
         R: QuasiInertial,
     {
@@ -70,7 +69,7 @@ where
     /// Constructs a Keplerian orbit with validation of the frame and perigee radius.
     pub fn try_from_keplerian(
         keplerian: Keplerian,
-        time: lox_time::Time<T>,
+        time: lox_time::Time,
         origin: O,
         frame: R,
     ) -> Result<Self, KeplerianOrbitError>
@@ -114,9 +113,8 @@ where
     }
 
     /// Converts this Keplerian orbit to Cartesian position and velocity.
-    pub fn to_cartesian(&self) -> CartesianOrbit<T, O, R>
+    pub fn to_cartesian(&self) -> CartesianOrbit<O, R>
     where
-        T: Copy,
         O: Copy + PointMass,
         R: Copy,
     {
@@ -129,9 +127,8 @@ where
     }
 
     /// Converts this Keplerian orbit to Cartesian, returning an error if the gravitational parameter is undefined.
-    pub fn try_to_cartesian(&self) -> Result<CartesianOrbit<T, O, R>, UndefinedOriginPropertyError>
+    pub fn try_to_cartesian(&self) -> Result<CartesianOrbit<O, R>, UndefinedOriginPropertyError>
     where
-        T: Copy,
         O: Copy + TryPointMass,
         R: Copy,
     {
@@ -154,9 +151,8 @@ where
     }
 
     /// Generates a trajectory by tracing the full orbit with `n` evenly-spaced samples.
-    pub fn trace(&self, n: usize) -> Option<Trajectory<T, O, R>>
+    pub fn trace(&self, n: usize) -> Option<Trajectory<O, R>>
     where
-        T: Copy,
         O: TryPointMass + Copy,
         R: Copy,
     {
@@ -187,15 +183,14 @@ where
     }
 }
 
-impl<T, O, R> TryFrom<KeplerianOrbit<T, O, R>> for CartesianOrbit<T, O, R>
+impl<O, R> TryFrom<KeplerianOrbit<O, R>> for CartesianOrbit<O, R>
 where
-    T: ContinuousTimeScale + Copy,
     O: CoordinateOrigin + TryPointMass + Copy,
     R: ReferenceFrame + Copy,
 {
     type Error = UndefinedOriginPropertyError;
 
-    fn try_from(orbit: KeplerianOrbit<T, O, R>) -> Result<Self, Self::Error> {
+    fn try_from(orbit: KeplerianOrbit<O, R>) -> Result<Self, Self::Error> {
         orbit.try_to_cartesian()
     }
 }
@@ -204,7 +199,8 @@ where
 mod tests {
     use lox_bodies::{Earth, MeanRadius};
     use lox_frames::Icrf;
-    use lox_time::{Time, time_scales::Tai, utc::Utc};
+    use lox_time::time_scales::TimeScale;
+    use lox_time::{Time, utc::Utc};
     use lox_units::DistanceUnits;
 
     use super::*;
@@ -223,10 +219,11 @@ mod tests {
             TrueAnomaly::new(0.0.deg()),
         );
 
-        let epoch: Time<Tai> =
-            Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2)).to_time();
+        let epoch =
+            Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2)).to_dynamic_time();
 
-        let result = KeplerianOrbit::try_from_keplerian(elements, epoch, Earth, Icrf);
+        let result =
+            KeplerianOrbit::try_from_keplerian(elements, epoch.into_dynamic(), Earth, Icrf);
         assert!(result.is_ok());
     }
 
@@ -243,10 +240,10 @@ mod tests {
             TrueAnomaly::new(0.0.deg()),
         );
 
-        let epoch: Time<Tai> =
-            Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2)).to_time();
+        let epoch =
+            Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2)).to_dynamic_time();
 
-        KeplerianOrbit::try_from_keplerian(elements, epoch, Earth, Icrf).unwrap();
+        KeplerianOrbit::try_from_keplerian(elements, epoch.into_dynamic(), Earth, Icrf).unwrap();
     }
 
     #[test]
@@ -255,7 +252,7 @@ mod tests {
         use lox_core::units::{AngleUnits, Distance};
         use lox_units::DistanceUnits;
 
-        let time = Time::j2000(Tai);
+        let time = Time::j2000(TimeScale::Tai);
         let kep = Keplerian::builder()
             .with_semi_major_axis(Distance::new(7_000_000.0), 0.001)
             .with_inclination(51.6_f64.to_radians().rad())
@@ -265,7 +262,7 @@ mod tests {
             .build()
             .unwrap();
         let kep_orbit = KeplerianOrbit::new(kep, time, Earth, Icrf);
-        let cart: CartesianOrbit<_, _, _> = kep_orbit.try_into().unwrap();
+        let cart: CartesianOrbit<_, _> = kep_orbit.try_into().unwrap();
         assert!(cart.position().length() > 6_000.0.km().as_f64());
     }
 }
