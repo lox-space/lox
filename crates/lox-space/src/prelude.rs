@@ -12,7 +12,7 @@
 pub use crate::time::Time;
 pub use crate::time::deltas::TimeDelta;
 pub use crate::time::intervals::Interval;
-pub use crate::time::time_scales::{Tai, Tdb, Ut1};
+pub use crate::time::time_scales::{Tai, Tdb, TimeScale, Ut1};
 pub use crate::time::utc::Utc;
 
 // Units (types + extension traits for 800.0.km() syntax)
@@ -31,8 +31,8 @@ pub use crate::orbits::propagators::numerical::NumericalPropagator;
 pub use crate::orbits::propagators::semi_analytical::Vallado;
 
 // Bodies & frames
-pub use crate::bodies::{Earth, Moon, Sun};
-pub use crate::frames::{Icrf, Itrf};
+pub use crate::bodies::{Earth, Moon, Origin, Sun};
+pub use crate::frames::{Frame, Icrf, Itrf};
 
 // Earth orientation
 pub use crate::earth::eop::{EopParser, EopProvider};

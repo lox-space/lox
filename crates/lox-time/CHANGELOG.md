@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+
+SPDX-License-Identifier: MPL-2.0
+-->
+
 # Changelog
 All notable changes to this project will be documented in this file.
 
@@ -5,6 +11,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+
+- [**breaking**] rename the `TimeScale` trait to `ContinuousTimeScale`
+- [**breaking**] rename the `DynTimeScale` enum to `TimeScale`
+- [**breaking**] `Time<T>` now defaults to `Time<TimeScale>`; the `DynTime` alias is removed
+- [**breaking**] rename `Time::into_dyn` to `Time::into_dynamic` and `Utc::to_dyn_time` to `Utc::to_dynamic_time`
 
 ## [0.1.0-alpha.26](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.25...lox-time-v0.1.0-alpha.26) - 2026-05-26
 
