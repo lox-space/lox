@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- [**breaking**] `Scenario(start, end, ...)` no longer normalizes its bounds to TAI; the supplied time scale is preserved
+
+### Changed
+
 - add `TimeScale`, `Origin` and `Frame` to the prelude
 
 ## [0.1.0-alpha.49](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.48...lox-space-v0.1.0-alpha.49) - 2026-06-08

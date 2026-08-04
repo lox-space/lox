@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- [**breaking**] `Scenario` is now runtime-scaled: `Scenario::new`, `with_interval` and `interval` take/return `Time`/`TimeInterval` instead of their TAI-pinned forms. The analysis layer no longer references `Tai` at all.
+
+### Changed
+
 - [**breaking**] drop the time-scale type parameter from event detection: `Event`, `DetectFn`, `EventDetector`, `IntervalDetector` and `IntervalDetectorExt` now work in runtime-scaled `Time`, matching the events2 rewrite. Detection outputs (`TimeSeries`, `TimeInterval`, `AccessWindow`) follow.
 
 ### Changed

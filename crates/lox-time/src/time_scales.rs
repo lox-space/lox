@@ -217,6 +217,7 @@ impl_time_scale_serde!(Ut1, "UT1");
 /// conversions between scales are checked at runtime.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(into = "&'static str", try_from = "String"))]
 pub enum TimeScale {
     /// GPS Time.
     Gps,
@@ -307,6 +308,21 @@ impl From<Ut1> for TimeScale {
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
 #[error("unknown time scale: {0}")]
 pub struct UnknownTimeScaleError(String);
+
+#[cfg(feature = "serde")]
+impl From<TimeScale> for &'static str {
+    fn from(scale: TimeScale) -> Self {
+        scale.abbreviation()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<String> for TimeScale {
+    type Error = UnknownTimeScaleError;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
 
 impl FromStr for TimeScale {
     type Err = UnknownTimeScaleError;
