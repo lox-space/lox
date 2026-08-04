@@ -375,7 +375,9 @@ impl Spacecraft {
 /// and the assets (ground stations and spacecraft) involved.
 ///
 /// The type parameters `O` and `R` specify the "native" origin body and
-/// reference frame. For dynamic dispatch (e.g. via Python), use `Scenario`.
+/// reference frame. Both default to the runtime-determined [`Origin`] and
+/// [`Frame`]; name the zero-sized types — `Scenario<Earth, Icrf>` — to have
+/// the compiler track them.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Scenario<O: CoordinateOrigin = Origin, R: ReferenceFrame = Frame> {

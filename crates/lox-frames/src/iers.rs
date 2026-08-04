@@ -12,7 +12,7 @@ use lox_units::Angle;
 
 use crate::iers::{cip::CipCoords, ecliptic::MeanObliquity, nutation::Nutation};
 
-/// Celestial Intermediate CoordinateOrigin locator.
+/// Celestial Intermediate Origin locator.
 pub mod cio;
 /// Celestial Intermediate Pole coordinates.
 pub mod cip;
@@ -28,7 +28,7 @@ pub mod nutation;
 pub mod polar_motion;
 /// Precession matrices and frame bias.
 pub mod precession;
-/// Terrestrial Intermediate CoordinateOrigin locator.
+/// Terrestrial Intermediate Origin locator.
 pub mod tio;
 
 mod sealed {

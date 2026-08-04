@@ -3,13 +3,13 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Module cio exposes functions for calculating the Celestial Intermediate CoordinateOrigin (CIO) locator, s.
+//! Module cio exposes functions for calculating the Celestial Intermediate Origin (CIO) locator, s.
 
 use lox_approx::ApproxEq;
 use lox_core::units::Angle;
 
 pub mod iau2006;
 
-/// Celestial Intermediate CoordinateOrigin (CIO) locator, s.
+/// Celestial Intermediate Origin (CIO) locator, s.
 #[derive(Debug, Clone, Copy, Default, PartialEq, ApproxEq)]
 pub struct CioLocator(pub Angle);
