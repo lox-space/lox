@@ -28,13 +28,16 @@ impl OffsetProvider for DefaultRotationProvider {
     type Error = Infallible;
 
     fn tai_to_ut1(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
+        // UT1 is approximated by UTC, which is good to |UT1 - UTC| <= 0.9 s.
+        // The contract is the offset *to* the target scale, i.e. UT1 - TAI,
+        // so the leap-second count (TAI - UTC) has to be negated.
         let tai = Time::from_delta(Tai, delta);
-        Ok(DefaultLeapSecondsProvider.delta_tai_utc(tai))
+        Ok(-DefaultLeapSecondsProvider.delta_tai_utc(tai))
     }
 
     fn ut1_to_tai(&self, delta: TimeDelta) -> Result<TimeDelta, Self::Error> {
         let utc = Utc::from_delta(delta);
-        Ok(DefaultLeapSecondsProvider.delta_utc_tai(utc))
+        Ok(-DefaultLeapSecondsProvider.delta_utc_tai(utc))
     }
 }
 
