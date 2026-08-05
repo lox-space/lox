@@ -17,5 +17,8 @@ pub mod imaging;
 pub mod pipeline;
 /// Power budget analysis: eclipse detection, beta angle, solar flux.
 pub mod power;
+/// Streaming execution: rayon workers to an async consumer over a bounded channel.
+#[cfg(feature = "async")]
+pub mod stream;
 /// Visibility analysis: line-of-sight, elevation masks, passes, and interval computation.
 pub mod visibility;

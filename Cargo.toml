@@ -44,6 +44,8 @@ csv = "1.4.0"
 differential-equations = "0.6.1"
 divan = { package = "codspeed-divan-compat", version = "4.3.0" }
 fast_polynomial = { version = "0.3.0", default-features = false }
+futures-core = "0.3.33"
+futures-util = { version = "0.3.33", default-features = false, features = ["std"] }
 geo = "0.33"
 geojson = "1.0"
 glam = { version = "0.33.1", default-features = false, features = ["f64"] }
@@ -63,6 +65,7 @@ sgp4 = "2.3.0"
 sha2 = "0.11"
 tempfile = "3"
 thiserror = { version = "2.0.17", default-features = false }
+tokio = { version = "1.53.1", default-features = false }
 zip = { version = "8", default-features = false, features = ["deflate"] }
 
 [profile.release]
