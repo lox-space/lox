@@ -2,29 +2,28 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Eager `compute()` versus the pipeline, while both still exist.
+//! What the pipeline's shape costs and saves.
 //!
-//! Lives in `lox-analysis` rather than `lox-space` (against the usual rule) for
-//! one reason: it compares two implementations of the *same* analysis, and the
-//! eager one is about to be deleted. Once the hard cut lands there is nothing
-//! left to compare and the surviving numbers belong in `lox-space`'s suite.
+//! Written to compare against the eager implementation before it was deleted;
+//! those arms are gone, and what remains measures the two things the eager path
+//! could not express at all:
+//!
+//! - `windows` versus `passes` — observables were roughly half again the cost of
+//!   the windows alone, which is why a windows-only entry point exists.
+//! - `first_pass_only` — stopping after one item, which an eager scan cannot do.
+//! - `sequential` versus `rayon` — parallelism as the caller's explicit choice
+//!   rather than a hard-coded pair-count threshold.
 //!
 //! Run with `cargo bench -p lox-analysis --bench pipeline`.
-//!
-//! The comparison to watch is `*_passes`: the old API returned cheap intervals
-//! and made observables opt-in via `to_passes`, whereas the pipeline's `single`
-//! materialises them as it goes. If observables dominate, a windows-only entry
-//! point has to survive the cut.
 
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 
 use divan::{Bencher, black_box};
 use lox_analysis::assets::{AssetId, GroundStation, Scenario, Spacecraft};
-use lox_analysis::legacy::VisibilityAnalysis as EagerVisibility;
 use lox_analysis::pipeline::Parallelism;
-use lox_analysis::pipeline::analyses::VisibilityAnalysis as PipelineVisibility;
 use lox_analysis::visibility::ElevationMask;
+use lox_analysis::visibility::VisibilityAnalysis;
 use lox_bodies::Origin;
 use lox_core::coords::LonLatAlt;
 use lox_ephem::spk::parser::Spk;
@@ -139,36 +138,11 @@ const STEP: TimeDelta = TimeDelta::from_seconds(60);
 // Single pair: intervals versus passes
 // ---------------------------------------------------------------------------
 
-/// The old windows-only path — no observables.
-#[divan::bench]
-fn eager_intervals(bencher: Bencher) {
-    let (scenario, ensemble, ..) = &*SINGLE_PAIR;
-    bencher.bench(|| {
-        black_box(
-            EagerVisibility::new(scenario, ensemble)
-                .with_step(STEP)
-                .compute()
-                .unwrap(),
-        )
-    });
-}
-
-/// The old path a caller who wants observables actually pays for.
-#[divan::bench]
-fn eager_passes(bencher: Bencher) {
-    let (scenario, ensemble, ..) = &*SINGLE_PAIR;
-    bencher.bench(|| {
-        let analysis = EagerVisibility::new(scenario, ensemble).with_step(STEP);
-        let results = analysis.compute().unwrap();
-        black_box(analysis.to_passes(&results))
-    });
-}
-
 /// The pipeline equivalent of `eager_passes`.
 #[divan::bench]
 fn pipeline_passes(bencher: Bencher) {
     let (scenario, ensemble, stations, spacecraft, interval) = &*SINGLE_PAIR;
-    let analysis = PipelineVisibility::new(scenario, ensemble, EPHEMERIS.as_ref()).with_step(STEP);
+    let analysis = VisibilityAnalysis::new(scenario, ensemble, EPHEMERIS.as_ref()).with_step(STEP);
     bencher.bench(|| {
         black_box(
             analysis
@@ -182,7 +156,7 @@ fn pipeline_passes(bencher: Bencher) {
 #[divan::bench]
 fn pipeline_windows(bencher: Bencher) {
     let (scenario, ensemble, stations, spacecraft, interval) = &*SINGLE_PAIR;
-    let analysis = PipelineVisibility::new(scenario, ensemble, EPHEMERIS.as_ref()).with_step(STEP);
+    let analysis = VisibilityAnalysis::new(scenario, ensemble, EPHEMERIS.as_ref()).with_step(STEP);
     bencher.bench(|| {
         black_box(
             analysis
@@ -198,7 +172,7 @@ fn pipeline_windows(bencher: Bencher) {
 #[divan::bench]
 fn pipeline_first_pass_only(bencher: Bencher) {
     let (scenario, ensemble, stations, spacecraft, interval) = &*SINGLE_PAIR;
-    let analysis = PipelineVisibility::new(scenario, ensemble, EPHEMERIS.as_ref()).with_step(STEP);
+    let analysis = VisibilityAnalysis::new(scenario, ensemble, EPHEMERIS.as_ref()).with_step(STEP);
     bencher.bench(|| {
         black_box(
             analysis
@@ -213,25 +187,15 @@ fn pipeline_first_pass_only(bencher: Bencher) {
 // ---------------------------------------------------------------------------
 
 #[divan::bench]
-fn eager_many_pairs(bencher: Bencher) {
-    let (scenario, ensemble, ..) = &*MANY_PAIRS;
-    bencher.bench(|| {
-        let analysis = EagerVisibility::new(scenario, ensemble).with_step(STEP);
-        let results = analysis.compute().unwrap();
-        black_box(analysis.to_passes(&results))
-    });
-}
-
-#[divan::bench]
 fn pipeline_many_pairs_sequential(bencher: Bencher) {
     let (scenario, ensemble, _, _, interval) = &*MANY_PAIRS;
-    let analysis = PipelineVisibility::new(scenario, ensemble, EPHEMERIS.as_ref()).with_step(STEP);
+    let analysis = VisibilityAnalysis::new(scenario, ensemble, EPHEMERIS.as_ref()).with_step(STEP);
     bencher.bench(|| black_box(analysis.run(*interval, Parallelism::Sequential)));
 }
 
 #[divan::bench]
 fn pipeline_many_pairs_rayon(bencher: Bencher) {
     let (scenario, ensemble, _, _, interval) = &*MANY_PAIRS;
-    let analysis = PipelineVisibility::new(scenario, ensemble, EPHEMERIS.as_ref()).with_step(STEP);
+    let analysis = VisibilityAnalysis::new(scenario, ensemble, EPHEMERIS.as_ref()).with_step(STEP);
     bencher.bench(|| black_box(analysis.run(*interval, Parallelism::Rayon(None))));
 }

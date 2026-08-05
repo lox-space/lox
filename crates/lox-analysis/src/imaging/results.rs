@@ -29,13 +29,7 @@ pub struct AccessWindow {
 
 #[cfg(test)]
 mod tests {
-    // Explicit imports shadow the glob, keeping these tests on the eager
-    // implementation until they are ported (see `crate::legacy`).
     use super::*;
-    #[allow(unused_imports)]
-    use crate::legacy::imaging::{
-        AccessAnalysis, AccessResults, OpticalAccessAnalysis, SarAccessAnalysis,
-    };
     use lox_time::time_scales::TimeScale;
 
     use lox_time::Time;

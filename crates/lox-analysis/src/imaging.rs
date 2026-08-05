@@ -24,12 +24,6 @@ pub use sar::{LookSide, SarPayload, SarPayloadError};
 
 #[cfg(test)]
 mod tests {
-    // Explicit imports shadow the glob, keeping these tests on the eager
-    // implementation until they are ported (see `crate::legacy`).
-    #[allow(unused_imports)]
-    use crate::legacy::imaging::{
-        AccessAnalysis, AccessResults, OpticalAccessAnalysis, SarAccessAnalysis,
-    };
 
     use super::*;
     use geo::{LineString, Polygon};
@@ -44,6 +38,7 @@ mod tests {
 
     use crate::assets::{AssetId, Scenario};
     use crate::imaging::PassDirection;
+    use crate::pipeline::Parallelism;
 
     // -----------------------------------------------------------------------
     // Integration tests — full OpticalAccessAnalysis pipeline with Sentinel-2 TLEs
@@ -169,9 +164,13 @@ mod tests {
 
         let analysis = OpticalAccessAnalysis::new(&scenario, &ensemble, aois)
             .with_step(TimeDelta::from_seconds(30));
-        let results = analysis.compute().expect("access analysis failed");
+        let run = analysis.run(interval, Parallelism::Sequential);
+        let windows = run
+            .iter()
+            .find(|((sc, aoi), _)| sc.as_str() == "s2a" && aoi.as_str() == "europe")
+            .map(|(_, r)| r.as_ref().expect("access analysis failed"))
+            .expect("pair missing");
 
-        let windows = results.windows(&AssetId::new("s2a"), &AoiId::new("europe"));
         // A sun-synchronous LEO satellite should overfly Western Europe
         // at least once in 6 hours.
         assert!(
@@ -212,12 +211,15 @@ mod tests {
         let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
 
         let analysis = OpticalAccessAnalysis::new(&scenario, &ensemble, aois);
-        let results = analysis.compute().expect("access analysis failed");
+        let run = analysis.run(interval, Parallelism::Sequential);
 
+        // A payload-less spacecraft is not a target, so it appears nowhere —
+        // neither as a success with no windows nor as an error.
         assert!(
-            results.is_empty(),
-            "expected no results when spacecraft has no payload"
+            run.is_empty(),
+            "expected no targets when the spacecraft has no payload"
         );
+        assert!(analysis.pairs().is_empty());
     }
 
     #[test]
@@ -242,35 +244,38 @@ mod tests {
 
         let analysis = OpticalAccessAnalysis::new(&scenario, &ensemble, aois)
             .with_step(TimeDelta::from_seconds(30));
-        let results = analysis.compute().expect("access analysis failed");
+        let run = analysis.run(interval, Parallelism::Sequential);
+        let windows = |sc_id: &str, aoi_id: &str| {
+            run.iter()
+                .find(|((sc, aoi), _)| sc.as_str() == sc_id && aoi.as_str() == aoi_id)
+                .map(|(_, r)| r.as_ref().expect("access analysis failed"))
+                .unwrap_or_else(|| panic!("pair ({sc_id}, {aoi_id}) missing"))
+        };
 
         // Both spacecraft should have windows over the large European AOI.
-        let s2a_europe = results.windows(&AssetId::new("s2a"), &AoiId::new("europe"));
-        let s2b_europe = results.windows(&AssetId::new("s2b"), &AoiId::new("europe"));
-        assert!(!s2a_europe.is_empty(), "S2A should image Europe");
-        assert!(!s2b_europe.is_empty(), "S2B should image Europe");
+        assert!(
+            !windows("s2a", "europe").is_empty(),
+            "S2A should image Europe"
+        );
+        assert!(
+            !windows("s2b", "europe").is_empty(),
+            "S2B should image Europe"
+        );
 
-        // The small Pacific AOI may or may not be hit. But the total result
-        // count should cover all 4 pairs.
-        assert_eq!(results.num_pairs(), 4);
+        // The small Pacific AOI may or may not be hit, but every one of the four
+        // pairs must be reported — an unhit AOI is an empty list, not an absence.
+        assert_eq!(run.len(), 4);
 
-        for w in s2a_europe {
-            assert!(
-                matches!(
-                    w.direction,
-                    PassDirection::Ascending | PassDirection::Descending,
-                ),
-                "window direction should be populated",
-            );
-        }
-        for w in s2b_europe {
-            assert!(
-                matches!(
-                    w.direction,
-                    PassDirection::Ascending | PassDirection::Descending,
-                ),
-                "window direction should be populated",
-            );
+        for sc_id in ["s2a", "s2b"] {
+            for w in windows(sc_id, "europe") {
+                assert!(
+                    matches!(
+                        w.direction,
+                        PassDirection::Ascending | PassDirection::Descending,
+                    ),
+                    "window direction should be populated",
+                );
+            }
         }
     }
 
@@ -297,10 +302,15 @@ mod tests {
 
         let analysis = OpticalAccessAnalysis::new(&scenario, &ensemble, aois)
             .with_step(TimeDelta::from_seconds(30));
-        let results = analysis.compute().expect("access analysis failed");
-
-        let nadir_windows = results.windows(&AssetId::new("nadir"), &AoiId::new("europe"));
-        let off_nadir_windows = results.windows(&AssetId::new("off_nadir"), &AoiId::new("europe"));
+        let run = analysis.run(interval, Parallelism::Sequential);
+        let windows = |sc_id: &str| {
+            run.iter()
+                .find(|((sc, _), _)| sc.as_str() == sc_id)
+                .map(|(_, r)| r.as_ref().expect("access analysis failed"))
+                .unwrap_or_else(|| panic!("spacecraft {sc_id} missing"))
+        };
+        let nadir_windows = windows("nadir");
+        let off_nadir_windows = windows("off_nadir");
 
         // Agile satellite should have at least as much total coverage time.
         let nadir_total: f64 = nadir_windows

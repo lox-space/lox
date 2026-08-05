@@ -5,10 +5,12 @@
 use std::f64::consts::PI;
 
 use crate::analysis::python::{
-    PyAccessResults, PyAccessWindow, PyAoi, PyElevationMask, PyEnsemble, PyEvent, PyGroundStation,
-    PyLookSide, PyObservables, PyOpticalAccessAnalysis, PyOpticalPayload, PyPass, PyPassDirection,
-    PyPowerBudgetAnalysis, PyPowerBudgetResults, PySarAccessAnalysis, PySarPayload, PyScenario,
-    PySpacecraft, PyVisibilityAnalysis, PyVisibilityResults,
+    PyAccessRun, PyAccessWindow, PyAnalysisError, PyAoi, PyDetectionFailed, PyEclipse,
+    PyElevationMask, PyEnsemble, PyEphemerisFailed, PyEvent, PyGroundStation,
+    PyInterSatelliteAnalysis, PyInterSatelliteRun, PyLookSide, PyObservables,
+    PyOpticalAccessAnalysis, PyOpticalPayload, PyPass, PyPassDirection, PyPowerBudgetAnalysis,
+    PyPowerBudgetRun, PyRotationFailed, PySarAccessAnalysis, PySarPayload, PyScenario,
+    PySpacecraft, PySpacecraftPower, PyVisibilityAnalysis, PyVisibilityRun, PyWindow,
 };
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
@@ -114,13 +116,22 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PySpacecraft>()?;
     m.add_class::<PyEnsemble>()?;
     m.add_class::<PyVisibilityAnalysis>()?;
-    m.add_class::<PyVisibilityResults>()?;
+    m.add_class::<PyVisibilityRun>()?;
+    m.add_class::<PyInterSatelliteAnalysis>()?;
+    m.add_class::<PyInterSatelliteRun>()?;
+    m.add_class::<PyWindow>()?;
+    m.add("AnalysisError", m.py().get_type::<PyAnalysisError>())?;
+    m.add("RotationFailed", m.py().get_type::<PyRotationFailed>())?;
+    m.add("EphemerisFailed", m.py().get_type::<PyEphemerisFailed>())?;
+    m.add("DetectionFailed", m.py().get_type::<PyDetectionFailed>())?;
     m.add_class::<PyPowerBudgetAnalysis>()?;
-    m.add_class::<PyPowerBudgetResults>()?;
+    m.add_class::<PyPowerBudgetRun>()?;
+    m.add_class::<PySpacecraftPower>()?;
+    m.add_class::<PyEclipse>()?;
     m.add_class::<PyAoi>()?;
     m.add_class::<PyPassDirection>()?;
     m.add_class::<PyAccessWindow>()?;
-    m.add_class::<PyAccessResults>()?;
+    m.add_class::<PyAccessRun>()?;
     m.add_class::<PyOpticalPayload>()?;
     m.add_class::<PyOpticalAccessAnalysis>()?;
     m.add_class::<PyLookSide>()?;

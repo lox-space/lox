@@ -102,7 +102,7 @@ pub use crate::pipeline::analyses::{PowerBudgetAnalysis, SpacecraftPower};
 mod tests {
     // See the note in `visibility`'s test module.
     use crate::assets::{Scenario, Spacecraft};
-    use crate::legacy::PowerBudgetAnalysis;
+    use crate::pipeline::Parallelism;
     use lox_orbits::orbits::Ensemble;
     use lox_time::deltas::TimeDelta;
     use lox_time::intervals::TimeInterval;
@@ -204,39 +204,54 @@ mod tests {
 
         let spk = ephemeris();
         let analysis = PowerBudgetAnalysis::new(&scenario, &ensemble, spk);
-        let results = analysis.compute().expect("power budget analysis");
-
-        // ISS completes ~15.5 orbits/day → expect roughly that many eclipses.
-        let eclipses = results
-            .eclipse_intervals_for(sc.id())
-            .expect("eclipse intervals");
+        let eclipses = analysis
+            .eclipses(&sc, scenario_interval)
+            .expect("power budget analysis");
         assert!(
             eclipses.len() >= 10,
             "expected ≥10 eclipse intervals for ISS over 24h, got {}",
             eclipses.len()
         );
 
-        // Eclipse fraction for ISS is typically ~35%.
-        let eclipse_frac = results.eclipse_fraction(sc.id()).unwrap();
+        // Eclipse fraction for ISS is typically ~35%. Computed here rather than
+        // read off a results object: the aggregate is the caller's to derive.
+        let eclipsed: f64 = eclipses
+            .iter()
+            .map(|e| e.0.duration().to_seconds().to_f64())
+            .sum();
+        let total = scenario_interval.duration().to_seconds().to_f64();
+        let eclipse_frac = eclipsed / total;
         assert!(
             (0.2..0.5).contains(&eclipse_frac),
             "unexpected eclipse fraction: {eclipse_frac}"
         );
 
-        let sunlit_frac = results.sunlit_fraction(sc.id()).unwrap();
-        assert_approx_eq!(eclipse_frac + sunlit_frac, 1.0, atol <= 1e-15);
-
-        let betas = results.beta_angles_for(sc.id()).expect("beta angles");
+        let betas = analysis
+            .beta_angle(&sc, scenario_interval)
+            .expect("beta angles");
         assert!(!betas.values().is_empty());
         for &b in betas.values() {
             assert!((-FRAC_PI_2..=FRAC_PI_2).contains(&b));
         }
 
-        let fluxes = results.solar_flux_for(sc.id()).expect("solar flux");
+        let fluxes = analysis
+            .solar_flux(&sc, scenario_interval)
+            .expect("solar flux");
         assert!(!fluxes.values().is_empty());
         for &f in fluxes.values() {
             // Solar flux near Earth should be ~1361 W/m².
             assert!(f > 1300.0 && f < 1420.0, "unexpected flux: {f}");
         }
+
+        // And the batch path agrees with the per-channel calls.
+        let run = analysis.run(scenario_interval, Parallelism::Sequential);
+        assert_eq!(run.len(), 1);
+        let power = run[0].1.as_ref().expect("run failed");
+        assert_eq!(power.eclipses.len(), eclipses.len());
+        assert_approx_eq!(
+            power.eclipse_fraction_over(scenario_interval),
+            eclipse_frac,
+            rtol <= 1e-12
+        );
     }
 }

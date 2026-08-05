@@ -14,8 +14,9 @@
 use std::error::Error;
 
 use lox_space::analysis::assets::{GroundStation, Scenario, Spacecraft};
-use lox_space::analysis::legacy::{VisibilityAnalysis, VisibilityResults};
+use lox_space::analysis::pipeline::{NoEphemeris, Parallelism};
 use lox_space::analysis::visibility::ElevationMask;
+use lox_space::analysis::visibility::VisibilityAnalysis;
 use lox_space::bodies::Origin;
 use lox_space::core::coords::LonLatAlt;
 use lox_space::frames::Frame;
@@ -58,7 +59,7 @@ fn format_duration(d: TimeDelta) -> String {
     format!("{hours}h {minutes:02}m {seconds:02}s")
 }
 
-fn print_summary(results: &VisibilityResults, interval: TimeInterval) {
+fn print_summary(run: &VisibilityRun, interval: TimeInterval) {
     let title = format!(
         "Sentinel visibility — {} → {} ({}h window)",
         interval.start(),
@@ -68,19 +69,42 @@ fn print_summary(results: &VisibilityResults, interval: TimeInterval) {
     println!("{title}");
     println!("{}", "=".repeat(title.len()));
 
-    for ((gs_id, sc_id), intervals) in results.all_intervals() {
-        let total: TimeDelta = intervals
-            .iter()
-            .fold(TimeDelta::default(), |acc, iv| acc + iv.duration());
-        println!(
-            "  {} ↔ {}:  {} passes,  {}",
-            gs_id,
-            sc_id,
-            intervals.len(),
-            format_duration(total),
-        );
+    // Sorted, because `run` yields targets in completion order — the key travels
+    // with each result precisely so that order carries no meaning.
+    let mut pairs: Vec<_> = run.iter().collect();
+    pairs.sort_by_key(|((gs, sc), _)| (gs.as_str(), sc.as_str()));
+
+    for ((gs_id, sc_id), result) in pairs {
+        match result {
+            Ok(passes) => {
+                let total: TimeDelta = passes
+                    .iter()
+                    .fold(TimeDelta::default(), |acc, p| acc + p.interval().duration());
+                println!(
+                    "  {} ↔ {}:  {} passes,  {}",
+                    gs_id,
+                    sc_id,
+                    passes.len(),
+                    format_duration(total),
+                );
+            }
+            // Per-target results, so one bad pair does not sink the report.
+            Err(e) => println!("  {gs_id} ↔ {sc_id}:  FAILED — {e}"),
+        }
     }
 }
+
+/// What `VisibilityAnalysis::run` returns: one keyed result per pair.
+type VisibilityRun = Vec<(
+    (
+        lox_space::analysis::assets::AssetId,
+        lox_space::analysis::assets::AssetId,
+    ),
+    Result<
+        Vec<lox_space::analysis::visibility::Pass>,
+        lox_space::analysis::pipeline::AnalysisError,
+    >,
+)>;
 
 fn main() -> Result<(), Box<dyn Error>> {
     // 1. Parse both TLEs. We need to know each TLE's epoch before we
@@ -132,8 +156,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let ensemble = scenario.propagate(&DefaultRotationProvider)?;
 
     // 6. Run the analysis.
-    let results = VisibilityAnalysis::new(&scenario, &ensemble).compute()?;
+    let run = VisibilityAnalysis::new(&scenario, &ensemble, &NoEphemeris)
+        .run(interval, Parallelism::Rayon(None));
 
-    print_summary(&results, interval);
+    print_summary(&run, interval);
     Ok(())
 }

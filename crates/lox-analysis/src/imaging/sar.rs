@@ -225,10 +225,6 @@ fn validate_range(min: Angle, max: Angle) -> Result<(f64, f64), SarPayloadError>
 
 #[cfg(test)]
 mod tests {
-    // Explicit imports shadow the glob, keeping these tests on the eager
-    // implementation until they are ported (see `crate::legacy`).
-    #[allow(unused_imports)]
-    use crate::legacy::imaging::{AccessAnalysis, AccessResults, OpticalAccessAnalysis};
 
     use super::*;
 
@@ -320,8 +316,9 @@ mod integration_tests {
     use crate::assets::{AssetId, Scenario, Spacecraft};
     use crate::imaging::AccessWindow;
     use crate::imaging::PassDirection;
+    use crate::imaging::SarAccessAnalysis;
     use crate::imaging::aoi::{Aoi, AoiId};
-    use crate::legacy::imaging::SarAccessAnalysis;
+    use crate::pipeline::Parallelism;
 
     // Sentinel-1A TLE — epoch 2026-079 (20 March 2026), consistent with the
     // Sentinel-2 TLEs used in the optical integration tests.
@@ -396,12 +393,15 @@ mod integration_tests {
         let (scenario, ensemble) = make_scenario(std::slice::from_ref(&sc), interval);
         let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
 
-        let results = SarAccessAnalysis::new(&scenario, &ensemble, aois)
+        let run = SarAccessAnalysis::new(&scenario, &ensemble, aois)
             .with_step(TimeDelta::from_seconds(30))
-            .compute()
-            .expect("SAR access analysis failed");
+            .run(interval, Parallelism::Sequential);
 
-        let windows = results.windows(&AssetId::new("s1a"), &AoiId::new("europe"));
+        let windows = run
+            .iter()
+            .find(|((sc, aoi), _)| sc.as_str() == "s1a" && aoi.as_str() == "europe")
+            .map(|(_, r)| r.as_ref().expect("SAR access analysis failed"))
+            .expect("pair missing");
         assert!(
             !windows.is_empty(),
             "expected at least one access window over Western Europe in 6h",
@@ -450,13 +450,17 @@ mod integration_tests {
         let (scenario, ensemble) = make_scenario(&[sc_r, sc_l], interval);
         let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
 
-        let results = SarAccessAnalysis::new(&scenario, &ensemble, aois)
+        let run = SarAccessAnalysis::new(&scenario, &ensemble, aois)
             .with_step(TimeDelta::from_seconds(30))
-            .compute()
-            .expect("SAR access analysis failed");
-
-        let r_windows = results.windows(&AssetId::new("s1a_r"), &AoiId::new("europe"));
-        let l_windows = results.windows(&AssetId::new("s1a_l"), &AoiId::new("europe"));
+            .run(interval, Parallelism::Sequential);
+        let windows = |sc_id: &str| {
+            run.iter()
+                .find(|((sc, _), _)| sc.as_str() == sc_id)
+                .map(|(_, r)| r.as_ref().expect("SAR access analysis failed"))
+                .unwrap_or_else(|| panic!("spacecraft {sc_id} missing"))
+        };
+        let r_windows = windows("s1a_r");
+        let l_windows = windows("s1a_l");
 
         assert!(
             !r_windows.is_empty() && !l_windows.is_empty(),
@@ -508,12 +512,15 @@ mod integration_tests {
         let (scenario, ensemble) = make_scenario(std::slice::from_ref(&sc), interval);
         let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
 
-        let results = SarAccessAnalysis::new(&scenario, &ensemble, aois)
+        let run = SarAccessAnalysis::new(&scenario, &ensemble, aois)
             .with_step(TimeDelta::from_seconds(30))
-            .compute()
-            .expect("SAR access analysis failed");
+            .run(interval, Parallelism::Sequential);
 
-        let windows = results.windows(&AssetId::new("s1a"), &AoiId::new("europe"));
+        let windows = run
+            .iter()
+            .find(|((sc, aoi), _)| sc.as_str() == "s1a" && aoi.as_str() == "europe")
+            .map(|(_, r)| r.as_ref().expect("SAR access analysis failed"))
+            .expect("pair missing");
         let has_ascending = windows
             .iter()
             .any(|w| w.direction == PassDirection::Ascending);

@@ -23,7 +23,8 @@ mod imaging_benches {
     use geo::{LineString, Polygon};
     use lox_space::analysis::assets::{Scenario, Spacecraft};
     use lox_space::analysis::imaging::{Aoi, AoiId, LookSide, OpticalPayload, SarPayload};
-    use lox_space::analysis::legacy::imaging::{OpticalAccessAnalysis, SarAccessAnalysis};
+    use lox_space::analysis::imaging::{OpticalAccessAnalysis, SarAccessAnalysis};
+    use lox_space::analysis::pipeline::Parallelism;
     use lox_space::core::units::{Angle, Distance};
     use lox_space::orbits::Trajectory;
     use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
@@ -117,8 +118,7 @@ mod imaging_benches {
             let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
             OpticalAccessAnalysis::new(&scenario, &ensemble, aois)
                 .with_step(TimeDelta::from_seconds(30))
-                .compute()
-                .unwrap()
+                .run(*scenario.interval(), Parallelism::Rayon(None))
         });
     }
 
@@ -130,8 +130,7 @@ mod imaging_benches {
             let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
             OpticalAccessAnalysis::new(&scenario, &ensemble, aois)
                 .with_step(TimeDelta::from_seconds(30))
-                .compute()
-                .unwrap()
+                .run(*scenario.interval(), Parallelism::Rayon(None))
         });
     }
 
@@ -151,8 +150,7 @@ mod imaging_benches {
             let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
             SarAccessAnalysis::new(&scenario, &ensemble, aois)
                 .with_step(TimeDelta::from_seconds(30))
-                .compute()
-                .unwrap()
+                .run(*scenario.interval(), Parallelism::Rayon(None))
         });
     }
 
@@ -166,8 +164,7 @@ mod imaging_benches {
                 let aois = vec![(AoiId::new("europe"), western_europe_aoi())];
                 OpticalAccessAnalysis::new(&scenario, &ensemble, aois)
                     .with_step(TimeDelta::from_seconds(30))
-                    .compute()
-                    .unwrap()
+                    .run(*scenario.interval(), Parallelism::Rayon(None))
             });
     }
 
@@ -180,8 +177,7 @@ mod imaging_benches {
             let aois = aoi_band(n_aoi);
             OpticalAccessAnalysis::new(&scenario, &ensemble, aois)
                 .with_step(TimeDelta::from_seconds(30))
-                .compute()
-                .unwrap()
+                .run(*scenario.interval(), Parallelism::Rayon(None))
         });
     }
 }

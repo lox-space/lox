@@ -168,6 +168,45 @@ impl From<EvalError> for AnalysisError {
 }
 
 // ---------------------------------------------------------------------------
+// NoEphemeris
+// ---------------------------------------------------------------------------
+
+/// Stands in for an ephemeris that was never supplied.
+///
+/// The analyses take an ephemeris handle unconditionally, but only consult it
+/// for occulting bodies other than the trajectories' own origin. Passing this
+/// says "no occulters configured", and the analysis is then never in a position
+/// to call it. If one *is* configured anyway, the lookup fails with a message
+/// naming what it could not locate rather than silently returning a wrong
+/// position.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct NoEphemeris;
+
+/// The error [`NoEphemeris`] returns when something does try to look a body up.
+#[derive(Clone, Debug, Error, Eq, PartialEq)]
+#[error("no ephemeris was provided, but one is needed to locate {target} relative to {origin}")]
+pub struct NoEphemerisError {
+    origin: &'static str,
+    target: &'static str,
+}
+
+impl lox_ephem::Ephemeris for NoEphemeris {
+    type Error = NoEphemerisError;
+
+    fn state<O1: lox_bodies::CoordinateOrigin, O2: lox_bodies::CoordinateOrigin>(
+        &self,
+        _time: lox_time::Time<lox_time::time_scales::Tdb>,
+        origin: O1,
+        target: O2,
+    ) -> Result<lox_core::coords::Cartesian, Self::Error> {
+        Err(NoEphemerisError {
+            origin: origin.name(),
+            target: target.name(),
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Stage — the unified source/transform trait
 // ---------------------------------------------------------------------------
 

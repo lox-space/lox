@@ -81,12 +81,6 @@ impl AccessPayload for OpticalPayload {
 
 #[cfg(test)]
 mod tests {
-    // Explicit imports shadow the glob, keeping these tests on the eager
-    // implementation until they are ported (see `crate::legacy`).
-    #[allow(unused_imports)]
-    use crate::legacy::imaging::{
-        AccessAnalysis, AccessResults, OpticalAccessAnalysis, SarAccessAnalysis,
-    };
 
     use super::*;
 

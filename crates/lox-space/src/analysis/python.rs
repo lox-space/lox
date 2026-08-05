@@ -2,20 +2,51 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use crate::analysis::assets::{AssetId, ConstellationId, GroundStation, Scenario, Spacecraft};
+use lox_analysis::imaging::AccessAnalysis;
+use lox_analysis::pipeline::{
+    AnalysisError, Eclipse, NoEphemeris, NoEphemerisError, Parallelism, Window,
+};
+use lox_analysis::power::{PowerBudgetAnalysis, SpacecraftPower};
+use lox_analysis::visibility::{InterSatelliteAnalysis, VisibilityAnalysis};
+use lox_bodies::CoordinateOrigin;
+use lox_core::coords::Cartesian;
+use lox_ephem::Ephemeris;
+use lox_ephem::spk::parser::DafSpkError;
+use lox_time::Time;
+use lox_time::time_scales::Tdb;
+use pyo3::create_exception;
+
+create_exception!(
+    lox_space,
+    PyAnalysisError,
+    pyo3::exceptions::PyException,
+    "Base class for analysis failures."
+);
+create_exception!(
+    lox_space,
+    PyRotationFailed,
+    PyAnalysisError,
+    "A frame rotation failed."
+);
+create_exception!(
+    lox_space,
+    PyEphemerisFailed,
+    PyAnalysisError,
+    "An ephemeris lookup failed."
+);
+create_exception!(
+    lox_space,
+    PyDetectionFailed,
+    PyAnalysisError,
+    "Root-finding or event detection failed."
+);
+
+use crate::analysis::assets::{AssetId, GroundStation, Scenario, Spacecraft};
 use crate::analysis::events::{Event, ZeroCrossing};
 use crate::analysis::imaging::{AccessError, Aoi, AoiId, LookSide, OpticalPayload, SarPayload};
-use crate::analysis::sun::AnalyticalSunEphemeris;
 use crate::analysis::visibility::{ElevationMask, ElevationMaskError, Pass};
-// These bindings still target the eager implementation; they are rebuilt against
-// the pipeline API in the commit that deletes `legacy`.
-use crate::analysis::legacy::imaging::{AccessResults, OpticalAccessAnalysis, SarAccessAnalysis};
-use crate::analysis::legacy::{
-    PairType, PowerBudgetAnalysis, PowerBudgetResults, PowerError, SpacecraftFilter,
-    VisibilityAnalysis, VisibilityError, VisibilityResults,
-};
 use crate::bodies::Origin;
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
@@ -40,21 +71,12 @@ use lox_frames::providers::DefaultRotationProvider;
 use lox_orbits::orbits::Ensemble;
 use lox_orbits::propagators::OrbitSource;
 use lox_time::intervals::TimeInterval;
-use lox_time::series::TimeSeries;
 use lox_units::{Angle, Distance, Velocity};
 
 use numpy::{PyArray1, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
-
-struct PyVisibilityError(VisibilityError);
-
-impl From<PyVisibilityError> for PyErr {
-    fn from(err: PyVisibilityError) -> Self {
-        PyValueError::new_err(err.0.to_string())
-    }
-}
 
 /// Error wrapper converting `ElevationMaskError` into a Python `ValueError`.
 pub struct PyElevationMaskError(pub ElevationMaskError);
@@ -437,43 +459,210 @@ impl PyEnsemble {
     }
 }
 
-/// Computes ground-station-to-spacecraft and inter-satellite visibility.
+// ---------------------------------------------------------------------------
+// Shared analysis-binding helpers
+// ---------------------------------------------------------------------------
+
+/// Either a real SPK borrowed from Python, or nothing.
+///
+/// The Rust analyses take an ephemeris unconditionally but only consult it for
+/// occulting bodies, while the Python constructors make it optional. One handle
+/// type keeps the two arms from duplicating every call site — `Ephemeris` has
+/// generic methods, so it cannot be used as `dyn`.
+pub enum EphemerisHandle<'a> {
+    /// A borrowed SPK kernel.
+    Spk(&'a Spk),
+    /// No ephemeris; fails if anything actually looks a body up.
+    Missing(NoEphemeris),
+}
+
+/// Failure from either arm of an [`EphemerisHandle`].
+///
+/// Written out rather than derived: `thiserror` is not a dependency of this
+/// crate and one two-variant passthrough does not justify adding it.
+#[derive(Debug)]
+pub enum EphemerisHandleError {
+    /// The SPK lookup failed.
+    Spk(DafSpkError),
+    /// No ephemeris was supplied.
+    Missing(NoEphemerisError),
+}
+
+impl std::fmt::Display for EphemerisHandleError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Spk(e) => e.fmt(f),
+            Self::Missing(e) => e.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for EphemerisHandleError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Spk(e) => Some(e),
+            Self::Missing(e) => Some(e),
+        }
+    }
+}
+
+impl From<DafSpkError> for EphemerisHandleError {
+    fn from(e: DafSpkError) -> Self {
+        Self::Spk(e)
+    }
+}
+
+impl From<NoEphemerisError> for EphemerisHandleError {
+    fn from(e: NoEphemerisError) -> Self {
+        Self::Missing(e)
+    }
+}
+
+impl Ephemeris for EphemerisHandle<'_> {
+    type Error = EphemerisHandleError;
+
+    fn state<O1: CoordinateOrigin, O2: CoordinateOrigin>(
+        &self,
+        time: Time<Tdb>,
+        origin: O1,
+        target: O2,
+    ) -> Result<Cartesian, Self::Error> {
+        match self {
+            Self::Spk(spk) => Ok(spk.state(time, origin, target)?),
+            Self::Missing(none) => Ok(none.state(time, origin, target)?),
+        }
+    }
+}
+
+/// Borrows the SPK out of its Python object, or yields the empty handle.
+///
+/// `PySpk` is frozen, so the borrow needs no GIL token and stays valid across
+/// `py.detach` for as long as the owning `Py` lives — which it does, on `self`.
+fn bind_ephemeris<'a>(_py: Python<'_>, ephemeris: Option<&'a Py<PySpk>>) -> EphemerisHandle<'a> {
+    match ephemeris {
+        Some(spk) => EphemerisHandle::Spk(&spk.get().0),
+        None => EphemerisHandle::Missing(NoEphemeris),
+    }
+}
+
+/// Converts the occulting-body list, rejecting occulters without an ephemeris.
+fn parse_occulting_bodies(
+    bodies: Option<Vec<Bound<'_, PyAny>>>,
+    has_ephemeris: bool,
+) -> PyResult<Vec<Origin>> {
+    let bodies: Vec<Origin> = bodies
+        .unwrap_or_default()
+        .iter()
+        .map(|b| Ok(PyOrigin::try_from(b)?.0))
+        .collect::<PyResult<_>>()?;
+    if !bodies.is_empty() && !has_ephemeris {
+        return Err(PyValueError::new_err(
+            "ephemeris is required when occulting_bodies is set",
+        ));
+    }
+    Ok(bodies)
+}
+
+/// Resolves the ensemble, propagating the scenario when none was supplied.
+fn resolve_ensemble(
+    scenario: &Scenario,
+    ensemble: &Option<Ensemble<AssetId, Origin, Frame>>,
+) -> PyResult<Ensemble<AssetId, Origin, Frame>> {
+    match ensemble {
+        Some(e) => Ok(e.clone()),
+        None => scenario
+            .propagate(&DefaultRotationProvider)
+            .map_err(|e| PyValueError::new_err(e.to_string())),
+    }
+}
+
+/// Turns the `parallel`/`workers` keyword pair into a [`Parallelism`].
+fn parallelism(parallel: bool, workers: Option<usize>) -> Parallelism {
+    if parallel {
+        Parallelism::Rayon(workers)
+    } else {
+        Parallelism::Sequential
+    }
+}
+
+/// Renders an [`AnalysisError`] and its `source()` chain into one message.
+///
+/// Typed recovery is an in-process guarantee; across the Python boundary the
+/// chain is flattened, so the message has to carry what the types would have.
+fn render_error(error: &AnalysisError) -> String {
+    let mut message = error.to_string();
+    let mut source = std::error::Error::source(error);
+    while let Some(cause) = source {
+        message.push_str(": ");
+        message.push_str(&cause.to_string());
+        source = cause.source();
+    }
+    message
+}
+
+/// Maps an [`AnalysisError`] onto its Python exception type.
+fn analysis_error(error: AnalysisError) -> PyErr {
+    let message = render_error(&error);
+    match error {
+        AnalysisError::Rotation(_) => PyRotationFailed::new_err(message),
+        AnalysisError::Ephemeris(_) => PyEphemerisFailed::new_err(message),
+        AnalysisError::Detect(_) => PyDetectionFailed::new_err(message),
+        AnalysisError::Stage(_) => PyAnalysisError::new_err(message),
+    }
+}
+
+/// Splits per-target results into the successes and errors a `*Run` exposes.
+///
+/// A target that produced no items appears in the item map with an empty list,
+/// not in `errors` — "found nothing" and "failed" are different outcomes, and
+/// collapsing them is how a caller ends up treating an ephemeris gap as a
+/// coverage hole.
+#[allow(clippy::type_complexity)]
+fn split_pairs<T>(
+    results: Vec<((AssetId, AssetId), Result<Vec<T>, AnalysisError>)>,
+) -> (
+    HashMap<(String, String), Vec<T>>,
+    HashMap<(String, String), String>,
+) {
+    let mut items = HashMap::new();
+    let mut errors = HashMap::new();
+    for ((a, b), result) in results {
+        let key = (a.as_str().to_string(), b.as_str().to_string());
+        match result {
+            Ok(v) => {
+                items.insert(key, v);
+            }
+            Err(e) => {
+                errors.insert(key, render_error(&e));
+            }
+        }
+    }
+    (items, errors)
+}
+
+/// Ground-station-to-spacecraft visibility, yielding passes with observables.
 ///
 /// Args:
-///     scenario: Scenario containing spacecraft, ground stations, and
-///         time interval.
-///     ephemeris: SPK ephemeris data.
-///     ensemble: Optional pre-computed Ensemble. If not provided, the
-///         scenario is propagated automatically.
-///     occulting_bodies: Optional list of additional occulting bodies for
-///         LOS checking. For inter-satellite visibility, the scenario's
-///         central body is always checked automatically.
-///     step: Optional time step for event detection (default: 60s).
-///     min_pass_duration: Optional minimum pass duration. Passes shorter
-///         than this value may be missed. Enables two-level stepping for faster
-///         detection.
-///     inter_satellite: If True, also compute inter-satellite visibility
-///         for all unique spacecraft pairs (default: False).
-///     ground_space_filter: Optional callable ``(GroundStation, Spacecraft) -> bool``
-///         that receives a ground station and spacecraft and returns whether the
-///         pair should be evaluated. Called once per candidate pair before the
-///         parallel phase.
-///     inter_satellite_filter: Optional callable ``(Spacecraft, Spacecraft) -> bool``
-///         that receives two spacecraft and returns whether the pair should be
-///         evaluated. Called once per candidate pair before the parallel phase.
-///         When provided, inter-satellite visibility is automatically enabled.
-///     min_range: Optional minimum range constraint for inter-satellite pairs.
-///     max_range: Optional maximum range constraint for inter-satellite pairs.
+///     scenario: Scenario containing spacecraft, ground stations, and time
+///         interval.
+///     ensemble: Optional pre-computed Ensemble. If omitted, the scenario is
+///         propagated automatically.
+///     ephemeris: SPK ephemeris. Required only when ``occulting_bodies`` is set.
+///     occulting_bodies: Additional bodies to check for line-of-sight
+///         occultation, beyond the trajectories' own origin.
+///     step: Sampling step for detection and observables (default: 60 s).
+///     min_pass_duration: Discards passes shorter than this, and coarsens the
+///         scan as far as that allows.
+///     min_range: Discards geometry closer than this.
+///     max_range: Discards geometry farther than this.
 #[pyclass(name = "VisibilityAnalysis", module = "lox_space", frozen)]
 pub struct PyVisibilityAnalysis {
     scenario: Scenario,
     ensemble: Option<Ensemble<AssetId, Origin, Frame>>,
+    ephemeris: Option<Py<PySpk>>,
     occulting_bodies: Vec<Origin>,
     step: TimeDelta,
     min_pass_duration: Option<TimeDelta>,
-    inter_satellite: bool,
-    ground_space_filter: Option<Py<PyAny>>,
-    inter_satellite_filter: Option<Py<PyAny>>,
     min_range: Option<Distance>,
     max_range: Option<Distance>,
 }
@@ -481,482 +670,385 @@ pub struct PyVisibilityAnalysis {
 #[pymethods]
 impl PyVisibilityAnalysis {
     #[new]
-    #[pyo3(signature = (scenario, ensemble=None, occulting_bodies=None, step=None, min_pass_duration=None, inter_satellite=false, ground_space_filter=None, inter_satellite_filter=None, min_range=None, max_range=None))]
+    #[pyo3(signature = (scenario, ensemble=None, ephemeris=None, occulting_bodies=None, step=None, min_pass_duration=None, min_range=None, max_range=None))]
     #[allow(clippy::too_many_arguments)]
     fn new(
-        py: Python<'_>,
         scenario: PyScenario,
         ensemble: Option<PyEnsemble>,
+        ephemeris: Option<Py<PySpk>>,
         occulting_bodies: Option<Vec<Bound<'_, PyAny>>>,
         step: Option<PyTimeDelta>,
         min_pass_duration: Option<PyTimeDelta>,
-        inter_satellite: bool,
-        ground_space_filter: Option<Py<PyAny>>,
-        inter_satellite_filter: Option<Py<PyAny>>,
         min_range: Option<PyDistance>,
         max_range: Option<PyDistance>,
     ) -> PyResult<Self> {
-        let occulting_bodies: Vec<Origin> = occulting_bodies
-            .unwrap_or_default()
-            .iter()
-            .map(|b| Ok(PyOrigin::try_from(b)?.0))
-            .collect::<PyResult<_>>()?;
-        if let Some(ref f) = ground_space_filter
-            && !f.bind(py).is_callable()
-        {
-            return Err(PyValueError::new_err(
-                "ground_space_filter must be callable",
-            ));
-        }
-        if let Some(ref f) = inter_satellite_filter
-            && !f.bind(py).is_callable()
-        {
-            return Err(PyValueError::new_err(
-                "inter_satellite_filter must be callable",
-            ));
-        }
+        let occulting_bodies = parse_occulting_bodies(occulting_bodies, ephemeris.is_some())?;
         Ok(Self {
             scenario: scenario.0,
             ensemble: ensemble.map(|e| e.0),
+            ephemeris,
             occulting_bodies,
             step: step
                 .map(|s| s.0)
                 .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
             min_pass_duration: min_pass_duration.map(|d| d.0),
-            inter_satellite,
-            ground_space_filter,
-            inter_satellite_filter,
             min_range: min_range.map(|d| d.0),
             max_range: max_range.map(|d| d.0),
         })
     }
 
-    /// Compute visibility intervals for all pairs.
-    ///
-    /// If no ensemble was provided at construction, the scenario is
-    /// propagated automatically (trajectories transformed to ICRF).
+    /// Computes the passes for one (ground station, spacecraft) pair.
     ///
     /// Args:
-    ///     ephemeris: SPK ephemeris data. Required when ``occulting_bodies``
-    ///         is non-empty; optional otherwise.
+    ///     ground_station: The station.
+    ///     spacecraft: The spacecraft; must have a trajectory in the ensemble.
+    ///     interval: Optional interval; defaults to the scenario's.
     ///
     /// Returns:
-    ///     VisibilityResults containing intervals for all pairs.
+    ///     list[Pass]
     ///
     /// Raises:
-    ///     ValueError: if occulting bodies are configured but no
-    ///         ephemeris is provided.
-    #[pyo3(signature = (ephemeris=None))]
-    fn compute(
+    ///     AnalysisError: if detection fails or the spacecraft has no trajectory.
+    #[pyo3(signature = (ground_station, spacecraft, interval=None))]
+    fn single(
         &self,
         py: Python<'_>,
-        ephemeris: Option<&Bound<'_, PySpk>>,
-    ) -> PyResult<PyVisibilityResults> {
-        if !self.occulting_bodies.is_empty() && ephemeris.is_none() {
-            return Err(PyValueError::new_err(
-                "ephemeris is required when occulting_bodies is set",
-            ));
-        }
+        ground_station: PyGroundStation,
+        spacecraft: PySpacecraft,
+        interval: Option<PyInterval>,
+    ) -> PyResult<Vec<PyPass>> {
+        let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
+        let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
+        let eph = bind_ephemeris(py, self.ephemeris.as_ref());
+        let passes = py
+            .detach(|| {
+                self.build(&ensemble, &eph)
+                    .single(&ground_station.0, &spacecraft.0, interval)
+            })
+            .map_err(analysis_error)?;
+        Ok(passes.into_iter().map(PyPass).collect())
+    }
 
-        let ephemeris_ref: Option<&Spk> = ephemeris.map(|e| &e.get().0);
-        let step = self.step;
-        let scenario = &self.scenario;
-
-        // Auto-propagate if no ensemble was provided.
-        let auto_ensemble;
-        let ensemble = match &self.ensemble {
-            Some(e) => e,
-            None => {
-                auto_ensemble = scenario
-                    .propagate(&DefaultRotationProvider)
-                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
-                &auto_ensemble
-            }
-        };
-
-        let occulting_bodies = self.occulting_bodies.clone();
-        let min_pass_duration = self.min_pass_duration;
-        let inter_satellite = self.inter_satellite;
-        let min_range = self.min_range;
-        let max_range = self.max_range;
-
-        // Eagerly evaluate Python filters while we hold the GIL, collecting
-        // accepted pairs into plain sets that can cross into the GIL-free
-        // parallel section.
-        let gs_accepted: Option<HashSet<(AssetId, AssetId)>> =
-            if let Some(ref filter) = self.ground_space_filter {
-                let ground_stations = scenario.ground_stations();
-                let spacecraft = scenario.spacecraft();
-                let mut set = HashSet::new();
-                for gs in ground_stations {
-                    for sc in spacecraft {
-                        let py_gs = PyGroundStation(gs.clone());
-                        let py_sc = PySpacecraft(sc.clone());
-                        let accept: bool = filter.call1(py, (py_gs, py_sc))?.extract(py)?;
-                        if accept {
-                            set.insert((gs.id().clone(), sc.id().clone()));
-                        }
-                    }
-                }
-                Some(set)
-            } else {
-                None
-            };
-
-        let isl_accepted: Option<HashSet<(AssetId, AssetId)>> =
-            if let Some(ref filter) = self.inter_satellite_filter {
-                let spacecraft = scenario.spacecraft();
-                let n = spacecraft.len();
-                let mut set = HashSet::new();
-                for i in 0..n {
-                    for j in (i + 1)..n {
-                        let py_sc1 = PySpacecraft(spacecraft[i].clone());
-                        let py_sc2 = PySpacecraft(spacecraft[j].clone());
-                        let accept: bool = filter.call1(py, (py_sc1, py_sc2))?.extract(py)?;
-                        if accept {
-                            set.insert((spacecraft[i].id().clone(), spacecraft[j].id().clone()));
-                        }
-                    }
-                }
-                Some(set)
-            } else {
-                None
-            };
-
-        let results = py.detach(|| -> Result<VisibilityResults, VisibilityError> {
-            let analysis = VisibilityAnalysis::new(scenario, ensemble).with_step(step);
-            let analysis = match min_pass_duration {
-                Some(d) => analysis.with_min_pass_duration(d),
-                None => analysis,
-            };
-            let analysis = if let Some(ref accepted) = gs_accepted {
-                analysis.with_ground_space_filter(move |gs, sc| {
-                    accepted.contains(&(gs.id().clone(), sc.id().clone()))
-                })
-            } else {
-                analysis
-            };
-            let analysis = if let Some(ref accepted) = isl_accepted {
-                analysis.with_inter_satellite_filter(move |sc1, sc2| {
-                    accepted.contains(&(sc1.id().clone(), sc2.id().clone()))
-                })
-            } else if inter_satellite {
-                analysis.with_inter_satellite()
-            } else {
-                analysis
-            };
-            let analysis = match min_range {
-                Some(r) => analysis.with_min_range(r),
-                None => analysis,
-            };
-            let analysis = match max_range {
-                Some(r) => analysis.with_max_range(r),
-                None => analysis,
-            };
-
-            if let Some(eph) = ephemeris_ref {
-                analysis
-                    .with_occulting_bodies(eph, occulting_bodies)
-                    .compute()
-            } else {
-                analysis.compute()
-            }
+    /// Computes the contact windows for one pair, without observables.
+    ///
+    /// Cheaper than :meth:`single` by roughly a third — nothing samples azimuth,
+    /// elevation, range, or range rate. Use it when only the timing matters.
+    ///
+    /// Returns:
+    ///     list[Window]
+    #[pyo3(signature = (ground_station, spacecraft, interval=None))]
+    fn windows(
+        &self,
+        py: Python<'_>,
+        ground_station: PyGroundStation,
+        spacecraft: PySpacecraft,
+        interval: Option<PyInterval>,
+    ) -> PyResult<Vec<PyWindow>> {
+        let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
+        let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
+        let eph = bind_ephemeris(py, self.ephemeris.as_ref());
+        let windows: Result<Vec<_>, _> = py.detach(|| {
+            self.build(&ensemble, &eph)
+                .windows(&ground_station.0, &spacecraft.0, interval)
+                .collect()
         });
+        Ok(windows
+            .map_err(analysis_error)?
+            .into_iter()
+            .map(PyWindow)
+            .collect())
+    }
 
-        Ok(PyVisibilityResults {
-            results: results.map_err(PyVisibilityError)?,
-            scenario: self.scenario.clone(),
-            ensemble: ensemble.clone(),
-            step: self.step,
+    /// Computes passes for every (ground station, spacecraft) pair.
+    ///
+    /// Args:
+    ///     interval: Optional interval; defaults to the scenario's.
+    ///     parallel: Fan out across threads (default: True).
+    ///     workers: Thread count. ``None`` uses the global pool; a number builds
+    ///         a pool local to this call, so it cannot disturb concurrent work.
+    ///
+    /// Returns:
+    ///     VisibilityRun with ``.passes`` and ``.errors``.
+    #[pyo3(signature = (interval=None, parallel=true, workers=None))]
+    fn run(
+        &self,
+        py: Python<'_>,
+        interval: Option<PyInterval>,
+        parallel: bool,
+        workers: Option<usize>,
+    ) -> PyResult<PyVisibilityRun> {
+        let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
+        let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
+        let mode = parallelism(parallel, workers);
+        let eph = bind_ephemeris(py, self.ephemeris.as_ref());
+        let results = py.detach(|| self.build(&ensemble, &eph).run(interval, mode));
+        let (passes, errors) = split_pairs(results);
+        Ok(PyVisibilityRun {
+            passes: passes
+                .into_iter()
+                .map(|(k, v)| (k, v.into_iter().map(PyPass).collect()))
+                .collect(),
+            errors,
         })
     }
 
     fn __repr__(&self) -> String {
-        let sc_count = self.scenario.spacecraft().len();
-        let gs_count = self.scenario.ground_stations().len();
-        let mut extras = Vec::new();
-        if self.ground_space_filter.is_some() {
-            extras.push("ground_space_filter=True".to_string());
-        }
-        if self.inter_satellite_filter.is_some() {
-            extras.push("inter_satellite_filter=True".to_string());
-        } else if self.inter_satellite {
-            extras.push("inter_satellite=True".to_string());
-        }
-        if extras.is_empty() {
-            format!("VisibilityAnalysis({gs_count} ground assets, {sc_count} space assets)")
-        } else {
-            format!(
-                "VisibilityAnalysis({gs_count} ground assets, {sc_count} space assets, {})",
-                extras.join(", "),
-            )
-        }
+        format!(
+            "VisibilityAnalysis({} ground stations, {} spacecraft)",
+            self.scenario.ground_stations().len(),
+            self.scenario.spacecraft().len(),
+        )
     }
 }
 
-/// Results of a visibility analysis.
+impl PyVisibilityAnalysis {
+    fn build<'a>(
+        &'a self,
+        ensemble: &'a Ensemble<AssetId, Origin, Frame>,
+        eph: &'a EphemerisHandle<'a>,
+    ) -> VisibilityAnalysis<'a, Origin, Frame, EphemerisHandle<'a>> {
+        let mut analysis = VisibilityAnalysis::new(&self.scenario, ensemble, eph)
+            .with_step(self.step)
+            .with_occulting_bodies(self.occulting_bodies.clone())
+            .with_range_limits(self.min_range, self.max_range);
+        if let Some(d) = self.min_pass_duration {
+            analysis = analysis.with_min_pass_duration(d);
+        }
+        analysis
+    }
+}
+
+/// Result of :meth:`VisibilityAnalysis.run`.
 ///
-/// Provides lazy access to visibility intervals and passes. Intervals
-/// (time windows) are computed eagerly; observables-rich Pass objects are
-/// computed on demand to avoid unnecessary work.
-#[pyclass(name = "VisibilityResults", module = "lox_space", frozen)]
-pub struct PyVisibilityResults {
-    results: VisibilityResults,
-    scenario: Scenario,
-    ensemble: Ensemble<AssetId, Origin, Frame>,
-    step: TimeDelta,
+/// A dumb container, deliberately: the aggregate ``VisibilityResults`` it
+/// replaces carried computed behaviour, which meant the analysis's knobs had to
+/// be remembered inside the result to answer later questions.
+#[pyclass(name = "VisibilityRun", module = "lox_space", frozen)]
+pub struct PyVisibilityRun {
+    passes: HashMap<(String, String), Vec<PyPass>>,
+    errors: HashMap<(String, String), String>,
 }
 
 #[pymethods]
-impl PyVisibilityResults {
-    /// Return visibility intervals for a specific pair.
-    ///
-    /// Args:
-    ///     id1: First asset identifier (ground or space).
-    ///     id2: Second asset identifier (space).
-    ///
-    /// Returns:
-    ///     List of Interval objects, or empty list if pair not found.
-    fn intervals(&self, id1: &str, id2: &str) -> Vec<PyInterval> {
-        let id1 = AssetId::new(id1);
-        let id2 = AssetId::new(id2);
-        self.results
-            .intervals_for(&id1, &id2)
-            .map(|intervals| {
-                intervals
-                    .iter()
-                    .map(|i| {
-                        PyInterval(TimeInterval::new(
-                            i.start().into_dynamic(),
-                            i.end().into_dynamic(),
-                        ))
-                    })
-                    .collect()
+impl PyVisibilityRun {
+    /// Passes per (ground station, spacecraft) pair. A pair with no passes maps
+    /// to an empty list rather than being absent.
+    #[getter]
+    fn passes(&self) -> HashMap<(String, String), Vec<PyPass>> {
+        self.passes.clone()
+    }
+
+    /// Error message per pair that failed. Absent pairs succeeded.
+    #[getter]
+    fn errors(&self) -> HashMap<(String, String), String> {
+        self.errors.clone()
+    }
+
+    fn __repr__(&self) -> String {
+        let total: usize = self.passes.values().map(Vec::len).sum();
+        format!(
+            "VisibilityRun({} pairs, {total} passes, {} errors)",
+            self.passes.len(),
+            self.errors.len()
+        )
+    }
+}
+
+/// Spacecraft-to-spacecraft contacts, yielding windows.
+///
+/// A separate class from ``VisibilityAnalysis`` because the item type differs:
+/// sat-to-sat contacts have no ground-station observables, so they cannot be
+/// passes. Replaces the old ``inter_satellite=True`` flag.
+///
+/// Args:
+///     scenario: Scenario containing the spacecraft and time interval.
+///     ensemble: Optional pre-computed Ensemble.
+///     ephemeris: SPK ephemeris. Required only when ``occulting_bodies`` is set.
+///     occulting_bodies: Bodies to check beyond the scenario's central body,
+///         which is always checked.
+///     step: Sampling step for detection (default: 60 s).
+///     min_duration: Discards windows shorter than this.
+///     min_range: Discards contacts closer than this.
+///     max_range: Discards contacts farther than this.
+#[pyclass(name = "InterSatelliteAnalysis", module = "lox_space", frozen)]
+pub struct PyInterSatelliteAnalysis {
+    scenario: Scenario,
+    ensemble: Option<Ensemble<AssetId, Origin, Frame>>,
+    ephemeris: Option<Py<PySpk>>,
+    occulting_bodies: Vec<Origin>,
+    step: TimeDelta,
+    min_duration: Option<TimeDelta>,
+    min_range: Option<Distance>,
+    max_range: Option<Distance>,
+}
+
+#[pymethods]
+impl PyInterSatelliteAnalysis {
+    #[new]
+    #[pyo3(signature = (scenario, ensemble=None, ephemeris=None, occulting_bodies=None, step=None, min_duration=None, min_range=None, max_range=None))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        scenario: PyScenario,
+        ensemble: Option<PyEnsemble>,
+        ephemeris: Option<Py<PySpk>>,
+        occulting_bodies: Option<Vec<Bound<'_, PyAny>>>,
+        step: Option<PyTimeDelta>,
+        min_duration: Option<PyTimeDelta>,
+        min_range: Option<PyDistance>,
+        max_range: Option<PyDistance>,
+    ) -> PyResult<Self> {
+        let occulting_bodies = parse_occulting_bodies(occulting_bodies, ephemeris.is_some())?;
+        Ok(Self {
+            scenario: scenario.0,
+            ensemble: ensemble.map(|e| e.0),
+            ephemeris,
+            occulting_bodies,
+            step: step
+                .map(|s| s.0)
+                .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
+            min_duration: min_duration.map(|d| d.0),
+            min_range: min_range.map(|d| d.0),
+            max_range: max_range.map(|d| d.0),
+        })
+    }
+
+    /// Computes the contact windows for one spacecraft pair.
+    #[pyo3(signature = (first, second, interval=None))]
+    fn single(
+        &self,
+        py: Python<'_>,
+        first: PySpacecraft,
+        second: PySpacecraft,
+        interval: Option<PyInterval>,
+    ) -> PyResult<Vec<PyWindow>> {
+        let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
+        let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
+        let eph = bind_ephemeris(py, self.ephemeris.as_ref());
+        let windows = py
+            .detach(|| {
+                self.build(&ensemble, &eph)
+                    .single(&first.0, &second.0, interval)
             })
-            .unwrap_or_default()
+            .map_err(analysis_error)?;
+        Ok(windows.into_iter().map(PyWindow).collect())
     }
 
-    /// Return all intervals for all pairs.
+    /// Computes contact windows for every unordered spacecraft pair.
     ///
     /// Returns:
-    ///     Dictionary mapping (id1, id2) to list of Interval objects.
-    fn all_intervals(&self) -> HashMap<(String, String), Vec<PyInterval>> {
-        self.results
-            .all_intervals()
-            .iter()
-            .map(|((id1, id2), intervals)| {
-                (
-                    (id1.as_str().to_string(), id2.as_str().to_string()),
-                    intervals
-                        .iter()
-                        .map(|i| {
-                            PyInterval(TimeInterval::new(
-                                i.start().into_dynamic(),
-                                i.end().into_dynamic(),
-                            ))
-                        })
-                        .collect(),
-                )
-            })
-            .collect()
-    }
-
-    /// Return intervals for ground-to-space pairs only.
-    ///
-    /// Returns:
-    ///     Dictionary mapping (ground_id, space_id) to list of Interval objects.
-    fn ground_space_intervals(&self) -> HashMap<(String, String), Vec<PyInterval>> {
-        self.results
-            .ground_space_pair_ids()
-            .into_iter()
-            .filter_map(|(gs_id, sc_id)| {
-                let intervals = self.results.intervals_for(gs_id, sc_id)?;
-                Some((
-                    (gs_id.as_str().to_string(), sc_id.as_str().to_string()),
-                    intervals
-                        .iter()
-                        .map(|i| {
-                            PyInterval(TimeInterval::new(
-                                i.start().into_dynamic(),
-                                i.end().into_dynamic(),
-                            ))
-                        })
-                        .collect(),
-                ))
-            })
-            .collect()
-    }
-
-    /// Return intervals for inter-satellite pairs only.
-    ///
-    /// Returns:
-    ///     Dictionary mapping (sc1_id, sc2_id) to list of Interval objects.
-    fn inter_satellite_intervals(&self) -> HashMap<(String, String), Vec<PyInterval>> {
-        self.results
-            .inter_satellite_pair_ids()
-            .into_iter()
-            .filter_map(|(sc1_id, sc2_id)| {
-                let intervals = self.results.intervals_for(sc1_id, sc2_id)?;
-                Some((
-                    (sc1_id.as_str().to_string(), sc2_id.as_str().to_string()),
-                    intervals
-                        .iter()
-                        .map(|i| {
-                            PyInterval(TimeInterval::new(
-                                i.start().into_dynamic(),
-                                i.end().into_dynamic(),
-                            ))
-                        })
-                        .collect(),
-                ))
-            })
-            .collect()
-    }
-
-    /// Compute passes with observables for a specific ground-to-space pair.
-    ///
-    /// This is more expensive than `intervals()` as it computes azimuth,
-    /// elevation, range, and range rate for each time step.
-    ///
-    /// Raises ValueError for inter-satellite pairs since ground-station
-    /// observables are not meaningful for them.
-    ///
-    /// Args:
-    ///     ground_id: Ground asset identifier.
-    ///     space_id: Space asset identifier.
-    ///
-    /// Returns:
-    ///     List of Pass objects, or empty list if pair not found.
-    fn passes(&self, ground_id: &str, space_id: &str) -> PyResult<Vec<PyPass>> {
-        let gs_id = AssetId::new(ground_id);
-        let sc_id = AssetId::new(space_id);
-
-        // Check if this is an inter-satellite pair before looking up assets.
-        if self.results.pair_type(&gs_id, &sc_id) == Some(PairType::InterSatellite) {
-            return Err(PyValueError::new_err(format!(
-                "passes are not supported for inter-satellite pair ({}, {}): use intervals() instead",
-                ground_id, space_id,
-            )));
-        }
-
-        let gs = self
-            .scenario
-            .ground_stations()
-            .iter()
-            .find(|g| g.id() == &gs_id);
-        let sc_traj = self.ensemble.get(&sc_id);
-        match (gs, sc_traj) {
-            (Some(gs), Some(sc_traj)) => {
-                let dynamic_traj = sc_traj.clone().into_dynamic();
-                let passes = self
-                    .results
-                    .to_passes(
-                        &gs_id,
-                        &sc_id,
-                        gs.location(),
-                        gs.mask(),
-                        &dynamic_traj,
-                        self.step,
-                        gs.body_fixed_frame(),
-                    )
-                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
-                Ok(passes.into_iter().map(PyPass).collect())
-            }
-            _ => Ok(vec![]),
-        }
-    }
-
-    /// Compute passes for all ground-to-space pairs.
-    ///
-    /// Inter-satellite pairs are skipped since ground-station observables
-    /// are not meaningful for them.
-    ///
-    /// Returns:
-    ///     Dictionary mapping (ground_id, space_id) to list of Pass objects.
-    fn all_passes(&self) -> HashMap<(String, String), Vec<PyPass>> {
-        let gs_map: HashMap<&AssetId, &GroundStation> = self
-            .scenario
-            .ground_stations()
-            .iter()
-            .map(|g| (g.id(), g))
-            .collect();
-
-        self.results
-            .ground_space_pair_ids()
-            .into_iter()
-            .filter_map(|(gs_id, sc_id)| {
-                let gs = gs_map.get(gs_id)?;
-                let sc_traj = self.ensemble.get(sc_id)?;
-                let dynamic_traj = sc_traj.clone().into_dynamic();
-                let intervals = self.results.intervals_for(gs_id, sc_id)?;
-                let passes: Vec<PyPass> = intervals
-                    .iter()
-                    .filter_map(|interval| {
-                        let dynamic_interval = TimeInterval::new(
-                            interval.start().into_dynamic(),
-                            interval.end().into_dynamic(),
-                        );
-                        Pass::from_interval(
-                            dynamic_interval,
-                            self.step,
-                            gs.location(),
-                            gs.mask(),
-                            &dynamic_traj,
-                            gs.body_fixed_frame(),
-                        )
-                    })
-                    .map(PyPass)
-                    .collect();
-                Some((
-                    (gs_id.as_str().to_string(), sc_id.as_str().to_string()),
-                    passes,
-                ))
-            })
-            .collect()
-    }
-
-    /// Return all pair identifiers.
-    fn pair_ids(&self) -> Vec<(String, String)> {
-        self.results
-            .pair_ids()
-            .map(|(id1, id2)| (id1.as_str().to_string(), id2.as_str().to_string()))
-            .collect()
-    }
-
-    /// Return pair identifiers for ground-to-space pairs only.
-    fn ground_space_pair_ids(&self) -> Vec<(String, String)> {
-        self.results
-            .ground_space_pair_ids()
-            .into_iter()
-            .map(|(id1, id2)| (id1.as_str().to_string(), id2.as_str().to_string()))
-            .collect()
-    }
-
-    /// Return pair identifiers for inter-satellite pairs only.
-    fn inter_satellite_pair_ids(&self) -> Vec<(String, String)> {
-        self.results
-            .inter_satellite_pair_ids()
-            .into_iter()
-            .map(|(id1, id2)| (id1.as_str().to_string(), id2.as_str().to_string()))
-            .collect()
-    }
-
-    /// Return the total number of pairs.
-    fn num_pairs(&self) -> usize {
-        self.results.num_pairs()
-    }
-
-    /// Return the total number of visibility intervals across all pairs.
-    fn total_intervals(&self) -> usize {
-        self.results.total_intervals()
+    ///     InterSatelliteRun with ``.windows`` and ``.errors``.
+    #[pyo3(signature = (interval=None, parallel=true, workers=None))]
+    fn run(
+        &self,
+        py: Python<'_>,
+        interval: Option<PyInterval>,
+        parallel: bool,
+        workers: Option<usize>,
+    ) -> PyResult<PyInterSatelliteRun> {
+        let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
+        let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
+        let mode = parallelism(parallel, workers);
+        let eph = bind_ephemeris(py, self.ephemeris.as_ref());
+        let results = py.detach(|| self.build(&ensemble, &eph).run(interval, mode));
+        let (windows, errors) = split_pairs(results);
+        Ok(PyInterSatelliteRun {
+            windows: windows
+                .into_iter()
+                .map(|(k, v)| (k, v.into_iter().map(PyWindow).collect()))
+                .collect(),
+            errors,
+        })
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "VisibilityResults({} pairs, {} intervals)",
-            self.results.num_pairs(),
-            self.results.total_intervals(),
+            "InterSatelliteAnalysis({} spacecraft)",
+            self.scenario.spacecraft().len()
         )
+    }
+}
+
+impl PyInterSatelliteAnalysis {
+    fn build<'a>(
+        &'a self,
+        ensemble: &'a Ensemble<AssetId, Origin, Frame>,
+        eph: &'a EphemerisHandle<'a>,
+    ) -> InterSatelliteAnalysis<'a, Origin, Frame, EphemerisHandle<'a>> {
+        let mut analysis = InterSatelliteAnalysis::new(&self.scenario, ensemble, eph)
+            .with_step(self.step)
+            .with_occulting_bodies(self.occulting_bodies.clone())
+            .with_range_limits(self.min_range, self.max_range);
+        if let Some(d) = self.min_duration {
+            analysis = analysis.with_min_duration(d);
+        }
+        analysis
+    }
+}
+
+/// Result of :meth:`InterSatelliteAnalysis.run`.
+#[pyclass(name = "InterSatelliteRun", module = "lox_space", frozen)]
+pub struct PyInterSatelliteRun {
+    windows: HashMap<(String, String), Vec<PyWindow>>,
+    errors: HashMap<(String, String), String>,
+}
+
+#[pymethods]
+impl PyInterSatelliteRun {
+    /// Contact windows per spacecraft pair.
+    #[getter]
+    fn windows(&self) -> HashMap<(String, String), Vec<PyWindow>> {
+        self.windows.clone()
+    }
+
+    /// Error message per pair that failed.
+    #[getter]
+    fn errors(&self) -> HashMap<(String, String), String> {
+        self.errors.clone()
+    }
+
+    fn __repr__(&self) -> String {
+        let total: usize = self.windows.values().map(Vec::len).sum();
+        format!(
+            "InterSatelliteRun({} pairs, {total} windows, {} errors)",
+            self.windows.len(),
+            self.errors.len()
+        )
+    }
+}
+
+/// A contact window: an interval with no observables attached.
+#[pyclass(name = "Window", module = "lox_space", frozen, from_py_object)]
+#[derive(Debug, Clone)]
+pub struct PyWindow(pub Window);
+
+#[pymethods]
+impl PyWindow {
+    /// The contact interval.
+    #[getter]
+    fn interval(&self) -> PyInterval {
+        PyInterval(self.0.0)
+    }
+
+    /// Window start.
+    #[getter]
+    fn start(&self) -> PyTime {
+        PyTime(self.0.0.start())
+    }
+
+    /// Window end.
+    #[getter]
+    fn end(&self) -> PyTime {
+        PyTime(self.0.0.end())
+    }
+
+    /// Window duration.
+    #[getter]
+    fn duration(&self) -> PyTimeDelta {
+        PyTimeDelta(self.0.0.duration())
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Window({}, {})", self.0.0.start(), self.0.0.end())
     }
 }
 
@@ -1223,236 +1315,290 @@ impl PyPass {
 }
 
 // ---------------------------------------------------------------------------
-// PowerBudgetAnalysis / PowerBudgetResults Python bindings
+// PowerBudgetAnalysis Python bindings
 // ---------------------------------------------------------------------------
 
-struct PyPowerError(PowerError);
-
-impl From<PyPowerError> for PyErr {
-    fn from(err: PyPowerError) -> Self {
-        PyValueError::new_err(err.0.to_string())
-    }
-}
-
-/// Power budget analysis for spacecraft in a scenario.
-///
-/// Computes eclipse intervals, sun beta angle, and solar flux for each
-/// spacecraft.  The shadow model is cylindrical (umbra only) — penumbra
-/// is **not** modelled.
+/// Eclipse intervals plus the continuous beta-angle and solar-flux channels.
 ///
 /// Args:
-///     scenario: Scenario containing spacecraft and time interval.
-///     ensemble: Optional pre-computed Ensemble. If not provided, the
-///         scenario is propagated automatically.
-///     step: Optional time step for sampling / event detection (default: 60s).
-///     spacecraft_ids: Optional list of spacecraft ids to analyse. Mutually
-///         exclusive with ``constellation_id``.
-///     constellation_id: Optional constellation id — only spacecraft belonging
-///         to this constellation are analysed. Mutually exclusive with
-///         ``spacecraft_ids``.
+///     scenario: Scenario containing the spacecraft and time interval.
+///     ephemeris: SPK ephemeris; required, since the Sun position is always
+///         needed.
+///     ensemble: Optional pre-computed Ensemble.
+///     step: Sampling step for detection and for the continuous channels
+///         (default: 60 s).
 #[pyclass(name = "PowerBudgetAnalysis", module = "lox_space", frozen)]
 pub struct PyPowerBudgetAnalysis {
     scenario: Scenario,
     ensemble: Option<Ensemble<AssetId, Origin, Frame>>,
+    ephemeris: Py<PySpk>,
     step: TimeDelta,
-    filter: Option<SpacecraftFilter>,
 }
 
 #[pymethods]
 impl PyPowerBudgetAnalysis {
     #[new]
-    #[pyo3(signature = (scenario, ensemble=None, step=None, spacecraft_ids=None, constellation_id=None))]
+    #[pyo3(signature = (scenario, ephemeris, ensemble=None, step=None))]
     fn new(
         scenario: PyScenario,
+        ephemeris: Py<PySpk>,
         ensemble: Option<PyEnsemble>,
         step: Option<PyTimeDelta>,
-        spacecraft_ids: Option<Vec<String>>,
-        constellation_id: Option<String>,
-    ) -> PyResult<Self> {
-        let filter = match (spacecraft_ids, constellation_id) {
-            (Some(_), Some(_)) => {
-                return Err(PyValueError::new_err(
-                    "spacecraft_ids and constellation_id are mutually exclusive",
-                ));
-            }
-            (Some(ids), None) => Some(SpacecraftFilter::Ids(
-                ids.into_iter().map(AssetId::new).collect(),
-            )),
-            (None, Some(cid)) => Some(SpacecraftFilter::Constellation(ConstellationId::new(cid))),
-            (None, None) => None,
-        };
-        Ok(Self {
+    ) -> Self {
+        Self {
             scenario: scenario.0,
             ensemble: ensemble.map(|e| e.0),
+            ephemeris,
             step: step
                 .map(|s| s.0)
                 .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
-            filter,
-        })
+        }
     }
 
-    /// Compute the power budget analysis.
-    ///
-    /// Args:
-    ///     ephemeris: Optional SPK ephemeris for Sun position. When omitted,
-    ///         an analytical model is used (valid for Earth-centred scenarios).
+    /// Computes one spacecraft's eclipse intervals.
     ///
     /// Returns:
-    ///     PowerBudgetResults with eclipse intervals, beta angles, and
-    ///     solar flux for each spacecraft.
-    #[pyo3(signature = (ephemeris=None))]
-    fn compute(
+    ///     list[Eclipse]
+    #[pyo3(signature = (spacecraft, interval=None))]
+    fn eclipses(
         &self,
         py: Python<'_>,
-        ephemeris: Option<&Bound<'_, PySpk>>,
-    ) -> PyResult<PyPowerBudgetResults> {
-        let scenario = &self.scenario;
-        let step = self.step;
-        let filter = self.filter.clone();
+        spacecraft: PySpacecraft,
+        interval: Option<PyInterval>,
+    ) -> PyResult<Vec<PyEclipse>> {
+        let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
+        let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
+        let eph = bind_ephemeris(py, Some(&self.ephemeris));
+        let eclipses = py
+            .detach(|| {
+                self.build(&ensemble, &eph)
+                    .eclipses(&spacecraft.0, interval)
+            })
+            .map_err(analysis_error)?;
+        Ok(eclipses.into_iter().map(PyEclipse).collect())
+    }
 
-        // Auto-propagate if no ensemble was provided.
-        let auto_ensemble;
-        let ensemble = match &self.ensemble {
-            Some(e) => e,
-            None => {
-                auto_ensemble = scenario
-                    .propagate(&DefaultRotationProvider)
-                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
-                &auto_ensemble
+    /// Samples one spacecraft's beta angle over the interval.
+    ///
+    /// Not an event stream: the beta angle has a value at every instant, so it
+    /// is sampled directly rather than detected.
+    ///
+    /// Returns:
+    ///     TimeSeries of radians.
+    #[pyo3(signature = (spacecraft, interval=None))]
+    fn beta_angle(
+        &self,
+        py: Python<'_>,
+        spacecraft: PySpacecraft,
+        interval: Option<PyInterval>,
+    ) -> PyResult<PyTimeSeries> {
+        let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
+        let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
+        let eph = bind_ephemeris(py, Some(&self.ephemeris));
+        let series = py
+            .detach(|| {
+                self.build(&ensemble, &eph)
+                    .beta_angle(&spacecraft.0, interval)
+            })
+            .map_err(analysis_error)?;
+        Ok(PyTimeSeries(series))
+    }
+
+    /// Samples one spacecraft's solar flux over the interval.
+    ///
+    /// Returns:
+    ///     TimeSeries of W/m².
+    #[pyo3(signature = (spacecraft, interval=None))]
+    fn solar_flux(
+        &self,
+        py: Python<'_>,
+        spacecraft: PySpacecraft,
+        interval: Option<PyInterval>,
+    ) -> PyResult<PyTimeSeries> {
+        let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
+        let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
+        let eph = bind_ephemeris(py, Some(&self.ephemeris));
+        let series = py
+            .detach(|| {
+                self.build(&ensemble, &eph)
+                    .solar_flux(&spacecraft.0, interval)
+            })
+            .map_err(analysis_error)?;
+        Ok(PyTimeSeries(series))
+    }
+
+    /// Computes all three channels for every spacecraft in the scenario.
+    ///
+    /// Returns:
+    ///     PowerBudgetRun with ``.spacecraft`` and ``.errors``.
+    #[pyo3(signature = (interval=None, parallel=true, workers=None))]
+    fn run(
+        &self,
+        py: Python<'_>,
+        interval: Option<PyInterval>,
+        parallel: bool,
+        workers: Option<usize>,
+    ) -> PyResult<PyPowerBudgetRun> {
+        let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
+        let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
+        let mode = parallelism(parallel, workers);
+        let eph = bind_ephemeris(py, Some(&self.ephemeris));
+        let results = py.detach(|| self.build(&ensemble, &eph).run(interval, mode));
+
+        let mut spacecraft = HashMap::new();
+        let mut errors = HashMap::new();
+        for (id, result) in results {
+            let key = id.as_str().to_string();
+            match result {
+                Ok(power) => {
+                    spacecraft.insert(key, PySpacecraftPower(power));
+                }
+                Err(e) => {
+                    errors.insert(key, render_error(&e));
+                }
             }
-        };
-
-        let results = if let Some(spk_bound) = ephemeris {
-            let spk = &spk_bound.get().0;
-            py.detach(|| {
-                let mut a = PowerBudgetAnalysis::new(scenario, ensemble, spk).with_step(step);
-                if let Some(f) = &filter {
-                    a = a.with_filter(f.clone());
-                }
-                a.compute()
-            })
-        } else {
-            let analytical = AnalyticalSunEphemeris;
-            py.detach(|| {
-                let mut a =
-                    PowerBudgetAnalysis::new(scenario, ensemble, &analytical).with_step(step);
-                if let Some(f) = &filter {
-                    a = a.with_filter(f.clone());
-                }
-                a.compute()
-            })
-        };
-
-        Ok(PyPowerBudgetResults {
-            results: results.map_err(PyPowerError)?,
-        })
+        }
+        Ok(PyPowerBudgetRun { spacecraft, errors })
     }
 
     fn __repr__(&self) -> String {
-        let sc_count = self.scenario.spacecraft().len();
-        match &self.filter {
-            Some(SpacecraftFilter::Ids(ids)) => format!(
-                "PowerBudgetAnalysis({sc_count} spacecraft, filtered to {} ids)",
-                ids.len()
-            ),
-            Some(SpacecraftFilter::Constellation(cid)) => {
-                format!("PowerBudgetAnalysis({sc_count} spacecraft, constellation=\"{cid}\")",)
-            }
-            None => format!("PowerBudgetAnalysis({sc_count} spacecraft)"),
-        }
+        format!(
+            "PowerBudgetAnalysis({} spacecraft)",
+            self.scenario.spacecraft().len()
+        )
     }
 }
 
-/// Convert a `TimeSeries<Tai>` to a `PyTimeSeries` (which uses `TimeScale`).
-fn to_py_time_series(ts: &TimeSeries) -> PyTimeSeries {
-    PyTimeSeries(ts.clone())
+impl PyPowerBudgetAnalysis {
+    fn build<'a>(
+        &'a self,
+        ensemble: &'a Ensemble<AssetId, Origin, Frame>,
+        eph: &'a EphemerisHandle<'a>,
+    ) -> PowerBudgetAnalysis<'a, Origin, Frame, EphemerisHandle<'a>> {
+        PowerBudgetAnalysis::new(&self.scenario, ensemble, eph).with_step(self.step)
+    }
 }
 
-/// Results of a power budget analysis.
-///
-/// Provides access to eclipse intervals, eclipse/sunlit fractions,
-/// beta-angle time series, and solar-flux time series for each spacecraft.
-#[pyclass(name = "PowerBudgetResults", module = "lox_space", frozen)]
-pub struct PyPowerBudgetResults {
-    results: PowerBudgetResults,
+/// One spacecraft's power-budget outputs.
+#[pyclass(name = "SpacecraftPower", module = "lox_space", frozen)]
+pub struct PySpacecraftPower(pub SpacecraftPower);
+
+#[pymethods]
+impl PySpacecraftPower {
+    /// Eclipse intervals (umbra only; penumbra is not modelled).
+    #[getter]
+    fn eclipses(&self) -> Vec<PyEclipse> {
+        self.0.eclipses.iter().copied().map(PyEclipse).collect()
+    }
+
+    /// Beta angle over the arc, in radians.
+    #[getter]
+    fn beta_angle(&self) -> PyTimeSeries {
+        PyTimeSeries(self.0.beta.clone())
+    }
+
+    /// Solar flux over the arc, in W/m².
+    #[getter]
+    fn solar_flux(&self) -> PyTimeSeries {
+        PyTimeSeries(self.0.flux.clone())
+    }
+
+    /// Fraction of ``interval`` spent in eclipse, in [0, 1].
+    ///
+    /// Takes the interval explicitly because the eclipse list alone cannot say
+    /// whether "no eclipses" covers a week or a minute.
+    fn eclipse_fraction(&self, interval: PyInterval) -> f64 {
+        self.0.eclipse_fraction_over(interval.0)
+    }
+
+    /// Fraction of ``interval`` spent sunlit, ``1 - eclipse_fraction``.
+    fn sunlit_fraction(&self, interval: PyInterval) -> f64 {
+        self.0.sunlit_fraction_over(interval.0)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("SpacecraftPower({} eclipses)", self.0.eclipses.len())
+    }
+}
+
+/// Result of :meth:`PowerBudgetAnalysis.run`.
+#[pyclass(name = "PowerBudgetRun", module = "lox_space", frozen)]
+pub struct PyPowerBudgetRun {
+    spacecraft: HashMap<String, PySpacecraftPower>,
+    errors: HashMap<String, String>,
 }
 
 #[pymethods]
-impl PyPowerBudgetResults {
-    /// Eclipse intervals for a given spacecraft.
-    ///
-    /// Args:
-    ///     id: Spacecraft identifier.
-    ///
-    /// Returns:
-    ///     List of Interval objects, or empty list if id not found.
-    fn eclipse_intervals(&self, id: &str) -> Vec<PyInterval> {
-        let asset_id = AssetId::new(id);
-        self.results
-            .eclipse_intervals_for(&asset_id)
-            .map(|intervals| {
-                intervals
-                    .iter()
-                    .map(|i| {
-                        PyInterval(TimeInterval::new(
-                            i.start().into_dynamic(),
-                            i.end().into_dynamic(),
-                        ))
-                    })
-                    .collect()
+impl PyPowerBudgetRun {
+    /// Power outputs per spacecraft id.
+    #[getter]
+    fn spacecraft(&self, py: Python<'_>) -> PyResult<HashMap<String, Py<PySpacecraftPower>>> {
+        self.spacecraft
+            .iter()
+            .map(|(k, v)| {
+                Ok((
+                    k.clone(),
+                    Py::new(
+                        py,
+                        PySpacecraftPower(SpacecraftPower {
+                            eclipses: v.0.eclipses.clone(),
+                            beta: v.0.beta.clone(),
+                            flux: v.0.flux.clone(),
+                        }),
+                    )?,
+                ))
             })
-            .unwrap_or_default()
+            .collect()
     }
 
-    /// Eclipse fraction for a given spacecraft (0 = fully sunlit, 1 = always eclipsed).
-    ///
-    /// Args:
-    ///     id: Spacecraft identifier.
-    ///
-    /// Returns:
-    ///     Eclipse fraction as float, or None if id not found.
-    fn eclipse_fraction(&self, id: &str) -> Option<f64> {
-        self.results.eclipse_fraction(&AssetId::new(id))
-    }
-
-    /// Sunlit fraction for a given spacecraft (1 - eclipse_fraction).
-    ///
-    /// Args:
-    ///     id: Spacecraft identifier.
-    ///
-    /// Returns:
-    ///     Sunlit fraction as float, or None if id not found.
-    fn sunlit_fraction(&self, id: &str) -> Option<f64> {
-        self.results.sunlit_fraction(&AssetId::new(id))
-    }
-
-    /// Beta-angle time series for a given spacecraft (radians).
-    ///
-    /// Args:
-    ///     id: Spacecraft identifier.
-    ///
-    /// Returns:
-    ///     TimeSeries of beta angles in radians, or None if id not found.
-    fn beta_angles(&self, id: &str) -> Option<PyTimeSeries> {
-        let ts = self.results.beta_angles_for(&AssetId::new(id))?;
-        Some(to_py_time_series(ts))
-    }
-
-    /// Solar-flux time series for a given spacecraft (W/m²).
-    ///
-    /// Args:
-    ///     id: Spacecraft identifier.
-    ///
-    /// Returns:
-    ///     TimeSeries of solar flux in W/m², or None if id not found.
-    fn solar_flux(&self, id: &str) -> Option<PyTimeSeries> {
-        let ts = self.results.solar_flux_for(&AssetId::new(id))?;
-        Some(to_py_time_series(ts))
+    /// Error message per spacecraft that failed.
+    #[getter]
+    fn errors(&self) -> HashMap<String, String> {
+        self.errors.clone()
     }
 
     fn __repr__(&self) -> String {
-        let n = self.results.all_eclipse_intervals().len();
-        format!("PowerBudgetResults({n} spacecraft)")
+        format!(
+            "PowerBudgetRun({} spacecraft, {} errors)",
+            self.spacecraft.len(),
+            self.errors.len()
+        )
+    }
+}
+
+/// A single eclipse interval.
+#[pyclass(name = "Eclipse", module = "lox_space", frozen, from_py_object)]
+#[derive(Debug, Clone, Copy)]
+pub struct PyEclipse(pub Eclipse);
+
+#[pymethods]
+impl PyEclipse {
+    /// The eclipse interval.
+    #[getter]
+    fn interval(&self) -> PyInterval {
+        PyInterval(self.0.0)
+    }
+
+    /// Eclipse entry.
+    #[getter]
+    fn start(&self) -> PyTime {
+        PyTime(self.0.0.start())
+    }
+
+    /// Eclipse exit.
+    #[getter]
+    fn end(&self) -> PyTime {
+        PyTime(self.0.0.end())
+    }
+
+    /// Eclipse duration.
+    #[getter]
+    fn duration(&self) -> PyTimeDelta {
+        PyTimeDelta(self.0.0.duration())
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Eclipse({}, {})", self.0.0.start(), self.0.0.end())
     }
 }
 
@@ -1554,102 +1700,6 @@ impl PyOpticalPayload {
     }
 }
 
-/// AOI optical access analysis: computes imaging windows for spacecraft over AOIs.
-///
-/// Optical payloads are read from each spacecraft; spacecraft without an
-/// optical payload are skipped.
-///
-/// Args:
-///     scenario: Scenario containing spacecraft and time interval.
-///         Spacecraft must have an ``optical_payload`` assigned.
-///     aois: List of (id, Aoi) tuples defining the areas of interest.
-///     ensemble: Optional pre-computed Ensemble. If not provided, the
-///         scenario is propagated automatically.
-///     step: Optional time step for event detection (default: 60s).
-///     body_fixed_frame: Optional body-fixed frame override (e.g. "ITRF").
-///         Defaults to IAU frame of the scenario's origin.
-#[pyclass(name = "OpticalAccessAnalysis", module = "lox_space", frozen)]
-pub struct PyOpticalAccessAnalysis {
-    scenario: Scenario,
-    aois: Vec<(AoiId, Aoi)>,
-    ensemble: Option<Ensemble<AssetId, Origin, Frame>>,
-    step: TimeDelta,
-    body_fixed_frame: Option<Frame>,
-}
-
-#[pymethods]
-impl PyOpticalAccessAnalysis {
-    #[new]
-    #[pyo3(signature = (scenario, aois, ensemble=None, step=None, body_fixed_frame=None))]
-    fn new(
-        scenario: PyScenario,
-        aois: Vec<(String, PyAoi)>,
-        ensemble: Option<PyEnsemble>,
-        step: Option<PyTimeDelta>,
-        body_fixed_frame: Option<PyFrame>,
-    ) -> Self {
-        let aois = aois
-            .into_iter()
-            .map(|(id, aoi)| (AoiId::new(id), aoi.0))
-            .collect();
-        Self {
-            scenario: scenario.0,
-            aois,
-            ensemble: ensemble.map(|e| e.0),
-            step: step
-                .map(|s| s.0)
-                .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
-            body_fixed_frame: body_fixed_frame.map(|f| f.0),
-        }
-    }
-
-    /// Compute optical access intervals for all (spacecraft, AOI) pairs.
-    ///
-    /// If no ensemble was provided at construction, the scenario is
-    /// propagated automatically (trajectories transformed to ICRF).
-    ///
-    /// Returns:
-    ///     AccessResults containing intervals for all pairs.
-    fn compute(&self, py: Python<'_>) -> PyResult<PyAccessResults> {
-        let scenario = &self.scenario;
-        let step = self.step;
-        let body_fixed_frame = self.body_fixed_frame;
-
-        // Auto-propagate if no ensemble was provided.
-        let auto_ensemble;
-        let ensemble = match &self.ensemble {
-            Some(e) => e,
-            None => {
-                auto_ensemble = scenario
-                    .propagate(&DefaultRotationProvider)
-                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
-                &auto_ensemble
-            }
-        };
-
-        let aois = self.aois.clone();
-
-        let results = py.detach(|| {
-            let mut analysis = OpticalAccessAnalysis::new(scenario, ensemble, aois).with_step(step);
-            if let Some(frame) = body_fixed_frame {
-                analysis = analysis.with_body_fixed_frame(frame);
-            }
-            analysis.compute()
-        });
-
-        Ok(PyAccessResults {
-            results: results.map_err(PyAccessError)?,
-        })
-    }
-
-    fn __repr__(&self) -> String {
-        let sc_count = self.scenario.spacecraft().len();
-        let aoi_count = self.aois.len();
-        let aoi_label = if aoi_count == 1 { "AOI" } else { "AOIs" };
-        format!("OpticalAccessAnalysis({sc_count} spacecraft, {aoi_count} {aoi_label})")
-    }
-}
-
 /// Direction of orbital motion at the time of an access window.
 #[pyclass(
     name = "PassDirection",
@@ -1716,58 +1766,6 @@ impl PyAccessWindow {
             self.0.interval.start(),
             self.0.interval.end(),
         )
-    }
-}
-
-/// Results of an imaging access analysis (optical or SAR).
-///
-/// Provides access windows for each (spacecraft, AOI) pair.
-#[pyclass(name = "AccessResults", module = "lox_space", frozen)]
-pub struct PyAccessResults {
-    results: AccessResults,
-}
-
-#[pymethods]
-impl PyAccessResults {
-    /// Return access windows for a specific (spacecraft, AOI) pair.
-    ///
-    /// Args:
-    ///     spacecraft_id: Spacecraft identifier.
-    ///     aoi_id: AOI identifier.
-    ///
-    /// Returns:
-    ///     List of AccessWindow objects, or empty list if pair not found.
-    fn windows(&self, spacecraft_id: &str, aoi_id: &str) -> Vec<PyAccessWindow> {
-        let sc_id = AssetId::new(spacecraft_id);
-        let aoi_id = AoiId::new(aoi_id);
-        self.results
-            .windows(&sc_id, &aoi_id)
-            .iter()
-            .map(|w| PyAccessWindow(*w))
-            .collect()
-    }
-
-    /// Return all access windows for all (spacecraft, AOI) pairs.
-    ///
-    /// Returns:
-    ///     Dictionary mapping (spacecraft_id, aoi_id) to list of AccessWindow objects.
-    fn all_windows(&self) -> HashMap<(String, String), Vec<PyAccessWindow>> {
-        self.results
-            .all_windows()
-            .iter()
-            .map(|((sc_id, aoi_id), windows)| {
-                (
-                    (sc_id.as_str().to_string(), aoi_id.as_str().to_string()),
-                    windows.iter().map(|w| PyAccessWindow(*w)).collect(),
-                )
-            })
-            .collect()
-    }
-
-    fn __repr__(&self) -> String {
-        let n = self.results.num_pairs();
-        let label = if n == 1 { "pair" } else { "pairs" };
-        format!("AccessResults({n} {label})")
     }
 }
 
@@ -1891,98 +1889,209 @@ impl PySarPayload {
     }
 }
 
-/// AOI SAR access analysis: computes imaging windows for SAR spacecraft over AOIs.
+// ---------------------------------------------------------------------------
+// Access analyses (optical + SAR)
+// ---------------------------------------------------------------------------
+
+/// Result of an access analysis `run`.
 ///
-/// SAR payloads are read from each spacecraft; spacecraft without a SAR
-/// payload are skipped.
-///
-/// Args:
-///     scenario: Scenario containing spacecraft and time interval.
-///         Spacecraft must have a ``sar_payload`` assigned.
-///     aois: List of (id, Aoi) tuples defining the areas of interest.
-///     ensemble: Optional pre-computed Ensemble. If not provided, the
-///         scenario is propagated automatically.
-///     step: Optional time step for event detection (default: 60s).
-///     body_fixed_frame: Optional body-fixed frame override (e.g. "ITRF").
-///         Defaults to IAU frame of the scenario's origin.
-#[pyclass(name = "SarAccessAnalysis", module = "lox_space", frozen)]
-pub struct PySarAccessAnalysis {
-    scenario: Scenario,
-    aois: Vec<(AoiId, Aoi)>,
-    ensemble: Option<Ensemble<AssetId, Origin, Frame>>,
-    step: TimeDelta,
-    body_fixed_frame: Option<Frame>,
+/// Shared by the optical and SAR analyses: the item type is the same, only the
+/// payload geometry that produced it differs.
+#[pyclass(name = "AccessRun", module = "lox_space", frozen)]
+pub struct PyAccessRun {
+    windows: HashMap<(String, String), Vec<PyAccessWindow>>,
+    errors: HashMap<(String, String), String>,
 }
 
 #[pymethods]
-impl PySarAccessAnalysis {
-    #[new]
-    #[pyo3(signature = (scenario, aois, ensemble=None, step=None, body_fixed_frame=None))]
-    fn new(
-        scenario: PyScenario,
-        aois: Vec<(String, PyAoi)>,
-        ensemble: Option<PyEnsemble>,
-        step: Option<PyTimeDelta>,
-        body_fixed_frame: Option<PyFrame>,
-    ) -> Self {
-        let aois = aois
-            .into_iter()
-            .map(|(id, aoi)| (AoiId::new(id), aoi.0))
-            .collect();
-        Self {
-            scenario: scenario.0,
-            aois,
-            ensemble: ensemble.map(|e| e.0),
-            step: step
-                .map(|s| s.0)
-                .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
-            body_fixed_frame: body_fixed_frame.map(|f| f.0),
-        }
+impl PyAccessRun {
+    /// Access windows per (spacecraft, AOI) pair.
+    #[getter]
+    fn windows(&self) -> HashMap<(String, String), Vec<PyAccessWindow>> {
+        self.windows.clone()
     }
 
-    /// Compute SAR access intervals for all (spacecraft, AOI) pairs.
-    ///
-    /// If no ensemble was provided at construction, the scenario is
-    /// propagated automatically (trajectories transformed to ICRF).
-    ///
-    /// Returns:
-    ///     AccessResults containing intervals for all pairs.
-    fn compute(&self, py: Python<'_>) -> PyResult<PyAccessResults> {
-        let scenario = &self.scenario;
-        let step = self.step;
-        let body_fixed_frame = self.body_fixed_frame;
-
-        // Auto-propagate if no ensemble was provided.
-        let auto_ensemble;
-        let ensemble = match &self.ensemble {
-            Some(e) => e,
-            None => {
-                auto_ensemble = scenario
-                    .propagate(&DefaultRotationProvider)
-                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
-                &auto_ensemble
-            }
-        };
-
-        let aois = self.aois.clone();
-
-        let results = py.detach(|| {
-            let mut analysis = SarAccessAnalysis::new(scenario, ensemble, aois).with_step(step);
-            if let Some(frame) = body_fixed_frame {
-                analysis = analysis.with_body_fixed_frame(frame);
-            }
-            analysis.compute()
-        });
-
-        Ok(PyAccessResults {
-            results: results.map_err(PyAccessError)?,
-        })
+    /// Error message per pair that failed.
+    #[getter]
+    fn errors(&self) -> HashMap<(String, String), String> {
+        self.errors.clone()
     }
 
     fn __repr__(&self) -> String {
-        let sc_count = self.scenario.spacecraft().len();
-        let aoi_count = self.aois.len();
-        let aoi_label = if aoi_count == 1 { "AOI" } else { "AOIs" };
-        format!("SarAccessAnalysis({sc_count} spacecraft, {aoi_count} {aoi_label})")
+        let total: usize = self.windows.values().map(Vec::len).sum();
+        format!(
+            "AccessRun({} pairs, {total} windows, {} errors)",
+            self.windows.len(),
+            self.errors.len()
+        )
     }
 }
+
+/// Generates the optical and SAR access bindings.
+///
+/// The two differ only in their payload type and their docs; a macro keeps the
+/// GIL handling, ensemble resolution, and error routing in one place instead of
+/// two copies that can drift.
+macro_rules! access_analysis {
+    ($py_name:literal, $ty:ident, $payload:ty, $doc:literal) => {
+        #[doc = $doc]
+        ///
+        /// Args:
+        ///     scenario: Scenario containing the spacecraft and time interval.
+        ///     aois: List of ``(id, Aoi)`` tuples defining the areas of interest.
+        ///     ensemble: Optional pre-computed Ensemble.
+        ///     step: Sampling step for detection (default: 60 s).
+        ///     body_fixed_frame: Body-fixed frame override; defaults to the IAU
+        ///         frame of the scenario's origin.
+        #[pyclass(name = $py_name, module = "lox_space", frozen)]
+        pub struct $ty {
+            scenario: Scenario,
+            aois: Vec<(AoiId, Aoi)>,
+            ensemble: Option<Ensemble<AssetId, Origin, Frame>>,
+            step: TimeDelta,
+            body_fixed_frame: Option<Frame>,
+        }
+
+        #[pymethods]
+        impl $ty {
+            #[new]
+            #[pyo3(signature = (scenario, aois, ensemble=None, step=None, body_fixed_frame=None))]
+            fn new(
+                scenario: PyScenario,
+                aois: Vec<(String, PyAoi)>,
+                ensemble: Option<PyEnsemble>,
+                step: Option<PyTimeDelta>,
+                body_fixed_frame: Option<PyFrame>,
+            ) -> Self {
+                Self {
+                    scenario: scenario.0,
+                    aois: aois
+                        .into_iter()
+                        .map(|(id, aoi)| (AoiId::new(id), aoi.0))
+                        .collect(),
+                    ensemble: ensemble.map(|e| e.0),
+                    step: step
+                        .map(|s| s.0)
+                        .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
+                    body_fixed_frame: body_fixed_frame.map(|f| f.0),
+                }
+            }
+
+            /// Computes access windows for one (spacecraft, AOI) pair.
+            ///
+            /// Args:
+            ///     spacecraft: The spacecraft; must carry the payload this
+            ///         analysis reads.
+            ///     aoi_id: Identifier of one of the configured AOIs.
+            ///     interval: Optional interval; defaults to the scenario's.
+            ///
+            /// Returns:
+            ///     list[AccessWindow]
+            ///
+            /// Raises:
+            ///     AnalysisError: if the spacecraft carries no such payload, has
+            ///         no trajectory, or detection fails.
+            ///     KeyError: if ``aoi_id`` is not one of the configured AOIs.
+            #[pyo3(signature = (spacecraft, aoi_id, interval=None))]
+            fn single(
+                &self,
+                py: Python<'_>,
+                spacecraft: PySpacecraft,
+                aoi_id: &str,
+                interval: Option<PyInterval>,
+            ) -> PyResult<Vec<PyAccessWindow>> {
+                let aoi = self
+                    .aois
+                    .iter()
+                    .find(|(id, _)| id.as_str() == aoi_id)
+                    .map(|(_, aoi)| aoi)
+                    .ok_or_else(|| {
+                        pyo3::exceptions::PyKeyError::new_err(format!(
+                            "no AOI named {aoi_id:?} in this analysis"
+                        ))
+                    })?;
+                let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
+                let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
+                let windows = py
+                    .detach(|| self.build(&ensemble).single(&spacecraft.0, aoi, interval))
+                    .map_err(analysis_error)?;
+                Ok(windows.into_iter().map(PyAccessWindow).collect())
+            }
+
+            /// Computes access windows for every (spacecraft, AOI) pair.
+            ///
+            /// Spacecraft without the relevant payload are not targets at all,
+            /// so they appear in neither ``.windows`` nor ``.errors``.
+            ///
+            /// Returns:
+            ///     AccessRun with ``.windows`` and ``.errors``.
+            #[pyo3(signature = (interval=None, parallel=true, workers=None))]
+            fn run(
+                &self,
+                py: Python<'_>,
+                interval: Option<PyInterval>,
+                parallel: bool,
+                workers: Option<usize>,
+            ) -> PyResult<PyAccessRun> {
+                let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
+                let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
+                let mode = parallelism(parallel, workers);
+                let results = py.detach(|| self.build(&ensemble).run(interval, mode));
+
+                let mut windows = HashMap::new();
+                let mut errors = HashMap::new();
+                for ((sc, aoi), result) in results {
+                    let key = (sc.as_str().to_string(), aoi.as_str().to_string());
+                    match result {
+                        Ok(v) => {
+                            windows
+                                .insert(key, v.into_iter().map(PyAccessWindow).collect::<Vec<_>>());
+                        }
+                        Err(e) => {
+                            errors.insert(key, render_error(&e));
+                        }
+                    }
+                }
+                Ok(PyAccessRun { windows, errors })
+            }
+
+            fn __repr__(&self) -> String {
+                let sc_count = self.scenario.spacecraft().len();
+                let aoi_count = self.aois.len();
+                let aoi_label = if aoi_count == 1 { "AOI" } else { "AOIs" };
+                format!(
+                    concat!($py_name, "({} spacecraft, {} {})"),
+                    sc_count, aoi_count, aoi_label
+                )
+            }
+        }
+
+        impl $ty {
+            fn build<'a>(
+                &'a self,
+                ensemble: &'a Ensemble<AssetId, Origin, Frame>,
+            ) -> AccessAnalysis<'a, $payload, Origin, Frame> {
+                let mut analysis = AccessAnalysis::new(&self.scenario, ensemble, self.aois.clone())
+                    .with_step(self.step);
+                if let Some(frame) = self.body_fixed_frame {
+                    analysis = analysis.with_body_fixed_frame(frame);
+                }
+                analysis
+            }
+        }
+    };
+}
+
+access_analysis!(
+    "OpticalAccessAnalysis",
+    PyOpticalAccessAnalysis,
+    OpticalPayload,
+    "AOI optical access: imaging windows for spacecraft carrying an optical payload."
+);
+
+access_analysis!(
+    "SarAccessAnalysis",
+    PySarAccessAnalysis,
+    SarPayload,
+    "AOI SAR access: imaging windows for spacecraft carrying a SAR payload."
+);

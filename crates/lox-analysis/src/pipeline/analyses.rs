@@ -501,6 +501,31 @@ pub struct SpacecraftPower {
     pub flux: TimeSeries,
 }
 
+impl SpacecraftPower {
+    /// The fraction of `interval` spent in eclipse, in `[0, 1]`.
+    ///
+    /// Takes the interval rather than deriving it from the eclipses, which
+    /// cannot distinguish "no eclipses over a week" from "no eclipses over a
+    /// minute". Returns 0 for an empty interval.
+    pub fn eclipse_fraction_over(&self, interval: TimeInterval) -> f64 {
+        let total = interval.duration().to_seconds().to_f64();
+        if total <= 0.0 {
+            return 0.0;
+        }
+        let eclipsed: f64 = self
+            .eclipses
+            .iter()
+            .map(|e| e.0.duration().to_seconds().to_f64())
+            .sum();
+        eclipsed / total
+    }
+
+    /// The fraction of `interval` spent sunlit, `1 - eclipse_fraction_over`.
+    pub fn sunlit_fraction_over(&self, interval: TimeInterval) -> f64 {
+        1.0 - self.eclipse_fraction_over(interval)
+    }
+}
+
 /// Eclipse intervals plus the continuous beta-angle and solar-flux channels.
 ///
 /// The pipeline covers only the eclipses (migration §4.1): beta and flux are
@@ -1070,7 +1095,6 @@ mod tests {
     use lox_test_utils::data_file;
     use std::sync::OnceLock;
 
-    use crate::legacy::VisibilityAnalysis as EagerVisibilityAnalysis;
     #[cfg(feature = "parallel")]
     use crate::pipeline::sources::tests::iss_trajectory;
     use crate::pipeline::sources::tests::{cebreros, lunar_trajectory, scenario_and_ensemble};
@@ -1123,29 +1147,6 @@ mod tests {
                 )
             })
             .collect()
-    }
-
-    #[test]
-    fn single_matches_the_eager_path() {
-        // The Step-5 parity suite covers the sources; this covers the wiring —
-        // that the analysis reaches them with the knobs it was given.
-        let (scenario, ensemble, gs, spacecraft, interval) = fixture();
-        let step = TimeDelta::from_seconds(60);
-
-        let eager = EagerVisibilityAnalysis::new(&scenario, &ensemble).with_step(step);
-        let eager_results = eager.compute().expect("eager visibility failed");
-        let eager_passes = eager.to_passes(&eager_results);
-        let eager_passes = eager_passes
-            .get(&(gs.id().clone(), spacecraft[0].id().clone()))
-            .expect("pair missing");
-
-        let new = VisibilityAnalysis::new(&scenario, &ensemble, ephemeris()).with_step(step);
-        let new_passes = new
-            .single(&gs, &spacecraft[0], interval)
-            .expect("pipeline visibility failed");
-
-        assert!(!eager_passes.is_empty(), "fixture produced no passes");
-        assert_eq!(boundaries(eager_passes), boundaries(&new_passes));
     }
 
     #[test]
@@ -1426,10 +1427,8 @@ mod access_tests {
     use lox_bodies::Origin;
     use lox_core::units::Distance;
     use lox_orbits::propagators::OrbitSource;
-    use lox_time::deltas::ToDelta as _;
 
     use crate::imaging::{AoiId, OpticalPayload};
-    use crate::legacy::imaging::AccessAnalysis as EagerAccess;
     use crate::pipeline::sources::tests::scenario_and_ensemble;
 
     use super::*;
@@ -1467,7 +1466,10 @@ mod access_tests {
     }
 
     #[test]
-    fn access_matches_the_eager_path() {
+    fn access_finds_windows_over_a_large_aoi() {
+        // Was a differential test against the eager implementation; that arm is
+        // gone with the implementation, and the assertions remain as a
+        // regression test on the pipeline path.
         let traj = sentinel2a();
         let interval = TimeInterval::new(traj.start_time(), traj.end_time());
         let payload = OpticalPayload::nadir_only(Distance::kilometers(290.0));
@@ -1475,34 +1477,23 @@ mod access_tests {
             Spacecraft::new("s2a", OrbitSource::Trajectory(traj)).with_optical_payload(payload),
         ];
         let (scenario, ensemble) = scenario_and_ensemble(&[], &spacecraft, interval);
-        let step = TimeDelta::from_seconds(30);
         let aoi_id = AoiId::new("europe");
         let aoi = western_europe();
 
-        let eager = EagerAccess::<OpticalPayload, _, _>::new(
-            &scenario,
-            &ensemble,
-            vec![(aoi_id.clone(), aoi.clone())],
-        )
-        .with_step(step)
-        .compute()
-        .expect("eager access failed");
-        let eager = eager.windows(spacecraft[0].id(), &aoi_id);
-
-        let new: OpticalAccessAnalysis<Origin, _> =
-            AccessAnalysis::new(&scenario, &ensemble, vec![(aoi_id.clone(), aoi.clone())])
-                .with_step(step);
-        let new = new
+        let analysis: OpticalAccessAnalysis<Origin, _> =
+            AccessAnalysis::new(&scenario, &ensemble, vec![(aoi_id, aoi.clone())])
+                .with_step(TimeDelta::from_seconds(30));
+        let windows = analysis
             .single(&spacecraft[0], &aoi, interval)
-            .expect("pipeline access failed");
+            .expect("access failed");
 
-        assert!(!eager.is_empty(), "fixture produced no access windows");
-        assert_eq!(eager.len(), new.len());
-        for (a, b) in eager.iter().zip(&new) {
-            assert_eq!(a.direction, b.direction);
-            assert_eq!(
-                a.interval.start().to_delta().to_seconds().to_f64(),
-                b.interval.start().to_delta().to_seconds().to_f64()
+        // A sun-synchronous LEO satellite overflies Western Europe within 6 h.
+        assert!(!windows.is_empty(), "expected access windows");
+        for w in &windows {
+            let seconds = w.interval.duration().to_seconds().to_f64();
+            assert!(
+                seconds > 0.0 && seconds < 600.0,
+                "implausible window: {seconds} s"
             );
         }
     }

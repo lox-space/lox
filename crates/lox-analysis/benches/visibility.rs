@@ -2,14 +2,15 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Compares the eager and lazy ground-to-space visibility detection paths.
+//! Uniform versus adaptive sampling on the ground-to-space window scan.
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use lox_analysis::assets::{AssetId, GroundStation, Scenario, Spacecraft};
-use lox_analysis::legacy::VisibilityAnalysis;
+use lox_analysis::pipeline::NoEphemeris;
 use lox_analysis::visibility::ElevationMask;
+use lox_analysis::visibility::VisibilityAnalysis;
 use lox_bodies::Origin;
 use lox_core::coords::LonLatAlt;
 use lox_frames::Frame;
@@ -52,10 +53,15 @@ const STEPS: [i64; 3] = [10, 60, 300];
 #[divan::bench(args = STEPS)]
 fn uniform(bencher: divan::Bencher, step: i64) {
     let (scenario, ensemble) = &*FIXTURE;
+    let gs = &scenario.ground_stations()[0];
+    let sc = &scenario.spacecraft()[0];
+    let interval = *scenario.interval();
+    let analysis = VisibilityAnalysis::new(scenario, ensemble, &NoEphemeris)
+        .with_step(TimeDelta::from_seconds(step));
     bencher.bench(|| {
-        VisibilityAnalysis::new(scenario, ensemble)
-            .with_step(TimeDelta::from_seconds(step))
-            .compute()
+        analysis
+            .windows(gs, sc, interval)
+            .collect::<Result<Vec<_>, _>>()
             .unwrap()
     });
 }
@@ -63,11 +69,16 @@ fn uniform(bencher: divan::Bencher, step: i64) {
 #[divan::bench(args = STEPS)]
 fn adaptive(bencher: divan::Bencher, step: i64) {
     let (scenario, ensemble) = &*FIXTURE;
+    let gs = &scenario.ground_stations()[0];
+    let sc = &scenario.spacecraft()[0];
+    let interval = *scenario.interval();
+    let analysis = VisibilityAnalysis::new(scenario, ensemble, &NoEphemeris)
+        .with_step(TimeDelta::from_seconds(step))
+        .with_adaptive_detection();
     bencher.bench(|| {
-        VisibilityAnalysis::new(scenario, ensemble)
-            .with_step(TimeDelta::from_seconds(step))
-            .with_adaptive_detection()
-            .compute()
+        analysis
+            .windows(gs, sc, interval)
+            .collect::<Result<Vec<_>, _>>()
             .unwrap()
     });
 }

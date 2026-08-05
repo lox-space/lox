@@ -10,7 +10,8 @@
 //! Run with `cargo bench -p lox-space --bench power`.
 
 use divan::Bencher;
-use lox_space::analysis::legacy::PowerBudgetAnalysis;
+use lox_space::analysis::pipeline::Parallelism;
+use lox_space::analysis::power::PowerBudgetAnalysis;
 use lox_space::time::deltas::TimeDelta;
 
 #[path = "common/mod.rs"]
@@ -27,8 +28,7 @@ fn power_single(bencher: Bencher) {
     bencher.bench(|| {
         PowerBudgetAnalysis::new(&scenario, &ensemble, spk)
             .with_step(TimeDelta::from_seconds(30))
-            .compute()
-            .unwrap()
+            .run(*scenario.interval(), Parallelism::Rayon(None))
     });
 }
 
@@ -40,8 +40,7 @@ fn power_step(bencher: Bencher, step_s: i64) {
     bencher.bench(|| {
         PowerBudgetAnalysis::new(&scenario, &ensemble, spk)
             .with_step(TimeDelta::from_seconds(step_s))
-            .compute()
-            .unwrap()
+            .run(*scenario.interval(), Parallelism::Rayon(None))
     });
 }
 
@@ -53,7 +52,6 @@ fn power_scaling(bencher: Bencher, n: usize) {
         .with_inputs(|| common::build_power_scenario(n))
         .bench_values(|(scenario, ensemble)| {
             PowerBudgetAnalysis::new(&scenario, &ensemble, spk)
-                .compute()
-                .unwrap()
+                .run(*scenario.interval(), Parallelism::Rayon(None))
         });
 }

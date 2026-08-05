@@ -1020,7 +1020,6 @@ pub(crate) mod tests {
     use lox_time::time_scales::Tdb;
 
     use crate::assets::{AssetId, Scenario};
-    use crate::legacy::{PowerBudgetAnalysis, VisibilityAnalysis};
     use crate::visibility::ElevationMask;
 
     use super::*;
@@ -1172,31 +1171,31 @@ pub(crate) mod tests {
     ///
     /// Deliberately absolute rather than relative: J2000-relative epochs run to
     /// ~7.6e8 s, so even `rtol <= 1e-4` would admit a ±21-hour discrepancy.
-    /// Root-finder tolerance at a window edge is the only *legitimate*
-    /// difference between the two paths and lands well below a microsecond;
-    /// every bug class this harness is built to catch — a missed crossing, a
-    /// mis-staged detector, a scan that starts a step late — moves a boundary
-    /// by at least one scan step or changes the window count.
     const BOUNDARY_TOL_S: f64 = 1e-6;
 
-    fn assert_windows_match(label: &str, old: &[TimeInterval], new: &[TimeInterval]) {
-        assert_eq!(
-            old.len(),
-            new.len(),
-            "{label}: window count differs (old {}, new {})",
-            old.len(),
-            new.len()
-        );
-        for (i, (a, b)) in old.iter().zip(new).enumerate() {
-            let d_start = (a.start() - b.start()).to_seconds().to_f64().abs();
-            let d_end = (a.end() - b.end()).to_seconds().to_f64().abs();
+    /// Asserts the invariants `Intervals` guarantees by construction and every
+    /// combinator must preserve: non-empty windows, sorted by start, pairwise
+    /// disjoint, and contained in the scan interval.
+    ///
+    /// These were differential assertions against the eager implementation until
+    /// it was deleted. What is left is weaker but still real — a mis-staged
+    /// detector or a bad merge in `intersect`/`then_within` breaks one of them.
+    fn assert_window_invariants(label: &str, windows: &[TimeInterval], scan: TimeInterval) {
+        assert!(!windows.is_empty(), "{label}: no windows");
+        for (i, w) in windows.iter().enumerate() {
+            let duration = w.duration().to_seconds().to_f64();
+            assert!(duration > 0.0, "{label}: window {i} is empty");
             assert!(
-                d_start <= BOUNDARY_TOL_S,
-                "{label}: window {i} start differs by {d_start:e} s"
+                w.start() >= scan.start() && w.end() <= scan.end(),
+                "{label}: window {i} escapes the scan interval"
             );
+        }
+        for (i, pair) in windows.windows(2).enumerate() {
+            let gap = (pair[1].start() - pair[0].end()).to_seconds().to_f64();
             assert!(
-                d_end <= BOUNDARY_TOL_S,
-                "{label}: window {i} end differs by {d_end:e} s"
+                gap >= -BOUNDARY_TOL_S,
+                "{label}: windows {i} and {} overlap or are out of order",
+                i + 1
             );
         }
     }
@@ -1230,134 +1229,59 @@ pub(crate) mod tests {
     /// Runs the eager and pipeline ground-space paths over the lunar fixture
     /// and returns both window lists. `occulters` empty exercises the
     /// `NoEphemeris` variant of `compute()`.
-    fn ground_space_both_ways(
+    fn ground_space_windows(
         occulters: &[Origin],
         adaptive: bool,
-    ) -> (Vec<TimeInterval>, Vec<TimeInterval>) {
+    ) -> (Vec<TimeInterval>, TimeInterval) {
         let traj = lunar_trajectory();
         let interval = TimeInterval::new(traj.start_time(), traj.end_time());
         let gs = cebreros();
         let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(traj));
-        let stations = [gs.clone()];
         let spacecraft = [sc.clone()];
-        let (scenario, ensemble) = scenario_and_ensemble(&stations, &spacecraft, interval);
+        let (_scenario, ensemble) =
+            scenario_and_ensemble(std::slice::from_ref(&gs), &spacecraft, interval);
+        let traj = ensemble.get(sc.id()).expect("trajectory missing");
         let step = TimeDelta::from_seconds(60);
 
-        let old = {
-            let base = VisibilityAnalysis::new(&scenario, &ensemble).with_step(step);
-            let base = if adaptive {
-                base.with_adaptive_detection()
-            } else {
-                base
-            };
-            let results = if occulters.is_empty() {
-                base.compute()
-            } else {
-                base.with_occulting_bodies(ephemeris(), occulters.to_vec())
-                    .compute()
-            }
-            .expect("eager visibility failed");
-            results
-                .intervals_for(gs.id(), sc.id())
-                .expect("pair missing")
-                .to_vec()
-        };
-
-        let traj = ensemble.get(sc.id()).expect("trajectory missing");
         let source =
             GroundSpaceWindows::new(&gs, traj, ephemeris(), step).with_occulting_bodies(occulters);
         let source = if adaptive { source.adaptive() } else { source };
-        let new = collect(&source, interval);
-
-        (old, new)
+        (collect(&source, interval), interval)
     }
 
     #[test]
     fn parity_ground_space_elevation_only() {
-        let (old, new) = ground_space_both_ways(&[], false);
-        assert!(!old.is_empty(), "fixture produced no windows");
-        assert_windows_match("ground-space elevation only", &old, &new);
+        let (windows, interval) = ground_space_windows(&[], false);
+        assert_window_invariants("ground-space elevation only", &windows, interval);
     }
 
     #[test]
     fn parity_ground_space_adaptive() {
-        let (old, new) = ground_space_both_ways(&[], true);
-        assert!(!old.is_empty(), "fixture produced no windows");
-        assert_windows_match("ground-space adaptive", &old, &new);
+        let (windows, interval) = ground_space_windows(&[], true);
+        assert_window_invariants("ground-space adaptive", &windows, interval);
     }
 
     #[test]
     fn parity_ground_space_single_occulter() {
-        let (old, new) = ground_space_both_ways(&[Origin::Moon], false);
-        assert!(!old.is_empty(), "fixture produced no windows");
-        assert_windows_match("ground-space one occulter", &old, &new);
+        let (windows, interval) = ground_space_windows(&[Origin::Moon], false);
+        assert_window_invariants("ground-space one occulter", &windows, interval);
     }
 
     #[test]
     fn parity_ground_space_multi_occulter() {
-        // Two occulters take the eager `intersect` fallback inside the staged
-        // LOS scan (design §10) on both paths.
-        let (old, new) = ground_space_both_ways(&[Origin::Moon, Origin::Venus], false);
-        assert!(!old.is_empty(), "fixture produced no windows");
-        assert_windows_match("ground-space two occulters", &old, &new);
-    }
-
-    #[test]
-    fn parity_passes() {
-        let traj = lunar_trajectory();
-        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
-        let gs = cebreros();
-        let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(traj));
-        let stations = [gs.clone()];
-        let spacecraft = [sc.clone()];
-        let (scenario, ensemble) = scenario_and_ensemble(&stations, &spacecraft, interval);
-        let step = TimeDelta::from_seconds(60);
-
-        let analysis = VisibilityAnalysis::new(&scenario, &ensemble).with_step(step);
-        let results = analysis.compute().expect("eager visibility failed");
-        let old = analysis.to_passes(&results);
-        let old = old
-            .get(&(gs.id().clone(), sc.id().clone()))
-            .expect("pair missing");
-
-        let traj = ensemble.get(sc.id()).expect("trajectory missing");
-        let windows = GroundSpaceWindows::new(&gs, traj, ephemeris(), step);
-        let new = collect(&PassSource::new(windows, step), interval);
-
-        assert!(!old.is_empty(), "fixture produced no passes");
-        assert_eq!(old.len(), new.len(), "pass count differs");
-        for (i, (a, b)) in old.iter().zip(&new).enumerate() {
-            assert_windows_match(
-                &format!("pass {i} interval"),
-                &[*a.interval()],
-                &[*b.interval()],
-            );
-            assert_eq!(a.times().len(), b.times().len(), "pass {i} sample count");
-            for (j, (oa, ob)) in a.observables().iter().zip(b.observables()).enumerate() {
-                assert_eq!(oa.azimuth(), ob.azimuth(), "pass {i} sample {j} azimuth");
-                assert_eq!(
-                    oa.elevation(),
-                    ob.elevation(),
-                    "pass {i} sample {j} elevation"
-                );
-                assert_eq!(oa.range(), ob.range(), "pass {i} sample {j} range");
-                assert_eq!(
-                    oa.range_rate(),
-                    ob.range_rate(),
-                    "pass {i} sample {j} range rate"
-                );
-            }
-        }
+        // Two occulters exercise the `intersect` fallback inside the staged LOS scan.
+        let (windows, interval) = ground_space_windows(&[Origin::Moon, Origin::Venus], false);
+        assert_window_invariants("ground-space two occulters", &windows, interval);
     }
 
     // -- Inter-satellite parity ----------------------------------------------
 
-    fn inter_satellite_both_ways(
+    fn inter_satellite_windows(
         min_range: Option<Distance>,
         max_range: Option<Distance>,
         slew_rate: Option<AngularRate>,
         occulters: &[Origin],
-    ) -> (Vec<TimeInterval>, Vec<TimeInterval>) {
+    ) -> (Vec<TimeInterval>, TimeInterval) {
         let (traj1, traj2) = oneweb_pair();
         let interval = TimeInterval::new(traj1.start_time(), traj1.end_time());
 
@@ -1368,35 +1292,10 @@ pub(crate) mod tests {
             sc2 = sc2.with_max_slew_rate(rate);
         }
         let spacecraft = [sc1.clone(), sc2.clone()];
-        let (scenario, ensemble) = scenario_and_ensemble(&[], &spacecraft, interval);
-        let step = TimeDelta::from_seconds(60);
-
-        let old = {
-            let mut analysis = VisibilityAnalysis::new(&scenario, &ensemble)
-                .with_step(step)
-                .with_inter_satellite();
-            if let Some(min) = min_range {
-                analysis = analysis.with_min_range(min);
-            }
-            if let Some(max) = max_range {
-                analysis = analysis.with_max_range(max);
-            }
-            let results = if occulters.is_empty() {
-                analysis.compute()
-            } else {
-                analysis
-                    .with_occulting_bodies(ephemeris(), occulters.to_vec())
-                    .compute()
-            }
-            .expect("eager inter-satellite failed");
-            results
-                .intervals_for(sc1.id(), sc2.id())
-                .expect("pair missing")
-                .to_vec()
-        };
-
+        let (_scenario, ensemble) = scenario_and_ensemble(&[], &spacecraft, interval);
         let t1 = ensemble.get(sc1.id()).expect("trajectory missing");
         let t2 = ensemble.get(sc2.id()).expect("trajectory missing");
+
         let source = InterSatelliteSource::new(
             &spacecraft[0],
             &spacecraft[1],
@@ -1404,240 +1303,58 @@ pub(crate) mod tests {
             t2,
             ephemeris(),
             Origin::Earth,
-            step,
+            TimeDelta::from_seconds(60),
         )
         .with_range_limits(min_range, max_range)
         .with_occulting_bodies(occulters);
-        let new = collect(&source, interval)
+        let windows = collect(&source, interval)
             .into_iter()
             .map(|w| w.0)
             .collect();
-
-        (old, new)
+        (windows, interval)
     }
 
     #[test]
     fn parity_inter_satellite_central_body_only() {
-        let (old, new) = inter_satellite_both_ways(None, None, None, &[]);
-        assert!(!old.is_empty(), "fixture produced no windows");
-        assert_windows_match("inter-satellite central body", &old, &new);
+        let (windows, interval) = inter_satellite_windows(None, None, None, &[]);
+        assert_window_invariants("inter-satellite central body", &windows, interval);
     }
 
     #[test]
     fn parity_inter_satellite_max_range() {
-        let (old, new) =
-            inter_satellite_both_ways(None, Some(Distance::kilometers(5000.0)), None, &[]);
-        assert!(!old.is_empty(), "fixture produced no windows");
-        assert_windows_match("inter-satellite max range", &old, &new);
+        let (windows, interval) =
+            inter_satellite_windows(None, Some(Distance::kilometers(5000.0)), None, &[]);
+        assert_window_invariants("inter-satellite max range", &windows, interval);
     }
 
     #[test]
     fn parity_inter_satellite_min_and_max_range() {
-        // Both limits set takes the eager `intersect` path on both sides.
-        let (old, new) = inter_satellite_both_ways(
+        // Both limits set takes the eager `intersect` path inside the source.
+        let (windows, interval) = inter_satellite_windows(
             Some(Distance::kilometers(100.0)),
             Some(Distance::kilometers(5000.0)),
             None,
             &[],
         );
-        assert!(!old.is_empty(), "fixture produced no windows");
-        assert_windows_match("inter-satellite min+max range", &old, &new);
+        assert_window_invariants("inter-satellite min+max range", &windows, interval);
     }
 
     #[test]
     fn parity_inter_satellite_slew_rate() {
-        let (old, new) =
-            inter_satellite_both_ways(None, None, Some(AngularRate::degrees_per_second(0.05)), &[]);
-        assert!(!old.is_empty(), "fixture produced no windows");
-        assert_windows_match("inter-satellite slew rate", &old, &new);
+        let (windows, interval) =
+            inter_satellite_windows(None, None, Some(AngularRate::degrees_per_second(0.05)), &[]);
+        assert_window_invariants("inter-satellite slew rate", &windows, interval);
     }
 
     #[test]
     fn parity_inter_satellite_extra_occulter() {
-        let (old, new) = inter_satellite_both_ways(None, None, None, &[Origin::Moon]);
-        assert!(!old.is_empty(), "fixture produced no windows");
-        assert_windows_match("inter-satellite extra occulter", &old, &new);
+        let (windows, interval) = inter_satellite_windows(None, None, None, &[Origin::Moon]);
+        assert_window_invariants("inter-satellite extra occulter", &windows, interval);
     }
 
     // -- Power parity --------------------------------------------------------
 
-    #[test]
-    fn parity_eclipses_beta_and_flux() {
-        // The ISS, not the lunar arc: a lunar trajectory never enters Earth's
-        // shadow, so the eclipse comparison would hold vacuously between two
-        // empty lists — which is exactly what it did before this assertion.
-        let traj = iss_trajectory();
-        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
-        let sc = Spacecraft::new("iss", OrbitSource::Trajectory(traj));
-        let spacecraft = [sc.clone()];
-        let (scenario, ensemble) = scenario_and_ensemble(&[], &spacecraft, interval);
-        let step = TimeDelta::from_seconds(60);
-
-        let old = PowerBudgetAnalysis::new(&scenario, &ensemble, ephemeris())
-            .with_step(step)
-            .compute()
-            .expect("eager power budget failed");
-
-        let traj = ensemble.get(sc.id()).expect("trajectory missing");
-
-        let new_eclipses: Vec<TimeInterval> =
-            collect(&EclipseSource::new(traj, ephemeris(), step), interval)
-                .into_iter()
-                .map(|e| e.0)
-                .collect();
-        let old_eclipses = old
-            .eclipse_intervals_for(sc.id())
-            .expect("eclipses missing");
-        assert!(
-            !old_eclipses.is_empty(),
-            "fixture produced no eclipses, so the comparison would be vacuous"
-        );
-        assert_windows_match("eclipses", old_eclipses, &new_eclipses);
-
-        let (beta, flux) =
-            sample_sun_channels(traj, ephemeris(), interval, step).expect("sampling failed");
-        assert_series_match(
-            "beta angle",
-            old.beta_angles_for(sc.id()).expect("beta missing"),
-            &beta,
-            0.0,
-        );
-        assert_series_match(
-            "solar flux",
-            old.solar_flux_for(sc.id()).expect("flux missing"),
-            &flux,
-            0.0,
-        );
-    }
-
     // -- Access parity -------------------------------------------------------
-
-    #[cfg(feature = "imaging")]
-    mod access {
-        use geo::{LineString, Polygon};
-        use lox_core::units::Angle;
-
-        use crate::imaging::{AoiId, OpticalPayload, SarPayload};
-        use crate::legacy::imaging::{OpticalAccessAnalysis, SarAccessAnalysis};
-
-        use super::*;
-
-        fn sentinel2a() -> Trajectory {
-            use lox_orbits::propagators::Propagator;
-            use lox_orbits::propagators::sgp4::{Elements, Sgp4};
-            use lox_time::intervals::Interval;
-
-            let tle = Elements::from_tle(
-                Some("SENTINEL-2A".to_string()),
-                b"1 40697U 15028A   26079.19377485 -.00000072  00000+0 -11026-4 0  9994",
-                b"2 40697  98.5642 155.3327 0001269  98.1407 261.9920 14.30816376561005",
-            )
-            .unwrap();
-            let sgp4 = Sgp4::new(tle).unwrap();
-            let t0 = sgp4.time();
-            sgp4.with_step(TimeDelta::from_seconds(10))
-                .propagate(Interval::new(t0, t0 + TimeDelta::from_hours(6)).into_dynamic())
-                .unwrap()
-                .into_dynamic()
-        }
-
-        fn western_europe() -> Aoi {
-            Aoi::new(Polygon::new(
-                LineString::from(vec![
-                    (-10.0, 35.0),
-                    (20.0, 35.0),
-                    (20.0, 60.0),
-                    (-10.0, 60.0),
-                    (-10.0, 35.0),
-                ]),
-                vec![],
-            ))
-        }
-
-        fn assert_access_parity(label: &str, old: &[AccessWindow], new: &[AccessWindow]) {
-            assert!(!old.is_empty(), "{label}: fixture produced no windows");
-            let old_intervals: Vec<_> = old.iter().map(|w| w.interval).collect();
-            let new_intervals: Vec<_> = new.iter().map(|w| w.interval).collect();
-            assert_windows_match(label, &old_intervals, &new_intervals);
-            for (i, (a, b)) in old.iter().zip(new).enumerate() {
-                assert_eq!(a.direction, b.direction, "{label}: window {i} direction");
-            }
-        }
-
-        #[test]
-        fn parity_optical_access() {
-            let traj = sentinel2a();
-            let interval = TimeInterval::new(traj.start_time(), traj.end_time());
-            let payload = OpticalPayload::nadir_only(Distance::kilometers(290.0));
-            let sc =
-                Spacecraft::new("s2a", OrbitSource::Trajectory(traj)).with_optical_payload(payload);
-            let spacecraft = [sc.clone()];
-            let (scenario, ensemble) = scenario_and_ensemble(&[], &spacecraft, interval);
-            let step = TimeDelta::from_seconds(30);
-            let aoi_id = AoiId::new("europe");
-            let aoi = western_europe();
-
-            let old = OpticalAccessAnalysis::new(
-                &scenario,
-                &ensemble,
-                vec![(aoi_id.clone(), aoi.clone())],
-            )
-            .with_step(step)
-            .compute()
-            .expect("eager optical access failed");
-
-            let traj = ensemble.get(sc.id()).expect("trajectory missing");
-            let source = AccessSource::new(
-                payload,
-                &aoi,
-                traj,
-                Origin::Earth,
-                Frame::Iau(Origin::Earth),
-                step,
-            );
-            let new = collect(&source, interval);
-
-            assert_access_parity("optical access", old.windows(sc.id(), &aoi_id), &new);
-        }
-
-        #[test]
-        fn parity_sar_access() {
-            let traj = sentinel2a();
-            let interval = TimeInterval::new(traj.start_time(), traj.end_time());
-            let payload = SarPayload::with_look_angles(
-                Angle::degrees(20.0),
-                Angle::degrees(45.0),
-                crate::imaging::LookSide::Either,
-            )
-            .unwrap();
-            let sc =
-                Spacecraft::new("s2a", OrbitSource::Trajectory(traj)).with_sar_payload(payload);
-            let spacecraft = [sc.clone()];
-            let (scenario, ensemble) = scenario_and_ensemble(&[], &spacecraft, interval);
-            let step = TimeDelta::from_seconds(30);
-            let aoi_id = AoiId::new("europe");
-            let aoi = western_europe();
-
-            let old =
-                SarAccessAnalysis::new(&scenario, &ensemble, vec![(aoi_id.clone(), aoi.clone())])
-                    .with_step(step)
-                    .compute()
-                    .expect("eager SAR access failed");
-
-            let traj = ensemble.get(sc.id()).expect("trajectory missing");
-            let source = AccessSource::new(
-                payload,
-                &aoi,
-                traj,
-                Origin::Earth,
-                Frame::Iau(Origin::Earth),
-                step,
-            );
-            let new = collect(&source, interval);
-
-            assert_access_parity("SAR access", old.windows(sc.id(), &aoi_id), &new);
-        }
-    }
 
     // -- Structural assertions the parity suite cannot make ------------------
 
@@ -1823,111 +1540,3 @@ pub(crate) mod tests {
 // ---------------------------------------------------------------------------
 // Manual inspection
 // ---------------------------------------------------------------------------
-
-/// Dumps the two paths side by side for eyeballing, rather than only asserting
-/// on them. Kept in the tree (not a scratch script) so the hard-cut review can
-/// reproduce it:
-///
-/// ```text
-/// cargo nextest run -p lox-analysis --all-features -E 'test(dump_parity)' \
-///     --run-ignored only --no-capture
-/// ```
-///
-/// Writes `beta_parity.csv` into the system temp directory (path printed) for
-/// plotting the continuous channels, which a boundary table cannot show.
-#[cfg(test)]
-mod dump {
-    use std::fmt::Write as _;
-
-    use lox_bodies::Origin;
-    use lox_orbits::propagators::OrbitSource;
-
-    use crate::legacy::{PowerBudgetAnalysis, VisibilityAnalysis};
-
-    use super::tests::*;
-    use super::*;
-
-    #[test]
-    #[ignore = "manual inspection only"]
-    fn dump_parity_table() {
-        let traj = lunar_trajectory();
-        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
-        let gs = cebreros();
-        let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(traj));
-        let stations = [gs.clone()];
-        let spacecraft = [sc.clone()];
-        let (scenario, ensemble) = scenario_and_ensemble(&stations, &spacecraft, interval);
-        let step = TimeDelta::from_seconds(60);
-        let occulters = [Origin::Moon];
-
-        let old = VisibilityAnalysis::new(&scenario, &ensemble)
-            .with_step(step)
-            .with_occulting_bodies(ephemeris(), occulters.to_vec())
-            .compute()
-            .expect("eager visibility failed");
-        let old = old.intervals_for(gs.id(), sc.id()).expect("pair missing");
-
-        let traj = ensemble.get(sc.id()).expect("trajectory missing");
-        let source =
-            GroundSpaceWindows::new(&gs, traj, ephemeris(), step).with_occulting_bodies(&occulters);
-        let new = collect(&source, interval);
-
-        let mut table = String::new();
-        writeln!(
-            table,
-            "\nground-space windows (Cebreros -> lunar arc, Moon occultation)\n\
-             eager: {} windows, pipeline: {} windows\n",
-            old.len(),
-            new.len()
-        )
-        .unwrap();
-        writeln!(
-            table,
-            "{:>3}  {:>26}  {:>26}  {:>12}  {:>12}",
-            "#", "start (eager)", "end (eager)", "d start [s]", "d end [s]"
-        )
-        .unwrap();
-        for (i, (a, b)) in old.iter().zip(&new).enumerate() {
-            writeln!(
-                table,
-                "{:>3}  {:>26}  {:>26}  {:>12.3e}  {:>12.3e}",
-                i,
-                a.start().to_string(),
-                a.end().to_string(),
-                (a.start() - b.start()).to_seconds().to_f64(),
-                (a.end() - b.end()).to_seconds().to_f64(),
-            )
-            .unwrap();
-        }
-        println!("{table}");
-
-        // The continuous channels: a boundary table says nothing about them.
-        let power = PowerBudgetAnalysis::new(&scenario, &ensemble, ephemeris())
-            .with_step(step)
-            .compute()
-            .expect("eager power budget failed");
-        let old_beta = power.beta_angles_for(sc.id()).expect("beta missing");
-        let (new_beta, _) =
-            sample_sun_channels(traj, ephemeris(), interval, step).expect("sampling failed");
-
-        let mut csv = String::from("offset_s,eager_beta_deg,pipeline_beta_deg\n");
-        let epoch = old_beta.epoch();
-        for ((t, a), b) in old_beta.iter().zip(new_beta.values()) {
-            writeln!(
-                csv,
-                "{},{},{}",
-                (t - epoch).to_seconds().to_f64(),
-                a.to_degrees(),
-                b.to_degrees()
-            )
-            .unwrap();
-        }
-        let path = std::env::temp_dir().join("beta_parity.csv");
-        std::fs::write(&path, csv).expect("failed to write beta_parity.csv");
-        println!(
-            "wrote {} samples to {}",
-            old_beta.values().len(),
-            path.display()
-        );
-    }
-}
