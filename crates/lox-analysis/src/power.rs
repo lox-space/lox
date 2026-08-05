@@ -84,9 +84,9 @@ pub enum PowerError {
 
 /// Eclipse detect function: positive when the spacecraft is sunlit, negative
 /// when it is in eclipse (cylindrical shadow model, umbra only).
-struct EclipseDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    sc: &'a Trajectory<O, R>,
-    ephemeris: &'a E,
+pub(crate) struct EclipseDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
+    pub(crate) sc: &'a Trajectory<O, R>,
+    pub(crate) ephemeris: &'a E,
 }
 
 impl<O, R, E: Ephemeris> DetectFn for EclipseDetectFn<'_, O, R, E>

@@ -67,6 +67,9 @@ use thiserror::Error;
 use lox_core::error::LoxError;
 
 use crate::events::DetectError;
+use crate::visibility::EvalError;
+
+mod sources;
 
 // ---------------------------------------------------------------------------
 // Unified error
@@ -118,6 +121,21 @@ impl AnalysisError {
 impl From<Infallible> for AnalysisError {
     fn from(never: Infallible) -> Self {
         match never {}
+    }
+}
+
+/// Routes a detector-evaluation failure to its domain variant.
+///
+/// This is what the named variants buy: a streaming client can tell an
+/// ephemeris gap from a rotation failure without string-matching, and the
+/// classification happens once here rather than at every call site.
+impl From<EvalError> for AnalysisError {
+    fn from(e: EvalError) -> Self {
+        match e {
+            EvalError::Rotation(_) => Self::Rotation(LoxError::new(e)),
+            EvalError::Ephemeris(_) => Self::Ephemeris(LoxError::new(e)),
+            EvalError::UndefinedProperty(_) => Self::Stage(LoxError::new(e)),
+        }
     }
 }
 

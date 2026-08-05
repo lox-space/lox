@@ -112,7 +112,7 @@ fn ground_track_azimuth(sub_sat: LonLatAlt, vel_bf: DVec3) -> Angle {
 
 /// A single per-time sample of the spacecraft state in the body-fixed frame,
 /// pre-resolved into the quantities every per-sample computation needs.
-struct SubSatSample {
+pub(crate) struct SubSatSample {
     lla: LonLatAlt,
     vel_bf: DVec3,
     mean_radius_m: f64,
@@ -122,7 +122,7 @@ struct SubSatSample {
 /// the state-interpolation → body-fixed-rotation → LLA pipeline used by both
 /// [`AccessDetectFn::eval`] (per-sample detection) and pass-direction sampling
 /// (per-window post-detection).
-fn sub_sat_sample<O, R>(
+pub(crate) fn sub_sat_sample<O, R>(
     trajectory: &Trajectory<O, R>,
     time: Time,
     origin: O,
@@ -161,7 +161,7 @@ where
 ///
 /// Uses the sign of the SEZ-north component of the body-fixed velocity. Ties
 /// (zero north-component — measure-zero in practice) resolve to `Ascending`.
-fn pass_direction_of(sample: &SubSatSample) -> PassDirection {
+pub(crate) fn pass_direction_of(sample: &SubSatSample) -> PassDirection {
     let r_to_sez = sample.lla.rotation_to_topocentric();
     let v_sez = r_to_sez * sample.vel_bf;
     // SEZ.x is south; north component = -SEZ.x. Strict positive → Ascending.
@@ -176,12 +176,12 @@ fn pass_direction_of(sample: &SubSatSample) -> PassDirection {
 // AccessDetectFn
 // ---------------------------------------------------------------------------
 
-struct AccessDetectFn<'a, P: AccessPayload, O: CoordinateOrigin, R: ReferenceFrame> {
-    payload: P,
-    aoi: &'a Aoi,
-    trajectory: &'a Trajectory<O, R>,
-    origin: O,
-    body_fixed_frame: Frame,
+pub(crate) struct AccessDetectFn<'a, P: AccessPayload, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub(crate) payload: P,
+    pub(crate) aoi: &'a Aoi,
+    pub(crate) trajectory: &'a Trajectory<O, R>,
+    pub(crate) origin: O,
+    pub(crate) body_fixed_frame: Frame,
 }
 
 impl<P, O, R> DetectFn for AccessDetectFn<'_, P, O, R>

@@ -370,11 +370,11 @@ impl From<RotationError> for EvalError {
 /// 2. Rotates the state into the body-fixed frame via `TryRotation<R, Frame, TimeScale>`
 /// 3. Computes observables (azimuth, elevation, range, range rate)
 /// 4. Returns elevation minus minimum elevation from the mask
-struct ElevationDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    gs: &'a GroundLocation,
-    mask: &'a ElevationMask,
-    sc: &'a Trajectory<O, R>,
-    body_fixed_frame: Frame,
+pub(crate) struct ElevationDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub(crate) gs: &'a GroundLocation,
+    pub(crate) mask: &'a ElevationMask,
+    pub(crate) sc: &'a Trajectory<O, R>,
+    pub(crate) body_fixed_frame: Frame,
 }
 
 impl<O, R> DetectFn for ElevationDetectFn<'_, O, R>
@@ -435,20 +435,76 @@ where
     }
 }
 
-/// Computes visibility windows for a (ground, space) pair via the lazy
-/// [`events`] scan.
+/// Slant-range threshold detector for a ground station / spacecraft pair.
 ///
-/// Mirrors the elevation-only eager path, including the `min_pass_duration` →
-/// coarse-step conversion. With `adaptive`, the scan strides by the detect
-/// function's rate bound and `step` acts as the minimum stride.
+/// Costs the same body-fixed rotation as [`ElevationDetectFn`], so it earns
+/// nothing by running first; it is staged *inside* the elevation windows
+/// instead.
+///
+/// Only the pipeline range gate uses it — the eager path has no ground-space
+/// range knob — so it is dead until the hard cut (plan step 7).
+#[allow(dead_code)]
+pub(crate) struct GroundSpaceRangeDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub(crate) gs: &'a GroundLocation,
+    pub(crate) sc: &'a Trajectory<O, R>,
+    pub(crate) body_fixed_frame: Frame,
+    pub(crate) threshold: Distance,
+    pub(crate) direction: RangeDirection,
+}
+
+impl<O, R> DetectFn for GroundSpaceRangeDetectFn<'_, O, R>
+where
+    O: TrySpheroid + Copy,
+    R: ReferenceFrame + Copy,
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
+    <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
+        std::error::Error + Send + Sync + 'static,
+{
+    type Error = EvalError;
+
+    fn eval(&self, time: Time) -> Result<f64, Self::Error> {
+        let sc = self.sc.at(time.into_dynamic());
+        let sc = sc
+            .try_to_frame(self.body_fixed_frame, &DefaultRotationProvider)
+            .map_err(|e| EvalError::Rotation(Box::new(e)))?;
+        let obs = self.gs.compute_observables(sc.position(), sc.velocity());
+        Ok(self
+            .direction
+            .residual(obs.range(), self.threshold.to_meters()))
+    }
+}
+
+impl<O, R> RateBounded for GroundSpaceRangeDetectFn<'_, O, R>
+where
+    O: TrySpheroid + Copy,
+    R: ReferenceFrame + Copy,
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
+    <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
+        std::error::Error + Send + Sync + 'static,
+{
+    fn eval_bounded(&self, time: Time) -> Result<(f64, f64), Self::Error> {
+        let sc = self.sc.at(time);
+        let sc = sc
+            .try_to_frame(self.body_fixed_frame, &DefaultRotationProvider)
+            .map_err(|e| EvalError::Rotation(Box::new(e)))?;
+        let obs = self.gs.compute_observables(sc.position(), sc.velocity());
+        let value = self
+            .direction
+            .residual(obs.range(), self.threshold.to_meters());
+        // d/dt |r| = (r·v)/|r|, so |d/dt| <= |v| by Cauchy-Schwarz. The
+        // body-fixed velocity already accounts for the station's co-rotation.
+        Ok((value, sc.velocity().length()))
+    }
+}
+
 /// Line-of-sight between a ground station and spacecraft, relative to an
 /// occulting body.
-struct LineOfSightDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    gs: &'a GroundLocation,
-    sc: &'a Trajectory<O, R>,
-    body: Origin,
-    ephemeris: &'a E,
-    body_fixed_frame: Frame,
+pub(crate) struct LineOfSightDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
+    pub(crate) gs: &'a GroundLocation,
+    pub(crate) sc: &'a Trajectory<O, R>,
+    pub(crate) body: Origin,
+    pub(crate) ephemeris: &'a E,
+    pub(crate) body_fixed_frame: Frame,
 }
 
 impl<O, R, E: Ephemeris> DetectFn for LineOfSightDetectFn<'_, O, R, E>
@@ -483,11 +539,11 @@ where
 
 /// Line-of-sight between two spacecraft, relative to a non-central occulting body. Uses the
 /// ephemeris to compute the body position.
-struct InterSatLosOccluderDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    sc1: &'a Trajectory<O, R>,
-    sc2: &'a Trajectory<O, R>,
-    body: Origin,
-    ephemeris: &'a E,
+pub(crate) struct InterSatLosOccluderDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
+    pub(crate) sc1: &'a Trajectory<O, R>,
+    pub(crate) sc2: &'a Trajectory<O, R>,
+    pub(crate) body: Origin,
+    pub(crate) ephemeris: &'a E,
 }
 
 impl<O, R, E: Ephemeris> DetectFn for InterSatLosOccluderDetectFn<'_, O, R, E>
@@ -513,10 +569,10 @@ where
 /// Line-of-sight between two spacecraft when the occluding body is the
 /// trajectories' origin. `r_body == 0` by construction, so no ephemeris
 /// lookup is required.
-struct InterSatLosCentralBodyDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    sc1: &'a Trajectory<O, R>,
-    sc2: &'a Trajectory<O, R>,
-    body: Origin,
+pub(crate) struct InterSatLosCentralBodyDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub(crate) sc1: &'a Trajectory<O, R>,
+    pub(crate) sc2: &'a Trajectory<O, R>,
+    pub(crate) body: Origin,
 }
 
 impl<O, R> DetectFn for InterSatLosCentralBodyDetectFn<'_, O, R>
@@ -533,20 +589,32 @@ where
     }
 }
 
-/// Direction for inter-satellite range threshold comparison.
-enum RangeDirection {
+/// Direction for a range threshold comparison.
+#[derive(Clone, Copy)]
+pub(crate) enum RangeDirection {
     /// Positive when range < threshold (i.e. `threshold - range`).
     Max,
     /// Positive when range > threshold (i.e. `range - threshold`).
     Min,
 }
 
+impl RangeDirection {
+    /// Signs a range against `threshold` so the result is positive inside the
+    /// admissible region.
+    fn residual(self, range: f64, threshold: f64) -> f64 {
+        match self {
+            RangeDirection::Max => threshold - range,
+            RangeDirection::Min => range - threshold,
+        }
+    }
+}
+
 /// Range threshold detector for inter-satellite pairs.
-struct InterSatelliteRangeDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    sc1: &'a Trajectory<O, R>,
-    sc2: &'a Trajectory<O, R>,
-    threshold: Distance,
-    direction: RangeDirection,
+pub(crate) struct InterSatelliteRangeDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub(crate) sc1: &'a Trajectory<O, R>,
+    pub(crate) sc2: &'a Trajectory<O, R>,
+    pub(crate) threshold: Distance,
+    pub(crate) direction: RangeDirection,
 }
 
 impl<O, R> DetectFn for InterSatelliteRangeDetectFn<'_, O, R>
@@ -560,11 +628,7 @@ where
         let r1 = self.sc1.at(time.into_dynamic()).position();
         let r2 = self.sc2.at(time.into_dynamic()).position();
         let range = (r1 - r2).length();
-        let threshold = self.threshold.to_meters();
-        Ok(match self.direction {
-            RangeDirection::Max => threshold - range,
-            RangeDirection::Min => range - threshold,
-        })
+        Ok(self.direction.residual(range, self.threshold.to_meters()))
     }
 }
 
@@ -577,11 +641,7 @@ where
         let s1 = self.sc1.at(time);
         let s2 = self.sc2.at(time);
         let range = (s1.position() - s2.position()).length();
-        let threshold = self.threshold.to_meters();
-        let value = match self.direction {
-            RangeDirection::Max => threshold - range,
-            RangeDirection::Min => range - threshold,
-        };
+        let value = self.direction.residual(range, self.threshold.to_meters());
         // d/dt (±range) = ±(r·v)/|r|, so |d/dt| ≤ |v_rel| by Cauchy–Schwarz.
         // Velocity is the analytic derivative of the position interpolant, so
         // this bound comes free from the same `at` lookups.
@@ -604,10 +664,10 @@ where
         // d/dt |r| = (r·v)/|r|; zero relative separation has no well-defined
         // rate, so report a flat derivative there.
         let d_range = if range > 0.0 { r.dot(v) / range } else { 0.0 };
-        let threshold = self.threshold.to_meters();
-        let (value, derivative) = match self.direction {
-            RangeDirection::Max => (threshold - range, -d_range),
-            RangeDirection::Min => (range - threshold, d_range),
+        let value = self.direction.residual(range, self.threshold.to_meters());
+        let derivative = match self.direction {
+            RangeDirection::Max => -d_range,
+            RangeDirection::Min => d_range,
         };
         Ok((value, derivative))
     }
@@ -618,10 +678,10 @@ where
 /// The angular rate ω = |r × v| / |r|² is symmetric between the two
 /// spacecraft.  The detector returns `threshold - ω`, positive when the
 /// angular rate is within the limit.
-struct InterSatelliteSlewRateDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    sc1: &'a Trajectory<O, R>,
-    sc2: &'a Trajectory<O, R>,
-    threshold: AngularRate,
+pub(crate) struct InterSatelliteSlewRateDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub(crate) sc1: &'a Trajectory<O, R>,
+    pub(crate) sc2: &'a Trajectory<O, R>,
+    pub(crate) threshold: AngularRate,
 }
 
 impl<O, R> DetectFn for InterSatelliteSlewRateDetectFn<'_, O, R>
