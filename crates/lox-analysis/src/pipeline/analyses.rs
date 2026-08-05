@@ -47,6 +47,15 @@ use crate::pipeline::sources::{
 use crate::pipeline::{AnalysisError, HasInterval, PipelineExt as _, Source as _};
 use crate::visibility::Pass;
 
+#[cfg(feature = "imaging")]
+use crate::imaging::{
+    AccessPayload, AccessWindow, Aoi, AoiId, OpticalPayload, PayloadAccessor, SarPayload,
+};
+#[cfg(feature = "imaging")]
+use crate::pipeline::sources::AccessSource;
+#[cfg(feature = "imaging")]
+use core::marker::PhantomData;
+
 #[cfg(feature = "parallel")]
 use crate::pipeline::Parallelism;
 
@@ -610,6 +619,151 @@ where
 }
 
 // ---------------------------------------------------------------------------
+// AccessAnalysis — payload-generic AOI access
+// ---------------------------------------------------------------------------
+
+/// A (spacecraft, AOI) pair id.
+#[cfg(feature = "imaging")]
+pub type AccessId = (AssetId, AoiId);
+
+/// AOI access windows for spacecraft carrying a payload of type `P`.
+///
+/// Payload-generic rather than one type per sensor: the driver is identical and
+/// only [`AccessPayload::access_metric`] differs. See [`OpticalAccessAnalysis`]
+/// and [`SarAccessAnalysis`] for the concrete forms.
+#[cfg(feature = "imaging")]
+pub struct AccessAnalysis<'a, P, O: CoordinateOrigin, R: ReferenceFrame> {
+    scenario: &'a Scenario<O, R>,
+    ensemble: &'a Ensemble<AssetId, O, R>,
+    aois: Vec<(AoiId, Aoi)>,
+    step: TimeDelta,
+    body_fixed_frame: Frame,
+    _marker: PhantomData<P>,
+}
+
+#[cfg(feature = "imaging")]
+impl<'a, P, O, R> AccessAnalysis<'a, P, O, R>
+where
+    P: AccessPayload + Copy + Send + Sync + 'a,
+    Spacecraft: PayloadAccessor<P>,
+    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<Origin>,
+    R: ReferenceFrame + Copy + Send + Sync,
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
+    <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
+        std::error::Error + Send + Sync + 'static,
+{
+    /// Creates an access analysis over a propagated scenario.
+    ///
+    /// The body-fixed frame defaults to the scenario origin's IAU frame.
+    pub fn new(
+        scenario: &'a Scenario<O, R>,
+        ensemble: &'a Ensemble<AssetId, O, R>,
+        aois: Vec<(AoiId, Aoi)>,
+    ) -> Self {
+        Self {
+            scenario,
+            ensemble,
+            aois,
+            step: TimeDelta::from_seconds(60),
+            body_fixed_frame: Frame::Iau(scenario.origin().into()),
+            _marker: PhantomData,
+        }
+    }
+
+    /// Sets the sampling step for event detection.
+    pub fn with_step(mut self, step: TimeDelta) -> Self {
+        self.step = step;
+        self
+    }
+
+    /// Overrides the body-fixed frame.
+    pub fn with_body_fixed_frame(mut self, frame: Frame) -> Self {
+        self.body_fixed_frame = frame;
+        self
+    }
+
+    /// Streams one (spacecraft, AOI) pair's access windows.
+    ///
+    /// Yields an error item if the spacecraft carries no payload of type `P` —
+    /// distinguishing "no payload" from "no access", which the eager path could
+    /// not, since it silently skipped payload-less spacecraft during enumeration.
+    pub fn windows(
+        &self,
+        spacecraft: &Spacecraft,
+        aoi: &'a Aoi,
+        interval: TimeInterval,
+    ) -> ItemStream<'a, AccessWindow> {
+        let Some(payload) = <Spacecraft as PayloadAccessor<P>>::extract(spacecraft) else {
+            return ItemStream::new(std::iter::once(Err(missing_payload(spacecraft.id()))));
+        };
+        let trajectory = match self.trajectory(spacecraft.id()) {
+            Ok(trajectory) => trajectory,
+            Err(e) => return ItemStream::new(std::iter::once(Err(e))),
+        };
+        ItemStream::new(
+            AccessSource::new(
+                payload,
+                aoi,
+                trajectory,
+                self.scenario.origin(),
+                self.body_fixed_frame,
+                self.step,
+            )
+            .detect(interval),
+        )
+    }
+
+    fn trajectory(&self, id: &AssetId) -> Result<&'a Trajectory<O, R>, AnalysisError> {
+        self.ensemble.get(id).ok_or_else(|| missing_trajectory(id))
+    }
+
+    /// Collects one (spacecraft, AOI) pair's access windows.
+    pub fn single(
+        &self,
+        spacecraft: &Spacecraft,
+        aoi: &'a Aoi,
+        interval: TimeInterval,
+    ) -> Result<Vec<AccessWindow>, AnalysisError> {
+        self.windows(spacecraft, aoi, interval).try_collect()
+    }
+
+    /// Every (spacecraft carrying `P`, AOI) pair.
+    ///
+    /// See [`VisibilityAnalysis::pairs`] for why this is public.
+    pub fn pairs(&self) -> Vec<(&'a Spacecraft, &(AoiId, Aoi))> {
+        self.scenario
+            .spacecraft()
+            .iter()
+            .filter(|sc| <Spacecraft as PayloadAccessor<P>>::extract(sc).is_some())
+            .flat_map(|sc| self.aois.iter().map(move |aoi| (sc, aoi)))
+            .collect()
+    }
+
+    /// Computes access windows for every pair from [`pairs`](Self::pairs).
+    #[cfg(feature = "parallel")]
+    pub fn run(
+        &self,
+        interval: TimeInterval,
+        parallelism: Parallelism,
+    ) -> Keyed<AccessId, Vec<AccessWindow>> {
+        map_targets(self.pairs(), parallelism, |(sc, (aoi_id, aoi))| {
+            (
+                (sc.id().clone(), aoi_id.clone()),
+                self.single(sc, aoi, interval),
+            )
+        })
+    }
+}
+
+/// Optical access analysis.
+#[cfg(feature = "imaging")]
+pub type OpticalAccessAnalysis<'a, O, R> = AccessAnalysis<'a, OpticalPayload, O, R>;
+
+/// SAR access analysis.
+#[cfg(feature = "imaging")]
+pub type SarAccessAnalysis<'a, O, R> = AccessAnalysis<'a, SarPayload, O, R>;
+
+// ---------------------------------------------------------------------------
 // Errors
 // ---------------------------------------------------------------------------
 
@@ -621,6 +775,16 @@ fn missing_trajectory(id: &AssetId) -> AnalysisError {
     AnalysisError::Stage(lox_core::error::LoxError::new(MissingTrajectory(
         id.clone(),
     )))
+}
+
+#[cfg(feature = "imaging")]
+#[derive(Debug, thiserror::Error)]
+#[error("{0} carries no payload of the analysed type")]
+struct MissingPayload(AssetId);
+
+#[cfg(feature = "imaging")]
+fn missing_payload(id: &AssetId) -> AnalysisError {
+    AnalysisError::Stage(lox_core::error::LoxError::new(MissingPayload(id.clone())))
 }
 
 // ---------------------------------------------------------------------------
@@ -1253,5 +1417,116 @@ mod tests {
                 assert_eq!(windows.get(&key), Some(&count));
             }
         }
+    }
+}
+
+#[cfg(all(test, feature = "imaging"))]
+mod access_tests {
+    use geo::{LineString, Polygon};
+    use lox_bodies::Origin;
+    use lox_core::units::Distance;
+    use lox_orbits::propagators::OrbitSource;
+    use lox_time::deltas::ToDelta as _;
+
+    use crate::imaging::{AccessAnalysis as EagerAccess, AoiId, OpticalPayload};
+    use crate::pipeline::sources::tests::scenario_and_ensemble;
+
+    use super::*;
+
+    fn sentinel2a() -> Trajectory {
+        use lox_orbits::propagators::Propagator;
+        use lox_orbits::propagators::sgp4::{Elements, Sgp4};
+        use lox_time::intervals::Interval;
+
+        let tle = Elements::from_tle(
+            Some("SENTINEL-2A".to_string()),
+            b"1 40697U 15028A   26079.19377485 -.00000072  00000+0 -11026-4 0  9994",
+            b"2 40697  98.5642 155.3327 0001269  98.1407 261.9920 14.30816376561005",
+        )
+        .unwrap();
+        let sgp4 = Sgp4::new(tle).unwrap();
+        let t0 = sgp4.time();
+        sgp4.with_step(TimeDelta::from_seconds(10))
+            .propagate(Interval::new(t0, t0 + TimeDelta::from_hours(6)).into_dynamic())
+            .unwrap()
+            .into_dynamic()
+    }
+
+    fn western_europe() -> Aoi {
+        Aoi::new(Polygon::new(
+            LineString::from(vec![
+                (-10.0, 35.0),
+                (20.0, 35.0),
+                (20.0, 60.0),
+                (-10.0, 60.0),
+                (-10.0, 35.0),
+            ]),
+            vec![],
+        ))
+    }
+
+    #[test]
+    fn access_matches_the_eager_path() {
+        let traj = sentinel2a();
+        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
+        let payload = OpticalPayload::nadir_only(Distance::kilometers(290.0));
+        let spacecraft = vec![
+            Spacecraft::new("s2a", OrbitSource::Trajectory(traj)).with_optical_payload(payload),
+        ];
+        let (scenario, ensemble) = scenario_and_ensemble(&[], &spacecraft, interval);
+        let step = TimeDelta::from_seconds(30);
+        let aoi_id = AoiId::new("europe");
+        let aoi = western_europe();
+
+        let eager = EagerAccess::<OpticalPayload, _, _>::new(
+            &scenario,
+            &ensemble,
+            vec![(aoi_id.clone(), aoi.clone())],
+        )
+        .with_step(step)
+        .compute()
+        .expect("eager access failed");
+        let eager = eager.windows(spacecraft[0].id(), &aoi_id);
+
+        let new: OpticalAccessAnalysis<Origin, _> =
+            AccessAnalysis::new(&scenario, &ensemble, vec![(aoi_id.clone(), aoi.clone())])
+                .with_step(step);
+        let new = new
+            .single(&spacecraft[0], &aoi, interval)
+            .expect("pipeline access failed");
+
+        assert!(!eager.is_empty(), "fixture produced no access windows");
+        assert_eq!(eager.len(), new.len());
+        for (a, b) in eager.iter().zip(&new) {
+            assert_eq!(a.direction, b.direction);
+            assert_eq!(
+                a.interval.start().to_delta().to_seconds().to_f64(),
+                b.interval.start().to_delta().to_seconds().to_f64()
+            );
+        }
+    }
+
+    #[test]
+    fn a_spacecraft_without_the_payload_reports_that_rather_than_no_access() {
+        // The eager path skipped payload-less spacecraft during enumeration, so
+        // "no payload" and "no access" were indistinguishable in the results.
+        let traj = sentinel2a();
+        let interval = TimeInterval::new(traj.start_time(), traj.end_time());
+        let spacecraft = vec![Spacecraft::new("bare", OrbitSource::Trajectory(traj))];
+        let (scenario, ensemble) = scenario_and_ensemble(&[], &spacecraft, interval);
+        let aoi = western_europe();
+
+        let analysis: OpticalAccessAnalysis<Origin, _> = AccessAnalysis::new(
+            &scenario,
+            &ensemble,
+            vec![(AoiId::new("europe"), aoi.clone())],
+        );
+        let err = analysis
+            .single(&spacecraft[0], &aoi, interval)
+            .expect_err("expected a missing-payload error");
+        assert!(err.to_string().contains("no payload"), "{err}");
+
+        // And it is excluded from the batch target list entirely.
+        assert!(analysis.pairs().is_empty());
     }
 }
