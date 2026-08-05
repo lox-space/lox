@@ -69,6 +69,10 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal", "
 name = "visibility"
 harness = false
 
+[[bench]]
+name = "pipeline"
+harness = false
+
 [[example]]
 name = "stream_toy"
 required-features = ["async"]

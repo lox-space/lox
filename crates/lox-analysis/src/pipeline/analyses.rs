@@ -40,8 +40,8 @@ use lox_time::time_scales::TimeScale;
 
 use crate::assets::{AssetId, GroundStation, Scenario, Spacecraft};
 use crate::pipeline::sources::{
-    Eclipse, EclipseSource, GroundSpaceConfig, InterSatelliteConfig, MaterialisePass, StationView,
-    Window, effective_slew_rate, ground_space_stack, inter_satellite_stack, lift,
+    Eclipse, EclipseSource, GroundSpaceConfig, InterSatelliteConfig, ItemStream, MaterialisePass,
+    StationView, Window, effective_slew_rate, ground_space_stack, inter_satellite_stack, lift,
     sample_sun_channels,
 };
 use crate::pipeline::{AnalysisError, HasInterval, PipelineExt as _, Source as _};
@@ -50,8 +50,6 @@ use crate::visibility::Pass;
 #[cfg(feature = "parallel")]
 use crate::pipeline::Parallelism;
 
-#[cfg(feature = "async")]
-use crate::pipeline::sources::ItemStream;
 #[cfg(feature = "async")]
 use std::collections::HashMap;
 
@@ -214,17 +212,57 @@ where
         }
     }
 
-    /// Computes the passes for one (station, spacecraft) pair.
+    /// Streams one pair's contact windows, **without** observables.
     ///
-    /// Returns an error if the spacecraft has no trajectory in the ensemble —
-    /// unlike the eager path, which panicked.
-    pub fn single(
+    /// The cheap half of the analysis: a scheduler that only needs to know when
+    /// a spacecraft is reachable pays nothing for azimuth, elevation, range, or
+    /// range rate. Prefer this over [`passes`](Self::passes) whenever the
+    /// observables are not read — measurably so, since materialising them
+    /// resamples the whole window.
+    ///
+    /// Lazy: nothing is scanned until the stream is polled, so `next()` or
+    /// `take(n)` stop the scan early.
+    pub fn windows(
         &self,
         station: &GroundStation,
         spacecraft: &Spacecraft,
         interval: TimeInterval,
-    ) -> Result<Vec<Pass>, AnalysisError> {
-        let trajectory = self.trajectory(spacecraft.id())?;
+    ) -> ItemStream<'a, Window> {
+        let min_duration = self.min_pass_duration;
+        match self.trajectory(spacecraft.id()) {
+            Ok(trajectory) => ItemStream::new(
+                ground_space_stack(
+                    StationView::of(station),
+                    trajectory,
+                    self.ephemeris,
+                    self.occulting_bodies.clone(),
+                    self.config(),
+                    interval,
+                )
+                .map(|r| r.map(Window).map_err(AnalysisError::from))
+                .filter_ok(move |window| long_enough(window, min_duration)),
+            ),
+            // Deferred into the stream, per the `Source` convention: "failed to
+            // start" and "failed mid-scan" look identical to every consumer.
+            Err(e) => ItemStream::new(std::iter::once(Err(e))),
+        }
+    }
+
+    /// Streams one pair's passes, with observables sampled across each window.
+    ///
+    /// Lazy in the same way as [`windows`](Self::windows), and observables are
+    /// computed per pass as it is yielded — so `next()` costs one pass, not the
+    /// whole arc.
+    pub fn passes(
+        &self,
+        station: &GroundStation,
+        spacecraft: &Spacecraft,
+        interval: TimeInterval,
+    ) -> ItemStream<'a, Pass> {
+        let trajectory = match self.trajectory(spacecraft.id()) {
+            Ok(trajectory) => trajectory,
+            Err(e) => return ItemStream::new(std::iter::once(Err(e))),
+        };
         let windows = ground_space_stack(
             StationView::of(station),
             trajectory,
@@ -239,10 +277,25 @@ where
             resolution: self.step,
         };
         let min_duration = self.min_pass_duration;
-        lift(windows)
-            .then(stage)
-            .filter_ok(|pass| long_enough(pass, min_duration))
-            .try_collect()
+        ItemStream::new(
+            lift(windows)
+                .then(stage)
+                .filter_ok(move |pass| long_enough(pass, min_duration)),
+        )
+    }
+
+    /// Collects one pair's passes.
+    ///
+    /// The batch-shaped counterpart to [`run`](Self::run); short-circuits on the
+    /// first failure. Returns an error if the spacecraft has no trajectory in
+    /// the ensemble — unlike the eager path, which panicked.
+    pub fn single(
+        &self,
+        station: &GroundStation,
+        spacecraft: &Spacecraft,
+        interval: TimeInterval,
+    ) -> Result<Vec<Pass>, AnalysisError> {
+        self.passes(station, spacecraft, interval).try_collect()
     }
 
     fn trajectory(&self, id: &AssetId) -> Result<&'a Trajectory<O, R>, AnalysisError> {

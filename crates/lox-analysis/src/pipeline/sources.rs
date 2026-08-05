@@ -79,12 +79,17 @@ use crate::imaging::{
 pub(crate) type BoxedWindows<'a> =
     Box<dyn Iterator<Item = Result<TimeInterval, DetectError>> + Send + 'a>;
 
-/// The [`Source::Stream`] of every source in this module.
-pub(crate) struct ItemStream<'a, T>(Box<dyn Iterator<Item = Result<T, AnalysisError>> + Send + 'a>);
+/// A lazy stream of analysis items.
+///
+/// The `'a` is the lifetime of the *inputs* the stream reads — a scenario and its
+/// trajectories — not of the analysis handle that produced it, so the stream
+/// outlives the call that built it and can be stored, filtered, or partly
+/// consumed.
+pub struct ItemStream<'a, T>(Box<dyn Iterator<Item = Result<T, AnalysisError>> + Send + 'a>);
 
 impl<'a, T> ItemStream<'a, T> {
     /// Boxes any compatible iterator as an item stream.
-    pub(crate) fn new(items: impl Iterator<Item = Result<T, AnalysisError>> + Send + 'a) -> Self {
+    pub fn new(items: impl Iterator<Item = Result<T, AnalysisError>> + Send + 'a) -> Self {
         Self(Box::new(items))
     }
 }

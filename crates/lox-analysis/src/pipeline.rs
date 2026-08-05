@@ -74,7 +74,7 @@ use crate::visibility::EvalError;
 pub mod analyses;
 mod sources;
 
-pub use sources::{Eclipse, Window};
+pub use sources::{Eclipse, ItemStream, Window};
 
 // ---------------------------------------------------------------------------
 // Parallelism
