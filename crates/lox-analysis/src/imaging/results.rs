@@ -2,12 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::collections::HashMap;
-
 use lox_time::intervals::TimeInterval;
-
-use crate::assets::AssetId;
-use crate::imaging::aoi::AoiId;
 
 /// Direction of the spacecraft's orbital motion at the time of an access window:
 /// moving northward ([`PassDirection::Ascending`]) or southward
@@ -32,45 +27,15 @@ pub struct AccessWindow {
     pub direction: PassDirection,
 }
 
-type WindowMap = HashMap<(AssetId, AoiId), Vec<AccessWindow>>;
-
-/// Results of an access analysis.
-pub struct AccessResults {
-    windows: WindowMap,
-}
-
-impl AccessResults {
-    pub(super) fn new(windows: WindowMap) -> Self {
-        Self { windows }
-    }
-
-    /// Returns access windows for a specific (spacecraft, AOI) pair.
-    pub fn windows(&self, sc_id: &AssetId, aoi_id: &AoiId) -> &[AccessWindow] {
-        self.windows
-            .get(&(sc_id.clone(), aoi_id.clone()))
-            .map(|v| v.as_slice())
-            .unwrap_or(&[])
-    }
-
-    /// Returns all (spacecraft, AOI) pairs and their access windows.
-    pub fn all_windows(&self) -> &WindowMap {
-        &self.windows
-    }
-
-    /// Returns `true` if no access windows were found.
-    pub fn is_empty(&self) -> bool {
-        self.windows.is_empty()
-    }
-
-    /// Returns the number of (spacecraft, AOI) pairs.
-    pub fn num_pairs(&self) -> usize {
-        self.windows.len()
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    // Explicit imports shadow the glob, keeping these tests on the eager
+    // implementation until they are ported (see `crate::legacy`).
     use super::*;
+    #[allow(unused_imports)]
+    use crate::legacy::imaging::{
+        AccessAnalysis, AccessResults, OpticalAccessAnalysis, SarAccessAnalysis,
+    };
     use lox_time::time_scales::TimeScale;
 
     use lox_time::Time;

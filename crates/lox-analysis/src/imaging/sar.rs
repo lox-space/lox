@@ -225,6 +225,11 @@ fn validate_range(min: Angle, max: Angle) -> Result<(f64, f64), SarPayloadError>
 
 #[cfg(test)]
 mod tests {
+    // Explicit imports shadow the glob, keeping these tests on the eager
+    // implementation until they are ported (see `crate::legacy`).
+    #[allow(unused_imports)]
+    use crate::legacy::imaging::{AccessAnalysis, AccessResults, OpticalAccessAnalysis};
+
     use super::*;
 
     #[test]
@@ -315,8 +320,8 @@ mod integration_tests {
     use crate::assets::{AssetId, Scenario, Spacecraft};
     use crate::imaging::AccessWindow;
     use crate::imaging::PassDirection;
-    use crate::imaging::analysis::SarAccessAnalysis;
     use crate::imaging::aoi::{Aoi, AoiId};
+    use crate::legacy::imaging::SarAccessAnalysis;
 
     // Sentinel-1A TLE — epoch 2026-079 (20 March 2026), consistent with the
     // Sentinel-2 TLEs used in the optical integration tests.

@@ -6,17 +6,15 @@ use std::collections::{HashMap, HashSet};
 
 use crate::analysis::assets::{AssetId, ConstellationId, GroundStation, Scenario, Spacecraft};
 use crate::analysis::events::{Event, ZeroCrossing};
-use crate::analysis::imaging::{
-    AccessError, Aoi, AoiId, LookSide, OpticalAccessAnalysis, OpticalPayload, SarAccessAnalysis,
-    SarPayload,
-};
-use crate::analysis::power::{
-    PowerBudgetAnalysis, PowerBudgetResults, PowerError, SpacecraftFilter,
-};
+use crate::analysis::imaging::{AccessError, Aoi, AoiId, LookSide, OpticalPayload, SarPayload};
 use crate::analysis::sun::AnalyticalSunEphemeris;
-use crate::analysis::visibility::{
-    ElevationMask, ElevationMaskError, PairType, Pass, VisibilityAnalysis, VisibilityError,
-    VisibilityResults,
+use crate::analysis::visibility::{ElevationMask, ElevationMaskError, Pass};
+// These bindings still target the eager implementation; they are rebuilt against
+// the pipeline API in the commit that deletes `legacy`.
+use crate::analysis::legacy::imaging::{AccessResults, OpticalAccessAnalysis, SarAccessAnalysis};
+use crate::analysis::legacy::{
+    PairType, PowerBudgetAnalysis, PowerBudgetResults, PowerError, SpacecraftFilter,
+    VisibilityAnalysis, VisibilityError, VisibilityResults,
 };
 use crate::bodies::Origin;
 use crate::bodies::python::PyOrigin;
@@ -1726,7 +1724,7 @@ impl PyAccessWindow {
 /// Provides access windows for each (spacecraft, AOI) pair.
 #[pyclass(name = "AccessResults", module = "lox_space", frozen)]
 pub struct PyAccessResults {
-    results: crate::analysis::imaging::AccessResults,
+    results: AccessResults,
 }
 
 #[pymethods]

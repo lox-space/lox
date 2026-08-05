@@ -8,26 +8,17 @@
 //! [`line_of_sight`](crate::visibility::line_of_sight) function.  Penumbra is
 //! **not** modelled.
 
-use std::collections::HashMap;
-
-use lox_bodies::{CoordinateOrigin, Origin, Sun, TryMeanRadius, TrySpheroid};
+use lox_bodies::{CoordinateOrigin, Sun, TryMeanRadius, TrySpheroid};
 use lox_core::glam::DVec3;
-use lox_core::math::series::InterpolationType;
 use lox_core::units::ASTRONOMICAL_UNIT;
 use lox_ephem::Ephemeris;
 use lox_time::Time;
-use lox_time::deltas::TimeDelta;
-use lox_time::intervals::TimeInterval;
-use lox_time::series::TimeSeries;
 use lox_time::time_scales::Tdb;
-use thiserror::Error;
 
-use crate::assets::{AssetId, ConstellationId, Scenario, Spacecraft};
-use crate::events::{DetectFn, DetectFnExt as _, IntervalIterExt as _, UniformSampler};
-use crate::par::try_map;
+use crate::events::DetectFn;
 use crate::visibility::{EvalError, LineOfSight};
 use lox_frames::ReferenceFrame;
-use lox_orbits::orbits::{Ensemble, Trajectory};
+use lox_orbits::orbits::Trajectory;
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -68,20 +59,6 @@ pub fn solar_flux(distance_m: f64) -> f64 {
 // Eclipse DetectFn
 // ---------------------------------------------------------------------------
 
-/// Per-spacecraft power-budget output tuple.
-type SpacecraftPowerData = (AssetId, Vec<TimeInterval>, TimeSeries, TimeSeries);
-
-/// Errors from power-budget analysis.
-#[derive(Debug, Error)]
-pub enum PowerError {
-    /// Event detection failed.
-    #[error(transparent)]
-    Detect(#[from] crate::events::DetectError),
-    /// Evaluation error (frame rotation, ephemeris, …).
-    #[error(transparent)]
-    Eval(#[from] EvalError),
-}
-
 /// Eclipse detect function: positive when the spacecraft is sunlit, negative
 /// when it is in eclipse (cylindrical shadow model, umbra only).
 pub(crate) struct EclipseDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
@@ -110,222 +87,12 @@ where
     }
 }
 
-// ---------------------------------------------------------------------------
-// PowerBudgetResults
-// ---------------------------------------------------------------------------
-
-/// Results of a power-budget analysis.
-///
-/// Contains eclipse intervals, beta-angle time series, and solar-flux time
-/// series for each spacecraft.
-pub struct PowerBudgetResults {
-    eclipse_intervals: HashMap<AssetId, Vec<TimeInterval>>,
-    beta_angles: HashMap<AssetId, TimeSeries>,
-    solar_fluxes: HashMap<AssetId, TimeSeries>,
-    scenario_duration: f64,
-}
-
-impl PowerBudgetResults {
-    /// Eclipse intervals for a given spacecraft.
-    pub fn eclipse_intervals_for(&self, id: &AssetId) -> Option<&[TimeInterval]> {
-        self.eclipse_intervals.get(id).map(|v| v.as_slice())
-    }
-
-    /// All eclipse intervals keyed by spacecraft id.
-    pub fn all_eclipse_intervals(&self) -> &HashMap<AssetId, Vec<TimeInterval>> {
-        &self.eclipse_intervals
-    }
-
-    /// Eclipse fraction for a given spacecraft (ratio of total eclipse time to
-    /// scenario duration, in \[0, 1\]).
-    pub fn eclipse_fraction(&self, id: &AssetId) -> Option<f64> {
-        let intervals = self.eclipse_intervals.get(id)?;
-        let total_eclipse: f64 = intervals
-            .iter()
-            .map(|i| (i.end() - i.start()).to_seconds().to_f64())
-            .sum();
-        Some(total_eclipse / self.scenario_duration)
-    }
-
-    /// Sunlit fraction for a given spacecraft (`1 − eclipse_fraction`).
-    pub fn sunlit_fraction(&self, id: &AssetId) -> Option<f64> {
-        self.eclipse_fraction(id).map(|f| 1.0 - f)
-    }
-
-    /// Beta-angle time series for a given spacecraft (radians).
-    pub fn beta_angles_for(&self, id: &AssetId) -> Option<&TimeSeries> {
-        self.beta_angles.get(id)
-    }
-
-    /// Solar-flux time series for a given spacecraft (W/m²).
-    pub fn solar_flux_for(&self, id: &AssetId) -> Option<&TimeSeries> {
-        self.solar_fluxes.get(id)
-    }
-}
-
-// ---------------------------------------------------------------------------
-// PowerBudgetAnalysis
-// ---------------------------------------------------------------------------
-
-/// Filter for restricting which spacecraft are analysed.
-#[derive(Clone)]
-pub enum SpacecraftFilter {
-    /// Analyse only spacecraft whose id is in the given list.
-    Ids(Vec<AssetId>),
-    /// Analyse only spacecraft belonging to the given constellation.
-    Constellation(ConstellationId),
-}
-
-/// Computes eclipse intervals, beta angles, and solar flux for spacecraft
-/// in a scenario.
-///
-/// Generic over origin `O`, reference frame `R`, and ephemeris `E`.
-/// The shadow model is cylindrical (umbra only) — penumbra is not modelled.
-pub struct PowerBudgetAnalysis<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    scenario: &'a Scenario<O, R>,
-    ensemble: &'a Ensemble<AssetId, O, R>,
-    ephemeris: &'a E,
-    step: TimeDelta,
-    filter: Option<SpacecraftFilter>,
-}
-
-impl<'a, O, R, E> PowerBudgetAnalysis<'a, O, R, E>
-where
-    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<Origin>,
-    R: ReferenceFrame + Copy + Send + Sync,
-    E: Ephemeris + Send + Sync,
-    E::Error: 'static,
-{
-    /// Creates a new power-budget analysis.
-    pub fn new(
-        scenario: &'a Scenario<O, R>,
-        ensemble: &'a Ensemble<AssetId, O, R>,
-        ephemeris: &'a E,
-    ) -> Self {
-        Self {
-            scenario,
-            ensemble,
-            ephemeris,
-            step: TimeDelta::from_seconds(60),
-            filter: None,
-        }
-    }
-
-    /// Sets the time step for sampling and event detection.
-    pub fn with_step(mut self, step: TimeDelta) -> Self {
-        self.step = step;
-        self
-    }
-
-    /// Restricts the analysis to a subset of spacecraft.
-    ///
-    /// See [`SpacecraftFilter`] for the available filter modes.
-    pub fn with_filter(mut self, filter: SpacecraftFilter) -> Self {
-        self.filter = Some(filter);
-        self
-    }
-
-    /// Compute the power-budget analysis for all (or filtered) spacecraft in
-    /// the scenario.
-    pub fn compute(&self) -> Result<PowerBudgetResults, PowerError> {
-        let interval = *self.scenario.interval();
-        let all_spacecraft = self.scenario.spacecraft();
-        let spacecraft: Vec<&Spacecraft> = match &self.filter {
-            Some(SpacecraftFilter::Ids(ids)) => all_spacecraft
-                .iter()
-                .filter(|sc| ids.contains(sc.id()))
-                .collect(),
-            Some(SpacecraftFilter::Constellation(cid)) => all_spacecraft
-                .iter()
-                .filter(|sc| sc.constellation_id() == Some(cid))
-                .collect(),
-            None => all_spacecraft.iter().collect(),
-        };
-        let duration_s = (interval.end() - interval.start()).to_seconds().to_f64();
-
-        let results: Result<Vec<_>, PowerError> = try_map(&spacecraft, true, |sc| {
-            self.compute_spacecraft(sc, interval.into_dynamic())
-        });
-
-        let mut eclipse_intervals = HashMap::new();
-        let mut beta_angles = HashMap::new();
-        let mut solar_fluxes = HashMap::new();
-
-        for (id, eclipses, betas, fluxes) in results? {
-            eclipse_intervals.insert(id.clone(), eclipses);
-            beta_angles.insert(id.clone(), betas);
-            solar_fluxes.insert(id, fluxes);
-        }
-
-        Ok(PowerBudgetResults {
-            eclipse_intervals,
-            beta_angles,
-            solar_fluxes,
-            scenario_duration: duration_s,
-        })
-    }
-
-    /// Compute all quantities for a single spacecraft.
-    fn compute_spacecraft(
-        &self,
-        sc: &Spacecraft,
-        interval: TimeInterval,
-    ) -> Result<SpacecraftPowerData, PowerError> {
-        let sc_traj = self.ensemble.get(sc.id()).expect(
-            "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
-        );
-
-        // 1. Eclipse intervals via root-finding
-        let eclipse_fn = EclipseDetectFn {
-            sc: sc_traj,
-            ephemeris: self.ephemeris,
-        };
-        // The scan yields intervals where the function is positive (sunlit);
-        // complementing them within the scan window gives the eclipses.
-        let eclipse_intervals: Vec<TimeInterval> = eclipse_fn
-            .iter_intervals(UniformSampler::new(self.step), interval)
-            .complement(interval)
-            .collect::<Result<_, _>>()?;
-
-        // 2. Beta angle + solar flux sampled at `step`
-        let epoch = interval.start();
-        let mut offsets = Vec::new();
-        let mut beta_values = Vec::new();
-        let mut flux_values = Vec::new();
-
-        for time in interval.step_by(self.step) {
-            let tdb = time.to_scale(Tdb);
-            let state = sc_traj.at(time.into_dynamic());
-            let r = state.position();
-            let v = state.velocity();
-            let h = r.cross(v);
-            let h_hat = h.normalize();
-
-            let r_sun = self
-                .ephemeris
-                .position(tdb, sc_traj.origin(), Sun)
-                .map_err(|e| PowerError::Eval(EvalError::Ephemeris(Box::new(e))))?;
-            let sun_hat = r_sun.normalize();
-
-            offsets.push((time - epoch).to_seconds().to_f64());
-            beta_values.push(beta_angle(h_hat, sun_hat));
-            flux_values.push(solar_flux(r_sun.length()));
-        }
-
-        let beta_series = TimeSeries::try_new(
-            epoch,
-            offsets.clone(),
-            beta_values,
-            InterpolationType::Linear,
-        )
-        .expect("sampled series should have valid dimensions");
-        let flux_series =
-            TimeSeries::try_new(epoch, offsets, flux_values, InterpolationType::Linear)
-                .expect("sampled series should have valid dimensions");
-
-        Ok((sc.id().clone(), eclipse_intervals, beta_series, flux_series))
-    }
-}
+// The eager `PowerBudgetAnalysis` / `PowerBudgetResults` implementation moved to
+// `crate::legacy` for one commit while the Python bindings are ported. Power is
+// the one analysis the pipeline does not cover uniformly: only eclipses are
+// event-shaped, so the replacement exposes those as items and the continuous
+// beta-angle and solar-flux channels as sampled series.
+pub use crate::pipeline::analyses::{PowerBudgetAnalysis, SpacecraftPower};
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -333,6 +100,14 @@ where
 
 #[cfg(test)]
 mod tests {
+    // See the note in `visibility`'s test module.
+    use crate::assets::{Scenario, Spacecraft};
+    use crate::legacy::PowerBudgetAnalysis;
+    use lox_orbits::orbits::Ensemble;
+    use lox_time::deltas::TimeDelta;
+    use lox_time::intervals::TimeInterval;
+    use std::collections::HashMap;
+
     use lox_time::time_scales::TimeScale;
     use std::f64::consts::{FRAC_PI_2, PI};
     use std::sync::OnceLock;

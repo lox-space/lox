@@ -19,11 +19,18 @@ pub use analysis::{
 pub use aoi::AoiError;
 pub use aoi::{Aoi, AoiId};
 pub use optical::OpticalPayload;
-pub use results::{AccessResults, AccessWindow, PassDirection};
+pub use results::{AccessWindow, PassDirection};
 pub use sar::{LookSide, SarPayload, SarPayloadError};
 
 #[cfg(test)]
 mod tests {
+    // Explicit imports shadow the glob, keeping these tests on the eager
+    // implementation until they are ported (see `crate::legacy`).
+    #[allow(unused_imports)]
+    use crate::legacy::imaging::{
+        AccessAnalysis, AccessResults, OpticalAccessAnalysis, SarAccessAnalysis,
+    };
+
     use super::*;
     use geo::{LineString, Polygon};
     use lox_bodies::Origin;

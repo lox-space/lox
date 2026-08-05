@@ -4,30 +4,22 @@
 
 //! Access-analysis traits: payload metric and payload accessor.
 
-use core::marker::PhantomData;
-use std::collections::HashMap;
-
 use lox_core::glam::DVec3;
 use thiserror::Error;
 
-use crate::events::{DetectError, DetectFn, DetectFnExt as _, UniformSampler};
-use lox_bodies::{CoordinateOrigin, Origin, TryMeanRadius, TrySpheroid};
+use crate::events::{DetectError, DetectFn};
+use lox_bodies::{CoordinateOrigin, TryMeanRadius, TrySpheroid};
 use lox_core::coords::LonLatAlt;
 use lox_core::units::Angle;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_frames::{Frame, ReferenceFrame};
-use lox_orbits::orbits::{Ensemble, Trajectory};
+use lox_orbits::orbits::Trajectory;
 use lox_time::Time;
-use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::TimeScale;
 
-use crate::assets::{AssetId, Scenario, Spacecraft};
-use crate::imaging::aoi::{Aoi, AoiId};
-use crate::imaging::optical::OpticalPayload;
-use crate::imaging::results::{AccessResults, AccessWindow, PassDirection};
-use crate::imaging::sar::SarPayload;
-use crate::par::try_map;
+use crate::imaging::aoi::Aoi;
+use crate::imaging::results::PassDirection;
 use crate::visibility::EvalError;
 
 /// Returns the per-sample access metric for an AOI.
@@ -208,124 +200,20 @@ where
     }
 }
 
-// ---------------------------------------------------------------------------
-// AccessAnalysis orchestrator
-// ---------------------------------------------------------------------------
-
-/// Generic access analysis: computes per-(spacecraft, AOI) windows for spacecraft
-/// carrying a payload of type `P`.
-pub struct AccessAnalysis<'a, P, O: CoordinateOrigin, R: ReferenceFrame>
-where
-    P: AccessPayload + Copy + Send + Sync,
-    Spacecraft: PayloadAccessor<P>,
-{
-    scenario: &'a Scenario<O, R>,
-    ensemble: &'a Ensemble<AssetId, O, R>,
-    aois: Vec<(AoiId, Aoi)>,
-    step: TimeDelta,
-    body_fixed_frame: Frame,
-    _marker: PhantomData<P>,
-}
-
-impl<'a, P, O, R> AccessAnalysis<'a, P, O, R>
-where
-    P: AccessPayload + Copy + Send + Sync,
-    Spacecraft: PayloadAccessor<P>,
-    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + Into<Origin>,
-    R: ReferenceFrame + Copy + Send + Sync + Into<Frame>,
-    DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
-    <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
-        core::error::Error + Send + Sync + 'static,
-{
-    /// Creates a new access analysis. The body-fixed frame defaults to the
-    /// scenario origin's IAU frame.
-    pub fn new(
-        scenario: &'a Scenario<O, R>,
-        ensemble: &'a Ensemble<AssetId, O, R>,
-        aois: Vec<(AoiId, Aoi)>,
-    ) -> Self {
-        let body_fixed_frame = Frame::Iau(scenario.origin().into());
-        Self {
-            scenario,
-            ensemble,
-            aois,
-            step: TimeDelta::from_seconds(60),
-            body_fixed_frame,
-            _marker: PhantomData,
-        }
-    }
-
-    /// Overrides the time step for event detection (default 60 s).
-    pub fn with_step(mut self, step: TimeDelta) -> Self {
-        self.step = step;
-        self
-    }
-
-    /// Overrides the body-fixed frame (default IAU of scenario origin).
-    pub fn with_body_fixed_frame(mut self, frame: Frame) -> Self {
-        self.body_fixed_frame = frame;
-        self
-    }
-
-    /// Computes per-(spacecraft, AOI) access windows.
-    pub fn compute(&self) -> Result<AccessResults, AccessError> {
-        let interval = *self.scenario.interval();
-
-        let with_payload: Vec<(&Spacecraft, P)> = self
-            .scenario
-            .spacecraft()
-            .iter()
-            .filter_map(|sc| <Spacecraft as PayloadAccessor<P>>::extract(sc).map(|p| (sc, p)))
-            .collect();
-
-        let pairs: Vec<(&Spacecraft, P, &(AoiId, Aoi))> = with_payload
-            .iter()
-            .flat_map(|&(sc, p)| self.aois.iter().map(move |aoi| (sc, p, aoi)))
-            .collect();
-
-        let compute_one = |&(sc, payload, (aoi_id, aoi)): &(&Spacecraft, P, &(AoiId, Aoi))| {
-            let key = (sc.id().clone(), aoi_id.clone());
-            let traj = self.ensemble.get(sc.id()).expect(
-                "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
-            );
-            let detect_fn = AccessDetectFn {
-                payload,
-                aoi,
-                trajectory: traj,
-                origin: self.scenario.origin(),
-                body_fixed_frame: self.body_fixed_frame,
-            };
-            let intervals = detect_fn.intervals(UniformSampler::new(self.step), interval)?;
-            let origin = self.scenario.origin();
-            let body_fixed_frame = self.body_fixed_frame;
-            let mut windows: Vec<AccessWindow> = Vec::with_capacity(intervals.len());
-            for iv in intervals {
-                let midpoint = iv.start() + 0.5 * (iv.end() - iv.start());
-                let sample = sub_sat_sample(traj, midpoint, origin, body_fixed_frame)?;
-                let direction = pass_direction_of(&sample);
-                windows.push(AccessWindow {
-                    interval: iv,
-                    direction,
-                });
-            }
-            Ok::<_, AccessError>((key, windows))
-        };
-
-        let results: Result<Vec<_>, AccessError> = try_map(&pairs, pairs.len() > 100, compute_one);
-
-        let windows_by_pair: HashMap<_, _> = results?.into_iter().collect();
-        Ok(AccessResults::new(windows_by_pair))
-    }
-}
-
-/// Type alias for the optical access analysis (parameterised by [`OpticalPayload`]).
-pub type OpticalAccessAnalysis<'a, O, R> = AccessAnalysis<'a, OpticalPayload, O, R>;
-
-/// Type alias for the SAR access analysis (parameterised by [`SarPayload`]).
-pub type SarAccessAnalysis<'a, O, R> = AccessAnalysis<'a, SarPayload, O, R>;
+// The eager `AccessAnalysis` moved to `crate::legacy` for one commit while the
+// Python bindings are ported; this is the pipeline-backed replacement at the
+// canonical path.
+pub use crate::pipeline::analyses::{AccessAnalysis, OpticalAccessAnalysis, SarAccessAnalysis};
 
 #[cfg(test)]
 mod tests {
+    // Explicit imports shadow the glob, keeping these tests on the eager
+    // implementation until they are ported (see `crate::legacy`).
+    #[allow(unused_imports)]
+    use crate::legacy::imaging::{
+        AccessAnalysis, AccessResults, OpticalAccessAnalysis, SarAccessAnalysis,
+    };
+
     use super::*;
 
     use geo::{LineString, Polygon};

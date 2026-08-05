@@ -1020,8 +1020,8 @@ pub(crate) mod tests {
     use lox_time::time_scales::Tdb;
 
     use crate::assets::{AssetId, Scenario};
-    use crate::power::PowerBudgetAnalysis;
-    use crate::visibility::{ElevationMask, VisibilityAnalysis};
+    use crate::legacy::{PowerBudgetAnalysis, VisibilityAnalysis};
+    use crate::visibility::ElevationMask;
 
     use super::*;
 
@@ -1517,9 +1517,8 @@ pub(crate) mod tests {
         use geo::{LineString, Polygon};
         use lox_core::units::Angle;
 
-        use crate::imaging::{
-            AoiId, OpticalAccessAnalysis, OpticalPayload, SarAccessAnalysis, SarPayload,
-        };
+        use crate::imaging::{AoiId, OpticalPayload, SarPayload};
+        use crate::legacy::imaging::{OpticalAccessAnalysis, SarAccessAnalysis};
 
         use super::*;
 
@@ -1843,8 +1842,7 @@ mod dump {
     use lox_bodies::Origin;
     use lox_orbits::propagators::OrbitSource;
 
-    use crate::power::PowerBudgetAnalysis;
-    use crate::visibility::VisibilityAnalysis;
+    use crate::legacy::{PowerBudgetAnalysis, VisibilityAnalysis};
 
     use super::tests::*;
     use super::*;

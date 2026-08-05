@@ -10,7 +10,7 @@
 //! Run with `cargo bench -p lox-space --bench power`.
 
 use divan::Bencher;
-use lox_space::analysis::power::PowerBudgetAnalysis;
+use lox_space::analysis::legacy::PowerBudgetAnalysis;
 use lox_space::time::deltas::TimeDelta;
 
 #[path = "common/mod.rs"]

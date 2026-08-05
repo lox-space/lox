@@ -22,9 +22,8 @@ mod imaging_benches {
     use divan::Bencher;
     use geo::{LineString, Polygon};
     use lox_space::analysis::assets::{Scenario, Spacecraft};
-    use lox_space::analysis::imaging::{
-        Aoi, AoiId, LookSide, OpticalAccessAnalysis, OpticalPayload, SarAccessAnalysis, SarPayload,
-    };
+    use lox_space::analysis::imaging::{Aoi, AoiId, LookSide, OpticalPayload, SarPayload};
+    use lox_space::analysis::legacy::imaging::{OpticalAccessAnalysis, SarAccessAnalysis};
     use lox_space::core::units::{Angle, Distance};
     use lox_space::orbits::Trajectory;
     use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};

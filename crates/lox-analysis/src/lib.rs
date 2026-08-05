@@ -13,6 +13,10 @@ pub mod events;
 /// AOI imaging event detection: sub-satellite point, swath, and off-nadir coverage.
 #[cfg(feature = "imaging")]
 pub mod imaging;
+/// The eager `*Analysis` implementations, staged for deletion (see the module
+/// docs). Not part of the supported surface.
+#[doc(hidden)]
+pub mod legacy;
 mod par;
 /// Lazy analysis pipelines: the `Source` scan, `Stage` transforms, and caller-owned fan-out.
 pub mod pipeline;

@@ -42,4 +42,4 @@ pub use crate::orbits::ground::GroundLocation;
 
 // Analysis
 pub use crate::analysis::assets::{GroundStation, Scenario, Spacecraft};
-pub use crate::analysis::visibility::{Pass, VisibilityAnalysis, VisibilityResults};
+pub use crate::analysis::visibility::{InterSatelliteAnalysis, Pass, VisibilityAnalysis};

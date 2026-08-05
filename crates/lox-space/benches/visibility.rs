@@ -12,7 +12,7 @@
 //! Run with `cargo bench -p lox-space --bench visibility`.
 
 use divan::{Bencher, black_box};
-use lox_space::analysis::visibility::VisibilityAnalysis;
+use lox_space::analysis::legacy::VisibilityAnalysis;
 use lox_space::bodies::Origin;
 use lox_space::core::units::{AngularRate, Distance};
 use lox_space::time::deltas::TimeDelta;

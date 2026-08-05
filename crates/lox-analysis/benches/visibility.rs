@@ -8,7 +8,8 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use lox_analysis::assets::{AssetId, GroundStation, Scenario, Spacecraft};
-use lox_analysis::visibility::{ElevationMask, VisibilityAnalysis};
+use lox_analysis::legacy::VisibilityAnalysis;
+use lox_analysis::visibility::ElevationMask;
 use lox_bodies::Origin;
 use lox_core::coords::LonLatAlt;
 use lox_frames::Frame;

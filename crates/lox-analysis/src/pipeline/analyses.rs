@@ -1070,10 +1070,10 @@ mod tests {
     use lox_test_utils::data_file;
     use std::sync::OnceLock;
 
+    use crate::legacy::VisibilityAnalysis as EagerVisibilityAnalysis;
     #[cfg(feature = "parallel")]
     use crate::pipeline::sources::tests::iss_trajectory;
     use crate::pipeline::sources::tests::{cebreros, lunar_trajectory, scenario_and_ensemble};
-    use crate::visibility::VisibilityAnalysis as EagerVisibilityAnalysis;
     use lox_time::deltas::ToDelta as _;
 
     use super::*;
@@ -1428,7 +1428,8 @@ mod access_tests {
     use lox_orbits::propagators::OrbitSource;
     use lox_time::deltas::ToDelta as _;
 
-    use crate::imaging::{AccessAnalysis as EagerAccess, AoiId, OpticalPayload};
+    use crate::imaging::{AoiId, OpticalPayload};
+    use crate::legacy::imaging::AccessAnalysis as EagerAccess;
     use crate::pipeline::sources::tests::scenario_and_ensemble;
 
     use super::*;

@@ -14,7 +14,8 @@
 use std::error::Error;
 
 use lox_space::analysis::assets::{GroundStation, Scenario, Spacecraft};
-use lox_space::analysis::visibility::{ElevationMask, VisibilityAnalysis, VisibilityResults};
+use lox_space::analysis::legacy::{VisibilityAnalysis, VisibilityResults};
+use lox_space::analysis::visibility::ElevationMask;
 use lox_space::bodies::Origin;
 use lox_space::core::coords::LonLatAlt;
 use lox_space::frames::Frame;

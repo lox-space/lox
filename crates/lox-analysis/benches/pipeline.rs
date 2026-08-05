@@ -21,9 +21,10 @@ use std::sync::{Arc, LazyLock};
 
 use divan::{Bencher, black_box};
 use lox_analysis::assets::{AssetId, GroundStation, Scenario, Spacecraft};
+use lox_analysis::legacy::VisibilityAnalysis as EagerVisibility;
 use lox_analysis::pipeline::Parallelism;
 use lox_analysis::pipeline::analyses::VisibilityAnalysis as PipelineVisibility;
-use lox_analysis::visibility::{ElevationMask, VisibilityAnalysis as EagerVisibility};
+use lox_analysis::visibility::ElevationMask;
 use lox_bodies::Origin;
 use lox_core::coords::LonLatAlt;
 use lox_ephem::spk::parser::Spk;
