@@ -709,12 +709,13 @@ where
 }
 
 // ---------------------------------------------------------------------------
-// VisibilityResults
+// Analyses
 // ---------------------------------------------------------------------------
 
-// The eager `VisibilityAnalysis` / `VisibilityResults` implementation moved to
-// `crate::legacy` for one commit while the Python bindings are ported; these are
-// the pipeline-backed replacements at the canonical paths.
+// The eager `VisibilityAnalysis` and its aggregate `VisibilityResults` are gone.
+// These are the pipeline-backed replacements: lazily yielded items in place of a
+// results object, and a separate type for inter-satellite contacts, whose items
+// have no ground observables and so cannot be passes.
 pub use crate::pipeline::analyses::{InterSatelliteAnalysis, VisibilityAnalysis};
 
 #[cfg(test)]

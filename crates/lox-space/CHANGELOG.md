@@ -12,8 +12,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `InterSatelliteAnalysis` / `InterSatelliteRun` for spacecraft-to-spacecraft contacts, replacing the `inter_satellite=True` flag
+- `Window`, `Eclipse`, `SpacecraftPower` item classes
+- `VisibilityAnalysis.windows()` — contact timing without observables, roughly a third cheaper than `single()`
+- `VisibilityAnalysis` range limits now gate ground-space passes, not only inter-satellite ones
+- typed exceptions: `AnalysisError` and its `RotationFailed`, `EphemerisFailed`, `DetectionFailed` subclasses
+
 ### Changed
 
+- [**breaking**] the analyses are pipeline-backed and lazy. `compute()` is replaced by `single()` (one target, raises) and `run()` (every target, per-target results); the aggregate `VisibilityResults`, `PowerBudgetResults` and `AccessResults` classes are gone, replaced by the dumb `VisibilityRun` / `InterSatelliteRun` / `PowerBudgetRun` / `AccessRun` containers with `.errors`
+- [**breaking**] `run()` returns per-target results, so one failing pair no longer sinks the batch
+- [**breaking**] pair-selection filters (`ground_space_filter`, `inter_satellite_filter`) and spacecraft filters (`spacecraft_ids`, `constellation_id`) are removed — filter the scenario or iterate `single()` yourself
+- [**breaking**] `min_pass_duration` now discards short passes; it previously only coarsened the scan
+- [**breaking**] `VisibilityAnalysis` takes `ephemeris` at construction rather than at `compute()`
+- [**breaking**] `SpacecraftPower.eclipse_fraction(interval)` takes the interval explicitly; the eclipse list alone cannot say whether "no eclipses" covers a week or a minute
+- [**breaking**] parallelism is an explicit `run(parallel=..., workers=...)` choice rather than a hard-coded 100-pair threshold
 - [**breaking**] `Scenario(start, end, ...)` no longer normalizes its bounds to TAI; the supplied time scale is preserved
 
 ### Changed

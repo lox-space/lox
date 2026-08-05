@@ -58,8 +58,8 @@ future_state = propagator.propagate(t + lox.TimeDelta.from_hours(1.5))
 | [Orbital States](states.md) | `Cartesian`, `Keplerian`, `Trajectory` |
 | [Propagators](propagators.md) | `Vallado`, `SGP4`, `TLE`, `GroundPropagator` |
 | [Ground Stations](ground.md) | `GroundLocation`, `ElevationMask`, `Observables`, `Pass` |
-| [Events & Visibility](events.md) | `Event`, `Interval`, `intersect_intervals`, `union_intervals`, `complement_intervals`, `GroundStation`, `Spacecraft`, `Scenario`, `Ensemble`, `VisibilityAnalysis`, `VisibilityResults`, `PowerBudgetAnalysis`, `PowerBudgetResults` |
-| [Imaging](imaging.md) | `Aoi`, `OpticalPayload`, `OpticalAccessAnalysis`, `SarPayload`, `LookSide`, `SarAccessAnalysis`, `AccessResults` |
+| [Events & Visibility](events.md) | `Event`, `Interval`, `intersect_intervals`, `union_intervals`, `complement_intervals`, `GroundStation`, `Spacecraft`, `Scenario`, `Ensemble`, `VisibilityAnalysis`, `VisibilityRun`, `InterSatelliteAnalysis`, `InterSatelliteRun`, `Window`, `PowerBudgetAnalysis`, `PowerBudgetRun`, `SpacecraftPower`, `Eclipse` |
+| [Imaging](imaging.md) | `Aoi`, `OpticalPayload`, `OpticalAccessAnalysis`, `SarPayload`, `LookSide`, `SarAccessAnalysis`, `AccessRun` |
 | [Communications](comms.md) | `TxChain`, `RxChain`, `AmplifierTransmitter`, `NoiseTempReceiver`, `CascadeReceiver`, `Channel`, `ModCod`, `LinkBudget`, `PropagationLosses`, `fspl`, `freq_overlap` |
 | [Constellations](constellations.md) | `Constellation`, `ConstellationSatellite` |
 | [Data Providers](data.md) | `EOPProvider`, `Series` |

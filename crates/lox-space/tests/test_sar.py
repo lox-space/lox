@@ -142,8 +142,8 @@ class TestSarAccessAnalysis:
             aois=[("europe", EUROPE_AOI)],
             step=30 * lox.seconds,
         )
-        results = analysis.compute()
-        windows = results.windows("s1a", "europe")
+        results = analysis.run()
+        windows = results.windows.get(("s1a", "europe"), [])
         assert len(windows) > 0, "Sentinel-1A should image Western Europe within 6 hours"
 
     def test_interval_durations(self, scenario_single):
@@ -152,8 +152,8 @@ class TestSarAccessAnalysis:
             aois=[("europe", EUROPE_AOI)],
             step=30 * lox.seconds,
         )
-        results = analysis.compute()
-        for iv in results.windows("s1a", "europe"):
+        results = analysis.run()
+        for iv in results.windows.get(("s1a", "europe"), []):
             dur = float(iv.interval().duration())
             assert dur > 0, "zero-length SAR window"
             assert dur < 600, f"SAR window too long ({dur:.0f}s)"
@@ -164,8 +164,8 @@ class TestSarAccessAnalysis:
             aois=[("europe", EUROPE_AOI), ("pacific", PACIFIC_AOI)],
             step=30 * lox.seconds,
         )
-        results = analysis.compute()
-        all_ivs = results.all_windows()
+        results = analysis.run()
+        all_ivs = results.windows
         # Should have entries for both AOIs (even if pacific has zero windows)
         assert len(all_ivs) == 2
 
@@ -177,8 +177,8 @@ class TestSarAccessAnalysis:
             scenario,
             aois=[("europe", EUROPE_AOI)],
         )
-        results = analysis.compute()
-        assert len(results.all_windows()) == 0
+        results = analysis.run()
+        assert len(results.windows) == 0
 
     def test_left_vs_right_side_differ(self, s1a, six_hour_window):
         t0, t1 = six_hour_window
@@ -196,9 +196,9 @@ class TestSarAccessAnalysis:
             aois=[("europe", EUROPE_AOI)],
             step=30 * lox.seconds,
         )
-        results = analysis.compute()
-        windows_l = results.windows("s1a_l", "europe")
-        windows_r = results.windows("s1a_r", "europe")
+        results = analysis.run()
+        windows_l = results.windows.get(("s1a_l", "europe"), [])
+        windows_r = results.windows.get(("s1a_r", "europe"), [])
         assert len(windows_l) > 0, "Left-looking should have access over Europe"
         assert len(windows_r) > 0, "Right-looking should have access over Europe"
 
@@ -226,7 +226,7 @@ class TestSarAccessAnalysis:
     def test_results_repr(self, scenario_single):
         results = lox.SarAccessAnalysis(
             scenario_single, aois=[("europe", EUROPE_AOI)], step=30 * lox.seconds
-        ).compute()
+        ).run()
         assert "pair" in repr(results)
 
     def test_multiple_spacecraft(self, s1a, six_hour_window):
@@ -239,8 +239,8 @@ class TestSarAccessAnalysis:
             aois=[("europe", EUROPE_AOI)],
             step=30 * lox.seconds,
         )
-        results = analysis.compute()
-        all_ivs = results.all_windows()
+        results = analysis.run()
+        all_ivs = results.windows
         assert len(all_ivs) == 2, "Both spacecraft-AOI pairs should be present in results"
 
     def test_pass_direction_populated(self, scenario_single):
@@ -249,8 +249,8 @@ class TestSarAccessAnalysis:
             aois=[("europe", EUROPE_AOI)],
             step=30 * lox.seconds,
         )
-        results = analysis.compute()
-        for window in results.windows("s1a", "europe"):
+        results = analysis.run()
+        for window in results.windows.get(("s1a", "europe"), []):
             d = window.direction()
             assert d in (lox.PassDirection.Ascending, lox.PassDirection.Descending), (
                 f"unexpected direction: {d}"
@@ -272,7 +272,7 @@ class TestSarAccessAnalysis:
             aois=[("europe", EUROPE_AOI)],
             step=30 * lox.seconds,
         )
-        results = analysis.compute()
-        directions = {w.direction() for w in results.windows("s1a", "europe")}
+        results = analysis.run()
+        directions = {w.direction() for w in results.windows.get(("s1a", "europe"), [])}
         assert lox.PassDirection.Ascending in directions, "missing ascending pass"
         assert lox.PassDirection.Descending in directions, "missing descending pass"

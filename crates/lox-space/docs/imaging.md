@@ -12,7 +12,7 @@ Lox computes per-(spacecraft, AOI) access windows for two sensor families:
 - [SAR (synthetic aperture radar)](sar.md) — side-looking annular access geometry.
 
 Both share the same area-of-interest primitive ([`Aoi`](#areas-of-interest))
-and the same result type ([`AccessResults`](#results)). See the individual
+and the same result type ([`AccessRun`](#results)). See the individual
 sensor pages for worked examples.
 
 ## Areas of interest
@@ -46,15 +46,25 @@ analysis = lox.OpticalAccessAnalysis(
 
 ## Results
 
-Both `OpticalAccessAnalysis` and `SarAccessAnalysis` return an `AccessResults`
-object. Call `windows(spacecraft_name, aoi_name)` to retrieve the list of
-access windows for a given spacecraft–AOI pair:
+`run()` computes every (spacecraft, AOI) pair and returns an `AccessRun`, whose
+`windows` dict is keyed by pair. A pair that saw nothing maps to an empty list;
+a pair that *failed* appears in `errors` instead, so one unresolvable target
+cannot sink the batch.
 
 ```python
-results = analysis.compute()
-for window in results.windows("S2A", "rome"):
+run = analysis.run()
+for window in run.windows[("S2A", "rome")]:
     iv = window.interval()
     print(f"{iv.start()} → {iv.end()}  ({float(iv.duration()):.0f}s)")
+
+for pair, message in run.errors.items():
+    print(f"{pair} failed: {message}")
+```
+
+For a single pair, `single()` skips the fan-out entirely:
+
+```python
+windows = analysis.single(spacecraft, "rome")
 ```
 
 ### Pass direction
@@ -66,7 +76,7 @@ disambiguating the two near-identical windows per orbit produced by
 `SarPayload` with `LookSide.Either`.
 
 ```python
-for window in results.windows("s1a", "europe"):
+for window in run.windows[("s1a", "europe")]:
     print(window.interval(), window.direction())
 ```
 
@@ -82,6 +92,6 @@ crossing). The midpoint sample is representative.
 
 ---
 
-::: lox_space.AccessResults
+::: lox_space.AccessRun
     options:
       show_source: false

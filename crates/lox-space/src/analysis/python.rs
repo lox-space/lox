@@ -46,6 +46,7 @@ create_exception!(
 use crate::analysis::assets::{AssetId, GroundStation, Scenario, Spacecraft};
 use crate::analysis::events::{Event, ZeroCrossing};
 use crate::analysis::imaging::{AccessError, Aoi, AoiId, LookSide, OpticalPayload, SarPayload};
+use crate::analysis::sun::{AnalyticalSunEphemeris, AnalyticalSunEphemerisError};
 use crate::analysis::visibility::{ElevationMask, ElevationMaskError, Pass};
 use crate::bodies::Origin;
 use crate::bodies::python::PyOrigin;
@@ -472,6 +473,9 @@ impl PyEnsemble {
 pub enum EphemerisHandle<'a> {
     /// A borrowed SPK kernel.
     Spk(&'a Spk),
+    /// The analytical Sun model — accurate enough for eclipse geometry in an
+    /// Earth-centred scenario, and it needs no kernel.
+    AnalyticalSun(AnalyticalSunEphemeris),
     /// No ephemeris; fails if anything actually looks a body up.
     Missing(NoEphemeris),
 }
@@ -484,6 +488,8 @@ pub enum EphemerisHandle<'a> {
 pub enum EphemerisHandleError {
     /// The SPK lookup failed.
     Spk(DafSpkError),
+    /// The analytical Sun model was asked for something it cannot provide.
+    AnalyticalSun(AnalyticalSunEphemerisError),
     /// No ephemeris was supplied.
     Missing(NoEphemerisError),
 }
@@ -492,6 +498,7 @@ impl std::fmt::Display for EphemerisHandleError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Spk(e) => e.fmt(f),
+            Self::AnalyticalSun(e) => e.fmt(f),
             Self::Missing(e) => e.fmt(f),
         }
     }
@@ -501,6 +508,7 @@ impl std::error::Error for EphemerisHandleError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::Spk(e) => Some(e),
+            Self::AnalyticalSun(e) => Some(e),
             Self::Missing(e) => Some(e),
         }
     }
@@ -518,6 +526,12 @@ impl From<NoEphemerisError> for EphemerisHandleError {
     }
 }
 
+impl From<AnalyticalSunEphemerisError> for EphemerisHandleError {
+    fn from(e: AnalyticalSunEphemerisError) -> Self {
+        Self::AnalyticalSun(e)
+    }
+}
+
 impl Ephemeris for EphemerisHandle<'_> {
     type Error = EphemerisHandleError;
 
@@ -529,6 +543,7 @@ impl Ephemeris for EphemerisHandle<'_> {
     ) -> Result<Cartesian, Self::Error> {
         match self {
             Self::Spk(spk) => Ok(spk.state(time, origin, target)?),
+            Self::AnalyticalSun(sun) => Ok(sun.state(time, origin, target)?),
             Self::Missing(none) => Ok(none.state(time, origin, target)?),
         }
     }
@@ -542,6 +557,15 @@ fn bind_ephemeris<'a>(_py: Python<'_>, ephemeris: Option<&'a Py<PySpk>>) -> Ephe
     match ephemeris {
         Some(spk) => EphemerisHandle::Spk(&spk.get().0),
         None => EphemerisHandle::Missing(NoEphemeris),
+    }
+}
+
+/// Like [`bind_ephemeris`], but falls back to the analytical Sun rather than to
+/// nothing — for analyses whose only ephemeris need *is* the Sun.
+fn bind_sun_ephemeris<'a>(ephemeris: Option<&'a Py<PySpk>>) -> EphemerisHandle<'a> {
+    match ephemeris {
+        Some(spk) => EphemerisHandle::Spk(&spk.get().0),
+        None => EphemerisHandle::AnalyticalSun(AnalyticalSunEphemeris),
     }
 }
 
@@ -1322,8 +1346,8 @@ impl PyPass {
 ///
 /// Args:
 ///     scenario: Scenario containing the spacecraft and time interval.
-///     ephemeris: SPK ephemeris; required, since the Sun position is always
-///         needed.
+///     ephemeris: Optional SPK ephemeris for the Sun. When omitted, an
+///         analytical model is used, which is valid for Earth-centred scenarios.
 ///     ensemble: Optional pre-computed Ensemble.
 ///     step: Sampling step for detection and for the continuous channels
 ///         (default: 60 s).
@@ -1331,17 +1355,17 @@ impl PyPass {
 pub struct PyPowerBudgetAnalysis {
     scenario: Scenario,
     ensemble: Option<Ensemble<AssetId, Origin, Frame>>,
-    ephemeris: Py<PySpk>,
+    ephemeris: Option<Py<PySpk>>,
     step: TimeDelta,
 }
 
 #[pymethods]
 impl PyPowerBudgetAnalysis {
     #[new]
-    #[pyo3(signature = (scenario, ephemeris, ensemble=None, step=None))]
+    #[pyo3(signature = (scenario, ephemeris=None, ensemble=None, step=None))]
     fn new(
         scenario: PyScenario,
-        ephemeris: Py<PySpk>,
+        ephemeris: Option<Py<PySpk>>,
         ensemble: Option<PyEnsemble>,
         step: Option<PyTimeDelta>,
     ) -> Self {
@@ -1368,7 +1392,7 @@ impl PyPowerBudgetAnalysis {
     ) -> PyResult<Vec<PyEclipse>> {
         let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
         let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
-        let eph = bind_ephemeris(py, Some(&self.ephemeris));
+        let eph = bind_sun_ephemeris(self.ephemeris.as_ref());
         let eclipses = py
             .detach(|| {
                 self.build(&ensemble, &eph)
@@ -1394,7 +1418,7 @@ impl PyPowerBudgetAnalysis {
     ) -> PyResult<PyTimeSeries> {
         let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
         let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
-        let eph = bind_ephemeris(py, Some(&self.ephemeris));
+        let eph = bind_sun_ephemeris(self.ephemeris.as_ref());
         let series = py
             .detach(|| {
                 self.build(&ensemble, &eph)
@@ -1417,7 +1441,7 @@ impl PyPowerBudgetAnalysis {
     ) -> PyResult<PyTimeSeries> {
         let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
         let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
-        let eph = bind_ephemeris(py, Some(&self.ephemeris));
+        let eph = bind_sun_ephemeris(self.ephemeris.as_ref());
         let series = py
             .detach(|| {
                 self.build(&ensemble, &eph)
@@ -1442,7 +1466,7 @@ impl PyPowerBudgetAnalysis {
         let ensemble = resolve_ensemble(&self.scenario, &self.ensemble)?;
         let interval = interval.map_or(*self.scenario.interval(), |i| i.0);
         let mode = parallelism(parallel, workers);
-        let eph = bind_ephemeris(py, Some(&self.ephemeris));
+        let eph = bind_sun_ephemeris(self.ephemeris.as_ref());
         let results = py.detach(|| self.build(&ensemble, &eph).run(interval, mode));
 
         let mut spacecraft = HashMap::new();

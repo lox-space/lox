@@ -205,11 +205,13 @@ class TestOneWebEuropeBenchmark:
     ):
         """Test visibility analysis on a small sample."""
         scenario, ensemble = small_scenario_and_ensemble
-        analysis = lox.VisibilityAnalysis(scenario, ensemble=ensemble)
-        results = analysis.compute(ephemeris)
+        analysis = lox.VisibilityAnalysis(
+            scenario, ensemble=ensemble, ephemeris=ephemeris
+        )
+        results = analysis.run()
 
         sample_ground_assets = europe_ground_assets_coarse[:10]
-        assert results.num_pairs() == len(oneweb_sample_small) * len(
+        assert len(results.passes) == len(oneweb_sample_small) * len(
             sample_ground_assets
         )
 
@@ -223,11 +225,13 @@ class TestOneWebEuropeBenchmark:
     ):
         """Test visibility analysis on a medium sample."""
         scenario, ensemble = medium_scenario_and_ensemble
-        analysis = lox.VisibilityAnalysis(scenario, ensemble=ensemble)
-        results = analysis.compute(ephemeris)
+        analysis = lox.VisibilityAnalysis(
+            scenario, ensemble=ensemble, ephemeris=ephemeris
+        )
+        results = analysis.run()
 
         sample_ground_assets = europe_ground_assets_coarse[:50]
-        assert results.num_pairs() == len(oneweb_sample_medium) * len(
+        assert len(results.passes) == len(oneweb_sample_medium) * len(
             sample_ground_assets
         )
 
@@ -241,10 +245,12 @@ class TestOneWebEuropeBenchmark:
     ):
         """Test visibility analysis on a large subset (marked as slow)."""
         scenario, ensemble = large_scenario_and_ensemble
-        analysis = lox.VisibilityAnalysis(scenario, ensemble=ensemble)
-        results = analysis.compute(ephemeris)
+        analysis = lox.VisibilityAnalysis(
+            scenario, ensemble=ensemble, ephemeris=ephemeris
+        )
+        results = analysis.run()
 
         sample_ground_assets = europe_ground_assets[:100]
-        assert results.num_pairs() == len(oneweb_sample_large) * len(
+        assert len(results.passes) == len(oneweb_sample_large) * len(
             sample_ground_assets
         )

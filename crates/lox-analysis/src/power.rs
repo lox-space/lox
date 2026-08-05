@@ -87,11 +87,10 @@ where
     }
 }
 
-// The eager `PowerBudgetAnalysis` / `PowerBudgetResults` implementation moved to
-// `crate::legacy` for one commit while the Python bindings are ported. Power is
-// the one analysis the pipeline does not cover uniformly: only eclipses are
-// event-shaped, so the replacement exposes those as items and the continuous
-// beta-angle and solar-flux channels as sampled series.
+// The eager `PowerBudgetAnalysis` and its aggregate `PowerBudgetResults` are
+// gone. Power is the one analysis the pipeline does not cover uniformly: only
+// eclipses are event-shaped, so the replacement exposes those as items and the
+// continuous beta-angle and solar-flux channels as sampled series.
 pub use crate::pipeline::analyses::{PowerBudgetAnalysis, SpacecraftPower};
 
 // ---------------------------------------------------------------------------

@@ -567,249 +567,279 @@ class Constellation:
     def __len__(self) -> int: ...
     def __repr__(self) -> str: ...
 
-class PowerBudgetAnalysis:
-    """Power budget analysis for spacecraft in a scenario.
+class AnalysisError(Exception):
+    """Base class for analysis failures."""
 
-    Computes eclipse intervals, sun beta angle, and solar flux for each
-    spacecraft.  The shadow model is cylindrical (umbra only) — penumbra
-    is **not** modelled.
+class RotationFailed(AnalysisError):
+    """A frame rotation failed."""
+
+class EphemerisFailed(AnalysisError):
+    """An ephemeris lookup failed."""
+
+class DetectionFailed(AnalysisError):
+    """Root-finding or event detection failed."""
+
+class Window:
+    """A contact window: an interval with no observables attached."""
+
+    @property
+    def interval(self) -> Interval: ...
+    @property
+    def start(self) -> Time: ...
+    @property
+    def end(self) -> Time: ...
+    @property
+    def duration(self) -> TimeDelta: ...
+    def __repr__(self) -> str: ...
+
+class Eclipse:
+    """A single eclipse interval (umbra only; penumbra is not modelled)."""
+
+    @property
+    def interval(self) -> Interval: ...
+    @property
+    def start(self) -> Time: ...
+    @property
+    def end(self) -> Time: ...
+    @property
+    def duration(self) -> TimeDelta: ...
+    def __repr__(self) -> str: ...
+
+class SpacecraftPower:
+    """One spacecraft's power-budget outputs."""
+
+    @property
+    def eclipses(self) -> list[Eclipse]: ...
+    @property
+    def beta_angle(self) -> TimeSeries:
+        """Beta angle over the arc, in radians."""
+        ...
+    @property
+    def solar_flux(self) -> TimeSeries:
+        """Solar flux over the arc, in W/m²."""
+        ...
+    def eclipse_fraction(self, interval: Interval) -> float:
+        """Fraction of ``interval`` spent in eclipse, in [0, 1].
+
+        Takes the interval explicitly because the eclipse list alone cannot say
+        whether "no eclipses" covers a week or a minute.
+        """
+        ...
+    def sunlit_fraction(self, interval: Interval) -> float:
+        """Fraction of ``interval`` spent sunlit, ``1 - eclipse_fraction``."""
+        ...
+    def __repr__(self) -> str: ...
+
+class PowerBudgetRun:
+    """Result of :meth:`PowerBudgetAnalysis.run`."""
+
+    @property
+    def spacecraft(self) -> dict[str, SpacecraftPower]: ...
+    @property
+    def errors(self) -> dict[str, str]:
+        """Error message per spacecraft that failed. Absent ids succeeded."""
+        ...
+    def __repr__(self) -> str: ...
+
+class PowerBudgetAnalysis:
+    """Eclipse intervals plus the continuous beta-angle and solar-flux channels.
+
+    Only eclipses are event-shaped; beta angle and solar flux have a value at
+    every instant, so they are sampled rather than detected.
 
     Args:
-        scenario: Scenario containing spacecraft and time interval.
+        scenario: Scenario containing the spacecraft and time interval.
+        ephemeris: Optional SPK ephemeris for the Sun. When omitted, an
+            analytical model is used, valid for Earth-centred scenarios.
         ensemble: Optional pre-computed Ensemble.
-        step: Optional time step for sampling / event detection (default: 60s).
-        spacecraft_ids: Optional list of spacecraft ids to restrict the analysis.
+        step: Sampling step for detection and the continuous channels
+            (default: 60 s).
 
     Examples:
-        >>> analysis = lox.PowerBudgetAnalysis(scenario)
-        >>> results = analysis.compute()          # analytical Sun
-        >>> results = analysis.compute(ephemeris)  # SPK Sun
+        >>> analysis = lox.PowerBudgetAnalysis(scenario)  # analytical Sun
+        >>> eclipses = analysis.eclipses(spacecraft)
+        >>> run = analysis.run()
+        >>> run.spacecraft["sc1"].beta_angle
     """
     def __new__(
         cls,
         scenario: Scenario,
+        ephemeris: SPK | None = None,
         ensemble: Ensemble | None = None,
         step: TimeDelta | None = None,
-        spacecraft_ids: list[str] | None = None,
-        constellation_id: str | None = None,
     ) -> Self: ...
-    def compute(self, ephemeris: SPK | None = None) -> "PowerBudgetResults":
-        """Compute the power budget analysis.
+    def eclipses(
+        self, spacecraft: Spacecraft, interval: Interval | None = None
+    ) -> list[Eclipse]:
+        """Compute one spacecraft's eclipse intervals."""
+        ...
+    def beta_angle(
+        self, spacecraft: Spacecraft, interval: Interval | None = None
+    ) -> TimeSeries:
+        """Sample one spacecraft's beta angle, in radians."""
+        ...
+    def solar_flux(
+        self, spacecraft: Spacecraft, interval: Interval | None = None
+    ) -> TimeSeries:
+        """Sample one spacecraft's solar flux, in W/m²."""
+        ...
+    def run(
+        self,
+        interval: Interval | None = None,
+        parallel: bool = True,
+        workers: int | None = None,
+    ) -> PowerBudgetRun:
+        """Compute all three channels for every spacecraft in the scenario."""
+        ...
+    def __repr__(self) -> str: ...
 
-        Args:
-            ephemeris: Optional SPK ephemeris for Sun position. When omitted,
-                an analytical model is used (valid for Earth-centred scenarios).
+class VisibilityRun:
+    """Result of :meth:`VisibilityAnalysis.run`."""
 
-        Returns:
-            PowerBudgetResults with eclipse intervals, beta angles, and
-            solar flux for each spacecraft.
+    @property
+    def passes(self) -> dict[tuple[str, str], list[Pass]]:
+        """Passes per (ground station, spacecraft) pair.
+
+        A pair with no passes maps to an empty list rather than being absent.
         """
         ...
-
-class PowerBudgetResults:
-    """Results of a power budget analysis.
-
-    Provides access to eclipse intervals, eclipse/sunlit fractions,
-    beta-angle time series, and solar-flux time series for each spacecraft.
-    """
-    def eclipse_intervals(self, id: str) -> list[Interval]:
-        """Return eclipse intervals for a specific spacecraft.
-
-        Args:
-            id: Spacecraft identifier.
-
-        Returns:
-            List of Interval objects, or empty list if id not found.
-        """
+    @property
+    def errors(self) -> dict[tuple[str, str], str]:
+        """Error message per pair that failed. Absent pairs succeeded."""
         ...
-    def eclipse_fraction(self, id: str) -> float | None:
-        """Return eclipse fraction (0 = fully sunlit, 1 = always eclipsed).
-
-        Args:
-            id: Spacecraft identifier.
-
-        Returns:
-            Eclipse fraction, or None if id not found.
-        """
-        ...
-    def sunlit_fraction(self, id: str) -> float | None:
-        """Return sunlit fraction (1 - eclipse_fraction).
-
-        Args:
-            id: Spacecraft identifier.
-
-        Returns:
-            Sunlit fraction, or None if id not found.
-        """
-        ...
-    def beta_angles(self, id: str) -> TimeSeries | None:
-        """Return beta-angle time series (radians).
-
-        Args:
-            id: Spacecraft identifier.
-
-        Returns:
-            TimeSeries of beta angles in radians, or None if id not found.
-        """
-        ...
-    def solar_flux(self, id: str) -> TimeSeries | None:
-        """Return solar-flux time series (W/m²).
-
-        Args:
-            id: Spacecraft identifier.
-
-        Returns:
-            TimeSeries of solar flux in W/m², or None if id not found.
-        """
-        ...
+    def __repr__(self) -> str: ...
 
 class VisibilityAnalysis:
-    """Computes ground-station-to-spacecraft and inter-satellite visibility.
-
-    Ground-to-space pairs are always computed when ground assets are present.
-    Inter-satellite pairs are additionally computed when ``inter_satellite``
-    is set to True.
+    """Ground-station-to-spacecraft visibility, yielding passes.
 
     Args:
-        scenario: Scenario containing spacecraft, ground stations, and
-            time interval.
-        ensemble: Optional pre-computed Ensemble. If not provided, the
-            scenario is propagated automatically.
-        occulting_bodies: Optional list of additional occulting bodies for
-            line-of-sight checking. For inter-satellite visibility, the
-            scenario's central body is always checked automatically.
-        step: Optional time step for event detection (default: 60s).
-        min_pass_duration: Optional minimum pass duration. Passes
-            shorter than this value may be missed. Enables two-level stepping
-            for faster detection.
-        inter_satellite: If True, also compute inter-satellite visibility
-            for all unique spacecraft pairs (default: False).
-        ground_space_filter: Optional callable
-            ``(GroundStation, Spacecraft) -> bool`` that receives a ground
-            station and a spacecraft and returns whether the pair should be
-            evaluated. Called once per candidate pair before the parallel
-            phase.
-        inter_satellite_filter: Optional callable
-            ``(Spacecraft, Spacecraft) -> bool`` that receives two spacecraft
-            and returns whether the pair should be evaluated. Called once per
-            candidate pair before the parallel phase. When provided,
-            inter-satellite visibility is automatically enabled.
-        min_range: Optional minimum range constraint for inter-satellite pairs.
-        max_range: Optional maximum range constraint for inter-satellite pairs.
+        scenario: Scenario containing spacecraft, ground stations, and time
+            interval.
+        ensemble: Optional pre-computed Ensemble. If omitted, the scenario is
+            propagated automatically.
+        ephemeris: SPK ephemeris. Required only when ``occulting_bodies`` is set.
+        occulting_bodies: Additional bodies to check for line-of-sight
+            occultation, beyond the trajectories' own origin.
+        step: Sampling step for detection and observables (default: 60 s).
+        min_pass_duration: Discards passes shorter than this, and coarsens the
+            scan as far as that allows.
+        min_range: Discards geometry closer than this.
+        max_range: Discards geometry farther than this.
 
     Examples:
-        >>> scenario = lox.Scenario(t0, t1, spacecraft=[sc], ground_stations=[gs])
-        >>> analysis = lox.VisibilityAnalysis(scenario, step=lox.TimeDelta(60))
-        >>> results = analysis.compute(spk)
+        >>> analysis = lox.VisibilityAnalysis(scenario)
+        >>> passes = analysis.single(station, spacecraft)
+        >>> run = analysis.run()
+        >>> run.passes[("station", "spacecraft")]
     """
     def __new__(
         cls,
         scenario: Scenario,
         ensemble: Ensemble | None = None,
-        occulting_bodies: list[str | int | Origin] | None = None,
+        ephemeris: SPK | None = None,
+        occulting_bodies: list[Origin] | None = None,
         step: TimeDelta | None = None,
         min_pass_duration: TimeDelta | None = None,
-        inter_satellite: bool = False,
-        ground_space_filter: Callable[[GroundStation, Spacecraft], bool] | None = None,
-        inter_satellite_filter: Callable[[Spacecraft, Spacecraft], bool] | None = None,
         min_range: Distance | None = None,
         max_range: Distance | None = None,
     ) -> Self: ...
-    def compute(self, ephemeris: SPK) -> VisibilityResults:
-        """Compute visibility intervals for all pairs.
-
-        If no ensemble was provided at construction, the scenario is
-        propagated automatically (trajectories transformed to ICRF).
-
-        Args:
-            ephemeris: SPK ephemeris data.
-
-        Returns:
-            VisibilityResults containing intervals for all pairs.
-        """
-        ...
-
-class VisibilityResults:
-    """Results of a visibility analysis.
-
-    Provides access to visibility intervals and passes. Intervals (time
-    windows) are computed eagerly; observables-rich Pass objects are
-    computed on demand.
-    """
-    def intervals(self, id1: str, id2: str) -> list[Interval]:
-        """Return visibility intervals for a specific pair.
-
-        Args:
-            id1: First asset identifier (ground or space).
-            id2: Second asset identifier (space).
-
-        Returns:
-            List of Interval objects, or empty list if pair not found.
-        """
-        ...
-    def all_intervals(self) -> dict[tuple[str, str], list[Interval]]:
-        """Return all intervals for all pairs.
-
-        Returns:
-            Dictionary mapping (id1, id2) to list of Interval objects.
-        """
-        ...
-    def ground_space_intervals(self) -> dict[tuple[str, str], list[Interval]]:
-        """Return intervals for ground-to-space pairs only.
-
-        Returns:
-            Dictionary mapping (ground_id, space_id) to list of Interval objects.
-        """
-        ...
-    def inter_satellite_intervals(self) -> dict[tuple[str, str], list[Interval]]:
-        """Return intervals for inter-satellite pairs only.
-
-        Returns:
-            Dictionary mapping (sc1_id, sc2_id) to list of Interval objects.
-        """
-        ...
-    def passes(self, ground_id: str, space_id: str) -> list[Pass]:
-        """Compute passes with observables for a specific ground-to-space pair.
-
-        This is more expensive than ``intervals()`` as it computes azimuth,
-        elevation, range, and range rate for each time step.
+    def single(
+        self,
+        ground_station: GroundStation,
+        spacecraft: Spacecraft,
+        interval: Interval | None = None,
+    ) -> list[Pass]:
+        """Compute the passes for one pair.
 
         Raises:
-            ValueError: If the pair is an inter-satellite pair.
+            AnalysisError: if detection fails or the spacecraft has no
+                trajectory in the ensemble.
+        """
+        ...
+    def windows(
+        self,
+        ground_station: GroundStation,
+        spacecraft: Spacecraft,
+        interval: Interval | None = None,
+    ) -> list[Window]:
+        """Compute the contact windows for one pair, without observables.
+
+        Cheaper than :meth:`single` by roughly a third. Use it when only the
+        timing matters.
+        """
+        ...
+    def run(
+        self,
+        interval: Interval | None = None,
+        parallel: bool = True,
+        workers: int | None = None,
+    ) -> VisibilityRun:
+        """Compute passes for every (ground station, spacecraft) pair.
 
         Args:
-            ground_id: Ground asset identifier.
-            space_id: Space asset identifier.
-
-        Returns:
-            List of Pass objects, or empty list if pair not found.
+            interval: Optional interval; defaults to the scenario's.
+            parallel: Fan out across threads.
+            workers: Thread count. ``None`` uses the global pool; a number
+                builds a pool local to this call.
         """
         ...
-    def all_passes(self) -> dict[tuple[str, str], list[Pass]]:
-        """Compute passes for all ground-to-space pairs.
+    def __repr__(self) -> str: ...
 
-        Inter-satellite pairs are skipped.
+class InterSatelliteRun:
+    """Result of :meth:`InterSatelliteAnalysis.run`."""
 
-        Returns:
-            Dictionary mapping (ground_id, space_id) to list of Pass objects.
-        """
-        ...
-    def pair_ids(self) -> list[tuple[str, str]]:
-        """Return all pair identifiers."""
-        ...
-    def ground_space_pair_ids(self) -> list[tuple[str, str]]:
-        """Return pair identifiers for ground-to-space pairs only."""
-        ...
-    def inter_satellite_pair_ids(self) -> list[tuple[str, str]]:
-        """Return pair identifiers for inter-satellite pairs only."""
-        ...
-    def num_pairs(self) -> int:
-        """Return the total number of pairs."""
-        ...
-    def total_intervals(self) -> int:
-        """Return the total number of visibility intervals across all pairs."""
-        ...
+    @property
+    def windows(self) -> dict[tuple[str, str], list[Window]]: ...
+    @property
+    def errors(self) -> dict[tuple[str, str], str]: ...
+    def __repr__(self) -> str: ...
 
+class InterSatelliteAnalysis:
+    """Spacecraft-to-spacecraft contacts, yielding windows.
+
+    A separate class from :class:`VisibilityAnalysis` because the item type
+    differs: sat-to-sat contacts have no ground-station observables, so they
+    cannot be passes. Replaces the old ``inter_satellite=True`` flag.
+
+    Args:
+        scenario: Scenario containing the spacecraft and time interval.
+        ensemble: Optional pre-computed Ensemble.
+        ephemeris: SPK ephemeris. Required only when ``occulting_bodies`` is set.
+        occulting_bodies: Bodies to check beyond the scenario's central body,
+            which is always checked.
+        step: Sampling step for detection (default: 60 s).
+        min_duration: Discards windows shorter than this.
+        min_range: Discards contacts closer than this.
+        max_range: Discards contacts farther than this.
+    """
+    def __new__(
+        cls,
+        scenario: Scenario,
+        ensemble: Ensemble | None = None,
+        ephemeris: SPK | None = None,
+        occulting_bodies: list[Origin] | None = None,
+        step: TimeDelta | None = None,
+        min_duration: TimeDelta | None = None,
+        min_range: Distance | None = None,
+        max_range: Distance | None = None,
+    ) -> Self: ...
+    def single(
+        self,
+        first: Spacecraft,
+        second: Spacecraft,
+        interval: Interval | None = None,
+    ) -> list[Window]:
+        """Compute the contact windows for one spacecraft pair."""
+        ...
+    def run(
+        self,
+        interval: Interval | None = None,
+        parallel: bool = True,
+        workers: int | None = None,
+    ) -> InterSatelliteRun:
+        """Compute contact windows for every unordered spacecraft pair."""
+        ...
+    def __repr__(self) -> str: ...
 class ElevationMask:
     """Defines elevation constraints for visibility analysis.
 
@@ -3248,26 +3278,41 @@ class OpticalPayload:
         """
         ...
 
-class OpticalAccessAnalysis:
-    """AOI optical access analysis: computes imaging windows for spacecraft over AOIs.
+class AccessRun:
+    """Result of an access analysis ``run``.
 
-    Optical payloads are read from each spacecraft; spacecraft without a
-    payload are silently skipped.
+    Shared by the optical and SAR analyses: the item type is the same, only the
+    payload geometry that produced it differs.
+    """
+
+    @property
+    def windows(self) -> dict[tuple[str, str], list[AccessWindow]]:
+        """Access windows per (spacecraft, AOI) pair."""
+        ...
+    @property
+    def errors(self) -> dict[tuple[str, str], str]:
+        """Error message per pair that failed. Absent pairs succeeded."""
+        ...
+    def __repr__(self) -> str: ...
+
+class OpticalAccessAnalysis:
+    """AOI optical access: imaging windows for spacecraft with an optical payload.
 
     Args:
-        scenario: Scenario containing spacecraft with ``optical_payload``.
-        aois: List of (id, Aoi) tuples defining the areas of interest.
+        scenario: Scenario containing the spacecraft and time interval.
+        aois: List of ``(id, Aoi)`` tuples defining the areas of interest.
         ensemble: Optional pre-computed Ensemble.
-        step: Optional time step for event detection (default: 60s).
-        body_fixed_frame: Optional body-fixed frame override.
+        step: Sampling step for detection (default: 60 s).
+        body_fixed_frame: Body-fixed frame override; defaults to the IAU frame
+            of the scenario's origin.
 
     Examples:
         >>> payload = lox.OpticalPayload.off_nadir(20.0 * lox.km, 30.0 * lox.deg)
         >>> sc = lox.Spacecraft("sat1", orbit, optical_payload=payload)
         >>> scenario = lox.Scenario(t0, t1, spacecraft=[sc])
-        >>> aoi = lox.Aoi.from_geojson('{"type":"Polygon","coordinates":[[[10,45],[11,45],[11,46],[10,46],[10,45]]]}')
         >>> analysis = lox.OpticalAccessAnalysis(scenario, aois=[("rome", aoi)])
-        >>> results = analysis.compute()
+        >>> run = analysis.run()
+        >>> run.windows[("sat1", "rome")]
     """
     def __new__(
         cls,
@@ -3277,34 +3322,33 @@ class OpticalAccessAnalysis:
         step: TimeDelta | None = None,
         body_fixed_frame: Frame | None = None,
     ) -> Self: ...
-    def compute(self) -> "AccessResults":
-        """Compute access intervals for all (spacecraft, AOI) pairs.
+    def single(
+        self,
+        spacecraft: Spacecraft,
+        aoi_id: str,
+        interval: Interval | None = None,
+    ) -> list[AccessWindow]:
+        """Compute access windows for one (spacecraft, AOI) pair.
 
-        If no ensemble was provided, the scenario is propagated automatically.
-        Spacecraft without an optical payload are skipped.
+        Raises:
+            AnalysisError: if the spacecraft carries no optical payload, has no
+                trajectory, or detection fails.
+            KeyError: if ``aoi_id`` is not one of the configured AOIs.
         """
         ...
+    def run(
+        self,
+        interval: Interval | None = None,
+        parallel: bool = True,
+        workers: int | None = None,
+    ) -> AccessRun:
+        """Compute access windows for every (spacecraft, AOI) pair.
 
-class AccessResults:
-    """Results of an access analysis.
-
-    Provides access windows for each (spacecraft, AOI) pair.
-    """
-    def windows(self, spacecraft_id: str, aoi_id: str) -> list[AccessWindow]:
-        """Return access windows for a specific (spacecraft, AOI) pair.
-
-        Args:
-            spacecraft_id: Spacecraft identifier.
-            aoi_id: AOI identifier.
-
-        Returns:
-            List of AccessWindow objects, or empty list if pair not found.
+        Spacecraft without an optical payload are not targets, so they appear in
+        neither ``.windows`` nor ``.errors``.
         """
         ...
-    def all_windows(self) -> dict[tuple[str, str], list[AccessWindow]]:
-        """Return all access windows for all (spacecraft, AOI) pairs."""
-        ...
-
+    def __repr__(self) -> str: ...
 
 class PassDirection:
     """Direction of orbital motion at the time of an access window: moving
@@ -3369,25 +3413,23 @@ class SarPayload:
 
 
 class SarAccessAnalysis:
-    """SAR access analysis: per-(spacecraft, AOI) access windows.
-
-    Only spacecraft carrying a ``sar_payload`` contribute.
+    """AOI SAR access: imaging windows for spacecraft with a SAR payload.
 
     Args:
-        scenario: Scenario containing spacecraft with ``sar_payload``.
-        aois: List of (id, Aoi) tuples defining the areas of interest.
+        scenario: Scenario containing the spacecraft and time interval.
+        aois: List of ``(id, Aoi)`` tuples defining the areas of interest.
         ensemble: Optional pre-computed Ensemble.
-        step: Optional time step for event detection (default: 60s).
-        body_fixed_frame: Optional body-fixed frame override.
+        step: Sampling step for detection (default: 60 s).
+        body_fixed_frame: Body-fixed frame override; defaults to the IAU frame
+            of the scenario's origin.
 
     Examples:
         >>> import lox_space as lox
         >>> payload = lox.SarPayload.with_incidence_angles(29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right)
         >>> sc = lox.Spacecraft("s1a", orbit, sar_payload=payload)
         >>> scenario = lox.Scenario(t0, t1, spacecraft=[sc])
-        >>> aoi = lox.Aoi([(10, 45), (11, 45), (11, 46), (10, 46), (10, 45)])
         >>> analysis = lox.SarAccessAnalysis(scenario, aois=[("rome", aoi)])
-        >>> results = analysis.compute()
+        >>> run = analysis.run()
     """
 
     def __new__(
@@ -3398,13 +3440,29 @@ class SarAccessAnalysis:
         step: TimeDelta | None = None,
         body_fixed_frame: Frame | None = None,
     ) -> Self: ...
-    def compute(self) -> "AccessResults":
-        """Compute access intervals for all (spacecraft, AOI) pairs.
+    def single(
+        self,
+        spacecraft: Spacecraft,
+        aoi_id: str,
+        interval: Interval | None = None,
+    ) -> list[AccessWindow]:
+        """Compute access windows for one (spacecraft, AOI) pair.
 
-        If no ensemble was provided, the scenario is propagated automatically.
-        Spacecraft without a SAR payload are skipped.
+        Raises:
+            AnalysisError: if the spacecraft carries no SAR payload, has no
+                trajectory, or detection fails.
+            KeyError: if ``aoi_id`` is not one of the configured AOIs.
         """
         ...
+    def run(
+        self,
+        interval: Interval | None = None,
+        parallel: bool = True,
+        workers: int | None = None,
+    ) -> AccessRun:
+        """Compute access windows for every (spacecraft, AOI) pair."""
+        ...
+    def __repr__(self) -> str: ...
 
 # ITU-R atmospheric propagation
 

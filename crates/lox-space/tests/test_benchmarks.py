@@ -37,5 +37,5 @@ def test_visibility_benchmark(scenario, ensemble, oneweb, estrack, ephemeris):
     analysis = lox.VisibilityAnalysis(
         scenario, ensemble=ensemble, min_pass_duration=lox.TimeDelta(600)
     )
-    results = analysis.compute(ephemeris)
-    assert results.num_pairs() == len(oneweb) * len(estrack)
+    results = analysis.run()
+    assert len(results.passes) == len(oneweb) * len(estrack)

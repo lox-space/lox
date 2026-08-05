@@ -200,9 +200,8 @@ where
     }
 }
 
-// The eager `AccessAnalysis` moved to `crate::legacy` for one commit while the
-// Python bindings are ported; this is the pipeline-backed replacement at the
-// canonical path.
+// The eager `AccessAnalysis` and its aggregate `AccessResults` are gone; this is
+// the pipeline-backed replacement at the canonical path.
 pub use crate::pipeline::analyses::{AccessAnalysis, OpticalAccessAnalysis, SarAccessAnalysis};
 
 #[cfg(test)]
