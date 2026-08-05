@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use std::collections::HashMap;
+use std::ops::Deref;
 
 use lox_bodies::{
     CoordinateOrigin, Origin, TryMeanRadius, TrySpheroid, UndefinedOriginPropertyError,
@@ -18,7 +19,6 @@ use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
 use lox_time::time_scales::{Tdb, TimeScale};
-use rayon::prelude::*;
 use std::f64::consts::PI;
 use thiserror::Error;
 
@@ -31,6 +31,7 @@ use crate::events::{
     AdaptiveSampler, DetectError, DetectFn, DetectFnExt as _, Differentiable, IntervalIterExt as _,
     RateBounded, UniformSampler,
 };
+use crate::par::try_map;
 use lox_orbits::ground::{GroundLocation, Observables};
 use lox_orbits::orbits::{Ensemble, Trajectory};
 
@@ -365,22 +366,34 @@ impl From<RotationError> for EvalError {
 
 /// Elevation above mask for a ground station / spacecraft pair.
 ///
-/// Generic over origin `O` and frame `R`. The detect function:
+/// The detect function:
 /// 1. Interpolates the spacecraft trajectory at the given time
 /// 2. Rotates the state into the body-fixed frame via `TryRotation<R, Frame, TimeScale>`
 /// 3. Computes observables (azimuth, elevation, range, range rate)
 /// 4. Returns elevation minus minimum elevation from the mask
-pub(crate) struct ElevationDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    pub(crate) gs: &'a GroundLocation,
-    pub(crate) mask: &'a ElevationMask,
-    pub(crate) sc: &'a Trajectory<O, R>,
+///
+/// `T` is a *trajectory handle* rather than a plain reference: `&Trajectory` on
+/// the borrowing paths, `Arc<Trajectory>` where the detector has to outlive the
+/// scope that built it, which is what the streaming engine's `'static` iterators
+/// require. Every detector in this module is generic the same way, so one
+/// implementation serves both.
+///
+/// The bound is [`Deref`] rather than [`Borrow`](std::borrow::Borrow) on
+/// purpose: `Deref::Target` is unique, so `O` and `R` are inferred from the
+/// handle, whereas `&T` implements both `Borrow<T>` and `Borrow<&T>` and would
+/// leave the ephemeris handle ambiguous.
+pub(crate) struct ElevationDetectFn<T> {
+    pub(crate) gs: GroundLocation,
+    pub(crate) mask: ElevationMask,
+    pub(crate) sc: T,
     pub(crate) body_fixed_frame: Frame,
 }
 
-impl<O, R> DetectFn for ElevationDetectFn<'_, O, R>
+impl<O, R, T> DetectFn for ElevationDetectFn<T>
 where
     O: TrySpheroid + Copy,
     R: ReferenceFrame + Copy,
+    T: Deref<Target = Trajectory<O, R>>,
     DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
     <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
@@ -397,10 +410,11 @@ where
     }
 }
 
-impl<O, R> RateBounded for ElevationDetectFn<'_, O, R>
+impl<O, R, T> RateBounded for ElevationDetectFn<T>
 where
     O: TrySpheroid + Copy,
     R: ReferenceFrame + Copy,
+    T: Deref<Target = Trajectory<O, R>>,
     DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
     <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
@@ -420,7 +434,7 @@ where
         // this bounds the whole crossing function. Azimuth-varying masks would
         // additionally need the mask slope; until that is modelled they report
         // an unbounded rate, which degrades adaptive stepping to the fixed step.
-        let bound = match self.mask {
+        let bound = match &self.mask {
             ElevationMask::Fixed(_) => {
                 let range = obs.range();
                 if range > 0.0 {
@@ -444,18 +458,19 @@ where
 /// Only the pipeline range gate uses it — the eager path has no ground-space
 /// range knob — so it is dead until the hard cut (plan step 7).
 #[allow(dead_code)]
-pub(crate) struct GroundSpaceRangeDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    pub(crate) gs: &'a GroundLocation,
-    pub(crate) sc: &'a Trajectory<O, R>,
+pub(crate) struct GroundSpaceRangeDetectFn<T> {
+    pub(crate) gs: GroundLocation,
+    pub(crate) sc: T,
     pub(crate) body_fixed_frame: Frame,
     pub(crate) threshold: Distance,
     pub(crate) direction: RangeDirection,
 }
 
-impl<O, R> DetectFn for GroundSpaceRangeDetectFn<'_, O, R>
+impl<O, R, T> DetectFn for GroundSpaceRangeDetectFn<T>
 where
     O: TrySpheroid + Copy,
     R: ReferenceFrame + Copy,
+    T: Deref<Target = Trajectory<O, R>>,
     DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
     <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
@@ -474,10 +489,11 @@ where
     }
 }
 
-impl<O, R> RateBounded for GroundSpaceRangeDetectFn<'_, O, R>
+impl<O, R, T> RateBounded for GroundSpaceRangeDetectFn<T>
 where
     O: TrySpheroid + Copy,
     R: ReferenceFrame + Copy,
+    T: Deref<Target = Trajectory<O, R>>,
     DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
     <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
@@ -499,19 +515,22 @@ where
 
 /// Line-of-sight between a ground station and spacecraft, relative to an
 /// occulting body.
-pub(crate) struct LineOfSightDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    pub(crate) gs: &'a GroundLocation,
-    pub(crate) sc: &'a Trajectory<O, R>,
+pub(crate) struct LineOfSightDetectFn<T, E> {
+    pub(crate) gs: GroundLocation,
+    pub(crate) sc: T,
     pub(crate) body: Origin,
-    pub(crate) ephemeris: &'a E,
+    pub(crate) ephemeris: E,
     pub(crate) body_fixed_frame: Frame,
 }
 
-impl<O, R, E: Ephemeris> DetectFn for LineOfSightDetectFn<'_, O, R, E>
+impl<O, R, T, E> DetectFn for LineOfSightDetectFn<T, E>
 where
     O: TrySpheroid + Copy,
     R: ReferenceFrame + Copy,
-    E::Error: 'static,
+    T: Deref<Target = Trajectory<O, R>>,
+    E: Deref,
+    E::Target: Ephemeris,
+    <E::Target as Ephemeris>::Error: 'static,
     DefaultRotationProvider: TryRotation<Frame, R, TimeScale>,
     <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
@@ -520,16 +539,17 @@ where
 
     fn eval(&self, time: Time) -> Result<f64, Self::Error> {
         // Convert to TDB for ephemeris lookup (infallible via DefaultOffsetProvider).
+        let sc = &*self.sc;
         let tdb = time.to_scale(Tdb);
         let r_body = self
             .ephemeris
-            .position(tdb, self.sc.origin(), self.body)
+            .position(tdb, sc.origin(), self.body)
             .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
-        let r_sc = self.sc.at(time.into_dynamic()).position() - r_body;
+        let r_sc = sc.at(time.into_dynamic()).position() - r_body;
         // Compute ground station position in the scenario frame R by rotating
         // from body-fixed → R.
         let rot = DefaultRotationProvider
-            .try_rotation(self.body_fixed_frame, self.sc.reference_frame(), time)
+            .try_rotation(self.body_fixed_frame, sc.reference_frame(), time)
             .map_err(|e| EvalError::Rotation(Box::new(e)))?;
         let (r_gs_frame, _) = rot.rotate_state(self.gs.body_fixed_position(), DVec3::ZERO);
         let r_gs = r_gs_frame - r_body;
@@ -539,29 +559,33 @@ where
 
 /// Line-of-sight between two spacecraft, relative to a non-central occulting body. Uses the
 /// ephemeris to compute the body position.
-pub(crate) struct InterSatLosOccluderDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    pub(crate) sc1: &'a Trajectory<O, R>,
-    pub(crate) sc2: &'a Trajectory<O, R>,
+pub(crate) struct InterSatLosOccluderDetectFn<T, E> {
+    pub(crate) sc1: T,
+    pub(crate) sc2: T,
     pub(crate) body: Origin,
-    pub(crate) ephemeris: &'a E,
+    pub(crate) ephemeris: E,
 }
 
-impl<O, R, E: Ephemeris> DetectFn for InterSatLosOccluderDetectFn<'_, O, R, E>
+impl<O, R, T, E> DetectFn for InterSatLosOccluderDetectFn<T, E>
 where
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
-    E::Error: 'static,
+    T: Deref<Target = Trajectory<O, R>>,
+    E: Deref,
+    E::Target: Ephemeris,
+    <E::Target as Ephemeris>::Error: 'static,
 {
     type Error = EvalError;
 
     fn eval(&self, time: Time) -> Result<f64, Self::Error> {
+        let (sc1, sc2) = (&*self.sc1, &*self.sc2);
         let tdb = time.to_scale(Tdb);
         let r_body = self
             .ephemeris
-            .position(tdb, self.sc1.origin(), self.body)
+            .position(tdb, sc1.origin(), self.body)
             .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
-        let r_sc1 = self.sc1.at(time.into_dynamic()).position() - r_body;
-        let r_sc2 = self.sc2.at(time.into_dynamic()).position() - r_body;
+        let r_sc1 = sc1.at(time.into_dynamic()).position() - r_body;
+        let r_sc2 = sc2.at(time.into_dynamic()).position() - r_body;
         Ok(self.body.line_of_sight(r_sc1, r_sc2)?)
     }
 }
@@ -569,16 +593,17 @@ where
 /// Line-of-sight between two spacecraft when the occluding body is the
 /// trajectories' origin. `r_body == 0` by construction, so no ephemeris
 /// lookup is required.
-pub(crate) struct InterSatLosCentralBodyDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    pub(crate) sc1: &'a Trajectory<O, R>,
-    pub(crate) sc2: &'a Trajectory<O, R>,
+pub(crate) struct InterSatLosCentralBodyDetectFn<T> {
+    pub(crate) sc1: T,
+    pub(crate) sc2: T,
     pub(crate) body: Origin,
 }
 
-impl<O, R> DetectFn for InterSatLosCentralBodyDetectFn<'_, O, R>
+impl<O, R, T> DetectFn for InterSatLosCentralBodyDetectFn<T>
 where
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
+    T: Deref<Target = Trajectory<O, R>>,
 {
     type Error = EvalError;
 
@@ -610,17 +635,18 @@ impl RangeDirection {
 }
 
 /// Range threshold detector for inter-satellite pairs.
-pub(crate) struct InterSatelliteRangeDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    pub(crate) sc1: &'a Trajectory<O, R>,
-    pub(crate) sc2: &'a Trajectory<O, R>,
+pub(crate) struct InterSatelliteRangeDetectFn<T> {
+    pub(crate) sc1: T,
+    pub(crate) sc2: T,
     pub(crate) threshold: Distance,
     pub(crate) direction: RangeDirection,
 }
 
-impl<O, R> DetectFn for InterSatelliteRangeDetectFn<'_, O, R>
+impl<O, R, T> DetectFn for InterSatelliteRangeDetectFn<T>
 where
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
+    T: Deref<Target = Trajectory<O, R>>,
 {
     type Error = EvalError;
 
@@ -632,10 +658,11 @@ where
     }
 }
 
-impl<O, R> RateBounded for InterSatelliteRangeDetectFn<'_, O, R>
+impl<O, R, T> RateBounded for InterSatelliteRangeDetectFn<T>
 where
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
+    T: Deref<Target = Trajectory<O, R>>,
 {
     fn eval_bounded(&self, time: Time) -> Result<(f64, f64), Self::Error> {
         let s1 = self.sc1.at(time);
@@ -650,10 +677,11 @@ where
     }
 }
 
-impl<O, R> Differentiable for InterSatelliteRangeDetectFn<'_, O, R>
+impl<O, R, T> Differentiable for InterSatelliteRangeDetectFn<T>
 where
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
+    T: Deref<Target = Trajectory<O, R>>,
 {
     fn eval_derivative(&self, time: Time) -> Result<(f64, f64), Self::Error> {
         let s1 = self.sc1.at(time);
@@ -678,16 +706,17 @@ where
 /// The angular rate ω = |r × v| / |r|² is symmetric between the two
 /// spacecraft.  The detector returns `threshold - ω`, positive when the
 /// angular rate is within the limit.
-pub(crate) struct InterSatelliteSlewRateDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    pub(crate) sc1: &'a Trajectory<O, R>,
-    pub(crate) sc2: &'a Trajectory<O, R>,
+pub(crate) struct InterSatelliteSlewRateDetectFn<T> {
+    pub(crate) sc1: T,
+    pub(crate) sc2: T,
     pub(crate) threshold: AngularRate,
 }
 
-impl<O, R> DetectFn for InterSatelliteSlewRateDetectFn<'_, O, R>
+impl<O, R, T> DetectFn for InterSatelliteSlewRateDetectFn<T>
 where
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
+    T: Deref<Target = Trajectory<O, R>>,
 {
     type Error = EvalError;
 
@@ -773,8 +802,8 @@ where
         let step = self.scan_step();
 
         let elev = ElevationDetectFn {
-            gs: gs.location(),
-            mask: gs.mask(),
+            gs: gs.location().clone(),
+            mask: gs.mask().clone(),
             sc: sc_traj,
             body_fixed_frame,
         };
@@ -803,7 +832,7 @@ where
         let windows = elev_windows.then_within(move |window| {
             let make_los = |body: Origin| {
                 LineOfSightDetectFn {
-                    gs: location,
+                    gs: location.clone(),
                     sc: sc_traj,
                     body,
                     ephemeris,
@@ -1335,8 +1364,8 @@ where
                 _ => step,
             };
             let elev = ElevationDetectFn {
-                gs: gs.location(),
-                mask: gs.mask(),
+                gs: gs.location().clone(),
+                mask: gs.mask().clone(),
                 sc: sc_traj,
                 body_fixed_frame,
             };
@@ -1353,11 +1382,8 @@ where
 
         const PARALLEL_THRESHOLD: usize = 100;
 
-        let results: Result<Vec<_>, VisibilityError> = if pairs.len() > PARALLEL_THRESHOLD {
-            pairs.par_iter().map(compute_one).collect()
-        } else {
-            pairs.iter().map(compute_one).collect()
-        };
+        let results: Result<Vec<_>, VisibilityError> =
+            try_map(&pairs, pairs.len() > PARALLEL_THRESHOLD, compute_one);
 
         let intervals: HashMap<_, _> = results?.into_iter().collect();
         let pair_types = intervals
@@ -1403,86 +1429,80 @@ where
             _ => step,
         };
 
-        let results: Result<Vec<_>, VisibilityError> = pairs
-            .par_iter()
-            .map(|&(i, j)| {
-                let sc1 = &spacecraft[i];
-                let sc2 = &spacecraft[j];
-                let key = (sc1.id().clone(), sc2.id().clone());
-                let traj1 = ensemble
-                    .get(sc1.id())
-                    .expect("trajectory not found in ensemble");
-                let traj2 = ensemble
-                    .get(sc2.id())
-                    .expect("trajectory not found in ensemble");
+        let results: Result<Vec<_>, VisibilityError> = try_map(&pairs, true, |&(i, j)| {
+            let sc1 = &spacecraft[i];
+            let sc2 = &spacecraft[j];
+            let key = (sc1.id().clone(), sc2.id().clone());
+            let traj1 = ensemble
+                .get(sc1.id())
+                .expect("trajectory not found in ensemble");
+            let traj2 = ensemble
+                .get(sc2.id())
+                .expect("trajectory not found in ensemble");
 
-                let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
-                    (Some(a), Some(b)) => {
-                        Some(if a.to_radians_per_second() < b.to_radians_per_second() {
-                            a
-                        } else {
-                            b
-                        })
-                    }
-                    (Some(a), None) => Some(a),
-                    (None, Some(b)) => Some(b),
-                    (None, None) => None,
-                };
-
-                let make_range =
-                    move |threshold: Distance, direction: RangeDirection, window: TimeInterval| {
-                        InterSatelliteRangeDetectFn {
-                            sc1: traj1,
-                            sc2: traj2,
-                            threshold,
-                            direction,
-                        }
-                        .into_intervals(UniformSampler::new(step), window)
-                    };
-
-                // Cheapest-first staging, seeded with the whole interval so
-                // every later stage applies uniformly.
-                let mut windows: Box<dyn Iterator<Item = Result<TimeInterval, DetectError>> + '_> =
-                    match (max_range, min_range) {
-                        (Some(max), Some(min)) => {
-                            Box::new(
-                                make_range(max, RangeDirection::Max, interval)
-                                    .intersect(make_range(min, RangeDirection::Min, interval)),
-                            )
-                        }
-                        (Some(max), None) => {
-                            Box::new(make_range(max, RangeDirection::Max, interval))
-                        }
-                        (None, Some(min)) => {
-                            Box::new(make_range(min, RangeDirection::Min, interval))
-                        }
-                        (None, None) => Box::new(std::iter::once(Ok(interval))),
-                    };
-
-                if let Some(threshold) = effective_slew_rate {
-                    windows = Box::new(windows.then_within(move |window| {
-                        InterSatelliteSlewRateDetectFn {
-                            sc1: traj1,
-                            sc2: traj2,
-                            threshold,
-                        }
-                        .into_intervals(UniformSampler::new(step), window)
-                    }));
+            let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
+                (Some(a), Some(b)) => {
+                    Some(if a.to_radians_per_second() < b.to_radians_per_second() {
+                        a
+                    } else {
+                        b
+                    })
                 }
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            };
 
-                windows = Box::new(windows.then_within(move |window| {
-                    InterSatLosCentralBodyDetectFn {
+            let make_range =
+                move |threshold: Distance, direction: RangeDirection, window: TimeInterval| {
+                    InterSatelliteRangeDetectFn {
                         sc1: traj1,
                         sc2: traj2,
-                        body: central_body,
+                        threshold,
+                        direction,
+                    }
+                    .into_intervals(UniformSampler::new(step), window)
+                };
+
+            // Cheapest-first staging, seeded with the whole interval so
+            // every later stage applies uniformly.
+            let mut windows: Box<dyn Iterator<Item = Result<TimeInterval, DetectError>> + '_> =
+                match (max_range, min_range) {
+                    (Some(max), Some(min)) => Box::new(
+                        make_range(max, RangeDirection::Max, interval).intersect(make_range(
+                            min,
+                            RangeDirection::Min,
+                            interval,
+                        )),
+                    ),
+                    (Some(max), None) => Box::new(make_range(max, RangeDirection::Max, interval)),
+                    (None, Some(min)) => Box::new(make_range(min, RangeDirection::Min, interval)),
+                    (None, None) => Box::new(std::iter::once(Ok(interval))),
+                };
+
+            if let Some(threshold) = effective_slew_rate {
+                windows = Box::new(windows.then_within(move |window| {
+                    InterSatelliteSlewRateDetectFn {
+                        sc1: traj1,
+                        sc2: traj2,
+                        threshold,
                     }
                     .into_intervals(UniformSampler::new(step), window)
                 }));
+            }
 
-                let windows = windows.collect::<Result<_, _>>()?;
-                Ok((key, windows))
-            })
-            .collect();
+            windows = Box::new(windows.then_within(move |window| {
+                InterSatLosCentralBodyDetectFn {
+                    sc1: traj1,
+                    sc2: traj2,
+                    body: central_body,
+                }
+                .into_intervals(UniformSampler::new(step), window)
+            }));
+
+            let windows = windows.collect::<Result<_, _>>()?;
+            Ok((key, windows))
+        });
 
         let intervals: HashMap<_, _> = results?.into_iter().collect();
         let pair_types = intervals
@@ -1581,11 +1601,7 @@ where
             Ok((key, windows))
         };
 
-        let results: Result<Vec<_>, VisibilityError> = if use_parallel {
-            pairs.par_iter().map(compute_one).collect()
-        } else {
-            pairs.iter().map(compute_one).collect()
-        };
+        let results: Result<Vec<_>, VisibilityError> = try_map(&pairs, use_parallel, compute_one);
 
         let intervals: HashMap<_, _> = results?.into_iter().collect();
         let pair_types = intervals
@@ -1633,25 +1649,21 @@ where
             adaptive: self.adaptive,
         };
 
-        let results: Result<Vec<_>, VisibilityError> = pairs
-            .par_iter()
-            .map(|&(i, j)| {
-                let sc1 = &spacecraft[i];
-                let sc2 = &spacecraft[j];
-                let key = (sc1.id().clone(), sc2.id().clone());
-                let traj1 = params
-                    .ensemble
-                    .get(sc1.id())
-                    .expect("trajectory not found in ensemble");
-                let traj2 = params
-                    .ensemble
-                    .get(sc2.id())
-                    .expect("trajectory not found in ensemble");
-                let windows =
-                    params.compute_inter_satellite_pair(sc1, sc2, traj1, traj2, interval)?;
-                Ok((key, windows))
-            })
-            .collect();
+        let results: Result<Vec<_>, VisibilityError> = try_map(&pairs, true, |&(i, j)| {
+            let sc1 = &spacecraft[i];
+            let sc2 = &spacecraft[j];
+            let key = (sc1.id().clone(), sc2.id().clone());
+            let traj1 = params
+                .ensemble
+                .get(sc1.id())
+                .expect("trajectory not found in ensemble");
+            let traj2 = params
+                .ensemble
+                .get(sc2.id())
+                .expect("trajectory not found in ensemble");
+            let windows = params.compute_inter_satellite_pair(sc1, sc2, traj1, traj2, interval)?;
+            Ok((key, windows))
+        });
 
         let intervals: HashMap<_, _> = results?.into_iter().collect();
         let pair_types = intervals
@@ -1765,8 +1777,8 @@ mod tests {
         let (epoch, o, f, data) = sc.clone().into_parts();
         let typed_sc = Trajectory::from_parts(epoch.with_scale(TimeScale::Tai), o, f, data);
         let elev_fn = ElevationDetectFn {
-            gs: &gs,
-            mask: &mask,
+            gs,
+            mask,
             sc: &typed_sc,
             body_fixed_frame: Frame::Iau(Origin::Earth),
         };

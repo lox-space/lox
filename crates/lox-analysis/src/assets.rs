@@ -4,7 +4,6 @@
 
 #[cfg(feature = "comms")]
 use std::collections::BTreeMap;
-use std::collections::HashMap;
 use std::fmt;
 
 use lox_bodies::{CoordinateOrigin, Origin};
@@ -21,7 +20,6 @@ use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::TimeScale;
-use rayon::prelude::*;
 
 #[cfg(feature = "comms")]
 use lox_comms::terminal::{RxTerminal, TxTerminal};
@@ -564,31 +562,27 @@ impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send +
         );
         let origin = self.origin;
         let frame = self.frame;
-        let entries: Result<HashMap<_, _>, _> = self
-            .spacecraft
-            .par_iter()
-            .map(|sc| {
-                let traj = sc
-                    .orbit
-                    .propagate(dynamic_interval)
-                    .map_err(|e| ScenarioPropagateError::Propagate(sc.id.clone(), e))?;
-                // Rotate Trajectory directly into concrete frame R
-                // (uses mixed TryRotation<Frame, R, TimeScale>).
-                let rotated = traj.into_frame(frame, provider).map_err(|e| {
-                    ScenarioPropagateError::FrameTransformation(sc.id.clone(), e.to_string())
-                })?;
-                // Re-tag origin and time scale (data unchanged, just type markers).
-                let (epoch, _origin, frame, data) = rotated.into_parts();
-                let typed = lox_orbits::orbits::Trajectory::from_parts(
-                    epoch.with_scale(TimeScale::Tai),
-                    origin,
-                    frame,
-                    data,
-                );
-                Ok((sc.id.clone(), typed))
-            })
-            .collect();
-        Ok(Ensemble::new(entries?))
+        let entries: Result<Vec<_>, _> = crate::par::try_map(&self.spacecraft, true, |sc| {
+            let traj = sc
+                .orbit
+                .propagate(dynamic_interval)
+                .map_err(|e| ScenarioPropagateError::Propagate(sc.id.clone(), e))?;
+            // Rotate Trajectory directly into concrete frame R
+            // (uses mixed TryRotation<Frame, R, TimeScale>).
+            let rotated = traj.into_frame(frame, provider).map_err(|e| {
+                ScenarioPropagateError::FrameTransformation(sc.id.clone(), e.to_string())
+            })?;
+            // Re-tag origin and time scale (data unchanged, just type markers).
+            let (epoch, _origin, frame, data) = rotated.into_parts();
+            let typed = lox_orbits::orbits::Trajectory::from_parts(
+                epoch.with_scale(TimeScale::Tai),
+                origin,
+                frame,
+                data,
+            );
+            Ok((sc.id.clone(), typed))
+        });
+        Ok(Ensemble::new(entries?.into_iter().collect()))
     }
 
     /// Returns a new scenario containing only spacecraft belonging to the given constellations.

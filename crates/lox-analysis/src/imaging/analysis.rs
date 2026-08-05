@@ -8,7 +8,6 @@ use core::marker::PhantomData;
 use std::collections::HashMap;
 
 use lox_core::glam::DVec3;
-use rayon::prelude::*;
 use thiserror::Error;
 
 use crate::events::{DetectError, DetectFn, DetectFnExt as _, UniformSampler};
@@ -28,6 +27,7 @@ use crate::imaging::aoi::{Aoi, AoiId};
 use crate::imaging::optical::OpticalPayload;
 use crate::imaging::results::{AccessResults, AccessWindow, PassDirection};
 use crate::imaging::sar::SarPayload;
+use crate::par::try_map;
 use crate::visibility::EvalError;
 
 /// Returns the per-sample access metric for an AOI.
@@ -311,11 +311,7 @@ where
             Ok::<_, AccessError>((key, windows))
         };
 
-        let results: Result<Vec<_>, AccessError> = if pairs.len() > 100 {
-            pairs.par_iter().map(compute_one).collect()
-        } else {
-            pairs.iter().map(compute_one).collect()
-        };
+        let results: Result<Vec<_>, AccessError> = try_map(&pairs, pairs.len() > 100, compute_one);
 
         let windows_by_pair: HashMap<_, _> = results?.into_iter().collect();
         Ok(AccessResults::new(windows_by_pair))

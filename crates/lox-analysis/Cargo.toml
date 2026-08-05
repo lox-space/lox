@@ -29,18 +29,22 @@ futures-core = { workspace = true, optional = true }
 geo = { workspace = true, optional = true }
 geojson = { workspace = true, optional = true }
 itertools.workspace = true
-rayon.workspace = true
+rayon = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, optional = true, features = ["sync"] }
 
 [features]
-# The streaming engine. Rayon is unconditional today; when `parallel` lands
-# (plan step 6) this gains `"parallel"` per design §9.
-async = ["dep:futures-core", "dep:tokio"]
+default = ["parallel"]
+
+# The streaming engine drives its workers on rayon, so it implies `parallel`.
+async = ["parallel", "dep:futures-core", "dep:tokio"]
 comms = ["dep:lox-comms"]
 geojson = ["dep:geojson"]
 imaging = ["dep:geo"]
+# Rayon-backed fan-out: `Parallelism` and the `*Analysis::run` methods. Callers
+# doing their own fan-out over the pipeline need none of it (design §9).
+parallel = ["dep:rayon"]
 serde = [
   "dep:serde",
   "lox-bodies/serde",
@@ -57,9 +61,18 @@ divan.workspace = true
 futures-util.workspace = true
 lox-approx = { workspace = true, features = ["std", "glam"] }
 lox-test-utils.workspace = true
+rayon.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal", "time"] }
 
 
 [[bench]]
 name = "visibility"
 harness = false
+
+[[example]]
+name = "stream_toy"
+required-features = ["async"]
+
+[[example]]
+name = "stream_passes"
+required-features = ["async"]

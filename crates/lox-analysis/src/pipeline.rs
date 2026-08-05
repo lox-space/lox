@@ -69,7 +69,35 @@ use lox_core::error::LoxError;
 use crate::events::DetectError;
 use crate::visibility::EvalError;
 
+/// Pipeline-backed `*Analysis` types, coexisting with the eager ones until the
+/// hard cut.
+pub mod analyses;
 mod sources;
+
+pub use sources::{Eclipse, Window};
+
+// ---------------------------------------------------------------------------
+// Parallelism
+// ---------------------------------------------------------------------------
+
+/// How an `*Analysis::run` should fan out over its targets.
+///
+/// A **runtime** choice, not the rayon-free path: `Sequential` exists so a run
+/// can be made deterministic for debugging while still linking rayon. Building
+/// without the `parallel` feature is what removes rayon, and there `run` does
+/// not exist at all — callers iterate themselves (design §9).
+#[cfg(feature = "parallel")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Parallelism {
+    /// One target at a time, in input order.
+    Sequential,
+    /// Rayon: the global pool with `None`, or a local pool of `n` workers.
+    ///
+    /// `Some(n)` builds a **local** pool because the global one cannot be
+    /// resized per call — a server sizing one request must not change the width
+    /// of every other request in the process.
+    Rayon(Option<usize>),
+}
 
 // ---------------------------------------------------------------------------
 // Unified error

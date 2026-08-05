@@ -20,11 +20,11 @@ use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
 use lox_time::time_scales::Tdb;
-use rayon::prelude::*;
 use thiserror::Error;
 
 use crate::assets::{AssetId, ConstellationId, Scenario, Spacecraft};
 use crate::events::{DetectFn, DetectFnExt as _, IntervalIterExt as _, UniformSampler};
+use crate::par::try_map;
 use crate::visibility::{EvalError, LineOfSight};
 use lox_frames::ReferenceFrame;
 use lox_orbits::orbits::{Ensemble, Trajectory};
@@ -243,10 +243,9 @@ where
         };
         let duration_s = (interval.end() - interval.start()).to_seconds().to_f64();
 
-        let results: Result<Vec<_>, PowerError> = spacecraft
-            .par_iter()
-            .map(|sc| self.compute_spacecraft(sc, interval.into_dynamic()))
-            .collect();
+        let results: Result<Vec<_>, PowerError> = try_map(&spacecraft, true, |sc| {
+            self.compute_spacecraft(sc, interval.into_dynamic())
+        });
 
         let mut eclipse_intervals = HashMap::new();
         let mut beta_angles = HashMap::new();

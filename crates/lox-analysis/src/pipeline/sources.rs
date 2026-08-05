@@ -28,15 +28,18 @@
 #![allow(dead_code)]
 
 use std::convert::Infallible;
+use std::ops::Deref;
 use std::sync::Arc;
 
 use lox_bodies::{CoordinateOrigin, Origin, Sun, TryMeanRadius, TrySpheroid};
 use lox_core::math::series::InterpolationType;
-use lox_core::units::Distance;
+use lox_core::sync::CancellationToken;
+use lox_core::units::{AngularRate, Distance};
 use lox_ephem::Ephemeris;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_frames::{Frame, ReferenceFrame};
+use lox_orbits::ground::GroundLocation;
 use lox_orbits::orbits::Trajectory;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
@@ -45,14 +48,14 @@ use lox_time::time_scales::{Tdb, TimeScale};
 
 use crate::assets::{GroundStation, Spacecraft};
 use crate::events::{
-    AdaptiveSampler, DetectError, DetectFnExt as _, IntervalIterExt as _, UniformSampler,
+    AdaptiveSampler, DetectError, DetectFnExt as _, IntervalIterExt as _, Intervals, UniformSampler,
 };
 use crate::pipeline::{AnalysisError, HasInterval, PipelineExt as _, Source, Stage};
 use crate::power::{beta_angle, solar_flux};
 use crate::visibility::{
-    ElevationDetectFn, EvalError, GroundSpaceRangeDetectFn, InterSatLosCentralBodyDetectFn,
-    InterSatLosOccluderDetectFn, InterSatelliteRangeDetectFn, InterSatelliteSlewRateDetectFn,
-    LineOfSightDetectFn, Pass, RangeDirection,
+    ElevationDetectFn, ElevationMask, EvalError, GroundSpaceRangeDetectFn,
+    InterSatLosCentralBodyDetectFn, InterSatLosOccluderDetectFn, InterSatelliteRangeDetectFn,
+    InterSatelliteSlewRateDetectFn, LineOfSightDetectFn, Pass, RangeDirection,
 };
 
 #[cfg(feature = "imaging")]
@@ -73,10 +76,18 @@ use crate::imaging::{
 /// operand in a new type, so a stack whose shape depends on runtime
 /// configuration (how many occulting bodies, which range limits are set) has no
 /// single static type. The eager path boxes at exactly the same points.
-type BoxedWindows<'a> = Box<dyn Iterator<Item = Result<TimeInterval, DetectError>> + Send + 'a>;
+pub(crate) type BoxedWindows<'a> =
+    Box<dyn Iterator<Item = Result<TimeInterval, DetectError>> + Send + 'a>;
 
 /// The [`Source::Stream`] of every source in this module.
 pub(crate) struct ItemStream<'a, T>(Box<dyn Iterator<Item = Result<T, AnalysisError>> + Send + 'a>);
+
+impl<'a, T> ItemStream<'a, T> {
+    /// Boxes any compatible iterator as an item stream.
+    pub(crate) fn new(items: impl Iterator<Item = Result<T, AnalysisError>> + Send + 'a) -> Self {
+        Self(Box::new(items))
+    }
+}
 
 impl<T> Iterator for ItemStream<'_, T> {
     type Item = Result<T, AnalysisError>;
@@ -87,7 +98,7 @@ impl<T> Iterator for ItemStream<'_, T> {
 }
 
 /// Lifts a window stream out of the detect-error domain into the pipeline's.
-fn lift<'a>(windows: BoxedWindows<'a>) -> ItemStream<'a, TimeInterval> {
+pub(crate) fn lift<'a>(windows: BoxedWindows<'a>) -> ItemStream<'a, TimeInterval> {
     ItemStream(Box::new(windows.map(|r| r.map_err(AnalysisError::from))))
 }
 
@@ -101,11 +112,17 @@ fn lift<'a>(windows: BoxedWindows<'a>) -> ItemStream<'a, TimeInterval> {
 /// they cannot be [`Pass`]es. Relative geometry becomes a capability if a
 /// second consumer appears (design §6).
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub(crate) struct Window(pub(crate) TimeInterval);
+pub struct Window(
+    /// The contact interval.
+    pub TimeInterval,
+);
 
 /// A single eclipse interval (cylindrical umbra, no penumbra).
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub(crate) struct Eclipse(pub(crate) TimeInterval);
+pub struct Eclipse(
+    /// The eclipse interval.
+    pub TimeInterval,
+);
 
 impl HasInterval for Pass {
     fn interval(&self) -> TimeInterval {
@@ -136,22 +153,189 @@ impl HasInterval for AccessWindow {
 // Ground-space windows
 // ---------------------------------------------------------------------------
 
-/// The bare-window half of the ground-space source: elevation, then
-/// line-of-sight per occulting body, then the range gate.
+/// The station data a detector needs, lifted out of the [`GroundStation`] once
+/// so a stack never retains the station itself. Cheap to clone — the only
+/// non-trivial field is a `Variable` mask's series, cloned once per scan rather
+/// than once per sample.
+#[derive(Clone)]
+pub(crate) struct StationView {
+    location: GroundLocation,
+    mask: ElevationMask,
+    body_fixed_frame: Frame,
+}
+
+impl StationView {
+    pub(crate) fn of(station: &GroundStation) -> Self {
+        Self {
+            location: station.location().clone(),
+            mask: station.mask().clone(),
+            body_fixed_frame: station.body_fixed_frame(),
+        }
+    }
+}
+
+/// The knobs a ground-space stack needs, independent of how its inputs are held.
 ///
-/// `step` is the already-resolved scan step. The `min_pass_duration` knob does
-/// **not** live here — it is a `filter_ok` stage on materialised items (design
-/// §8). Its scan-coarsening side effect is the caller's business, because only
-/// the caller sees both knobs at once.
+/// `step` is the already-resolved scan step: `min_pass_duration` is **not** here,
+/// because it is a `filter_ok` stage on materialised items (design §8). Only a
+/// caller that sees both knobs can decide to coarsen the scan on its account.
+#[derive(Clone, Default)]
+pub(crate) struct GroundSpaceConfig {
+    pub(crate) step: TimeDelta,
+    pub(crate) min_range: Option<Distance>,
+    pub(crate) max_range: Option<Distance>,
+    pub(crate) adaptive: bool,
+    /// Checked inside every scan, so a cancelled run stops within one detector
+    /// evaluation rather than waiting for the next item (design §7.1).
+    pub(crate) cancel: Option<CancellationToken>,
+}
+
+impl GroundSpaceConfig {
+    pub(crate) fn new(step: TimeDelta) -> Self {
+        Self {
+            step,
+            ..Default::default()
+        }
+    }
+}
+
+/// Attaches `cancel` to a scan when one is set.
+///
+/// A free function rather than a method chain because
+/// [`Intervals::with_cancellation`] consumes and returns `Self`, so there is no
+/// way to apply it conditionally in place.
+fn cancellable<F, S, R>(
+    intervals: Intervals<F, S, R>,
+    cancel: &Option<CancellationToken>,
+) -> Intervals<F, S, R> {
+    match cancel {
+        Some(token) => intervals.with_cancellation(token.clone()),
+        None => intervals,
+    }
+}
+
+/// Builds the staged ground-space window stack: elevation, then line-of-sight
+/// per occulting body, then the range gate.
+///
+/// `'x` is the lifetime the returned stream is valid for, and it comes from the
+/// *handles* rather than from a `&self` — which is exactly what lets one copy of
+/// this staging logic serve both the borrowing sources (`'x = 'a`) and the
+/// streaming fork (`'x = 'static`, handles being `Arc`s). Writing it as a method
+/// would tie the stream to the borrow of the source and force the two paths to
+/// duplicate it.
+pub(crate) fn ground_space_stack<'x, O, R, T, E>(
+    station: StationView,
+    trajectory: T,
+    ephemeris: E,
+    occulters: Vec<Origin>,
+    config: GroundSpaceConfig,
+    interval: TimeInterval,
+) -> BoxedWindows<'x>
+where
+    O: TrySpheroid + TryMeanRadius + Copy + Send + Sync + 'x,
+    R: ReferenceFrame + Copy + Send + Sync + 'x,
+    T: Deref<Target = Trajectory<O, R>> + Clone + Send + Sync + 'x,
+    E: Deref + Clone + Send + Sync + 'x,
+    E::Target: Ephemeris,
+    <E::Target as Ephemeris>::Error: 'static,
+    DefaultRotationProvider: TryRotation<R, Frame, TimeScale> + TryRotation<Frame, R, TimeScale>,
+    <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
+        std::error::Error + Send + Sync + 'static,
+    <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
+        std::error::Error + Send + Sync + 'static,
+{
+    let step = config.step;
+    let cancel = config.cancel.clone();
+
+    // Elevation is the cheap constraint and always runs over the whole
+    // interval; `adaptive` lets it stride by its own rate bound.
+    let elev = ElevationDetectFn {
+        gs: station.location.clone(),
+        mask: station.mask.clone(),
+        sc: trajectory.clone(),
+        body_fixed_frame: station.body_fixed_frame,
+    };
+    let mut windows: BoxedWindows<'x> = if config.adaptive {
+        Box::new(cancellable(
+            elev.into_intervals(
+                AdaptiveSampler::new(step, interval.duration().max(step)),
+                interval,
+            ),
+            &cancel,
+        ))
+    } else {
+        Box::new(cancellable(
+            elev.into_intervals(UniformSampler::new(step), interval),
+            &cancel,
+        ))
+    };
+
+    // Line of sight needs an ephemeris lookup per sample, so it runs only
+    // inside the windows elevation already admitted.
+    if !occulters.is_empty() {
+        let view = station.clone();
+        let traj = trajectory.clone();
+        let cancel = cancel.clone();
+        windows = Box::new(windows.then_within(move |window| {
+            let make_los = |body: Origin| {
+                cancellable(
+                    LineOfSightDetectFn {
+                        gs: view.location.clone(),
+                        sc: traj.clone(),
+                        body,
+                        ephemeris: ephemeris.clone(),
+                        body_fixed_frame: view.body_fixed_frame,
+                    }
+                    .into_intervals(UniformSampler::new(step), window),
+                    &cancel,
+                )
+            };
+            let mut los: BoxedWindows<'x> = Box::new(make_los(occulters[0]));
+            for &body in &occulters[1..] {
+                los = Box::new(los.intersect(make_los(body)));
+            }
+            los
+        }));
+    }
+
+    // The range gate (design §6.1). Nesting max inside min is equivalent to
+    // intersecting them and strictly cheaper, since the second detector never
+    // sees the stretches the first ruled out.
+    let gate = |windows: BoxedWindows<'x>, threshold: Distance, direction: RangeDirection| {
+        let location = station.location.clone();
+        let body_fixed_frame = station.body_fixed_frame;
+        let traj = trajectory.clone();
+        let cancel = cancel.clone();
+        Box::new(windows.then_within(move |window| {
+            cancellable(
+                GroundSpaceRangeDetectFn {
+                    gs: location.clone(),
+                    sc: traj.clone(),
+                    body_fixed_frame,
+                    threshold,
+                    direction,
+                }
+                .into_intervals(UniformSampler::new(step), window),
+                &cancel,
+            )
+        })) as BoxedWindows<'x>
+    };
+    if let Some(max) = config.max_range {
+        windows = gate(windows, max, RangeDirection::Max);
+    }
+    if let Some(min) = config.min_range {
+        windows = gate(windows, min, RangeDirection::Min);
+    }
+    windows
+}
+
+/// The bare-window half of the ground-space source, over borrowed inputs.
 pub(crate) struct GroundSpaceWindows<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
     station: &'a GroundStation,
     trajectory: &'a Trajectory<O, R>,
     ephemeris: &'a E,
     occulting_bodies: &'a [Origin],
-    step: TimeDelta,
-    min_range: Option<Distance>,
-    max_range: Option<Distance>,
-    adaptive: bool,
+    config: GroundSpaceConfig,
 }
 
 impl<'a, O, R, E> GroundSpaceWindows<'a, O, R, E>
@@ -178,10 +362,7 @@ where
             trajectory,
             ephemeris,
             occulting_bodies: &[],
-            step,
-            min_range: None,
-            max_range: None,
-            adaptive: false,
+            config: GroundSpaceConfig::new(step),
         }
     }
 
@@ -198,100 +379,32 @@ where
         min_range: Option<Distance>,
         max_range: Option<Distance>,
     ) -> Self {
-        self.min_range = min_range;
-        self.max_range = max_range;
+        self.config.min_range = min_range;
+        self.config.max_range = max_range;
         self
     }
 
     /// Drives the elevation scan by its own rate bound rather than a fixed step.
     pub(crate) fn adaptive(mut self) -> Self {
-        self.adaptive = true;
+        self.config.adaptive = true;
         self
     }
 
-    /// Wraps `windows` in a range gate, so the range detector only samples
-    /// inside windows the geometry constraints already admitted.
-    fn range_gate(
-        &self,
-        windows: BoxedWindows<'a>,
-        threshold: Distance,
-        direction: RangeDirection,
-    ) -> BoxedWindows<'a> {
-        let gs = self.station.location();
-        let sc = self.trajectory;
-        let body_fixed_frame = self.station.body_fixed_frame();
-        let step = self.step;
-        Box::new(windows.then_within(move |window| {
-            GroundSpaceRangeDetectFn {
-                gs,
-                sc,
-                body_fixed_frame,
-                threshold,
-                direction,
-            }
-            .into_intervals(UniformSampler::new(step), window)
-        }))
+    /// Makes every scan in the stack cancellable.
+    pub(crate) fn with_cancellation(mut self, cancel: Option<CancellationToken>) -> Self {
+        self.config.cancel = cancel;
+        self
     }
 
-    /// Builds the staged window stack for `interval`.
     fn stack(&self, interval: TimeInterval) -> BoxedWindows<'a> {
-        let gs = self.station.location();
-        let mask = self.station.mask();
-        let body_fixed_frame = self.station.body_fixed_frame();
-        let sc = self.trajectory;
-        let ephemeris = self.ephemeris;
-        let occulters = self.occulting_bodies;
-        let step = self.step;
-
-        // Elevation is the cheap constraint and always runs over the whole
-        // interval; `adaptive` lets it stride by its own rate bound.
-        let elev = ElevationDetectFn {
-            gs,
-            mask,
-            sc,
-            body_fixed_frame,
-        };
-        let mut windows: BoxedWindows<'a> = if self.adaptive {
-            Box::new(elev.into_intervals(
-                AdaptiveSampler::new(step, interval.duration().max(step)),
-                interval,
-            ))
-        } else {
-            Box::new(elev.into_intervals(UniformSampler::new(step), interval))
-        };
-
-        // Line of sight needs an ephemeris lookup per sample, so it runs only
-        // inside the windows elevation already admitted.
-        if !occulters.is_empty() {
-            windows = Box::new(windows.then_within(move |window| {
-                let make_los = move |body: Origin| {
-                    LineOfSightDetectFn {
-                        gs,
-                        sc,
-                        body,
-                        ephemeris,
-                        body_fixed_frame,
-                    }
-                    .into_intervals(UniformSampler::new(step), window)
-                };
-                let mut los: BoxedWindows<'a> = Box::new(make_los(occulters[0]));
-                for &body in &occulters[1..] {
-                    los = Box::new(los.intersect(make_los(body)));
-                }
-                los
-            }));
-        }
-
-        // The range gate. Nesting max inside min is equivalent to intersecting
-        // them and strictly cheaper, since the second detector never sees the
-        // stretches the first ruled out.
-        if let Some(max) = self.max_range {
-            windows = self.range_gate(windows, max, RangeDirection::Max);
-        }
-        if let Some(min) = self.min_range {
-            windows = self.range_gate(windows, min, RangeDirection::Min);
-        }
-        windows
+        ground_space_stack(
+            StationView::of(self.station),
+            self.trajectory,
+            self.ephemeris,
+            self.occulting_bodies.to_vec(),
+            self.config.clone(),
+            interval,
+        )
     }
 }
 
@@ -323,16 +436,16 @@ where
 ///
 /// A window whose interior never clears the mask yields no `Pass` at all —
 /// `Stage` flat-maps to `0..n`, so dropping is free and needs no error.
-pub(crate) struct MaterialisePass<'a> {
-    station: &'a GroundStation,
+pub(crate) struct MaterialisePass {
+    pub(crate) station: StationView,
     /// Shared because the stage outlives the `&self` of `detect`, and `Pass`
     /// needs the origin/frame-erased trajectory that `Pass::from_interval`
     /// takes. Cloned once per source rather than once per window.
-    trajectory: Arc<Trajectory>,
-    resolution: TimeDelta,
+    pub(crate) trajectory: Arc<Trajectory>,
+    pub(crate) resolution: TimeDelta,
 }
 
-impl Stage<TimeInterval> for MaterialisePass<'_> {
+impl Stage<TimeInterval> for MaterialisePass {
     type Out = Pass;
     type Error = Infallible;
 
@@ -340,10 +453,10 @@ impl Stage<TimeInterval> for MaterialisePass<'_> {
         Ok(Pass::from_interval(
             window,
             self.resolution,
-            self.station.location(),
-            self.station.mask(),
+            &self.station.location,
+            &self.station.mask,
             &self.trajectory,
-            self.station.body_fixed_frame(),
+            self.station.body_fixed_frame,
         )
         .into_iter()
         .collect())
@@ -397,7 +510,7 @@ where
 
     fn detect(&self, interval: TimeInterval) -> Self::Stream {
         let stage = MaterialisePass {
-            station: self.windows.station,
+            station: StationView::of(self.windows.station),
             trajectory: Arc::clone(&self.trajectory),
             resolution: self.resolution,
         };
@@ -409,21 +522,171 @@ where
 // Inter-satellite windows
 // ---------------------------------------------------------------------------
 
-/// The inter-satellite source: range, then slew rate, then central-body
-/// occultation, then any extra occulters.
+/// The knobs an inter-satellite stack needs, independent of how its inputs are
+/// held. `slew_rate` is already resolved to the tighter of the pair's limits.
+#[derive(Clone)]
+pub(crate) struct InterSatelliteConfig {
+    pub(crate) step: TimeDelta,
+    pub(crate) central_body: Origin,
+    pub(crate) slew_rate: Option<AngularRate>,
+    pub(crate) min_range: Option<Distance>,
+    pub(crate) max_range: Option<Distance>,
+    /// See [`GroundSpaceConfig::cancel`].
+    pub(crate) cancel: Option<CancellationToken>,
+}
+
+impl InterSatelliteConfig {
+    pub(crate) fn new(step: TimeDelta, central_body: Origin) -> Self {
+        Self {
+            step,
+            central_body,
+            slew_rate: None,
+            min_range: None,
+            max_range: None,
+            cancel: None,
+        }
+    }
+}
+
+/// The per-pair slew-rate limit: the tighter of the two assets' limits, or
+/// whichever one is set.
+pub(crate) fn effective_slew_rate(a: &Spacecraft, b: &Spacecraft) -> Option<AngularRate> {
+    match (a.max_slew_rate(), b.max_slew_rate()) {
+        (Some(a), Some(b)) => Some(if a.to_radians_per_second() < b.to_radians_per_second() {
+            a
+        } else {
+            b
+        }),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    }
+}
+
+/// Builds the staged inter-satellite window stack: range, then slew rate, then
+/// central-body occultation, then any extra occulters.
 ///
-/// The scenario's central body is always checked and needs no ephemeris.
+/// The scenario's central body is always checked and needs no ephemeris. See
+/// [`ground_space_stack`] for why `'x` comes from the handles.
+pub(crate) fn inter_satellite_stack<'x, O, R, T, E>(
+    traj1: T,
+    traj2: T,
+    ephemeris: E,
+    occulters: Vec<Origin>,
+    config: InterSatelliteConfig,
+    interval: TimeInterval,
+) -> BoxedWindows<'x>
+where
+    O: CoordinateOrigin + TryMeanRadius + Copy + Send + Sync + 'x,
+    R: ReferenceFrame + Copy + Send + Sync + 'x,
+    T: Deref<Target = Trajectory<O, R>> + Clone + Send + Sync + 'x,
+    E: Deref + Clone + Send + Sync + 'x,
+    E::Target: Ephemeris,
+    <E::Target as Ephemeris>::Error: 'static,
+{
+    let step = config.step;
+    let cancel = config.cancel.clone();
+
+    let make_range = {
+        let (t1, t2) = (traj1.clone(), traj2.clone());
+        let cancel = cancel.clone();
+        move |threshold: Distance, direction: RangeDirection, window: TimeInterval| {
+            cancellable(
+                InterSatelliteRangeDetectFn {
+                    sc1: t1.clone(),
+                    sc2: t2.clone(),
+                    threshold,
+                    direction,
+                }
+                .into_intervals(UniformSampler::new(step), window),
+                &cancel,
+            )
+        }
+    };
+
+    // Range is position-only — the cheapest detector here, so it seeds the
+    // stack. With both limits set the two scans are `intersect`ed over the
+    // whole interval; the streaming merge that would let them nest instead is
+    // design §10's deferred item.
+    let mut windows: BoxedWindows<'x> = match (config.max_range, config.min_range) {
+        (Some(max), Some(min)) => Box::new(
+            make_range(max, RangeDirection::Max, interval).intersect(make_range(
+                min,
+                RangeDirection::Min,
+                interval,
+            )),
+        ),
+        (Some(max), None) => Box::new(make_range(max, RangeDirection::Max, interval)),
+        (None, Some(min)) => Box::new(make_range(min, RangeDirection::Min, interval)),
+        // Seeding with the whole interval lets every later stage apply
+        // uniformly, whether or not range limits are set.
+        (None, None) => Box::new(std::iter::once(Ok(interval))),
+    };
+
+    // Slew rate: position and velocity, no ephemeris.
+    if let Some(threshold) = config.slew_rate {
+        let (t1, t2) = (traj1.clone(), traj2.clone());
+        let cancel = cancel.clone();
+        windows = Box::new(windows.then_within(move |window| {
+            cancellable(
+                InterSatelliteSlewRateDetectFn {
+                    sc1: t1.clone(),
+                    sc2: t2.clone(),
+                    threshold,
+                }
+                .into_intervals(UniformSampler::new(step), window),
+                &cancel,
+            )
+        }));
+    }
+
+    // Central-body occultation always applies, and needs no ephemeris.
+    {
+        let (t1, t2) = (traj1.clone(), traj2.clone());
+        let body = config.central_body;
+        let cancel = cancel.clone();
+        windows = Box::new(windows.then_within(move |window| {
+            cancellable(
+                InterSatLosCentralBodyDetectFn {
+                    sc1: t1.clone(),
+                    sc2: t2.clone(),
+                    body,
+                }
+                .into_intervals(UniformSampler::new(step), window),
+                &cancel,
+            )
+        }));
+    }
+
+    // Additional occulters are the most expensive: ephemeris per sample.
+    for body in occulters {
+        let (t1, t2) = (traj1.clone(), traj2.clone());
+        let eph = ephemeris.clone();
+        let cancel = cancel.clone();
+        windows = Box::new(windows.then_within(move |window| {
+            cancellable(
+                InterSatLosOccluderDetectFn {
+                    sc1: t1.clone(),
+                    sc2: t2.clone(),
+                    body,
+                    ephemeris: eph.clone(),
+                }
+                .into_intervals(UniformSampler::new(step), window),
+                &cancel,
+            )
+        }));
+    }
+
+    windows
+}
+
+/// The inter-satellite source over borrowed inputs.
 pub(crate) struct InterSatelliteSource<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    sc1: &'a Spacecraft,
-    sc2: &'a Spacecraft,
     traj1: &'a Trajectory<O, R>,
     traj2: &'a Trajectory<O, R>,
     ephemeris: &'a E,
-    central_body: Origin,
     occulting_bodies: &'a [Origin],
-    step: TimeDelta,
-    min_range: Option<Distance>,
-    max_range: Option<Distance>,
+    config: InterSatelliteConfig,
 }
 
 impl<'a, O, R, E> InterSatelliteSource<'a, O, R, E>
@@ -434,27 +697,23 @@ where
     E::Error: 'static,
 {
     /// Creates an inter-satellite source checking only `central_body`.
-    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
-        sc1: &'a Spacecraft,
-        sc2: &'a Spacecraft,
+        sc1: &Spacecraft,
+        sc2: &Spacecraft,
         traj1: &'a Trajectory<O, R>,
         traj2: &'a Trajectory<O, R>,
         ephemeris: &'a E,
         central_body: Origin,
         step: TimeDelta,
     ) -> Self {
+        let mut config = InterSatelliteConfig::new(step, central_body);
+        config.slew_rate = effective_slew_rate(sc1, sc2);
         Self {
-            sc1,
-            sc2,
             traj1,
             traj2,
             ephemeris,
-            central_body,
             occulting_bodies: &[],
-            step,
-            min_range: None,
-            max_range: None,
+            config,
         }
     }
 
@@ -470,99 +729,26 @@ where
         min_range: Option<Distance>,
         max_range: Option<Distance>,
     ) -> Self {
-        self.min_range = min_range;
-        self.max_range = max_range;
+        self.config.min_range = min_range;
+        self.config.max_range = max_range;
         self
     }
 
-    /// The per-pair slew-rate limit: the tighter of the two assets' limits.
-    fn effective_slew_rate(&self) -> Option<lox_core::units::AngularRate> {
-        match (self.sc1.max_slew_rate(), self.sc2.max_slew_rate()) {
-            (Some(a), Some(b)) => Some(if a.to_radians_per_second() < b.to_radians_per_second() {
-                a
-            } else {
-                b
-            }),
-            (Some(a), None) => Some(a),
-            (None, Some(b)) => Some(b),
-            (None, None) => None,
-        }
+    /// Makes every scan in the stack cancellable.
+    pub(crate) fn with_cancellation(mut self, cancel: Option<CancellationToken>) -> Self {
+        self.config.cancel = cancel;
+        self
     }
 
-    /// Builds the staged window stack for `interval`.
     fn stack(&self, interval: TimeInterval) -> BoxedWindows<'a> {
-        let traj1 = self.traj1;
-        let traj2 = self.traj2;
-        let ephemeris = self.ephemeris;
-        let central_body = self.central_body;
-        let step = self.step;
-
-        let make_range =
-            move |threshold: Distance, direction: RangeDirection, window: TimeInterval| {
-                InterSatelliteRangeDetectFn {
-                    sc1: traj1,
-                    sc2: traj2,
-                    threshold,
-                    direction,
-                }
-                .into_intervals(UniformSampler::new(step), window)
-            };
-
-        // Range is position-only — the cheapest detector here, so it seeds the
-        // stack. With both limits set the two scans are `intersect`ed over the
-        // whole interval; the streaming merge that would let them nest is
-        // design §10's deferred item.
-        let mut windows: BoxedWindows<'a> = match (self.max_range, self.min_range) {
-            (Some(max), Some(min)) => Box::new(
-                make_range(max, RangeDirection::Max, interval).intersect(make_range(
-                    min,
-                    RangeDirection::Min,
-                    interval,
-                )),
-            ),
-            (Some(max), None) => Box::new(make_range(max, RangeDirection::Max, interval)),
-            (None, Some(min)) => Box::new(make_range(min, RangeDirection::Min, interval)),
-            // Seeding with the whole interval lets every later stage apply
-            // uniformly, whether or not range limits are set.
-            (None, None) => Box::new(std::iter::once(Ok(interval))),
-        };
-
-        // Slew rate: position and velocity, no ephemeris.
-        if let Some(threshold) = self.effective_slew_rate() {
-            windows = Box::new(windows.then_within(move |window| {
-                InterSatelliteSlewRateDetectFn {
-                    sc1: traj1,
-                    sc2: traj2,
-                    threshold,
-                }
-                .into_intervals(UniformSampler::new(step), window)
-            }));
-        }
-
-        // Central-body occultation always applies, and needs no ephemeris.
-        windows = Box::new(windows.then_within(move |window| {
-            InterSatLosCentralBodyDetectFn {
-                sc1: traj1,
-                sc2: traj2,
-                body: central_body,
-            }
-            .into_intervals(UniformSampler::new(step), window)
-        }));
-
-        // Additional occulters are the most expensive: ephemeris per sample.
-        for &body in self.occulting_bodies {
-            windows = Box::new(windows.then_within(move |window| {
-                InterSatLosOccluderDetectFn {
-                    sc1: traj1,
-                    sc2: traj2,
-                    body,
-                    ephemeris,
-                }
-                .into_intervals(UniformSampler::new(step), window)
-            }));
-        }
-
-        windows
+        inter_satellite_stack(
+            self.traj1,
+            self.traj2,
+            self.ephemeris,
+            self.occulting_bodies.to_vec(),
+            self.config.clone(),
+            interval,
+        )
     }
 }
 
@@ -810,7 +996,7 @@ where
 // ---------------------------------------------------------------------------
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use std::collections::HashMap;
     use std::sync::OnceLock;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -836,12 +1022,12 @@ mod tests {
 
     // -- Fixtures ------------------------------------------------------------
 
-    pub(super) fn ephemeris() -> &'static Spk {
+    pub(crate) fn ephemeris() -> &'static Spk {
         static SPK: OnceLock<Spk> = OnceLock::new();
         SPK.get_or_init(|| Spk::from_file(data_file("spice/de440s.bsp")).unwrap())
     }
 
-    pub(super) fn lunar_trajectory() -> Trajectory {
+    pub(crate) fn lunar_trajectory() -> Trajectory {
         Trajectory::from_csv_dynamic(
             &read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
@@ -850,7 +1036,7 @@ mod tests {
         .unwrap()
     }
 
-    pub(super) fn cebreros() -> GroundStation {
+    pub(crate) fn cebreros() -> GroundStation {
         let coords = lox_core::coords::LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
         let location = GroundLocation::try_new(coords, Origin::Earth).unwrap();
         GroundStation::new(
@@ -858,6 +1044,29 @@ mod tests {
             location,
             ElevationMask::with_fixed_elevation(0.0),
         )
+    }
+
+    /// The ISS over a day: ~15.5 orbits, so eclipses are guaranteed. A lunar arc
+    /// has none at all, and even a polar LEO can spend a short window entirely in
+    /// sunlight, so anything eclipse-related needs a fixture like this or its
+    /// assertions hold vacuously.
+    pub(crate) fn iss_trajectory() -> Trajectory {
+        use lox_orbits::propagators::Propagator;
+        use lox_orbits::propagators::sgp4::{Elements, Sgp4};
+        use lox_time::intervals::Interval;
+
+        let tle = Elements::from_tle(
+            Some("ISS (ZARYA)".to_string()),
+            b"1 25544U 98067A   24170.37528350  .00016566  00000+0  30244-3 0  9996",
+            b"2 25544  51.6410 309.3890 0010444 339.5369 107.8830 15.49495945458731",
+        )
+        .unwrap();
+        let sgp4 = Sgp4::new(tle).unwrap();
+        let t0 = sgp4.time();
+        sgp4.with_step(TimeDelta::from_seconds(30))
+            .propagate(Interval::new(t0, t0 + TimeDelta::from_hours(24)).into_dynamic())
+            .unwrap()
+            .into_dynamic()
     }
 
     /// Two OneWeb satellites in near-opposite planes: their crossing orbits
@@ -897,7 +1106,7 @@ mod tests {
 
     /// Builds the `Scenario` + `Ensemble` the eager path needs, re-tagging each
     /// trajectory's epoch to TAI exactly as the existing tests do.
-    pub(super) fn scenario_and_ensemble(
+    pub(crate) fn scenario_and_ensemble(
         stations: &[GroundStation],
         spacecraft: &[Spacecraft],
         interval: TimeInterval,
@@ -1004,7 +1213,7 @@ mod tests {
     }
 
     /// Runs a source to completion, panicking on the first error.
-    pub(super) fn collect<S: Source>(source: &S, interval: TimeInterval) -> Vec<S::Out> {
+    pub(crate) fn collect<S: Source>(source: &S, interval: TimeInterval) -> Vec<S::Out> {
         source
             .detect(interval)
             .try_collect()
@@ -1249,9 +1458,12 @@ mod tests {
 
     #[test]
     fn parity_eclipses_beta_and_flux() {
-        let traj = lunar_trajectory();
+        // The ISS, not the lunar arc: a lunar trajectory never enters Earth's
+        // shadow, so the eclipse comparison would hold vacuously between two
+        // empty lists — which is exactly what it did before this assertion.
+        let traj = iss_trajectory();
         let interval = TimeInterval::new(traj.start_time(), traj.end_time());
-        let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(traj));
+        let sc = Spacecraft::new("iss", OrbitSource::Trajectory(traj));
         let spacecraft = [sc.clone()];
         let (scenario, ensemble) = scenario_and_ensemble(&[], &spacecraft, interval);
         let step = TimeDelta::from_seconds(60);
@@ -1268,12 +1480,14 @@ mod tests {
                 .into_iter()
                 .map(|e| e.0)
                 .collect();
-        assert_windows_match(
-            "eclipses",
-            old.eclipse_intervals_for(sc.id())
-                .expect("eclipses missing"),
-            &new_eclipses,
+        let old_eclipses = old
+            .eclipse_intervals_for(sc.id())
+            .expect("eclipses missing");
+        assert!(
+            !old_eclipses.is_empty(),
+            "fixture produced no eclipses, so the comparison would be vacuous"
         );
+        assert_windows_match("eclipses", old_eclipses, &new_eclipses);
 
         let (beta, flux) =
             sample_sun_channels(traj, ephemeris(), interval, step).expect("sampling failed");
@@ -1542,7 +1756,7 @@ mod tests {
         // over the whole interval at the same step.
         let counting = CountingEphemeris::new(ephemeris());
         let unstaged: Vec<TimeInterval> = LineOfSightDetectFn {
-            gs: gs.location(),
+            gs: gs.location().clone(),
             sc: traj,
             body: Origin::Moon,
             ephemeris: &counting,

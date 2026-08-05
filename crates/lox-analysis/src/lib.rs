@@ -13,6 +13,7 @@ pub mod events;
 /// AOI imaging event detection: sub-satellite point, swath, and off-nadir coverage.
 #[cfg(feature = "imaging")]
 pub mod imaging;
+mod par;
 /// Lazy analysis pipelines: the `Source` scan, `Stage` transforms, and caller-owned fan-out.
 pub mod pipeline;
 /// Power budget analysis: eclipse detection, beta angle, solar flux.
