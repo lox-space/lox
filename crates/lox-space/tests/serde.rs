@@ -13,7 +13,7 @@ use lox_space::frames::Teme;
 use lox_space::frames::rotations::Rotation;
 use lox_space::frames::*;
 use lox_space::orbits::CartesianOrbit;
-use lox_space::orbits::ground::GroundLocation;
+use lox_space::orbits::ground::EllipsoidLocation;
 use lox_space::time::Time;
 use lox_space::time::intervals::TimeInterval;
 use lox_space::time::time_scales::Tai;
@@ -373,9 +373,24 @@ fn test_state() {
 
 #[test]
 fn test_ground_location() {
-    let loc = GroundLocation::new(LonLatAlt::default(), Earth);
+    let loc = EllipsoidLocation::new(LonLatAlt::default(), Iau::new(Earth));
     let json = serde_json::to_string(&loc).expect("serialize");
-    let _: GroundLocation<Earth> = serde_json::from_str(&json).expect("deserialize");
+    let _: EllipsoidLocation<Iau<Earth>> = serde_json::from_str(&json).expect("deserialize");
+}
+
+#[test]
+fn test_ground_location_deserialize_rejects_non_body_fixed_frame() {
+    // `EllipsoidLocation::origin` relies on the frame being body-fixed, so
+    // deserialization must enforce the same invariant as the constructors.
+    let loc = EllipsoidLocation::try_new(LonLatAlt::default(), Frame::Iau(Origin::Earth))
+        .expect("construct");
+    let mut value = serde_json::to_value(&loc).expect("serialize");
+    value["frame"] = serde_json::to_value(Frame::Icrf).expect("serialize frame");
+
+    let err = serde_json::from_value::<EllipsoidLocation>(value)
+        .expect_err("ICRF must not deserialize into a location")
+        .to_string();
+    assert!(err.contains("body-fixed"), "unexpected error: {err}");
 }
 
 #[test]
@@ -670,7 +685,39 @@ fn test_network_id() {
 #[test]
 fn test_elevation_mask_fixed() {
     use lox_space::analysis::visibility::ElevationMask;
-    round_trip(&ElevationMask::with_fixed_elevation(0.1));
+    round_trip(&ElevationMask::with_fixed_elevation(Angle::radians(0.1)));
+}
+
+#[test]
+fn test_unit_types_serialize_transparently() {
+    // `Angle`, `Distance` and `Velocity` are newtypes over f64, so making the
+    // accessors unitful must not change the wire format of anything that
+    // stores them. Guards previously-written scenario files.
+    use lox_orbits::ground::Observables;
+    use lox_space::analysis::visibility::ElevationMask;
+    use lox_units::{Distance, Velocity};
+
+    let mask = ElevationMask::with_fixed_elevation(Angle::radians(0.1));
+    assert_eq!(
+        serde_json::to_value(&mask).unwrap(),
+        serde_json::json!({ "Fixed": 0.1 })
+    );
+
+    let obs = Observables::new(
+        Angle::radians(1.0),
+        Angle::radians(0.5),
+        Distance::meters(2000.0),
+        Velocity::meters_per_second(-7.0),
+    );
+    assert_eq!(
+        serde_json::to_value(&obs).unwrap(),
+        serde_json::json!({
+            "azimuth": 1.0,
+            "elevation": 0.5,
+            "range": 2000.0,
+            "range_rate": -7.0,
+        })
+    );
 }
 
 #[test]
@@ -733,11 +780,11 @@ fn test_access_window() {
 fn test_ground_station() {
     use lox_space::analysis::assets::GroundStation;
     use lox_space::analysis::visibility::ElevationMask;
-    use lox_space::orbits::ground::GroundLocation;
+    use lox_space::orbits::ground::EllipsoidLocation;
 
     let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
-    let loc = GroundLocation::try_new(coords, Origin::Earth).unwrap();
-    let mask = ElevationMask::with_fixed_elevation(5.0);
+    let loc = EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap();
+    let mask = ElevationMask::with_fixed_elevation(Angle::degrees(5.0));
     let gs = GroundStation::new("madrid", loc, mask).with_network_id("estrack");
     round_trip_no_eq(&gs);
 }
@@ -789,15 +836,19 @@ fn test_scenario() {
     use lox_space::analysis::assets::{GroundStation, Scenario, Spacecraft};
     use lox_space::analysis::visibility::ElevationMask;
     use lox_space::orbits::Trajectory;
-    use lox_space::orbits::ground::GroundLocation;
+    use lox_space::orbits::ground::EllipsoidLocation;
     use lox_space::orbits::propagators::OrbitSource;
 
     let t0 = Time::new(TimeScale::Tai, 0, Default::default());
     let t1 = Time::new(TimeScale::Tai, 86400, Default::default());
 
     let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
-    let loc = GroundLocation::try_new(coords, Origin::Earth).unwrap();
-    let gs = GroundStation::new("madrid", loc, ElevationMask::with_fixed_elevation(5.0));
+    let loc = EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap();
+    let gs = GroundStation::new(
+        "madrid",
+        loc,
+        ElevationMask::with_fixed_elevation(Angle::degrees(5.0)),
+    );
 
     let traj = Trajectory::from_csv_dynamic(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),

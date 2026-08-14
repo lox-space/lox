@@ -593,32 +593,19 @@ class TestAssets:
     def test_ground_station_location(self, ground_assets):
         for ga in ground_assets:
             loc = ga.location()
-            assert isinstance(loc, lox.GroundLocation)
+            assert isinstance(loc, lox.EllipsoidLocation)
 
     def test_ground_station_mask(self, ground_assets):
         for ga in ground_assets:
             mask = ga.mask()
             assert isinstance(mask, lox.ElevationMask)
 
-    def test_ground_station_body_fixed_frame_default(self, ground_assets):
-        """Default body-fixed frame should be IAU_EARTH."""
+    def test_ground_station_body_fixed_frame(self, ground_assets):
+        """A station's body-fixed frame comes from its location, not the station."""
         ga = ground_assets[0]
-        frame = ga.body_fixed_frame()
+        frame = ga.location().frame()
         assert isinstance(frame, lox.Frame)
         assert repr(frame) == 'Frame("IAU_EARTH")'
-
-    def test_ground_station_body_fixed_frame_custom(self):
-        """Custom body-fixed frame should be preserved."""
-        loc = lox.GroundLocation(
-            origin=lox.Origin("Earth"),
-            longitude=0 * lox.deg,
-            latitude=0 * lox.deg,
-            altitude=0 * lox.km,
-        )
-        mask = lox.ElevationMask.fixed(0 * lox.deg)
-        itrf = lox.Frame("ITRF")
-        gs = lox.GroundStation("test", loc, mask, body_fixed_frame=itrf)
-        assert repr(gs.body_fixed_frame()) == 'Frame("ITRF")'
 
     def test_ground_station_repr(self, ground_assets):
         r = repr(ground_assets[0])
@@ -645,8 +632,8 @@ class TestAssets:
         assert ground_assets[0].network_id() is None
 
     def test_ground_station_network_id_set(self):
-        loc = lox.GroundLocation(
-            origin=lox.Origin("Earth"),
+        loc = lox.EllipsoidLocation(
+            frame="IAU_EARTH",
             longitude=0 * lox.deg,
             latitude=0 * lox.deg,
             altitude=0 * lox.km,

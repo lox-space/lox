@@ -4,23 +4,22 @@
 
 use std::ops::Sub;
 
-use lox_bodies::{
-    CoordinateOrigin, Origin, PointMass, RotationalElements, Spheroid, TryPointMass, TrySpheroid,
-    UndefinedOriginPropertyError,
-};
+use lox_bodies::{CoordinateOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
 use lox_core::coords::Cartesian;
 use lox_core::coords::FromBodyFixedError;
 use lox_core::coords::LonLatAlt;
 use lox_core::glam::{DMat3, DVec3};
 use lox_ephem::Ephemeris;
-use lox_frames::{
-    Frame, Iau, Icrf, ReferenceFrame, TryBodyFixed, rotations::TryRotation, traits::frame_key,
-};
+use lox_frames::BodyFixed;
+use lox_frames::traits::ReferenceEllipsoid;
+use lox_frames::traits::TryReferenceEllipsoid;
+use lox_frames::traits::UndefinedReferenceEllipsoidError;
+use lox_frames::{Frame, Icrf, ReferenceFrame, rotations::TryRotation, traits::frame_key};
 use lox_time::offsets::DefaultOffsetProvider;
 use lox_time::time_scales::{Tdb, TimeScale};
 use thiserror::Error;
 
-use crate::ground::GroundLocation;
+use crate::ground::EllipsoidLocation;
 
 use super::{CartesianOrbit, KeplerianOrbit, Orbit};
 
@@ -106,30 +105,27 @@ where
     }
 }
 
-impl<O> CartesianOrbit<O, Iau<O>>
+impl<R> CartesianOrbit<R::Origin, R>
 where
-    O: CoordinateOrigin + RotationalElements + Spheroid + Copy,
+    R: BodyFixed + ReferenceEllipsoid + Copy,
 {
     /// Converts this body-fixed Cartesian orbit to a ground location.
-    pub fn to_ground_location(&self) -> Result<GroundLocation<O>, FromBodyFixedError> {
-        let origin = self.origin();
-        let coords = LonLatAlt::from_body_fixed(self.position(), &origin.ellipsoid())?;
-        Ok(GroundLocation::new(coords, origin))
+    pub fn to_ellipsoid_location(&self) -> Result<EllipsoidLocation<R>, FromBodyFixedError> {
+        let ellipsoid = self.frame.reference_ellipsoid();
+        let coords = LonLatAlt::from_body_fixed(self.position(), &ellipsoid)?;
+        Ok(EllipsoidLocation::new(coords, self.frame))
     }
 }
 
 /// Errors that can occur when converting a dynamic Cartesian orbit to a ground location.
 #[derive(Debug, Error)]
 pub enum StateToGroundError {
-    /// The origin body does not define equatorial radius and flattening.
-    #[error("equatorial radius and flattening factor are not available for origin `{}`", .0.name())]
-    UndefinedSpheroid(Origin),
+    /// The frame is not body-fixed or does not have a reference ellipsoid defined.
+    #[error(transparent)]
+    UndefinedReferenceEllipsoid(#[from] UndefinedReferenceEllipsoidError),
     /// Failed to convert from body-fixed coordinates.
     #[error(transparent)]
     FromBodyFixed(#[from] FromBodyFixedError),
-    /// The frame is not a body-fixed frame.
-    #[error("not a body-fixed frame {0}")]
-    NonBodyFixedFrame(String),
 }
 
 fn rotation_lvlh(position: DVec3, velocity: DVec3) -> DMat3 {
@@ -204,20 +200,12 @@ impl CartesianOrbit {
     }
 
     /// Converts this dynamic Cartesian orbit to a ground location.
-    pub fn try_to_ground_location(&self) -> Result<GroundLocation, StateToGroundError> {
+    pub fn try_to_ellipsoid_location(&self) -> Result<EllipsoidLocation, StateToGroundError> {
         let frame = self.reference_frame();
-        let origin = self.origin();
-        if frame.try_body_fixed().is_err() {
-            return Err(StateToGroundError::NonBodyFixedFrame(
-                frame.name().to_string(),
-            ));
-        }
-        let ellipsoid = origin
-            .try_ellipsoid()
-            .map_err(|_| StateToGroundError::UndefinedSpheroid(origin))?;
-
+        let ellipsoid = frame.try_reference_ellipsoid()?;
         let coords = LonLatAlt::from_body_fixed(self.position(), &ellipsoid)?;
-        Ok(GroundLocation::try_new(coords, origin).unwrap())
+        EllipsoidLocation::try_with_ellipsoid(coords, ellipsoid, frame)
+            .map_err(|e| UndefinedReferenceEllipsoidError::NotBodyFixed(e).into())
     }
 
     /// Returns the LVLH rotation matrix, returning an error if the frame is not ICRF.
@@ -265,8 +253,10 @@ mod tests {
     use lox_bodies::{Earth, Jupiter, Venus};
     use lox_core::coords::Cartesian;
     use lox_core::glam::DVec3;
+    use lox_core::units::{Angle, Distance};
     use lox_ephem::Ephemeris;
     use lox_ephem::spk::parser::Spk;
+    use lox_frames::Iau;
     use lox_frames::providers::DefaultRotationProvider;
     use lox_test_utils::data_file;
     use lox_time::{time, time_scales::Tdb, utc::Utc};
@@ -332,10 +322,10 @@ mod tests {
     }
 
     #[test]
-    fn test_to_ground_location() {
-        let lat_exp = 51.484f64.to_radians();
-        let lon_exp = -35.516f64.to_radians();
-        let alt_exp = 237.434; // km
+    fn test_to_ellipsoid_location() {
+        let lat_exp = Angle::degrees(51.484);
+        let lon_exp = Angle::degrees(-35.516);
+        let alt_exp = Distance::kilometers(237.434);
 
         let position = DVec3::new(3359927.0, -2398072.0, 5153000.0);
         let velocity = DVec3::new(5065.7, 5485.0, -744.0);
@@ -346,7 +336,7 @@ mod tests {
             Earth,
             Iau::new(Earth),
         );
-        let ground = state.to_ground_location().unwrap();
+        let ground = state.to_ellipsoid_location().unwrap();
         assert_approx_eq!(ground.latitude(), lat_exp, rtol <= 1e-4);
         assert_approx_eq!(ground.longitude(), lon_exp, rtol <= 1e-4);
         assert_approx_eq!(ground.altitude(), alt_exp, rtol <= 1e-4);

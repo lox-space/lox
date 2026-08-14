@@ -9,7 +9,7 @@ use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::ephem::python::{PyDafSpkError, PySpk};
 use crate::frames::Frame;
 use crate::frames::python::{PyFrame, PyRotationError};
-use crate::orbits::ground::{GroundLocation, GroundPropagator, GroundPropagatorError, Observables};
+use crate::orbits::ground::{EllipsoidLocation, GroundPropagator, GroundPropagatorError};
 use crate::orbits::propagators::Propagator;
 use crate::orbits::propagators::j2::J2Propagator;
 use crate::orbits::propagators::j4::J4Propagator;
@@ -23,7 +23,7 @@ use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
 use crate::time::time_scales::Tai;
 use crate::units::python::{PyAngle, PyDistance, PyVelocity};
-use lox_core::coords::{Cartesian, LonLatAlt};
+use lox_core::coords::{Cartesian, Ellipsoid, LonLatAlt};
 use lox_core::glam::DVec3;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
@@ -343,19 +343,19 @@ impl PyCartesian {
         Ok(PyArray2::from_vec2(py, &rot)?)
     }
 
-    /// Convert this state to a ground location.
+    /// Convert this state to a location on a reference ellipsoid.
     ///
     /// This is useful for converting a state in a body-fixed frame to geodetic coordinates.
     ///
     /// Returns:
-    ///     GroundLocation with longitude, latitude, and altitude.
+    ///     EllipsoidLocation with longitude, latitude, and altitude.
     ///
     /// Raises:
     ///     ValueError: If conversion fails.
-    fn to_ground_location(&self) -> PyResult<PyGroundLocation> {
-        Ok(PyGroundLocation(
+    fn to_ellipsoid_location(&self) -> PyResult<PyEllipsoidLocation> {
+        Ok(PyEllipsoidLocation(
             self.0
-                .try_to_ground_location()
+                .try_to_ellipsoid_location()
                 .map_err(|err| PyValueError::new_err(err.to_string()))?,
         ))
     }
@@ -1560,40 +1560,136 @@ impl PyJ4Propagator {
     }
 }
 
-/// Represents a location on the surface of a celestial body.
-///
-/// Ground locations are specified using geodetic coordinates (longitude, latitude,
-/// altitude) relative to a central body's reference ellipsoid.
+/// A reference ellipsoid, defined by its equatorial radius and flattening.
 ///
 /// Args:
-///     origin: The central body (e.g., Earth, Moon).
+///     equatorial_radius: Semi-major axis as Distance.
+///     flattening: Flattening factor in [0, 1).
+///
+/// Examples:
+///     >>> lox.Ellipsoid.WGS84
+///     >>> lox.Ellipsoid(6378137.0 * lox.m, 1 / 298.257223563)
+#[pyclass(name = "Ellipsoid", module = "lox_space", frozen, from_py_object)]
+#[derive(Clone, Copy, Debug)]
+pub struct PyEllipsoid(pub Ellipsoid);
+
+#[pymethods]
+impl PyEllipsoid {
+    #[new]
+    fn new(equatorial_radius: PyDistance, flattening: f64) -> PyResult<Self> {
+        Ok(PyEllipsoid(
+            Ellipsoid::try_new(equatorial_radius.0, flattening)
+                .map_err(|e| PyValueError::new_err(e.to_string()))?,
+        ))
+    }
+
+    /// The WGS84 reference ellipsoid.
+    #[classattr]
+    #[allow(non_snake_case)]
+    fn WGS84() -> Self {
+        PyEllipsoid(Ellipsoid::WGS84)
+    }
+
+    /// The GRS80 reference ellipsoid.
+    #[classattr]
+    #[allow(non_snake_case)]
+    fn GRS80() -> Self {
+        PyEllipsoid(Ellipsoid::GRS80)
+    }
+
+    /// The WGS72 reference ellipsoid.
+    #[classattr]
+    #[allow(non_snake_case)]
+    fn WGS72() -> Self {
+        PyEllipsoid(Ellipsoid::WGS72)
+    }
+
+    /// Return the equatorial radius.
+    fn equatorial_radius(&self) -> PyDistance {
+        PyDistance(self.0.equatorial_radius())
+    }
+
+    /// Return the flattening factor.
+    fn flattening(&self) -> f64 {
+        self.0.flattening()
+    }
+
+    /// Return true if both ellipsoids have the same radius and flattening.
+    fn __eq__(&self, other: &PyEllipsoid) -> bool {
+        self.0 == other.0
+    }
+
+    /// Return the constructor arguments for pickling.
+    fn __getnewargs__(&self) -> (PyDistance, f64) {
+        (self.equatorial_radius(), self.flattening())
+    }
+
+    /// Return the developer-facing string representation of this ellipsoid.
+    fn __repr__(&self) -> String {
+        format!(
+            "Ellipsoid({}, {})",
+            self.equatorial_radius().__repr__(),
+            repr_f64(self.flattening()),
+        )
+    }
+}
+
+/// Represents a location on the surface of a celestial body.
+///
+/// Locations are specified using geodetic coordinates (longitude, latitude,
+/// altitude) relative to a reference ellipsoid, in a body-fixed frame.
+///
+/// Args:
+///     frame: Body-fixed frame as Frame or str (e.g. "IAU_EARTH", "ITRF").
 ///     longitude: Geodetic longitude as Angle.
 ///     latitude: Geodetic latitude as Angle.
 ///     altitude: Altitude above the reference ellipsoid as Distance.
-#[pyclass(name = "GroundLocation", module = "lox_space", frozen, from_py_object)]
+///     ellipsoid: Reference ellipsoid, overriding the one conventionally
+///         paired with the frame.
+///
+/// Examples:
+///     >>> darmstadt = lox.EllipsoidLocation(
+///     ...     "IAU_EARTH",
+///     ...     longitude=8.6512 * lox.deg,
+///     ...     latitude=49.8728 * lox.deg,
+///     ...     altitude=0.108 * lox.km,
+///     ... )
+#[pyclass(
+    name = "EllipsoidLocation",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
 #[derive(Clone, Debug)]
-pub struct PyGroundLocation(pub GroundLocation);
+pub struct PyEllipsoidLocation(pub EllipsoidLocation);
 
 #[pymethods]
-impl PyGroundLocation {
+impl PyEllipsoidLocation {
     #[new]
+    #[pyo3(signature = (frame, longitude, latitude, altitude, ellipsoid=None))]
     fn new(
-        origin: &Bound<'_, PyAny>,
+        frame: &Bound<'_, PyAny>,
         longitude: PyAngle,
         latitude: PyAngle,
         altitude: PyDistance,
+        ellipsoid: Option<PyEllipsoid>,
     ) -> PyResult<Self> {
-        let origin: PyOrigin = origin.try_into()?;
+        let frame: PyFrame = frame.try_into()?;
         let coordinates = LonLatAlt::builder()
             .longitude(longitude.0)
             .latitude(latitude.0)
             .altitude(altitude.0)
             .build()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        Ok(PyGroundLocation(
-            GroundLocation::try_new(coordinates, origin.0)
-                .map_err(PyUndefinedOriginPropertyError)?,
-        ))
+        let location = match ellipsoid {
+            Some(ellipsoid) => {
+                EllipsoidLocation::try_with_ellipsoid(coordinates, ellipsoid.0, frame.0)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?
+            }
+            None => EllipsoidLocation::try_new(coordinates, frame.0)
+                .map_err(|e| PyValueError::new_err(e.to_string()))?,
+        };
+        Ok(PyEllipsoidLocation(location))
     }
 
     /// Compute observables (azimuth, elevation, range, range rate) to a target.
@@ -1617,16 +1713,7 @@ impl PyGroundLocation {
             .transpose()?
             .unwrap_or(PyFrame(Frame::Iau(state.0.origin())));
         let state = state.to_frame_inner(frame, provider)?;
-        let rot = self.0.rotation_to_topocentric();
-        let position = rot * (state.0.position() - self.0.body_fixed_position());
-        let velocity = rot * state.0.velocity();
-        let range = position.length();
-        let range_rate = position.dot(velocity) / range;
-        let elevation = (position.z / range).asin();
-        let azimuth = position.y.atan2(-position.x);
-        Ok(PyObservables(Observables::new(
-            azimuth, elevation, range, range_rate,
-        )))
+        Ok(PyObservables(self.0.observables(state.0)))
     }
 
     /// Return the rotation matrix from body-fixed to topocentric frame.
@@ -1641,17 +1728,17 @@ impl PyGroundLocation {
 
     /// Return the geodetic longitude.
     fn longitude(&self) -> PyAngle {
-        PyAngle(Angle::radians(self.0.longitude()))
+        PyAngle(self.0.longitude())
     }
 
     /// Return the geodetic latitude.
     fn latitude(&self) -> PyAngle {
-        PyAngle(Angle::radians(self.0.latitude()))
+        PyAngle(self.0.latitude())
     }
 
     /// Return the altitude above the reference ellipsoid.
     fn altitude(&self) -> PyDistance {
-        PyDistance(Distance::kilometers(self.0.altitude()))
+        PyDistance(self.0.altitude())
     }
 
     /// Return the central body (origin).
@@ -1659,14 +1746,36 @@ impl PyGroundLocation {
         PyOrigin(self.0.origin())
     }
 
-    /// Return the developer-facing string representation of this ground location.
+    /// Return the body-fixed frame the coordinates are referenced to.
+    fn frame(&self) -> PyFrame {
+        PyFrame(self.0.frame())
+    }
+
+    /// Return the reference ellipsoid the coordinates are referenced to.
+    fn ellipsoid(&self) -> PyEllipsoid {
+        PyEllipsoid(self.0.ellipsoid())
+    }
+
+    /// Return the geodetic coordinates as a (longitude, latitude, altitude) tuple.
+    fn coordinates(&self) -> (PyAngle, PyAngle, PyDistance) {
+        (self.longitude(), self.latitude(), self.altitude())
+    }
+
+    /// Return the body-fixed Cartesian position as a numpy array in m.
+    fn body_fixed_position<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        let pos = self.0.body_fixed_position();
+        PyArray1::from_slice(py, &[pos.x, pos.y, pos.z])
+    }
+
+    /// Return the developer-facing string representation of this location.
     pub fn __repr__(&self) -> String {
         format!(
-            "GroundLocation({}, {}, {}, {})",
-            PyOrigin(self.0.origin()).__repr__(),
+            "EllipsoidLocation({}, {}, {}, {}, {})",
+            self.frame().__repr__(),
             self.longitude().__repr__(),
             self.latitude().__repr__(),
             self.altitude().__repr__(),
+            self.ellipsoid().__repr__(),
         )
     }
 }
@@ -1693,8 +1802,8 @@ impl From<PyGroundPropagatorError> for PyErr {
 #[pymethods]
 impl PyGroundPropagator {
     #[new]
-    fn new(location: PyGroundLocation) -> Self {
-        PyGroundPropagator(GroundPropagator::new_dynamic(location.0))
+    fn new(location: PyEllipsoidLocation) -> Self {
+        PyGroundPropagator(GroundPropagator::new(location.0))
     }
 
     /// Propagate the ground station.
@@ -1738,7 +1847,7 @@ impl PyGroundPropagator {
     }
 
     fn __repr__(&self) -> String {
-        let loc = PyGroundLocation(self.0.location().clone());
+        let loc = PyEllipsoidLocation(self.0.location().clone());
         format!("GroundPropagator({})", loc.__repr__())
     }
 }

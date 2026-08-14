@@ -17,9 +17,10 @@ use lox_space::analysis::assets::{GroundStation, Scenario, Spacecraft};
 use lox_space::analysis::visibility::{ElevationMask, VisibilityAnalysis, VisibilityResults};
 use lox_space::bodies::Origin;
 use lox_space::core::coords::LonLatAlt;
+use lox_space::core::units::Angle;
 use lox_space::frames::Frame;
 use lox_space::frames::providers::DefaultRotationProvider;
-use lox_space::orbits::ground::GroundLocation;
+use lox_space::orbits::ground::EllipsoidLocation;
 use lox_space::orbits::propagators::OrbitSource;
 use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
 use lox_space::time::deltas::TimeDelta;
@@ -95,21 +96,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     let interval = TimeInterval::new(t0, t1).into_dynamic();
 
     // 2. Build ground stations.
-    let mask = ElevationMask::with_fixed_elevation(ELEVATION_MASK_DEG.to_radians());
+    let mask = ElevationMask::with_fixed_elevation(Angle::degrees(ELEVATION_MASK_DEG));
     let stations = vec![
         GroundStation::new(
             "svalbard",
-            GroundLocation::try_new(
+            EllipsoidLocation::try_new(
                 LonLatAlt::from_degrees(15.4078, 78.2297, 450.0)?,
-                Origin::Earth,
+                Frame::Iau(Origin::Earth),
             )?,
             mask.clone(),
         ),
         GroundStation::new(
             "maspalomas",
-            GroundLocation::try_new(
+            EllipsoidLocation::try_new(
                 LonLatAlt::from_degrees(-15.6336, 27.7629, 205.0)?,
-                Origin::Earth,
+                Frame::Iau(Origin::Earth),
             )?,
             mask,
         ),

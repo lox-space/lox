@@ -6,16 +6,18 @@
 use std::str::FromStr;
 
 use lox_bodies::{
-    CoordinateOrigin, Origin, RotationalElements, TryRotationalElements,
-    UndefinedOriginPropertyError,
+    CoordinateOrigin, Earth, Origin, RotationalElements, Spheroid, TryRotationalElements,
+    TrySpheroid, UndefinedOriginPropertyError,
 };
+use lox_core::coords::Ellipsoid;
 use thiserror::Error;
 
 use crate::{
     iers::{Iau2000Model, IersSystem, ReferenceSystem},
     traits::{
         BodyFixed, FrameKey, NonBodyFixedFrameError, NonQuasiInertialFrameError, QuasiInertial,
-        ReferenceFrame, TryBodyFixed, TryQuasiInertial, frame_key,
+        ReferenceEllipsoid, ReferenceFrame, TryBodyFixed, TryQuasiInertial, TryReferenceEllipsoid,
+        UndefinedReferenceEllipsoidError, frame_key,
     },
 };
 
@@ -83,6 +85,8 @@ impl ReferenceFrame for Cirf {
     }
 }
 
+impl QuasiInertial for Cirf {}
+
 /// Terrestrial Intermediate Reference Frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -103,6 +107,21 @@ impl ReferenceFrame for Tirf {
     }
 }
 
+impl BodyFixed for Tirf {
+    type Origin = Earth;
+
+    fn origin(&self) -> Self::Origin {
+        Earth
+    }
+}
+
+// TIRF differs from ITRF only by polar motion, so it shares ITRF's datum.
+impl ReferenceEllipsoid for Tirf {
+    fn reference_ellipsoid(&self) -> Ellipsoid {
+        Ellipsoid::GRS80
+    }
+}
+
 /// International Terrestrial Reference Frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -120,6 +139,20 @@ impl ReferenceFrame for Itrf {
 
     fn frame_key(&self, _: crate::traits::private::Internal) -> Option<FrameKey> {
         Some(FrameKey::Itrf)
+    }
+}
+
+impl BodyFixed for Itrf {
+    type Origin = Earth;
+
+    fn origin(&self) -> Self::Origin {
+        Earth
+    }
+}
+
+impl ReferenceEllipsoid for Itrf {
+    fn reference_ellipsoid(&self) -> Ellipsoid {
+        Ellipsoid::GRS80
     }
 }
 
@@ -145,6 +178,8 @@ where
     }
 }
 
+impl<T> QuasiInertial for Mod<T> where T: IersSystem + Into<ReferenceSystem> + Copy {}
+
 /// True of Date frame, parameterised by IERS convention.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -166,6 +201,8 @@ where
         Some(FrameKey::Tod(self.0.into()))
     }
 }
+
+impl<T> QuasiInertial for Tod<T> where T: IersSystem + Into<ReferenceSystem> + Copy {}
 
 /// Pseudo-Earth Fixed frame, parameterised by IERS convention.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -189,6 +226,27 @@ where
     }
 }
 
+impl<T> BodyFixed for Pef<T>
+where
+    T: IersSystem + Into<ReferenceSystem> + Copy,
+{
+    type Origin = Earth;
+
+    fn origin(&self) -> Self::Origin {
+        Earth
+    }
+}
+
+// PEF differs from ITRF only by polar motion, so it shares ITRF's datum.
+impl<T> ReferenceEllipsoid for Pef<T>
+where
+    T: IersSystem + Into<ReferenceSystem> + Copy,
+{
+    fn reference_ellipsoid(&self) -> Ellipsoid {
+        Ellipsoid::GRS80
+    }
+}
+
 /// True Equator Mean Equinox frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -209,7 +267,7 @@ impl ReferenceFrame for Teme {
     }
 }
 
-impl BodyFixed for Itrf {}
+impl QuasiInertial for Teme {}
 
 // -- serde: serialize frame ZSTs as their abbreviation --
 
@@ -310,7 +368,19 @@ where
     }
 }
 
-impl<T: TryRotationalElements> BodyFixed for Iau<T> {}
+impl<T: TryRotationalElements + Copy> BodyFixed for Iau<T> {
+    type Origin = T;
+
+    fn origin(&self) -> Self::Origin {
+        self.0
+    }
+}
+
+impl<T: RotationalElements + Spheroid + Copy> ReferenceEllipsoid for Iau<T> {
+    fn reference_ellipsoid(&self) -> Ellipsoid {
+        self.0.ellipsoid()
+    }
+}
 
 /// Full name of the IAU body-fixed frame for a body named `body`.
 pub(crate) fn iau_name(body: &str) -> String {
@@ -448,17 +518,48 @@ impl ReferenceFrame for Frame {
 impl TryQuasiInertial for Frame {
     fn try_quasi_inertial(&self) -> Result<(), NonQuasiInertialFrameError> {
         match self {
-            Frame::Icrf | Frame::J2000 | Frame::Cirf | Frame::Mod(_) | Frame::Tod(_) => Ok(()),
+            Frame::Icrf
+            | Frame::J2000
+            | Frame::Cirf
+            | Frame::Mod(_)
+            | Frame::Tod(_)
+            | Frame::Teme => Ok(()),
             _ => Err(NonQuasiInertialFrameError(self.abbreviation())),
         }
     }
 }
 
 impl TryBodyFixed for Frame {
+    type Origin = Origin;
+
     fn try_body_fixed(&self) -> Result<(), NonBodyFixedFrameError> {
         match self {
             Frame::Iau(_) | Frame::Itrf | Frame::Tirf | Frame::Pef(_) => Ok(()),
             _ => Err(NonBodyFixedFrameError(self.abbreviation())),
+        }
+    }
+
+    fn try_origin(&self) -> Result<Self::Origin, NonBodyFixedFrameError> {
+        match self {
+            Frame::Iau(origin) => Ok(*origin),
+            Frame::Itrf => Ok(Itrf.origin().into()),
+            Frame::Tirf => Ok(Tirf.origin().into()),
+            Frame::Pef(sys) => Ok(Pef(*sys).origin().into()),
+            _ => Err(NonBodyFixedFrameError(self.abbreviation())),
+        }
+    }
+}
+
+impl TryReferenceEllipsoid for Frame {
+    fn try_reference_ellipsoid(&self) -> Result<Ellipsoid, UndefinedReferenceEllipsoidError> {
+        match self {
+            Frame::Iau(origin) => Ok(origin.try_ellipsoid()?),
+            Frame::Itrf => Ok(Itrf.reference_ellipsoid()),
+            Frame::Tirf => Ok(Tirf.reference_ellipsoid()),
+            Frame::Pef(sys) => Ok(Pef(*sys).reference_ellipsoid()),
+            _ => Err(UndefinedReferenceEllipsoidError::NotBodyFixed(
+                NonBodyFixedFrameError(self.abbreviation()),
+            )),
         }
     }
 }
@@ -598,6 +699,7 @@ impl FromStr for Frame {
 mod tests {
     use super::*;
 
+    use crate::iers::{Iers1996, Iers2003, Iers2010};
     use crate::rotations::TryRotation;
     use crate::traits::frame_key;
     use crate::{Iau, providers::DefaultRotationProvider};
@@ -765,6 +867,124 @@ mod tests {
         assert!(Frame::J2000.try_quasi_inertial().is_ok());
     }
 
+    /// Quasi-inertial frames do not rotate with a central body; body-fixed
+    /// frames do. Every variant is listed so adding one forces a decision.
+    #[rstest]
+    #[case(Frame::Icrf, true)]
+    #[case(Frame::J2000, true)]
+    #[case(Frame::Cirf, true)]
+    #[case(Frame::Teme, true)]
+    #[case(Frame::Mod(ReferenceSystem::Iers1996), true)]
+    #[case(Frame::Mod(ReferenceSystem::Iers2010), true)]
+    #[case(Frame::Tod(ReferenceSystem::Iers1996), true)]
+    #[case(Frame::Tod(ReferenceSystem::Iers2010), true)]
+    #[case(Frame::Tirf, false)]
+    #[case(Frame::Itrf, false)]
+    #[case(Frame::Pef(ReferenceSystem::Iers1996), false)]
+    #[case(Frame::Pef(ReferenceSystem::Iers2010), false)]
+    #[case(Frame::Iau(Origin::Earth), false)]
+    fn test_quasi_inertial_classification(#[case] frame: Frame, #[case] exp: bool) {
+        assert_eq!(frame.try_quasi_inertial().is_ok(), exp);
+        // The two classifications are mutually exclusive.
+        assert!(!(frame.try_quasi_inertial().is_ok() && frame.try_body_fixed().is_ok()));
+    }
+
+    #[rstest]
+    #[case(Frame::Tirf, true)]
+    #[case(Frame::Itrf, true)]
+    #[case(Frame::Pef(ReferenceSystem::Iers1996), true)]
+    #[case(Frame::Pef(ReferenceSystem::Iers2010), true)]
+    #[case(Frame::Iau(Origin::Earth), true)]
+    #[case(Frame::Iau(Origin::Moon), true)]
+    #[case(Frame::Icrf, false)]
+    #[case(Frame::J2000, false)]
+    #[case(Frame::Cirf, false)]
+    #[case(Frame::Teme, false)]
+    #[case(Frame::Mod(ReferenceSystem::Iers1996), false)]
+    #[case(Frame::Tod(ReferenceSystem::Iers1996), false)]
+    fn test_body_fixed_classification(#[case] frame: Frame, #[case] exp: bool) {
+        assert_eq!(frame.try_body_fixed().is_ok(), exp);
+        assert_eq!(frame.try_origin().is_ok(), exp);
+    }
+
+    /// The terrestrial frames are all realizations of the same rotating Earth.
+    #[rstest]
+    #[case(Frame::Itrf)]
+    #[case(Frame::Tirf)]
+    #[case(Frame::Pef(ReferenceSystem::Iers2010))]
+    fn test_terrestrial_frames_share_origin_and_datum(#[case] frame: Frame) {
+        assert_eq!(frame.try_origin().unwrap(), Origin::Earth);
+        assert_eq!(frame.try_reference_ellipsoid().unwrap(), Ellipsoid::GRS80);
+    }
+
+    // The zero-sized types carry their capabilities as compile-time markers and
+    // `Frame` as runtime checks. The two must not drift apart: passing a ZST to
+    // these helpers requires the marker, and the assertion covers the enum.
+
+    fn assert_quasi_inertial_agrees(frame: impl QuasiInertial + Copy + Into<Frame>) {
+        let dynamic: Frame = frame.into();
+        assert!(
+            dynamic.try_quasi_inertial().is_ok(),
+            "{} is quasi-inertial as a ZST but not as a Frame",
+            dynamic.abbreviation()
+        );
+    }
+
+    fn assert_body_fixed_agrees<F>(frame: F)
+    where
+        F: BodyFixed + Copy + Into<Frame>,
+        F::Origin: Into<Origin>,
+    {
+        let dynamic: Frame = frame.into();
+        assert!(
+            dynamic.try_body_fixed().is_ok(),
+            "{} is body-fixed as a ZST but not as a Frame",
+            dynamic.abbreviation()
+        );
+        assert_eq!(dynamic.try_origin().unwrap(), frame.origin().into());
+    }
+
+    fn assert_reference_ellipsoid_agrees(frame: impl ReferenceEllipsoid + Copy + Into<Frame>) {
+        let dynamic: Frame = frame.into();
+        assert_eq!(
+            dynamic.try_reference_ellipsoid().unwrap(),
+            frame.reference_ellipsoid()
+        );
+    }
+
+    #[test]
+    fn test_quasi_inertial_zsts_agree_with_frame() {
+        assert_quasi_inertial_agrees(Icrf);
+        assert_quasi_inertial_agrees(J2000);
+        assert_quasi_inertial_agrees(Cirf);
+        assert_quasi_inertial_agrees(Teme);
+        assert_quasi_inertial_agrees(Mod(Iers1996));
+        assert_quasi_inertial_agrees(Mod(Iers2003::default()));
+        assert_quasi_inertial_agrees(Mod(Iers2010));
+        assert_quasi_inertial_agrees(Tod(Iers1996));
+        assert_quasi_inertial_agrees(Tod(Iers2003::default()));
+        assert_quasi_inertial_agrees(Tod(Iers2010));
+    }
+
+    #[test]
+    fn test_body_fixed_zsts_agree_with_frame() {
+        assert_body_fixed_agrees(Itrf);
+        assert_body_fixed_agrees(Tirf);
+        assert_body_fixed_agrees(Pef(Iers1996));
+        assert_body_fixed_agrees(Pef(Iers2003::default()));
+        assert_body_fixed_agrees(Pef(Iers2010));
+        assert_body_fixed_agrees(Iau::new(Earth));
+    }
+
+    #[test]
+    fn test_reference_ellipsoid_zsts_agree_with_frame() {
+        assert_reference_ellipsoid_agrees(Itrf);
+        assert_reference_ellipsoid_agrees(Tirf);
+        assert_reference_ellipsoid_agrees(Pef(Iers1996));
+        assert_reference_ellipsoid_agrees(Pef(Iers2010));
+        assert_reference_ellipsoid_agrees(Iau::new(Earth));
+    }
+
     #[test]
     fn test_from_simple_frames() {
         assert_eq!(Frame::from(Icrf), Frame::Icrf);
@@ -777,8 +997,6 @@ mod tests {
 
     #[test]
     fn test_from_parameterized_frames() {
-        use crate::iers::{Iers1996, Iers2003, Iers2010};
-
         assert_eq!(
             Frame::from(Mod(Iers1996)),
             Frame::Mod(ReferenceSystem::Iers1996)

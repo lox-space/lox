@@ -11,8 +11,9 @@ use lox_analysis::assets::{AssetId, GroundStation, Scenario, Spacecraft};
 use lox_analysis::visibility::{ElevationMask, VisibilityAnalysis};
 use lox_bodies::Origin;
 use lox_core::coords::LonLatAlt;
+use lox_core::units::Angle;
 use lox_frames::Frame;
-use lox_orbits::ground::GroundLocation;
+use lox_orbits::ground::EllipsoidLocation;
 use lox_orbits::orbits::{Ensemble, Trajectory};
 use lox_orbits::propagators::OrbitSource;
 use lox_test_utils::read_data_file;
@@ -30,8 +31,8 @@ static FIXTURE: LazyLock<Fixture> = LazyLock::new(|| {
     )
     .unwrap();
     let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
-    let gs_loc = GroundLocation::try_new(coords, Origin::Earth).unwrap();
-    let mask = ElevationMask::with_fixed_elevation(0.0);
+    let gs_loc = EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap();
+    let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
     let gs = GroundStation::new("cebreros", gs_loc, mask);
     let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
 

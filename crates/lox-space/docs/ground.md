@@ -14,11 +14,20 @@ Ground-based tracking and observation support.
 import lox_space as lox
 
 # Define a ground station
-gs = lox.GroundLocation(
-    origin=lox.Origin("Earth"),
+gs = lox.EllipsoidLocation(
+    frame="IAU_EARTH",          # any body-fixed frame, e.g. "ITRF"
     longitude=0.0 * lox.rad,    # Greenwich
     latitude=51.5 * lox.deg,    # ~51.5° N
     altitude=0.0 * lox.km,
+)
+
+# The frame's conventional ellipsoid is a default, not a constraint
+gs_wgs84 = lox.EllipsoidLocation(
+    frame="IAU_EARTH",
+    longitude=0.0 * lox.rad,
+    latitude=51.5 * lox.deg,
+    altitude=0.0 * lox.km,
+    ellipsoid=lox.Ellipsoid.WGS84,
 )
 
 # Calculate observables for a spacecraft state
@@ -39,7 +48,13 @@ mask = lox.ElevationMask.variable(azimuth, elevation)
 
 ---
 
-::: lox_space.GroundLocation
+::: lox_space.EllipsoidLocation
+    options:
+      show_source: false
+
+---
+
+::: lox_space.Ellipsoid
     options:
       show_source: false
 

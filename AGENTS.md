@@ -78,7 +78,7 @@ Key details:
 - `Distance` stores meters internally, even when created via `kilometers()`.
 - `GravitationalParameter` stores m³/s² internally, even when created via `km3_per_s2()`.
 - `Angle` stores **radians** internally.
-- `GroundLocation` altitude is in **km** (converted to m internally in `body_fixed_position()`).
+- `EllipsoidLocation` and `Observables` accessors return **unitful** types (`Angle`, `Distance`, `Velocity`), not raw `f64` — prefer this for new scalar accessors. Bulk numeric arrays feeding interpolation series (e.g. `ElevationMask::new`) stay `Vec<f64>` in radians.
 
 **Getting this wrong will produce silently incorrect results. Always verify units.**
 
