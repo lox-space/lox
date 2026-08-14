@@ -27,8 +27,9 @@ use crate::itur::python::PyItuProvider;
 use crate::itur::python::register_itur_functions;
 use crate::math::python::PySeries;
 use crate::orbits::python::{
-    PyCartesian, PyGroundLocation, PyGroundPropagator, PyJ2Propagator, PyJ4Propagator, PyKeplerian,
-    PyModifiedEquinoctial, PyNumericalPropagator, PySgp4, PyTle, PyTrajectory, PyVallado,
+    PyCartesian, PyEllipsoid, PyEllipsoidLocation, PyGroundPropagator, PyJ2Propagator,
+    PyJ4Propagator, PyKeplerian, PyModifiedEquinoctial, PyNumericalPropagator, PySgp4, PyTle,
+    PyTrajectory, PyVallado,
 };
 use crate::time::python::{
     deltas::PyTimeDelta,
@@ -133,8 +134,9 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // orbits
     m.add_class::<PyCartesian>()?;
+    m.add_class::<PyEllipsoid>()?;
     m.add_class::<PyEvent>()?;
-    m.add_class::<PyGroundLocation>()?;
+    m.add_class::<PyEllipsoidLocation>()?;
     m.add_class::<PyGroundPropagator>()?;
     m.add_class::<PyInterval>()?;
     m.add_class::<PyJ2Propagator>()?;

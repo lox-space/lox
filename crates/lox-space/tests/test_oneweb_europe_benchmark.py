@@ -44,7 +44,7 @@ def create_europe_ground_assets(resolution_deg=1.0, min_elevation_deg=10.0):
     lats = np.arange(lat_min, lat_max + resolution_deg, resolution_deg)
 
     elevation_mask = lox.ElevationMask.fixed(min_elevation_deg * lox.deg)
-    origin = lox.Origin("Earth")
+    frame = lox.Frame("IAU_EARTH")
 
     ground_assets = []
     point_count = 0
@@ -53,8 +53,8 @@ def create_europe_ground_assets(resolution_deg=1.0, min_elevation_deg=10.0):
             # Filter to approximate Europe shape (rough filtering)
             if is_point_in_europe(lon, lat):
                 gs_name = f"EU_GS_{point_count:04d}"
-                ground_location = lox.GroundLocation(
-                    origin=origin,
+                ground_location = lox.EllipsoidLocation(
+                    frame=frame,
                     longitude=lon * lox.deg,
                     latitude=lat * lox.deg,
                     altitude=0.0 * lox.km,  # Sea level

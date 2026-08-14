@@ -38,7 +38,7 @@ pub use crate::frames::{Frame, Icrf, Itrf};
 pub use crate::earth::eop::{EopParser, EopProvider};
 
 // Ground
-pub use crate::orbits::ground::GroundLocation;
+pub use crate::orbits::ground::EllipsoidLocation;
 
 // Analysis
 pub use crate::analysis::assets::{GroundStation, Scenario, Spacecraft};

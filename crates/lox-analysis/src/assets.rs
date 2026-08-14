@@ -28,7 +28,7 @@ use lox_comms::terminal::{RxTerminal, TxTerminal};
 
 use crate::visibility::ElevationMask;
 use lox_orbits::constellations::{Constellation, ConstellationPropagator};
-use lox_orbits::ground::GroundLocation;
+use lox_orbits::ground::EllipsoidLocation;
 use lox_orbits::orbits::{Ensemble, KeplerianOrbit};
 use lox_orbits::propagators::j2::J2Propagator;
 use lox_orbits::propagators::j4::J4Propagator;
@@ -110,9 +110,8 @@ impl fmt::Display for NetworkId {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GroundStation {
     id: AssetId,
-    location: GroundLocation,
+    location: EllipsoidLocation,
     mask: ElevationMask,
-    body_fixed_frame: Frame,
     network: Option<NetworkId>,
     #[cfg(feature = "comms")]
     tx_terminals: BTreeMap<String, TxTerminal>,
@@ -122,25 +121,17 @@ pub struct GroundStation {
 
 impl GroundStation {
     /// Creates a new ground station with the given location and elevation mask.
-    pub fn new(id: impl Into<String>, location: GroundLocation, mask: ElevationMask) -> Self {
-        let body_fixed_frame = Frame::Iau(location.origin());
+    pub fn new(id: impl Into<String>, location: EllipsoidLocation, mask: ElevationMask) -> Self {
         Self {
             id: AssetId::new(id),
             location,
             mask,
-            body_fixed_frame,
             network: None,
             #[cfg(feature = "comms")]
             tx_terminals: BTreeMap::new(),
             #[cfg(feature = "comms")]
             rx_terminals: BTreeMap::new(),
         }
-    }
-
-    /// Overrides the body-fixed frame (defaults to IAU frame of the location's origin).
-    pub fn with_body_fixed_frame(mut self, frame: impl Into<Frame>) -> Self {
-        self.body_fixed_frame = frame.into();
-        self
     }
 
     /// Assigns this ground station to a network.
@@ -181,7 +172,7 @@ impl GroundStation {
     }
 
     /// Returns the ground location.
-    pub fn location(&self) -> &GroundLocation {
+    pub fn location(&self) -> &EllipsoidLocation {
         &self.location
     }
 
@@ -193,11 +184,6 @@ impl GroundStation {
     /// Returns the network identifier, if assigned.
     pub fn network_id(&self) -> Option<&NetworkId> {
         self.network.as_ref()
-    }
-
-    /// Returns the body-fixed reference frame.
-    pub fn body_fixed_frame(&self) -> Frame {
-        self.body_fixed_frame
     }
 
     /// Returns the named transmit terminals of this ground station.
@@ -644,19 +630,20 @@ mod tests {
     #[cfg(feature = "comms")]
     use lox_core::comms::FrequencyBand;
     use lox_core::coords::LonLatAlt;
+    use lox_core::units::Angle;
     #[cfg(feature = "comms")]
     use lox_core::units::DecibelUnits;
     use lox_frames::Frame;
-    use lox_orbits::ground::GroundLocation;
+    use lox_orbits::ground::EllipsoidLocation;
     use lox_time::deltas::TimeDelta;
 
-    fn dummy_location() -> GroundLocation {
+    fn dummy_location() -> EllipsoidLocation {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
-        GroundLocation::try_new(coords, Origin::Earth).unwrap()
+        EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap()
     }
 
     fn dummy_mask() -> ElevationMask {
-        ElevationMask::with_fixed_elevation(0.0)
+        ElevationMask::with_fixed_elevation(Angle::ZERO)
     }
 
     #[cfg(feature = "comms")]
@@ -764,14 +751,6 @@ mod tests {
         let mask = dummy_mask();
         let gs = GroundStation::new("gs1", loc, mask);
         assert_eq!(gs.id().as_str(), "gs1");
-        assert_eq!(gs.body_fixed_frame(), Frame::Iau(Origin::Earth));
-    }
-
-    #[test]
-    fn test_ground_station_with_body_fixed_frame() {
-        let gs = GroundStation::new("gs1", dummy_location(), dummy_mask())
-            .with_body_fixed_frame(Frame::Itrf);
-        assert_eq!(gs.body_fixed_frame(), Frame::Itrf);
     }
 
     #[test]
@@ -803,9 +782,9 @@ mod tests {
 
     #[test]
     fn test_ground_station_mask_getter() {
-        let mask = ElevationMask::with_fixed_elevation(0.1);
+        let mask = ElevationMask::with_fixed_elevation(Angle::radians(0.1));
         let gs = GroundStation::new("gs1", dummy_location(), mask.clone());
-        assert_eq!(gs.mask().min_elevation(0.0), 0.1);
+        assert_eq!(gs.mask().min_elevation(Angle::ZERO), Angle::radians(0.1));
     }
 
     // --- Spacecraft ---

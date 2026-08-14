@@ -28,8 +28,8 @@ use crate::ephem::spk::parser::Spk;
 use crate::frames::python::PyFrame;
 use crate::orbits::ground::Observables;
 use crate::orbits::python::{
-    PyGroundLocation, PyJ2Propagator, PyJ4Propagator, PyNumericalPropagator, PySgp4, PyTrajectory,
-    PyVallado,
+    PyEllipsoidLocation, PyJ2Propagator, PyJ4Propagator, PyNumericalPropagator, PySgp4,
+    PyTrajectory, PyVallado,
 };
 use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
@@ -43,7 +43,7 @@ use lox_orbits::orbits::Ensemble;
 use lox_orbits::propagators::OrbitSource;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
-use lox_units::{Angle, Distance, Velocity};
+use lox_units::Distance;
 
 use numpy::{PyArray1, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
@@ -132,20 +132,16 @@ pub struct PyGroundStation(pub GroundStation);
 #[pymethods]
 impl PyGroundStation {
     #[new]
-    #[pyo3(signature = (id, location, mask, body_fixed_frame=None, network_id=None, tx_terminals=None, rx_terminals=None))]
+    #[pyo3(signature = (id, location, mask, network_id=None, tx_terminals=None, rx_terminals=None))]
     fn new(
         id: String,
-        location: PyGroundLocation,
+        location: PyEllipsoidLocation,
         mask: PyElevationMask,
-        body_fixed_frame: Option<PyFrame>,
         network_id: Option<String>,
         tx_terminals: Option<HashMap<String, Bound<'_, PyAny>>>,
         rx_terminals: Option<HashMap<String, Bound<'_, PyAny>>>,
     ) -> PyResult<Self> {
         let mut gs = GroundStation::new(id, location.0, mask.0);
-        if let Some(frame) = body_fixed_frame {
-            gs = gs.with_body_fixed_frame(frame.0);
-        }
         if let Some(nid) = network_id {
             gs = gs.with_network_id(nid);
         }
@@ -164,8 +160,8 @@ impl PyGroundStation {
     }
 
     /// Return the ground location.
-    fn location(&self) -> PyGroundLocation {
-        PyGroundLocation(self.0.location().clone())
+    fn location(&self) -> PyEllipsoidLocation {
+        PyEllipsoidLocation(self.0.location().clone())
     }
 
     /// Return the elevation mask.
@@ -176,11 +172,6 @@ impl PyGroundStation {
     /// Return the network identifier, if assigned.
     fn network_id(&self) -> Option<String> {
         self.0.network_id().map(|id| id.as_str().to_string())
-    }
-
-    /// Return the body-fixed frame.
-    fn body_fixed_frame(&self) -> PyFrame {
-        PyFrame(self.0.body_fixed_frame())
     }
 
     /// Return the named transmit terminals as a dict.
@@ -859,7 +850,6 @@ impl PyVisibilityResults {
                         gs.mask(),
                         &dynamic_traj,
                         self.step,
-                        gs.body_fixed_frame(),
                     )
                     .map_err(|e| PyValueError::new_err(e.to_string()))?;
                 Ok(passes.into_iter().map(PyPass).collect())
@@ -904,7 +894,6 @@ impl PyVisibilityResults {
                             gs.location(),
                             gs.mask(),
                             &dynamic_traj,
-                            gs.body_fixed_frame(),
                         )
                     })
                     .map(PyPass)
@@ -993,7 +982,7 @@ impl PyElevationMask {
     ) -> PyResult<Self> {
         if let Some(min_elevation) = min_elevation {
             return Ok(PyElevationMask(ElevationMask::with_fixed_elevation(
-                min_elevation.0.to_radians(),
+                min_elevation.0,
             )));
         }
         if let (Some(azimuth), Some(elevation)) = (azimuth, elevation) {
@@ -1017,9 +1006,7 @@ impl PyElevationMask {
     ///     ElevationMask with fixed minimum elevation.
     #[classmethod]
     fn fixed(_cls: &Bound<'_, PyType>, min_elevation: PyAngle) -> Self {
-        PyElevationMask(ElevationMask::with_fixed_elevation(
-            min_elevation.0.to_radians(),
-        ))
+        PyElevationMask(ElevationMask::with_fixed_elevation(min_elevation.0))
     }
 
     /// Create a variable elevation mask from azimuth-dependent data.
@@ -1066,7 +1053,7 @@ impl PyElevationMask {
     /// Return the fixed elevation value (for fixed masks only).
     fn fixed_elevation(&self) -> Option<PyAngle> {
         match &self.0 {
-            ElevationMask::Fixed(min_elevation) => Some(PyAngle(Angle::radians(*min_elevation))),
+            ElevationMask::Fixed(min_elevation) => Some(PyAngle(*min_elevation)),
             ElevationMask::Variable(_) => None,
         }
     }
@@ -1079,7 +1066,7 @@ impl PyElevationMask {
     /// Returns:
     ///     Minimum elevation as Angle.
     fn min_elevation(&self, azimuth: PyAngle) -> PyAngle {
-        PyAngle(Angle::radians(self.0.min_elevation(azimuth.0.to_radians())))
+        PyAngle(self.0.min_elevation(azimuth.0))
     }
 
     fn __repr__(&self) -> String {
@@ -1087,7 +1074,7 @@ impl PyElevationMask {
             ElevationMask::Fixed(min_elevation) => {
                 format!(
                     "ElevationMask(min_elevation={})",
-                    PyAngle(Angle::radians(*min_elevation)).__repr__(),
+                    PyAngle(*min_elevation).__repr__(),
                 )
             }
             ElevationMask::Variable(series) => {
@@ -1122,31 +1109,31 @@ impl PyObservables {
         range_rate: PyVelocity,
     ) -> Self {
         PyObservables(Observables::new(
-            azimuth.0.to_radians(),
-            elevation.0.to_radians(),
-            range.0.to_meters(),
-            range_rate.0.to_meters_per_second(),
+            azimuth.0,
+            elevation.0,
+            range.0,
+            range_rate.0,
         ))
     }
 
     /// Return the azimuth angle.
     fn azimuth(&self) -> PyAngle {
-        PyAngle(Angle::radians(self.0.azimuth()))
+        PyAngle(self.0.azimuth())
     }
 
     /// Return the elevation angle.
     fn elevation(&self) -> PyAngle {
-        PyAngle(Angle::radians(self.0.elevation()))
+        PyAngle(self.0.elevation())
     }
 
     /// Return the range (distance).
     fn range(&self) -> PyDistance {
-        PyDistance(Distance::meters(self.0.range()))
+        PyDistance(self.0.range())
     }
 
     /// Return the range rate.
     fn range_rate(&self) -> PyVelocity {
-        PyVelocity(Velocity::meters_per_second(self.0.range_rate()))
+        PyVelocity(self.0.range_rate())
     }
 
     fn __repr__(&self) -> String {

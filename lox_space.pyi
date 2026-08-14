@@ -327,9 +327,8 @@ class GroundStation:
     def __new__(
         cls,
         id: str,
-        location: GroundLocation,
+        location: EllipsoidLocation,
         mask: ElevationMask,
-        body_fixed_frame: Frame | None = None,
         network_id: str | None = None,
         tx_terminals: dict[str, TxTerminal] | None = None,
         rx_terminals: dict[str, RxTerminal] | None = None,
@@ -337,7 +336,7 @@ class GroundStation:
     def id(self) -> str:
         """Return the asset identifier."""
         ...
-    def location(self) -> GroundLocation:
+    def location(self) -> EllipsoidLocation:
         """Return the ground location."""
         ...
     def mask(self) -> ElevationMask:
@@ -345,9 +344,6 @@ class GroundStation:
         ...
     def network_id(self) -> str | None:
         """Return the network identifier, if assigned."""
-        ...
-    def body_fixed_frame(self) -> Frame:
-        """Return the body-fixed frame."""
         ...
     def tx_terminals(self) -> dict[str, TxTerminal]:
         """Return the named transmit terminals as a dict."""
@@ -1106,7 +1102,7 @@ class Cartesian:
     def rotation_lvlh(self) -> np.ndarray:
         """Compute the rotation matrix from inertial to LVLH frame."""
         ...
-    def to_ground_location(self) -> GroundLocation:
+    def to_ellipsoid_location(self) -> EllipsoidLocation:
         """Convert this state to a ground location."""
         ...
 
@@ -1621,18 +1617,44 @@ class J4:
         """Propagate the orbit to one or more times."""
         ...
 
-class GroundLocation:
+class Ellipsoid:
+    """A reference ellipsoid, defined by its equatorial radius and flattening.
+
+    Args:
+        equatorial_radius: Semi-major axis as Distance.
+        flattening: Flattening factor in [0, 1).
+
+    Examples:
+        >>> lox.Ellipsoid.WGS84
+        >>> lox.Ellipsoid(6378137.0 * lox.m, 1 / 298.257223563)
+    """
+
+    WGS84: Ellipsoid
+    GRS80: Ellipsoid
+    WGS72: Ellipsoid
+
+    def __new__(cls, equatorial_radius: Distance, flattening: float) -> Self: ...
+    def equatorial_radius(self) -> Distance:
+        """Return the equatorial radius."""
+        ...
+    def flattening(self) -> float:
+        """Return the flattening factor."""
+        ...
+
+class EllipsoidLocation:
     """Represents a location on the surface of a celestial body.
 
     Args:
-        origin: The central body (e.g., Earth, Moon).
+        frame: Body-fixed frame as Frame or str (e.g. "IAU_EARTH", "ITRF").
         longitude: Geodetic longitude as Angle.
         latitude: Geodetic latitude as Angle.
         altitude: Altitude above the reference ellipsoid as Distance.
+        ellipsoid: Reference ellipsoid, overriding the one conventionally
+            paired with the frame.
 
     Examples:
-        >>> darmstadt = lox.GroundLocation(
-        ...     lox.Origin("Earth"),
+        >>> darmstadt = lox.EllipsoidLocation(
+        ...     "IAU_EARTH",
         ...     longitude=8.6512 * lox.deg,
         ...     latitude=49.8728 * lox.deg,
         ...     altitude=0.108 * lox.km,
@@ -1640,10 +1662,11 @@ class GroundLocation:
     """
     def __new__(
         cls,
-        origin: str | int | Origin,
+        frame: str | Frame,
         longitude: Angle,
         latitude: Angle,
         altitude: Distance,
+        ellipsoid: Ellipsoid | None = None,
     ) -> Self: ...
     def longitude(self) -> Angle:
         """Return the geodetic longitude."""
@@ -1653,6 +1676,9 @@ class GroundLocation:
         ...
     def altitude(self) -> Distance:
         """Return the altitude above the reference ellipsoid."""
+        ...
+    def coordinates(self) -> tuple[Angle, Angle, Distance]:
+        """Return the geodetic coordinates as a (longitude, latitude, altitude) tuple."""
         ...
     def observables(
         self,
@@ -1665,6 +1691,15 @@ class GroundLocation:
     def origin(self) -> Origin:
         """Return the central body (origin)."""
         ...
+    def frame(self) -> Frame:
+        """Return the body-fixed frame the coordinates are referenced to."""
+        ...
+    def ellipsoid(self) -> Ellipsoid:
+        """Return the reference ellipsoid the coordinates are referenced to."""
+        ...
+    def body_fixed_position(self) -> np.ndarray:
+        """Return the body-fixed Cartesian position as a numpy array in m."""
+        ...
     def rotation_to_topocentric(self) -> np.ndarray:
         """Return the rotation matrix from body-fixed to topocentric frame."""
         ...
@@ -1676,11 +1711,11 @@ class GroundPropagator:
         location: The ground location to propagate.
 
     Examples:
-        >>> gs = lox.GroundLocation(lox.Origin("Earth"), lon, lat, alt)
+        >>> gs = lox.EllipsoidLocation("IAU_EARTH", lon, lat, alt)
         >>> prop = lox.GroundPropagator(gs)
         >>> trajectory = prop.propagate([t1, t2, t3])
     """
-    def __new__(cls, location: GroundLocation) -> Self: ...
+    def __new__(cls, location: EllipsoidLocation) -> Self: ...
     @overload
     def propagate(self, steps: Time) -> Cartesian: ...
     @overload

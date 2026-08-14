@@ -7,7 +7,7 @@ import numpy.testing as npt
 import pytest
 
 
-def test_state_to_ground_location():
+def test_state_to_ellipsoid_location():
     time = lox.UTC.from_iso("2024-07-05T09:09:18.173").to_scale("TAI")
     state = lox.Cartesian(
         time,
@@ -24,7 +24,7 @@ def test_state_to_ground_location():
         state.velocity() * 1e-3,
         [-3.53237875783652, -3.152377656863808, 5.642296713889555],
     )
-    ground = state.to_ground_location()
+    ground = state.to_ellipsoid_location()
     assert float(ground.longitude()) == pytest.approx(2.643578045424445)
     assert float(ground.latitude()) == pytest.approx(-0.27944957125091063)
     assert ground.altitude().to_kilometers() == pytest.approx(417.8524151150059)

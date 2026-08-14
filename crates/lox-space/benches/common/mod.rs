@@ -23,11 +23,12 @@ use lox_space::analysis::assets::{AssetId, GroundStation, Scenario, Spacecraft};
 use lox_space::analysis::visibility::ElevationMask;
 use lox_space::bodies::{Earth, Origin};
 use lox_space::core::coords::LonLatAlt;
+use lox_space::core::units::Angle;
 use lox_space::core::units::AngularRate;
 use lox_space::ephem::spk::parser::Spk;
 use lox_space::frames::providers::DefaultRotationProvider;
-use lox_space::frames::{Frame, Icrf};
-use lox_space::orbits::ground::GroundLocation;
+use lox_space::frames::{Frame, Iau, Icrf};
+use lox_space::orbits::ground::EllipsoidLocation;
 use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
 use lox_space::orbits::propagators::{OrbitSource, Propagator};
 use lox_space::orbits::{Ensemble, Trajectory};
@@ -59,16 +60,16 @@ fn spacecraft_trajectory_dynamic() -> Trajectory {
     .unwrap()
 }
 
-fn ground_location_dynamic() -> GroundLocation<Origin> {
+fn ground_location_dynamic() -> EllipsoidLocation {
     let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
-    GroundLocation::try_new(coords, Origin::Earth).unwrap()
+    EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap()
 }
 
 /// Ground-space scenario over the lunar trajectory using dynamic dispatch.
 pub fn setup_dynamic() -> (Scenario, DynamicEnsemble) {
     let sc_traj = spacecraft_trajectory_dynamic();
     let gs_loc = ground_location_dynamic();
-    let mask = ElevationMask::with_fixed_elevation(0.0);
+    let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
     let gs = GroundStation::new("cebreros", gs_loc, mask);
     let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
     let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj));
@@ -88,9 +89,9 @@ fn spacecraft_trajectory_mono() -> Trajectory<Earth, Icrf> {
     .unwrap()
 }
 
-fn ground_location_mono() -> GroundLocation<Earth> {
+fn ground_location_mono() -> EllipsoidLocation<Iau<Earth>> {
     let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
-    GroundLocation::try_new(coords, Earth).unwrap()
+    EllipsoidLocation::new(coords, Iau::new(Earth))
 }
 
 /// Ground-space scenario over the lunar trajectory using concrete types
@@ -98,7 +99,7 @@ fn ground_location_mono() -> GroundLocation<Earth> {
 pub fn setup_mono() -> (Scenario<Earth, Icrf>, MonoEnsemble) {
     let traj = spacecraft_trajectory_mono();
     let gs_loc = ground_location_mono();
-    let mask = ElevationMask::with_fixed_elevation(0.0);
+    let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
     let interval = TimeInterval::new(traj.start_time(), traj.end_time());
     let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(traj.into_dynamic()));
     let gs = GroundStation::new("cebreros", gs_loc.into_dynamic(), mask);
@@ -221,8 +222,8 @@ fn scaling_ground_stations() -> Vec<GroundStation> {
         .iter()
         .map(|&(id, lon, lat)| {
             let coords = LonLatAlt::from_degrees(lon, lat, 0.0).unwrap();
-            let loc = GroundLocation::try_new(coords, Origin::Earth).unwrap();
-            GroundStation::new(id, loc, ElevationMask::with_fixed_elevation(0.0))
+            let loc = EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap();
+            GroundStation::new(id, loc, ElevationMask::with_fixed_elevation(Angle::ZERO))
         })
         .collect()
 }

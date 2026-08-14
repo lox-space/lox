@@ -51,8 +51,8 @@ def estrack():
     return [
         lox.GroundStation(
             name,
-            lox.GroundLocation(
-                lox.Origin("Earth"), lon * lox.deg, lat * lox.deg, 0 * lox.km
+            lox.EllipsoidLocation(
+                "IAU_EARTH", lon * lox.deg, lat * lox.deg, 0 * lox.km
             ),
             lox.ElevationMask.fixed(0 * lox.rad),
         )

@@ -2,7 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_bodies::NaifId;
+use lox_bodies::{CoordinateOrigin, NaifId, UndefinedOriginPropertyError};
+use lox_core::coords::Ellipsoid;
 use thiserror::Error;
 
 use crate::iers::ReferenceSystem;
@@ -77,7 +78,13 @@ impl<T: QuasiInertial> TryQuasiInertial for T {
 }
 
 /// Marker trait for body-fixed reference frames.
-pub trait BodyFixed: ReferenceFrame {}
+pub trait BodyFixed: ReferenceFrame {
+    /// The coordinate origin (central body) of the body-fixed frame.
+    type Origin: CoordinateOrigin + Copy;
+
+    /// Returns the coordinate origin (central body) of the body-fixed frame.
+    fn origin(&self) -> Self::Origin;
+}
 
 /// The frame is not body-fixed.
 #[derive(Clone, Debug, Error)]
@@ -86,12 +93,63 @@ pub struct NonBodyFixedFrameError(pub String);
 
 /// Fallible check for body-fixed frames (used by dynamic dispatch).
 pub trait TryBodyFixed: ReferenceFrame {
+    /// The coordinate origin (central body) of the body-fixed frame.
+    type Origin: CoordinateOrigin + Copy;
+
     /// Returns `Ok(())` if the frame is body-fixed.
     fn try_body_fixed(&self) -> Result<(), NonBodyFixedFrameError>;
+
+    /// Returns the coordinate origin (central body) of the body-fixed frame.
+    fn try_origin(&self) -> Result<Self::Origin, NonBodyFixedFrameError>;
 }
 
 impl<T: BodyFixed> TryBodyFixed for T {
+    type Origin = T::Origin;
+
     fn try_body_fixed(&self) -> Result<(), NonBodyFixedFrameError> {
         Ok(())
     }
+
+    fn try_origin(&self) -> Result<Self::Origin, NonBodyFixedFrameError> {
+        Ok(self.origin())
+    }
+}
+
+/// A body-fixed frame with a conventional reference ellipsoid.
+///
+/// The ellipsoid is the one conventionally paired with the frame rather than an
+/// intrinsic property of its origin: the terrestrial frames
+/// ([`Itrf`](crate::Itrf), [`Tirf`](crate::Tirf) and [`Pef`](crate::Pef)) are
+/// paired with GRS80, while [`Iau`](crate::Iau) frames use their body's own
+/// spheroid. Callers needing a different datum supply the ellipsoid explicitly.
+pub trait ReferenceEllipsoid: BodyFixed {
+    /// Returns the reference ellipsoid conventionally paired with this frame.
+    fn reference_ellipsoid(&self) -> Ellipsoid;
+}
+
+/// Fallible accessor for a frame's reference ellipsoid (used by dynamic dispatch).
+pub trait TryReferenceEllipsoid: TryBodyFixed {
+    /// Returns the reference ellipsoid conventionally paired with this frame,
+    /// or an error if the frame is not body-fixed or its origin is not a spheroid.
+    fn try_reference_ellipsoid(&self) -> Result<Ellipsoid, UndefinedReferenceEllipsoidError>;
+}
+
+impl<T> TryReferenceEllipsoid for T
+where
+    T: ReferenceEllipsoid,
+{
+    fn try_reference_ellipsoid(&self) -> Result<Ellipsoid, UndefinedReferenceEllipsoidError> {
+        Ok(self.reference_ellipsoid())
+    }
+}
+
+/// Error returned when a frame has no reference ellipsoid.
+#[derive(Debug, thiserror::Error)]
+pub enum UndefinedReferenceEllipsoidError {
+    /// The frame is not body-fixed, so no datum is associated with it.
+    #[error(transparent)]
+    NotBodyFixed(#[from] NonBodyFixedFrameError),
+    /// The frame's origin has no spheroid, as for a triaxial body.
+    #[error(transparent)]
+    UndefinedSpheroid(#[from] UndefinedOriginPropertyError),
 }

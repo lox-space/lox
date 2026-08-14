@@ -1528,8 +1528,8 @@ def test_gt_model_accessors():
 
 def test_ground_station_terminals():
     rx = lox.GtModel(KA_BAND, 30.0 * lox.dB)
-    location = lox.GroundLocation(
-        lox.Origin("Earth"), 13.4 * lox.deg, 52.5 * lox.deg, 0.1 * lox.km
+    location = lox.EllipsoidLocation(
+        "IAU_EARTH", 13.4 * lox.deg, 52.5 * lox.deg, 0.1 * lox.km
     )
     mask = lox.ElevationMask.fixed(5.0 * lox.deg)
     gs = lox.GroundStation("berlin", location, mask, rx_terminals={"ka": rx})
@@ -1542,8 +1542,8 @@ def test_ground_station_terminals():
 
 def test_asset_terminals_round_trip_both_tiers():
     # Component chains and lumped models survive the asset dict round trip.
-    location = lox.GroundLocation(
-        lox.Origin("Earth"), 13.4 * lox.deg, 52.5 * lox.deg, 0.1 * lox.km
+    location = lox.EllipsoidLocation(
+        "IAU_EARTH", 13.4 * lox.deg, 52.5 * lox.deg, 0.1 * lox.km
     )
     mask = lox.ElevationMask.fixed(5.0 * lox.deg)
     tx_terminals = {"hga": make_tx(), "beacon": lox.EirpModel(KA_BAND, 40.0 * lox.dB)}
