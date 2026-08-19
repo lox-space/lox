@@ -6,8 +6,8 @@
 use std::f64::consts::TAU;
 use std::str::FromStr;
 
-use lox_space::bodies::DynOrigin;
-use lox_space::bodies::Origin as OriginTrait;
+use lox_space::bodies::CoordinateOrigin as OriginTrait;
+use lox_space::bodies::Origin as LoxOrigin;
 use lox_space::bodies::TryMeanRadius;
 use lox_space::bodies::TryPointMass;
 use lox_space::core::anomalies::TrueAnomaly;
@@ -16,13 +16,13 @@ use lox_space::core::elements::Keplerian as LoxKeplerian;
 use lox_space::core::elements::{ArgumentOfPeriapsis, Eccentricity, LongitudeOfAscendingNode};
 use lox_space::core::glam::DVec3;
 use lox_space::core::units::{Angle, AngleUnits, DistanceUnits};
-use lox_space::frames::dynamic::DynFrame;
+use lox_space::frames::Frame as LoxFrame;
 use lox_space::frames::traits::ReferenceFrame;
 use lox_space::orbits::sso::inclination_sso;
-use lox_space::time::DynTime;
+use lox_space::time::Time as LoxTime;
 use lox_space::time::calendar_dates::CalendarDate;
 use lox_space::time::time_of_day::CivilTime;
-use lox_space::time::time_scales::{DynTimeScale, TimeScale};
+use lox_space::time::time_scales::{ContinuousTimeScale, TimeScale};
 use lox_space::time::utc::Utc as LoxUtc;
 use lox_space::time::utc::transformations::ToUtc;
 use wasm_bindgen::JsValue;
@@ -37,7 +37,7 @@ pub fn init() {
 
 /// Represents a celestial body (planet, moon, barycenter, etc.).
 #[wasm_bindgen]
-pub struct Origin(DynOrigin);
+pub struct Origin(LoxOrigin);
 
 #[wasm_bindgen]
 impl Origin {
@@ -47,12 +47,12 @@ impl Origin {
         dbg!(&value);
         if let Some(name) = value.as_string() {
             let origin =
-                DynOrigin::from_str(&name).map_err(|e| JsValue::from_str(&e.to_string()))?;
+                LoxOrigin::from_str(&name).map_err(|e| JsValue::from_str(&e.to_string()))?;
             return Ok(Origin(origin));
         }
         if let Some(id) = value.as_f64() {
             let origin =
-                DynOrigin::try_from(id as i32).map_err(|e| JsValue::from_str(&e.to_string()))?;
+                LoxOrigin::try_from(id as i32).map_err(|e| JsValue::from_str(&e.to_string()))?;
             return Ok(Origin(origin));
         }
         Err(JsValue::from_str(
@@ -87,14 +87,14 @@ impl Origin {
 
 /// Represents a reference frame for positioning and transformations.
 #[wasm_bindgen]
-pub struct Frame(DynFrame);
+pub struct Frame(LoxFrame);
 
 #[wasm_bindgen]
 impl Frame {
     /// Construct a Frame from its abbreviation (e.g., "ICRF", "ITRF").
     #[wasm_bindgen(constructor)]
     pub fn new(abbreviation: &str) -> Result<Frame, JsValue> {
-        DynFrame::from_str(abbreviation)
+        LoxFrame::from_str(abbreviation)
             .map(Frame)
             .map_err(|e| JsValue::from_str(&e.to_string()))
     }
@@ -116,7 +116,7 @@ impl Frame {
 #[wasm_bindgen]
 pub struct Keplerian {
     elements: LoxKeplerian,
-    origin: DynOrigin,
+    origin: LoxOrigin,
 }
 
 #[wasm_bindgen]
@@ -363,7 +363,7 @@ impl Keplerian {
         Ok(Cartesian {
             state: cart,
             origin: self.origin,
-            frame: DynFrame::default(),
+            frame: LoxFrame::default(),
         })
     }
 
@@ -380,7 +380,7 @@ impl Keplerian {
         Ok(Trajectory {
             states,
             origin: self.origin,
-            frame: DynFrame::default(),
+            frame: LoxFrame::default(),
         })
     }
 }
@@ -391,8 +391,8 @@ impl Keplerian {
 #[wasm_bindgen]
 pub struct Cartesian {
     state: LoxCartesian,
-    origin: DynOrigin,
-    frame: DynFrame,
+    origin: LoxOrigin,
+    frame: LoxFrame,
 }
 
 #[wasm_bindgen]
@@ -501,8 +501,8 @@ impl Cartesian {
 #[wasm_bindgen]
 pub struct Trajectory {
     states: Vec<LoxCartesian>,
-    origin: DynOrigin,
-    frame: DynFrame,
+    origin: LoxOrigin,
+    frame: LoxFrame,
 }
 
 #[wasm_bindgen]
@@ -558,7 +558,7 @@ impl Trajectory {
     }
 }
 
-fn parse_scale(scale: &str) -> Result<DynTimeScale, JsValue> {
+fn parse_scale(scale: &str) -> Result<TimeScale, JsValue> {
     scale
         .parse()
         .map_err(|_| JsValue::from_str(&format!("unknown time scale: {scale}")))
@@ -581,7 +581,7 @@ impl Utc {
     #[wasm_bindgen(js_name = toScale)]
     pub fn to_scale(&self, scale: &str) -> Result<WasmTime, JsValue> {
         let scale = parse_scale(scale)?;
-        Ok(WasmTime(self.0.to_dyn_time().to_scale(scale)))
+        Ok(WasmTime(self.0.to_time().into_dynamic().to_scale(scale)))
     }
 
     pub fn year(&self) -> i64 {
@@ -612,7 +612,7 @@ impl Utc {
 }
 
 #[wasm_bindgen]
-pub struct WasmTime(DynTime);
+pub struct WasmTime(LoxTime);
 
 #[wasm_bindgen]
 impl WasmTime {
@@ -669,19 +669,19 @@ mod tests {
 
     #[test]
     fn test_origin_from_name() {
-        let origin = DynOrigin::from_str("Earth").unwrap();
+        let origin = LoxOrigin::from_str("Earth").unwrap();
         assert_eq!(OriginTrait::name(&origin), "Earth");
     }
 
     #[test]
     fn test_origin_from_naif_id() {
-        let origin = DynOrigin::try_from(399i32).unwrap();
+        let origin = LoxOrigin::try_from(399i32).unwrap();
         assert_eq!(OriginTrait::name(&origin), "Earth");
     }
 
     #[test]
     fn test_origin_gravitational_parameter() {
-        let origin = DynOrigin::from_str("Earth").unwrap();
+        let origin = LoxOrigin::from_str("Earth").unwrap();
         let gp = TryPointMass::try_gravitational_parameter(&origin)
             .unwrap()
             .as_f64();
@@ -690,38 +690,38 @@ mod tests {
 
     #[test]
     fn test_origin_mean_radius() {
-        let origin = DynOrigin::from_str("Earth").unwrap();
+        let origin = LoxOrigin::from_str("Earth").unwrap();
         let r = TryMeanRadius::try_mean_radius(&origin).unwrap().to_meters();
         assert!((r - 6.371e6).abs() < 1e4, "r = {r}");
     }
 
     #[test]
     fn test_origin_unknown_name() {
-        assert!(DynOrigin::from_str("Tatooine").is_err());
+        assert!(LoxOrigin::from_str("Tatooine").is_err());
     }
 
     #[test]
     fn test_origin_unknown_id() {
-        assert!(DynOrigin::try_from(999999i32).is_err());
+        assert!(LoxOrigin::try_from(999999i32).is_err());
     }
 
     // Frame tests
 
     #[test]
     fn test_frame_icrf() {
-        let frame = DynFrame::from_str("ICRF").unwrap();
+        let frame = LoxFrame::from_str("ICRF").unwrap();
         assert_eq!(frame.abbreviation(), "ICRF");
     }
 
     #[test]
     fn test_frame_itrf() {
-        let frame = DynFrame::from_str("ITRF").unwrap();
+        let frame = LoxFrame::from_str("ITRF").unwrap();
         assert_eq!(frame.abbreviation(), "ITRF");
     }
 
     #[test]
     fn test_frame_unknown() {
-        assert!(DynFrame::from_str("UNKNOWN_FRAME_XYZ").is_err());
+        assert!(LoxFrame::from_str("UNKNOWN_FRAME_XYZ").is_err());
     }
 
     // Keplerian tests
@@ -816,7 +816,7 @@ mod tests {
         let alt_p = 200_000.0_f64;
         let alt_a = 350_000.0_f64;
         let inc = 51.6_f64.to_radians();
-        let mean_r = TryMeanRadius::try_mean_radius(&DynOrigin::from_str("Earth").unwrap())
+        let mean_r = TryMeanRadius::try_mean_radius(&LoxOrigin::from_str("Earth").unwrap())
             .unwrap()
             .to_meters();
 
@@ -858,7 +858,7 @@ mod tests {
     #[test]
     fn test_keplerian_circular_from_altitude() {
         let altitude = 400_000.0_f64; // 400 km in meters
-        let earth = DynOrigin::from_str("Earth").unwrap();
+        let earth = LoxOrigin::from_str("Earth").unwrap();
         let mean_r = TryMeanRadius::try_mean_radius(&earth).unwrap().to_meters();
 
         let k = LoxKeplerianTest::builder()
@@ -887,7 +887,7 @@ mod tests {
         // 600 km altitude
         let alt = 600_000.0_f64;
         let ecc = Eccentricity::default(); // 0.0
-        let earth = DynOrigin::from_str("Earth").unwrap();
+        let earth = LoxOrigin::from_str("Earth").unwrap();
         let mean_r = TryMeanRadius::try_mean_radius(&earth).unwrap().to_meters();
         let semi_major_axis = (alt + mean_r).m();
         let inclination = inclination_sso(semi_major_axis, ecc).unwrap();
@@ -1037,8 +1037,8 @@ mod tests {
         let states = k.trace(gp, n).unwrap();
         let traj = Trajectory {
             states,
-            origin: DynOrigin::from_str("Earth").unwrap(),
-            frame: DynFrame::default(),
+            origin: LoxOrigin::from_str("Earth").unwrap(),
+            frame: LoxFrame::default(),
         };
         let buf = traj.to_buffer();
         assert_eq!(buf.len(), n * 3);
@@ -1055,8 +1055,8 @@ mod tests {
         let states = k.trace(gp, n).unwrap();
         let traj = Trajectory {
             states,
-            origin: DynOrigin::from_str("Earth").unwrap(),
-            frame: DynFrame::default(),
+            origin: LoxOrigin::from_str("Earth").unwrap(),
+            frame: LoxFrame::default(),
         };
         assert_eq!(traj.len(), n);
         assert!(!traj.is_empty());
@@ -1088,8 +1088,8 @@ mod tests {
         );
         let state = Cartesian {
             state: cart,
-            origin: DynOrigin::default(),
-            frame: DynFrame::default(),
+            origin: LoxOrigin::default(),
+            frame: LoxFrame::default(),
         };
         let threejs = state.to_threejs();
         assert!((threejs[0] - 1000.0).abs() < 1e-10);
@@ -1103,8 +1103,8 @@ mod tests {
         let p2 = LoxCartesian::from_vecs(DVec3::new(4.0, 5.0, 6.0), DVec3::new(0.0, 0.0, 0.0));
         let traj = Trajectory {
             states: vec![p1, p2],
-            origin: DynOrigin::default(),
-            frame: DynFrame::default(),
+            origin: LoxOrigin::default(),
+            frame: LoxFrame::default(),
         };
         let buf = traj.to_threejs_buffer();
         assert_eq!(buf.len(), 6);
