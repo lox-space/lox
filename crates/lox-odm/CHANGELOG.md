@@ -1,9 +1,3 @@
-<!--
-SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
-
-SPDX-License-Identifier: MPL-2.0
--->
-
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -12,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.1.0-alpha.4](https://github.com/lox-space/lox/compare/lox-odm-v0.1.0-alpha.3...lox-odm-v0.1.0-alpha.4) - 2026-08-20
+
+### Other
+
+- document the runtime/static type split, add prelude enums and changelog entries
+- default Time/Orbit/Trajectory type params to the runtime enums, drop Dyn aliases
+- rename DynOrigin/DynFrame/DynTimeScale to Origin/Frame/TimeScale
+- rename Origin trait to CoordinateOrigin, TimeScale trait to ContinuousTimeScale
+- *(lox-odm)* rename OdmTimeScale to OdmTimeSystem to match CCSDS TIME_SYSTEM
+- *(lox-odm)* use new ApproxEq impls
+- *(lox-core/lox-time)* remove TimeDelta sentinels
+<!--
+SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+
+SPDX-License-Identifier: MPL-2.0
+-->
+
 
 ### Changed
 
