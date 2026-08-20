@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.30](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.29...lox-earth-v0.1.0-alpha.30) - 2026-08-20
+
+### Added
+
+- *(lox-approx)* add lox-approx crate
+
+### Other
+
+- default Time/Orbit/Trajectory type params to the runtime enums, drop Dyn aliases
+- rename DynOrigin/DynFrame/DynTimeScale to Origin/Frame/TimeScale
+- rename Origin trait to CoordinateOrigin, TimeScale trait to ContinuousTimeScale
+- dependency cleanup
+
 ## [0.1.0-alpha.29](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.28...lox-earth-v0.1.0-alpha.29) - 2026-05-26
 
 ### Other

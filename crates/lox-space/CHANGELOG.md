@@ -1,3 +1,66 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0-alpha.50](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.49...lox-space-v0.1.0-alpha.50) - 2026-08-20
+
+### Added
+
+- *(lox-approx)* add lox-approx crate
+- *(lox-comms)* line-item budget report and C/N combining (Track F.1/F.2)
+- *(lox-comms)* integrate ACM into the pipeline via LinkBudget::modulate_best
+- *(lox-space)* [**breaking**] rebind Python channel API to waveform/modcod split
+- *(lox-space)* [**breaking**] expose rain-degraded G/T via link_type in Python API
+- *(lox-comms)* direction-aware link-budget pointing via Pointing enum
+- *(lox-comms)* replace pfd_mask with piecewise-linear PfdMask
+- *(lox-comms)* add phi angle to antenna gain trait
+
+### Fixed
+
+- read stub as UTF-8 in stub-coverage test for Windows
+- validate bandwidth in budget views, restore stub coverage
+- bandwidth-mismatch guard in evaluate, stale docs, broken pyi stub
+
+### Other
+
+- *(lox-orbits)* [**breaking**] key ground locations on body-fixed frames
+- *(lox-analysis)* make the Scenario interval runtime-scaled
+- *(lox-analysis)* drop the time-scale parameter from events and detection
+- drop the time-scale type parameter from the orbit and analysis layers
+- *(lox-frames)* move the iau module to rotations::to_iau
+- document the runtime/static type split, add prelude enums and changelog entries
+- default Time/Orbit/Trajectory type params to the runtime enums, drop Dyn aliases
+- privatize the dynamic modules as origin/frame, re-export at crate root
+- rename DynOrigin/DynFrame/DynTimeScale to Origin/Frame/TimeScale
+- rename Origin trait to CoordinateOrigin, TimeScale trait to ContinuousTimeScale
+- *(lox-frames)* fuse TEME<->ICRF, evaluate nutation once
+- *(lox-space)* benchmark cleanup
+- *(lox-frames)* simplify composed rotations via ICRF
+- *(lox-space)* add frames benchmarks
+- *(lox-frames)* tighten tolerances
+- *(lox-space)* benchmark cleanup
+- *(lox-core)* extract callback and zero-crossing modules from roots
+- *(lox-core)* introduce type-erased LoxError and make plain closures the Callback default
+- *(lox-orbits/lox-analysis)* move events to lox-analysis
+- *(lox-orbits)* clean up trajectory API
+- *(lox-orbits)* remove direct trajectory event API
+- dependency cleanup
+- *(lox-core/lox-time)* remove TimeDelta sentinels
+- *(lox-comms)* flatten noise_power to Result via AbsolutePowerUnavailable
+- *(lox-comms)* [**breaking**] rework the link budget into a discoverable pipeline
+- close coverage gaps in modcod, channel, and Python bindings
+- *(lox-space)* [**breaking**] expose PropagationLosses in Python API and ITU provider
+- *(lox-core)* [**breaking**] move FrequencyBand and FrequencyRange to new comms module
+- *(lox-comms)* [**breaking**] introduce LinkParameters for LinkStats::for_link
+- *(lox-space)* [**breaking**] rebind comms Python API to link terminals
+- *(lox-comms)* use Angle::ZERO everywhere
+- *(lox-comms)* use antenna frame for patterned antenna
+- *(lox-comms)* remove beamwidth from AntennaGain trait
 <!--
 SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
 

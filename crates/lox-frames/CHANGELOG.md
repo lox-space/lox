@@ -1,3 +1,44 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0-alpha.21](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.20...lox-frames-v0.1.0-alpha.21) - 2026-08-20
+
+### Added
+
+- *(lox-approx)* add lox-approx crate
+
+### Fixed
+
+- *(lox-time,lox-frames)* correct the sign of the default TAI<->UT1 offset
+- revert Origin type-parameter renames in offsets and rotations traits
+- revert prose renames in IERS docs, drop Python reference from Scenario docs
+- restore mangled identity test name, trim impl detail from docs
+- *(lox-frames)* validate rotational elements on Iau deserialization
+- *(lox-frames)* dedup IAU frame naming, round-trip IERS2003B abbreviation
+- *(lox-frames)* match SOFA polar-motion axis order, name TEME frame id
+- *(lox-frames)* fix correctness issues
+
+### Other
+
+- *(lox-orbits)* [**breaking**] key ground locations on body-fixed frames
+- *(lox-frames)* move the iau module to rotations::to_iau
+- *(lox-frames)* merge the Frame enum into the frames module
+- document the runtime/static type split, add prelude enums and changelog entries
+- default Time/Orbit/Trajectory type params to the runtime enums, drop Dyn aliases
+- privatize the dynamic modules as origin/frame, re-export at crate root
+- rename DynOrigin/DynFrame/DynTimeScale to Origin/Frame/TimeScale
+- rename Origin trait to CoordinateOrigin, TimeScale trait to ContinuousTimeScale
+- *(lox-frames)* cover via-ICRF composition, J2000, IAU naming, default key
+- *(lox-frames)* replace packed frame ids with a structured FrameKey
+- *(lox-frames)* fuse TEME<->ICRF, evaluate nutation once
+- *(lox-frames)* simplify composed rotations via ICRF
+- *(lox-core/lox-time)* remove TimeDelta sentinels
 <!--
 SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
 
