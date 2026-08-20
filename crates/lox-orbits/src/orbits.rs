@@ -24,14 +24,6 @@ use lox_core::{
 use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
 
-/// The state representation of an orbit, either Cartesian or Keplerian.
-pub enum OrbitType {
-    /// Cartesian position and velocity state.
-    Cartesian(Cartesian),
-    /// Classical Keplerian orbital elements.
-    Keplerian(Keplerian),
-}
-
 /// An orbital state parameterized by state representation, origin, and reference frame.
 ///
 /// The epoch carries its time scale at runtime as a [`Time`]; the orbit layer does
