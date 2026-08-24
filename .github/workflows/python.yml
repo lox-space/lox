@@ -7,8 +7,8 @@
 #
 #    maturin generate-ci github -m crates/lox-space/Cargo.toml -o .github/workflows/python.yml --pytest
 #
-# NOTE: Path filters and concurrency group were added manually.
-# Re-running `maturin generate-ci` will overwrite these changes.
+# NOTE: Path filters, the concurrency group and the `pyodide` job were added
+# manually. Re-running `maturin generate-ci` will overwrite these changes.
 name: Python
 
 on:
@@ -171,6 +171,43 @@ jobs:
           source .venv/bin/activate
           pytest
 
+  pyodide:
+    name: pyodide
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@just
+      - uses: actions/setup-python@v7
+        with:
+          python-version: 3.x
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Resolve the pinned Pyodide version
+        id: pyodide
+        run: echo "version=$(just --evaluate pyodide_version)" >> "$GITHUB_OUTPUT"
+      - name: Cache the Pyodide cross-build environment
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/pyodide-build
+          key: pyodide-xbuildenv-${{ steps.pyodide.outputs.version }}
+      - name: Install the cross-build environment
+        run: just pyodide-setup
+      - name: Build wheel
+        run: just build-pyodide
+      - name: Upload wheels
+        uses: actions/upload-artifact@v7
+        with:
+          name: wheels-pyodide
+          path: dist-pyodide
+      - name: pytest
+        run: |
+          set -e
+          python -m pip download --no-deps itur==0.4.0 -d itur-wheel
+          cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
+          just pytest-pyodide
+
   sdist:
     runs-on: ubuntu-latest
     steps:
@@ -191,7 +228,7 @@ jobs:
     environment: release
     runs-on: ubuntu-latest
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
-    needs: [ linux, windows, macos, sdist ]
+    needs: [ linux, windows, macos, pyodide, sdist ]
     permissions:
       # Use to sign the release artifacts
       id-token: write

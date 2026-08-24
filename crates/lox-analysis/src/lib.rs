@@ -13,6 +13,8 @@ pub mod events;
 /// AOI imaging event detection: sub-satellite point, swath, and off-nadir coverage.
 #[cfg(feature = "imaging")]
 pub mod imaging;
+/// Fallible fan-out over a slice, parallel where the target has threads.
+mod parallel;
 /// Power budget analysis: eclipse detection, beta angle, solar flux.
 pub mod power;
 /// Visibility analysis: line-of-sight, elevation masks, passes, and interval computation.

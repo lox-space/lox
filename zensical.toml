@@ -31,6 +31,7 @@ nav = [
         { "Data Providers" = "data.md" },
         { "Units" = "units.md" },
     ]},
+    { "Browser & Pyodide" = "pyodide.md" },
 ]
 
 [project.theme]

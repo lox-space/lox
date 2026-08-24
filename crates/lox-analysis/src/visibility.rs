@@ -18,7 +18,6 @@ use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
 use lox_time::time_scales::{Tdb, TimeScale};
-use rayon::prelude::*;
 use std::f64::consts::PI;
 use thiserror::Error;
 
@@ -31,6 +30,7 @@ use crate::events::{
     AdaptiveSampler, DetectError, DetectFn, DetectFnExt as _, Differentiable, IntervalIterExt as _,
     RateBounded, UniformSampler,
 };
+use crate::parallel;
 use lox_orbits::ground::{EllipsoidLocation, Observables};
 use lox_orbits::orbits::{Ensemble, Trajectory};
 
@@ -1291,11 +1291,8 @@ where
 
         const PARALLEL_THRESHOLD: usize = 100;
 
-        let results: Result<Vec<_>, VisibilityError> = if pairs.len() > PARALLEL_THRESHOLD {
-            pairs.par_iter().map(compute_one).collect()
-        } else {
-            pairs.iter().map(compute_one).collect()
-        };
+        let results: Result<Vec<_>, VisibilityError> =
+            parallel::try_map_above(&pairs, PARALLEL_THRESHOLD, compute_one);
 
         let intervals: HashMap<_, _> = results?.into_iter().collect();
         let pair_types = intervals
@@ -1341,86 +1338,80 @@ where
             _ => step,
         };
 
-        let results: Result<Vec<_>, VisibilityError> = pairs
-            .par_iter()
-            .map(|&(i, j)| {
-                let sc1 = &spacecraft[i];
-                let sc2 = &spacecraft[j];
-                let key = (sc1.id().clone(), sc2.id().clone());
-                let traj1 = ensemble
-                    .get(sc1.id())
-                    .expect("trajectory not found in ensemble");
-                let traj2 = ensemble
-                    .get(sc2.id())
-                    .expect("trajectory not found in ensemble");
+        let results: Result<Vec<_>, VisibilityError> = parallel::try_map(&pairs, |&(i, j)| {
+            let sc1 = &spacecraft[i];
+            let sc2 = &spacecraft[j];
+            let key = (sc1.id().clone(), sc2.id().clone());
+            let traj1 = ensemble
+                .get(sc1.id())
+                .expect("trajectory not found in ensemble");
+            let traj2 = ensemble
+                .get(sc2.id())
+                .expect("trajectory not found in ensemble");
 
-                let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
-                    (Some(a), Some(b)) => {
-                        Some(if a.to_radians_per_second() < b.to_radians_per_second() {
-                            a
-                        } else {
-                            b
-                        })
-                    }
-                    (Some(a), None) => Some(a),
-                    (None, Some(b)) => Some(b),
-                    (None, None) => None,
-                };
-
-                let make_range =
-                    move |threshold: Distance, direction: RangeDirection, window: TimeInterval| {
-                        InterSatelliteRangeDetectFn {
-                            sc1: traj1,
-                            sc2: traj2,
-                            threshold,
-                            direction,
-                        }
-                        .into_intervals(UniformSampler::new(step), window)
-                    };
-
-                // Cheapest-first staging, seeded with the whole interval so
-                // every later stage applies uniformly.
-                let mut windows: Box<dyn Iterator<Item = Result<TimeInterval, DetectError>> + '_> =
-                    match (max_range, min_range) {
-                        (Some(max), Some(min)) => {
-                            Box::new(
-                                make_range(max, RangeDirection::Max, interval)
-                                    .intersect(make_range(min, RangeDirection::Min, interval)),
-                            )
-                        }
-                        (Some(max), None) => {
-                            Box::new(make_range(max, RangeDirection::Max, interval))
-                        }
-                        (None, Some(min)) => {
-                            Box::new(make_range(min, RangeDirection::Min, interval))
-                        }
-                        (None, None) => Box::new(std::iter::once(Ok(interval))),
-                    };
-
-                if let Some(threshold) = effective_slew_rate {
-                    windows = Box::new(windows.then_within(move |window| {
-                        InterSatelliteSlewRateDetectFn {
-                            sc1: traj1,
-                            sc2: traj2,
-                            threshold,
-                        }
-                        .into_intervals(UniformSampler::new(step), window)
-                    }));
+            let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
+                (Some(a), Some(b)) => {
+                    Some(if a.to_radians_per_second() < b.to_radians_per_second() {
+                        a
+                    } else {
+                        b
+                    })
                 }
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            };
 
-                windows = Box::new(windows.then_within(move |window| {
-                    InterSatLosCentralBodyDetectFn {
+            let make_range =
+                move |threshold: Distance, direction: RangeDirection, window: TimeInterval| {
+                    InterSatelliteRangeDetectFn {
                         sc1: traj1,
                         sc2: traj2,
-                        body: central_body,
+                        threshold,
+                        direction,
+                    }
+                    .into_intervals(UniformSampler::new(step), window)
+                };
+
+            // Cheapest-first staging, seeded with the whole interval so
+            // every later stage applies uniformly.
+            let mut windows: Box<dyn Iterator<Item = Result<TimeInterval, DetectError>> + '_> =
+                match (max_range, min_range) {
+                    (Some(max), Some(min)) => Box::new(
+                        make_range(max, RangeDirection::Max, interval).intersect(make_range(
+                            min,
+                            RangeDirection::Min,
+                            interval,
+                        )),
+                    ),
+                    (Some(max), None) => Box::new(make_range(max, RangeDirection::Max, interval)),
+                    (None, Some(min)) => Box::new(make_range(min, RangeDirection::Min, interval)),
+                    (None, None) => Box::new(std::iter::once(Ok(interval))),
+                };
+
+            if let Some(threshold) = effective_slew_rate {
+                windows = Box::new(windows.then_within(move |window| {
+                    InterSatelliteSlewRateDetectFn {
+                        sc1: traj1,
+                        sc2: traj2,
+                        threshold,
                     }
                     .into_intervals(UniformSampler::new(step), window)
                 }));
+            }
 
-                let windows = windows.collect::<Result<_, _>>()?;
-                Ok((key, windows))
-            })
-            .collect();
+            windows = Box::new(windows.then_within(move |window| {
+                InterSatLosCentralBodyDetectFn {
+                    sc1: traj1,
+                    sc2: traj2,
+                    body: central_body,
+                }
+                .into_intervals(UniformSampler::new(step), window)
+            }));
+
+            let windows = windows.collect::<Result<_, _>>()?;
+            Ok((key, windows))
+        });
 
         let intervals: HashMap<_, _> = results?.into_iter().collect();
         let pair_types = intervals
@@ -1508,7 +1499,6 @@ where
         };
 
         const PARALLEL_THRESHOLD: usize = 100;
-        let use_parallel = pairs.len() > PARALLEL_THRESHOLD;
 
         let compute_one = |(gs, sc): &(&GroundStation, &Spacecraft)| {
             let key = (gs.id().clone(), sc.id().clone());
@@ -1519,11 +1509,8 @@ where
             Ok((key, windows))
         };
 
-        let results: Result<Vec<_>, VisibilityError> = if use_parallel {
-            pairs.par_iter().map(compute_one).collect()
-        } else {
-            pairs.iter().map(compute_one).collect()
-        };
+        let results: Result<Vec<_>, VisibilityError> =
+            parallel::try_map_above(&pairs, PARALLEL_THRESHOLD, compute_one);
 
         let intervals: HashMap<_, _> = results?.into_iter().collect();
         let pair_types = intervals
@@ -1571,25 +1558,21 @@ where
             adaptive: self.adaptive,
         };
 
-        let results: Result<Vec<_>, VisibilityError> = pairs
-            .par_iter()
-            .map(|&(i, j)| {
-                let sc1 = &spacecraft[i];
-                let sc2 = &spacecraft[j];
-                let key = (sc1.id().clone(), sc2.id().clone());
-                let traj1 = params
-                    .ensemble
-                    .get(sc1.id())
-                    .expect("trajectory not found in ensemble");
-                let traj2 = params
-                    .ensemble
-                    .get(sc2.id())
-                    .expect("trajectory not found in ensemble");
-                let windows =
-                    params.compute_inter_satellite_pair(sc1, sc2, traj1, traj2, interval)?;
-                Ok((key, windows))
-            })
-            .collect();
+        let results: Result<Vec<_>, VisibilityError> = parallel::try_map(&pairs, |&(i, j)| {
+            let sc1 = &spacecraft[i];
+            let sc2 = &spacecraft[j];
+            let key = (sc1.id().clone(), sc2.id().clone());
+            let traj1 = params
+                .ensemble
+                .get(sc1.id())
+                .expect("trajectory not found in ensemble");
+            let traj2 = params
+                .ensemble
+                .get(sc2.id())
+                .expect("trajectory not found in ensemble");
+            let windows = params.compute_inter_satellite_pair(sc1, sc2, traj1, traj2, interval)?;
+            Ok((key, windows))
+        });
 
         let intervals: HashMap<_, _> = results?.into_iter().collect();
         let pair_types = intervals

@@ -67,8 +67,10 @@ pub fn parse_npy(bytes: &[u8]) -> Result<NpyArray, NpyError> {
         return Err(NpyError::LengthMismatch { expected, actual });
     }
     let data: Vec<f64> = data_bytes[..expected * 8]
-        .chunks_exact(8)
-        .map(|c| f64::from_le_bytes(c.try_into().unwrap()))
+        .as_chunks::<8>()
+        .0
+        .iter()
+        .map(|&c| f64::from_le_bytes(c))
         .collect();
     Ok(NpyArray { shape, data })
 }
