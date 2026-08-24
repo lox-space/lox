@@ -5,8 +5,40 @@
 _default:
     just -l
 
+# Pyodide release to build the browser wheel against. Pins CPython, Emscripten
+# and Rust; `pyodide xbuildenv search` lists the compatible releases.
+pyodide_version := "314.0.5"
+pyodide_python := "3.14"
+
+# Tests that compare against packages Pyodide does not ship.
+pyodide_test_excludes := "--ignore=crates/lox-space/tests/test_astropy_frames.py \
+    --ignore=crates/lox-space/tests/test_frames.py \
+    --ignore=crates/lox-space/tests/test_teme_frame.py \
+    --ignore=crates/lox-space/tests/test_spacelink_comms.py"
+
 build-pyo3 *FLAGS:
     uv run maturin develop --uv {{FLAGS}}
+
+# One-off setup for the Pyodide wheel build (~2 GB download).
+pyodide-setup:
+    uv venv --python {{pyodide_python}} .venv-pyodide-build
+    VIRTUAL_ENV=.venv-pyodide-build uv pip install pyodide-build
+    .venv-pyodide-build/bin/pyodide xbuildenv install {{pyodide_version}}
+    rustup toolchain install "$(.venv-pyodide-build/bin/pyodide config get rust_toolchain)" \
+        --target wasm32-unknown-emscripten --profile minimal
+
+# Build the Pyodide wheel into dist-pyodide/.
+build-pyodide *FLAGS:
+    rm -rf dist-pyodide
+    RUSTUP_TOOLCHAIN="$(.venv-pyodide-build/bin/pyodide config get rust_toolchain)" \
+        .venv-pyodide-build/bin/pyodide build -o dist-pyodide {{FLAGS}}
+
+# Run the Python tests against the Pyodide wheel in Node.
+pytest-pyodide *FLAGS:
+    PATH="$PWD/.venv-pyodide-build/bin:$PATH" \
+        .venv-pyodide-build/bin/pyodide venv --clear .venv-pyodide
+    .venv-pyodide/bin/pip install pytest dist-pyodide/*.whl
+    .venv-pyodide/bin/python -m pytest -m "not benchmark" {{pyodide_test_excludes}} {{FLAGS}}
 
 # Pack the upstream `itur` Python wheel into target/lox-itur-data.npz.
 #

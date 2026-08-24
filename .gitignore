@@ -13,8 +13,11 @@ __pycache__/
 *.py[cod]
 *.so
 .venv/
+.venv-pyodide/
+.venv-pyodide-build/
 build/
 dist/
+dist-pyodide/
 *.egg-info/
 .coverage
 coverage.xml

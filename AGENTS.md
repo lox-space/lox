@@ -58,6 +58,20 @@ just lint           # clippy + rustfmt + REUSE compliance
 just coverage       # Generate code coverage report
 ```
 
+### Pyodide (browser) wheel
+
+```bash
+just pyodide-setup   # One-off: cross-build environment + pinned Rust toolchain (~2 GB)
+just build-pyodide   # Emscripten wheel into dist-pyodide/
+just pytest-pyodide  # Python tests against the wasm wheel, in Node
+```
+
+The pinned Pyodide release lives in `pyodide_version` in the `justfile`; it also
+pins the CPython, Emscripten and Rust versions of the build. Pyodide has no
+threads, so `lox-analysis` drops its `rayon` dependency on wasm targets — see
+`crates/lox-analysis/src/parallel.rs`. Keep new fan-out behind that module
+rather than calling `rayon` directly.
+
 ## Critical Conventions
 
 ### Module Convention
