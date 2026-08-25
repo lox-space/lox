@@ -1,3 +1,42 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0-alpha.40](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.39...lox-orbits-v0.1.0-alpha.40) - 2026-08-25
+
+### Added
+
+- *(lox-approx)* add lox-approx crate
+
+### Fixed
+
+- restore mangled identity test name, trim impl detail from docs
+
+### Other
+
+- *(lox-orbits)* remove unused type
+- *(lox-orbits)* [**breaking**] key ground locations on body-fixed frames
+- drop the time-scale type parameter from the orbit and analysis layers
+- document the runtime/static type split, add prelude enums and changelog entries
+- default Time/Orbit/Trajectory type params to the runtime enums, drop Dyn aliases
+- rename DynOrigin/DynFrame/DynTimeScale to Origin/Frame/TimeScale
+- rename Origin trait to CoordinateOrigin, TimeScale trait to ContinuousTimeScale
+- *(lox-odm)* rename OdmTimeScale to OdmTimeSystem to match CCSDS TIME_SYSTEM
+- *(lox-frames)* replace packed frame ids with a structured FrameKey
+- *(lox-core)* introduce type-erased LoxError and make plain closures the Callback default
+- *(lox-orbits/lox-analysis)* move events to lox-analysis
+- *(lox-orbits)* clean up trajectory API
+- *(lox-orbits)* remove direct trajectory event API
+- dependency cleanup
+- *(lox-core/lox-orbits)* move ZeroCrossing into roots and reuse bracket endpoint values
+- *(lox-core/lox-time)* remove TimeDelta sentinels
+- *(deps)* bump geo to 0.33 and geojson to 1.0
+- *(deps)* bump differential-equations to 0.6, nalgebra to 0.35, quick-xml to 0.40
 <!--
 SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
 

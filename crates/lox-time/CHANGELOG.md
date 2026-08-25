@@ -1,3 +1,37 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0-alpha.27](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.26...lox-time-v0.1.0-alpha.27) - 2026-08-25
+
+### Added
+
+- *(lox-approx)* add lox-approx crate
+
+### Fixed
+
+- *(lox-time,lox-frames)* correct the sign of the default TAI<->UT1 offset
+- *(lox-time)* reject mismatched time scales in Sub and add checked constructors
+- revert Origin type-parameter renames in offsets and rotations traits
+
+### Other
+
+- *(lox-time)* remove the unused UtcInterval and TimeInterval::to_utc
+- *(lox-time)* represent intervals as an epoch plus a duration
+- *(lox-analysis)* make the Scenario interval runtime-scaled
+- drop the time-scale type parameter from the orbit and analysis layers
+- document the runtime/static type split, add prelude enums and changelog entries
+- default Time/Orbit/Trajectory type params to the runtime enums, drop Dyn aliases
+- privatize the dynamic modules as origin/frame, re-export at crate root
+- rename DynOrigin/DynFrame/DynTimeScale to Origin/Frame/TimeScale
+- rename Origin trait to CoordinateOrigin, TimeScale trait to ContinuousTimeScale
+- dependency cleanup
+- *(lox-core/lox-time)* remove TimeDelta sentinels
 <!--
 SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
 
