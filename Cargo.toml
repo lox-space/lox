@@ -34,7 +34,7 @@ lox-itur = { path = "crates/lox-itur", version = "0.1.0-alpha.6" }
 lox-math = { path = "crates/lox-math", version = "0.1.0-alpha.24" }
 lox-odm = { path = "crates/lox-odm", version = "0.1.0-alpha.4" }
 lox-orbits = { path = "crates/lox-orbits", version = "0.1.0-alpha.40" }
-lox-test-utils = { path = "crates/lox-test-utils", version = "0.1.0-alpha.10" }
+lox-test-utils = { path = "crates/lox-test-utils" }
 lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.27" }
 lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.16" }
 
