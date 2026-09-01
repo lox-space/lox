@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.16](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.15...lox-analysis-v0.1.0-alpha.16) - 2026-09-01
+
+### Other
+
+- *(lox-analysis)* clean up empty where clauses
+
 ## [0.1.0-alpha.15](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.14...lox-analysis-v0.1.0-alpha.15) - 2026-08-25
 
 ### Added
