@@ -249,8 +249,7 @@ impl Pass {
         interval: TimeInterval,
         times: Vec<Time>,
         observables: Vec<Observables>,
-    ) -> Result<Self, SeriesError>
-where {
+    ) -> Result<Self, SeriesError> {
         if times.len() < 2 {
             return Err(SeriesError::InsufficientPoints(times.len()));
         }
@@ -322,8 +321,7 @@ where {
     }
 
     /// Interpolates observables at the given time, or `None` if outside the pass interval.
-    pub fn interpolate(&self, time: Time) -> Option<Observables>
-where {
+    pub fn interpolate(&self, time: Time) -> Option<Observables> {
         if time < self.interval.start() || time > self.interval.end() {
             return None;
         }
