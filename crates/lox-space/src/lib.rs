@@ -10,6 +10,11 @@
 //! paths and provides a [`prelude`] of the most commonly used types. Each module mirrors the
 //! corresponding standalone crate; enable the matching cargo feature to pull it in.
 
+// Include readme when running doctests
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+struct _ReadMe;
+
 /// Mission analysis: access, visibility, link budgets, and ground-station modelling
 /// (re-exports [`lox_analysis`]).
 #[cfg(feature = "analysis")]
