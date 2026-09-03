@@ -550,13 +550,12 @@ class TestPass:
             assert float(obs.range()) > 0
             assert -math.pi <= float(obs.azimuth()) <= math.pi
 
-    def test_observables_above_mask(self, results, ground_assets, space_assets):
-        """All observables in a pass should be above the elevation mask."""
+    def test_observables_above_threshold(self, results, ground_assets, space_assets):
+        """All observables in a pass should be above the station's threshold."""
         p, gs = self._first_pass_with_gs(results, ground_assets, space_assets)
-        mask = gs.mask()
         for obs in p.observables():
-            min_elev = mask.min_elevation(obs.azimuth())
-            assert float(obs.elevation()) >= float(min_elev)
+            threshold = gs.threshold_at(obs.azimuth())
+            assert float(obs.elevation()) >= float(threshold)
 
     def test_interpolate_within_pass(self, results, ground_assets, space_assets):
         p = self._first_pass(results, ground_assets, space_assets)
@@ -595,10 +594,36 @@ class TestAssets:
             loc = ga.location()
             assert isinstance(loc, lox.EllipsoidLocation)
 
-    def test_ground_station_mask(self, ground_assets):
+    def test_ground_station_constraints_unset_by_default(self, ground_assets):
         for ga in ground_assets:
-            mask = ga.mask()
-            assert isinstance(mask, lox.ElevationMask)
+            assert ga.min_elevation() is None
+            assert ga.horizon_mask() is None
+            assert float(ga.threshold_at(0 * lox.rad)) == 0.0
+
+    def test_ground_station_threshold_combines_floor_and_horizon(self):
+        loc = lox.EllipsoidLocation(
+            frame="IAU_EARTH",
+            longitude=0 * lox.deg,
+            latitude=0 * lox.deg,
+            altitude=0 * lox.km,
+        )
+        az = np.array([-np.pi, -0.1, 0.0, np.pi])
+        el = np.array([np.radians(20), np.radians(20), 0.0, 0.0])
+        gs = lox.GroundStation(
+            "test",
+            loc,
+            min_elevation=10 * lox.deg,
+            horizon_mask=lox.HorizonMask(az, el),
+        )
+        assert float(gs.min_elevation()) == pytest.approx(np.radians(10))
+        assert gs.horizon_mask() is not None
+        # The horizon dominates in the western sector, the floor in the east.
+        assert float(gs.threshold_at(-np.pi / 2 * lox.rad)) == pytest.approx(
+            np.radians(20)
+        )
+        assert float(gs.threshold_at(np.pi / 2 * lox.rad)) == pytest.approx(
+            np.radians(10)
+        )
 
     def test_ground_station_body_fixed_frame(self, ground_assets):
         """A station's body-fixed frame comes from its location, not the station."""
@@ -638,8 +663,7 @@ class TestAssets:
             latitude=0 * lox.deg,
             altitude=0 * lox.km,
         )
-        mask = lox.ElevationMask.fixed(0 * lox.deg)
-        gs = lox.GroundStation("test", loc, mask, network_id="estrack")
+        gs = lox.GroundStation("test", loc, network_id="estrack")
         assert gs.network_id() == "estrack"
 
     def test_spacecraft_constellation_id_none(self, space_assets):
@@ -688,49 +712,31 @@ class TestScenario:
 
 
 # ---------------------------------------------------------------------------
-# ElevationMask
+# HorizonMask
 # ---------------------------------------------------------------------------
 
 
-class TestElevationMask:
-    def test_fixed(self):
-        mask = lox.ElevationMask.fixed(np.radians(10) * lox.rad)
-        assert float(mask.min_elevation(0 * lox.rad)) == pytest.approx(np.radians(10))
-        assert float(mask.min_elevation(np.pi * lox.rad)) == pytest.approx(
-            np.radians(10)
-        )
-        assert float(mask.fixed_elevation()) == pytest.approx(np.radians(10))
-        assert mask.azimuth() is None
-        assert mask.elevation() is None
-
-    def test_variable(self):
+class TestHorizonMask:
+    def test_constructor(self):
         az = np.array([-np.pi, 0.0, np.pi])
         el = np.array([0.0, np.radians(10), 0.0])
-        mask = lox.ElevationMask.variable(az, el)
-        assert float(mask.min_elevation(0 * lox.rad)) == pytest.approx(np.radians(10))
-        assert float(mask.min_elevation(-np.pi * lox.rad)) == pytest.approx(0.0)
-        assert mask.fixed_elevation() is None
-        assert mask.azimuth() is not None
-        assert mask.elevation() is not None
+        mask = lox.HorizonMask(az, el)
+        assert float(mask.elevation_at(0 * lox.rad)) == pytest.approx(np.radians(10))
+        assert float(mask.elevation_at(-np.pi * lox.rad)) == pytest.approx(0.0)
+        assert mask.azimuth() == pytest.approx(az.tolist())
+        assert mask.elevation() == pytest.approx(el.tolist())
 
-    def test_constructor_with_min_elevation(self):
-        mask = lox.ElevationMask(min_elevation=np.radians(5) * lox.rad)
-        assert float(mask.min_elevation(0 * lox.rad)) == pytest.approx(np.radians(5))
-
-    def test_constructor_with_arrays(self):
-        az = np.array([-np.pi, 0.0, np.pi])
-        el = np.array([0.0, np.radians(10), 0.0])
-        mask = lox.ElevationMask(azimuth=az, elevation=el)
-        assert float(mask.min_elevation(0 * lox.rad)) == pytest.approx(np.radians(10))
-
-    def test_constructor_invalid(self):
-        with pytest.raises(ValueError):
-            lox.ElevationMask()
+    def test_invalid_azimuth_range(self):
+        az = np.array([-np.pi / 2, 0.0, np.pi])
+        el = np.array([0.0, 0.1, 0.0])
+        with pytest.raises(ValueError, match="azimuth range"):
+            lox.HorizonMask(az, el)
 
     def test_equality(self):
-        a = lox.ElevationMask.fixed(0.1 * lox.rad)
-        b = lox.ElevationMask.fixed(0.1 * lox.rad)
-        c = lox.ElevationMask.fixed(0.2 * lox.rad)
+        az = np.array([-np.pi, 0.0, np.pi])
+        a = lox.HorizonMask(az, np.array([0.0, 0.1, 0.0]))
+        b = lox.HorizonMask(az, np.array([0.0, 0.1, 0.0]))
+        c = lox.HorizonMask(az, np.array([0.0, 0.2, 0.0]))
         assert a == b
         assert a != c
 

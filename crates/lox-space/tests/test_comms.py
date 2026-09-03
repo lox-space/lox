@@ -1531,12 +1531,13 @@ def test_ground_station_terminals():
     location = lox.EllipsoidLocation(
         "IAU_EARTH", 13.4 * lox.deg, 52.5 * lox.deg, 0.1 * lox.km
     )
-    mask = lox.ElevationMask.fixed(5.0 * lox.deg)
-    gs = lox.GroundStation("berlin", location, mask, rx_terminals={"ka": rx})
+    gs = lox.GroundStation(
+        "berlin", location, min_elevation=5.0 * lox.deg, rx_terminals={"ka": rx}
+    )
     assert gs.rx_terminals()["ka"] == rx
     assert gs.tx_terminals() == {}
 
-    bare = lox.GroundStation("bare", location, mask)
+    bare = lox.GroundStation("bare", location, min_elevation=5.0 * lox.deg)
     assert bare.rx_terminals() == {}
 
 
@@ -1545,11 +1546,14 @@ def test_asset_terminals_round_trip_both_tiers():
     location = lox.EllipsoidLocation(
         "IAU_EARTH", 13.4 * lox.deg, 52.5 * lox.deg, 0.1 * lox.km
     )
-    mask = lox.ElevationMask.fixed(5.0 * lox.deg)
     tx_terminals = {"hga": make_tx(), "beacon": lox.EirpModel(KA_BAND, 40.0 * lox.dB)}
     rx_terminals = {"main": make_rx(), "lumped": lox.GtModel(KA_BAND, 30.0 * lox.dB)}
     gs = lox.GroundStation(
-        "berlin", location, mask, tx_terminals=tx_terminals, rx_terminals=rx_terminals
+        "berlin",
+        location,
+        min_elevation=5.0 * lox.deg,
+        tx_terminals=tx_terminals,
+        rx_terminals=rx_terminals,
     )
     assert gs.tx_terminals() == tx_terminals
     assert gs.rx_terminals() == rx_terminals

@@ -94,12 +94,12 @@ pub trait LineOfSight: TrySpheroid + TryMeanRadius {
 impl<T: TrySpheroid + TryMeanRadius> LineOfSight for T {}
 
 // ---------------------------------------------------------------------------
-// Elevation mask
+// Horizon mask
 // ---------------------------------------------------------------------------
 
-/// Errors from constructing an [`ElevationMask`].
+/// Errors from constructing a [`HorizonMask`].
 #[derive(Debug, Clone, Error, PartialEq)]
-pub enum ElevationMaskError {
+pub enum HorizonMaskError {
     /// The azimuth range does not span \[-π, π\].
     #[error("invalid azimuth range: {}..{}", .0.to_degrees(), .1.to_degrees())]
     InvalidAzimuthRange(f64, f64),
@@ -108,53 +108,51 @@ pub enum ElevationMaskError {
     SeriesError(#[from] SeriesError),
 }
 
-/// Minimum elevation angle as a function of azimuth.
+/// The measured skyline profile of a ground station: horizon elevation as a
+/// piecewise-linear function of azimuth.
 ///
-/// Can be either a constant angle ([`Fixed`](Self::Fixed)) or an
-/// azimuth-dependent piecewise-linear profile ([`Variable`](Self::Variable)).
+/// This captures the physical horizon (terrain, buildings) around a station.
+/// The operational minimum-elevation policy is a separate, constant floor on
+/// [`GroundStation`]; visibility detection tests elevation against the
+/// maximum of both via [`GroundStation::threshold_at`].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum ElevationMask {
-    /// Constant minimum elevation angle.
-    Fixed(Angle),
-    /// Azimuth-dependent minimum elevation angle (interpolated series).
-    Variable(Series),
-}
+pub struct HorizonMask(Series);
 
-impl ElevationMask {
-    /// Creates a variable elevation mask from paired azimuth/elevation vectors
-    /// in radians.
+impl HorizonMask {
+    /// Creates a horizon mask from paired azimuth/elevation vectors in
+    /// radians.
     ///
     /// The vectors feed a numeric interpolation series and so are taken as raw
     /// radians; scalar angles elsewhere on this type are [`Angle`]s.
-    pub fn new(azimuth: Vec<f64>, elevation: Vec<f64>) -> Result<Self, ElevationMaskError> {
+    pub fn new(azimuth: Vec<f64>, elevation: Vec<f64>) -> Result<Self, HorizonMaskError> {
         if !azimuth.is_empty() {
             let az_min = *azimuth.iter().min_by(|a, b| a.total_cmp(b)).unwrap();
             let az_max = *azimuth.iter().max_by(|a, b| a.total_cmp(b)).unwrap();
             if az_min != -PI || az_max != PI {
-                return Err(ElevationMaskError::InvalidAzimuthRange(az_min, az_max));
+                return Err(HorizonMaskError::InvalidAzimuthRange(az_min, az_max));
             }
         }
-        Ok(Self::Variable(Series::try_new(
+        Ok(Self(Series::try_new(
             azimuth,
             elevation,
             InterpolationType::Linear,
         )?))
     }
 
-    /// Creates a fixed elevation mask with a constant minimum elevation.
-    pub fn with_fixed_elevation(elevation: Angle) -> Self {
-        Self::Fixed(elevation)
+    /// Returns the horizon elevation at the given azimuth.
+    pub fn elevation_at(&self, azimuth: Angle) -> Angle {
+        Angle::radians(self.0.interpolate(azimuth.to_radians()))
     }
 
-    /// Returns the minimum elevation angle at the given azimuth.
-    pub fn min_elevation(&self, azimuth: Angle) -> Angle {
-        match self {
-            ElevationMask::Fixed(min_elevation) => *min_elevation,
-            ElevationMask::Variable(series) => {
-                Angle::radians(series.interpolate(azimuth.to_radians()))
-            }
-        }
+    /// Returns the azimuth grid of the profile in radians.
+    pub fn azimuth(&self) -> &[f64] {
+        self.0.x()
+    }
+
+    /// Returns the horizon elevations of the profile in radians.
+    pub fn elevation(&self) -> &[f64] {
+        self.0.y()
     }
 }
 
@@ -205,14 +203,13 @@ pub struct Pass {
 
 impl Pass {
     /// Create a Pass from an interval, calculating observables for times when
-    /// the satellite is above the elevation mask.
+    /// the satellite is above the station's elevation threshold.
     ///
-    /// Returns `None` if the satellite is never above the mask within the interval.
+    /// Returns `None` if the satellite is never above the threshold within the interval.
     pub fn from_interval(
         interval: TimeInterval<TimeScale>,
         time_resolution: TimeDelta,
-        gs: &EllipsoidLocation,
-        mask: &ElevationMask,
+        gs: &GroundStation,
         sc: &lox_orbits::orbits::Trajectory,
     ) -> Option<Pass> {
         let mut pass_times = Vec::new();
@@ -221,12 +218,11 @@ impl Pass {
         for current_time in interval.step_by(time_resolution) {
             let state = sc.at(current_time);
             let state_bf = state
-                .try_to_frame(gs.frame(), &DefaultRotationProvider)
+                .try_to_frame(gs.location().frame(), &DefaultRotationProvider)
                 .unwrap();
-            let obs = gs.observables(state_bf);
+            let obs = gs.location().observables(state_bf);
 
-            let min_elev = mask.min_elevation(obs.azimuth());
-            if obs.elevation() >= min_elev {
+            if obs.elevation() >= gs.threshold_at(obs.azimuth()) {
                 pass_times.push(current_time);
                 pass_observables.push(obs);
             }
@@ -377,16 +373,16 @@ impl From<RotationError> for EvalError {
 // DetectFn implementations
 // ---------------------------------------------------------------------------
 
-/// Elevation above mask for a ground station / spacecraft pair.
+/// Elevation above the station's threshold for a ground station / spacecraft
+/// pair.
 ///
 /// Generic over origin `O` and frame `R`. The detect function:
 /// 1. Interpolates the spacecraft trajectory at the given time
 /// 2. Rotates the state into the body-fixed frame via `TryRotation<R, Frame, TimeScale>`
 /// 3. Computes observables (azimuth, elevation, range, range rate)
-/// 4. Returns elevation minus minimum elevation from the mask
+/// 4. Returns elevation minus the station's elevation threshold
 struct ElevationDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    gs: &'a EllipsoidLocation,
-    mask: &'a ElevationMask,
+    gs: &'a GroundStation,
     sc: &'a Trajectory<O, R>,
 }
 
@@ -403,10 +399,10 @@ where
     fn eval(&self, time: Time) -> Result<f64, Self::Error> {
         let sc = self.sc.at(time.into_dynamic());
         let sc = sc
-            .try_to_frame(self.gs.frame(), &DefaultRotationProvider)
+            .try_to_frame(self.gs.location().frame(), &DefaultRotationProvider)
             .map_err(|e| EvalError::Rotation(Box::new(e)))?;
-        let obs = self.gs.observables(sc);
-        Ok((obs.elevation() - self.mask.min_elevation(obs.azimuth())).to_radians())
+        let obs = self.gs.location().observables(sc);
+        Ok((obs.elevation() - self.gs.threshold_at(obs.azimuth())).to_radians())
     }
 }
 
@@ -421,28 +417,37 @@ where
     fn eval_bounded(&self, time: Time) -> Result<(f64, f64), Self::Error> {
         let sc = self.sc.at(time);
         let sc = sc
-            .try_to_frame(self.gs.frame(), &DefaultRotationProvider)
+            .try_to_frame(self.gs.location().frame(), &DefaultRotationProvider)
             .map_err(|e| EvalError::Rotation(Box::new(e)))?;
-        let obs = self.gs.observables(sc);
-        let value = (obs.elevation() - self.mask.min_elevation(obs.azimuth())).to_radians();
+        let obs = self.gs.location().observables(sc);
+        let value = (obs.elevation() - self.gs.threshold_at(obs.azimuth())).to_radians();
 
         // The topocentric elevation-angle rate is bounded by the transverse
         // angular rate of the line-of-sight vector, |v_bf| / range (the
         // body-fixed velocity is the analytic derivative of the interpolated
-        // position). A fixed mask contributes no azimuth-dependent term, so
-        // this bounds the whole crossing function. Azimuth-varying masks would
-        // additionally need the mask slope; until that is modelled they report
-        // an unbounded rate, which degrades adaptive stepping to the fixed step.
-        let bound = match self.mask {
-            ElevationMask::Fixed(_) => {
-                let range = obs.range().to_meters();
-                if range > 0.0 {
-                    sc.velocity().length() / range
-                } else {
-                    f64::INFINITY
-                }
+        // position). A constant threshold contributes no azimuth-dependent
+        // term, so this bounds the whole crossing function whenever the
+        // `min_elevation` floor dominates the horizon profile at the current
+        // azimuth — always, when no horizon mask is set. A dominating sloped
+        // horizon would additionally need the mask slope; until that is
+        // modelled it reports an unbounded rate, which degrades adaptive
+        // stepping to the fixed step.
+        let floor_dominates = match self.gs.horizon_mask() {
+            None => true,
+            Some(mask) => self
+                .gs
+                .min_elevation()
+                .is_some_and(|floor| floor >= mask.elevation_at(obs.azimuth())),
+        };
+        let bound = if floor_dominates {
+            let range = obs.range().to_meters();
+            if range > 0.0 {
+                sc.velocity().length() / range
+            } else {
+                f64::INFINITY
             }
-            ElevationMask::Variable(_) => f64::INFINITY,
+        } else {
+            f64::INFINITY
         };
         Ok((value, bound))
     }
@@ -723,11 +728,7 @@ where
     ) -> Result<Vec<TimeInterval>, VisibilityError> {
         let step = self.scan_step();
 
-        let elev = ElevationDetectFn {
-            gs: gs.location(),
-            mask: gs.mask(),
-            sc: sc_traj,
-        };
+        let elev = ElevationDetectFn { gs, sc: sc_traj };
 
         // Elevation is the cheap constraint and always runs over the whole
         // window; `adaptive` lets it stride by its own rate bound.
@@ -942,13 +943,11 @@ impl VisibilityResults {
     /// Returns an error if the pair is an inter-satellite pair, since passes
     /// with ground-station observables are not meaningful for such pairs.
     /// Returns an empty vec if the pair is not found.
-    #[allow(clippy::too_many_arguments)]
     pub fn to_passes(
         &self,
         ground_id: &AssetId,
         space_id: &AssetId,
-        gs: &EllipsoidLocation,
-        mask: &ElevationMask,
+        gs: &GroundStation,
         sc: &lox_orbits::orbits::Trajectory,
         time_resolution: TimeDelta,
     ) -> Result<Vec<Pass>, PassError> {
@@ -970,7 +969,7 @@ impl VisibilityResults {
                             interval.start().into_dynamic(),
                             interval.end().into_dynamic(),
                         );
-                        Pass::from_interval(dynamic_interval, time_resolution, gs, mask, sc)
+                        Pass::from_interval(dynamic_interval, time_resolution, gs, sc)
                     })
                     .collect()
             })
@@ -1126,13 +1125,7 @@ where
                         // The trajectory may carry typed origin/frame; erase them
                         // for pass computation.
                         let dynamic_traj = sc_traj.clone().into_dynamic();
-                        Pass::from_interval(
-                            *interval,
-                            self.step,
-                            gs.location(),
-                            gs.mask(),
-                            &dynamic_traj,
-                        )
+                        Pass::from_interval(*interval, self.step, gs, &dynamic_traj)
                     })
                     .collect();
                 Some(((gs_id.clone(), sc_id.clone()), passes))
@@ -1273,11 +1266,7 @@ where
                 Some(d) if 0.5 * d > step => 0.5 * d,
                 _ => step,
             };
-            let elev = ElevationDetectFn {
-                gs: gs.location(),
-                mask: gs.mask(),
-                sc: sc_traj,
-            };
+            let elev = ElevationDetectFn { gs, sc: sc_traj };
             let windows = if adaptive {
                 elev.intervals(
                     AdaptiveSampler::new(step, interval.duration().max(step)),
@@ -1676,8 +1665,7 @@ mod tests {
     fn test_elevation() {
         let sc = spacecraft_trajectory_dynamic();
         let gs_traj = ground_station_trajectory();
-        let gs = location_dynamic();
-        let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
+        let gs = GroundStation::new("cebreros", location_dynamic());
         let expected: Vec<f64> = read_data_file("elevation.csv")
             .lines()
             .map(|line| line.parse::<f64>().unwrap().to_radians())
@@ -1687,7 +1675,6 @@ mod tests {
         let typed_sc = Trajectory::from_parts(epoch.with_scale(TimeScale::Tai), o, f, data);
         let elev_fn = ElevationDetectFn {
             gs: &gs,
-            mask: &mask,
             sc: &typed_sc,
         };
         // Use the ground station trajectory times
@@ -1703,30 +1690,29 @@ mod tests {
     }
 
     #[test]
-    fn test_elevation_mask() {
+    fn test_horizon_mask() {
         let azimuth = vec![-PI, 0.0, PI];
         let elevation = vec![-2.0, 0.0, 2.0];
-        let mask = ElevationMask::new(azimuth, elevation).unwrap();
-        assert_eq!(mask.min_elevation(Angle::ZERO), Angle::ZERO);
+        let mask = HorizonMask::new(azimuth, elevation).unwrap();
+        assert_eq!(mask.elevation_at(Angle::ZERO), Angle::ZERO);
     }
 
     #[test]
-    fn test_elevation_mask_invalid_mask() {
+    fn test_horizon_mask_invalid_azimuth_range() {
         let azimuth = vec![-PI, 0.0, PI / 2.0];
         let elevation = vec![-2.0, 0.0, 2.0];
-        let mask = ElevationMask::new(azimuth, elevation);
+        let mask = HorizonMask::new(azimuth, elevation);
         assert_eq!(
             mask,
-            Err(ElevationMaskError::InvalidAzimuthRange(-PI, PI / 2.0))
+            Err(HorizonMaskError::InvalidAzimuthRange(-PI, PI / 2.0))
         )
     }
 
     #[test]
     fn test_visibility() {
         let gs_loc = location_dynamic();
-        let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
         let sc_traj = spacecraft_trajectory_dynamic();
-        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let gs = GroundStation::new("cebreros", gs_loc);
         let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
         let spk = ephemeris();
         let ground_assets = [gs.clone()];
@@ -1748,9 +1734,8 @@ mod tests {
     #[test]
     fn test_visibility_no_ephemeris() {
         let gs_loc = location_dynamic();
-        let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
         let sc_traj = spacecraft_trajectory_dynamic();
-        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let gs = GroundStation::new("cebreros", gs_loc);
         let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
         let ground_assets = [gs.clone()];
         let space_assets = [sc.clone()];
@@ -1773,9 +1758,8 @@ mod tests {
     #[test]
     fn test_visibility_combined() {
         let gs_loc = location_dynamic();
-        let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
         let sc_traj = spacecraft_trajectory_dynamic();
-        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let gs = GroundStation::new("cebreros", gs_loc);
         let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
         let spk = ephemeris();
         let ground_assets = [gs.clone()];
@@ -1800,9 +1784,8 @@ mod tests {
     #[test]
     fn test_pass_observables_above_mask() {
         let gs_loc = location_dynamic();
-        let mask = ElevationMask::with_fixed_elevation(Angle::degrees(10.0));
         let sc_traj = spacecraft_trajectory_dynamic();
-        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let gs = GroundStation::new("cebreros", gs_loc).with_min_elevation(Angle::degrees(10.0));
         let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
         let ground_assets = [gs.clone()];
         let space_assets = [sc.clone()];
@@ -1814,16 +1797,15 @@ mod tests {
         let passes = analysis.to_passes(&results);
         let key = (gs.id().clone(), sc.id().clone());
         let pair_passes = &passes[&key];
-        let mask = gs.mask();
 
         for pass in pair_passes {
             for obs in pass.observables() {
-                let min_elevation = mask.min_elevation(obs.azimuth());
+                let threshold = gs.threshold_at(obs.azimuth());
                 assert!(
-                    obs.elevation() >= min_elevation,
-                    "Observable elevation {:.2}° is below mask minimum {:.2}° at azimuth {:.2}°",
+                    obs.elevation() >= threshold,
+                    "Observable elevation {:.2}° is below threshold {:.2}° at azimuth {:.2}°",
                     obs.elevation().to_degrees(),
-                    min_elevation.to_degrees(),
+                    threshold.to_degrees(),
                     obs.azimuth().to_degrees()
                 );
             }
@@ -1881,9 +1863,8 @@ mod tests {
     #[test]
     fn test_visibility_adaptive_matches_uniform() {
         let gs_loc = location_dynamic();
-        let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
         let sc_traj = spacecraft_trajectory_dynamic();
-        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let gs = GroundStation::new("cebreros", gs_loc);
         let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
         let ground_assets = [gs.clone()];
         let space_assets = [sc.clone()];
@@ -2207,9 +2188,8 @@ mod tests {
     #[test]
     fn test_ground_space_filter() {
         let gs_loc = location_dynamic();
-        let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
-        let gs1 = GroundStation::new("cebreros", gs_loc.clone(), mask.clone());
-        let gs2 = GroundStation::new("malargue", gs_loc, mask);
+        let gs1 = GroundStation::new("cebreros", gs_loc.clone());
+        let gs2 = GroundStation::new("malargue", gs_loc);
         let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
@@ -2258,9 +2238,8 @@ mod tests {
     #[test]
     fn test_both_filters_combined_with_ground_space() {
         let gs_loc = location_dynamic();
-        let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
-        let gs1 = GroundStation::new("cebreros", gs_loc.clone(), mask.clone());
-        let gs2 = GroundStation::new("malargue", gs_loc, mask);
+        let gs1 = GroundStation::new("cebreros", gs_loc.clone());
+        let gs2 = GroundStation::new("malargue", gs_loc);
         let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
@@ -2292,8 +2271,7 @@ mod tests {
     #[test]
     fn test_min_pass_duration_filters_short_passes() {
         let gs_loc = location_dynamic();
-        let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
-        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let gs = GroundStation::new("cebreros", gs_loc);
         let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj));
@@ -2345,8 +2323,7 @@ mod tests {
             .compute()
             .unwrap();
 
-        let gs_loc = location_dynamic();
-        let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
+        let gs = GroundStation::new("dummy", location_dynamic());
         let dummy_traj = Trajectory::from_csv_dynamic(
             &read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
@@ -2358,8 +2335,7 @@ mod tests {
             .to_passes(
                 sc1.id(),
                 sc2.id(),
-                &gs_loc,
-                &mask,
+                &gs,
                 &dummy_traj,
                 TimeDelta::from_seconds(60),
             )
@@ -2369,13 +2345,12 @@ mod tests {
 
     #[test]
     fn test_to_passes_unknown_pair_returns_empty() {
-        let gs_loc = location_dynamic();
-        let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
-        let gs = GroundStation::new("cebreros", gs_loc.clone(), mask.clone());
+        let gs = GroundStation::new("cebreros", location_dynamic());
         let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj));
-        let (scenario, ensemble) = make_scenario_and_ensemble(&[gs], &[sc], interval);
+        let (scenario, ensemble) =
+            make_scenario_and_ensemble(std::slice::from_ref(&gs), &[sc], interval);
 
         let results = VisibilityAnalysis::new(&scenario, &ensemble)
             .compute()
@@ -2393,8 +2368,7 @@ mod tests {
             .to_passes(
                 &unknown_id,
                 &unknown_id,
-                &gs_loc,
-                &mask,
+                &gs,
                 &dummy_traj,
                 TimeDelta::from_seconds(60),
             )
@@ -2405,8 +2379,7 @@ mod tests {
     #[test]
     fn test_combined_ground_and_inter_satellite() {
         let gs_loc = location_dynamic();
-        let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
-        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let gs = GroundStation::new("cebreros", gs_loc);
         let sc_traj = spacecraft_trajectory_dynamic();
         let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
         let sc1 = Spacecraft::new("sc1", OrbitSource::Trajectory(sc_traj.clone()));
@@ -2515,5 +2488,125 @@ mod tests {
     fn ephemeris() -> &'static Spk {
         static EPHEMERIS: OnceLock<Spk> = OnceLock::new();
         EPHEMERIS.get_or_init(|| Spk::from_file(data_file("spice/de440s.bsp")).unwrap())
+    }
+
+    /// Computes ground-space visibility intervals for a single station over
+    /// the lunar trajectory.
+    fn intervals_for_station(gs: GroundStation) -> Vec<TimeInterval> {
+        let sc_traj = spacecraft_trajectory_dynamic();
+        let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
+        let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
+        let (scenario, ensemble) = make_scenario_and_ensemble(
+            std::slice::from_ref(&gs),
+            std::slice::from_ref(&sc),
+            interval,
+        );
+        let results = VisibilityAnalysis::new(&scenario, &ensemble)
+            .compute()
+            .expect("visibility");
+        results
+            .intervals_for(gs.id(), sc.id())
+            .expect("pair not found")
+            .to_vec()
+    }
+
+    #[test]
+    fn test_unconstrained_station_reproduces_fixed_zero_mask() {
+        // A station with neither a horizon mask nor a minimum-elevation floor
+        // must reproduce the old `ElevationMask::Fixed(0°)` behaviour: the
+        // reference contacts in contacts.csv were generated with that mask.
+        let unconstrained =
+            intervals_for_station(GroundStation::new("cebreros", location_dynamic()));
+        let expected = contacts_tai();
+        assert_eq!(unconstrained.len(), expected.len());
+        assert_approx_eq!(expected, unconstrained.clone(), rtol <= 1e-4);
+
+        // An explicit 0° floor is equivalent to no floor at all.
+        let zero_floor = intervals_for_station(
+            GroundStation::new("cebreros", location_dynamic()).with_min_elevation(Angle::ZERO),
+        );
+        assert_eq!(unconstrained, zero_floor);
+    }
+
+    #[test]
+    fn test_visibility_combines_horizon_mask_and_min_elevation() {
+        // Horizon mask: 20° across the western azimuth sector, 0° in the
+        // eastern sector. Combined with a 10° floor, the horizon dominates in
+        // the west and the floor dominates in the east.
+        let deg20 = Angle::degrees(20.0).to_radians();
+        let horizon =
+            || HorizonMask::new(vec![-PI, -0.05, 0.0, PI], vec![deg20, deg20, 0.0, 0.0]).unwrap();
+        let floor = Angle::degrees(10.0);
+
+        let mask_only = intervals_for_station(
+            GroundStation::new("cebreros", location_dynamic()).with_horizon_mask(horizon()),
+        );
+        let floor_only = intervals_for_station(
+            GroundStation::new("cebreros", location_dynamic()).with_min_elevation(floor),
+        );
+        let combined = intervals_for_station(
+            GroundStation::new("cebreros", location_dynamic())
+                .with_horizon_mask(horizon())
+                .with_min_elevation(floor),
+        );
+
+        let total = |intervals: &[TimeInterval]| -> f64 {
+            intervals
+                .iter()
+                .map(|iv| iv.duration().to_seconds().to_f64())
+                .sum()
+        };
+
+        // The combined threshold is max(horizon, floor), so each constraint
+        // must trim windows the other alone would admit.
+        assert!(!combined.is_empty());
+        assert!(
+            total(&combined) < total(&mask_only),
+            "the 10° floor must trim the horizon-only windows ({:.0}s vs {:.0}s)",
+            total(&combined),
+            total(&mask_only)
+        );
+        assert!(
+            total(&combined) < total(&floor_only),
+            "the 20° horizon sector must trim the floor-only windows ({:.0}s vs {:.0}s)",
+            total(&combined),
+            total(&floor_only)
+        );
+    }
+
+    #[test]
+    fn test_rate_bound_finite_for_constant_threshold() {
+        let sc_traj = spacecraft_trajectory_dynamic();
+        let (epoch, origin, frame, data) = sc_traj.into_parts();
+        let typed = Trajectory::from_parts(epoch.with_scale(TimeScale::Tai), origin, frame, data);
+        let time = typed.start_time();
+
+        let bound_for = |gs: &GroundStation| {
+            let (_, bound) = ElevationDetectFn { gs, sc: &typed }
+                .eval_bounded(time)
+                .unwrap();
+            bound
+        };
+
+        // Without a horizon mask the threshold is constant, so the adaptive
+        // scan keeps its finite |v|/range rate bound — with or without a floor.
+        let flat = GroundStation::new("flat", location_dynamic());
+        assert!(bound_for(&flat).is_finite());
+        let floored = GroundStation::new("floored", location_dynamic())
+            .with_min_elevation(Angle::degrees(5.0));
+        assert!(bound_for(&floored).is_finite());
+
+        // A sloped horizon above the floor has no modelled rate bound.
+        let deg20 = Angle::degrees(20.0).to_radians();
+        let masked = GroundStation::new("masked", location_dynamic())
+            .with_horizon_mask(HorizonMask::new(vec![-PI, PI], vec![deg20, deg20]).unwrap());
+        assert!(bound_for(&masked).is_infinite());
+
+        // When the floor dominates the horizon at the current azimuth the
+        // constant part governs and the bound stays finite.
+        let dominated = GroundStation::new("dominated", location_dynamic())
+            .with_horizon_mask(HorizonMask::new(vec![-PI, PI], vec![deg20, deg20]).unwrap())
+            .with_min_elevation(Angle::degrees(30.0));
+        assert!(bound_for(&dominated).is_finite());
     }
 }
