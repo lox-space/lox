@@ -1,6 +1,6 @@
 <!--
-SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
 SPDX-FileCopyrightText: 2024 Angus Morrison <github@angus-morrison.com>
+SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
 
 SPDX-License-Identifier: MPL-2.0
 -->
@@ -13,11 +13,15 @@ SPDX-License-Identifier: MPL-2.0
 [![CodSpeed][codspeed-badge]][codspeed-url]
 [![project chat][zulip-badge]][zulip-url]
 
+<!-- cargo-rdme start -->
+
 Lox is an MPLv2-licensed Rust astrodynamics library with first-class Python bindings for
 orbital mechanics, mission analysis, and telecommunications.
 
 `lox-space` is the main entry point for both the Rust and Python APIs, re-exporting all
-functionality from the Lox ecosystem through a unified interface.
+functionality from the Lox ecosystem through a unified interface and providing a
+`prelude` of the most commonly used types. Each module mirrors the corresponding
+standalone crate; enable the matching cargo feature to pull it in.
 
 ## Python Quick Start
 
@@ -43,7 +47,7 @@ trajectory = j2.propagate(epoch, end=epoch + 100 * lox.minutes)
 
 ## Rust Quick Start
 
-```rust,no_run
+```rust
 use lox_space::prelude::*;
 
 let epoch = Utc::from_iso("2025-01-01T12:00:00").unwrap().to_time().to_scale(TimeScale::Tdb);
@@ -103,19 +107,12 @@ Lox is pre-1.0. The API may change between releases.
 
 ## Documentation
 
-- Python: https://python.lox.rs
-- Rust: https://docs.rs/lox-space
+- Python: <https://python.lox.rs>
+- Rust: <https://docs.rs/lox-space>
 
-## Community
+<!-- cargo-rdme end -->
 
-- [Zulip Chat][zulip-url]
-
-## Why "Lox"?
-
-> Liquid oxygen—abbreviated LOx, LOX or Lox in the aerospace, submarine and gas industries—is the liquid form of
-> molecular oxygen. It was used as the _oxidizer_ in the first liquid-fueled rocket invented in 1926 by Robert H.
-> Goddard,
-> an application which has continued to the present. [Wikipedia](https://en.wikipedia.org/wiki/Liquid_oxygen)
+For more information, see the [main repository](https://github.com/lox-space/lox).
 
 [codecov-badge]: https://codecov.io/gh/lox-space/lox/graph/badge.svg?token=R1W6HLN2N2
 [codecov-url]: https://codecov.io/gh/lox-space/lox

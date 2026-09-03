@@ -85,7 +85,17 @@ lint-clippy-embedded *ARGS:
 lint-rustfmt *ARGS:
     cargo fmt --check {{ARGS}}
 
-lint: lint-reuse lint-clippy lint-rustfmt
+# Check that both READMEs match the lox-space crate documentation
+lint-readme *ARGS:
+    cargo rdme --check {{ARGS}}
+    cargo rdme --check --readme-path README.md {{ARGS}}
+
+lint: lint-reuse lint-clippy lint-rustfmt lint-readme
+
+# Regenerate both READMEs from the lox-space crate documentation
+readme *ARGS:
+    cargo rdme {{ARGS}}
+    cargo rdme --readme-path README.md {{ARGS}}
 
 # Add SPDX headers to new files
 headers:
