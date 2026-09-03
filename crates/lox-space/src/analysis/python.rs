@@ -15,7 +15,7 @@ use crate::analysis::power::{
 };
 use crate::analysis::sun::AnalyticalSunEphemeris;
 use crate::analysis::visibility::{
-    ElevationMask, ElevationMaskError, PairType, Pass, VisibilityAnalysis, VisibilityError,
+    HorizonMask, HorizonMaskError, PairType, Pass, VisibilityAnalysis, VisibilityError,
     VisibilityResults,
 };
 use crate::bodies::Origin;
@@ -45,7 +45,6 @@ use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
 use lox_units::Distance;
 
-use numpy::{PyArray1, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
@@ -58,11 +57,11 @@ impl From<PyVisibilityError> for PyErr {
     }
 }
 
-/// Error wrapper converting `ElevationMaskError` into a Python `ValueError`.
-pub struct PyElevationMaskError(pub ElevationMaskError);
+/// Error wrapper converting `HorizonMaskError` into a Python `ValueError`.
+pub struct PyHorizonMaskError(pub HorizonMaskError);
 
-impl From<PyElevationMaskError> for PyErr {
-    fn from(err: PyElevationMaskError) -> Self {
+impl From<PyHorizonMaskError> for PyErr {
+    fn from(err: PyHorizonMaskError) -> Self {
         PyValueError::new_err(err.0.to_string())
     }
 }
@@ -117,12 +116,15 @@ impl PyEvent {
 
 /// A named ground station for visibility analysis.
 ///
-/// Wraps a ground location and elevation mask with an identifier.
+/// Wraps a ground location with an identifier, an optional operational
+/// minimum-elevation floor, and an optional measured horizon mask.
+/// Visibility tests elevation against the maximum of both.
 ///
 /// Args:
 ///     id: Unique identifier for this ground station.
 ///     location: Ground station location.
-///     mask: Elevation mask defining minimum elevation constraints.
+///     min_elevation: Optional minimum-elevation floor (unconstrained when omitted).
+///     horizon_mask: Optional measured horizon profile (flat 0° horizon when omitted).
 ///     tx_terminals: Optional dict of named transmit terminals (TxChain or EirpModel).
 ///     rx_terminals: Optional dict of named receive terminals (RxChain or GtModel).
 #[pyclass(name = "GroundStation", module = "lox_space", frozen, from_py_object)]
@@ -132,16 +134,23 @@ pub struct PyGroundStation(pub GroundStation);
 #[pymethods]
 impl PyGroundStation {
     #[new]
-    #[pyo3(signature = (id, location, mask, network_id=None, tx_terminals=None, rx_terminals=None))]
+    #[pyo3(signature = (id, location, min_elevation=None, horizon_mask=None, network_id=None, tx_terminals=None, rx_terminals=None))]
     fn new(
         id: String,
         location: PyEllipsoidLocation,
-        mask: PyElevationMask,
+        min_elevation: Option<PyAngle>,
+        horizon_mask: Option<PyHorizonMask>,
         network_id: Option<String>,
         tx_terminals: Option<HashMap<String, Bound<'_, PyAny>>>,
         rx_terminals: Option<HashMap<String, Bound<'_, PyAny>>>,
     ) -> PyResult<Self> {
-        let mut gs = GroundStation::new(id, location.0, mask.0);
+        let mut gs = GroundStation::new(id, location.0);
+        if let Some(min_elevation) = min_elevation {
+            gs = gs.with_min_elevation(min_elevation.0);
+        }
+        if let Some(horizon_mask) = horizon_mask {
+            gs = gs.with_horizon_mask(horizon_mask.0);
+        }
         if let Some(nid) = network_id {
             gs = gs.with_network_id(nid);
         }
@@ -164,9 +173,28 @@ impl PyGroundStation {
         PyEllipsoidLocation(self.0.location().clone())
     }
 
-    /// Return the elevation mask.
-    fn mask(&self) -> PyElevationMask {
-        PyElevationMask(self.0.mask().clone())
+    /// Return the minimum-elevation floor, if set.
+    fn min_elevation(&self) -> Option<PyAngle> {
+        self.0.min_elevation().map(PyAngle)
+    }
+
+    /// Return the horizon mask, if set.
+    fn horizon_mask(&self) -> Option<PyHorizonMask> {
+        self.0.horizon_mask().cloned().map(PyHorizonMask)
+    }
+
+    /// Return the effective elevation threshold at the given azimuth.
+    ///
+    /// The threshold is the maximum of the horizon profile (0° when no
+    /// horizon mask is set) and the minimum-elevation floor.
+    ///
+    /// Args:
+    ///     azimuth: Azimuth angle as Angle.
+    ///
+    /// Returns:
+    ///     Elevation threshold as Angle.
+    fn threshold_at(&self, azimuth: PyAngle) -> PyAngle {
+        PyAngle(self.0.threshold_at(azimuth.0))
     }
 
     /// Return the network identifier, if assigned.
@@ -194,10 +222,9 @@ impl PyGroundStation {
 
     fn __repr__(&self) -> String {
         format!(
-            "GroundStation(\"{}\", {}, {})",
+            "GroundStation(\"{}\", {})",
             self.id(),
             self.location().__repr__(),
-            self.mask().__repr__(),
         )
     }
 }
@@ -843,14 +870,7 @@ impl PyVisibilityResults {
                 let dynamic_traj = sc_traj.clone().into_dynamic();
                 let passes = self
                     .results
-                    .to_passes(
-                        &gs_id,
-                        &sc_id,
-                        gs.location(),
-                        gs.mask(),
-                        &dynamic_traj,
-                        self.step,
-                    )
+                    .to_passes(&gs_id, &sc_id, gs, &dynamic_traj, self.step)
                     .map_err(|e| PyValueError::new_err(e.to_string()))?;
                 Ok(passes.into_iter().map(PyPass).collect())
             }
@@ -888,13 +908,7 @@ impl PyVisibilityResults {
                             interval.start().into_dynamic(),
                             interval.end().into_dynamic(),
                         );
-                        Pass::from_interval(
-                            dynamic_interval,
-                            self.step,
-                            gs.location(),
-                            gs.mask(),
-                            &dynamic_traj,
-                        )
+                        Pass::from_interval(dynamic_interval, self.step, gs, &dynamic_traj)
                     })
                     .map(PyPass)
                     .collect();
@@ -951,137 +965,57 @@ impl PyVisibilityResults {
     }
 }
 
-/// Defines elevation constraints for visibility analysis.
+/// A measured horizon profile for visibility analysis.
 ///
-/// An elevation mask specifies the minimum elevation angle required for
-/// visibility at different azimuth angles. Can be either fixed (constant
-/// minimum elevation) or variable (azimuth-dependent).
+/// A horizon mask captures the physical skyline around a ground station as
+/// elevation over azimuth. Visibility additionally honours the station's
+/// operational `min_elevation` floor; detection tests elevation against the
+/// maximum of both.
 ///
 /// Args:
-///     azimuth: Array of azimuth angles in radians (for variable mask).
-///     elevation: Array of minimum elevations in radians (for variable mask).
-///     min_elevation: Fixed minimum elevation in radians.
-#[pyclass(
-    name = "ElevationMask",
-    module = "lox_space",
-    frozen,
-    eq,
-    from_py_object
-)]
+///     azimuth: Array of azimuth angles in radians spanning [-π, π].
+///     elevation: Array of horizon elevations in radians.
+#[pyclass(name = "HorizonMask", module = "lox_space", frozen, eq, from_py_object)]
 #[derive(Debug, Clone, PartialEq)]
-pub struct PyElevationMask(pub ElevationMask);
+pub struct PyHorizonMask(pub HorizonMask);
 
 #[pymethods]
-impl PyElevationMask {
+impl PyHorizonMask {
     #[new]
-    #[pyo3(signature = (azimuth=None, elevation=None, min_elevation=None))]
-    fn new(
-        azimuth: Option<&Bound<'_, PyArray1<f64>>>,
-        elevation: Option<&Bound<'_, PyArray1<f64>>>,
-        min_elevation: Option<PyAngle>,
-    ) -> PyResult<Self> {
-        if let Some(min_elevation) = min_elevation {
-            return Ok(PyElevationMask(ElevationMask::with_fixed_elevation(
-                min_elevation.0,
-            )));
-        }
-        if let (Some(azimuth), Some(elevation)) = (azimuth, elevation) {
-            let azimuth = azimuth.to_vec()?;
-            let elevation = elevation.to_vec()?;
-            return Ok(PyElevationMask(
-                ElevationMask::new(azimuth, elevation).map_err(PyElevationMaskError)?,
-            ));
-        }
-        Err(PyValueError::new_err(
-            "invalid argument combination, either `min_elevation` or `azimuth` and `elevation` arrays need to be present",
+    fn new(azimuth: Vec<f64>, elevation: Vec<f64>) -> PyResult<Self> {
+        Ok(PyHorizonMask(
+            HorizonMask::new(azimuth, elevation).map_err(PyHorizonMaskError)?,
         ))
     }
 
-    /// Create a fixed elevation mask with constant minimum elevation.
-    ///
-    /// Args:
-    ///     min_elevation: Minimum elevation angle as Angle.
-    ///
-    /// Returns:
-    ///     ElevationMask with fixed minimum elevation.
-    #[classmethod]
-    fn fixed(_cls: &Bound<'_, PyType>, min_elevation: PyAngle) -> Self {
-        PyElevationMask(ElevationMask::with_fixed_elevation(min_elevation.0))
+    fn __getnewargs__(&self) -> (Vec<f64>, Vec<f64>) {
+        (self.azimuth(), self.elevation())
     }
 
-    /// Create a variable elevation mask from azimuth-dependent data.
-    ///
-    /// Args:
-    ///     azimuth: Array of azimuth angles in radians.
-    ///     elevation: Array of minimum elevations in radians.
-    ///
-    /// Returns:
-    ///     ElevationMask with variable minimum elevation.
-    #[classmethod]
-    fn variable(
-        _cls: &Bound<'_, PyType>,
-        azimuth: &Bound<'_, PyArray1<f64>>,
-        elevation: &Bound<'_, PyArray1<f64>>,
-    ) -> PyResult<Self> {
-        let azimuth = azimuth.to_vec()?;
-        let elevation = elevation.to_vec()?;
-        Ok(PyElevationMask(
-            ElevationMask::new(azimuth, elevation).map_err(PyElevationMaskError)?,
-        ))
+    /// Return the azimuth grid in radians.
+    fn azimuth(&self) -> Vec<f64> {
+        self.0.azimuth().to_vec()
     }
 
-    fn __getnewargs__(&self) -> (Option<Vec<f64>>, Option<Vec<f64>>, Option<PyAngle>) {
-        (self.azimuth(), self.elevation(), self.fixed_elevation())
+    /// Return the horizon elevations in radians.
+    fn elevation(&self) -> Vec<f64> {
+        self.0.elevation().to_vec()
     }
 
-    /// Return the azimuth array (for variable masks only).
-    fn azimuth(&self) -> Option<Vec<f64>> {
-        match &self.0 {
-            ElevationMask::Fixed(_) => None,
-            ElevationMask::Variable(series) => Some(series.x().to_vec()),
-        }
-    }
-
-    /// Return the elevation array (for variable masks only).
-    fn elevation(&self) -> Option<Vec<f64>> {
-        match &self.0 {
-            ElevationMask::Fixed(_) => None,
-            ElevationMask::Variable(series) => Some(series.y().to_vec()),
-        }
-    }
-
-    /// Return the fixed elevation value (for fixed masks only).
-    fn fixed_elevation(&self) -> Option<PyAngle> {
-        match &self.0 {
-            ElevationMask::Fixed(min_elevation) => Some(PyAngle(*min_elevation)),
-            ElevationMask::Variable(_) => None,
-        }
-    }
-
-    /// Return the minimum elevation at the given azimuth.
+    /// Return the horizon elevation at the given azimuth.
     ///
     /// Args:
     ///     azimuth: Azimuth angle as Angle.
     ///
     /// Returns:
-    ///     Minimum elevation as Angle.
-    fn min_elevation(&self, azimuth: PyAngle) -> PyAngle {
-        PyAngle(self.0.min_elevation(azimuth.0))
+    ///     Horizon elevation as Angle.
+    fn elevation_at(&self, azimuth: PyAngle) -> PyAngle {
+        PyAngle(self.0.elevation_at(azimuth.0))
     }
 
     fn __repr__(&self) -> String {
-        match &self.0 {
-            ElevationMask::Fixed(min_elevation) => {
-                format!(
-                    "ElevationMask(min_elevation={})",
-                    PyAngle(*min_elevation).__repr__(),
-                )
-            }
-            ElevationMask::Variable(series) => {
-                let n = series.x().len();
-                format!("ElevationMask({n} azimuth/elevation pairs)")
-            }
-        }
+        let n = self.0.azimuth().len();
+        format!("HorizonMask({n} azimuth/elevation pairs)")
     }
 }
 

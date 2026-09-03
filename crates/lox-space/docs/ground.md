@@ -36,14 +36,16 @@ print(f"Azimuth: {obs.azimuth().to_degrees():.2f} deg")
 print(f"Elevation: {obs.elevation().to_degrees():.2f} deg")
 print(f"Range: {obs.range().to_kilometers():.1f} km")
 
-# Define elevation mask
-mask = lox.ElevationMask.fixed(5 * lox.deg)
+# Set an operational minimum elevation on a ground station
+station = lox.GroundStation("ESOC", gs, min_elevation=5 * lox.deg)
 
-# Or variable mask based on azimuth
+# Or add a measured horizon profile; visibility uses the maximum of the
+# horizon and the minimum elevation at each azimuth
 import numpy as np
-azimuth = np.linspace(0, 2*np.pi, 36)
+azimuth = np.linspace(-np.pi, np.pi, 36)
 elevation = np.full(36, 0.1)  # radians
-mask = lox.ElevationMask.variable(azimuth, elevation)
+mask = lox.HorizonMask(azimuth, elevation)
+station = lox.GroundStation("ESOC", gs, min_elevation=5 * lox.deg, horizon_mask=mask)
 ```
 
 ---
@@ -60,7 +62,7 @@ mask = lox.ElevationMask.variable(azimuth, elevation)
 
 ---
 
-::: lox_space.ElevationMask
+::: lox_space.HorizonMask
     options:
       show_source: false
 
