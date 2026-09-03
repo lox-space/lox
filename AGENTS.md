@@ -54,7 +54,8 @@ just rstest         # Rust tests via cargo nextest
 just doctest        # Rust doc tests
 just pytest         # Build maturin + run Python tests
 just build-pyo3     # Build Python extension module
-just lint           # clippy + rustfmt + REUSE compliance
+just lint           # clippy + rustfmt + REUSE compliance + README check
+just readme         # Regenerate README.md from the lox-space crate docs
 just coverage       # Generate code coverage report
 ```
 
@@ -99,6 +100,12 @@ Key details:
 ### Code Style
 
 - **SPDX license headers** are mandatory on all source files (checked by `reuse lint`).
+- **READMEs**: the workspace `README.md` and `crates/lox-space/README.md` share a body
+  generated from the `lox-space` crate documentation with
+  [cargo-rdme](https://github.com/orium/cargo-rdme). Edit the `//!` docs in
+  `crates/lox-space/src/lib.rs` and run `just readme` — never edit the section between the
+  `cargo-rdme` markers by hand. Text outside the markers is hand-written and differs
+  between the two files.
 - **Error handling**: Use `thiserror` with domain-specific enum error types (e.g., `TimeError`, `TrajectoryError`).
 - **Type safety**: Zero-sized marker traits for time scales (`TimeScale`) and reference frames (`ReferenceFrame`). Prefer compile-time guarantees over runtime checks.
 - **Builder pattern**: Used for complex types (`AzElBuilder`, `TimeBuilder`, `CartesianBuilder`).

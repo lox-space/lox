@@ -67,6 +67,19 @@ jobs:
       - name: Linting
         run: just lint-clippy
 
+  readme:
+    name: README
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-rdme
+      - uses: taiki-e/install-action@just
+      - name: Check that README matches the crate documentation
+        run: just lint-readme
+
   no-std-test:
     name: Test (no_std)
     runs-on: ubuntu-latest
