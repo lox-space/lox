@@ -5,7 +5,7 @@
 use std::f64::consts::PI;
 
 use crate::analysis::python::{
-    PyAccessResults, PyAccessWindow, PyAoi, PyElevationMask, PyEnsemble, PyEvent, PyGroundStation,
+    PyAccessResults, PyAccessWindow, PyAoi, PyEnsemble, PyEvent, PyGroundStation, PyHorizonMask,
     PyLookSide, PyObservables, PyOpticalAccessAnalysis, PyOpticalPayload, PyPass, PyPassDirection,
     PyPowerBudgetAnalysis, PyPowerBudgetResults, PySarAccessAnalysis, PySarPayload, PyScenario,
     PySpacecraft, PyVisibilityAnalysis, PyVisibilityResults,
@@ -107,8 +107,8 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PySeries>()?;
 
     // analysis
-    m.add_class::<PyElevationMask>()?;
     m.add_class::<PyGroundStation>()?;
+    m.add_class::<PyHorizonMask>()?;
     m.add_class::<PyObservables>()?;
     m.add_class::<PyPass>()?;
     m.add_class::<PyScenario>()?;

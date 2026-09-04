@@ -683,25 +683,12 @@ fn test_network_id() {
 }
 
 #[test]
-fn test_elevation_mask_fixed() {
-    use lox_space::analysis::visibility::ElevationMask;
-    round_trip(&ElevationMask::with_fixed_elevation(Angle::radians(0.1)));
-}
-
-#[test]
 fn test_unit_types_serialize_transparently() {
     // `Angle`, `Distance` and `Velocity` are newtypes over f64, so making the
     // accessors unitful must not change the wire format of anything that
     // stores them. Guards previously-written scenario files.
     use lox_orbits::ground::Observables;
-    use lox_space::analysis::visibility::ElevationMask;
     use lox_units::{Distance, Velocity};
-
-    let mask = ElevationMask::with_fixed_elevation(Angle::radians(0.1));
-    assert_eq!(
-        serde_json::to_value(&mask).unwrap(),
-        serde_json::json!({ "Fixed": 0.1 })
-    );
 
     let obs = Observables::new(
         Angle::radians(1.0),
@@ -721,10 +708,10 @@ fn test_unit_types_serialize_transparently() {
 }
 
 #[test]
-fn test_elevation_mask_variable() {
-    use lox_space::analysis::visibility::ElevationMask;
+fn test_horizon_mask() {
+    use lox_space::analysis::visibility::HorizonMask;
     use std::f64::consts::PI;
-    let mask = ElevationMask::new(
+    let mask = HorizonMask::new(
         vec![-PI, -PI / 2.0, 0.0, PI / 2.0, PI],
         vec![5.0, 10.0, 5.0, 10.0, 5.0],
     )
@@ -779,13 +766,17 @@ fn test_access_window() {
 #[test]
 fn test_ground_station() {
     use lox_space::analysis::assets::GroundStation;
-    use lox_space::analysis::visibility::ElevationMask;
+    use lox_space::analysis::visibility::HorizonMask;
     use lox_space::orbits::ground::EllipsoidLocation;
+    use std::f64::consts::PI;
 
     let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
     let loc = EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap();
-    let mask = ElevationMask::with_fixed_elevation(Angle::degrees(5.0));
-    let gs = GroundStation::new("madrid", loc, mask).with_network_id("estrack");
+    let mask = HorizonMask::new(vec![-PI, 0.0, PI], vec![0.1, 0.0, 0.1]).unwrap();
+    let gs = GroundStation::new("madrid", loc)
+        .with_min_elevation(Angle::degrees(5.0))
+        .with_horizon_mask(mask)
+        .with_network_id("estrack");
     round_trip_no_eq(&gs);
 }
 
@@ -834,7 +825,6 @@ fn test_spacecraft_with_payloads() {
 #[test]
 fn test_scenario() {
     use lox_space::analysis::assets::{GroundStation, Scenario, Spacecraft};
-    use lox_space::analysis::visibility::ElevationMask;
     use lox_space::orbits::Trajectory;
     use lox_space::orbits::ground::EllipsoidLocation;
     use lox_space::orbits::propagators::OrbitSource;
@@ -844,11 +834,7 @@ fn test_scenario() {
 
     let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
     let loc = EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap();
-    let gs = GroundStation::new(
-        "madrid",
-        loc,
-        ElevationMask::with_fixed_elevation(Angle::degrees(5.0)),
-    );
+    let gs = GroundStation::new("madrid", loc).with_min_elevation(Angle::degrees(5.0));
 
     let traj = Trajectory::from_csv_dynamic(
         &lox_test_utils::read_data_file("trajectory_lunar.csv"),
