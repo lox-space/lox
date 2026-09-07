@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- [**breaking**] `ElevationMask` is now `HorizonMask` in the Python API and only models the measured azimuth→elevation skyline profile: the `fixed`/`variable` constructors and `fixed_elevation` are gone, and `min_elevation(azimuth)` is now `elevation_at(azimuth)`. `GroundStation` takes optional `min_elevation` and `horizon_mask` keyword arguments instead of a mask, exposes them via `min_elevation()`/`horizon_mask()`, and resolves the effective constraint via `threshold_at(azimuth)` (the maximum of horizon and floor; omitting both reproduces the old fixed 0° mask).
+
 ## [0.1.0-alpha.50](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.49...lox-space-v0.1.0-alpha.50) - 2026-08-25
 
 ### Added

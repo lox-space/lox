@@ -17,5 +17,5 @@ pub mod imaging;
 mod parallel;
 /// Power budget analysis: eclipse detection, beta angle, solar flux.
 pub mod power;
-/// Visibility analysis: line-of-sight, elevation masks, passes, and interval computation.
+/// Visibility analysis: line-of-sight, horizon masks, passes, and interval computation.
 pub mod visibility;

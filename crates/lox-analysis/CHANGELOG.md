@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- [**breaking**] split the conflated `ElevationMask` into two concepts: `HorizonMask`, the measured azimuth→elevation skyline profile (the former `Variable` variant; the `Fixed` variant is gone, `min_elevation(azimuth)` is now `elevation_at(azimuth)`, and `ElevationMaskError` is now `HorizonMaskError`), and an operational `min_elevation` floor on `GroundStation`. `GroundStation::new` no longer takes a mask — use the `with_min_elevation`/`with_horizon_mask` builders (`None` means unconstrained and flat 0° horizon respectively, reproducing the old `Fixed(0°)` default). Visibility detection and pass computation test elevation against `GroundStation::threshold_at(azimuth)`, the maximum of horizon and floor; `Pass::from_interval` and `VisibilityResults::to_passes` take the `GroundStation` instead of a location/mask pair. The serde format changes: `GroundStation` serializes optional `min_elevation`/`horizon_mask` fields instead of `mask`, and `HorizonMask` serializes as a bare interpolation series without the `Fixed`/`Variable` tag.
+
 ## [0.1.0-alpha.15](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.14...lox-analysis-v0.1.0-alpha.15) - 2026-08-25
 
 ### Added

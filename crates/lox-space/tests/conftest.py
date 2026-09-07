@@ -54,7 +54,6 @@ def estrack():
             lox.EllipsoidLocation(
                 "IAU_EARTH", lon * lox.deg, lat * lox.deg, 0 * lox.km
             ),
-            lox.ElevationMask.fixed(0 * lox.rad),
         )
         for name, lat, lon in stations
     ]

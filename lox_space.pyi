@@ -312,23 +312,27 @@ days: TimeDelta
 class GroundStation:
     """A named ground station for visibility analysis.
 
-    Wraps a ground location and elevation mask with an identifier.
+    Wraps a ground location with an identifier, an optional operational
+    minimum-elevation floor, and an optional measured horizon mask.
+    Visibility tests elevation against the maximum of both.
 
     Args:
         id: Unique identifier for this ground station.
         location: Ground station location.
-        mask: Elevation mask defining minimum elevation constraints.
+        min_elevation: Optional minimum-elevation floor (unconstrained when omitted).
+        horizon_mask: Optional measured horizon profile (flat 0° horizon when omitted).
         tx_terminals: Optional dict of named transmit terminals (TxChain or EirpModel).
         rx_terminals: Optional dict of named receive terminals (RxChain or GtModel).
 
     Examples:
-        >>> gs = lox.GroundStation("ESOC", ground_location, elevation_mask)
+        >>> gs = lox.GroundStation("ESOC", ground_location, min_elevation=5 * lox.deg)
     """
     def __new__(
         cls,
         id: str,
         location: EllipsoidLocation,
-        mask: ElevationMask,
+        min_elevation: Angle | None = None,
+        horizon_mask: HorizonMask | None = None,
         network_id: str | None = None,
         tx_terminals: dict[str, TxTerminal] | None = None,
         rx_terminals: dict[str, RxTerminal] | None = None,
@@ -339,8 +343,18 @@ class GroundStation:
     def location(self) -> EllipsoidLocation:
         """Return the ground location."""
         ...
-    def mask(self) -> ElevationMask:
-        """Return the elevation mask."""
+    def min_elevation(self) -> Angle | None:
+        """Return the minimum-elevation floor, if set."""
+        ...
+    def horizon_mask(self) -> HorizonMask | None:
+        """Return the horizon mask, if set."""
+        ...
+    def threshold_at(self, azimuth: Angle) -> Angle:
+        """Return the effective elevation threshold at the given azimuth.
+
+        The threshold is the maximum of the horizon profile (0° when no
+        horizon mask is set) and the minimum-elevation floor.
+        """
         ...
     def network_id(self) -> str | None:
         """Return the network identifier, if assigned."""
@@ -806,50 +820,34 @@ class VisibilityResults:
         """Return the total number of visibility intervals across all pairs."""
         ...
 
-class ElevationMask:
-    """Defines elevation constraints for visibility analysis.
+class HorizonMask:
+    """A measured horizon profile for visibility analysis.
 
-    An elevation mask specifies the minimum elevation angle required for
-    visibility at different azimuth angles. Can be either fixed (constant)
-    or variable (azimuth-dependent).
+    A horizon mask captures the physical skyline around a ground station as
+    elevation over azimuth. Visibility additionally honours the station's
+    operational ``min_elevation`` floor; detection tests elevation against
+    the maximum of both.
 
     Args:
-        azimuth: Array of azimuth angles in radians (for variable mask).
-        elevation: Array of minimum elevations in radians (for variable mask).
-        min_elevation: Fixed minimum elevation as Angle.
+        azimuth: Array of azimuth angles in radians spanning [-π, π].
+        elevation: Array of horizon elevations in radians.
 
     Examples:
-        >>> # Fixed elevation mask (5 degrees)
-        >>> mask = lox.ElevationMask.fixed(5.0 * lox.deg)
-
-        >>> # Variable mask based on terrain
-        >>> mask = lox.ElevationMask.variable(azimuth, elevation)
+        >>> mask = lox.HorizonMask(azimuth, elevation)
     """
     def __new__(
         cls,
-        azimuth: np.ndarray | None = None,
-        elevation: np.ndarray | None = None,
-        min_elevation: Angle | None = None,
+        azimuth: np.ndarray,
+        elevation: np.ndarray,
     ) -> Self: ...
-    @classmethod
-    def variable(cls, azimuth: np.ndarray, elevation: np.ndarray) -> Self:
-        """Create a variable elevation mask from azimuth-dependent data."""
+    def azimuth(self) -> list[float]:
+        """Return the azimuth grid in radians."""
         ...
-    @classmethod
-    def fixed(cls, min_elevation: Angle) -> Self:
-        """Create a fixed elevation mask with constant minimum elevation."""
+    def elevation(self) -> list[float]:
+        """Return the horizon elevations in radians."""
         ...
-    def azimuth(self) -> list[float] | None:
-        """Return the azimuth array (for variable masks only)."""
-        ...
-    def elevation(self) -> list[float] | None:
-        """Return the elevation array (for variable masks only)."""
-        ...
-    def fixed_elevation(self) -> Angle | None:
-        """Return the fixed elevation value (for fixed masks only)."""
-        ...
-    def min_elevation(self, azimuth: Angle) -> Angle:
-        """Return the minimum elevation at the given azimuth."""
+    def elevation_at(self, azimuth: Angle) -> Angle:
+        """Return the horizon elevation at the given azimuth."""
         ...
 
 def intersect_intervals(a: list[Interval], b: list[Interval]) -> list[Interval]:

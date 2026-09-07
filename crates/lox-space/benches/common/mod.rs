@@ -20,10 +20,8 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 use lox_space::analysis::assets::{AssetId, GroundStation, Scenario, Spacecraft};
-use lox_space::analysis::visibility::ElevationMask;
 use lox_space::bodies::{Earth, Origin};
 use lox_space::core::coords::LonLatAlt;
-use lox_space::core::units::Angle;
 use lox_space::core::units::AngularRate;
 use lox_space::ephem::spk::parser::Spk;
 use lox_space::frames::providers::DefaultRotationProvider;
@@ -69,8 +67,7 @@ fn ground_location_dynamic() -> EllipsoidLocation {
 pub fn setup_dynamic() -> (Scenario, DynamicEnsemble) {
     let sc_traj = spacecraft_trajectory_dynamic();
     let gs_loc = ground_location_dynamic();
-    let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
-    let gs = GroundStation::new("cebreros", gs_loc, mask);
+    let gs = GroundStation::new("cebreros", gs_loc);
     let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
     let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj));
     let scenario = Scenario::new(interval.start(), interval.end(), Origin::Earth, Frame::Icrf)
@@ -99,10 +96,9 @@ fn ground_location_mono() -> EllipsoidLocation<Iau<Earth>> {
 pub fn setup_mono() -> (Scenario<Earth, Icrf>, MonoEnsemble) {
     let traj = spacecraft_trajectory_mono();
     let gs_loc = ground_location_mono();
-    let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
     let interval = TimeInterval::new(traj.start_time(), traj.end_time());
     let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(traj.into_dynamic()));
-    let gs = GroundStation::new("cebreros", gs_loc.into_dynamic(), mask);
+    let gs = GroundStation::new("cebreros", gs_loc.into_dynamic());
     let scenario = Scenario::new(interval.start(), interval.end(), Earth, Icrf)
         .with_spacecraft(&[sc])
         .with_ground_stations(&[gs]);
@@ -223,7 +219,7 @@ fn scaling_ground_stations() -> Vec<GroundStation> {
         .map(|&(id, lon, lat)| {
             let coords = LonLatAlt::from_degrees(lon, lat, 0.0).unwrap();
             let loc = EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap();
-            GroundStation::new(id, loc, ElevationMask::with_fixed_elevation(Angle::ZERO))
+            GroundStation::new(id, loc)
         })
         .collect()
 }

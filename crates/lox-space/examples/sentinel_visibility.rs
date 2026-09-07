@@ -14,7 +14,7 @@
 use std::error::Error;
 
 use lox_space::analysis::assets::{GroundStation, Scenario, Spacecraft};
-use lox_space::analysis::visibility::{ElevationMask, VisibilityAnalysis, VisibilityResults};
+use lox_space::analysis::visibility::{VisibilityAnalysis, VisibilityResults};
 use lox_space::bodies::Origin;
 use lox_space::core::coords::LonLatAlt;
 use lox_space::core::units::Angle;
@@ -43,7 +43,7 @@ const WINDOW_HOURS: i64 = 24;
 const PROPAGATION_STEP_SECS: i64 = 10;
 
 // Minimum elevation for a contact, in degrees.
-const ELEVATION_MASK_DEG: f64 = 5.0;
+const MIN_ELEVATION_DEG: f64 = 5.0;
 
 fn tle_to_sgp4(name: &str, line_1: &[u8], line_2: &[u8]) -> Result<Sgp4, Box<dyn Error>> {
     let elements = Elements::from_tle(Some(name.to_string()), line_1, line_2)?;
@@ -96,7 +96,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let interval = TimeInterval::new(t0, t1).into_dynamic();
 
     // 2. Build ground stations.
-    let mask = ElevationMask::with_fixed_elevation(Angle::degrees(ELEVATION_MASK_DEG));
+    let min_elevation = Angle::degrees(MIN_ELEVATION_DEG);
     let stations = vec![
         GroundStation::new(
             "svalbard",
@@ -104,16 +104,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                 LonLatAlt::from_degrees(15.4078, 78.2297, 450.0)?,
                 Frame::Iau(Origin::Earth),
             )?,
-            mask.clone(),
-        ),
+        )
+        .with_min_elevation(min_elevation),
         GroundStation::new(
             "maspalomas",
             EllipsoidLocation::try_new(
                 LonLatAlt::from_degrees(-15.6336, 27.7629, 205.0)?,
                 Frame::Iau(Origin::Earth),
             )?,
-            mask,
-        ),
+        )
+        .with_min_elevation(min_elevation),
     ];
 
     // 3. Build the spacecraft assets with SGP4 orbit sources.

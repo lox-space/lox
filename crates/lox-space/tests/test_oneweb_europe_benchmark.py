@@ -43,7 +43,7 @@ def create_europe_ground_assets(resolution_deg=1.0, min_elevation_deg=10.0):
     lons = np.arange(lon_min, lon_max + resolution_deg, resolution_deg)
     lats = np.arange(lat_min, lat_max + resolution_deg, resolution_deg)
 
-    elevation_mask = lox.ElevationMask.fixed(min_elevation_deg * lox.deg)
+    min_elevation = min_elevation_deg * lox.deg
     frame = lox.Frame("IAU_EARTH")
 
     ground_assets = []
@@ -60,7 +60,9 @@ def create_europe_ground_assets(resolution_deg=1.0, min_elevation_deg=10.0):
                     altitude=0.0 * lox.km,  # Sea level
                 )
                 ground_assets.append(
-                    lox.GroundStation(gs_name, ground_location, elevation_mask)
+                    lox.GroundStation(
+                        gs_name, ground_location, min_elevation=min_elevation
+                    )
                 )
                 point_count += 1
 

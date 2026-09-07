@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use lox_bodies::{CoordinateOrigin, Origin};
-use lox_core::units::AngularRate;
+use lox_core::units::{Angle, AngularRate};
 
 #[cfg(feature = "imaging")]
 use crate::imaging::OpticalPayload;
@@ -25,7 +25,7 @@ use lox_time::time_scales::TimeScale;
 use lox_comms::terminal::{RxTerminal, TxTerminal};
 
 use crate::parallel;
-use crate::visibility::ElevationMask;
+use crate::visibility::HorizonMask;
 use lox_orbits::constellations::{Constellation, ConstellationPropagator};
 use lox_orbits::ground::EllipsoidLocation;
 use lox_orbits::orbits::{Ensemble, KeplerianOrbit};
@@ -104,13 +104,24 @@ impl fmt::Display for NetworkId {
     }
 }
 
-/// A ground station with location, elevation mask, and optional network membership.
+/// A ground station with location, optional visibility constraints, and
+/// optional network membership.
+///
+/// Visibility is constrained by two independent, optional settings:
+/// - `horizon_mask`: the measured physical skyline around the station
+///   (`None` means a flat 0° horizon), and
+/// - `min_elevation`: the operational minimum-elevation floor
+///   (`None` means unconstrained).
+///
+/// Detection tests elevation against the maximum of both, resolved via
+/// [`threshold_at`](Self::threshold_at).
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GroundStation {
     id: AssetId,
     location: EllipsoidLocation,
-    mask: ElevationMask,
+    min_elevation: Option<Angle>,
+    horizon_mask: Option<HorizonMask>,
     network: Option<NetworkId>,
     #[cfg(feature = "comms")]
     tx_terminals: BTreeMap<String, TxTerminal>,
@@ -119,18 +130,32 @@ pub struct GroundStation {
 }
 
 impl GroundStation {
-    /// Creates a new ground station with the given location and elevation mask.
-    pub fn new(id: impl Into<String>, location: EllipsoidLocation, mask: ElevationMask) -> Self {
+    /// Creates a new ground station at the given location, with a flat 0°
+    /// horizon and no minimum-elevation floor.
+    pub fn new(id: impl Into<String>, location: EllipsoidLocation) -> Self {
         Self {
             id: AssetId::new(id),
             location,
-            mask,
+            min_elevation: None,
+            horizon_mask: None,
             network: None,
             #[cfg(feature = "comms")]
             tx_terminals: BTreeMap::new(),
             #[cfg(feature = "comms")]
             rx_terminals: BTreeMap::new(),
         }
+    }
+
+    /// Sets the operational minimum-elevation floor.
+    pub fn with_min_elevation(mut self, min_elevation: Angle) -> Self {
+        self.min_elevation = Some(min_elevation);
+        self
+    }
+
+    /// Sets the measured horizon profile of the station.
+    pub fn with_horizon_mask(mut self, horizon_mask: HorizonMask) -> Self {
+        self.horizon_mask = Some(horizon_mask);
+        self
     }
 
     /// Assigns this ground station to a network.
@@ -175,9 +200,31 @@ impl GroundStation {
         &self.location
     }
 
-    /// Returns the elevation mask.
-    pub fn mask(&self) -> &ElevationMask {
-        &self.mask
+    /// Returns the operational minimum-elevation floor, if set.
+    pub fn min_elevation(&self) -> Option<Angle> {
+        self.min_elevation
+    }
+
+    /// Returns the measured horizon profile, if set.
+    pub fn horizon_mask(&self) -> Option<&HorizonMask> {
+        self.horizon_mask.as_ref()
+    }
+
+    /// Resolves the effective elevation threshold at the given azimuth: the
+    /// maximum of the horizon profile (flat 0° when unset) and the
+    /// minimum-elevation floor (unconstrained when unset).
+    ///
+    /// All visibility detection and pass computation resolves the station's
+    /// constraints through this method.
+    pub fn threshold_at(&self, azimuth: Angle) -> Angle {
+        let horizon = self
+            .horizon_mask
+            .as_ref()
+            .map_or(Angle::ZERO, |mask| mask.elevation_at(azimuth));
+        match self.min_elevation {
+            Some(floor) if floor > horizon => floor,
+            _ => horizon,
+        }
     }
 
     /// Returns the network identifier, if assigned.
@@ -637,10 +684,6 @@ mod tests {
         EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap()
     }
 
-    fn dummy_mask() -> ElevationMask {
-        ElevationMask::with_fixed_elevation(Angle::ZERO)
-    }
-
     #[cfg(feature = "comms")]
     fn eirp_terminal(eirp_dbw: f64) -> TxTerminal {
         EirpModel::new(FrequencyBand::Ka, eirp_dbw.db())
@@ -658,7 +701,7 @@ mod tests {
     #[cfg(feature = "comms")]
     #[test]
     fn test_ground_station_terminals() {
-        let gs = GroundStation::new("gs1", dummy_location(), dummy_mask())
+        let gs = GroundStation::new("gs1", dummy_location())
             .with_tx_terminal("beacon", eirp_terminal(40.0))
             .with_rx_terminal("main", gt_terminal(30.0))
             .with_rx_terminal("backup", gt_terminal(25.0));
@@ -669,7 +712,7 @@ mod tests {
         assert!(gs.tx_terminal("nonexistent").is_none());
         assert!(gs.rx_terminal("nonexistent").is_none());
 
-        let bare = GroundStation::new("bare", dummy_location(), dummy_mask());
+        let bare = GroundStation::new("bare", dummy_location());
         assert!(bare.tx_terminals().is_empty());
         assert!(bare.rx_terminals().is_empty());
     }
@@ -678,7 +721,7 @@ mod tests {
     #[test]
     fn test_ground_station_terminal_names_are_unique() {
         // Re-adding under the same name replaces the terminal.
-        let gs = GroundStation::new("gs1", dummy_location(), dummy_mask())
+        let gs = GroundStation::new("gs1", dummy_location())
             .with_rx_terminal("main", gt_terminal(30.0))
             .with_rx_terminal("main", gt_terminal(25.0));
         assert_eq!(gs.rx_terminals().len(), 1);
@@ -743,21 +786,21 @@ mod tests {
     #[test]
     fn test_ground_station_new() {
         let loc = dummy_location();
-        let mask = dummy_mask();
-        let gs = GroundStation::new("gs1", loc, mask);
+        let gs = GroundStation::new("gs1", loc);
         assert_eq!(gs.id().as_str(), "gs1");
+        assert!(gs.min_elevation().is_none());
+        assert!(gs.horizon_mask().is_none());
     }
 
     #[test]
     fn test_ground_station_network_id_none_by_default() {
-        let gs = GroundStation::new("gs1", dummy_location(), dummy_mask());
+        let gs = GroundStation::new("gs1", dummy_location());
         assert!(gs.network_id().is_none());
     }
 
     #[test]
     fn test_ground_station_with_network_id() {
-        let gs =
-            GroundStation::new("gs1", dummy_location(), dummy_mask()).with_network_id("estrack");
+        let gs = GroundStation::new("gs1", dummy_location()).with_network_id("estrack");
         assert_eq!(gs.network_id(), Some(&NetworkId::new("estrack")));
         // Verify network via filter_by_networks round-trip.
         let start = Time::j2000(TimeScale::Tai);
@@ -771,15 +814,39 @@ mod tests {
     #[test]
     fn test_ground_station_location_getter() {
         let loc = dummy_location();
-        let gs = GroundStation::new("gs1", loc.clone(), dummy_mask());
+        let gs = GroundStation::new("gs1", loc.clone());
         let _ = gs.location(); // verify it compiles and returns
     }
 
     #[test]
-    fn test_ground_station_mask_getter() {
-        let mask = ElevationMask::with_fixed_elevation(Angle::radians(0.1));
-        let gs = GroundStation::new("gs1", dummy_location(), mask.clone());
-        assert_eq!(gs.mask().min_elevation(Angle::ZERO), Angle::radians(0.1));
+    fn test_ground_station_threshold_at() {
+        use std::f64::consts::PI;
+
+        // Unconstrained station: flat 0° threshold everywhere.
+        let gs = GroundStation::new("gs1", dummy_location());
+        assert_eq!(gs.threshold_at(Angle::ZERO), Angle::ZERO);
+
+        // The floor alone raises the threshold uniformly.
+        let gs =
+            GroundStation::new("gs1", dummy_location()).with_min_elevation(Angle::radians(0.1));
+        assert_eq!(gs.min_elevation(), Some(Angle::radians(0.1)));
+        assert_eq!(gs.threshold_at(Angle::ZERO), Angle::radians(0.1));
+        assert_eq!(gs.threshold_at(Angle::PI), Angle::radians(0.1));
+
+        // Horizon mask and floor combine via max: the horizon dominates where
+        // it rises above the floor, the floor everywhere else.
+        let mask = HorizonMask::new(vec![-PI, 0.0, PI], vec![0.3, 0.0, 0.3]).unwrap();
+        let gs = GroundStation::new("gs1", dummy_location())
+            .with_horizon_mask(mask.clone())
+            .with_min_elevation(Angle::radians(0.1));
+        assert_eq!(gs.horizon_mask(), Some(&mask));
+        assert_eq!(gs.threshold_at(Angle::PI), Angle::radians(0.3));
+        assert_eq!(gs.threshold_at(Angle::ZERO), Angle::radians(0.1));
+
+        // Horizon mask without a floor: the profile alone applies.
+        let gs = GroundStation::new("gs1", dummy_location()).with_horizon_mask(mask);
+        assert_eq!(gs.threshold_at(Angle::ZERO), Angle::ZERO);
+        assert_eq!(gs.threshold_at(Angle::PI), Angle::radians(0.3));
     }
 
     // --- Spacecraft ---
@@ -853,7 +920,7 @@ mod tests {
     fn test_scenario_with_assets() {
         let start = Time::j2000(TimeScale::Tai);
         let end = start + TimeDelta::from_seconds(86400);
-        let gs = GroundStation::new("gs1", dummy_location(), dummy_mask());
+        let gs = GroundStation::new("gs1", dummy_location());
         let traj = lox_orbits::orbits::Trajectory::from_csv_dynamic(
             &lox_test_utils::read_data_file("trajectory_lunar.csv"),
             Origin::Earth,
@@ -892,9 +959,8 @@ mod tests {
     fn test_scenario_filter_by_networks() {
         let start = Time::j2000(TimeScale::Tai);
         let end = start + TimeDelta::from_seconds(86400);
-        let gs1 =
-            GroundStation::new("gs1", dummy_location(), dummy_mask()).with_network_id("estrack");
-        let gs2 = GroundStation::new("gs2", dummy_location(), dummy_mask());
+        let gs1 = GroundStation::new("gs1", dummy_location()).with_network_id("estrack");
+        let gs2 = GroundStation::new("gs2", dummy_location());
         let scenario =
             Scenario::new(start, end, Origin::Earth, Frame::Icrf).with_ground_stations(&[gs1, gs2]);
         let filtered = scenario.filter_by_networks(&[NetworkId::new("estrack")]);
