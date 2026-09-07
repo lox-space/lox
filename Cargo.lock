@@ -927,7 +927,7 @@ checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 
 [[package]]
 name = "lox-analysis"
-version = "0.1.0-alpha.15"
+version = "0.1.0-alpha.16"
 dependencies = [
  "codspeed-divan-compat",
  "csv",
@@ -1131,7 +1131,7 @@ dependencies = [
 
 [[package]]
 name = "lox-space"
-version = "0.1.0-alpha.50"
+version = "0.1.0-alpha.51"
 dependencies = [
  "codspeed-divan-compat",
  "geo",
