@@ -382,10 +382,10 @@ impl From<RotationError> for EvalError {
 /// 2. Rotates the state into the body-fixed frame via `TryRotation<R, Frame, TimeScale>`
 /// 3. Computes observables (azimuth, elevation, range, range rate)
 /// 4. Returns elevation minus minimum elevation from the mask
-struct ElevationDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    gs: &'a EllipsoidLocation,
-    mask: &'a ElevationMask,
-    sc: &'a Trajectory<O, R>,
+pub struct ElevationDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub gs: &'a EllipsoidLocation,
+    pub mask: &'a ElevationMask,
+    pub sc: &'a Trajectory<O, R>,
 }
 
 impl<O, R> DetectFn for ElevationDetectFn<'_, O, R>
