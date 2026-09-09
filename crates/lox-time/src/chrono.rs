@@ -7,13 +7,19 @@ use lox_core::time::deltas::ToDelta;
 
 pub use lox_core::time::chrono::ChronoError;
 
+use crate::Time;
+use crate::offsets::{DefaultOffsetProvider, Offset};
+use crate::time_scales::{ContinuousTimeScale, Tai};
 use crate::utc::transformations::ToUtc;
-use crate::{Time, time_scales::Tai};
 
-impl TryFrom<Time<Tai>> for DateTime<Utc> {
+impl<T> TryFrom<Time<T>> for DateTime<Utc>
+where
+    T: ContinuousTimeScale + Copy,
+    DefaultOffsetProvider: Offset<T, Tai>,
+{
     type Error = ChronoError;
 
-    fn try_from(time: Time<Tai>) -> Result<Self, Self::Error> {
+    fn try_from(time: Time<T>) -> Result<Self, Self::Error> {
         let utc = time.to_utc();
         utc.to_delta().try_into()
     }
@@ -22,6 +28,12 @@ impl TryFrom<Time<Tai>> for DateTime<Utc> {
 impl From<DateTime<Utc>> for Time<Tai> {
     fn from(dt: DateTime<Utc>) -> Self {
         crate::utc::Utc::from_delta(dt.into()).to_time()
+    }
+}
+
+impl From<DateTime<Utc>> for Time {
+    fn from(dt: DateTime<Utc>) -> Self {
+        crate::utc::Utc::from_delta(dt.into()).to_dynamic_time()
     }
 }
 
@@ -44,6 +56,8 @@ mod tests {
     use lox_core::time::{constants::UNIX_EPOCH, deltas::TimeDelta};
     use rstest::rstest;
 
+    use crate::time_scales::TimeScale;
+
     use super::*;
 
     // Post-1972 delta where TAI-UTC offset is an exact integer, ensuring
@@ -54,10 +68,21 @@ mod tests {
     #[case(POST_1972_DELTA)]
     #[case(TimeDelta::default())]
     #[case(TimeDelta::from_seconds_f64(0.123456))]
-    fn test_chrono_time_roundtrip(#[case] delta: TimeDelta) {
+    fn test_chrono_time_tai_roundtrip(#[case] delta: TimeDelta) {
         let exp = Time::from_delta(Tai, delta);
         let dt: DateTime<Utc> = exp.try_into().unwrap();
         let act: Time<Tai> = dt.into();
+        assert_eq!(act, exp)
+    }
+
+    #[rstest]
+    #[case(POST_1972_DELTA)]
+    #[case(TimeDelta::default())]
+    #[case(TimeDelta::from_seconds_f64(0.123456))]
+    fn test_chrono_time_roundtrip(#[case] delta: TimeDelta) {
+        let exp = Time::from_delta(TimeScale::Tai, delta);
+        let dt: DateTime<Utc> = exp.try_into().unwrap();
+        let act: Time = dt.into();
         assert_eq!(act, exp)
     }
 
