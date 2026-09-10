@@ -12,7 +12,6 @@ def test_angle_rad():
     assert str(a) == "180 deg"
     assert repr(a) == "Angle(3.141592653589793)"
     assert float(a) == math.pi
-    assert int(a) == 3
     assert complex(a) == complex(math.pi)
 
 
@@ -21,7 +20,6 @@ def test_angle_deg():
     assert str(a) == "180 deg"
     assert repr(a) == "Angle(3.141592653589793)"
     assert float(a) == math.pi
-    assert int(a) == 3
     assert complex(a) == complex(math.pi)
 
 
@@ -30,7 +28,6 @@ def test_distance_km():
     assert str(d) == "1024 km"
     assert repr(d) == "Distance(1024000.0)"
     assert float(d) == 1024000.0
-    assert int(d) == 1024000
     assert complex(d) == complex(1024000.0)
 
 
@@ -39,7 +36,6 @@ def test_distance_m():
     assert str(d) == "2.048 km"
     assert repr(d) == "Distance(2048.0)"
     assert float(d) == 2048.0
-    assert int(d) == 2048
     assert complex(d) == complex(2048.0)
 
 
@@ -48,7 +44,6 @@ def test_frequency_hz():
     assert str(f) == "1.073741824 GHz"
     assert repr(f) == "Frequency(1073741824.0)"
     assert float(f) == 1073741824.0
-    assert int(f) == 1073741824
     assert complex(f) == complex(1073741824.0)
 
 
@@ -57,7 +52,6 @@ def test_frequency_khz():
     assert str(f) == "2 GHz"
     assert repr(f) == "Frequency(2000000000.0)"
     assert float(f) == 2000000000.0
-    assert int(f) == 2000000000
     assert complex(f) == complex(2000000000.0)
 
 
@@ -66,7 +60,6 @@ def test_velocity_ms():
     assert str(v) == "262.144 km/s"
     assert repr(v) == "Velocity(262144.0)"
     assert float(v) == 262144.0
-    assert int(v) == 262144
     assert complex(v) == complex(262144.0)
 
 
@@ -75,7 +68,6 @@ def test_velocity_kms():
     assert str(v) == "16 km/s"
     assert repr(v) == "Velocity(16000.0)"
     assert float(v) == 16000.0
-    assert int(v) == 16000
     assert complex(v) == complex(16000.0)
 
 
@@ -127,7 +119,7 @@ def test_distance_conversions():
     d = 1 * lox.km
     assert d.to_meters() == pytest.approx(1000.0)
     assert d.to_kilometers() == pytest.approx(1.0)
-    au = lox.Distance(lox.au.to_meters())
+    au = lox.Distance.from_astronomical_units(1.0)
     assert au.to_astronomical_units() == pytest.approx(1.0)
 
 
@@ -267,3 +259,298 @@ def test_decibel_mul():
     db = lox.Decibel(2.0)
     assert float(db * 3) == pytest.approx(6.0)
     assert float(3 * db) == pytest.approx(6.0)
+
+
+# --- Ordering ---
+
+ALL_QUANTITIES = [
+    lox.Angle,
+    lox.AngularRate,
+    lox.Decibel,
+    lox.Distance,
+    lox.Frequency,
+    lox.GravitationalParameter,
+    lox.Power,
+    lox.Pressure,
+    lox.Temperature,
+    lox.Velocity,
+]
+
+
+@pytest.mark.parametrize("cls", ALL_QUANTITIES)
+def test_ordering(cls):
+    small, large = cls(1.0), cls(2.0)
+    assert small < large
+    assert small <= large
+    assert large > small
+    assert large >= small
+    assert small <= cls(1.0)
+    assert small >= cls(1.0)
+    assert not (small > large)
+
+
+def test_ordering_sorts_and_reduces():
+    assert sorted([500 * lox.km, 100 * lox.km]) == [100 * lox.km, 500 * lox.km]
+    assert min(500 * lox.km, 100 * lox.km) == 100 * lox.km
+    assert max(26.63 * lox.dB, 3 * lox.dB) == 26.63 * lox.dB
+    # The threshold comparison a link budget is written around.
+    assert 26.63 * lox.dB > 3 * lox.dB
+
+
+def test_ordering_nan_is_always_false():
+    nan = lox.Distance(float("nan"))
+    one = lox.Distance(1.0)
+    assert not (nan < one)
+    assert not (nan > one)
+    assert not (nan == one)
+    assert nan != one
+
+
+def test_ordering_across_types_raises():
+    with pytest.raises(TypeError):
+        _ = (1 * lox.km) < (1 * lox.rad)
+    with pytest.raises(TypeError):
+        _ = (1 * lox.km) > (1 * lox.dB)
+
+
+def test_equality_with_foreign_types_is_false():
+    d = 1 * lox.km
+    assert d != "foo"
+    assert d != 1000.0
+    assert d != (1 * lox.rad)
+
+
+# --- Hashing ---
+
+
+@pytest.mark.parametrize("cls", ALL_QUANTITIES)
+def test_hashable(cls):
+    assert hash(cls(1.5)) == hash(cls(1.5))
+    assert len({cls(1.0), cls(1.0), cls(2.0)}) == 2
+
+
+def test_hash_usable_as_dict_key():
+    bands = {8.2 * lox.GHz: "X-band", 2.2 * lox.GHz: "S-band"}
+    assert bands[8.2 * lox.GHz] == "X-band"
+
+
+def test_hash_consistent_with_equality_for_negative_zero():
+    assert lox.Distance(-0.0) == lox.Distance(0.0)
+    assert hash(lox.Distance(-0.0)) == hash(lox.Distance(0.0))
+
+
+# --- Dimensional safety ---
+
+
+def test_quantity_times_quantity_raises():
+    with pytest.raises(TypeError):
+        _ = (1 * lox.km) * (1 * lox.km)
+    with pytest.raises(TypeError):
+        _ = (10 * lox.dB) * (10 * lox.dB)
+    with pytest.raises(TypeError):
+        _ = (1 * lox.km) * (1 * lox.rad)
+
+
+def test_quantity_plus_other_quantity_raises():
+    with pytest.raises(TypeError):
+        _ = (1 * lox.km) + (1 * lox.rad)
+
+
+def test_scalar_multiplication_accepts_real_numbers():
+    np = pytest.importorskip("numpy")
+    for scalar in [2, 2.0, np.float64(2), np.float32(2), np.int64(2)]:
+        assert (scalar * lox.Distance(500.0)).to_meters() == pytest.approx(1000.0)
+    # bool is a subclass of int, so it scales like the integer it is.
+    assert (True * lox.Distance(500.0)).to_meters() == pytest.approx(500.0)
+
+
+def test_scalar_multiplication_rejects_non_numbers():
+    with pytest.raises(TypeError):
+        _ = "2" * lox.Distance(500.0)
+
+
+# --- Division ---
+
+
+def test_truediv_by_scalar_keeps_type():
+    assert (500 * lox.km) / 2 == 250 * lox.km
+
+
+def test_truediv_by_same_type_is_a_plain_ratio():
+    ratio = (500 * lox.km) / (100 * lox.km)
+    assert isinstance(ratio, float)
+    assert ratio == pytest.approx(5.0)
+
+
+def test_truediv_by_other_quantity_raises():
+    with pytest.raises(TypeError):
+        _ = (500 * lox.km) / (100 * lox.rad)
+
+
+def test_rtruediv_raises():
+    # 1/length has no type here.
+    with pytest.raises(TypeError):
+        _ = 2.0 / (500 * lox.km)
+
+
+# --- round() and abs() ---
+
+
+def test_round_operates_on_the_base_si_value():
+    assert round(26.6314 * lox.dB, 2) == lox.Decibel(26.63)
+    # Distance displays in km but rounds in metres, matching float().
+    d = lox.Distance(909424.94)
+    assert round(d, 1).to_meters() == pytest.approx(909424.9)
+    assert round(d, -2).to_meters() == pytest.approx(909400.0)
+    assert round(d).to_meters() == pytest.approx(909425.0)
+
+
+def test_abs():
+    assert abs(-(26.63 * lox.dB)) == 26.63 * lox.dB
+    assert abs(500 * lox.km) == 500 * lox.km
+
+
+# --- int() is deliberately absent ---
+
+
+@pytest.mark.parametrize("cls", ALL_QUANTITIES)
+def test_no_int_conversion(cls):
+    # Silent truncation to whole metres or whole hertz is never what anyone wants.
+    with pytest.raises(TypeError):
+        int(cls(1.5))
+
+
+# --- from_* constructors ---
+
+
+@pytest.mark.parametrize(
+    "cls, ctor, accessor, value",
+    [
+        (lox.Angle, "from_degrees", "to_degrees", 45.0),
+        (lox.Angle, "from_radians", "to_radians", 1.5),
+        (lox.Angle, "from_arcseconds", "to_arcseconds", 3600.0),
+        (lox.AngularRate, "from_degrees_per_second", "to_degrees_per_second", 15.0),
+        (lox.Distance, "from_kilometers", "to_kilometers", 500.0),
+        (lox.Distance, "from_meters", "to_meters", 500.0),
+        (lox.Distance, "from_astronomical_units", "to_astronomical_units", 1.0),
+        (lox.Frequency, "from_gigahertz", "to_gigahertz", 8.2),
+        (lox.Frequency, "from_megahertz", "to_megahertz", 150.0),
+        (lox.Power, "from_watts", "to_watts", 100.0),
+        (lox.Power, "from_kilowatts", "to_kilowatts", 1.5),
+        (lox.Pressure, "from_hpa", "to_hpa", 1013.25),
+        (lox.Temperature, "from_kelvin", "to_kelvin", 290.0),
+        (lox.Velocity, "from_kilometers_per_second", "to_kilometers_per_second", 7.8),
+        (lox.GravitationalParameter, "from_km3_per_s2", "to_km3_per_s2", 398600.435),
+    ],
+)
+def test_from_constructors_round_trip(cls, ctor, accessor, value):
+    quantity = getattr(cls, ctor)(value)
+    assert getattr(quantity, accessor)() == pytest.approx(value, rel=1e-12)
+
+
+def test_from_constructor_matches_unit_constant():
+    assert lox.Distance.from_kilometers(500) == 500 * lox.km
+
+
+# --- __format__ ---
+
+
+@pytest.mark.parametrize(
+    "spec, expected",
+    [
+        ("", "909.42494 km"),
+        (".2f", "909.42 km"),
+        (".1f", "909.4 km"),
+        (">12.1f", "    909.4 km"),
+        ("<12.1f", "909.4 km    "),
+        ("*^20.3e", "****9.094e+02 km****"),
+        ("+.1f", "+909.4 km"),
+        ("08.2f", "00909.42 km"),
+        (".4g", "909.4 km"),
+    ],
+)
+def test_format_renders_the_display_unit(spec, expected):
+    assert format(lox.Distance(909424.94), spec) == expected
+
+
+def test_format_matches_str_for_an_empty_spec():
+    d = 909.42494 * lox.km
+    assert f"{d}" == str(d)
+
+
+@pytest.mark.parametrize(
+    "quantity, expected",
+    [
+        (lox.Angle.from_degrees(45.0), "45.00 deg"),
+        (lox.Frequency.from_gigahertz(8.2), "8.20 GHz"),
+        (lox.Velocity.from_kilometers_per_second(7.8), "7.80 km/s"),
+        (lox.Power.from_watts(100.0), "100.00 W"),
+        (lox.Temperature.from_kelvin(290.0), "290.00 K"),
+        (lox.Decibel(26.6314), "26.63 dB"),
+        (lox.GravitationalParameter.from_km3_per_s2(398600.0), "398600.00 km³/s²"),
+    ],
+)
+def test_format_uses_each_types_display_unit(quantity, expected):
+    assert f"{quantity:.2f}" == expected
+
+
+def test_format_invalid_spec_raises():
+    with pytest.raises(ValueError):
+        format(500 * lox.km, "d")
+
+
+# --- str() suppresses float noise, repr() stays exact ---
+
+
+@pytest.mark.parametrize(
+    "quantity, expected",
+    [
+        (29 * lox.GHz, "29 GHz"),
+        (150 * lox.MHz, "0.15 GHz"),
+        (8.2 * lox.GHz, "8.2 GHz"),
+        (0.25 * lox.m, "0.00025 km"),
+    ],
+)
+def test_str_suppresses_scaling_noise(quantity, expected):
+    assert str(quantity) == expected
+
+
+@pytest.mark.parametrize("cls", ALL_QUANTITIES)
+def test_repr_round_trips(cls):
+    quantity = cls(1234.5678)
+    assert eval(repr(quantity), {cls.__name__: cls}) == quantity
+
+
+# --- NumPy interoperability ---
+
+
+def test_numpy_array_is_float64_in_base_si():
+    np = pytest.importorskip("numpy")
+    array = np.array([500 * lox.km, 100 * lox.km])
+    assert array.dtype == np.float64
+    assert array.tolist() == [500000.0, 100000.0]
+
+
+def test_numpy_asarray_of_a_scalar():
+    np = pytest.importorskip("numpy")
+    assert np.asarray(500 * lox.km).item() == pytest.approx(500000.0)
+    assert np.array(500 * lox.km, dtype=np.float32).dtype == np.float32
+
+
+def test_numpy_scalar_multiplication_preserves_the_type():
+    np = pytest.importorskip("numpy")
+    # Without __array_ufunc__ = None numpy would take over and return a bare float.
+    assert isinstance(np.float64(2) * (500 * lox.km), lox.Distance)
+    assert isinstance(np.float32(2) * (500 * lox.km), lox.Distance)
+    assert isinstance((500 * lox.km) * np.float64(2), lox.Distance)
+
+
+# --- Pickling ---
+
+
+@pytest.mark.parametrize("cls", ALL_QUANTITIES)
+def test_pickle_round_trip(cls):
+    import pickle
+
+    quantity = cls(13.5)
+    assert pickle.loads(pickle.dumps(quantity)) == quantity

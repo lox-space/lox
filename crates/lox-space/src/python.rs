@@ -13,7 +13,7 @@ use crate::analysis::python::{
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
     PyAmplifierTransmitter, PyAntennaFrame, PyCascadeReceiver, PyChannel, PyConstantAntenna,
-    PyDecibel, PyDipolePattern, PyEirpModel, PyFrequencyRange, PyGaussianPattern, PyGtModel,
+    PyDipolePattern, PyEirpModel, PyFrequencyRange, PyGaussianPattern, PyGtModel,
     PyInterferenceStats, PyLinkBudget, PyModCod, PyModulatedLinkBudget, PyModulation, PyNoiseStage,
     PyNoiseTempReceiver, PyParabolicPattern, PyPatternedAntenna, PyPfdMask, PyPropagationLosses,
     PyRxChain, PyTxChain, combine_carrier_to_noise, freq_overlap, fspl, power_flux_density,
@@ -42,8 +42,8 @@ use crate::time::python::{
 use crate::units::{
     ASTRONOMICAL_UNIT,
     python::{
-        PyAngle, PyAngularRate, PyDistance, PyFrequency, PyGravitationalParameter, PyPower,
-        PyPressure, PyTemperature, PyVelocity,
+        PyAngle, PyAngularRate, PyDecibel, PyDistance, PyFrequency, PyGravitationalParameter,
+        PyPower, PyPressure, PyTemperature, PyVelocity,
     },
 };
 
@@ -57,8 +57,6 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyOrigin>()?;
 
     // comms
-    m.add_class::<PyDecibel>()?;
-    m.add("dB", PyDecibel::new(1.0))?;
     m.add_class::<PyModulation>()?;
     m.add_class::<PyParabolicPattern>()?;
     m.add_class::<PyGaussianPattern>()?;
@@ -171,6 +169,8 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("rad_per_s", PyAngularRate::new(1.0))?;
     m.add("deg_per_s", PyAngularRate::new(PI / 180.0))?;
 
+    m.add_class::<PyDecibel>()?;
+    m.add("dB", PyDecibel::new(1.0))?;
     m.add_class::<PyDistance>()?;
     m.add("m", PyDistance::new(1.0))?;
     m.add("km", PyDistance::new(1e3))?;
