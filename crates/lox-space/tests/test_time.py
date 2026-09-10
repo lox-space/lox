@@ -410,3 +410,74 @@ def test_time_delta_constructors_accept_real_numbers():
     np = pytest.importorskip("numpy")
     for value in [90, 90.0, np.float64(90), np.float32(90), np.int64(90)]:
         assert lox.TimeDelta.from_minutes(value) == 90 * lox.minutes
+
+
+# --- Lossless pickling ---
+
+
+EXACT_DELTAS = [
+    lox.TimeDelta(1.5),
+    lox.TimeDelta(0.0),
+    -lox.TimeDelta(1.5),
+    2 * lox.hours,
+    lox.TimeDelta.from_attoseconds(1),
+    lox.TimeDelta.from_attoseconds(999_999_999_999_999_999),
+    lox.TimeDelta(1, 1),
+    lox.TimeDelta(-1, 1),
+    lox.TimeDelta(3600, 123_456_789_012_345_678),
+    # Beyond 2**53 seconds, where decimal seconds could not round-trip.
+    lox.TimeDelta(9_000_000_000_000_000, 42),
+]
+
+
+@pytest.mark.parametrize("delta", EXACT_DELTAS)
+def test_time_delta_pickle_is_exact(delta):
+    import pickle
+
+    back = pickle.loads(pickle.dumps(delta))
+    assert back == delta
+    # Equality alone would not catch a lossy round-trip through float seconds.
+    assert (back.seconds(), back.attoseconds()) == (
+        delta.seconds(),
+        delta.attoseconds(),
+    )
+
+
+@pytest.mark.parametrize("delta", EXACT_DELTAS)
+def test_time_delta_repr_round_trips_exactly(delta):
+    back = eval(repr(delta), {"TimeDelta": lox.TimeDelta})
+    assert (back.seconds(), back.attoseconds()) == (
+        delta.seconds(),
+        delta.attoseconds(),
+    )
+
+
+def test_time_delta_getnewargs_is_the_integer_components():
+    delta = lox.TimeDelta(3600, 123_456_789_012_345_678)
+    assert delta.__getnewargs__() == (3600, 123_456_789_012_345_678)
+    assert lox.TimeDelta(*delta.__getnewargs__()) == delta
+
+
+def test_time_delta_repr_keeps_the_readable_form_when_exact():
+    assert repr(lox.TimeDelta(1.5)) == "TimeDelta(1.5)"
+    assert repr(2 * lox.hours) == "TimeDelta(7200)"
+    # Only an attosecond-precise value needs the two-argument form.
+    assert repr(lox.TimeDelta(1, 1)) == "TimeDelta(1, 1)"
+
+
+def test_time_delta_exact_constructor():
+    assert lox.TimeDelta(1, 1).attoseconds() == 1
+    assert lox.TimeDelta(1, 1).seconds() == 1
+    # Attoseconds are normalized, carrying into whole seconds.
+    assert lox.TimeDelta(0, 10**18) == lox.TimeDelta(1.0)
+    # The two-argument form takes whole seconds.
+    with pytest.raises(TypeError):
+        lox.TimeDelta(1.5, 0)
+    with pytest.raises(TypeError):
+        lox.TimeDelta(lox.Distance(1.0), 1)
+
+
+def test_time_delta_attoseconds_matches_subsecond():
+    delta = lox.TimeDelta(1.5)
+    assert delta.attoseconds() == 500_000_000_000_000_000
+    assert delta.subsecond() == pytest.approx(0.5)

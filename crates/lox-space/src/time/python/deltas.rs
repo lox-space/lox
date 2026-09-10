@@ -44,13 +44,28 @@ impl PyTimeDelta {
 impl PyTimeDelta {
     #[new]
     /// Constructs a `TimeDelta` from a duration in seconds.
-    fn py_new(seconds: Scalar) -> PyResult<Self> {
-        Self::new(seconds.0)
+    ///
+    /// With `attoseconds`, `seconds` must be a whole number and the two
+    /// combine into an exact duration. That form is what `__getnewargs__`
+    /// produces, so pickling round-trips without going through a float.
+    #[pyo3(signature = (seconds, attoseconds=None))]
+    fn py_new(seconds: &Bound<'_, PyAny>, attoseconds: Option<i64>) -> PyResult<Self> {
+        match attoseconds {
+            Some(attoseconds) => Ok(Self(TimeDelta::new(seconds.extract()?, attoseconds))),
+            None => Self::new(seconds.extract::<Scalar>()?.0),
+        }
     }
 
     /// Returns the developer representation of the `TimeDelta`.
+    ///
+    /// Falls back to the exact two-argument form when decimal seconds do not
+    /// reproduce the duration, so `eval(repr(dt))` is always exact.
     pub fn __repr__(&self) -> String {
-        format!("TimeDelta({})", self.to_decimal_seconds())
+        let seconds = self.to_decimal_seconds();
+        match TimeDelta::try_from_seconds_f64(seconds) {
+            Ok(roundtrip) if roundtrip == self.0 => format!("TimeDelta({seconds})"),
+            _ => format!("TimeDelta({}, {})", self.0.seconds(), self.0.attoseconds()),
+        }
     }
 
     /// Returns the human-readable string representation of the `TimeDelta`.
@@ -228,6 +243,25 @@ impl PyTimeDelta {
     ///     Fractional seconds (0.0 to 1.0).
     pub fn subsecond(&self) -> f64 {
         self.0.subsecond()
+    }
+
+    /// Return the attosecond component.
+    ///
+    /// Together with `seconds()` this is the exact state of the duration,
+    /// where `subsecond()` is the same value rounded to an `f64`.
+    ///
+    /// Returns:
+    ///     Attoseconds in `[0, 10**18)`.
+    pub fn attoseconds(&self) -> i64 {
+        self.0.attoseconds()
+    }
+
+    /// Returns the constructor arguments for pickling.
+    ///
+    /// The two integer components, so the round-trip is exact rather than
+    /// passing through decimal seconds.
+    pub fn __getnewargs__(&self) -> (i64, i64) {
+        (self.0.seconds(), self.0.attoseconds())
     }
 
     /// Create a TimeDelta from integer seconds.

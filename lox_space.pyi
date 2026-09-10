@@ -2654,6 +2654,20 @@ class TimeDelta:
     def subsecond(self) -> float:
         """Return the fractional part of the second."""
         ...
+    def attoseconds(self) -> int:
+        """Return the attosecond component.
+
+        Together with `seconds()` this is the exact state of the duration,
+        where `subsecond()` is the same value rounded to a `float`.
+        """
+        ...
+    def __getnewargs__(self) -> tuple[int, int]:
+        """Returns the constructor arguments for pickling.
+
+        The two integer components, so the round-trip is exact rather than
+        passing through decimal seconds.
+        """
+        ...
     @classmethod
     def from_seconds(cls, seconds: int) -> Self:
         """Create from integer seconds."""

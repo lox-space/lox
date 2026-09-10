@@ -72,8 +72,21 @@ durations is a `TypeError` — lox has no type for seconds squared:
 ```
 
 `TimeDelta` keeps whole seconds and an attosecond remainder rather than one
-float, so it is exact well past what `float(dt)` can show, and hashing keeps
-attosecond-distinct durations distinct.
+float, so it is exact well past what `float(dt)` can show. The two-argument
+constructor reaches that precision directly, and `seconds()` with
+`attoseconds()` reads it back:
+
+```python
+tick = lox.TimeDelta(3600, 123_456_789_012_345_678)
+
+tick.seconds()      # 3600
+tick.attoseconds()  # 123456789012345678
+tick.subsecond()    # the same fraction, rounded to a float
+```
+
+Hashing, pickling and `repr()` all use those two integers rather than decimal
+seconds, so they stay exact — `repr()` prints the readable one-argument form
+whenever it round-trips, and the two-argument form when it would not.
 
 ---
 
