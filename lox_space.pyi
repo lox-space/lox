@@ -521,47 +521,311 @@ class Decibel:
         self, dtype: Any = None, copy: bool | None = None
     ) -> np.ndarray: ...
 
+# Unit classes for the module-level constants
+class AngleUnit:
+    """A unit an `Angle` can be expressed in.
+
+    Multiplying by a number produces an `Angle`, and dividing an `Angle`
+    by one converts it: `2 * lox.deg` is an `Angle`, and
+    `value / lox.deg` is that value as a plain `float`.
+
+    Units: `deg`, `rad`.
+
+    Args:
+        symbol: The unit name or display suffix, e.g. `"deg"`.
+    """
+    def __new__(cls, symbol: str) -> Self: ...
+    @property
+    def symbol(self) -> str:
+        """The name this unit is exported under."""
+    @property
+    def suffix(self) -> str:
+        """The suffix used when rendering."""
+    @property
+    def scale(self) -> float:
+        """The value of one of this unit in base SI units."""
+    def __mul__(self, other: float) -> Angle: ...
+    def __rmul__(self, other: float) -> Angle: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+class AngularRateUnit:
+    """A unit an `AngularRate` can be expressed in.
+
+    Multiplying by a number produces an `AngularRate`, and dividing an `AngularRate`
+    by one converts it: `2 * lox.deg_per_s` is an `AngularRate`, and
+    `value / lox.deg_per_s` is that value as a plain `float`.
+
+    Units: `deg_per_s`, `rad_per_s`.
+
+    Args:
+        symbol: The unit name or display suffix, e.g. `"deg_per_s"`.
+    """
+    def __new__(cls, symbol: str) -> Self: ...
+    @property
+    def symbol(self) -> str:
+        """The name this unit is exported under."""
+    @property
+    def suffix(self) -> str:
+        """The suffix used when rendering."""
+    @property
+    def scale(self) -> float:
+        """The value of one of this unit in base SI units."""
+    def __mul__(self, other: float) -> AngularRate: ...
+    def __rmul__(self, other: float) -> AngularRate: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+class DecibelUnit:
+    """A unit a `Decibel` can be expressed in.
+
+    Multiplying by a number produces a `Decibel`, and dividing a `Decibel`
+    by one converts it: `2 * lox.dB` is a `Decibel`, and
+    `value / lox.dB` is that value as a plain `float`.
+
+    Units: `dB`.
+
+    Args:
+        symbol: The unit name or display suffix, e.g. `"dB"`.
+    """
+    def __new__(cls, symbol: str) -> Self: ...
+    @property
+    def symbol(self) -> str:
+        """The name this unit is exported under."""
+    @property
+    def suffix(self) -> str:
+        """The suffix used when rendering."""
+    @property
+    def scale(self) -> float:
+        """The value of one of this unit in base SI units."""
+    def __mul__(self, other: float) -> Decibel: ...
+    def __rmul__(self, other: float) -> Decibel: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+class DistanceUnit:
+    """A unit a `Distance` can be expressed in.
+
+    Multiplying by a number produces a `Distance`, and dividing a `Distance`
+    by one converts it: `2 * lox.km` is a `Distance`, and
+    `value / lox.km` is that value as a plain `float`.
+
+    Units: `km`, `m`, `au`.
+
+    Args:
+        symbol: The unit name or display suffix, e.g. `"km"`.
+    """
+    def __new__(cls, symbol: str) -> Self: ...
+    @property
+    def symbol(self) -> str:
+        """The name this unit is exported under."""
+    @property
+    def suffix(self) -> str:
+        """The suffix used when rendering."""
+    @property
+    def scale(self) -> float:
+        """The value of one of this unit in base SI units."""
+    def __mul__(self, other: float) -> Distance: ...
+    def __rmul__(self, other: float) -> Distance: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+class FrequencyUnit:
+    """A unit a `Frequency` can be expressed in.
+
+    Multiplying by a number produces a `Frequency`, and dividing a `Frequency`
+    by one converts it: `2 * lox.GHz` is a `Frequency`, and
+    `value / lox.GHz` is that value as a plain `float`.
+
+    Units: `GHz`, `Hz`, `kHz`, `MHz`, `THz`.
+
+    Args:
+        symbol: The unit name or display suffix, e.g. `"GHz"`.
+    """
+    def __new__(cls, symbol: str) -> Self: ...
+    @property
+    def symbol(self) -> str:
+        """The name this unit is exported under."""
+    @property
+    def suffix(self) -> str:
+        """The suffix used when rendering."""
+    @property
+    def scale(self) -> float:
+        """The value of one of this unit in base SI units."""
+    def __mul__(self, other: float) -> Frequency: ...
+    def __rmul__(self, other: float) -> Frequency: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+class PowerUnit:
+    """A unit a `Power` can be expressed in.
+
+    Multiplying by a number produces a `Power`, and dividing a `Power`
+    by one converts it: `2 * lox.W` is a `Power`, and
+    `value / lox.W` is that value as a plain `float`.
+
+    Units: `W`, `kW`.
+
+    Args:
+        symbol: The unit name or display suffix, e.g. `"W"`.
+    """
+    def __new__(cls, symbol: str) -> Self: ...
+    @property
+    def symbol(self) -> str:
+        """The name this unit is exported under."""
+    @property
+    def suffix(self) -> str:
+        """The suffix used when rendering."""
+    @property
+    def scale(self) -> float:
+        """The value of one of this unit in base SI units."""
+    def __mul__(self, other: float) -> Power: ...
+    def __rmul__(self, other: float) -> Power: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+class PressureUnit:
+    """A unit a `Pressure` can be expressed in.
+
+    Multiplying by a number produces a `Pressure`, and dividing a `Pressure`
+    by one converts it: `2 * lox.Pa` is a `Pressure`, and
+    `value / lox.Pa` is that value as a plain `float`.
+
+    Units: `Pa`, `hPa`.
+
+    Args:
+        symbol: The unit name or display suffix, e.g. `"Pa"`.
+    """
+    def __new__(cls, symbol: str) -> Self: ...
+    @property
+    def symbol(self) -> str:
+        """The name this unit is exported under."""
+    @property
+    def suffix(self) -> str:
+        """The suffix used when rendering."""
+    @property
+    def scale(self) -> float:
+        """The value of one of this unit in base SI units."""
+    def __mul__(self, other: float) -> Pressure: ...
+    def __rmul__(self, other: float) -> Pressure: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+class TemperatureUnit:
+    """A unit a `Temperature` can be expressed in.
+
+    Multiplying by a number produces a `Temperature`, and dividing a `Temperature`
+    by one converts it: `2 * lox.K` is a `Temperature`, and
+    `value / lox.K` is that value as a plain `float`.
+
+    Units: `K`.
+
+    Args:
+        symbol: The unit name or display suffix, e.g. `"K"`.
+    """
+    def __new__(cls, symbol: str) -> Self: ...
+    @property
+    def symbol(self) -> str:
+        """The name this unit is exported under."""
+    @property
+    def suffix(self) -> str:
+        """The suffix used when rendering."""
+    @property
+    def scale(self) -> float:
+        """The value of one of this unit in base SI units."""
+    def __mul__(self, other: float) -> Temperature: ...
+    def __rmul__(self, other: float) -> Temperature: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+class VelocityUnit:
+    """A unit a `Velocity` can be expressed in.
+
+    Multiplying by a number produces a `Velocity`, and dividing a `Velocity`
+    by one converts it: `2 * lox.m_per_s` is a `Velocity`, and
+    `value / lox.m_per_s` is that value as a plain `float`.
+
+    Units: `m_per_s`, `km_per_s`.
+
+    Args:
+        symbol: The unit name or display suffix, e.g. `"m_per_s"`.
+    """
+    def __new__(cls, symbol: str) -> Self: ...
+    @property
+    def symbol(self) -> str:
+        """The name this unit is exported under."""
+    @property
+    def suffix(self) -> str:
+        """The suffix used when rendering."""
+    @property
+    def scale(self) -> float:
+        """The value of one of this unit in base SI units."""
+    def __mul__(self, other: float) -> Velocity: ...
+    def __rmul__(self, other: float) -> Velocity: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
 # Unit constants
-rad: Angle
+rad: AngleUnit
 """1 radian"""
-deg: Angle
+deg: AngleUnit
 """π/180 radians"""
-rad_per_s: AngularRate
+rad_per_s: AngularRateUnit
 """1 radian per second"""
-deg_per_s: AngularRate
+deg_per_s: AngularRateUnit
 """π/180 radians per second"""
-m: Distance
+m: DistanceUnit
 """1 meter"""
-km: Distance
+km: DistanceUnit
 """1000 meters"""
-au: Distance
+au: DistanceUnit
 """1 astronomical unit"""
-Hz: Frequency
+Hz: FrequencyUnit
 """1 Hz"""
-kHz: Frequency
+kHz: FrequencyUnit
 """1 kHz"""
-MHz: Frequency
+MHz: FrequencyUnit
 """1 MHz"""
-GHz: Frequency
+GHz: FrequencyUnit
 """1 GHz"""
-THz: Frequency
+THz: FrequencyUnit
 """1 THz"""
-W: Power
-"""1 Watt"""
-kW: Power
-"""1000 Watts"""
-K: Temperature
-"""1 Kelvin"""
-Pa: Pressure
+W: PowerUnit
+"""1 W"""
+kW: PowerUnit
+"""1 kW"""
+Pa: PressureUnit
 """1 pascal"""
-hPa: Pressure
-"""100 pascals"""
-m_per_s: Velocity
+hPa: PressureUnit
+"""1 hectopascal"""
+K: TemperatureUnit
+"""1 Kelvin"""
+m_per_s: VelocityUnit
 """1 m/s"""
-km_per_s: Velocity
+km_per_s: VelocityUnit
 """1 km/s"""
-dB: Decibel
+dB: DecibelUnit
 """1 dB"""
+
+# Time constants
 seconds: TimeDelta
 """1 second"""
 minutes: TimeDelta

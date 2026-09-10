@@ -554,3 +554,149 @@ def test_pickle_round_trip(cls):
 
     quantity = cls(13.5)
     assert pickle.loads(pickle.dumps(quantity)) == quantity
+
+
+# --- Unit objects ---
+
+UNIT_CONSTANTS = [
+    (lox.rad, lox.AngleUnit, lox.Angle, "rad", "rad", 1.0),
+    (lox.deg, lox.AngleUnit, lox.Angle, "deg", "deg", math.pi / 180.0),
+    (lox.rad_per_s, lox.AngularRateUnit, lox.AngularRate, "rad_per_s", "rad/s", 1.0),
+    (lox.deg_per_s, lox.AngularRateUnit, lox.AngularRate, "deg_per_s", "deg/s", math.pi / 180.0),
+    (lox.m, lox.DistanceUnit, lox.Distance, "m", "m", 1.0),
+    (lox.km, lox.DistanceUnit, lox.Distance, "km", "km", 1e3),
+    (lox.Hz, lox.FrequencyUnit, lox.Frequency, "Hz", "Hz", 1.0),
+    (lox.GHz, lox.FrequencyUnit, lox.Frequency, "GHz", "GHz", 1e9),
+    (lox.W, lox.PowerUnit, lox.Power, "W", "W", 1.0),
+    (lox.kW, lox.PowerUnit, lox.Power, "kW", "kW", 1e3),
+    (lox.Pa, lox.PressureUnit, lox.Pressure, "Pa", "Pa", 1.0),
+    (lox.hPa, lox.PressureUnit, lox.Pressure, "hPa", "hPa", 100.0),
+    (lox.K, lox.TemperatureUnit, lox.Temperature, "K", "K", 1.0),
+    (lox.m_per_s, lox.VelocityUnit, lox.Velocity, "m_per_s", "m/s", 1.0),
+    (lox.km_per_s, lox.VelocityUnit, lox.Velocity, "km_per_s", "km/s", 1e3),
+    (lox.dB, lox.DecibelUnit, lox.Decibel, "dB", "dB", 1.0),
+]
+
+
+@pytest.mark.parametrize(
+    "unit, unit_cls, quantity_cls, symbol, suffix, scale", UNIT_CONSTANTS
+)
+def test_unit_constants(unit, unit_cls, quantity_cls, symbol, suffix, scale):
+    assert isinstance(unit, unit_cls)
+    assert unit.symbol == symbol
+    assert unit.suffix == suffix
+    assert unit.scale == pytest.approx(scale)
+    assert str(unit) == suffix
+    assert repr(unit) == f'{unit_cls.__name__}("{symbol}")'
+    # A unit is not a quantity.
+    assert not isinstance(unit, quantity_cls)
+
+
+@pytest.mark.parametrize(
+    "unit, unit_cls, quantity_cls, symbol, suffix, scale", UNIT_CONSTANTS
+)
+def test_unit_scales_in_both_directions(
+    unit, unit_cls, quantity_cls, symbol, suffix, scale
+):
+    assert isinstance(2 * unit, quantity_cls)
+    assert isinstance(unit * 2, quantity_cls)
+    assert float(2 * unit) == pytest.approx(2 * scale)
+    assert (2 * unit) == (unit * 2)
+
+
+def test_unit_lookup_by_symbol_and_suffix():
+    assert lox.DistanceUnit("km") == lox.km
+    assert lox.VelocityUnit("km_per_s") == lox.km_per_s
+    # The display suffix works too, which is what the format spec accepts.
+    assert lox.VelocityUnit("km/s") == lox.km_per_s
+
+
+def test_unit_unknown_name_raises():
+    with pytest.raises(ValueError, match="not a DistanceUnit"):
+        lox.DistanceUnit("furlong")
+
+
+def test_unit_equality_and_hashing():
+    assert lox.km == lox.DistanceUnit("km")
+    assert lox.km != lox.m
+    assert hash(lox.km) == hash(lox.DistanceUnit("km"))
+    assert {lox.km: "kilometers"}[lox.DistanceUnit("km")] == "kilometers"
+
+
+def test_unit_pickle_round_trip():
+    import pickle
+
+    for unit, *_ in UNIT_CONSTANTS:
+        assert pickle.loads(pickle.dumps(unit)) == unit
+
+
+def test_unit_repr_round_trips():
+    namespace = {cls.__name__: cls for _, cls, *_ in UNIT_CONSTANTS}
+    for unit, *_ in UNIT_CONSTANTS:
+        assert eval(repr(unit), namespace) == unit
+
+
+def test_unit_is_not_a_scalar():
+    with pytest.raises(TypeError):
+        float(lox.km)
+
+
+def test_unit_arithmetic_is_rejected():
+    with pytest.raises(TypeError):
+        _ = lox.km + lox.km
+    with pytest.raises(TypeError):
+        _ = lox.km * lox.km
+    with pytest.raises(TypeError):
+        _ = lox.km * lox.m
+    with pytest.raises(TypeError):
+        _ = (1 * lox.km) * lox.km
+
+
+def test_units_are_not_ordered():
+    with pytest.raises(TypeError):
+        _ = lox.km < lox.m
+
+
+# --- Converting through a unit ---
+
+
+def test_divide_by_unit_gives_a_plain_float():
+    d = 909.42494 * lox.km
+    assert d / lox.m == pytest.approx(909424.94)
+    assert d / lox.km == pytest.approx(909.42494)
+    assert isinstance(d / lox.m, float)
+
+
+def test_divide_by_a_foreign_unit_raises():
+    with pytest.raises(TypeError):
+        _ = (500 * lox.km) / lox.GHz
+
+
+# --- Selecting a unit in the format spec ---
+
+
+@pytest.mark.parametrize(
+    "spec, expected",
+    [
+        (".1f", "909.4 km"),
+        (".1f m", "909424.9 m"),
+        (".1f km", "909.4 km"),
+        (">14.1f m", "    909424.9 m"),
+        # A leading space is the sign option, and a space fill keeps its meaning.
+        (" .1f", " 909.4 km"),
+        ("> 12.1f", "    909.4 km"),
+    ],
+)
+def test_format_unit_token(spec, expected):
+    assert format(lox.Distance(909424.94), spec) == expected
+
+
+def test_format_unit_token_accepts_the_display_suffix():
+    v = 7.8 * lox.km_per_s
+    assert f"{v:.1f m/s}" == "7800.0 m/s"
+    assert f"{v:.1f m_per_s}" == "7800.0 m/s"
+
+
+def test_format_unknown_unit_raises():
+    with pytest.raises(ValueError, match="not a DistanceUnit"):
+        format(500 * lox.km, ".1f dB")

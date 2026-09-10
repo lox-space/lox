@@ -11,14 +11,18 @@ use numpy::ndarray::arr0;
 use pyo3::exceptions::PyTypeError;
 use pyo3::sync::PyOnceLock;
 use pyo3::types::{
-    PyAnyMethods, PyComplex, PyFloat, PyFloatMethods, PyInt, PyString, PyType, PyTypeMethods,
+    PyAnyMethods, PyComplex, PyFloat, PyFloatMethods, PyInt, PyModule, PyModuleMethods, PyString,
+    PyType, PyTypeMethods,
 };
 use pyo3::{
     Borrowed, Bound, FromPyObject, Py, PyAny, PyErr, PyResult, Python, intern, pyclass, pymethods,
 };
+use std::f64::consts::PI;
 use std::format;
 use std::string::{String, ToString};
+use std::vec::Vec;
 
+use lox_units::ASTRONOMICAL_UNIT;
 use lox_units::{
     Angle, AngularRate, Decibel, Distance, Frequency, Power, Pressure, Quantity, Temperature,
     Velocity,
@@ -110,24 +114,46 @@ fn split_format_spec(spec: &str) -> (String, String) {
     (pad, format!("{flags}{tail}"))
 }
 
-/// Renders a quantity in its display unit, honouring a Python format spec.
-fn format_quantity<Q: Quantity>(py: Python<'_>, value: Q, spec: &str) -> PyResult<String> {
-    let display = value.to_display();
+/// Splits a trailing unit name off a format spec.
+///
+/// The numeric mini-language never ends in a space followed by a word, so
+/// `".1f m"` unambiguously means "one decimal place, in metres".
+fn split_unit_token(spec: &str) -> (&str, Option<&str>) {
+    match spec.rsplit_once(' ') {
+        // The token must start with a letter, and something must precede the
+        // space. That rules out the two places a space is already meaningful:
+        // the `sign` option in `" .1f"`, and a space fill in `"> 12.1f"`.
+        Some((head, unit))
+            if !head.is_empty() && unit.starts_with(|c: char| c.is_ascii_alphabetic()) =>
+        {
+            (head, Some(unit))
+        }
+        _ => (spec, None),
+    }
+}
+
+/// Renders `value` followed by `suffix`, honouring a Python format spec.
+fn format_in_unit(py: Python<'_>, value: f64, suffix: &str, spec: &str) -> PyResult<String> {
     if spec.is_empty() {
         return Ok(format!(
             "{} {}",
-            format_f64(py, display, DISPLAY_PRECISION)?,
-            Q::SUFFIX
+            format_f64(py, value, DISPLAY_PRECISION)?,
+            suffix
         ));
     }
     let (pad, number_spec) = split_format_spec(spec);
-    let body = format!("{} {}", format_f64(py, display, &number_spec)?, Q::SUFFIX);
+    let body = format!("{} {}", format_f64(py, value, &number_spec)?, suffix);
     if pad.is_empty() {
         return Ok(body);
     }
     PyString::new(py, &body)
         .call_method1("__format__", (pad,))?
         .extract()
+}
+
+/// Renders a quantity in its display unit, honouring a Python format spec.
+fn format_quantity<Q: Quantity>(py: Python<'_>, value: Q, spec: &str) -> PyResult<String> {
+    format_in_unit(py, value.to_display(), Q::SUFFIX, spec)
 }
 
 /// A real number that is not itself a `lox_space` quantity.
@@ -169,11 +195,116 @@ impl<'py> FromPyObject<'_, 'py> for Scalar {
 
 macro_rules! py_unit {
     ($((
-        $unit:ident, $name:literal, $pyunit:ident,
+        $unit:ident, $name:literal, $pyunit:ident, $pyunitunit:ident, $unitname:literal,
+        units = [$(($usym:literal, $usuffix:literal, $uscale:expr)),* $(,)?],
         conv = [$(($to:ident, $from:ident, $ctor:ident, $unitdoc:literal)),* $(,)?]
         $(, { $($extra:tt)* })?
     )),* $(,)?) => {
         $(
+            #[doc = concat!("A unit a `", $name, "` can be expressed in.")]
+            ///
+            /// Multiplying by a number produces a quantity, and dividing a
+            /// quantity by one converts it: `500 * lox.km` is a `Distance`,
+            /// and `distance / lox.m` is that distance in metres.
+            #[pyclass(name = $unitname, module = "lox_space", frozen, from_py_object)]
+            #[derive(Clone, Copy)]
+            pub struct $pyunitunit {
+                symbol: &'static str,
+                suffix: &'static str,
+                scale: f64,
+            }
+
+            impl $pyunitunit {
+                /// The units this quantity can be expressed in, as
+                /// `(constant name, display suffix, value in base SI units)`.
+                const UNITS: &'static [(&'static str, &'static str, f64)] =
+                    &[$(($usym, $usuffix, $uscale)),*];
+
+                /// Looks a unit up by its constant name or its display suffix.
+                fn lookup(symbol: &str) -> Option<Self> {
+                    Self::UNITS
+                        .iter()
+                        .find(|(name, suffix, _)| *name == symbol || *suffix == symbol)
+                        .map(|&(symbol, suffix, scale)| Self { symbol, suffix, scale })
+                }
+
+                fn unknown(symbol: &str) -> PyErr {
+                    let known: Vec<&str> = Self::UNITS.iter().map(|(name, ..)| *name).collect();
+                    pyo3::exceptions::PyValueError::new_err(format!(
+                        "'{}' is not a {}; expected one of {}",
+                        symbol,
+                        $unitname,
+                        known.join(", ")
+                    ))
+                }
+
+                /// Registers the class and its unit constants on the module.
+                fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+                    m.add_class::<$pyunitunit>()?;
+                    for &(symbol, suffix, scale) in Self::UNITS {
+                        m.add(symbol, Self { symbol, suffix, scale })?;
+                    }
+                    Ok(())
+                }
+            }
+
+            #[pymethods]
+            impl $pyunitunit {
+                #[new]
+                #[doc = concat!("Looks up a `", $unitname, "` by name, e.g. `\"km\"`.")]
+                fn new(symbol: &str) -> PyResult<Self> {
+                    Self::lookup(symbol).ok_or_else(|| Self::unknown(symbol))
+                }
+
+                /// The name this unit is exported under, e.g. `"km_per_s"`.
+                #[getter]
+                fn symbol(&self) -> &'static str {
+                    self.symbol
+                }
+
+                /// The suffix used when rendering, e.g. `"km/s"`.
+                #[getter]
+                fn suffix(&self) -> &'static str {
+                    self.suffix
+                }
+
+                /// The value of one of this unit in base SI units.
+                #[getter]
+                fn scale(&self) -> f64 {
+                    self.scale
+                }
+
+                #[doc = concat!("Scales this unit into a `", $name, "`.")]
+                fn __mul__(&self, other: Scalar) -> $pyunit {
+                    $pyunit($unit::from_base(other.0 * self.scale))
+                }
+
+                #[doc = concat!("Scales this unit into a `", $name, "` (right-hand side).")]
+                fn __rmul__(&self, other: Scalar) -> $pyunit {
+                    $pyunit($unit::from_base(other.0 * self.scale))
+                }
+
+                fn __eq__(&self, other: &$pyunitunit) -> bool {
+                    self.symbol == other.symbol
+                }
+
+                fn __hash__(&self, py: Python<'_>) -> PyResult<isize> {
+                    PyString::new(py, self.symbol).hash()
+                }
+
+                fn __getnewargs__(&self) -> (&'static str,) {
+                    (self.symbol,)
+                }
+
+                fn __repr__(&self) -> String {
+                    format!("{}(\"{}\")", $unitname, self.symbol)
+                }
+
+                fn __str__(&self) -> &'static str {
+                    self.suffix
+                }
+            }
+
             #[pyclass(name = $name, module = "lox_space", frozen, from_py_object)]
             #[derive(Clone, Copy)]
             /// Python wrapper for a typed unit quantity.
@@ -230,7 +361,7 @@ macro_rules! py_unit {
                     Self(other.0 * self.0)
                 }
 
-                /// Divides by a scalar, or by a same-typed quantity for a plain ratio.
+                /// Divides by a scalar, or by a same-typed quantity or unit for a plain number.
                 pub fn __truediv__<'py>(
                     &self,
                     py: Python<'py>,
@@ -240,6 +371,10 @@ macro_rules! py_unit {
                     if let Ok(quantity) = other.extract::<$pyunit>() {
                         let ratio = self.0.to_base() / quantity.0.to_base();
                         return Ok(ratio.into_pyobject(py)?.into_any());
+                    }
+                    if let Ok(unit) = other.extract::<$pyunitunit>() {
+                        let converted = self.0.to_base() / unit.scale;
+                        return Ok(converted.into_pyobject(py)?.into_any());
                     }
                     match other.extract::<Scalar>() {
                         Ok(scalar) => {
@@ -304,9 +439,25 @@ macro_rules! py_unit {
                     format_quantity(py, self.0, "")
                 }
 
-                /// Renders the value in its display unit using a Python format spec.
+                /// Renders the value using a Python format spec.
+                ///
+                /// The default is the type's display unit; a trailing unit name
+                /// selects another, as in `f"{distance:.1f m}"`.
                 pub fn __format__(&self, py: Python<'_>, spec: &str) -> PyResult<String> {
-                    format_quantity(py, self.0, spec)
+                    let (spec, unit) = split_unit_token(spec);
+                    match unit {
+                        None => format_quantity(py, self.0, spec),
+                        Some(symbol) => {
+                            let unit = $pyunitunit::lookup(symbol)
+                                .ok_or_else(|| $pyunitunit::unknown(symbol))?;
+                            format_in_unit(
+                                py,
+                                self.0.to_base() / unit.scale,
+                                unit.suffix,
+                                spec,
+                            )
+                        }
+                    }
                 }
 
                 /// Returns the value as a Python complex number.
@@ -353,6 +504,16 @@ macro_rules! py_unit {
                 $($($extra)*)?
             }
         )*
+
+        /// Registers every quantity class, unit class and unit constant.
+        pub fn register_units(m: &Bound<'_, PyModule>) -> PyResult<()> {
+            $(
+                m.add_class::<$pyunit>()?;
+                $pyunitunit::register(m)?;
+            )*
+            m.add_class::<PyGravitationalParameter>()?;
+            Ok(())
+        }
     };
 }
 
@@ -361,6 +522,9 @@ py_unit!(
         Angle,
         "Angle",
         PyAngle,
+        PyAngleUnit,
+        "AngleUnit",
+        units = [("deg", "deg", PI / 180.0), ("rad", "rad", 1.0)],
         conv = [
             (to_radians, from_radians, radians, "radians"),
             (to_degrees, from_degrees, degrees, "degrees"),
@@ -371,6 +535,12 @@ py_unit!(
         AngularRate,
         "AngularRate",
         PyAngularRate,
+        PyAngularRateUnit,
+        "AngularRateUnit",
+        units = [
+            ("deg_per_s", "deg/s", PI / 180.0),
+            ("rad_per_s", "rad/s", 1.0)
+        ],
         conv = [
             (
                 to_radians_per_second,
@@ -386,22 +556,38 @@ py_unit!(
             ),
         ]
     ),
-    (Decibel, "Decibel", PyDecibel, conv = [], {
-        /// Creates a `Decibel` from a linear power ratio.
-        #[staticmethod]
-        fn from_linear(value: f64) -> Self {
-            Self(Decibel::from_linear(value))
-        }
+    (
+        Decibel,
+        "Decibel",
+        PyDecibel,
+        PyDecibelUnit,
+        "DecibelUnit",
+        units = [("dB", "dB", 1.0)],
+        conv = [],
+        {
+            /// Creates a `Decibel` from a linear power ratio.
+            #[staticmethod]
+            fn from_linear(value: f64) -> Self {
+                Self(Decibel::from_linear(value))
+            }
 
-        /// Returns the linear power ratio.
-        fn to_linear(&self) -> f64 {
-            self.0.to_linear()
+            /// Returns the linear power ratio.
+            fn to_linear(&self) -> f64 {
+                self.0.to_linear()
+            }
         }
-    }),
+    ),
     (
         Distance,
         "Distance",
         PyDistance,
+        PyDistanceUnit,
+        "DistanceUnit",
+        units = [
+            ("km", "km", 1e3),
+            ("m", "m", 1.0),
+            ("au", "au", ASTRONOMICAL_UNIT)
+        ],
         conv = [
             (to_meters, from_meters, meters, "meters"),
             (to_kilometers, from_kilometers, kilometers, "kilometers"),
@@ -417,6 +603,15 @@ py_unit!(
         Frequency,
         "Frequency",
         PyFrequency,
+        PyFrequencyUnit,
+        "FrequencyUnit",
+        units = [
+            ("GHz", "GHz", 1e9),
+            ("Hz", "Hz", 1.0),
+            ("kHz", "kHz", 1e3),
+            ("MHz", "MHz", 1e6),
+            ("THz", "THz", 1e12)
+        ],
         conv = [
             (to_hertz, from_hertz, hertz, "hertz"),
             (to_kilohertz, from_kilohertz, kilohertz, "kilohertz"),
@@ -429,6 +624,9 @@ py_unit!(
         Power,
         "Power",
         PyPower,
+        PyPowerUnit,
+        "PowerUnit",
+        units = [("W", "W", 1.0), ("kW", "kW", 1e3)],
         conv = [
             (to_watts, from_watts, watts, "Watts"),
             (to_kilowatts, from_kilowatts, kilowatts, "kilowatts"),
@@ -444,6 +642,9 @@ py_unit!(
         Pressure,
         "Pressure",
         PyPressure,
+        PyPressureUnit,
+        "PressureUnit",
+        units = [("Pa", "Pa", 1.0), ("hPa", "hPa", 100.0)],
         conv = [
             (to_pa, from_pa, pa, "pascals"),
             (to_hpa, from_hpa, hpa, "hectopascals"),
@@ -453,12 +654,18 @@ py_unit!(
         Temperature,
         "Temperature",
         PyTemperature,
+        PyTemperatureUnit,
+        "TemperatureUnit",
+        units = [("K", "K", 1.0)],
         conv = [(to_kelvin, from_kelvin, kelvin, "Kelvin"),]
     ),
     (
         Velocity,
         "Velocity",
         PyVelocity,
+        PyVelocityUnit,
+        "VelocityUnit",
+        units = [("km_per_s", "km/s", 1e3), ("m_per_s", "m/s", 1.0)],
         conv = [
             (
                 to_meters_per_second,
