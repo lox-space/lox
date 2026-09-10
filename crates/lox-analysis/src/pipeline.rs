@@ -1,4 +1,4 @@
-use std::{collections::HashMap, marker::PhantomData, ops::Deref};
+use std::{collections::HashMap, convert::Infallible, marker::PhantomData, ops::Deref};
 
 use lox_bodies::CoordinateOrigin;
 use lox_frames::ReferenceFrame;
@@ -10,8 +10,14 @@ use rayon::iter::{
 
 use crate::{
     assets::{AssetId, GroundStation, Scenario, Spacecraft},
-    visibility::NoEphemeris,
+    visibility::{NoEphemeris, VisibilityError},
 };
+
+impl From<Infallible> for VisibilityError {
+    fn from(value: Infallible) -> Self {
+        unreachable!()
+    }
+}
 
 trait AssetIdExt {
     fn asset_id(&self) -> AssetId;
@@ -77,50 +83,51 @@ impl FromParallelIterator<(AssetId, AssetId, TimeInterval)> for IntervalMap {
     }
 }
 
-struct Analysis<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    scenario: &'a Scenario<O, R>,
+struct Analysis<'a, T1, T2> {
+    t1: &'a [T1],
+    t2: &'a [T2],
+    interval: TimeInterval,
 }
 
-impl<'a, O: CoordinateOrigin, R: ReferenceFrame> Analysis<'a, O, R> {
-    fn new(scenario: &'a Scenario<O, R>) -> Self {
-        Self { scenario }
+impl<'a, T1, T2> Analysis<'a, T1, T2> {
+    fn new(t1: &'a [T1], t2: &'a [T2], interval: TimeInterval) -> Self {
+        Self { t1, t2, interval }
     }
 }
 
-impl<O, R> Refine<GroundStation, Spacecraft> for Analysis<'_, O, R>
+impl<T1, T2> Refine<T1, T2> for Analysis<'_, T1, T2>
 where
-    O: CoordinateOrigin + Copy + Send + Sync,
-    R: ReferenceFrame + Copy + Send + Sync,
+    T1: AssetIdExt,
+    T2: AssetIdExt,
 {
-    fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a GroundStation, &'a Spacecraft, TimeInterval)>
+    type Error = Infallible;
+
+    fn iter<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = Result<(&'a T1, &'a T2, TimeInterval), Self::Error>>
     where
-        Spacecraft: 'a,
-        GroundStation: 'a,
+        T1: 'a,
+        T2: 'a,
     {
-        self.scenario.ground_stations().iter().flat_map(move |gs| {
-            self.scenario
-                .spacecraft()
+        self.t1.iter().flat_map(move |item1| {
+            self.t2
                 .iter()
-                .map(move |sc| (gs, sc, *self.scenario.interval()))
+                .map(move |item2| Ok((item1, item2, self.interval)))
         })
     }
 
     fn par_iter<'a>(
         &'a self,
-    ) -> impl ParallelIterator<Item = (&'a GroundStation, &'a Spacecraft, TimeInterval)>
+    ) -> impl ParallelIterator<Item = Result<(&'a T1, &'a T2, TimeInterval), Self::Error>>
     where
-        GroundStation: 'a,
-        Spacecraft: 'a,
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync,
     {
-        self.scenario
-            .ground_stations()
-            .par_iter()
-            .flat_map(move |gs| {
-                self.scenario
-                    .spacecraft()
-                    .par_iter()
-                    .map(move |sc| (gs, sc, *self.scenario.interval()))
-            })
+        self.t1.par_iter().flat_map(move |item1| {
+            self.t2
+                .par_iter()
+                .map(move |item2| Ok((item1, item2, self.interval)))
+        })
     }
 }
 
@@ -129,9 +136,11 @@ where
     T1: AssetIdExt,
     T2: AssetIdExt,
 {
-    fn refine<R, I>(self, refinement: R) -> Refined<T1, T2, Self, R, I>
+    type Error: Send + Sync;
+
+    fn refine<R, I, E>(self, refinement: R) -> Refined<T1, T2, Self, R, I, E>
     where
-        R: Fn(&T1, &T2, TimeInterval) -> I,
+        R: Fn(&T1, &T2, TimeInterval) -> Result<I, E>,
         I: Iterator<Item = TimeInterval>,
     {
         Refined {
@@ -152,69 +161,92 @@ where
         }
     }
 
-    fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a T1, &'a T2, TimeInterval)>
+    fn iter<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = Result<(&'a T1, &'a T2, TimeInterval), Self::Error>>
     where
         T1: 'a,
         T2: 'a;
 
-    fn par_iter<'a>(&'a self) -> impl ParallelIterator<Item = (&'a T1, &'a T2, TimeInterval)>
+    fn collect(self) -> Result<IntervalMap, Self::Error> {
+        self.iter()
+            .map(|item| item.map(|(t1, t2, interval)| (t1.asset_id(), t2.asset_id(), interval)))
+            .collect()
+    }
+
+    fn par_iter<'a>(
+        &'a self,
+    ) -> impl ParallelIterator<Item = Result<(&'a T1, &'a T2, TimeInterval), Self::Error>>
     where
         T1: 'a + Send + Sync,
         T2: 'a + Send + Sync;
 
-    fn collect(self) -> IntervalMap {
-        self.iter()
-            .map(|(t1, t2, interval)| (t1.asset_id(), t2.asset_id(), interval))
-            .collect()
-    }
-
-    fn par_collect(self) -> IntervalMap
+    fn par_collect(self) -> Result<IntervalMap, Self::Error>
     where
         T1: Send + Sync,
         T2: Send + Sync,
     {
         self.par_iter()
-            .map(|(t1, t2, interval)| (t1.asset_id(), t2.asset_id(), interval))
+            .map(|item| item.map(|(t1, t2, interval)| (t1.asset_id(), t2.asset_id(), interval)))
             .collect()
     }
 }
 
-struct Refined<T1, T2, W, R, I> {
+struct Refined<T1, T2, W, R, I, E> {
     wrapped: W,
     refinement: R,
-    __: PhantomData<(T1, T2, I)>,
+    __: PhantomData<(T1, T2, I, E)>,
 }
 
-impl<T1, T2, W, R, I> Refine<T1, T2> for Refined<T1, T2, W, R, I>
+impl<T1, T2, W, R, I, E> Refine<T1, T2> for Refined<T1, T2, W, R, I, E>
 where
     T1: AssetIdExt,
     T2: AssetIdExt,
     W: Refine<T1, T2> + Send + Sync,
-    R: Fn(&T1, &T2, TimeInterval) -> I + Send + Sync,
+    R: Fn(&T1, &T2, TimeInterval) -> Result<I, E> + Send + Sync,
     I: Iterator<Item = TimeInterval> + Send + Sync,
+    E: From<W::Error> + Send + Sync,
 {
-    fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a T1, &'a T2, TimeInterval)>
+    type Error = E;
+
+    fn iter<'a>(&'a self) -> impl Iterator<Item = Result<(&'a T1, &'a T2, TimeInterval), E>>
     where
         T1: 'a,
         T2: 'a,
     {
-        self.wrapped.iter().flat_map(move |(t1, t2, interval)| {
-            (self.refinement)(t1, t2, interval).map(move |sub_interval| (t1, t2, sub_interval))
-        })
+        self.wrapped
+            .iter()
+            .flat_map(move |item| {
+                let (t1, t2, interval) = item?;
+                let intervals = (self.refinement)(t1, t2, interval)?;
+
+                Ok::<_, E>(intervals.map(move |sub_interval| Ok((t1, t2, sub_interval))))
+            })
+            .flatten()
     }
 
-    fn par_iter<'a>(&'a self) -> impl ParallelIterator<Item = (&'a T1, &'a T2, TimeInterval)>
+    fn par_iter<'a>(
+        &'a self,
+    ) -> impl ParallelIterator<Item = Result<(&'a T1, &'a T2, TimeInterval), E>>
     where
         T1: 'a + Send + Sync,
         T2: 'a + Send + Sync,
     {
-        self.wrapped.par_iter().flat_map(move |(t1, t2, interval)| {
-            let refined = (self.refinement)(t1, t2, interval).collect::<Vec<_>>();
+        self.wrapped
+            .par_iter()
+            .flat_map(move |item| {
+                let (t1, t2, interval) = item?;
 
-            refined
-                .into_par_iter()
-                .map(move |sub_interval| (t1, t2, sub_interval))
-        })
+                let intervals = (self.refinement)(t1, t2, interval)?;
+                let intervals = intervals.collect::<Vec<_>>();
+
+                Ok::<_, E>(
+                    intervals
+                        .into_par_iter()
+                        .map(move |sub_interval| Ok((t1, t2, sub_interval))),
+                )
+            })
+            .flatten()
     }
 }
 
@@ -231,24 +263,33 @@ where
     W: Refine<T1, T2> + Send + Sync,
     F: Fn(&T1, &T2, TimeInterval) -> bool + Send + Sync,
 {
-    fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a T1, &'a T2, TimeInterval)>
+    type Error = W::Error;
+
+    fn iter<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = Result<(&'a T1, &'a T2, TimeInterval), Self::Error>>
     where
         T1: 'a,
         T2: 'a,
     {
-        self.wrapped
-            .iter()
-            .filter(|(t1, t2, interval)| (self.filter)(t1, t2, *interval))
+        self.wrapped.iter().filter(|item| match item {
+            Ok((t1, t2, interval)) => (self.filter)(t1, t2, *interval),
+            Err(_) => true,
+        })
     }
 
-    fn par_iter<'a>(&'a self) -> impl ParallelIterator<Item = (&'a T1, &'a T2, TimeInterval)>
+    fn par_iter<'a>(
+        &'a self,
+    ) -> impl ParallelIterator<Item = Result<(&'a T1, &'a T2, TimeInterval), Self::Error>>
     where
         T1: 'a + Send + Sync,
         T2: 'a + Send + Sync,
     {
-        self.wrapped
-            .par_iter()
-            .filter(|(t1, t2, interval)| (self.filter)(t1, t2, *interval))
+        self.wrapped.par_iter().filter(|item| match item {
+            Ok((t1, t2, interval)) => (self.filter)(t1, t2, *interval),
+            Err(_) => true,
+        })
+        // (self.filter)(t1, t2, *interval))
     }
 }
 
@@ -257,6 +298,7 @@ mod tests {
     use std::time::Duration;
 
     use crate::events::DetectFnExt;
+    use crate::visibility::VisibilityError;
     use lox_bodies::Origin;
     use lox_core::{coords::LonLatAlt, units::Angle};
     use lox_frames::Frame;
@@ -325,37 +367,38 @@ mod tests {
         let (scenario, ensemble) =
             make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
 
-        let result = Analysis::new(&scenario)
+        let result = Analysis::new(&ground_assets, &space_assets, interval)
             .refine(|gs, sc, interval| {
                 let sc_traj = ensemble.get(sc.id()).expect(
-                    "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
-		);
+                "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
+            );
                 let elev = ElevationDetectFn {
                     gs: gs.location(),
                     mask: gs.mask(),
                     sc: sc_traj,
                 };
-                let windows = elev.intervals(UniformSampler::new(step), interval).unwrap();
-                windows.into_iter()
+                let windows = elev.intervals(UniformSampler::new(step), interval)?;
+                Ok::<_, VisibilityError>(windows.into_iter())
             })
-            // .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
-            .collect();
+            .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
+            .collect()
+            .unwrap();
 
-        let result_par = Analysis::new(&scenario)
+        let result_par = Analysis::new(&ground_assets, &space_assets, interval)
             .refine(|gs, sc, interval| {
                 let sc_traj = ensemble.get(sc.id()).expect(
                     "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
-		);
+        	);
                 let elev = ElevationDetectFn {
                     gs: gs.location(),
                     mask: gs.mask(),
                     sc: sc_traj,
                 };
                 let windows = elev.intervals(UniformSampler::new(step), interval).unwrap();
-                windows.into_iter()
+                Ok::<_, VisibilityError>(windows.into_iter())
             })
-            // .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
-            .par_collect();
+            .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
+            .par_collect().unwrap();
 
         dbg!(
             result
