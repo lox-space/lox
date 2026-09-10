@@ -10,6 +10,8 @@
 //! built-in implementors live in [`terminal`](crate::terminal); custom ends
 //! only need to answer the trait questions.
 
+use core::fmt::{Display, Formatter};
+
 use lox_core::units::{Decibel, Distance, Frequency, Power, Temperature};
 
 use crate::channel::{Channel, LinkDirection};
@@ -212,6 +214,47 @@ pub enum LineKind {
     Total,
 }
 
+/// The quantity a decibel figure is referenced against.
+///
+/// Display only: [`Decibel`] arithmetic is unit-blind and this never takes
+/// part in it. It exists so a rendered budget can say `dBW` where it means
+/// dBW, rather than labelling every row `dB`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[non_exhaustive]
+pub enum DecibelReference {
+    /// A dimensionless power ratio: `dB`.
+    #[default]
+    Ratio,
+    /// Power referenced to one watt: `dBW`.
+    Watt,
+    /// Gain over system noise temperature: `dB/K`.
+    PerKelvin,
+    /// A density referenced to one hertz: `dBHz`.
+    Hertz,
+    /// The reciprocal of the Boltzmann constant: `dB(Hz·K/W)`.
+    HertzKelvinPerWatt,
+}
+
+impl DecibelReference {
+    /// Returns the rendered symbol, e.g. `"dBW"`.
+    pub const fn symbol(&self) -> &'static str {
+        match self {
+            Self::Ratio => "dB",
+            Self::Watt => "dBW",
+            Self::PerKelvin => "dB/K",
+            Self::Hertz => "dBHz",
+            Self::HertzKelvinPerWatt => "dB(Hz·K/W)",
+        }
+    }
+}
+
+impl Display for DecibelReference {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.write_str(self.symbol())
+    }
+}
+
 /// One line of a link-budget report.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -222,14 +265,42 @@ pub struct BudgetLine {
     pub value: Decibel,
     /// The role of this line.
     pub kind: LineKind,
+    /// The quantity `value` is referenced against. Display only.
+    pub reference: DecibelReference,
 }
 
 impl BudgetLine {
-    fn new(label: impl Into<String>, value: Decibel, kind: LineKind) -> Self {
+    /// A contribution that increases the link quality.
+    fn gain(label: impl Into<String>, value: Decibel, reference: DecibelReference) -> Self {
+        Self::new(label, value, LineKind::Gain, reference)
+    }
+
+    /// A contribution that decreases the link quality.
+    fn loss(label: impl Into<String>, value: Decibel, reference: DecibelReference) -> Self {
+        Self::new(label, value, LineKind::Loss, reference)
+    }
+
+    /// An intermediate result.
+    fn subtotal(label: impl Into<String>, value: Decibel, reference: DecibelReference) -> Self {
+        Self::new(label, value, LineKind::Subtotal, reference)
+    }
+
+    /// A final result.
+    fn total(label: impl Into<String>, value: Decibel, reference: DecibelReference) -> Self {
+        Self::new(label, value, LineKind::Total, reference)
+    }
+
+    fn new(
+        label: impl Into<String>,
+        value: Decibel,
+        kind: LineKind,
+        reference: DecibelReference,
+    ) -> Self {
         Self {
             label: label.into(),
             value,
             kind,
+            reference,
         }
     }
 }
@@ -245,9 +316,10 @@ fn render_budget(f: &mut core::fmt::Formatter<'_>, lines: &[BudgetLine]) -> core
         };
         writeln!(
             f,
-            "{sign} {:width$}  {:>10.2} dB",
+            "{sign} {:width$}  {:>10.2} {}",
             line.label,
             line.value.as_f64(),
+            line.reference,
         )?;
     }
     Ok(())
@@ -454,6 +526,15 @@ pub struct LinkBudget {
 }
 
 impl LinkBudget {
+    /// The quantity [`Self::eirp`] and [`Self::carrier_rx_power`] are
+    /// referenced against.
+    pub const EIRP_REFERENCE: DecibelReference = DecibelReference::Watt;
+    /// The quantity [`Self::gt`] and [`Self::gt_degraded`] are referenced
+    /// against.
+    pub const GT_REFERENCE: DecibelReference = DecibelReference::PerKelvin;
+    /// The quantity [`Self::c_n0`] is referenced against.
+    pub const C_N0_REFERENCE: DecibelReference = DecibelReference::Hertz;
+
     /// Computes a modulation-agnostic link budget between two link ends
     /// under the given conditions.
     ///
@@ -557,30 +638,31 @@ impl LinkBudget {
     /// carries the +228.6 dB(Hz·K/W) term that makes the column sum.
     pub fn budget_lines(&self) -> Vec<BudgetLine> {
         let mut lines = vec![
-            BudgetLine::new("EIRP", self.eirp, LineKind::Gain),
-            BudgetLine::new("Free-space path loss", self.fspl, LineKind::Loss),
+            BudgetLine::gain("EIRP", self.eirp, Self::EIRP_REFERENCE),
+            BudgetLine::loss("Free-space path loss", self.fspl, DecibelReference::Ratio),
         ];
         for loss in self.losses.lines() {
-            lines.push(BudgetLine::new(
+            lines.push(BudgetLine::loss(
                 loss.kind().label(),
                 loss.value(),
-                LineKind::Loss,
+                DecibelReference::Ratio,
             ));
         }
-        lines.push(BudgetLine::new("G/T", self.gt, LineKind::Gain));
+        lines.push(BudgetLine::gain("G/T", self.gt, Self::GT_REFERENCE));
         if let Some(gt_degraded) = self.gt_degraded {
-            lines.push(BudgetLine::new(
+            // A difference of two dB/K figures, so a plain ratio.
+            lines.push(BudgetLine::loss(
                 "G/T degradation due to rain",
                 self.gt - gt_degraded,
-                LineKind::Loss,
+                DecibelReference::Ratio,
             ));
         }
-        lines.push(BudgetLine::new(
+        lines.push(BudgetLine::gain(
             "Boltzmann constant",
             -BOLTZMANN_CONSTANT_DB,
-            LineKind::Gain,
+            DecibelReference::HertzKelvinPerWatt,
         ));
-        lines.push(BudgetLine::new("C/N0", self.c_n0, LineKind::Total));
+        lines.push(BudgetLine::total("C/N0", self.c_n0, Self::C_N0_REFERENCE));
         lines
     }
 
@@ -681,25 +763,23 @@ impl ModulatedLinkBudget {
     /// budget extended with C/N, Es/N0, Eb/N0, the MODCOD threshold, the
     /// design margin, and the link margin.
     pub fn budget_lines(&self) -> Vec<BudgetLine> {
+        // Every line below is a ratio of two powers, so all are plain dB.
+        let ratio = DecibelReference::Ratio;
         let mut lines = self.budget.budget_lines();
-        lines.push(BudgetLine::new(
+        lines.push(BudgetLine::subtotal(
             "C/N (occupied bandwidth)",
             self.c_n,
-            LineKind::Subtotal,
+            ratio,
         ));
-        lines.push(BudgetLine::new("Es/N0", self.es_n0, LineKind::Subtotal));
-        lines.push(BudgetLine::new("Eb/N0", self.eb_n0, LineKind::Subtotal));
-        lines.push(BudgetLine::new(
+        lines.push(BudgetLine::subtotal("Es/N0", self.es_n0, ratio));
+        lines.push(BudgetLine::subtotal("Eb/N0", self.eb_n0, ratio));
+        lines.push(BudgetLine::loss(
             format!("Required Eb/N0 ({})", self.modcod.mode().name()),
             self.modcod.required_eb_n0(),
-            LineKind::Loss,
+            ratio,
         ));
-        lines.push(BudgetLine::new(
-            "Design margin",
-            self.design_margin,
-            LineKind::Loss,
-        ));
-        lines.push(BudgetLine::new("Link margin", self.margin, LineKind::Total));
+        lines.push(BudgetLine::loss("Design margin", self.design_margin, ratio));
+        lines.push(BudgetLine::total("Link margin", self.margin, ratio));
         lines
     }
 
@@ -1409,6 +1489,62 @@ mod tests {
         assert!(table.contains("+ EIRP"));
         assert!(table.contains("- Free-space path loss"));
         assert!(table.contains("= Link margin"));
+    }
+
+    #[test]
+    fn test_budget_lines_carry_their_reference_unit() {
+        let budget = LinkBudget::new(
+            &tx_chain(),
+            &rx_chain(),
+            &faded_params(Some(LinkDirection::Downlink)),
+        )
+        .unwrap();
+        let reference = |label: &str| {
+            budget
+                .budget_lines()
+                .into_iter()
+                .find(|l| l.label == label)
+                .unwrap_or_else(|| panic!("no {label} line"))
+                .reference
+        };
+        // The references multiply out to the C/N0 unit:
+        // W · 1/K · K·Hz/W = Hz.
+        assert_eq!(reference("EIRP"), DecibelReference::Watt);
+        assert_eq!(reference("G/T"), DecibelReference::PerKelvin);
+        assert_eq!(
+            reference("Boltzmann constant"),
+            DecibelReference::HertzKelvinPerWatt
+        );
+        assert_eq!(reference("C/N0"), DecibelReference::Hertz);
+        assert_eq!(reference("Free-space path loss"), DecibelReference::Ratio);
+    }
+
+    #[test]
+    fn test_budget_table_labels_the_reference_units() {
+        let budget = LinkBudget::new(
+            &tx_chain(),
+            &rx_chain(),
+            &faded_params(Some(LinkDirection::Downlink)),
+        )
+        .unwrap();
+        let table = budget.to_string();
+        assert!(table.contains("dBW"), "{table}");
+        assert!(table.contains("dB/K"), "{table}");
+        assert!(table.contains("dBHz"), "{table}");
+        assert!(table.contains("dB(Hz\u{b7}K/W)"), "{table}");
+    }
+
+    #[test]
+    fn test_decibel_reference_symbols() {
+        assert_eq!(DecibelReference::default(), DecibelReference::Ratio);
+        assert_eq!(DecibelReference::Ratio.symbol(), "dB");
+        assert_eq!(DecibelReference::Watt.to_string(), "dBW");
+        assert_eq!(DecibelReference::PerKelvin.to_string(), "dB/K");
+        assert_eq!(DecibelReference::Hertz.to_string(), "dBHz");
+        assert_eq!(
+            DecibelReference::HertzKelvinPerWatt.to_string(),
+            "dB(Hz\u{b7}K/W)"
+        );
     }
 
     #[test]

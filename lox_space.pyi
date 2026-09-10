@@ -3458,6 +3458,27 @@ class GtModel:
     def __eq__(self, other: object) -> bool: ...
     def __repr__(self) -> str: ...
 
+class BudgetLine:
+    """One line of a rendered link-budget report."""
+    @property
+    def label(self) -> str:
+        """Human-readable label, e.g. "Free-space path loss"."""
+    @property
+    def value(self) -> Decibel:
+        """The value in decibels; gains and losses are both positive."""
+    @property
+    def kind(self) -> Literal["gain", "loss", "subtotal", "total"]:
+        """The role this line plays in the table."""
+    @property
+    def unit(self) -> str:
+        """The unit the value is referenced against, e.g. "dBW".
+
+        One `Decibel` type carries dimensionless dB, dBW, dB/K, dBHz and
+        dB(Hz·K/W), so the report states which one each row means.
+        """
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
 class LinkBudget:
     """A modulation-agnostic link budget between two link terminals.
 
@@ -3490,9 +3511,8 @@ class LinkBudget:
         losses: PropagationLosses | None = None,
         link_type: str | None = None,
     ) -> Self: ...
-    def budget_lines(self) -> list[tuple[str, Decibel, str]]:
-        """Returns the budget as ordered (label, value, kind) report lines,
-        where kind is "gain", "loss", "subtotal", or "total"."""
+    def budget_lines(self) -> list[BudgetLine]:
+        """Returns the budget as ordered report lines."""
         ...
     def __str__(self) -> str: ...
     def modulate_best(
@@ -3615,9 +3635,9 @@ class ModulatedLinkBudget:
     def closes(self) -> bool:
         """Returns whether the link closes: margin >= 0."""
         ...
-    def budget_lines(self) -> list[tuple[str, Decibel, str]]:
-        """Returns the budget as ordered (label, value, kind) report lines,
-        extended with C/N, Es/N0, Eb/N0, threshold, and margins."""
+    def budget_lines(self) -> list[BudgetLine]:
+        """Returns the budget as ordered report lines, extended with C/N,
+        Es/N0, Eb/N0, threshold, and margins."""
         ...
     def __str__(self) -> str: ...
     @property

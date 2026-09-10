@@ -306,7 +306,7 @@ macro_rules! py_unit {
             }
 
             #[pyclass(name = $name, module = "lox_space", frozen, from_py_object)]
-            #[derive(Clone, Copy)]
+            #[derive(Debug, Clone, Copy)]
             /// Python wrapper for a typed unit quantity.
             pub struct $pyunit(pub $unit);
 

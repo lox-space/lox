@@ -1182,17 +1182,51 @@ fn line_kind_name(kind: LineKind) -> &'static str {
     }
 }
 
-fn budget_lines_py(
-    lines: Vec<lox_comms::link_budget::BudgetLine>,
-) -> Vec<(String, PyDecibel, String)> {
+/// One line of a rendered link-budget report.
+#[pyclass(
+    name = "BudgetLine",
+    module = "lox_space",
+    frozen,
+    get_all,
+    skip_from_py_object
+)]
+#[derive(Debug, Clone)]
+pub struct PyBudgetLine {
+    /// Human-readable label, e.g. `"Free-space path loss"`.
+    pub label: String,
+    /// The value in decibels; gains and losses are both positive.
+    pub value: PyDecibel,
+    /// One of "gain", "loss", "subtotal" or "total".
+    pub kind: String,
+    /// The unit the value is referenced against, e.g. `"dBW"`.
+    pub unit: String,
+}
+
+#[pymethods]
+impl PyBudgetLine {
+    fn __repr__(&self) -> String {
+        format!(
+            "BudgetLine(label={:?}, value={}, kind={:?}, unit={:?})",
+            self.label,
+            self.value.__repr__(),
+            self.kind,
+            self.unit,
+        )
+    }
+
+    fn __str__(&self) -> String {
+        format!("{} {:.2} {}", self.label, self.value.0.as_f64(), self.unit)
+    }
+}
+
+fn budget_lines_py(lines: Vec<lox_comms::link_budget::BudgetLine>) -> Vec<PyBudgetLine> {
     lines
         .into_iter()
-        .map(|l| {
-            (
-                l.label,
-                PyDecibel(l.value),
-                line_kind_name(l.kind).to_owned(),
-            )
+        .map(|l| PyBudgetLine {
+            label: l.label,
+            value: PyDecibel(l.value),
+            kind: line_kind_name(l.kind).to_owned(),
+            unit: l.reference.symbol().to_owned(),
         })
         .collect()
 }
@@ -1352,10 +1386,11 @@ impl PyLinkBudget {
         PyDecibel(self.0.c_n0)
     }
 
-    /// Returns the budget as ordered (label, value, kind) report lines,
-    /// where kind is "gain", "loss", "subtotal", or "total". Gains minus
-    /// losses equal the C/N0 total exactly.
-    fn budget_lines(&self) -> Vec<(String, PyDecibel, String)> {
+    /// Returns the budget as ordered `BudgetLine` records, each carrying a
+    /// label, a value, a kind ("gain", "loss", "subtotal" or "total") and the
+    /// unit the value is referenced against. Gains minus losses equal the
+    /// C/N0 total exactly.
+    fn budget_lines(&self) -> Vec<PyBudgetLine> {
         budget_lines_py(self.0.budget_lines())
     }
 
@@ -1483,10 +1518,10 @@ impl PyModulatedLinkBudget {
         self.0.closes()
     }
 
-    /// Returns the budget as ordered (label, value, kind) report lines,
-    /// extended with C/N, Es/N0, Eb/N0, the MODCOD threshold, the design
-    /// margin, and the link margin.
-    fn budget_lines(&self) -> Vec<(String, PyDecibel, String)> {
+    /// Returns the budget as ordered `BudgetLine` records, extended with
+    /// C/N, Es/N0, Eb/N0, the MODCOD threshold, the design margin, and the
+    /// link margin.
+    fn budget_lines(&self) -> Vec<PyBudgetLine> {
         budget_lines_py(self.0.budget_lines())
     }
 
