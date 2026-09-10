@@ -150,6 +150,15 @@ Scalar × quantity is a quantity. Anything else is a `TypeError`:
 lox.km * lox.m                # TypeError
 ```
 
+The constructors are just as strict, so a quantity cannot slip in where a plain
+number belongs:
+
+```python
+lox.Distance(500.0)                 # Distance
+lox.Distance(lox.Angle(1.0))        # TypeError
+lox.Distance.from_kilometers(500)   # Distance
+```
+
 There is no `int()` conversion: silently truncating to whole metres or whole hertz is
 rarely what anyone means. Use `round()`, which returns a quantity, or `float()`.
 

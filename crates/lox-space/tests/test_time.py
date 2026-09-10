@@ -395,3 +395,18 @@ def test_time_delta_unit_lookup_and_pickle():
 def test_time_delta_unit_unknown_name_raises():
     with pytest.raises(ValueError, match="not a TimeDeltaUnit"):
         lox.TimeDeltaUnit("fortnights")
+
+
+def test_time_delta_constructors_reject_quantities():
+    with pytest.raises(TypeError):
+        lox.TimeDelta(lox.Distance(1.0))
+    with pytest.raises(TypeError):
+        lox.TimeDelta.from_minutes(lox.Angle(1.0))
+    with pytest.raises(TypeError):
+        lox.TimeDelta.from_days(1 * lox.hours)
+
+
+def test_time_delta_constructors_accept_real_numbers():
+    np = pytest.importorskip("numpy")
+    for value in [90, 90.0, np.float64(90), np.float32(90), np.int64(90)]:
+        assert lox.TimeDelta.from_minutes(value) == 90 * lox.minutes

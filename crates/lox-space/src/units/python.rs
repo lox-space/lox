@@ -315,12 +315,23 @@ macro_rules! py_unit {
             /// Python wrapper for a typed unit quantity.
             pub struct $pyunit(pub $unit);
 
+            impl $pyunit {
+                /// Constructs the quantity from a value in its base SI unit.
+                ///
+                /// The Rust-side counterpart of the Python constructor, which
+                /// takes a [`Scalar`] so that another quantity cannot be
+                /// coerced into it.
+                pub fn new(value: f64) -> Self {
+                    Self($unit::new(value))
+                }
+            }
+
             #[pymethods]
             impl $pyunit {
                 #[new]
                 /// Constructs the unit quantity from a value in its base SI unit.
-                pub fn new(value: f64) -> Self {
-                    Self($unit::new(value))
+                fn py_new(value: Scalar) -> Self {
+                    Self::new(value.0)
                 }
 
                 $(
@@ -331,8 +342,8 @@ macro_rules! py_unit {
 
                     #[classmethod]
                     #[doc = concat!("Creates a `", $name, "` from a value in ", $unitdoc, ".")]
-                    fn $from(_cls: &Bound<'_, PyType>, value: f64) -> Self {
-                        Self($unit::$ctor(value))
+                    fn $from(_cls: &Bound<'_, PyType>, value: Scalar) -> Self {
+                        Self($unit::$ctor(value.0))
                     }
                 )*
 
@@ -572,8 +583,8 @@ py_unit!(
         {
             /// Creates a `Decibel` from a linear power ratio.
             #[staticmethod]
-            fn from_linear(value: f64) -> Self {
-                Self(Decibel::from_linear(value))
+            fn from_linear(value: Scalar) -> Self {
+                Self(Decibel::from_linear(value.0))
             }
 
             /// Returns the linear power ratio.
@@ -710,24 +721,34 @@ use lox_core::elements::GravitationalParameter;
 #[derive(Clone, Copy)]
 pub struct PyGravitationalParameter(pub GravitationalParameter);
 
+impl PyGravitationalParameter {
+    /// Constructs a gravitational parameter from a value in m³/s².
+    ///
+    /// The Rust-side counterpart of the Python constructor, which takes a
+    /// [`Scalar`] so that another quantity cannot be coerced into it.
+    pub fn new(value: f64) -> Self {
+        Self(GravitationalParameter::m3_per_s2(value))
+    }
+}
+
 #[pymethods]
 impl PyGravitationalParameter {
     #[new]
     /// Constructs a gravitational parameter from a value in m³/s².
-    pub fn new(value: f64) -> Self {
-        Self(GravitationalParameter::m3_per_s2(value))
+    fn py_new(value: Scalar) -> Self {
+        Self::new(value.0)
     }
 
     /// Creates a `GravitationalParameter` from a value in m³/s².
     #[classmethod]
-    fn from_m3_per_s2(_cls: &Bound<'_, PyType>, value: f64) -> Self {
-        Self(GravitationalParameter::m3_per_s2(value))
+    fn from_m3_per_s2(_cls: &Bound<'_, PyType>, value: Scalar) -> Self {
+        Self::new(value.0)
     }
 
     /// Creates a `GravitationalParameter` from a value in km³/s².
     #[staticmethod]
-    fn from_km3_per_s2(value: f64) -> Self {
-        Self(GravitationalParameter::km3_per_s2(value))
+    fn from_km3_per_s2(value: Scalar) -> Self {
+        Self(GravitationalParameter::km3_per_s2(value.0))
     }
 
     /// Returns the value in m³/s².

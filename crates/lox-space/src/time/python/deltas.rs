@@ -28,14 +28,24 @@ use crate::units::python::{Scalar, format_in_unit, split_unit_token};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PyTimeDelta(pub TimeDelta);
 
-#[pymethods]
 impl PyTimeDelta {
-    #[new]
     /// Constructs a `TimeDelta` from a duration in seconds.
+    ///
+    /// The Rust-side counterpart of the Python constructor, which takes a
+    /// [`Scalar`] so that a quantity cannot be coerced into it.
     pub fn new(seconds: f64) -> PyResult<Self> {
         Ok(Self(
             TimeDelta::try_from_seconds_f64(seconds).map_err(PyInvalidFloatSeconds)?,
         ))
+    }
+}
+
+#[pymethods]
+impl PyTimeDelta {
+    #[new]
+    /// Constructs a `TimeDelta` from a duration in seconds.
+    fn py_new(seconds: Scalar) -> PyResult<Self> {
+        Self::new(seconds.0)
     }
 
     /// Returns the developer representation of the `TimeDelta`.
@@ -228,41 +238,41 @@ impl PyTimeDelta {
 
     /// Create a TimeDelta from minutes.
     #[classmethod]
-    pub fn from_minutes(_cls: &Bound<'_, PyType>, minutes: f64) -> PyResult<Self> {
+    pub fn from_minutes(_cls: &Bound<'_, PyType>, minutes: Scalar) -> PyResult<Self> {
         Ok(Self(
-            TimeDelta::try_from_minutes_f64(minutes).map_err(PyInvalidFloatSeconds)?,
+            TimeDelta::try_from_minutes_f64(minutes.0).map_err(PyInvalidFloatSeconds)?,
         ))
     }
 
     /// Create a TimeDelta from hours.
     #[classmethod]
-    pub fn from_hours(_cls: &Bound<'_, PyType>, hours: f64) -> PyResult<Self> {
+    pub fn from_hours(_cls: &Bound<'_, PyType>, hours: Scalar) -> PyResult<Self> {
         Ok(Self(
-            TimeDelta::try_from_hours_f64(hours).map_err(PyInvalidFloatSeconds)?,
+            TimeDelta::try_from_hours_f64(hours.0).map_err(PyInvalidFloatSeconds)?,
         ))
     }
 
     /// Create a TimeDelta from days (86400 seconds per day).
     #[classmethod]
-    pub fn from_days(_cls: &Bound<'_, PyType>, days: f64) -> PyResult<Self> {
+    pub fn from_days(_cls: &Bound<'_, PyType>, days: Scalar) -> PyResult<Self> {
         Ok(Self(
-            TimeDelta::try_from_days_f64(days).map_err(PyInvalidFloatSeconds)?,
+            TimeDelta::try_from_days_f64(days.0).map_err(PyInvalidFloatSeconds)?,
         ))
     }
 
     /// Create a TimeDelta from Julian years (365.25 days per year).
     #[classmethod]
-    pub fn from_julian_years(_cls: &Bound<'_, PyType>, years: f64) -> PyResult<Self> {
+    pub fn from_julian_years(_cls: &Bound<'_, PyType>, years: Scalar) -> PyResult<Self> {
         Ok(Self(
-            TimeDelta::try_from_julian_years(years).map_err(PyInvalidFloatSeconds)?,
+            TimeDelta::try_from_julian_years(years.0).map_err(PyInvalidFloatSeconds)?,
         ))
     }
 
     /// Create a TimeDelta from Julian centuries (36525 days per century).
     #[classmethod]
-    pub fn from_julian_centuries(_cls: &Bound<'_, PyType>, centuries: f64) -> PyResult<Self> {
+    pub fn from_julian_centuries(_cls: &Bound<'_, PyType>, centuries: Scalar) -> PyResult<Self> {
         Ok(Self(
-            TimeDelta::try_from_julian_centuries(centuries).map_err(PyInvalidFloatSeconds)?,
+            TimeDelta::try_from_julian_centuries(centuries.0).map_err(PyInvalidFloatSeconds)?,
         ))
     }
 

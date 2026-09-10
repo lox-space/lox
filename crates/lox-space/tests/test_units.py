@@ -364,6 +364,43 @@ def test_scalar_multiplication_accepts_real_numbers():
     assert (True * lox.Distance(500.0)).to_meters() == pytest.approx(500.0)
 
 
+@pytest.mark.parametrize("cls", ALL_QUANTITIES)
+def test_constructor_rejects_other_quantities(cls):
+    # The constructor takes a number, and PyO3 would otherwise coerce any
+    # quantity through __float__.
+    other = lox.Angle(1.0) if cls is not lox.Angle else lox.Distance(1.0)
+    with pytest.raises(TypeError):
+        cls(other)
+    with pytest.raises(TypeError):
+        cls(1 * lox.hours)
+
+
+@pytest.mark.parametrize(
+    "ctor",
+    [
+        lox.Distance.from_kilometers,
+        lox.Angle.from_degrees,
+        lox.Frequency.from_gigahertz,
+        lox.Power.from_watts,
+        lox.Temperature.from_kelvin,
+        lox.Velocity.from_kilometers_per_second,
+        lox.Pressure.from_hpa,
+        lox.Decibel.from_linear,
+        lox.GravitationalParameter.from_km3_per_s2,
+    ],
+)
+def test_from_constructors_reject_other_quantities(ctor):
+    with pytest.raises(TypeError):
+        ctor(lox.Angle(1.0))
+
+
+@pytest.mark.parametrize("cls", ALL_QUANTITIES)
+def test_constructor_accepts_real_numbers(cls):
+    np = pytest.importorskip("numpy")
+    for value in [2, 2.0, np.float64(2), np.float32(2), np.int64(2)]:
+        assert float(cls(value)) == pytest.approx(2.0)
+
+
 def test_scalar_multiplication_rejects_non_numbers():
     with pytest.raises(TypeError):
         _ = "2" * lox.Distance(500.0)
