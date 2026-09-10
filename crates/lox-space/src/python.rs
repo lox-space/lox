@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::f64::consts::PI;
-
 use crate::analysis::python::{
     PyAccessResults, PyAccessWindow, PyAoi, PyElevationMask, PyEnsemble, PyEvent, PyGroundStation,
     PyLookSide, PyObservables, PyOpticalAccessAnalysis, PyOpticalPayload, PyPass, PyPassDirection,
@@ -12,12 +10,12 @@ use crate::analysis::python::{
 };
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
-    PyAmplifierTransmitter, PyAntennaFrame, PyCascadeReceiver, PyChannel, PyConstantAntenna,
-    PyDecibel, PyDipolePattern, PyEirpModel, PyFrequencyRange, PyGaussianPattern, PyGtModel,
-    PyInterferenceStats, PyLinkBudget, PyModCod, PyModulatedLinkBudget, PyModulation, PyNoiseStage,
-    PyNoiseTempReceiver, PyParabolicPattern, PyPatternedAntenna, PyPfdMask, PyPropagationLosses,
-    PyRxChain, PyTxChain, combine_carrier_to_noise, freq_overlap, fspl, power_flux_density,
-    slant_range,
+    PyAmplifierTransmitter, PyAntennaFrame, PyBudgetLine, PyCascadeReceiver, PyChannel,
+    PyConstantAntenna, PyDipolePattern, PyEirpModel, PyFrequencyRange, PyGaussianPattern,
+    PyGtModel, PyInterferenceStats, PyLinkBudget, PyModCod, PyModulatedLinkBudget, PyModulation,
+    PyNoiseStage, PyNoiseTempReceiver, PyParabolicPattern, PyPatternedAntenna, PyPfdMask,
+    PyPropagationLosses, PyRxChain, PyTxChain, combine_carrier_to_noise, freq_overlap, fspl,
+    power_flux_density, slant_range,
 };
 use crate::constellations::python::{PyConstellation, PyConstellationSatellite};
 use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
@@ -39,13 +37,6 @@ use crate::time::python::{
     time_series::PyTimeSeries,
     utc::PyUtc,
 };
-use crate::units::{
-    ASTRONOMICAL_UNIT,
-    python::{
-        PyAngle, PyAngularRate, PyDistance, PyFrequency, PyGravitationalParameter, PyPower,
-        PyPressure, PyTemperature, PyVelocity,
-    },
-};
 
 use pyo3::prelude::*;
 
@@ -57,8 +48,6 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyOrigin>()?;
 
     // comms
-    m.add_class::<PyDecibel>()?;
-    m.add("dB", PyDecibel::new(1.0))?;
     m.add_class::<PyModulation>()?;
     m.add_class::<PyParabolicPattern>()?;
     m.add_class::<PyGaussianPattern>()?;
@@ -74,6 +63,7 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyModCod>()?;
     m.add_class::<PyItuProvider>()?;
     m.add_class::<PyPropagationLosses>()?;
+    m.add_class::<PyBudgetLine>()?;
     m.add_class::<PyLinkBudget>()?;
     m.add_class::<PyInterferenceStats>()?;
     m.add_class::<PyModulatedLinkBudget>()?;
@@ -155,44 +145,13 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // time
     m.add_class::<PyTime>()?;
     m.add_class::<PyTimeDelta>()?;
-    m.add("seconds", PyTimeDelta::new(1.0)?)?;
-    m.add("minutes", PyTimeDelta::new(60.0)?)?;
-    m.add("hours", PyTimeDelta::new(3600.0)?)?;
-    m.add("days", PyTimeDelta::new(86400.0)?)?;
+    crate::time::python::deltas::PyTimeDeltaUnit::register(m)?;
     m.add_class::<PyTimeScale>()?;
     m.add_class::<PyTimeSeries>()?;
     m.add_class::<PyUtc>()?;
 
     // units
-    m.add_class::<PyAngle>()?;
-    m.add("rad", PyAngle::new(1.0))?;
-    m.add("deg", PyAngle::new(PI / 180.0))?;
-    m.add_class::<PyAngularRate>()?;
-    m.add("rad_per_s", PyAngularRate::new(1.0))?;
-    m.add("deg_per_s", PyAngularRate::new(PI / 180.0))?;
-
-    m.add_class::<PyDistance>()?;
-    m.add("m", PyDistance::new(1.0))?;
-    m.add("km", PyDistance::new(1e3))?;
-    m.add("au", PyDistance::new(ASTRONOMICAL_UNIT))?;
-    m.add_class::<PyFrequency>()?;
-    m.add("Hz", PyFrequency::new(1.0))?;
-    m.add("kHz", PyFrequency::new(1e3))?;
-    m.add("MHz", PyFrequency::new(1e6))?;
-    m.add("GHz", PyFrequency::new(1e9))?;
-    m.add("THz", PyFrequency::new(1e12))?;
-    m.add_class::<PyGravitationalParameter>()?;
-    m.add_class::<PyPower>()?;
-    m.add("W", PyPower::new(1.0))?;
-    m.add("kW", PyPower::new(1e3))?;
-    m.add_class::<PyPressure>()?;
-    m.add("Pa", PyPressure::new(1.0))?;
-    m.add("hPa", PyPressure::new(100.0))?;
-    m.add_class::<PyTemperature>()?;
-    m.add("K", PyTemperature::new(1.0))?;
-    m.add_class::<PyVelocity>()?;
-    m.add("m_per_s", PyVelocity::new(1.0))?;
-    m.add("km_per_s", PyVelocity::new(1e3))?;
+    crate::units::python::register_units(m)?;
 
     Ok(())
 }

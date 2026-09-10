@@ -930,7 +930,7 @@ def test_budget_lines_and_table():
     m = budget.modulate(ch, mc, design_margin=3.0 * lox.dB)
 
     lines = m.budget_lines()
-    labels = [label for label, _, _ in lines]
+    labels = [line.label for line in lines]
     assert labels[0] == "EIRP"
     assert "Rain attenuation" in labels
     assert "G/T degradation due to rain" in labels
@@ -938,15 +938,46 @@ def test_budget_lines_and_table():
     # Gains minus losses reproduce the C/N0 total on the agnostic stage.
     link_lines = budget.budget_lines()
     total = sum(
-        float(v) if kind == "gain" else -float(v) if kind == "loss" else 0.0
-        for _, v, kind in link_lines
+        float(line.value)
+        if line.kind == "gain"
+        else -float(line.value)
+        if line.kind == "loss"
+        else 0.0
+        for line in link_lines
     )
-    c_n0 = next(float(v) for label, v, _ in link_lines if label == "C/N0")
+    c_n0 = next(float(line.value) for line in link_lines if line.label == "C/N0")
     assert total == pytest.approx(c_n0, abs=1e-9)
     # The rendered table is the same data.
     table = str(m)
     assert "+ EIRP" in table
     assert "= Link margin" in table
+
+
+def test_budget_lines_carry_their_reference_unit():
+    budget = link_budget(make_tx(), make_rx(), link_type="downlink")
+    units = {line.label: line.unit for line in budget.budget_lines()}
+    # One Decibel type carries all of these, so the report has to say which.
+    assert units["EIRP"] == "dBW"
+    assert units["G/T"] == "dB/K"
+    assert units["C/N0"] == "dBHz"
+    assert units["Boltzmann constant"] == "dB(Hz·K/W)"
+    assert units["Free-space path loss"] == "dB"
+    # The units multiply out to the C/N0 unit: W · 1/K · K·Hz/W = Hz.
+    table = str(budget)
+    assert "dBW" in table
+    assert "dB/K" in table
+    assert "dBHz" in table
+
+
+def test_budget_line_repr_and_str():
+    budget = link_budget(make_tx(), make_rx(), link_type="downlink")
+    line = budget.budget_lines()[0]
+    assert line.label == "EIRP"
+    assert isinstance(line.value, lox.Decibel)
+    assert line.kind == "gain"
+    assert repr(line).startswith('BudgetLine(label="EIRP", value=Decibel(')
+    assert str(line).startswith("EIRP ")
+    assert str(line).endswith(" dBW")
 
 
 def test_combine_carrier_to_noise():

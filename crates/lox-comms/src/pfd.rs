@@ -12,6 +12,13 @@ use thiserror::Error;
 /// Computes the power flux density in dBW/m²/ref_bw.
 ///
 /// PFD = 10·log₁₀(EIRP_linear / (4π·d²) · (ref_bw / occupied_bw))
+///
+/// # Units
+///
+/// `eirp` is in dBW and the result is in dBW/m² per `reference_bw`. Both are
+/// plain [`Decibel`] values, so the reference bandwidth is not carried with
+/// the result: a PFD may only be compared against a [`PfdMask`] built for the
+/// same `reference_bw`.
 pub fn power_flux_density(
     eirp: Decibel,
     distance: Distance,
@@ -26,6 +33,9 @@ pub fn power_flux_density(
 }
 
 /// A piecewise-linear PFD mask over elevation in dBW/m²/ref_bw.
+///
+/// The reference bandwidth is the caller's to track: nothing here records it,
+/// so a mask is only meaningful against a PFD computed for the same one.
 ///
 /// ITU Radio Regulations Article 21 specifies PFD limits as piecewise-linear
 /// functions of the arrival angle, with band-dependent breakpoints and slopes.
@@ -90,6 +100,9 @@ impl PfdMask {
 
     /// The ITU RR Article 21.16 mask shape for a given low-elevation limit.
     ///
+    /// `start` is in dBW/m² per the reference bandwidth the mask will be
+    /// compared against; Article 21.16 specifies 4 kHz.
+    ///
     /// - θ < 5°: `start`
     /// - 5° ≤ θ < 25°: `start + 0.5 · (θ − 5)`
     /// - θ ≥ 25°: `start + 10 dB`
@@ -101,7 +114,8 @@ impl PfdMask {
         .expect("two ascending breakpoints are always valid")
     }
 
-    /// Returns the mask value at the given elevation angle.
+    /// Returns the mask value at the given elevation angle, in dBW/m² per
+    /// the reference bandwidth the mask was built for.
     pub fn value_at(&self, elevation: Angle) -> Decibel {
         let el = elevation.to_radians();
         let (first, last) = (self.nodes[0], self.nodes[self.nodes.len() - 1]);
@@ -136,7 +150,7 @@ pub enum PfdMaskError {
     #[error("PFD mask requires at least 2 nodes, got {0}")]
     TooFewNodes(usize),
     /// A breakpoint or mask value is not finite.
-    #[error("PFD mask node ({} deg, {} dB) must be finite", .0.to_degrees(), .1.as_f64())]
+    #[error("PFD mask node ({} deg, {} dBW/m²) must be finite", .0.to_degrees(), .1.as_f64())]
     NonFiniteNode(Angle, Decibel),
     /// Breakpoint elevations must be strictly ascending.
     #[error(

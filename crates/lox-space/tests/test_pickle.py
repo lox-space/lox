@@ -16,6 +16,13 @@ import pytest
         lox.ElevationMask.fixed(0.0 * lox.rad),
         lox.TimeScale("TAI"),
         lox.Time("TAI", 2000, 1, 1),
+        lox.TimeDelta(1.5),
+        lox.TimeDelta(1, 1),
+        lox.minutes,
+        1024 * lox.km,
+        26.63 * lox.dB,
+        lox.km,
+        lox.GravitationalParameter(3.986e14),
     ],
 )
 def test_pickle(obj):

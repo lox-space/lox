@@ -36,15 +36,7 @@ use pyo3::types::{PyList, PyString, PyType};
 use sgp4::{Classification, Elements};
 use std::f64::consts::PI;
 
-/// Formats an f64 as a valid Python float literal (always includes a decimal point).
-fn repr_f64(v: f64) -> String {
-    let s = v.to_string();
-    if v.is_finite() && !s.contains('.') {
-        format!("{s}.0")
-    } else {
-        s
-    }
-}
+use crate::units::python::repr_f64;
 
 struct PyTrajectoryTransformationError(TrajectoryTransformationError);
 
