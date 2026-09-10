@@ -89,6 +89,11 @@ slant_range / lox.m         # 909424.94
 |----------|-------|
 | `dB` | 1 dB |
 
+Durations use the same machinery but live with the time API: `lox.seconds`,
+`lox.minutes`, `lox.hours` and `lox.days` are `TimeDeltaUnit` constants, and
+`TimeDelta` compares, hashes, divides and formats just like the quantities
+below. See [Time & Dates](time.md#durations).
+
 ## Creating quantities
 
 Multiply a number by a unit constant, or use a `from_*` constructor — the two are

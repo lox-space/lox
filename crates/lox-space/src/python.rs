@@ -145,10 +145,7 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // time
     m.add_class::<PyTime>()?;
     m.add_class::<PyTimeDelta>()?;
-    m.add("seconds", PyTimeDelta::new(1.0)?)?;
-    m.add("minutes", PyTimeDelta::new(60.0)?)?;
-    m.add("hours", PyTimeDelta::new(3600.0)?)?;
-    m.add("days", PyTimeDelta::new(86400.0)?)?;
+    crate::time::python::deltas::PyTimeDeltaUnit::register(m)?;
     m.add_class::<PyTimeScale>()?;
     m.add_class::<PyTimeSeries>()?;
     m.add_class::<PyUtc>()?;

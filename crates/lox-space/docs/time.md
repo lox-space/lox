@@ -45,6 +45,36 @@ utc = lox.UTC(2024, 6, 15, 12, 30, 45.5)
 t_tai = utc.to_scale("TAI")
 ```
 
+## Durations
+
+`lox.seconds`, `lox.minutes`, `lox.hours` and `lox.days` are `TimeDeltaUnit`
+constants, and multiplying one by a number gives a `TimeDelta`. Durations
+behave like the [physical quantities](units.md): they compare, sort, hash and
+format, `float()` gives base SI seconds, and formatting gives the display unit
+with its name.
+
+```python
+dt = 90 * lox.minutes
+
+float(dt)              # 5400.0   <- seconds
+f"{dt:.1f}"            # '5400.0 seconds'
+f"{dt:.1f minutes}"    # '90.0 minutes'
+dt / lox.hours         # 1.5
+dt / 2                 # TimeDelta(2700)
+dt > 1 * lox.hours     # True
+```
+
+A duration divided by another duration is a plain ratio, and multiplying two
+durations is a `TypeError` — lox has no type for seconds squared:
+
+```python
+(2 * lox.hours) / (30 * lox.minutes)   # 4.0
+```
+
+`TimeDelta` keeps whole seconds and an attosecond remainder rather than one
+float, so it is exact well past what `float(dt)` can show, and hashing keeps
+attosecond-distinct durations distinct.
+
 ---
 
 ::: lox_space.Time
@@ -60,6 +90,12 @@ t_tai = utc.to_scale("TAI")
 ---
 
 ::: lox_space.TimeDelta
+    options:
+      show_source: false
+
+---
+
+::: lox_space.TimeDeltaUnit
     options:
       show_source: false
 

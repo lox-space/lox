@@ -3,12 +3,15 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use lox_time::deltas::InvalidFloatSeconds;
+use numpy::PyArray;
+use numpy::ndarray::arr0;
 use pyo3::exceptions::PyValueError;
-use pyo3::types::PyType;
-use pyo3::{Bound, PyErr, PyResult, pyclass, pymethods};
+use pyo3::types::{PyAnyMethods, PyFloat, PyModule, PyModuleMethods, PyType};
+use pyo3::{Bound, Py, PyAny, PyErr, PyResult, Python, intern, pyclass, pymethods, types::PyTuple};
 
 use crate::time::deltas::TimeDelta;
 use crate::time::intervals::TimeDeltaInterval;
+use crate::units::python::{Scalar, format_in_unit, split_unit_token};
 
 /// Represents a duration or time difference.
 ///
@@ -65,15 +68,136 @@ impl PyTimeDelta {
         Self(self.0 - other.0)
     }
 
-    /// Returns the `TimeDelta` scaled by a floating-point factor.
-    pub fn __mul__(&self, other: f64) -> PyResult<Self> {
-        Ok(Self(self.0.try_mul(other).map_err(PyInvalidFloatSeconds)?))
+    /// Returns the `TimeDelta` scaled by a scalar.
+    pub fn __mul__(&self, other: Scalar) -> PyResult<Self> {
+        Ok(Self(
+            self.0.try_mul(other.0).map_err(PyInvalidFloatSeconds)?,
+        ))
     }
 
-    /// Returns the `TimeDelta` scaled by a floating-point factor (right-hand side).
-    pub fn __rmul__(&self, other: f64) -> PyResult<Self> {
-        Ok(Self(self.0.try_mul(other).map_err(PyInvalidFloatSeconds)?))
+    /// Returns the `TimeDelta` scaled by a scalar (right-hand side).
+    pub fn __rmul__(&self, other: Scalar) -> PyResult<Self> {
+        Ok(Self(
+            self.0.try_mul(other.0).map_err(PyInvalidFloatSeconds)?,
+        ))
     }
+
+    /// Returns the magnitude of the `TimeDelta`.
+    pub fn __abs__(&self) -> Self {
+        if self.0 < TimeDelta::default() {
+            Self(-self.0)
+        } else {
+            Self(self.0)
+        }
+    }
+
+    /// Divides by a scalar, or by another `TimeDelta` or a time unit for a
+    /// plain number.
+    pub fn __truediv__<'py>(
+        &self,
+        py: Python<'py>,
+        other: &Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        use pyo3::IntoPyObject;
+        if let Ok(delta) = other.extract::<PyTimeDelta>() {
+            let ratio = self.to_decimal_seconds() / delta.to_decimal_seconds();
+            return Ok(ratio.into_pyobject(py)?.into_any());
+        }
+        if let Ok(unit) = other.extract::<PyTimeDeltaUnit>() {
+            let converted = self.to_decimal_seconds() / unit.scale;
+            return Ok(converted.into_pyobject(py)?.into_any());
+        }
+        match other.extract::<Scalar>() {
+            Ok(scalar) => {
+                let scaled = Self(
+                    self.0
+                        .try_mul(1.0 / scalar.0)
+                        .map_err(PyInvalidFloatSeconds)?,
+                );
+                Ok(scaled.into_pyobject(py)?.into_any())
+            }
+            Err(_) => Ok(py.NotImplemented().into_bound(py)),
+        }
+    }
+
+    /// Rounds the duration to the given number of decimal seconds.
+    #[pyo3(signature = (ndigits=None))]
+    pub fn __round__(&self, py: Python<'_>, ndigits: Option<i32>) -> PyResult<Self> {
+        let rounded: f64 = PyFloat::new(py, self.to_decimal_seconds())
+            .call_method1(intern!(py, "__round__"), (ndigits,))?
+            .extract()?;
+        Self::new(rounded)
+    }
+
+    /// Returns `true` if this `TimeDelta` is shorter than `other`.
+    pub fn __lt__(&self, other: PyTimeDelta) -> bool {
+        self.0 < other.0
+    }
+
+    /// Returns `true` if this `TimeDelta` is shorter than or equal to `other`.
+    pub fn __le__(&self, other: PyTimeDelta) -> bool {
+        self.0 <= other.0
+    }
+
+    /// Returns `true` if this `TimeDelta` is longer than `other`.
+    pub fn __gt__(&self, other: PyTimeDelta) -> bool {
+        self.0 > other.0
+    }
+
+    /// Returns `true` if this `TimeDelta` is longer than or equal to `other`.
+    pub fn __ge__(&self, other: PyTimeDelta) -> bool {
+        self.0 >= other.0
+    }
+
+    /// Hashes the exact duration, consistently with `__eq__`.
+    ///
+    /// Hashing the two integer components rather than the decimal seconds
+    /// keeps attosecond-distinct deltas distinct.
+    pub fn __hash__(&self, py: Python<'_>) -> PyResult<isize> {
+        PyTuple::new(py, [self.0.seconds(), self.0.attoseconds()])?.hash()
+    }
+
+    /// Renders the duration using a Python format spec.
+    ///
+    /// The default unit is seconds; a trailing unit name selects another, as
+    /// in `f"{duration:.1f minutes}"`.
+    pub fn __format__(&self, py: Python<'_>, spec: &str) -> PyResult<String> {
+        let (spec, unit) = split_unit_token(spec);
+        match unit {
+            None => format_in_unit(py, self.to_decimal_seconds(), "seconds", spec),
+            Some(symbol) => {
+                let unit = PyTimeDeltaUnit::lookup(symbol)
+                    .ok_or_else(|| PyTimeDeltaUnit::unknown(symbol))?;
+                format_in_unit(
+                    py,
+                    self.to_decimal_seconds() / unit.scale,
+                    unit.symbol,
+                    spec,
+                )
+            }
+        }
+    }
+
+    /// Returns the duration in seconds as a 0-d float64 NumPy array.
+    #[pyo3(signature = (dtype=None, copy=None))]
+    pub fn __array__<'py>(
+        &self,
+        py: Python<'py>,
+        dtype: Option<&Bound<'py, PyAny>>,
+        copy: Option<bool>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let _ = copy;
+        let array = PyArray::from_owned_array(py, arr0(self.to_decimal_seconds())).into_any();
+        match dtype {
+            None => Ok(array),
+            Some(dtype) => array.call_method1(intern!(py, "astype"), (dtype,)),
+        }
+    }
+
+    /// Opts out of NumPy's ufunc machinery so scalar arithmetic keeps the type.
+    #[allow(non_upper_case_globals)]
+    #[classattr]
+    const __array_ufunc__: Option<Py<PyAny>> = None;
 
     /// Returns `true` if two `TimeDelta` values are equal.
     pub fn __eq__(&self, other: PyTimeDelta) -> bool {
@@ -218,5 +342,105 @@ pub(crate) struct PyInvalidFloatSeconds(pub InvalidFloatSeconds);
 impl From<PyInvalidFloatSeconds> for PyErr {
     fn from(err: PyInvalidFloatSeconds) -> Self {
         PyValueError::new_err(err.0.to_string())
+    }
+}
+
+// --- TimeDeltaUnit ---
+
+/// A unit a `TimeDelta` can be expressed in.
+///
+/// Multiplying by a number produces a `TimeDelta`, and dividing a `TimeDelta`
+/// by one converts it: `5 * lox.minutes` is a `TimeDelta`, and
+/// `duration / lox.minutes` is that duration in minutes.
+#[pyclass(name = "TimeDeltaUnit", module = "lox_space", frozen, from_py_object)]
+#[derive(Debug, Clone, Copy)]
+pub struct PyTimeDeltaUnit {
+    symbol: &'static str,
+    scale: f64,
+}
+
+impl PyTimeDeltaUnit {
+    /// The units a duration can be expressed in, as `(name, seconds per unit)`.
+    const UNITS: &'static [(&'static str, f64)] = &[
+        ("seconds", 1.0),
+        ("minutes", 60.0),
+        ("hours", 3600.0),
+        ("days", 86400.0),
+    ];
+
+    pub(crate) fn lookup(symbol: &str) -> Option<Self> {
+        Self::UNITS
+            .iter()
+            .find(|(name, _)| *name == symbol)
+            .map(|&(symbol, scale)| Self { symbol, scale })
+    }
+
+    pub(crate) fn unknown(symbol: &str) -> PyErr {
+        let known: Vec<&str> = Self::UNITS.iter().map(|(name, _)| *name).collect();
+        PyValueError::new_err(format!(
+            "'{}' is not a TimeDeltaUnit; expected one of {}",
+            symbol,
+            known.join(", ")
+        ))
+    }
+
+    /// Registers the class and its unit constants on the module.
+    pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        m.add_class::<PyTimeDeltaUnit>()?;
+        for &(symbol, scale) in Self::UNITS {
+            m.add(symbol, Self { symbol, scale })?;
+        }
+        Ok(())
+    }
+}
+
+#[pymethods]
+impl PyTimeDeltaUnit {
+    #[new]
+    /// Looks up a `TimeDeltaUnit` by name, e.g. `"minutes"`.
+    fn new(symbol: &str) -> PyResult<Self> {
+        Self::lookup(symbol).ok_or_else(|| Self::unknown(symbol))
+    }
+
+    /// The name this unit is exported under, e.g. `"minutes"`.
+    #[getter]
+    fn symbol(&self) -> &'static str {
+        self.symbol
+    }
+
+    /// The number of seconds in one of this unit.
+    #[getter]
+    fn scale(&self) -> f64 {
+        self.scale
+    }
+
+    /// Scales this unit into a `TimeDelta`.
+    fn __mul__(&self, other: Scalar) -> PyResult<PyTimeDelta> {
+        PyTimeDelta::new(other.0 * self.scale)
+    }
+
+    /// Scales this unit into a `TimeDelta` (right-hand side).
+    fn __rmul__(&self, other: Scalar) -> PyResult<PyTimeDelta> {
+        PyTimeDelta::new(other.0 * self.scale)
+    }
+
+    fn __eq__(&self, other: &PyTimeDeltaUnit) -> bool {
+        self.symbol == other.symbol
+    }
+
+    fn __hash__(&self, py: Python<'_>) -> PyResult<isize> {
+        pyo3::types::PyString::new(py, self.symbol).hash()
+    }
+
+    fn __getnewargs__(&self) -> (&'static str,) {
+        (self.symbol,)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("TimeDeltaUnit(\"{}\")", self.symbol)
+    }
+
+    fn __str__(&self) -> &'static str {
+        self.symbol
     }
 }

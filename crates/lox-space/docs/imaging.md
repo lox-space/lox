@@ -54,7 +54,7 @@ access windows for a given spacecraft–AOI pair:
 results = analysis.compute()
 for window in results.windows("S2A", "rome"):
     iv = window.interval()
-    print(f"{iv.start()} → {iv.end()}  ({float(iv.duration()):.0f}s)")
+    print(f"{iv.start()} → {iv.end()}  ({iv.duration():.0f})")
 ```
 
 ### Pass direction

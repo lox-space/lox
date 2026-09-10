@@ -266,3 +266,132 @@ def test_time_comparison_different_scale_raises():
         _ = t_tai < t_tt
     with pytest.raises(ValueError, match="different time scales"):
         _ = t_tt > t_tai
+
+
+# --- TimeDelta: ordering, hashing and dimensional safety ---
+
+
+def test_time_delta_ordering():
+    short, long = 90 * lox.minutes, 2 * lox.hours
+    assert short < long
+    assert short <= long
+    assert long > short
+    assert long >= short
+    assert short <= 90 * lox.minutes
+    assert sorted([long, short]) == [short, long]
+    assert min(long, short) == short
+
+
+def test_time_delta_ordering_across_types_raises():
+    with pytest.raises(TypeError):
+        _ = (1 * lox.hours) < (1 * lox.km)
+
+
+def test_time_delta_hashable():
+    assert hash(1 * lox.hours) == hash(60 * lox.minutes)
+    assert len({1 * lox.hours, 60 * lox.minutes, 2 * lox.hours}) == 2
+    assert {1 * lox.days: "a day"}[86400 * lox.seconds] == "a day"
+
+
+def test_time_delta_hash_keeps_attoseconds_distinct():
+    # Hashing the decimal seconds would collide these.
+    assert lox.TimeDelta.from_attoseconds(1) != lox.TimeDelta.from_attoseconds(2)
+    assert len(
+        {lox.TimeDelta.from_attoseconds(1), lox.TimeDelta.from_attoseconds(2)}
+    ) == 2
+
+
+def test_time_delta_times_time_delta_raises():
+    with pytest.raises(TypeError):
+        _ = (1 * lox.hours) * (1 * lox.hours)
+    with pytest.raises(TypeError):
+        _ = lox.seconds * lox.seconds
+    with pytest.raises(TypeError):
+        _ = lox.seconds + lox.seconds
+    with pytest.raises(TypeError):
+        float(lox.minutes)
+
+
+def test_time_delta_division():
+    two_hours = 2 * lox.hours
+    assert two_hours / 2 == 1 * lox.hours
+    assert two_hours / (30 * lox.minutes) == pytest.approx(4.0)
+    assert two_hours / lox.minutes == pytest.approx(120.0)
+    assert isinstance(two_hours / lox.minutes, float)
+
+
+def test_time_delta_round_and_abs():
+    assert round(lox.TimeDelta(1.567), 2) == lox.TimeDelta(1.57)
+    assert abs(-(5 * lox.minutes)) == 5 * lox.minutes
+    assert abs(5 * lox.minutes) == 5 * lox.minutes
+
+
+def test_time_delta_no_int_conversion():
+    with pytest.raises(TypeError):
+        int(1 * lox.hours)
+
+
+@pytest.mark.parametrize(
+    "spec, expected",
+    [
+        ("", "7200 seconds"),
+        (".1f", "7200.0 seconds"),
+        (".2f minutes", "120.00 minutes"),
+        (".3f days", "0.083 days"),
+        (">16.1f", "  7200.0 seconds"),
+    ],
+)
+def test_time_delta_format(spec, expected):
+    assert format(2 * lox.hours, spec) == expected
+
+
+def test_time_delta_format_unknown_unit_raises():
+    with pytest.raises(ValueError, match="not a TimeDeltaUnit"):
+        format(2 * lox.hours, ".1f fortnights")
+
+
+def test_time_delta_numpy():
+    np = pytest.importorskip("numpy")
+    array = np.array([1 * lox.hours, 2 * lox.hours])
+    assert array.dtype == np.float64
+    assert array.tolist() == [3600.0, 7200.0]
+    assert isinstance(np.float64(2) * (1 * lox.hours), lox.TimeDelta)
+
+
+# --- TimeDeltaUnit ---
+
+
+TIME_UNITS = [
+    (lox.seconds, "seconds", 1.0),
+    (lox.minutes, "minutes", 60.0),
+    (lox.hours, "hours", 3600.0),
+    (lox.days, "days", 86400.0),
+]
+
+
+@pytest.mark.parametrize("unit, symbol, scale", TIME_UNITS)
+def test_time_delta_unit_constants(unit, symbol, scale):
+    assert isinstance(unit, lox.TimeDeltaUnit)
+    assert not isinstance(unit, lox.TimeDelta)
+    assert unit.symbol == symbol
+    assert unit.scale == scale
+    assert str(unit) == symbol
+    assert repr(unit) == f'TimeDeltaUnit("{symbol}")'
+    assert float(2 * unit) == pytest.approx(2 * scale)
+    assert (2 * unit) == (unit * 2)
+
+
+def test_time_delta_unit_lookup_and_pickle():
+    import pickle
+
+    assert lox.TimeDeltaUnit("minutes") == lox.minutes
+    assert lox.minutes != lox.hours
+    assert hash(lox.minutes) == hash(lox.TimeDeltaUnit("minutes"))
+    for unit, *_ in TIME_UNITS:
+        assert pickle.loads(pickle.dumps(unit)) == unit
+        assert eval(repr(unit), {"TimeDeltaUnit": lox.TimeDeltaUnit}) == unit
+
+
+def test_time_delta_unit_unknown_name_raises():
+    with pytest.raises(ValueError, match="not a TimeDeltaUnit"):
+        lox.TimeDeltaUnit("fortnights")

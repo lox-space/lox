@@ -47,7 +47,7 @@ pub(crate) fn repr_f64(v: f64) -> String {
 }
 
 /// Formats `value` with a Python format spec by deferring to `float.__format__`.
-fn format_f64(py: Python<'_>, value: f64, spec: &str) -> PyResult<String> {
+pub(crate) fn format_f64(py: Python<'_>, value: f64, spec: &str) -> PyResult<String> {
     PyFloat::new(py, value)
         .call_method1("__format__", (spec,))?
         .extract()
@@ -118,7 +118,7 @@ fn split_format_spec(spec: &str) -> (String, String) {
 ///
 /// The numeric mini-language never ends in a space followed by a word, so
 /// `".1f m"` unambiguously means "one decimal place, in metres".
-fn split_unit_token(spec: &str) -> (&str, Option<&str>) {
+pub(crate) fn split_unit_token(spec: &str) -> (&str, Option<&str>) {
     match spec.rsplit_once(' ') {
         // The token must start with a letter, and something must precede the
         // space. That rules out the two places a space is already meaningful:
@@ -133,7 +133,12 @@ fn split_unit_token(spec: &str) -> (&str, Option<&str>) {
 }
 
 /// Renders `value` followed by `suffix`, honouring a Python format spec.
-fn format_in_unit(py: Python<'_>, value: f64, suffix: &str, spec: &str) -> PyResult<String> {
+pub(crate) fn format_in_unit(
+    py: Python<'_>,
+    value: f64,
+    suffix: &str,
+    spec: &str,
+) -> PyResult<String> {
     if spec.is_empty() {
         return Ok(format!(
             "{} {}",

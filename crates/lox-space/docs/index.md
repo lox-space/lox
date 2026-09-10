@@ -52,7 +52,7 @@ future_state = propagator.propagate(t + lox.TimeDelta.from_hours(1.5))
 
 | Section | Description |
 |---------|-------------|
-| [Time & Dates](time.md) | `Time`, `UTC`, `TimeDelta`, `TimeScale`, `TimeSeries` |
+| [Time & Dates](time.md) | `Time`, `UTC`, `TimeDelta`, `TimeDeltaUnit`, `TimeScale`, `TimeSeries` |
 | [Celestial Bodies](bodies.md) | `Origin` |
 | [Reference Frames](frames.md) | `Frame`, `SPK` |
 | [Orbital States](states.md) | `Cartesian`, `Keplerian`, `Trajectory` |
