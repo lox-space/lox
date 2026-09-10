@@ -132,7 +132,7 @@ link = lox.LinkBudget(
     carrier=29.0 * lox.GHz,
     range=1000.0 * lox.km,
 )
-print(f"C/N0 = {float(link.c_n0):.2f} dB·Hz")
+print(f"C/N0 = {float(link.c_n0):.2f} dBHz")
 ```
 
 Terminals attach to assets for scenario analysis as named collections via
@@ -156,7 +156,7 @@ link = lox.LinkBudget(
     carrier=29.0 * lox.GHz,
     range=1000.0 * lox.km,
 )
-print(f"C/N0 = {float(link.c_n0):.2f} dB·Hz")
+print(f"C/N0 = {float(link.c_n0):.2f} dBHz")
 ```
 
 For lumped links, `link.carrier_rx_power` and `link.noise_power(bandwidth)`
@@ -174,7 +174,7 @@ derives from the channel; the design margin is an input:
 channel = lox.Channel(symbol_rate=5 * lox.MHz)
 modcod = lox.ModCod("QPSK 1/2", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
 modulated = link.modulate(channel, modcod, design_margin=3.0 * lox.dB)
-print(f"Closes: {modulated.closes()}, margin = {float(modulated.margin):.2f} dB")
+print(f"Closes: {modulated.closes()}, margin = {modulated.margin:.2f}")
 ```
 
 For standards-based links, use the built-in DVB-S2 table — 28 modes whose
@@ -196,25 +196,34 @@ print(f"{best.modcod.name}: {float(best.information_rate()) / 1e6:.1f} Mbit/s")
 ### Budget Report
 
 Both budget stages render as the line-item table engineers exchange —
-`budget_lines()` returns the data as `(label, value, kind)` tuples and
-`str()` renders it, with gains minus losses reproducing the C/N₀ total
-exactly:
+`budget_lines()` returns the data as `BudgetLine` records and `str()`
+renders it, with gains minus losses reproducing the C/N₀ total exactly:
 
 ```python
 print(modulated)
-# + EIRP                            55.00 dB
+# + EIRP                            55.00 dBW
 # - Free-space path loss           181.70 dB
 # - Rain attenuation                 2.00 dB
-# + G/T                              3.01 dB
+# + G/T                              3.01 dB/K
 # - G/T degradation due to rain      0.99 dB
-# + Boltzmann constant             228.60 dB
-# = C/N0                           101.93 dB
+# + Boltzmann constant             228.60 dB(Hz·K/W)
+# = C/N0                           101.93 dBHz
 # = C/N (occupied bandwidth)        93.64 dB
 # = Es/N0                           34.94 dB
 # = Eb/N0                           34.94 dB
 # - Required Eb/N0 (QPSK 1/2)       10.00 dB
 # - Design margin                    3.00 dB
 # = Link margin                     21.94 dB
+```
+
+Each line carries the unit its value is referenced against, because one
+`Decibel` type stands in for dimensionless dB, dBW, dB/K and dBHz. The
+references multiply out to the total's unit — W · 1/K · K·Hz/W = Hz — so the
+column visibly type-checks:
+
+```python
+for line in modulated.budget_lines():
+    print(f"{line.kind:9} {line.label:30} {float(line.value):>8.2f} {line.unit}")
 ```
 
 For bent-pipe/relay budgets, combine per-hop C/N contributions in the
@@ -297,14 +306,22 @@ link = lox.LinkBudget(
 )
 modulated = link.modulate(channel, modcod, design_margin=3.0 * lox.dB)
 
+# Formatting a quantity appends its own unit, so the dimensionless dB
+# figures need no suffix of their own.
+print(f"FSPL:        {link.fspl:.2f}")
+print(f"Eb/N0:       {modulated.eb_n0:.2f}")
+print(f"Link margin: {modulated.margin:.2f}")
+
+# EIRP, G/T and C/N0 are `Decibel` values referenced against something other
+# than a bare ratio, which `Decibel` itself does not track — state the unit,
+# or read it off `budget_lines()`.
 print(f"EIRP:        {float(link.eirp):.2f} dBW")
-print(f"FSPL:        {float(link.fspl):.2f} dB")
 print(f"G/T:         {float(link.gt):.2f} dB/K (clear sky)")
 print(f"G/T:         {float(link.gt_degraded):.2f} dB/K (rain)")
-print(f"C/N0:        {float(link.c_n0):.2f} dB·Hz")
-print(f"Eb/N0:       {float(modulated.eb_n0):.2f} dB")
-print(f"Data rate:   {float(modulated.information_rate()) / 1e6:.1f} Mbit/s")
-print(f"Link margin: {float(modulated.margin):.2f} dB")
+print(f"C/N0:        {float(link.c_n0):.2f} dBHz")
+# A symbol/information rate is a Frequency, but its conventional unit is
+# Mbit/s rather than MHz, so name that one too.
+print(f"Data rate:   {modulated.information_rate().to_megahertz():.1f} Mbit/s")
 
 # Regulatory check: PFD on the ground vs. the RR Art. 21.16 mask
 pfd = lox.power_flux_density(link.eirp, slant_range, channel.bandwidth(), 4.0 * lox.kHz)
@@ -344,6 +361,9 @@ link = lox.LinkBudget(
 
 ### Working with Decibels
 
+`Decibel` is documented with the other quantity types on the
+[Units](units.md) page.
+
 ```python
 import lox_space as lox
 
@@ -356,7 +376,7 @@ total = gain + 3.0 * lox.dB   # 33.0 dB
 diff = gain - 10.0 * lox.dB   # 20.0 dB
 
 # Convert back
-print(f"{float(gain)} dB = {gain.to_linear():.0f} linear")
+print(f"{gain} = {gain.to_linear():.0f} linear")
 ```
 
 ### Free-Space Path Loss
@@ -366,7 +386,7 @@ import lox_space as lox
 
 # FSPL at 1000 km range and 29 GHz
 loss = lox.fspl(distance=1000 * lox.km, frequency=29 * lox.GHz)
-print(f"FSPL: {float(loss):.1f} dB")
+print(f"FSPL: {loss:.1f}")
 ```
 
 ### Propagation Losses
@@ -384,8 +404,8 @@ losses = lox.PropagationLosses(
     gaseous=0.3 * lox.dB,
     other=[("Radome wetting", 0.5 * lox.dB, True)],
 )
-print(f"Total: {float(losses.total()):.1f} dB")
-print(f"Absorptive: {float(losses.absorptive()):.1f} dB")
+print(f"Total: {losses.total():.1f}")
+print(f"Absorptive: {losses.absorptive():.1f}")
 
 # Pass to LinkBudget via the losses parameter
 link = lox.LinkBudget(
@@ -399,7 +419,7 @@ link = lox.LinkBudget(
 
 ---
 
-::: lox_space.Decibel
+::: lox_space.BudgetLine
     options:
       show_source: false
 

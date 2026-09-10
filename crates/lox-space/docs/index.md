@@ -60,10 +60,10 @@ future_state = propagator.propagate(t + lox.TimeDelta.from_hours(1.5))
 | [Ground Stations](ground.md) | `EllipsoidLocation`, `Ellipsoid`, `ElevationMask`, `Observables`, `Pass` |
 | [Events & Visibility](events.md) | `Event`, `Interval`, `intersect_intervals`, `union_intervals`, `complement_intervals`, `GroundStation`, `Spacecraft`, `Scenario`, `Ensemble`, `VisibilityAnalysis`, `VisibilityResults`, `PowerBudgetAnalysis`, `PowerBudgetResults` |
 | [Imaging](imaging.md) | `Aoi`, `OpticalPayload`, `OpticalAccessAnalysis`, `SarPayload`, `LookSide`, `SarAccessAnalysis`, `AccessResults` |
-| [Communications](comms.md) | `TxChain`, `RxChain`, `AmplifierTransmitter`, `NoiseTempReceiver`, `CascadeReceiver`, `Channel`, `ModCod`, `LinkBudget`, `PropagationLosses`, `fspl`, `freq_overlap` |
+| [Communications](comms.md) | `TxChain`, `RxChain`, `AmplifierTransmitter`, `NoiseTempReceiver`, `CascadeReceiver`, `Channel`, `ModCod`, `LinkBudget`, `BudgetLine`, `PropagationLosses`, `fspl`, `freq_overlap` |
 | [Constellations](constellations.md) | `Constellation`, `ConstellationSatellite` |
 | [Data Providers](data.md) | `EOPProvider`, `Series` |
-| [Units](units.md) | `Angle`, `Distance`, `Frequency`, `Velocity` |
+| [Units](units.md) | `Angle`, `AngularRate`, `Decibel`, `Distance`, `Frequency`, `GravitationalParameter`, `Power`, `Pressure`, `Temperature`, `Velocity`, and their `*Unit` constants |
 
 ## Related Resources
 
