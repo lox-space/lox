@@ -1,10 +1,12 @@
-use std::{collections::HashMap, marker::PhantomData};
+use std::{collections::HashMap, marker::PhantomData, ops::Deref};
 
 use lox_bodies::CoordinateOrigin;
 use lox_frames::ReferenceFrame;
 use lox_orbits::orbits::Ensemble;
 use lox_time::intervals::TimeInterval;
-use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{
+    FromParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
+};
 
 use crate::{
     assets::{AssetId, GroundStation, Scenario, Spacecraft},
@@ -27,14 +29,61 @@ impl AssetIdExt for GroundStation {
     }
 }
 
+#[derive(Debug, Eq, PartialEq, Clone)]
+struct IntervalMap(HashMap<(AssetId, AssetId), Vec<TimeInterval>>);
+
+impl Deref for IntervalMap {
+    type Target = HashMap<(AssetId, AssetId), Vec<TimeInterval>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl FromIterator<(AssetId, AssetId, TimeInterval)> for IntervalMap {
+    fn from_iter<T: IntoIterator<Item = (AssetId, AssetId, TimeInterval)>>(iter: T) -> Self {
+        IntervalMap(
+            iter.into_iter()
+                .fold(HashMap::new(), |mut map, (t1, t2, interval)| {
+                    let key = (t1, t2);
+                    map.entry(key).or_insert_with(Vec::new).push(interval);
+                    map
+                }),
+        )
+    }
+}
+
+impl FromParallelIterator<(AssetId, AssetId, TimeInterval)> for IntervalMap {
+    fn from_par_iter<I>(par_iter: I) -> Self
+    where
+        I: IntoParallelIterator<Item = (AssetId, AssetId, TimeInterval)>,
+    {
+        IntervalMap(
+            par_iter
+                .into_par_iter()
+                .fold(HashMap::new, |mut map, (t1, t2, interval)| {
+                    let key = (t1, t2);
+                    map.entry(key).or_insert_with(Vec::new).push(interval);
+
+                    map
+                })
+                .reduce(HashMap::new, |mut a, b| {
+                    for (k, v) in b {
+                        a.entry(k).or_insert_with(Vec::new).extend(v);
+                    }
+                    a
+                }),
+        )
+    }
+}
+
 struct Analysis<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     scenario: &'a Scenario<O, R>,
-    ensemble: &'a Ensemble<AssetId, O, R>,
 }
 
 impl<'a, O: CoordinateOrigin, R: ReferenceFrame> Analysis<'a, O, R> {
-    fn new(scenario: &'a Scenario<O, R>, ensemble: &'a Ensemble<AssetId, O, R>) -> Self {
-        Self { scenario, ensemble }
+    fn new(scenario: &'a Scenario<O, R>) -> Self {
+        Self { scenario }
     }
 }
 
@@ -113,35 +162,20 @@ where
         T1: 'a + Send + Sync,
         T2: 'a + Send + Sync;
 
-    fn collect(self) -> HashMap<(AssetId, AssetId), Vec<TimeInterval>> {
-        let mut map = HashMap::new();
-
-        for (t1, t2, interval) in self.iter() {
-            let key = (t1.asset_id(), t2.asset_id());
-            map.entry(key).or_insert_with(Vec::new).push(interval);
-        }
-
-        map
+    fn collect(self) -> IntervalMap {
+        self.iter()
+            .map(|(t1, t2, interval)| (t1.asset_id(), t2.asset_id(), interval))
+            .collect()
     }
 
-    fn par_collect(self) -> HashMap<(AssetId, AssetId), Vec<TimeInterval>>
+    fn par_collect(self) -> IntervalMap
     where
         T1: Send + Sync,
         T2: Send + Sync,
     {
         self.par_iter()
-            .fold(HashMap::new, |mut map, (t1, t2, interval)| {
-                let key = (t1.asset_id(), t2.asset_id());
-                map.entry(key).or_insert_with(Vec::new).push(interval);
-
-                map
-            })
-            .reduce(HashMap::new, |mut a, b| {
-                for (k, v) in b {
-                    a.entry(k).or_insert_with(Vec::new).extend(v);
-                }
-                a
-            })
+            .map(|(t1, t2, interval)| (t1.asset_id(), t2.asset_id(), interval))
+            .collect()
     }
 }
 
@@ -291,7 +325,7 @@ mod tests {
         let (scenario, ensemble) =
             make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
 
-        let result = Analysis::new(&scenario, &ensemble)
+        let result = Analysis::new(&scenario)
             .refine(|gs, sc, interval| {
                 let sc_traj = ensemble.get(sc.id()).expect(
                     "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
@@ -307,7 +341,7 @@ mod tests {
             // .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
             .collect();
 
-        let result_par = Analysis::new(&scenario, &ensemble)
+        let result_par = Analysis::new(&scenario)
             .refine(|gs, sc, interval| {
                 let sc_traj = ensemble.get(sc.id()).expect(
                     "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
