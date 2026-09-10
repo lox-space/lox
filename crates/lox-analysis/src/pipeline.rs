@@ -4,6 +4,7 @@ use lox_bodies::CoordinateOrigin;
 use lox_frames::ReferenceFrame;
 use lox_orbits::orbits::Ensemble;
 use lox_time::intervals::TimeInterval;
+use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
     assets::{AssetId, GroundStation, Scenario, Spacecraft},
@@ -54,6 +55,24 @@ where
                 .map(move |sc| (gs, sc, *self.scenario.interval()))
         })
     }
+
+    fn par_iter<'a>(
+        &'a self,
+    ) -> impl ParallelIterator<Item = (&'a GroundStation, &'a Spacecraft, TimeInterval)>
+    where
+        GroundStation: 'a,
+        Spacecraft: 'a,
+    {
+        self.scenario
+            .ground_stations()
+            .par_iter()
+            .flat_map(move |gs| {
+                self.scenario
+                    .spacecraft()
+                    .par_iter()
+                    .map(move |sc| (gs, sc, *self.scenario.interval()))
+            })
+    }
 }
 
 trait Refine<T1, T2>: Sized
@@ -89,6 +108,11 @@ where
         T1: 'a,
         T2: 'a;
 
+    fn par_iter<'a>(&'a self) -> impl ParallelIterator<Item = (&'a T1, &'a T2, TimeInterval)>
+    where
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync;
+
     fn collect(self) -> HashMap<(AssetId, AssetId), Vec<TimeInterval>> {
         let mut map = HashMap::new();
 
@@ -98,6 +122,26 @@ where
         }
 
         map
+    }
+
+    fn par_collect(self) -> HashMap<(AssetId, AssetId), Vec<TimeInterval>>
+    where
+        T1: Send + Sync,
+        T2: Send + Sync,
+    {
+        self.par_iter()
+            .fold(HashMap::new, |mut map, (t1, t2, interval)| {
+                let key = (t1.asset_id(), t2.asset_id());
+                map.entry(key).or_insert_with(Vec::new).push(interval);
+
+                map
+            })
+            .reduce(HashMap::new, |mut a, b| {
+                for (k, v) in b {
+                    a.entry(k).or_insert_with(Vec::new).extend(v);
+                }
+                a
+            })
     }
 }
 
@@ -111,9 +155,9 @@ impl<T1, T2, W, R, I> Refine<T1, T2> for Refined<T1, T2, W, R, I>
 where
     T1: AssetIdExt,
     T2: AssetIdExt,
-    W: Refine<T1, T2>,
-    R: Fn(&T1, &T2, TimeInterval) -> I,
-    I: Iterator<Item = TimeInterval>,
+    W: Refine<T1, T2> + Send + Sync,
+    R: Fn(&T1, &T2, TimeInterval) -> I + Send + Sync,
+    I: Iterator<Item = TimeInterval> + Send + Sync,
 {
     fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a T1, &'a T2, TimeInterval)>
     where
@@ -122,6 +166,20 @@ where
     {
         self.wrapped.iter().flat_map(move |(t1, t2, interval)| {
             (self.refinement)(t1, t2, interval).map(move |sub_interval| (t1, t2, sub_interval))
+        })
+    }
+
+    fn par_iter<'a>(&'a self) -> impl ParallelIterator<Item = (&'a T1, &'a T2, TimeInterval)>
+    where
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync,
+    {
+        self.wrapped.par_iter().flat_map(move |(t1, t2, interval)| {
+            let refined = (self.refinement)(t1, t2, interval).collect::<Vec<_>>();
+
+            refined
+                .into_par_iter()
+                .map(move |sub_interval| (t1, t2, sub_interval))
         })
     }
 }
@@ -136,8 +194,8 @@ impl<T1, T2, W, F> Refine<T1, T2> for Filtered<T1, T2, W, F>
 where
     T1: AssetIdExt,
     T2: AssetIdExt,
-    W: Refine<T1, T2>,
-    F: Fn(&T1, &T2, TimeInterval) -> bool,
+    W: Refine<T1, T2> + Send + Sync,
+    F: Fn(&T1, &T2, TimeInterval) -> bool + Send + Sync,
 {
     fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a T1, &'a T2, TimeInterval)>
     where
@@ -146,6 +204,16 @@ where
     {
         self.wrapped
             .iter()
+            .filter(|(t1, t2, interval)| (self.filter)(t1, t2, *interval))
+    }
+
+    fn par_iter<'a>(&'a self) -> impl ParallelIterator<Item = (&'a T1, &'a T2, TimeInterval)>
+    where
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync,
+    {
+        self.wrapped
+            .par_iter()
             .filter(|(t1, t2, interval)| (self.filter)(t1, t2, *interval))
     }
 }
@@ -236,9 +304,36 @@ mod tests {
                 let windows = elev.intervals(UniformSampler::new(step), interval).unwrap();
                 windows.into_iter()
             })
-            .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
+            // .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
             .collect();
 
+        let result_par = Analysis::new(&scenario, &ensemble)
+            .refine(|gs, sc, interval| {
+                let sc_traj = ensemble.get(sc.id()).expect(
+                    "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
+		);
+                let elev = ElevationDetectFn {
+                    gs: gs.location(),
+                    mask: gs.mask(),
+                    sc: sc_traj,
+                };
+                let windows = elev.intervals(UniformSampler::new(step), interval).unwrap();
+                windows.into_iter()
+            })
+            // .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
+            .par_collect();
+
+        dbg!(
+            result
+                .get(&(gs.id().clone(), sc.id().clone()))
+                .unwrap()
+                .len(),
+            result_par
+                .get(&(gs.id().clone(), sc.id().clone()))
+                .unwrap()
+                .len()
+        );
+        assert_eq!(result, result_par);
         dbg!(result);
         panic!();
     }
