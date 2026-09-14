@@ -18,7 +18,7 @@ use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
 use lox_time::time_scales::{Tdb, TimeScale};
-use std::f64::consts::PI;
+use std::f64::consts::TAU;
 use thiserror::Error;
 
 use lox_core::units::{Angle, AngularRate, Distance, Velocity};
@@ -100,11 +100,20 @@ impl<T: TrySpheroid + TryMeanRadius> LineOfSight for T {}
 /// Errors from constructing a [`HorizonMask`].
 #[derive(Debug, Clone, Error, PartialEq)]
 pub enum HorizonMaskError {
-    /// The azimuth range does not span \[-π, π\].
-    #[error("invalid azimuth range: {}..{}", .0.to_degrees(), .1.to_degrees())]
-    InvalidAzimuthRange(f64, f64),
+    /// The azimuth and elevation vectors have different lengths.
+    #[error("`azimuth` and `elevation` must have the same length but were {0} and {1}")]
+    DimensionMismatch(usize, usize),
+    /// The profile has no data points.
+    #[error("`azimuth` and `elevation` must not be empty")]
+    Empty,
+    /// Two data points share an azimuth but disagree on the horizon elevation.
+    #[error(
+        "conflicting horizon elevations {} and {} at azimuth {}",
+        .1.to_degrees(), .2.to_degrees(), .0.to_degrees()
+    )]
+    ConflictingElevations(f64, f64, f64),
     /// Failed to construct the interpolation series.
-    #[error("series error")]
+    #[error(transparent)]
     SeriesError(#[from] SeriesError),
 }
 
@@ -123,36 +132,87 @@ impl HorizonMask {
     /// Creates a horizon mask from paired azimuth/elevation vectors in
     /// radians.
     ///
+    /// The azimuths are normalised to \[-π, π) and sorted, so any convention
+    /// is accepted: \[0, 2π), \[-π, π\], unsorted data, and profiles that do
+    /// or do not repeat their wrap-around point. The mask is periodic, with
+    /// the segment between the last and the first point spanning the seam at
+    /// ±π.
+    ///
     /// The vectors feed a numeric interpolation series and so are taken as raw
     /// radians; scalar angles elsewhere on this type are [`Angle`]s.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the vectors have different lengths, if they are
+    /// empty, or if two points normalise to the same azimuth but carry
+    /// different elevations.
     pub fn new(azimuth: Vec<f64>, elevation: Vec<f64>) -> Result<Self, HorizonMaskError> {
-        if !azimuth.is_empty() {
-            let az_min = *azimuth.iter().min_by(|a, b| a.total_cmp(b)).unwrap();
-            let az_max = *azimuth.iter().max_by(|a, b| a.total_cmp(b)).unwrap();
-            if az_min != -PI || az_max != PI {
-                return Err(HorizonMaskError::InvalidAzimuthRange(az_min, az_max));
-            }
+        if azimuth.len() != elevation.len() {
+            return Err(HorizonMaskError::DimensionMismatch(
+                azimuth.len(),
+                elevation.len(),
+            ));
         }
-        Ok(Self(Series::try_new(
-            azimuth,
-            elevation,
-            InterpolationType::Linear,
-        )?))
+        if azimuth.is_empty() {
+            return Err(HorizonMaskError::Empty);
+        }
+
+        let mut points: Vec<(f64, f64)> = azimuth
+            .into_iter()
+            .map(|az| {
+                Angle::radians(az)
+                    .normalize_two_pi(Angle::ZERO)
+                    .to_radians()
+            })
+            .zip(elevation)
+            .collect();
+        points.sort_by(|(az1, _), (az2, _)| az1.total_cmp(az2));
+
+        let mut az = Vec::with_capacity(points.len() + 2);
+        let mut el = Vec::with_capacity(points.len() + 2);
+        for (azimuth, elevation) in points {
+            if az.last() == Some(&azimuth) {
+                let previous = *el.last().unwrap();
+                if previous != elevation {
+                    return Err(HorizonMaskError::ConflictingElevations(
+                        azimuth, previous, elevation,
+                    ));
+                }
+                continue;
+            }
+            az.push(azimuth);
+            el.push(elevation);
+        }
+
+        // Repeat the outermost points one period away so that interpolation
+        // across the seam at ±π wraps around.
+        let (first_az, first_el) = (az[0], el[0]);
+        let (last_az, last_el) = (az[az.len() - 1], el[el.len() - 1]);
+        az.insert(0, last_az - TAU);
+        el.insert(0, last_el);
+        az.push(first_az + TAU);
+        el.push(first_el);
+
+        Ok(Self(Series::try_new(az, el, InterpolationType::Linear)?))
     }
 
     /// Returns the horizon elevation at the given azimuth.
     pub fn elevation_at(&self, azimuth: Angle) -> Angle {
+        let azimuth = azimuth.normalize_two_pi(Angle::ZERO);
         Angle::radians(self.0.interpolate(azimuth.to_radians()))
     }
 
-    /// Returns the azimuth grid of the profile in radians.
+    /// Returns the azimuth grid of the profile in radians, normalised to
+    /// \[-π, π) and sorted.
     pub fn azimuth(&self) -> &[f64] {
-        self.0.x()
+        let x = self.0.x();
+        &x[1..x.len() - 1]
     }
 
     /// Returns the horizon elevations of the profile in radians.
     pub fn elevation(&self) -> &[f64] {
-        self.0.y()
+        let y = self.0.y();
+        &y[1..y.len() - 1]
     }
 }
 
@@ -1588,6 +1648,7 @@ mod tests {
     use lox_test_utils::{data_file, read_data_file};
     use lox_time::time_scales::{Tai, TimeScale};
     use lox_time::utc::Utc;
+    use std::f64::consts::PI;
     use std::iter::zip;
     use std::sync::OnceLock;
 
@@ -1689,21 +1750,105 @@ mod tests {
 
     #[test]
     fn test_horizon_mask() {
-        let azimuth = vec![-PI, 0.0, PI];
-        let elevation = vec![-2.0, 0.0, 2.0];
+        let azimuth = vec![-PI, -PI / 2.0, 0.0, PI / 2.0, PI];
+        let elevation = vec![0.4, 0.0, 0.1, 0.4, 0.4];
         let mask = HorizonMask::new(azimuth, elevation).unwrap();
-        assert_eq!(mask.elevation_at(Angle::ZERO), Angle::ZERO);
+        // The repeated wrap-around point is dropped.
+        assert_eq!(mask.azimuth(), [-PI, -PI / 2.0, 0.0, PI / 2.0]);
+        assert_eq!(mask.elevation(), [0.4, 0.0, 0.1, 0.4]);
+        assert_eq!(mask.elevation_at(Angle::ZERO), Angle::radians(0.1));
+        assert_eq!(mask.elevation_at(Angle::PI), Angle::radians(0.4));
+        assert_eq!(mask.elevation_at(-Angle::PI), Angle::radians(0.4));
+        assert_approx_eq!(
+            mask.elevation_at(Angle::radians(-PI / 4.0)).to_radians(),
+            0.05,
+            atol <= 1e-15
+        );
+    }
+
+    /// The same profile expressed in \[0, 2π), unsorted and without a repeated
+    /// wrap-around point, yields an identical mask.
+    #[test]
+    fn test_horizon_mask_normalizes_domain() {
+        let signed = HorizonMask::new(
+            vec![-PI, -PI / 2.0, 0.0, PI / 2.0, PI],
+            vec![0.4, 0.0, 0.1, 0.4, 0.4],
+        )
+        .unwrap();
+        let unsigned = HorizonMask::new(
+            vec![PI / 2.0, 3.0 * PI / 2.0, PI, 0.0],
+            vec![0.4, 0.0, 0.4, 0.1],
+        )
+        .unwrap();
+        assert_eq!(signed, unsigned);
+    }
+
+    /// Azimuths outside \[-π, π\] wrap into the profile on both sides.
+    #[test]
+    fn test_horizon_mask_elevation_at_wraps() {
+        let mask = HorizonMask::new(vec![-PI / 2.0, 0.0, PI / 2.0], vec![0.0, 0.1, 0.4]).unwrap();
+        assert_eq!(
+            mask.elevation_at(Angle::radians(TAU)),
+            mask.elevation_at(Angle::ZERO)
+        );
+        assert_eq!(
+            mask.elevation_at(Angle::radians(-3.0 * PI / 2.0)),
+            mask.elevation_at(Angle::radians(PI / 2.0))
+        );
+    }
+
+    /// A profile that stops short of ±π is interpolated across the seam.
+    #[test]
+    fn test_horizon_mask_interpolates_across_seam() {
+        let mask = HorizonMask::new(vec![-PI / 2.0, 0.0, PI / 2.0], vec![0.0, 0.1, 0.4]).unwrap();
+        // Halfway between the last point (0.4 at π/2) and the first (0.0 at -π/2).
+        assert_approx_eq!(
+            mask.elevation_at(Angle::PI).to_radians(),
+            0.2,
+            atol <= 1e-15
+        );
+        assert_eq!(mask.elevation_at(Angle::PI), mask.elevation_at(-Angle::PI));
+    }
+
+    /// A single point defines a constant horizon.
+    #[test]
+    fn test_horizon_mask_single_point() {
+        let mask = HorizonMask::new(vec![0.0], vec![0.3]).unwrap();
+        assert_eq!(mask.azimuth(), [0.0]);
+        assert_eq!(mask.elevation_at(Angle::ZERO), Angle::radians(0.3));
+        assert_eq!(mask.elevation_at(Angle::PI), Angle::radians(0.3));
     }
 
     #[test]
-    fn test_horizon_mask_invalid_azimuth_range() {
-        let azimuth = vec![-PI, 0.0, PI / 2.0];
-        let elevation = vec![-2.0, 0.0, 2.0];
-        let mask = HorizonMask::new(azimuth, elevation);
+    fn test_horizon_mask_conflicting_elevations() {
+        let mask = HorizonMask::new(vec![-PI, 0.0, PI], vec![0.1, 0.0, 0.2]);
         assert_eq!(
             mask,
-            Err(HorizonMaskError::InvalidAzimuthRange(-PI, PI / 2.0))
-        )
+            Err(HorizonMaskError::ConflictingElevations(-PI, 0.1, 0.2))
+        );
+    }
+
+    #[test]
+    fn test_horizon_mask_dimension_mismatch() {
+        let mask = HorizonMask::new(vec![-PI, 0.0], vec![0.1]);
+        assert_eq!(mask, Err(HorizonMaskError::DimensionMismatch(2, 1)));
+    }
+
+    #[test]
+    fn test_horizon_mask_empty() {
+        assert_eq!(
+            HorizonMask::new(vec![], vec![]),
+            Err(HorizonMaskError::Empty)
+        );
+    }
+
+    #[test]
+    fn test_horizon_mask_non_finite_azimuth() {
+        let mask = HorizonMask::new(vec![0.0, f64::NAN], vec![0.1, 0.2]);
+        assert_eq!(
+            mask,
+            Err(HorizonMaskError::SeriesError(SeriesError::NonMonotonic))
+        );
     }
 
     #[test]
@@ -2532,8 +2677,13 @@ mod tests {
         // eastern sector. Combined with a 10° floor, the horizon dominates in
         // the west and the floor dominates in the east.
         let deg20 = Angle::degrees(20.0).to_radians();
-        let horizon =
-            || HorizonMask::new(vec![-PI, -0.05, 0.0, PI], vec![deg20, deg20, 0.0, 0.0]).unwrap();
+        let horizon = || {
+            HorizonMask::new(
+                vec![-PI, -0.05, 0.0, PI - 0.05],
+                vec![deg20, deg20, 0.0, 0.0],
+            )
+            .unwrap()
+        };
         let floor = Angle::degrees(10.0);
 
         let mask_only = intervals_for_station(

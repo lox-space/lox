@@ -829,8 +829,17 @@ class HorizonMask:
     the maximum of both.
 
     Args:
-        azimuth: Array of azimuth angles in radians spanning [-π, π].
+        azimuth: Array of azimuth angles in radians. The values are normalised
+            to [-π, π) and sorted, so any convention works: [0, 2π), [-π, π],
+            unsorted data, and profiles that do or do not repeat their
+            wrap-around point. The mask is periodic, with the segment between
+            the last and the first point spanning the seam at ±π.
         elevation: Array of horizon elevations in radians.
+
+    Raises:
+        ValueError: If the arrays have different lengths, if they are empty, or
+            if two points normalise to the same azimuth but carry different
+            elevations.
 
     Examples:
         >>> mask = lox.HorizonMask(azimuth, elevation)
@@ -841,7 +850,7 @@ class HorizonMask:
         elevation: np.ndarray,
     ) -> Self: ...
     def azimuth(self) -> list[float]:
-        """Return the azimuth grid in radians."""
+        """Return the azimuth grid in radians, normalised to [-π, π) and sorted."""
         ...
     def elevation(self) -> list[float]:
         """Return the horizon elevations in radians."""

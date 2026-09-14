@@ -607,7 +607,7 @@ class TestAssets:
             latitude=0 * lox.deg,
             altitude=0 * lox.km,
         )
-        az = np.array([-np.pi, -0.1, 0.0, np.pi])
+        az = np.array([-np.pi, -0.1, 0.0, np.pi - 0.1])
         el = np.array([np.radians(20), np.radians(20), 0.0, 0.0])
         gs = lox.GroundStation(
             "test",
@@ -723,14 +723,37 @@ class TestHorizonMask:
         mask = lox.HorizonMask(az, el)
         assert float(mask.elevation_at(0 * lox.rad)) == pytest.approx(np.radians(10))
         assert float(mask.elevation_at(-np.pi * lox.rad)) == pytest.approx(0.0)
-        assert mask.azimuth() == pytest.approx(az.tolist())
-        assert mask.elevation() == pytest.approx(el.tolist())
+        # The repeated wrap-around point is dropped.
+        assert mask.azimuth() == pytest.approx([-np.pi, 0.0])
+        assert mask.elevation() == pytest.approx([0.0, np.radians(10)])
 
-    def test_invalid_azimuth_range(self):
-        az = np.array([-np.pi / 2, 0.0, np.pi])
-        el = np.array([0.0, 0.1, 0.0])
-        with pytest.raises(ValueError, match="azimuth range"):
+    def test_azimuth_domain_is_normalized(self):
+        """Any azimuth convention yields the same mask."""
+        signed = lox.HorizonMask(
+            np.array([-np.pi, 0.0, np.pi]), np.array([0.0, np.radians(10), 0.0])
+        )
+        unsigned = lox.HorizonMask(
+            np.array([0.0, np.pi]), np.array([np.radians(10), 0.0])
+        )
+        assert signed == unsigned
+
+    def test_elevation_at_wraps(self):
+        az = np.array([-np.pi / 2, 0.0, np.pi / 2])
+        el = np.array([0.0, 0.1, 0.4])
+        mask = lox.HorizonMask(az, el)
+        assert float(mask.elevation_at(2 * np.pi * lox.rad)) == pytest.approx(0.1)
+        # The seam at ±π is interpolated across.
+        assert float(mask.elevation_at(np.pi * lox.rad)) == pytest.approx(0.2)
+
+    def test_conflicting_elevations(self):
+        az = np.array([-np.pi, 0.0, np.pi])
+        el = np.array([0.0, 0.1, 0.2])
+        with pytest.raises(ValueError, match="conflicting horizon elevations"):
             lox.HorizonMask(az, el)
+
+    def test_empty(self):
+        with pytest.raises(ValueError, match="must not be empty"):
+            lox.HorizonMask(np.array([]), np.array([]))
 
     def test_equality(self):
         az = np.array([-np.pi, 0.0, np.pi])
