@@ -13,8 +13,15 @@ SPDX-License-Identifier: MPL-2.0
 [![CodSpeed][codspeed-badge]][codspeed-url]
 [![project chat][zulip-badge]][zulip-url]
 
+<!-- cargo-rdme start -->
+
 Lox is an MPLv2-licensed Rust astrodynamics library with first-class Python bindings for
 orbital mechanics, mission analysis, and telecommunications.
+
+`lox-space` is the main entry point for both the Rust and Python APIs, re-exporting all
+functionality from the Lox ecosystem through a unified interface and providing a
+`prelude` of the most commonly used types. Each module mirrors the corresponding
+standalone crate; enable the matching cargo feature to pull it in.
 
 ## Python Quick Start
 
@@ -43,7 +50,7 @@ trajectory = j2.propagate(epoch, end=epoch + 100 * lox.minutes)
 ```rust
 use lox_space::prelude::*;
 
-let epoch = Utc::from_iso("2025-01-01T12:00:00").unwrap().to_time().to_scale(Tdb);
+let epoch = Utc::from_iso("2025-01-01T12:00:00").unwrap().to_time().to_scale(TimeScale::Tdb);
 let provider = EopParser::new().from_path("finals2000A.all.csv").parse().unwrap();
 
 let sso = SsoBuilder::default()
@@ -56,7 +63,7 @@ let sso = SsoBuilder::default()
 
 // Convert to Cartesian state and propagate with J2 perturbations
 let state = sso.to_cartesian();
-let j2 = J2Propagator::new(state);
+let j2 = J2Propagator::try_new(state).unwrap();
 let end = epoch + TimeDelta::from_minutes(100);
 let trajectory = j2.propagate(Interval::new(epoch, end)).unwrap();
 ```
@@ -100,8 +107,10 @@ Lox is pre-1.0. The API may change between releases.
 
 ## Documentation
 
-- Python: https://python.lox.rs
-- Rust: https://docs.rs/lox-space
+- Python: <https://python.lox.rs>
+- Rust: <https://docs.rs/lox-space>
+
+<!-- cargo-rdme end -->
 
 ## Community
 

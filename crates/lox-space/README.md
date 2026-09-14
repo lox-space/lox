@@ -1,4 +1,5 @@
 <!--
+SPDX-FileCopyrightText: 2024 Angus Morrison <github@angus-morrison.com>
 SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
 
 SPDX-License-Identifier: MPL-2.0
@@ -6,11 +7,21 @@ SPDX-License-Identifier: MPL-2.0
 
 # Lox – Oxidized Astrodynamics
 
+[![codecov][codecov-badge]][codecov-url]
+[![Rust][rust-badge]][rust-url]
+[![Python][python-badge]][python-url]
+[![CodSpeed][codspeed-badge]][codspeed-url]
+[![project chat][zulip-badge]][zulip-url]
+
+<!-- cargo-rdme start -->
+
 Lox is an MPLv2-licensed Rust astrodynamics library with first-class Python bindings for
 orbital mechanics, mission analysis, and telecommunications.
 
 `lox-space` is the main entry point for both the Rust and Python APIs, re-exporting all
-functionality from the Lox ecosystem through a unified interface.
+functionality from the Lox ecosystem through a unified interface and providing a
+`prelude` of the most commonly used types. Each module mirrors the corresponding
+standalone crate; enable the matching cargo feature to pull it in.
 
 ## Python Quick Start
 
@@ -39,7 +50,7 @@ trajectory = j2.propagate(epoch, end=epoch + 100 * lox.minutes)
 ```rust
 use lox_space::prelude::*;
 
-let epoch = Utc::from_iso("2025-01-01T12:00:00").unwrap().to_time().to_scale(Tdb);
+let epoch = Utc::from_iso("2025-01-01T12:00:00").unwrap().to_time().to_scale(TimeScale::Tdb);
 let provider = EopParser::new().from_path("finals2000A.all.csv").parse().unwrap();
 
 let sso = SsoBuilder::default()
@@ -52,7 +63,7 @@ let sso = SsoBuilder::default()
 
 // Convert to Cartesian state and propagate with J2 perturbations
 let state = sso.to_cartesian();
-let j2 = J2Propagator::new(state).unwrap();
+let j2 = J2Propagator::try_new(state).unwrap();
 let end = epoch + TimeDelta::from_minutes(100);
 let trajectory = j2.propagate(Interval::new(epoch, end)).unwrap();
 ```
@@ -73,6 +84,13 @@ pip install lox-space
 cargo add lox-space
 ```
 
+Or add to your `Cargo.toml`:
+
+```toml
+[dependencies]
+lox-space = "0.1"
+```
+
 ## Features
 
 - **Orbital Mechanics** — Keplerian elements, state vectors, SSO design, Vallado/J2/SGP4 propagation, TLE parsing
@@ -83,13 +101,26 @@ cargo add lox-space
 - **RF Link Budgets** — Antenna patterns, modulation schemes, path loss
 - **Python Bindings** — Full API with type stubs and NumPy interop
 
-## Documentation
-
-- Python: https://python.lox.rs
-- Rust: https://docs.rs/lox-space
-
 ## Status
 
 Lox is pre-1.0. The API may change between releases.
 
+## Documentation
+
+- Python: <https://python.lox.rs>
+- Rust: <https://docs.rs/lox-space>
+
+<!-- cargo-rdme end -->
+
 For more information, see the [main repository](https://github.com/lox-space/lox).
+
+[codecov-badge]: https://codecov.io/gh/lox-space/lox/graph/badge.svg?token=R1W6HLN2N2
+[codecov-url]: https://codecov.io/gh/lox-space/lox
+[rust-badge]: https://github.com/lox-space/lox/actions/workflows/rust.yml/badge.svg
+[rust-url]: https://github.com/lox-space/lox/actions/workflows/rust.yml
+[python-badge]: https://github.com/lox-space/lox/actions/workflows/python.yml/badge.svg
+[python-url]: https://github.com/lox-space/lox/actions/workflows/python.yml
+[codspeed-badge]: https://img.shields.io/endpoint?url=https://codspeed.io/badge.json
+[codspeed-url]: https://codspeed.io/lox-space/lox
+[zulip-badge]: https://img.shields.io/badge/zulip-join_chat-brightgreen.svg
+[zulip-url]: https://lox-space.zulipchat.com

@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+# The workspace README.md and crates/lox-space/README.md are both generated from
+# the crate documentation in crates/lox-space/src/lib.rs. This configures the
+# crate README; the workspace one is generated with `--readme-path README.md`.
+workspace-project = "lox-space"
+
+[intralinks]
+# Intralink resolution requires a pinned nightly toolchain, so render intra-doc
+# links as plain text in the README instead.
+strip-links = true
