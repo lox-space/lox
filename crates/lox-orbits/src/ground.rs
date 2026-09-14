@@ -240,13 +240,9 @@ impl<R> EllipsoidLocation<R> {
         self.coordinates.rotation_to_topocentric()
     }
 
-    /// Computes topocentric observables from a Cartesian state.
-    ///
-    /// The state must be centred on this location's body and expressed in its
-    /// frame. Neither is enforced by the signature — a mismatch yields silently
-    /// wrong observables rather than an error — so both are asserted in debug
-    /// builds.
-    pub fn observables<O>(&self, state: CartesianOrbit<O, R>) -> Observables
+    /// Asserts, in debug builds, that a state is centred on this location's
+    /// body and expressed in its frame.
+    fn debug_assert_compatible<O>(&self, state: &CartesianOrbit<O, R>)
     where
         O: CoordinateOrigin + Copy,
         R: TryBodyFixed + Copy,
@@ -265,6 +261,38 @@ impl<R> EllipsoidLocation<R> {
             state.reference_frame().abbreviation(),
             self.frame.abbreviation(),
         );
+    }
+
+    /// Returns the slant range to a Cartesian state.
+    ///
+    /// Agrees with the range in [`observables`](Self::observables), which
+    /// resolves the pointing angles and the range rate as well.
+    ///
+    /// The state must be centred on this location's body and expressed in its
+    /// frame. Neither is enforced by the signature — a mismatch yields a
+    /// silently wrong range rather than an error — so both are asserted in
+    /// debug builds.
+    pub fn range_to<O>(&self, state: CartesianOrbit<O, R>) -> Distance
+    where
+        O: CoordinateOrigin + Copy,
+        R: TryBodyFixed + Copy,
+    {
+        self.debug_assert_compatible(&state);
+        Distance::meters((state.position() - self.body_fixed_position()).length())
+    }
+
+    /// Computes topocentric observables from a Cartesian state.
+    ///
+    /// The state must be centred on this location's body and expressed in its
+    /// frame. Neither is enforced by the signature — a mismatch yields silently
+    /// wrong observables rather than an error — so both are asserted in debug
+    /// builds.
+    pub fn observables<O>(&self, state: CartesianOrbit<O, R>) -> Observables
+    where
+        O: CoordinateOrigin + Copy,
+        R: TryBodyFixed + Copy,
+    {
+        self.debug_assert_compatible(&state);
         let rot = self.rotation_to_topocentric();
         let position = rot * (state.position() - self.body_fixed_position());
         let velocity = rot * state.velocity();
@@ -441,6 +469,27 @@ mod tests {
             Frame::Iau(Origin::Earth),
         );
         location.observables(state);
+    }
+
+    #[test]
+    fn test_range_to_agrees_with_observables() {
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
+        let location = EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap();
+        let state = CartesianOrbit::new(
+            Cartesian::from_vecs(
+                DVec3::new(3359927.0, -2398072.0, 5153000.0),
+                DVec3::new(-1000.0, 2000.0, 500.0),
+            ),
+            time!(Tdb, 2012, 7, 1).unwrap().into_dynamic(),
+            Origin::Earth,
+            Frame::Iau(Origin::Earth),
+        );
+
+        assert_approx_eq!(
+            location.range_to(state).to_meters(),
+            location.observables(state).range().to_meters(),
+            rtol <= 1e-14
+        );
     }
 
     #[test]

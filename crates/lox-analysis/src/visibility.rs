@@ -931,6 +931,7 @@ where
 /// This is the primary result type for visibility analysis. Intervals are
 /// cheap to compute; conversion to [`Pass`] (with observables) happens
 /// separately and on demand.
+#[derive(Debug, Clone, Default)]
 pub struct VisibilityResults {
     intervals: IntervalMap,
     pair_types: PairTypeMap,
