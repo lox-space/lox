@@ -820,6 +820,200 @@ class VisibilityResults:
         """Return the total number of visibility intervals across all pairs."""
         ...
 
+class TerminalId:
+    """Identifies one terminal: the asset carrying it and its name on that asset.
+
+    Terminal names are unique only within an asset, so neither half identifies
+    a terminal on its own.
+
+    Args:
+        asset: Identifier of the ground station or spacecraft.
+        name: The terminal's name on that asset.
+    """
+    def __new__(cls, asset: str, name: str) -> Self: ...
+    @property
+    def asset(self) -> str:
+        """Identifier of the asset carrying this terminal."""
+        ...
+    @property
+    def name(self) -> str:
+        """The terminal's name on its asset."""
+        ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+class CarrierPlan:
+    """The carrier, waveform, and coding a link is evaluated against.
+
+    The MODCOD table drives adaptive coding and modulation: each closing window
+    is annotated with the highest-efficiency mode that closes at its peak. The
+    detection MODCOD — by default the most robust entry in the table — defines
+    the window boundaries themselves.
+
+    Args:
+        carrier: Carrier frequency.
+        channel: The waveform the link is evaluated on.
+        modcods: Candidate MODCODs, e.g. ``ModCod.dvb_s2()``.
+        design_margin: Margin applied on top of the MODCOD threshold. Defaults to 0 dB.
+        losses: Propagation losses applied to every sample. Defaults to none.
+        detection_modcod: MODCOD whose margin defines the window boundaries. Must be
+            one of ``modcods``.
+    """
+    def __new__(
+        cls,
+        carrier: Frequency,
+        channel: Channel,
+        modcods: list[ModCod],
+        design_margin: Decibel | None = None,
+        losses: PropagationLosses | None = None,
+        detection_modcod: ModCod | None = None,
+    ) -> Self: ...
+    @property
+    def carrier(self) -> Frequency:
+        """Carrier frequency."""
+        ...
+    @property
+    def channel(self) -> Channel:
+        """The waveform the link is evaluated on."""
+        ...
+    @property
+    def design_margin(self) -> Decibel:
+        """Design margin applied on top of the MODCOD threshold."""
+        ...
+    @property
+    def losses(self) -> PropagationLosses:
+        """Propagation losses applied to every sample."""
+        ...
+    @property
+    def detection_modcod(self) -> ModCod:
+        """MODCOD whose margin defines the window boundaries."""
+        ...
+    @property
+    def modcods(self) -> list[ModCod]:
+        """Candidate MODCODs for adaptive coding and modulation."""
+        ...
+    def __repr__(self) -> str: ...
+
+class LinkWindow:
+    """An interval in which a link closes, with the throughput it supports."""
+    @property
+    def interval(self) -> Interval:
+        """The interval over which the link closes."""
+        ...
+    @property
+    def direction(self) -> str:
+        """Direction of the link: "uplink", "downlink", or "crosslink"."""
+        ...
+    @property
+    def peak_margin(self) -> Decibel:
+        """Highest margin reached within the window, against the detection MODCOD."""
+        ...
+    @property
+    def min_margin(self) -> Decibel:
+        """Lowest margin within the window.
+
+        Zero at a boundary the root finder placed, and positive only where the
+        window was clipped against the start or the end of a visibility
+        interval.
+        """
+        ...
+    @property
+    def peak_modcod(self) -> ModCod | None:
+        """MODCOD adaptive coding and modulation selects at the peak, or None when
+        no entry in the table closes there."""
+        ...
+    @property
+    def peak_information_rate(self) -> Frequency:
+        """Information rate supported at the peak, or zero when no MODCOD closes there."""
+        ...
+    @property
+    def data_volume(self) -> float:
+        """Data volume deliverable over the window in bits, integrating the
+        adaptively selected information rate."""
+        ...
+    def __repr__(self) -> str: ...
+
+class LinkBudgetAnalysis:
+    """Refines visibility windows into the intervals in which links close.
+
+    Pairs every transmit terminal with every receive terminal on the other
+    asset whose band contains the plan's carrier, in both directions, and scans
+    each resulting link inside the visibility windows the pair already has.
+
+    Args:
+        scenario: The scenario whose assets carry the terminals.
+        visibility: Results of a visibility analysis over the same scenario.
+        plan: Default carrier plan applied to every link.
+        ensemble: Optional propagated trajectories. Propagated automatically when omitted.
+        step: Sampling step for detection. Must be positive. Defaults to 60 seconds.
+        overrides: Optional list of (tx, rx, plan) triples overriding the default plan.
+    """
+    def __new__(
+        cls,
+        scenario: Scenario,
+        visibility: VisibilityResults,
+        plan: CarrierPlan,
+        ensemble: Ensemble | None = None,
+        step: TimeDelta | None = None,
+        overrides: list[tuple[TerminalId, TerminalId, CarrierPlan]] | None = None,
+    ) -> Self: ...
+    def compute(self) -> "LinkBudgetResults":
+        """Compute the intervals in which each compatible link closes.
+
+        Returns:
+            LinkBudgetResults keyed by terminal pair.
+
+        Raises:
+            ValueError: If the step is not positive, if a spacecraft in the
+                scenario has no trajectory in the ensemble, or if two assets
+                share an id.
+        """
+        ...
+    def __repr__(self) -> str: ...
+
+class LinkBudgetResults:
+    """Results of a link budget analysis."""
+    def windows(self, tx: TerminalId, rx: TerminalId) -> list[LinkWindow]:
+        """Windows in which the link between two terminals closes.
+
+        Args:
+            tx: Transmit terminal.
+            rx: Receive terminal.
+
+        Returns:
+            List of LinkWindow objects, or an empty list for a pair that is not a link.
+        """
+        ...
+    def all_windows(self) -> dict[tuple[str, str], list[LinkWindow]]:
+        """All windows keyed by ("asset/name", "asset/name") terminal pair."""
+        ...
+    def link_ids(self) -> list[tuple[TerminalId, TerminalId]]:
+        """The terminal pairs that form a link."""
+        ...
+    def data_volume(self, tx: TerminalId, rx: TerminalId) -> float:
+        """Total data volume in bits deliverable over a link.
+
+        Args:
+            tx: Transmit terminal.
+            rx: Receive terminal.
+
+        Returns:
+            Data volume in bits, or 0.0 for a pair that is not a link.
+        """
+        ...
+    def num_links(self) -> int:
+        """Number of links that closed at least once."""
+        ...
+    def total_windows(self) -> int:
+        """Total number of windows across all links."""
+        ...
+    def is_empty(self) -> bool:
+        """True when no link closed anywhere."""
+        ...
+    def __repr__(self) -> str: ...
+
 class HorizonMask:
     """A measured horizon profile for visibility analysis.
 
