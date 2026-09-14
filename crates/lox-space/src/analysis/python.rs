@@ -973,8 +973,17 @@ impl PyVisibilityResults {
 /// maximum of both.
 ///
 /// Args:
-///     azimuth: Array of azimuth angles in radians spanning [-π, π].
+///     azimuth: Array of azimuth angles in radians. The values are normalised
+///         to [-π, π) and sorted, so any convention works: [0, 2π), [-π, π],
+///         unsorted data, and profiles that do or do not repeat their
+///         wrap-around point. The mask is periodic, with the segment between
+///         the last and the first point spanning the seam at ±π.
 ///     elevation: Array of horizon elevations in radians.
+///
+/// Raises:
+///     ValueError: If the arrays have different lengths, if they are empty, or
+///         if two points normalise to the same azimuth but carry different
+///         elevations.
 #[pyclass(name = "HorizonMask", module = "lox_space", frozen, eq, from_py_object)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PyHorizonMask(pub HorizonMask);
@@ -992,7 +1001,7 @@ impl PyHorizonMask {
         (self.azimuth(), self.elevation())
     }
 
-    /// Return the azimuth grid in radians.
+    /// Return the azimuth grid in radians, normalised to [-π, π) and sorted.
     fn azimuth(&self) -> Vec<f64> {
         self.0.azimuth().to_vec()
     }

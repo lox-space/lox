@@ -40,9 +40,10 @@ print(f"Range: {obs.range().to_kilometers():.1f} km")
 station = lox.GroundStation("ESOC", gs, min_elevation=5 * lox.deg)
 
 # Or add a measured horizon profile; visibility uses the maximum of the
-# horizon and the minimum elevation at each azimuth
+# horizon and the minimum elevation at each azimuth. Azimuths are normalised
+# to [-pi, pi) and sorted, so [0, 2*pi) data works just as well.
 import numpy as np
-azimuth = np.linspace(-np.pi, np.pi, 36)
+azimuth = np.linspace(0.0, 2 * np.pi, 36, endpoint=False)
 elevation = np.full(36, 0.1)  # radians
 mask = lox.HorizonMask(azimuth, elevation)
 station = lox.GroundStation("ESOC", gs, min_elevation=5 * lox.deg, horizon_mask=mask)
