@@ -669,7 +669,7 @@ pub enum PairType {
     InterSatellite,
 }
 
-type IntervalMap = HashMap<(AssetId, AssetId), Vec<TimeInterval>>;
+pub type IntervalMap = HashMap<(AssetId, AssetId), Vec<TimeInterval>>;
 type PairTypeMap = HashMap<(AssetId, AssetId), PairType>;
 type GroundSpaceFilter<'a> = Box<dyn Fn(&GroundStation, &Spacecraft) -> bool + 'a>;
 type InterSatelliteFilter<'a> = Box<dyn Fn(&Spacecraft, &Spacecraft) -> bool + 'a>;
