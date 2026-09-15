@@ -399,13 +399,6 @@ impl Angle {
     }
 }
 
-impl Display for Angle {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        to_degrees(self.0).fmt(f)?;
-        write!(f, " deg")
-    }
-}
-
 /// A trait for creating [`Angle`] instances from primitives.
 ///
 /// By default it is implemented for [`f64`] and [`i64`].
@@ -528,13 +521,6 @@ impl Distance {
     }
 }
 
-impl Display for Distance {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        (1e-3 * self.0).fmt(f)?;
-        write!(f, " km")
-    }
-}
-
 /// A trait for creating [`Distance`] instances from primitives.
 ///
 /// By default it is implemented for [`f64`] and [`i64`].
@@ -641,13 +627,6 @@ impl Velocity {
     /// Returns the value of the velocity in 1/c.
     pub const fn to_fraction_of_speed_of_light(&self) -> f64 {
         self.0 / SPEED_OF_LIGHT
-    }
-}
-
-impl Display for Velocity {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        (1e-3 * self.0).fmt(f)?;
-        write!(f, " km/s")
     }
 }
 
@@ -791,13 +770,6 @@ impl Frequency {
     }
 }
 
-impl Display for Frequency {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        (1e-9 * self.0).fmt(f)?;
-        write!(f, " GHz")
-    }
-}
-
 /// A trait for creating [`Frequency`] instances from primitives.
 ///
 /// By default it is implemented for [`f64`] and [`i64`].
@@ -917,13 +889,6 @@ impl Mass {
     }
 }
 
-impl Display for Mass {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " kg")
-    }
-}
-
 /// A trait for creating [`Mass`] instances from primitives.
 ///
 /// By default it is implemented for [`f64`] and [`i64`].
@@ -1013,13 +978,6 @@ impl Area {
     }
 }
 
-impl Display for Area {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " m²")
-    }
-}
-
 /// A trait for creating [`Area`] instances from primitives.
 ///
 /// By default it is implemented for [`f64`] and [`i64`].
@@ -1092,13 +1050,6 @@ impl AreaToMass {
     }
 }
 
-impl Display for AreaToMass {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " m²/kg")
-    }
-}
-
 /// A trait for creating [`AreaToMass`] instances from primitives.
 ///
 /// By default it is implemented for [`f64`] and [`i64`].
@@ -1158,13 +1109,6 @@ impl Temperature {
     /// Returns the value in Kelvin.
     pub const fn to_kelvin(&self) -> f64 {
         self.0
-    }
-}
-
-impl Display for Temperature {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " K")
     }
 }
 
@@ -1235,13 +1179,6 @@ impl Pressure {
     }
 }
 
-impl Display for Pressure {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " Pa")
-    }
-}
-
 type Watts = f64;
 
 /// Power in Watts.
@@ -1284,13 +1221,6 @@ impl Power {
     /// Returns the value in dBW.
     pub fn to_dbw(&self) -> f64 {
         10.0 * log10(self.0)
-    }
-}
-
-impl Display for Power {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " W")
     }
 }
 
@@ -1371,13 +1301,6 @@ impl AngularRate {
     }
 }
 
-impl Display for AngularRate {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        to_degrees(self.0).fmt(f)?;
-        write!(f, " deg/s")
-    }
-}
-
 type DecibelValue = f64;
 
 /// A value in decibels.
@@ -1405,13 +1328,6 @@ impl Decibel {
     /// Returns the raw `f64` value in dB.
     pub const fn as_f64(self) -> f64 {
         self.0
-    }
-}
-
-impl Display for Decibel {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " dB")
     }
 }
 
@@ -1444,8 +1360,29 @@ impl DecibelUnits for i64 {
     }
 }
 
+/// A physical quantity stored as an `f64` in a fixed base unit.
+///
+/// Implementors are the newtype wrappers in this module. The associated
+/// constants describe how the quantity renders: [`Quantity::SUFFIX`] names the
+/// display unit and [`Quantity::to_display`] converts the stored base value
+/// into it, so that `format!("{q}")` and the Python bindings agree on units
+/// without duplicating the conversion.
+pub trait Quantity: Copy {
+    /// Symbol of the unit used by [`Display`], e.g. `"km"`.
+    const SUFFIX: &'static str;
+
+    /// Creates the quantity from a value in its base unit.
+    fn from_base(value: f64) -> Self;
+
+    /// Returns the value in the base unit.
+    fn to_base(self) -> f64;
+
+    /// Returns the value in the display unit named by [`Quantity::SUFFIX`].
+    fn to_display(self) -> f64;
+}
+
 macro_rules! trait_impls {
-    ($($unit:ident),*) => {
+    ($(($unit:ident, $display:ident, $suffix:literal)),* $(,)?) => {
         $(
             impl Neg for $unit {
                 type Output = Self;
@@ -1496,23 +1433,46 @@ macro_rules! trait_impls {
                     val.0
                 }
             }
+
+            impl Quantity for $unit {
+                const SUFFIX: &'static str = $suffix;
+
+                fn from_base(value: f64) -> Self {
+                    Self(value)
+                }
+
+                fn to_base(self) -> f64 {
+                    self.0
+                }
+
+                fn to_display(self) -> f64 {
+                    self.$display()
+                }
+            }
+
+            impl Display for $unit {
+                fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+                    self.$display().fmt(f)?;
+                    write!(f, concat!(" ", $suffix))
+                }
+            }
         )*
     };
 }
 
 trait_impls!(
-    Angle,
-    AngularRate,
-    Area,
-    AreaToMass,
-    Decibel,
-    Distance,
-    Frequency,
-    Mass,
-    Power,
-    Pressure,
-    Temperature,
-    Velocity
+    (Angle, to_degrees, "deg"),
+    (AngularRate, to_degrees_per_second, "deg/s"),
+    (Area, to_square_meters, "m²"),
+    (AreaToMass, to_square_meters_per_kilogram, "m²/kg"),
+    (Decibel, as_f64, "dB"),
+    (Distance, to_kilometers, "km"),
+    (Frequency, to_gigahertz, "GHz"),
+    (Mass, to_kilograms, "kg"),
+    (Power, to_watts, "W"),
+    (Pressure, to_pa, "Pa"),
+    (Temperature, to_kelvin, "K"),
+    (Velocity, to_kilometers_per_second, "km/s"),
 );
 
 #[cfg(test)]
@@ -2733,5 +2693,40 @@ mod tests {
         let (sign, hours, min, sec) = a.to_hms();
         let b = Angle::from_hms(sign, hours, min, sec);
         assert_approx_eq!(a.to_radians(), b.to_radians(), atol <= 1e-12);
+    }
+
+    /// Every `Quantity` renders as `to_display()` followed by `SUFFIX`, so the
+    /// Python bindings can format a value in its display unit without
+    /// duplicating the conversion.
+    fn assert_display_matches_quantity<Q: Quantity + Display>(q: Q) {
+        assert_eq!(format!("{q}"), format!("{} {}", q.to_display(), Q::SUFFIX));
+        assert_eq!(Q::from_base(q.to_base()).to_base(), q.to_base());
+    }
+
+    #[test]
+    fn test_quantity_display_contract() {
+        assert_display_matches_quantity(Angle::degrees(90.123456));
+        assert_display_matches_quantity(AngularRate::degrees_per_second(1.5));
+        assert_display_matches_quantity(Area::square_meters(12.5));
+        assert_display_matches_quantity(AreaToMass::square_meters_per_kilogram(0.02));
+        assert_display_matches_quantity(Decibel::new(26.6314));
+        assert_display_matches_quantity(Distance::kilometers(909.42494));
+        assert_display_matches_quantity(Frequency::gigahertz(8.2));
+        assert_display_matches_quantity(Mass::kilograms(1234.5));
+        assert_display_matches_quantity(Power::watts(100.0));
+        assert_display_matches_quantity(Pressure::hpa(1013.25));
+        assert_display_matches_quantity(Temperature::kelvin(290.0));
+        assert_display_matches_quantity(Velocity::kilometers_per_second(7.8));
+    }
+
+    #[test]
+    fn test_quantity_display_units() {
+        assert_eq!(Angle::SUFFIX, "deg");
+        assert_eq!(Distance::SUFFIX, "km");
+        assert_eq!(Frequency::SUFFIX, "GHz");
+        assert_eq!(Velocity::SUFFIX, "km/s");
+        assert_eq!(Decibel::SUFFIX, "dB");
+        assert_eq!(Distance::kilometers(1.0).to_display(), 1.0);
+        assert_eq!(Distance::kilometers(1.0).to_base(), 1000.0);
     }
 }

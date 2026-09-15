@@ -87,7 +87,7 @@ results = analysis.compute()
 
 for window in results.windows("S2A", "europe"):
     iv = window.interval()
-    print(f"{iv.start()} → {iv.end()}  ({float(iv.duration()):.0f}s)")
+    print(f"{iv.start()} → {iv.end()}  ({iv.duration():.0f})")
     print(window.direction())
 ```
 

@@ -15,6 +15,7 @@ use lox_approx::approx_eq;
 use thiserror::Error;
 
 use crate::math::float::{ln, powf, powi, signum, sqrt};
+use crate::units::Quantity;
 
 use crate::anomalies::AnomalyError;
 use crate::anomalies::MeanAnomaly;
@@ -48,12 +49,38 @@ impl GravitationalParameter {
     pub const fn as_f64(&self) -> f64 {
         self.0
     }
+
+    /// Returns the value in m³/s².
+    pub const fn to_m3_per_s2(&self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in km³/s².
+    pub const fn to_km3_per_s2(&self) -> f64 {
+        self.0 * 1e-9
+    }
+}
+
+impl Quantity for GravitationalParameter {
+    const SUFFIX: &'static str = "km³/s²";
+
+    fn from_base(value: f64) -> Self {
+        Self(value)
+    }
+
+    fn to_base(self) -> f64 {
+        self.0
+    }
+
+    fn to_display(self) -> f64 {
+        self.to_km3_per_s2()
+    }
 }
 
 impl Display for GravitationalParameter {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        (self.0 * 1e-9).fmt(f)?;
-        write!(f, " km³/s²")
+        self.to_display().fmt(f)?;
+        write!(f, " {}", Self::SUFFIX)
     }
 }
 
