@@ -4,7 +4,7 @@ use futures::task::Spawn;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::{channel::mpsc::unbounded, Stream};
-use futures_scopes::relay::new_relay_scope;
+use futures_scopes::relay::{new_relay_scope, RelayScope};
 use futures_scopes::{ScopedSpawnExt, SpawnScope};
 use lox_time::intervals::TimeInterval;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
@@ -81,18 +81,15 @@ where
         })
     }
 
-    async fn stream<'a, S>(
+    async fn stream<'a>(
         &'a self,
-        _spawner: &'a S,
+        _scope: &RelayScope<'a>,
     ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
     where
         T1: 'a + Send + Sync + Clone,
         T2: 'a + Send + Sync + Clone,
-        S: Spawn + Clone + Send,
     {
-        futures::stream::iter(
-            self.iter()
-        )
+        futures::stream::iter(self.iter())
     }
 }
 
@@ -154,14 +151,13 @@ where
             .collect()
     }
 
-    async fn stream<'a, S>(
+    async fn stream<'a>(
         &'a self,
-        spawner: &'a S,
+        scope: &RelayScope<'a>,
     ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
     where
         T1: 'a + Send + Sync + Clone,
-        T2: 'a + Send + Sync + Clone,
-        S: Spawn + Clone + Send;
+        T2: 'a + Send + Sync + Clone;
 
     async fn stream_collect<'a, S>(self, spawner: &'a S) -> Result<IntervalMap, Self::Error>
     where
@@ -169,13 +165,13 @@ where
         T2: 'a + Send + Sync + Clone,
         S: Spawn + Clone + Send,
     {
-        self.stream(spawner)
+        let scope = new_relay_scope!(spawner);
+        self.stream(scope)
             .await
             .map(|item| item.map(|(t1, t2, intervals)| ((t1.asset_id(), t2.asset_id()), intervals)))
             .try_collect()
             .await
     }
-
 }
 
 struct Refine<T1, T2, W, R, I, E> {
@@ -241,33 +237,31 @@ where
             .map(move |item| Self::map_item(&self.refinement, item))
     }
 
-    async fn stream<'a, S>(
+    async fn stream<'a>(
         &'a self,
-        spawner: &'a S,
+        scope: &RelayScope<'a>,
     ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
     where
         T1: 'a + Send + Sync + Clone,
         T2: 'a + Send + Sync + Clone,
-        S: Spawn + Clone + Send,
     {
         let (tx, rx) = unbounded();
-        let scope = new_relay_scope!(spawner);
 
         self.wrapped
-            .stream(spawner)
+            .stream(scope)
             .await
             .for_each(async |item| {
+                let tx = tx.clone();
+
                 scope
                     .spawner()
-                    .spawn_scoped(async {
+                    .spawn_scoped(async move {
                         tx.unbounded_send(Self::map_item(&self.refinement, item))
                             .unwrap();
                     })
                     .unwrap();
             })
             .await;
-
-        scope.until_empty().await;
 
         rx
     }
@@ -337,33 +331,30 @@ where
             .filter_map(|item| Self::filter_item(&self.filter, item))
     }
 
-    async fn stream<'a, S>(
+    async fn stream<'a>(
         &'a self,
-        spawner: &'a S,
+        scope: &RelayScope<'a>,
     ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
     where
         T1: 'a + Send + Sync + Clone,
         T2: 'a + Send + Sync + Clone,
-        S: Spawn + Clone + Send,
     {
         let (tx, rx) = unbounded();
-        let scope = new_relay_scope!(spawner);
 
         self.wrapped
-            .stream(spawner)
+            .stream(scope)
             .await
             .for_each(async |item| {
+                let tx = tx.clone();
                 scope
                     .spawner()
-                    .spawn_scoped(async {
+                    .spawn_scoped(async move {
                         tx.unbounded_send(Self::filter_item(&self.filter, item))
                             .unwrap();
                     })
                     .unwrap();
             })
             .await;
-
-        scope.until_empty().await;
 
         rx.filter_map(async |item| item)
     }
@@ -528,24 +519,22 @@ mod tests {
         let result_stream = {
             let pool = ThreadPool::new().unwrap();
 
-            block_on(
-                Analysis::new(&ground_assets, &space_assets, interval)
-                    .refine(|gs, sc, interval| {
-                        let sc_traj = ensemble.get(sc.id()).expect(
-                            "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
-                        );
-                        let elev = ElevationDetectFn {
-                            gs: gs.location(),
-                            mask: gs.mask(),
-                            sc: sc_traj,
-                        };
-                        let windows = elev.intervals(UniformSampler::new(step), interval).unwrap();
-                        Ok::<_, VisibilityError>(windows.into_iter())
-                    })
-                    .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
-                    .stream_collect(&pool),
-            )
-            .unwrap()
+            let pipeline = Analysis::new(&ground_assets, &space_assets, interval)
+                .refine(|gs, sc, interval| {
+                    let sc_traj = ensemble.get(sc.id()).expect(
+                        "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
+                    );
+                    let elev = ElevationDetectFn {
+                        gs: gs.location(),
+                        mask: gs.mask(),
+                        sc: sc_traj,
+                    };
+                    let windows = elev.intervals(UniformSampler::new(step), interval).unwrap();
+                    Ok::<_, VisibilityError>(windows.into_iter())
+                })
+                .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000));
+
+            block_on(pipeline.stream_collect(&pool)).unwrap()
         };
 
         assert_eq!(result, result_stream);
