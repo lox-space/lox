@@ -1,19 +1,21 @@
-use std::{collections::HashMap, convert::Infallible, marker::PhantomData, ops::Deref};
+use std::{convert::Infallible, marker::PhantomData};
 
-use lox_bodies::CoordinateOrigin;
-use lox_frames::ReferenceFrame;
-use lox_orbits::orbits::Ensemble;
+use futures::task::Spawn;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use futures::{channel::mpsc::unbounded, Stream};
+use futures_scopes::relay::new_relay_scope;
+use futures_scopes::{ScopedSpawnExt, SpawnScope};
 use lox_time::intervals::TimeInterval;
-use rayon::iter::{
-    FromParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
-};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
-    assets::{AssetId, GroundStation, Scenario, Spacecraft},
-    visibility::{IntervalMap, NoEphemeris, VisibilityError},
+    assets::{AssetId, GroundStation, Spacecraft},
+    visibility::{IntervalMap, VisibilityError},
 };
 
 type PipelineItem<'a, T1, T2, E> = Result<(&'a T1, &'a T2, Vec<TimeInterval>), E>;
+type StreamPipelineItem<T1, T2, E> = Result<(T1, T2, Vec<TimeInterval>), E>;
 
 impl From<Infallible> for VisibilityError {
     fn from(value: Infallible) -> Self {
@@ -81,6 +83,31 @@ where
     }
 }
 
+impl<T1, T2> StreamPipeline<T1, T2> for Analysis<'_, T1, T2>
+where
+    T1: AssetIdExt + Clone,
+    T2: AssetIdExt + Clone,
+{
+    async fn stream<'a, S>(
+        &self,
+        _spawner: &'a S,
+    ) -> impl Stream<Item = StreamPipelineItem<T1, T2, Self::Error>>
+    where
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync,
+        S: Spawn + Clone + Send,
+    {
+        futures::stream::iter(
+            self.iter()
+                .map(|item| {
+                    item.map(|(t1, t2, intervals)| (t1.to_owned(), t2.to_owned(), intervals))
+                })
+                .collect::<Vec<_>>()
+                .into_iter(),
+        )
+    }
+}
+
 trait Pipeline<T1, T2>: Sized
 where
     T1: AssetIdExt,
@@ -122,7 +149,9 @@ where
             .collect()
     }
 
-    fn par_iter<'a>(&'a self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>>
+    fn par_iter<'a>(
+        &'a self,
+    ) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>>
     where
         T1: 'a + Send + Sync,
         T2: 'a + Send + Sync;
@@ -135,6 +164,34 @@ where
         self.par_iter()
             .map(|item| item.map(|(t1, t2, interval)| ((t1.asset_id(), t2.asset_id()), interval)))
             .collect()
+    }
+}
+
+trait StreamPipeline<T1, T2>: Pipeline<T1, T2>
+where
+    T1: AssetIdExt + Clone,
+    T2: AssetIdExt + Clone,
+{
+    async fn stream<'a, S>(
+        &self,
+        spawner: &'a S,
+    ) -> impl Stream<Item = StreamPipelineItem<T1, T2, Self::Error>>
+    where
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync,
+        S: Spawn + Clone + Send;
+
+    async fn stream_collect<'a, S>(self, spawner: &'a S) -> Result<IntervalMap, Self::Error>
+    where
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync,
+        S: Spawn + Clone + Send,
+    {
+        self.stream(spawner)
+            .await
+            .map(|item| item.map(|(t1, t2, intervals)| ((t1.asset_id(), t2.asset_id()), intervals)))
+            .try_collect()
+            .await
     }
 }
 
@@ -153,17 +210,30 @@ where
     I: Iterator<Item = TimeInterval> + Send + Sync,
     E: From<W::Error> + Send + Sync,
 {
-    fn map_item<'a>(&'a self, item: PipelineItem<'a, T1, T2, W::Error>) -> PipelineItem<'a, T1, T2, E> {
+    fn map_item<'a>(
+        f: &R,
+        item: PipelineItem<'a, T1, T2, W::Error>,
+    ) -> PipelineItem<'a, T1, T2, E> {
         let (t1, t2, intervals) = item?;
 
         let mut sub_intervals = Vec::new();
         for interval in intervals {
-            for sub_interval in (self.refinement)(t1, t2, interval)? {
+            for sub_interval in f(&t1, &t2, interval)? {
                 sub_intervals.push(sub_interval);
             }
         }
 
         Ok::<_, E>((t1, t2, sub_intervals))
+    }
+
+    fn map_stream_item(
+        f: &R,
+        item: StreamPipelineItem<T1, T2, W::Error>,
+    ) -> StreamPipelineItem<T1, T2, E> {
+        let (t1, t2, intervals) = item?;
+        let (_, _, sub_intervals) = Self::map_item(f, Ok((&t1, &t2, intervals)))?;
+
+        Ok((t1, t2, sub_intervals))
     }
 }
 
@@ -183,7 +253,9 @@ where
         T1: 'a,
         T2: 'a,
     {
-        self.wrapped.iter().map(move |item| self.map_item(item))
+        self.wrapped
+            .iter()
+            .map(move |item| Self::map_item(&self.refinement, item))
     }
 
     fn par_iter<'a>(&'a self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>>
@@ -191,7 +263,50 @@ where
         T1: 'a + Send + Sync,
         T2: 'a + Send + Sync,
     {
-        self.wrapped.par_iter().map(move |item| self.map_item(item))
+        self.wrapped
+            .par_iter()
+            .map(move |item| Self::map_item(&self.refinement, item))
+    }
+}
+
+impl<T1, T2, W, R, I, E> StreamPipeline<T1, T2> for Refine<T1, T2, W, R, I, E>
+where
+    T1: AssetIdExt + Clone,
+    T2: AssetIdExt + Clone,
+    W: StreamPipeline<T1, T2> + Send + Sync,
+    R: Fn(&T1, &T2, TimeInterval) -> Result<I, E> + Send + Sync,
+    I: Iterator<Item = TimeInterval> + Send + Sync,
+    E: From<W::Error> + Send + Sync,
+{
+    async fn stream<'a, S>(
+        &self,
+        spawner: &'a S,
+    ) -> impl Stream<Item = StreamPipelineItem<T1, T2, Self::Error>>
+    where
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync,
+        S: Spawn + Clone + Send,
+    {
+        let (tx, rx) = unbounded();
+        let scope = new_relay_scope!(spawner);
+
+        self.wrapped
+            .stream(spawner)
+            .await
+            .for_each(async |item| {
+                scope
+                    .spawner()
+                    .spawn_scoped(async {
+                        tx.unbounded_send(Self::map_stream_item(&self.refinement, item))
+                            .unwrap();
+                    })
+                    .unwrap();
+            })
+            .await;
+
+        scope.until_empty().await;
+
+        rx
     }
 }
 
@@ -209,14 +324,14 @@ where
     F: Fn(&T1, &T2, TimeInterval) -> bool + Send + Sync,
 {
     fn filter_item<'a, E>(
-        &'a self,
+        f: &F,
         item: PipelineItem<'a, T1, T2, E>,
     ) -> Option<PipelineItem<'a, T1, T2, E>> {
         match item {
             Ok((t1, t2, intervals)) => {
                 let intervals = intervals
                     .into_iter()
-                    .filter(|interval| (self.filter)(t1, t2, *interval))
+                    .filter(|interval| f(&t1, &t2, *interval))
                     .collect::<Vec<_>>();
 
                 if intervals.len() > 0 {
@@ -228,6 +343,25 @@ where
             Err(err) => Some(Err(err)),
         }
     }
+
+    fn filter_stream_item<E>(
+        f: &F,
+        item: StreamPipelineItem<T1, T2, E>,
+    ) -> Option<StreamPipelineItem<T1, T2, E>> {
+        let (t1, t2, intervals) = match item {
+            Ok(item) => item,
+            Err(err) => return Some(Err(err)),
+        };
+
+        let item = Self::filter_item(f, Ok::<_, E>((&t1, &t2, intervals)))?;
+
+        let (_, _, intervals) = match item {
+            Ok(item) => item,
+            Err(err) => return Some(Err(err)),
+        };
+
+        Some(Ok((t1, t2, intervals)))
+    }
 }
 
 impl<T1, T2, W, F> Pipeline<T1, T2> for Filter<T1, T2, W, F>
@@ -235,7 +369,7 @@ where
     T1: AssetIdExt,
     T2: AssetIdExt,
     W: Pipeline<T1, T2> + Send + Sync,
-    F: Fn(&T1, &T2, TimeInterval) -> bool + Send + Sync,
+    F: Fn(&T1, &T2, TimeInterval) -> bool + Send + Sync + Clone,
 {
     type Error = W::Error;
 
@@ -246,7 +380,7 @@ where
     {
         self.wrapped
             .iter()
-            .filter_map(|item| self.filter_item(item))
+            .filter_map(|item| Self::filter_item(&self.filter, item))
     }
 
     fn par_iter<'a>(&'a self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>>
@@ -256,26 +390,67 @@ where
     {
         self.wrapped
             .par_iter()
-            .filter_map(|item| self.filter_item(item))
+            .filter_map(|item| Self::filter_item(&self.filter, item))
+    }
+}
+
+impl<T1, T2, W, F> StreamPipeline<T1, T2> for Filter<T1, T2, W, F>
+where
+    T1: AssetIdExt + Clone,
+    T2: AssetIdExt + Clone,
+    W: StreamPipeline<T1, T2> + Send + Sync,
+    F: Fn(&T1, &T2, TimeInterval) -> bool + Send + Sync + Clone,
+{
+    async fn stream<'a, S>(
+        &self,
+        spawner: &'a S,
+    ) -> impl Stream<Item = StreamPipelineItem<T1, T2, Self::Error>>
+    where
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync,
+        S: Spawn + Clone + Send,
+    {
+        let (tx, rx) = unbounded();
+        let scope = new_relay_scope!(spawner);
+
+        self.wrapped
+            .stream(spawner)
+            .await
+            .for_each(async |item| {
+                scope
+                    .spawner()
+                    .spawn_scoped(async {
+                        tx.unbounded_send(Self::filter_stream_item(&self.filter, item))
+                            .unwrap();
+                    })
+                    .unwrap();
+            })
+            .await;
+
+        scope.until_empty().await;
+
+        rx.filter_map(async |item| item)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::collections::HashMap;
 
-    use crate::events::DetectFnExt;
     use crate::visibility::VisibilityError;
+    use crate::{assets::Scenario, events::DetectFnExt};
+    use futures::executor::{block_on, ThreadPool};
     use lox_bodies::Origin;
     use lox_core::{coords::LonLatAlt, units::Angle};
     use lox_frames::Frame;
+    use lox_orbits::orbits::Ensemble;
     use lox_orbits::{ground::EllipsoidLocation, orbits::Trajectory, propagators::OrbitSource};
     use lox_test_utils::read_data_file;
+    use lox_time::deltas::TimeDelta;
     use lox_time::time_scales::TimeScale;
-    use lox_time::{deltas::TimeDelta, TimeBuilder};
 
     use crate::{
-        events::{DetectFn, UniformSampler},
+        events::UniformSampler,
         visibility::{ElevationDetectFn, ElevationMask},
     };
 
@@ -379,6 +554,65 @@ mod tests {
         );
         assert_eq!(result, result_par);
         dbg!(result);
-        panic!();
+        // panic!();
+    }
+
+    #[test]
+    fn refinement_stream() {
+        let gs_loc = location_dynamic();
+        let mask = ElevationMask::with_fixed_elevation(Angle::ZERO);
+        let sc_traj = spacecraft_trajectory_dynamic();
+        let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
+        let gs = GroundStation::new("cebreros", gs_loc, mask);
+        let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
+        let ground_assets = [gs.clone()];
+        let space_assets = [sc.clone()];
+        let step = TimeDelta::from_seconds(60);
+
+        let (scenario, ensemble) =
+            make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
+
+        let result = Analysis::new(&ground_assets, &space_assets, interval)
+            .refine(|gs, sc, interval| {
+                let sc_traj = ensemble.get(sc.id()).expect(
+                "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
+            );
+                let elev = ElevationDetectFn {
+                    gs: gs.location(),
+                    mask: gs.mask(),
+                    sc: sc_traj,
+                };
+                let windows = elev.intervals(UniformSampler::new(step), interval)?;
+                Ok::<_, VisibilityError>(windows.into_iter())
+            })
+            .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
+            .collect()
+            .unwrap();
+
+        let result_stream = {
+            let pool = ThreadPool::new().unwrap();
+
+            block_on(
+                Analysis::new(&ground_assets, &space_assets, interval)
+                    .refine(|gs, sc, interval| {
+                        let sc_traj = ensemble.get(sc.id()).expect(
+                            "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
+                        );
+                        let elev = ElevationDetectFn {
+                            gs: gs.location(),
+                            mask: gs.mask(),
+                            sc: sc_traj,
+                        };
+                        let windows = elev.intervals(UniformSampler::new(step), interval).unwrap();
+                        Ok::<_, VisibilityError>(windows.into_iter())
+                    })
+                    .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
+                    .stream_collect(&pool),
+            )
+            .unwrap()
+        };
+
+        assert_eq!(result, result_stream);
+        dbg!(result);
     }
 }
