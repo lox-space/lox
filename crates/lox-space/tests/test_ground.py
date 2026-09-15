@@ -135,8 +135,8 @@ def test_ellipsoid_rejects_invalid_flattening():
         lox.Ellipsoid(6378137.0 * lox.m, 1.5)
 
 
-def test_elevation_mask():
-    mask = lox.ElevationMask.variable(
+def test_horizon_mask():
+    mask = lox.HorizonMask(
         np.array([-np.pi, 0.0, np.pi]), np.array([0.0, 5.0, 0.0])
     )
-    assert float(mask.min_elevation(lox.Angle(np.pi / 2))) == pytest.approx(2.5)
+    assert float(mask.elevation_at(lox.Angle(np.pi / 2))) == pytest.approx(2.5)

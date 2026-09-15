@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
+import math
 import pickle
 
 import lox_space as lox
@@ -13,7 +14,7 @@ import pytest
     [
         lox.Origin("Earth"),
         lox.Frame("ICRF"),
-        lox.ElevationMask.fixed(0.0 * lox.rad),
+        lox.HorizonMask([-math.pi, 0.0, math.pi], [0.0, 0.1, 0.0]),
         lox.TimeScale("TAI"),
         lox.Time("TAI", 2000, 1, 1),
     ],
