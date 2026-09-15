@@ -15,7 +15,6 @@ use crate::{
 };
 
 type PipelineItem<'a, T1, T2, E> = Result<(&'a T1, &'a T2, Vec<TimeInterval>), E>;
-type StreamPipelineItem<T1, T2, E> = Result<(T1, T2, Vec<TimeInterval>), E>;
 
 impl From<Infallible> for VisibilityError {
     fn from(value: Infallible) -> Self {
@@ -81,29 +80,18 @@ where
                 .map(move |item2| Ok((item1, item2, vec![self.interval])))
         })
     }
-}
 
-impl<T1, T2> StreamPipeline<T1, T2> for Analysis<'_, T1, T2>
-where
-    T1: AssetIdExt + Clone,
-    T2: AssetIdExt + Clone,
-{
     async fn stream<'a, S>(
-        &self,
+        &'a self,
         _spawner: &'a S,
-    ) -> impl Stream<Item = StreamPipelineItem<T1, T2, Self::Error>>
+    ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync,
+        T1: 'a + Send + Sync + Clone,
+        T2: 'a + Send + Sync + Clone,
         S: Spawn + Clone + Send,
     {
         futures::stream::iter(
             self.iter()
-                .map(|item| {
-                    item.map(|(t1, t2, intervals)| (t1.to_owned(), t2.to_owned(), intervals))
-                })
-                .collect::<Vec<_>>()
-                .into_iter(),
         )
     }
 }
@@ -165,26 +153,20 @@ where
             .map(|item| item.map(|(t1, t2, interval)| ((t1.asset_id(), t2.asset_id()), interval)))
             .collect()
     }
-}
 
-trait StreamPipeline<T1, T2>: Pipeline<T1, T2>
-where
-    T1: AssetIdExt + Clone,
-    T2: AssetIdExt + Clone,
-{
     async fn stream<'a, S>(
-        &self,
+        &'a self,
         spawner: &'a S,
-    ) -> impl Stream<Item = StreamPipelineItem<T1, T2, Self::Error>>
+    ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync,
+        T1: 'a + Send + Sync + Clone,
+        T2: 'a + Send + Sync + Clone,
         S: Spawn + Clone + Send;
 
     async fn stream_collect<'a, S>(self, spawner: &'a S) -> Result<IntervalMap, Self::Error>
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync,
+        T1: 'a + Send + Sync + Clone,
+        T2: 'a + Send + Sync + Clone,
         S: Spawn + Clone + Send,
     {
         self.stream(spawner)
@@ -193,6 +175,7 @@ where
             .try_collect()
             .await
     }
+
 }
 
 struct Refine<T1, T2, W, R, I, E> {
@@ -224,16 +207,6 @@ where
         }
 
         Ok::<_, E>((t1, t2, sub_intervals))
-    }
-
-    fn map_stream_item(
-        f: &R,
-        item: StreamPipelineItem<T1, T2, W::Error>,
-    ) -> StreamPipelineItem<T1, T2, E> {
-        let (t1, t2, intervals) = item?;
-        let (_, _, sub_intervals) = Self::map_item(f, Ok((&t1, &t2, intervals)))?;
-
-        Ok((t1, t2, sub_intervals))
     }
 }
 
@@ -267,24 +240,14 @@ where
             .par_iter()
             .map(move |item| Self::map_item(&self.refinement, item))
     }
-}
 
-impl<T1, T2, W, R, I, E> StreamPipeline<T1, T2> for Refine<T1, T2, W, R, I, E>
-where
-    T1: AssetIdExt + Clone,
-    T2: AssetIdExt + Clone,
-    W: StreamPipeline<T1, T2> + Send + Sync,
-    R: Fn(&T1, &T2, TimeInterval) -> Result<I, E> + Send + Sync,
-    I: Iterator<Item = TimeInterval> + Send + Sync,
-    E: From<W::Error> + Send + Sync,
-{
     async fn stream<'a, S>(
-        &self,
+        &'a self,
         spawner: &'a S,
-    ) -> impl Stream<Item = StreamPipelineItem<T1, T2, Self::Error>>
+    ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync,
+        T1: 'a + Send + Sync + Clone,
+        T2: 'a + Send + Sync + Clone,
         S: Spawn + Clone + Send,
     {
         let (tx, rx) = unbounded();
@@ -297,7 +260,7 @@ where
                 scope
                     .spawner()
                     .spawn_scoped(async {
-                        tx.unbounded_send(Self::map_stream_item(&self.refinement, item))
+                        tx.unbounded_send(Self::map_item(&self.refinement, item))
                             .unwrap();
                     })
                     .unwrap();
@@ -343,25 +306,6 @@ where
             Err(err) => Some(Err(err)),
         }
     }
-
-    fn filter_stream_item<E>(
-        f: &F,
-        item: StreamPipelineItem<T1, T2, E>,
-    ) -> Option<StreamPipelineItem<T1, T2, E>> {
-        let (t1, t2, intervals) = match item {
-            Ok(item) => item,
-            Err(err) => return Some(Err(err)),
-        };
-
-        let item = Self::filter_item(f, Ok::<_, E>((&t1, &t2, intervals)))?;
-
-        let (_, _, intervals) = match item {
-            Ok(item) => item,
-            Err(err) => return Some(Err(err)),
-        };
-
-        Some(Ok((t1, t2, intervals)))
-    }
 }
 
 impl<T1, T2, W, F> Pipeline<T1, T2> for Filter<T1, T2, W, F>
@@ -392,22 +336,14 @@ where
             .par_iter()
             .filter_map(|item| Self::filter_item(&self.filter, item))
     }
-}
 
-impl<T1, T2, W, F> StreamPipeline<T1, T2> for Filter<T1, T2, W, F>
-where
-    T1: AssetIdExt + Clone,
-    T2: AssetIdExt + Clone,
-    W: StreamPipeline<T1, T2> + Send + Sync,
-    F: Fn(&T1, &T2, TimeInterval) -> bool + Send + Sync + Clone,
-{
     async fn stream<'a, S>(
-        &self,
+        &'a self,
         spawner: &'a S,
-    ) -> impl Stream<Item = StreamPipelineItem<T1, T2, Self::Error>>
+    ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync,
+        T1: 'a + Send + Sync + Clone,
+        T2: 'a + Send + Sync + Clone,
         S: Spawn + Clone + Send,
     {
         let (tx, rx) = unbounded();
@@ -420,7 +356,7 @@ where
                 scope
                     .spawner()
                     .spawn_scoped(async {
-                        tx.unbounded_send(Self::filter_stream_item(&self.filter, item))
+                        tx.unbounded_send(Self::filter_item(&self.filter, item))
                             .unwrap();
                     })
                     .unwrap();
