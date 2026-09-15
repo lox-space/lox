@@ -24,4 +24,3 @@ pub mod power;
 pub mod visibility;
 
 pub mod pipeline;
-pub mod stream;
