@@ -49,6 +49,12 @@ SPDX-License-Identifier: MPL-2.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.22](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.21...lox-frames-v0.1.0-alpha.22) - 2026-09-15
+
+### Other
+
+- updated the following local packages: lox-time
+
 ### Changed
 
 - [**breaking**] move the top-level `iau` module to `rotations::to_iau`, beside `rotations::to_icrf`

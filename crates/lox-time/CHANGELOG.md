@@ -46,6 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.28](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.27...lox-time-v0.1.0-alpha.28) - 2026-09-15
+
+### Fixed
+
+- *(lox-time)* re-enable chrono interop
+
 ### Changed
 
 - [**breaking**] `Interval` is now represented as an epoch plus a `TimeDelta` instead of a pair of bounds, so a `TimeInterval` cannot straddle two time scales. `Interval::new(start, end)` still exists and derives the duration, which means a scale mismatch now panics at construction. Adds `Interval::from_duration`.

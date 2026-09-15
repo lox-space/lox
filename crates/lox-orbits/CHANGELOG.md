@@ -51,6 +51,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.41](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.40...lox-orbits-v0.1.0-alpha.41) - 2026-09-15
+
+### Other
+
+- updated the following local packages: lox-time, lox-ephem, lox-frames, lox-earth, lox-odm
+
 ### Changed
 
 - [**breaking**] drop the time-scale type parameter from the orbit layer: `Orbit`, `Trajectory`, `Ensemble`, `Constellation`, the propagators and the builders now carry their epoch as a runtime-scaled `Time`. Origin and frame stay in the type system.
