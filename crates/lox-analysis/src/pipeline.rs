@@ -1,10 +1,10 @@
 use std::{convert::Infallible, marker::PhantomData};
 
-use futures::task::Spawn;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use futures::{channel::mpsc::unbounded, Stream};
-use futures_scopes::relay::{new_relay_scope, RelayScope};
+use futures::task::Spawn;
+use futures::{Stream, channel::mpsc::unbounded};
+use futures_scopes::relay::{RelayScope, new_relay_scope};
 use futures_scopes::{ScopedSpawnExt, SpawnScope};
 use lox_time::intervals::TimeInterval;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
@@ -86,8 +86,8 @@ where
         _scope: &RelayScope<'a>,
     ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
     where
-        T1: 'a + Send + Sync + Clone,
-        T2: 'a + Send + Sync + Clone,
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync,
     {
         futures::stream::iter(self.iter())
     }
@@ -156,13 +156,13 @@ where
         scope: &RelayScope<'a>,
     ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
     where
-        T1: 'a + Send + Sync + Clone,
-        T2: 'a + Send + Sync + Clone;
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync;
 
     async fn stream_collect<'a, S>(self, spawner: &'a S) -> Result<IntervalMap, Self::Error>
     where
-        T1: 'a + Send + Sync + Clone,
-        T2: 'a + Send + Sync + Clone,
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync,
         S: Spawn + Clone + Send,
     {
         let scope = new_relay_scope!(spawner);
@@ -242,8 +242,8 @@ where
         scope: &RelayScope<'a>,
     ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
     where
-        T1: 'a + Send + Sync + Clone,
-        T2: 'a + Send + Sync + Clone,
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync,
     {
         let (tx, rx) = unbounded();
 
@@ -307,7 +307,7 @@ where
     T1: AssetIdExt,
     T2: AssetIdExt,
     W: Pipeline<T1, T2> + Send + Sync,
-    F: Fn(&T1, &T2, TimeInterval) -> bool + Send + Sync + Clone,
+    F: Fn(&T1, &T2, TimeInterval) -> bool + Send + Sync,
 {
     type Error = W::Error;
 
@@ -336,8 +336,8 @@ where
         scope: &RelayScope<'a>,
     ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
     where
-        T1: 'a + Send + Sync + Clone,
-        T2: 'a + Send + Sync + Clone,
+        T1: 'a + Send + Sync,
+        T2: 'a + Send + Sync,
     {
         let (tx, rx) = unbounded();
 
@@ -366,7 +366,7 @@ mod tests {
 
     use crate::visibility::VisibilityError;
     use crate::{assets::Scenario, events::DetectFnExt};
-    use futures::executor::{block_on, ThreadPool};
+    use futures::executor::{ThreadPool, block_on};
     use lox_bodies::Origin;
     use lox_core::{coords::LonLatAlt, units::Angle};
     use lox_frames::Frame;
