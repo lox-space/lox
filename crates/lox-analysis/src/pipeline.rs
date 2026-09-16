@@ -9,6 +9,7 @@ use futures_scopes::{ScopedSpawnExt, SpawnScope};
 use lox_time::intervals::TimeInterval;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
+use crate::events::DetectError;
 use crate::{
     assets::{AssetId, GroundStation, Spacecraft},
     visibility::{IntervalMap, VisibilityError},
@@ -16,7 +17,7 @@ use crate::{
 
 type PipelineItem<'a, T1, T2, E> = Result<(&'a T1, &'a T2, Vec<TimeInterval>), E>;
 
-impl From<Infallible> for VisibilityError {
+impl From<Infallible> for DetectError {
     fn from(value: Infallible) -> Self {
         unreachable!()
     }
@@ -50,18 +51,14 @@ impl<'a, T1, T2> Analysis<'a, T1, T2> {
     }
 }
 
-impl<T1, T2> Pipeline<T1, T2> for Analysis<'_, T1, T2>
+impl<'a, T1, T2> Pipeline<'a, T1, T2> for Analysis<'a, T1, T2>
 where
     T1: AssetIdExt,
     T2: AssetIdExt,
 {
     type Error = Infallible;
 
-    fn iter<'a>(&'a self) -> impl Iterator<Item = PipelineItem<'a, T1, T2, Self::Error>>
-    where
-        T1: 'a,
-        T2: 'a,
-    {
+    fn iter(&self) -> impl Iterator<Item = PipelineItem<'a, T1, T2, Self::Error>> + '_ {
         self.t1.iter().flat_map(move |item1| {
             self.t2
                 .iter()
@@ -69,10 +66,10 @@ where
         })
     }
 
-    fn par_iter<'a>(&'a self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>>
+    fn par_iter(&self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>> + '_
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync,
+        T1: Send + Sync,
+        T2: Send + Sync,
     {
         self.t1.par_iter().flat_map(move |item1| {
             self.t2
@@ -81,29 +78,30 @@ where
         })
     }
 
-    async fn stream<'a>(
-        &'a self,
-        _scope: &RelayScope<'a>,
-    ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
+    async fn stream<'sc>(
+        &'sc self,
+        _scope: &RelayScope<'sc>,
+    ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>> + 'sc
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync,
+        T1: Send + Sync,
+        T2: Send + Sync,
+        'a: 'sc,
     {
         futures::stream::iter(self.iter())
     }
 }
 
-trait Pipeline<T1, T2>: Sized
+trait Pipeline<'a, T1, T2>: Sized
 where
-    T1: AssetIdExt,
-    T2: AssetIdExt,
+    T1: AssetIdExt + 'a,
+    T2: AssetIdExt + 'a,
 {
     type Error: Send + Sync;
 
     fn refine<R, I, E>(self, refinement: R) -> Refine<T1, T2, Self, R, I, E>
     where
-        R: Fn(&T1, &T2, TimeInterval) -> Result<I, E>,
-        I: Iterator<Item = TimeInterval>,
+        R: Fn(&'a T1, &'a T2, TimeInterval) -> I,
+        I: Iterator<Item = Result<TimeInterval, E>> + 'a,
     {
         Refine {
             wrapped: self,
@@ -123,10 +121,7 @@ where
         }
     }
 
-    fn iter<'a>(&'a self) -> impl Iterator<Item = PipelineItem<'a, T1, T2, Self::Error>>
-    where
-        T1: 'a,
-        T2: 'a;
+    fn iter(&self) -> impl Iterator<Item = PipelineItem<'a, T1, T2, Self::Error>> + '_;
 
     fn collect(self) -> Result<IntervalMap, Self::Error> {
         self.iter()
@@ -134,12 +129,10 @@ where
             .collect()
     }
 
-    fn par_iter<'a>(
-        &'a self,
-    ) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>>
+    fn par_iter(&self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>> + '_
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync;
+        T1: Send + Sync,
+        T2: Send + Sync;
 
     fn par_collect(self) -> Result<IntervalMap, Self::Error>
     where
@@ -151,18 +144,19 @@ where
             .collect()
     }
 
-    async fn stream<'a>(
-        &'a self,
-        scope: &RelayScope<'a>,
-    ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
+    async fn stream<'sc>(
+        &'sc self,
+        scope: &RelayScope<'sc>,
+    ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>> + 'sc
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync;
+        T1: Send + Sync,
+        T2: Send + Sync,
+        'a: 'sc;
 
-    async fn stream_collect<'a, S>(self, spawner: &'a S) -> Result<IntervalMap, Self::Error>
+    async fn stream_collect<S>(self, spawner: &'a S) -> Result<IntervalMap, Self::Error>
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync,
+        T1: Send + Sync,
+        T2: Send + Sync,
         S: Spawn + Clone + Send,
     {
         let scope = new_relay_scope!(spawner);
@@ -180,25 +174,22 @@ struct Refine<T1, T2, W, R, I, E> {
     __: PhantomData<(T1, T2, I, E)>,
 }
 
-impl<T1, T2, W, R, I, E> Refine<T1, T2, W, R, I, E>
+impl<'a, T1, T2, W, R, I, E> Refine<T1, T2, W, R, I, E>
 where
-    T1: AssetIdExt,
-    T2: AssetIdExt,
-    W: Pipeline<T1, T2> + Send + Sync,
-    R: Fn(&T1, &T2, TimeInterval) -> Result<I, E> + Send + Sync,
-    I: Iterator<Item = TimeInterval> + Send + Sync,
+    T1: AssetIdExt + 'a,
+    T2: AssetIdExt + 'a,
+    W: Pipeline<'a, T1, T2> + Send + Sync,
+    R: Fn(&'a T1, &'a T2, TimeInterval) -> I + Send + Sync,
+    I: Iterator<Item = Result<TimeInterval, E>> + Send + Sync + 'a,
     E: From<W::Error> + Send + Sync,
 {
-    fn map_item<'a>(
-        f: &R,
-        item: PipelineItem<'a, T1, T2, W::Error>,
-    ) -> PipelineItem<'a, T1, T2, E> {
+    fn map_item(f: &R, item: PipelineItem<'a, T1, T2, W::Error>) -> PipelineItem<'a, T1, T2, E> {
         let (t1, t2, intervals) = item?;
 
         let mut sub_intervals = Vec::new();
         for interval in intervals {
-            for sub_interval in f(&t1, &t2, interval)? {
-                sub_intervals.push(sub_interval);
+            for sub_interval in f(&t1, &t2, interval) {
+                sub_intervals.push(sub_interval?);
             }
         }
 
@@ -206,44 +197,41 @@ where
     }
 }
 
-impl<T1, T2, W, R, I, E> Pipeline<T1, T2> for Refine<T1, T2, W, R, I, E>
+impl<'a, T1, T2, W, R, I, E> Pipeline<'a, T1, T2> for Refine<T1, T2, W, R, I, E>
 where
-    T1: AssetIdExt,
-    T2: AssetIdExt,
-    W: Pipeline<T1, T2> + Send + Sync,
-    R: Fn(&T1, &T2, TimeInterval) -> Result<I, E> + Send + Sync,
-    I: Iterator<Item = TimeInterval> + Send + Sync,
+    T1: AssetIdExt + 'a,
+    T2: AssetIdExt + 'a,
+    W: Pipeline<'a, T1, T2> + Send + Sync,
+    R: Fn(&'a T1, &'a T2, TimeInterval) -> I + Send + Sync,
+    I: Iterator<Item = Result<TimeInterval, E>> + Send + Sync + 'a,
     E: From<W::Error> + Send + Sync,
 {
     type Error = E;
 
-    fn iter<'a>(&'a self) -> impl Iterator<Item = PipelineItem<'a, T1, T2, Self::Error>>
-    where
-        T1: 'a,
-        T2: 'a,
-    {
+    fn iter(&self) -> impl Iterator<Item = PipelineItem<'a, T1, T2, Self::Error>> + '_ {
         self.wrapped
             .iter()
             .map(move |item| Self::map_item(&self.refinement, item))
     }
 
-    fn par_iter<'a>(&'a self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>>
+    fn par_iter(&self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>> + '_
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync,
+        T1: Send + Sync,
+        T2: Send + Sync,
     {
         self.wrapped
             .par_iter()
             .map(move |item| Self::map_item(&self.refinement, item))
     }
 
-    async fn stream<'a>(
-        &'a self,
-        scope: &RelayScope<'a>,
-    ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
+    async fn stream<'sc>(
+        &'sc self,
+        scope: &RelayScope<'sc>,
+    ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>> + 'sc
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync,
+        T1: Send + Sync,
+        T2: Send + Sync,
+        'a: 'sc,
     {
         let (tx, rx) = unbounded();
 
@@ -273,14 +261,14 @@ struct Filter<T1, T2, W, F> {
     __: PhantomData<(T1, T2)>,
 }
 
-impl<T1, T2, W, F> Filter<T1, T2, W, F>
+impl<'a, T1, T2, W, F> Filter<T1, T2, W, F>
 where
-    T1: AssetIdExt,
-    T2: AssetIdExt,
-    W: Pipeline<T1, T2> + Send + Sync,
-    F: Fn(&T1, &T2, TimeInterval) -> bool + Send + Sync,
+    T1: AssetIdExt + 'a,
+    T2: AssetIdExt + 'a,
+    W: Pipeline<'a, T1, T2> + Send + Sync,
+    F: Fn(&'a T1, &'a T2, TimeInterval) -> bool + Send + Sync,
 {
-    fn filter_item<'a, E>(
+    fn filter_item<E>(
         f: &F,
         item: PipelineItem<'a, T1, T2, E>,
     ) -> Option<PipelineItem<'a, T1, T2, E>> {
@@ -302,42 +290,39 @@ where
     }
 }
 
-impl<T1, T2, W, F> Pipeline<T1, T2> for Filter<T1, T2, W, F>
+impl<'a, T1, T2, W, F> Pipeline<'a, T1, T2> for Filter<T1, T2, W, F>
 where
-    T1: AssetIdExt,
-    T2: AssetIdExt,
-    W: Pipeline<T1, T2> + Send + Sync,
-    F: Fn(&T1, &T2, TimeInterval) -> bool + Send + Sync,
+    T1: AssetIdExt + 'a,
+    T2: AssetIdExt + 'a,
+    W: Pipeline<'a, T1, T2> + Send + Sync,
+    F: Fn(&'a T1, &'a T2, TimeInterval) -> bool + Send + Sync,
 {
     type Error = W::Error;
 
-    fn iter<'a>(&'a self) -> impl Iterator<Item = PipelineItem<'a, T1, T2, Self::Error>>
-    where
-        T1: 'a,
-        T2: 'a,
-    {
+    fn iter(&self) -> impl Iterator<Item = PipelineItem<'a, T1, T2, Self::Error>> + '_ {
         self.wrapped
             .iter()
             .filter_map(|item| Self::filter_item(&self.filter, item))
     }
 
-    fn par_iter<'a>(&'a self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>>
+    fn par_iter(&self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>> + '_
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync,
+        T1: Send + Sync,
+        T2: Send + Sync,
     {
         self.wrapped
             .par_iter()
             .filter_map(|item| Self::filter_item(&self.filter, item))
     }
 
-    async fn stream<'a>(
-        &'a self,
-        scope: &RelayScope<'a>,
-    ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>>
+    async fn stream<'sc>(
+        &'sc self,
+        scope: &RelayScope<'sc>,
+    ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>> + 'sc
     where
-        T1: 'a + Send + Sync,
-        T2: 'a + Send + Sync,
+        T1: Send + Sync,
+        T2: Send + Sync,
+        'a: 'sc,
     {
         let (tx, rx) = unbounded();
 
@@ -446,8 +431,7 @@ mod tests {
                     mask: gs.mask(),
                     sc: sc_traj,
                 };
-                let windows = elev.intervals(UniformSampler::new(step), interval)?;
-                Ok::<_, VisibilityError>(windows.into_iter())
+                elev.into_intervals(UniformSampler::new(step), interval)
             })
             .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
             .collect()
@@ -463,8 +447,8 @@ mod tests {
                     mask: gs.mask(),
                     sc: sc_traj,
                 };
-                let windows = elev.intervals(UniformSampler::new(step), interval).unwrap();
-                Ok::<_, VisibilityError>(windows.into_iter())
+
+		elev.into_intervals(UniformSampler::new(step), interval)
             })
             .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
             .par_collect().unwrap();
@@ -480,8 +464,6 @@ mod tests {
                 .len()
         );
         assert_eq!(result, result_par);
-        dbg!(result);
-        // panic!();
     }
 
     #[test]
@@ -509,8 +491,7 @@ mod tests {
                     mask: gs.mask(),
                     sc: sc_traj,
                 };
-                let windows = elev.intervals(UniformSampler::new(step), interval)?;
-                Ok::<_, VisibilityError>(windows.into_iter())
+                elev.into_intervals(UniformSampler::new(step), interval)
             })
             .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000))
             .collect()
@@ -519,7 +500,7 @@ mod tests {
         let result_stream = {
             let pool = ThreadPool::new().unwrap();
 
-            let pipeline = Analysis::new(&ground_assets, &space_assets, interval)
+            let filter = Analysis::new(&ground_assets, &space_assets, interval)
                 .refine(|gs, sc, interval| {
                     let sc_traj = ensemble.get(sc.id()).expect(
                         "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
@@ -529,15 +510,17 @@ mod tests {
                         mask: gs.mask(),
                         sc: sc_traj,
                     };
-                    let windows = elev.intervals(UniformSampler::new(step), interval).unwrap();
-                    Ok::<_, VisibilityError>(windows.into_iter())
+
+                    elev.into_intervals(UniformSampler::new(step), interval)
+
                 })
                 .filter(|_, _, interval| interval.duration() > TimeDelta::from_seconds(40000));
+            let pipeline = filter;
 
             block_on(pipeline.stream_collect(&pool)).unwrap()
         };
 
         assert_eq!(result, result_stream);
-        dbg!(result);
+        // dbg!(result);
     }
 }
