@@ -68,8 +68,8 @@ where
 
     fn par_iter(&self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>> + '_
     where
-        T1: Send + Sync,
-        T2: Send + Sync,
+        T1: Sync,
+        T2: Sync,
     {
         self.t1.par_iter().flat_map(move |item1| {
             self.t2
@@ -83,8 +83,8 @@ where
         _scope: &RelayScope<'sc>,
     ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>> + 'sc
     where
-        T1: Send + Sync,
-        T2: Send + Sync,
+        T1: Sync,
+        T2: Sync,
         'a: 'sc,
     {
         futures::stream::iter(self.iter())
@@ -96,7 +96,7 @@ where
     T1: AssetIdExt + 'a,
     T2: AssetIdExt + 'a,
 {
-    type Error: Send + Sync;
+    type Error: Send;
 
     fn refine<R, I, E>(self, refinement: R) -> Refine<T1, T2, Self, R, I, E>
     where
@@ -131,13 +131,13 @@ where
 
     fn par_iter(&self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>> + '_
     where
-        T1: Send + Sync,
-        T2: Send + Sync;
+        T1: Sync,
+        T2: Sync;
 
     fn par_collect(self) -> Result<IntervalMap, Self::Error>
     where
-        T1: Send + Sync,
-        T2: Send + Sync,
+        T1: Sync,
+        T2: Sync,
     {
         self.par_iter()
             .map(|item| item.map(|(t1, t2, interval)| ((t1.asset_id(), t2.asset_id()), interval)))
@@ -149,14 +149,14 @@ where
         scope: &RelayScope<'sc>,
     ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>> + 'sc
     where
-        T1: Send + Sync,
-        T2: Send + Sync,
+        T1: Sync,
+        T2: Sync,
         'a: 'sc;
 
     async fn stream_collect<S>(self, spawner: &'a S) -> Result<IntervalMap, Self::Error>
     where
-        T1: Send + Sync,
-        T2: Send + Sync,
+        T1: Sync,
+        T2: Sync,
         S: Spawn + Clone + Send,
     {
         let scope = new_relay_scope!(spawner);
@@ -178,10 +178,10 @@ impl<'a, T1, T2, W, R, I, E> Refine<T1, T2, W, R, I, E>
 where
     T1: AssetIdExt + 'a,
     T2: AssetIdExt + 'a,
-    W: Pipeline<'a, T1, T2> + Send + Sync,
-    R: Fn(&'a T1, &'a T2, TimeInterval) -> I + Send + Sync,
-    I: Iterator<Item = Result<TimeInterval, E>> + Send + Sync + 'a,
-    E: From<W::Error> + Send + Sync,
+    W: Pipeline<'a, T1, T2>,
+    R: Fn(&'a T1, &'a T2, TimeInterval) -> I,
+    I: Iterator<Item = Result<TimeInterval, E>> + 'a,
+    E: From<W::Error>,
 {
     fn map_item(f: &R, item: PipelineItem<'a, T1, T2, W::Error>) -> PipelineItem<'a, T1, T2, E> {
         let (t1, t2, intervals) = item?;
@@ -201,9 +201,9 @@ impl<'a, T1, T2, W, R, I, E> Pipeline<'a, T1, T2> for Refine<T1, T2, W, R, I, E>
 where
     T1: AssetIdExt + 'a,
     T2: AssetIdExt + 'a,
-    W: Pipeline<'a, T1, T2> + Send + Sync,
-    R: Fn(&'a T1, &'a T2, TimeInterval) -> I + Send + Sync,
-    I: Iterator<Item = Result<TimeInterval, E>> + Send + Sync + 'a,
+    W: Pipeline<'a, T1, T2> + Sync,
+    R: Fn(&'a T1, &'a T2, TimeInterval) -> I + Sync,
+    I: Iterator<Item = Result<TimeInterval, E>> + Sync + 'a,
     E: From<W::Error> + Send + Sync,
 {
     type Error = E;
@@ -216,8 +216,8 @@ where
 
     fn par_iter(&self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>> + '_
     where
-        T1: Send + Sync,
-        T2: Send + Sync,
+        T1: Sync,
+        T2: Sync,
     {
         self.wrapped
             .par_iter()
@@ -229,8 +229,8 @@ where
         scope: &RelayScope<'sc>,
     ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>> + 'sc
     where
-        T1: Send + Sync,
-        T2: Send + Sync,
+        T1: Sync,
+        T2: Sync,
         'a: 'sc,
     {
         let (tx, rx) = unbounded();
@@ -265,8 +265,7 @@ impl<'a, T1, T2, W, F> Filter<T1, T2, W, F>
 where
     T1: AssetIdExt + 'a,
     T2: AssetIdExt + 'a,
-    W: Pipeline<'a, T1, T2> + Send + Sync,
-    F: Fn(&'a T1, &'a T2, TimeInterval) -> bool + Send + Sync,
+    F: Fn(&'a T1, &'a T2, TimeInterval) -> bool,
 {
     fn filter_item<E>(
         f: &F,
@@ -294,8 +293,8 @@ impl<'a, T1, T2, W, F> Pipeline<'a, T1, T2> for Filter<T1, T2, W, F>
 where
     T1: AssetIdExt + 'a,
     T2: AssetIdExt + 'a,
-    W: Pipeline<'a, T1, T2> + Send + Sync,
-    F: Fn(&'a T1, &'a T2, TimeInterval) -> bool + Send + Sync,
+    W: Pipeline<'a, T1, T2> + Sync,
+    F: Fn(&'a T1, &'a T2, TimeInterval) -> bool + Sync,
 {
     type Error = W::Error;
 
@@ -307,8 +306,8 @@ where
 
     fn par_iter(&self) -> impl ParallelIterator<Item = PipelineItem<'a, T1, T2, Self::Error>> + '_
     where
-        T1: Send + Sync,
-        T2: Send + Sync,
+        T1: Sync,
+        T2: Sync,
     {
         self.wrapped
             .par_iter()
@@ -320,8 +319,8 @@ where
         scope: &RelayScope<'sc>,
     ) -> impl Stream<Item = PipelineItem<'a, T1, T2, Self::Error>> + 'sc
     where
-        T1: Send + Sync,
-        T2: Send + Sync,
+        T1: Sync,
+        T2: Sync,
         'a: 'sc,
     {
         let (tx, rx) = unbounded();
