@@ -186,14 +186,14 @@ where
     fn map_item(f: &R, item: PipelineItem<'a, T1, T2, W::Error>) -> PipelineItem<'a, T1, T2, E> {
         let (t1, t2, intervals) = item?;
 
-        let mut sub_intervals = Vec::new();
-        for interval in intervals {
-            for sub_interval in f(&t1, &t2, interval) {
-                sub_intervals.push(sub_interval?);
-            }
-        }
-
-        Ok::<_, E>((t1, t2, sub_intervals))
+        Ok((
+            t1,
+            t2,
+            intervals
+                .into_iter()
+                .flat_map(|interval| f(&t1, &t2, interval))
+                .collect::<Result<Vec<_>, _>>()?,
+        ))
     }
 }
 
