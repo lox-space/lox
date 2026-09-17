@@ -23,7 +23,7 @@ impl From<Infallible> for DetectError {
     }
 }
 
-trait AssetIdExt {
+pub trait AssetIdExt {
     fn asset_id(&self) -> AssetId;
 }
 
@@ -39,14 +39,14 @@ impl AssetIdExt for GroundStation {
     }
 }
 
-struct Analysis<'a, T1, T2> {
+pub struct Analysis<'a, T1, T2> {
     t1: &'a [T1],
     t2: &'a [T2],
     interval: TimeInterval,
 }
 
 impl<'a, T1, T2> Analysis<'a, T1, T2> {
-    fn new(t1: &'a [T1], t2: &'a [T2], interval: TimeInterval) -> Self {
+    pub fn new(t1: &'a [T1], t2: &'a [T2], interval: TimeInterval) -> Self {
         Self { t1, t2, interval }
     }
 }
@@ -91,12 +91,12 @@ where
     }
 }
 
-trait Pipeline<'a, T1, T2>: Sized
+pub trait Pipeline<'a, T1, T2>: Sized
 where
     T1: AssetIdExt + 'a,
     T2: AssetIdExt + 'a,
 {
-    type Error: Send;
+    type Error: Send + Sync;
 
     fn refine<R, I, E>(self, refinement: R) -> Refine<T1, T2, Self, R, I, E>
     where
@@ -119,6 +119,14 @@ where
             filter,
             __: PhantomData,
         }
+    }
+
+    fn asset_filter<F>(self, f: F) -> impl Pipeline<'a, T1, T2>
+    where
+        F: Fn(&T1, &T2) -> bool + Sync + 'a,
+        Self: Sync,
+    {
+        self.filter(move |t1, t2, _| f(t1, t2))
     }
 
     fn iter(&self) -> impl Iterator<Item = PipelineItem<'a, T1, T2, Self::Error>> + '_;
@@ -168,7 +176,7 @@ where
     }
 }
 
-struct Refine<T1, T2, W, R, I, E> {
+pub struct Refine<T1, T2, W, R, I, E> {
     wrapped: W,
     refinement: R,
     __: PhantomData<(T1, T2, I, E)>,
@@ -255,7 +263,7 @@ where
     }
 }
 
-struct Filter<T1, T2, W, F> {
+pub struct Filter<T1, T2, W, F> {
     wrapped: W,
     filter: F,
     __: PhantomData<(T1, T2)>,
