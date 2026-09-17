@@ -523,10 +523,10 @@ where
 /// Line-of-sight between two spacecraft when the occluding body is the
 /// trajectories' origin. `r_body == 0` by construction, so no ephemeris
 /// lookup is required.
-struct InterSatLosCentralBodyDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    sc1: &'a Trajectory<O, R>,
-    sc2: &'a Trajectory<O, R>,
-    body: Origin,
+pub struct InterSatLosCentralBodyDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub sc1: &'a Trajectory<O, R>,
+    pub sc2: &'a Trajectory<O, R>,
+    pub body: Origin,
 }
 
 impl<O, R> DetectFn for InterSatLosCentralBodyDetectFn<'_, O, R>
@@ -544,7 +544,8 @@ where
 }
 
 /// Direction for inter-satellite range threshold comparison.
-enum RangeDirection {
+#[derive(Clone, Copy)]
+pub enum RangeDirection {
     /// Positive when range < threshold (i.e. `threshold - range`).
     Max,
     /// Positive when range > threshold (i.e. `range - threshold`).
@@ -552,11 +553,11 @@ enum RangeDirection {
 }
 
 /// Range threshold detector for inter-satellite pairs.
-struct InterSatelliteRangeDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    sc1: &'a Trajectory<O, R>,
-    sc2: &'a Trajectory<O, R>,
-    threshold: Distance,
-    direction: RangeDirection,
+pub struct InterSatelliteRangeDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub sc1: &'a Trajectory<O, R>,
+    pub sc2: &'a Trajectory<O, R>,
+    pub threshold: Distance,
+    pub direction: RangeDirection,
 }
 
 impl<O, R> DetectFn for InterSatelliteRangeDetectFn<'_, O, R>
@@ -628,10 +629,10 @@ where
 /// The angular rate ω = |r × v| / |r|² is symmetric between the two
 /// spacecraft.  The detector returns `threshold - ω`, positive when the
 /// angular rate is within the limit.
-struct InterSatelliteSlewRateDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    sc1: &'a Trajectory<O, R>,
-    sc2: &'a Trajectory<O, R>,
-    threshold: AngularRate,
+pub struct InterSatelliteSlewRateDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub sc1: &'a Trajectory<O, R>,
+    pub sc2: &'a Trajectory<O, R>,
+    pub threshold: AngularRate,
 }
 
 impl<O, R> DetectFn for InterSatelliteSlewRateDetectFn<'_, O, R>
