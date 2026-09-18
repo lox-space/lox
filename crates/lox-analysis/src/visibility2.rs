@@ -1,5 +1,6 @@
 use lox_bodies::{CoordinateOrigin, Origin, TrySpheroid};
 use lox_core::units::{AngularRate, Distance};
+use lox_ephem::Ephemeris;
 use lox_frames::{
     Frame, ReferenceFrame, providers::DefaultRotationProvider, rotations::TryRotation,
 };
@@ -7,6 +8,7 @@ use lox_orbits::orbits::{Ensemble, Trajectory};
 use lox_time::{deltas::TimeDelta, intervals::TimeInterval, time_scales::TimeScale};
 
 use crate::events::{AdaptiveSampler, IntervalIterExt, Intervals, Sampler};
+use crate::visibility::{InterSatLosOccluderDetectFn, LineOfSightDetectFn};
 use crate::{
     assets::{AssetId, GroundStation, Spacecraft},
     events::{DetectError, DetectFn, DetectFnExt, UniformSampler},
@@ -22,6 +24,29 @@ pub trait GroundSpacePipeline<'a>: Pipeline<'a, GroundStation, Spacecraft>
 where
     Self: Sync,
 {
+    fn refine_trajectory<O, R, F, I, E>(
+        self,
+        ensemble: &'a Ensemble<AssetId, O, R>,
+        f: F,
+    ) -> impl Pipeline<'a, GroundStation, Spacecraft>
+    where
+        O: CoordinateOrigin + TrySpheroid + Copy + Sync,
+        R: ReferenceFrame + Copy + Sync,
+        F: Fn(&'a GroundStation, (&'a Spacecraft, &'a Trajectory<O, R>), TimeInterval) -> I
+            + Sync
+            + 'a,
+        I: Iterator<Item = Result<TimeInterval, E>> + Send + Sync + 'a,
+        E: From<<Self as Pipeline<'a, GroundStation, Spacecraft>>::Error> + Sync + Send,
+    {
+        self.refine(move |gs, sc, interval| {
+            let sc_traj = ensemble.get(sc.id()).expect(
+                "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
+            );
+
+            f(gs, (sc, sc_traj), interval)
+        })
+    }
+
     fn refine_visibility<O, R, F, S>(
         self,
         ensemble: &'a Ensemble<AssetId, O, R>,
@@ -30,15 +55,12 @@ where
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        S: Sampler<ElevationDetectFn<'a, O, R>> + Sync + 'a,
-        F: Fn(TimeInterval) -> S + Sync,
+        S: Sampler<ElevationDetectFn<'a, O, R>> + Sync + Send + 'a,
+        F: Fn(TimeInterval) -> S + Sync + 'a,
         DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
         DetectError: From<<Self as Pipeline<'a, GroundStation, Spacecraft>>::Error>,
     {
-        self.refine(move |gs, sc, interval| {
-            let sc_traj = ensemble.get(sc.id()).expect(
-                "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
-            );
+        self.refine_trajectory(ensemble, move |gs, (_, sc_traj), interval| {
             let elev = ElevationDetectFn {
                 gs: gs.location(),
                 mask: gs.mask(),
@@ -77,22 +99,63 @@ where
             AdaptiveSampler::new(step, interval.duration().max(step))
         })
     }
+
+    fn refine_line_of_sight<O, R, E>(
+        self,
+        ensemble: &'a Ensemble<AssetId, O, R>,
+        occulting_bodies: &'a [Origin],
+        ephemeris: &'a E,
+        step: TimeDelta,
+    ) -> impl Pipeline<'a, GroundStation, Spacecraft>
+    where
+        O: CoordinateOrigin + TrySpheroid + Copy + Sync,
+        R: ReferenceFrame + Copy + Sync,
+        E: Ephemeris + Sync,
+        E::Error: 'static,
+        DefaultRotationProvider: TryRotation<Frame, R, TimeScale>,
+        <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
+            std::error::Error + Send + Sync + 'static,
+        DetectError: From<<Self as Pipeline<'a, GroundStation, Spacecraft>>::Error>,
+    {
+        self.refine_trajectory(ensemble, move |gs, (_, sc_traj), interval| {
+            let make_los = |body: Origin| {
+                LineOfSightDetectFn {
+                    gs: gs.location(),
+                    sc: sc_traj,
+                    body,
+                    ephemeris,
+                }
+                .into_intervals(UniformSampler::new(step), interval)
+            };
+            let mut los: Box<
+                dyn Iterator<Item = Result<TimeInterval, DetectError>> + Sync + Send + '_,
+            > = Box::new(make_los(occulting_bodies[0]));
+            for &body in &occulting_bodies[1..] {
+                los = Box::new(los.intersect(make_los(body)));
+            }
+            los
+        })
+    }
 }
 
 impl<'a, T> GroundSpacePipeline<'a> for T where T: Pipeline<'a, GroundStation, Spacecraft> + Sync {}
 
-struct OptionalIterator<I>(Option<I>);
+enum EitherIterator<I1, I2> {
+    Iter1(I1),
+    Iter2(I2),
+}
 
-impl<I, E> Iterator for OptionalIterator<I>
+impl<I1, I2, Item> Iterator for EitherIterator<I1, I2>
 where
-    I: Iterator<Item = Result<TimeInterval, E>>,
+    I1: Iterator<Item = Item>,
+    I2: Iterator<Item = Item>,
 {
-    type Item = Result<TimeInterval, E>;
+    type Item = Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match &mut self.0 {
-            Some(iter) => iter.next(),
-            None => None,
+        match self {
+            EitherIterator::Iter1(iter) => iter.next(),
+            EitherIterator::Iter2(iter) => iter.next(),
         }
     }
 }
@@ -210,16 +273,16 @@ where
             };
 
             if let Some(threshold) = effective_slew_rate {
-                OptionalIterator(Some(
+                EitherIterator::Iter1(
                     InterSatelliteSlewRateDetectFn {
                         sc1: traj1,
                         sc2: traj2,
                         threshold,
                     }
                     .into_intervals(UniformSampler::new(step), interval),
-                ))
+                )
             } else {
-                OptionalIterator(None)
+                EitherIterator::Iter2([Ok(interval)].into_iter())
             }
         })
     }
@@ -242,6 +305,43 @@ where
                 body: central_body,
             }
             .into_intervals(UniformSampler::new(step), interval)
+        })
+    }
+
+    fn refine_line_of_sight<O, R, E>(
+        self,
+        ensemble: &'a Ensemble<AssetId, O, R>,
+        occulting_bodies: &'a [Origin],
+        ephemeris: &'a E,
+        step: TimeDelta,
+    ) -> impl Pipeline<'a, Spacecraft, Spacecraft>
+    where
+        O: CoordinateOrigin + TrySpheroid + Copy + Sync,
+        R: ReferenceFrame + Copy + Sync,
+        E: Ephemeris + Sync,
+        E::Error: 'static,
+        DefaultRotationProvider: TryRotation<Frame, R, TimeScale>,
+        <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
+            std::error::Error + Send + Sync + 'static,
+        DetectError: From<<Self as Pipeline<'a, Spacecraft, Spacecraft>>::Error>,
+    {
+        self.refine_trajectories(ensemble, move |(_, traj1), (_, traj2), interval| {
+            let make_los = |body: Origin| {
+                InterSatLosOccluderDetectFn {
+                    sc1: traj1,
+                    sc2: traj2,
+                    body,
+                    ephemeris,
+                }
+                .into_intervals(UniformSampler::new(step), interval)
+            };
+            let mut los: Box<
+                dyn Iterator<Item = Result<TimeInterval, DetectError>> + Sync + Send + '_,
+            > = Box::new(make_los(occulting_bodies[0]));
+            for &body in &occulting_bodies[1..] {
+                los = Box::new(los.intersect(make_los(body)));
+            }
+            los
         })
     }
 }

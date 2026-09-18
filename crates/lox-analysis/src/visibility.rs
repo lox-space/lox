@@ -454,11 +454,11 @@ where
 /// function's rate bound and `step` acts as the minimum stride.
 /// Line-of-sight between a ground station and spacecraft, relative to an
 /// occulting body.
-struct LineOfSightDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    gs: &'a EllipsoidLocation,
-    sc: &'a Trajectory<O, R>,
-    body: Origin,
-    ephemeris: &'a E,
+pub struct LineOfSightDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
+    pub gs: &'a EllipsoidLocation,
+    pub sc: &'a Trajectory<O, R>,
+    pub body: Origin,
+    pub ephemeris: &'a E,
 }
 
 impl<O, R, E: Ephemeris> DetectFn for LineOfSightDetectFn<'_, O, R, E>
@@ -493,11 +493,11 @@ where
 
 /// Line-of-sight between two spacecraft, relative to a non-central occulting body. Uses the
 /// ephemeris to compute the body position.
-struct InterSatLosOccluderDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    sc1: &'a Trajectory<O, R>,
-    sc2: &'a Trajectory<O, R>,
-    body: Origin,
-    ephemeris: &'a E,
+pub struct InterSatLosOccluderDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
+    pub sc1: &'a Trajectory<O, R>,
+    pub sc2: &'a Trajectory<O, R>,
+    pub body: Origin,
+    pub ephemeris: &'a E,
 }
 
 impl<O, R, E: Ephemeris> DetectFn for InterSatLosOccluderDetectFn<'_, O, R, E>
