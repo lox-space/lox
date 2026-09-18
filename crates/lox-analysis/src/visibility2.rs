@@ -20,7 +20,7 @@ use crate::{
     },
 };
 
-pub trait GroundSpacePipeline<'a>: Pipeline<'a, GroundStation, Spacecraft>
+pub trait GroundSpacePipeline<'a>: Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>
 where
     Self: Sync,
 {
@@ -28,22 +28,22 @@ where
         self,
         ensemble: &'a Ensemble<AssetId, O, R>,
         f: F,
-    ) -> impl Pipeline<'a, GroundStation, Spacecraft>
+    ) -> impl Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        F: Fn(&'a GroundStation, (&'a Spacecraft, &'a Trajectory<O, R>), TimeInterval) -> I
+        F: Fn((&'a GroundStation, &'a Spacecraft, &'a Trajectory<O, R>), TimeInterval) -> I
             + Sync
             + 'a,
         I: Iterator<Item = Result<TimeInterval, E>> + Send + Sync + 'a,
-        E: From<<Self as Pipeline<'a, GroundStation, Spacecraft>>::Error> + Sync + Send,
+        E: From<<Self as Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>>::Error> + Sync + Send,
     {
-        self.refine(move |gs, sc, interval| {
+        self.refine(move |(gs, sc), interval| {
             let sc_traj = ensemble.get(sc.id()).expect(
                 "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
             );
 
-            f(gs, (sc, sc_traj), interval)
+            f((gs, sc, sc_traj), interval)
         })
     }
 
@@ -51,16 +51,16 @@ where
         self,
         ensemble: &'a Ensemble<AssetId, O, R>,
         sampler: F,
-    ) -> impl Pipeline<'a, GroundStation, Spacecraft>
+    ) -> impl Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
         S: Sampler<ElevationDetectFn<'a, O, R>> + Sync + Send + 'a,
         F: Fn(TimeInterval) -> S + Sync + 'a,
         DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
-        DetectError: From<<Self as Pipeline<'a, GroundStation, Spacecraft>>::Error>,
+        DetectError: From<<Self as Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>>::Error>,
     {
-        self.refine_trajectory(ensemble, move |gs, (_, sc_traj), interval| {
+        self.refine_trajectory(ensemble, move |(gs, _, sc_traj), interval| {
             let elev = ElevationDetectFn {
                 gs: gs.location(),
                 mask: gs.mask(),
@@ -74,12 +74,12 @@ where
         self,
         ensemble: &'a Ensemble<AssetId, O, R>,
         step: TimeDelta,
-    ) -> impl Pipeline<'a, GroundStation, Spacecraft>
+    ) -> impl Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
         DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
-        DetectError: From<<Self as Pipeline<'a, GroundStation, Spacecraft>>::Error>,
+        DetectError: From<<Self as Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>>::Error>,
     {
         self.refine_visibility(ensemble, move |_| UniformSampler::new(step))
     }
@@ -88,12 +88,12 @@ where
         self,
         ensemble: &'a Ensemble<AssetId, O, R>,
         step: TimeDelta,
-    ) -> impl Pipeline<'a, GroundStation, Spacecraft>
+    ) -> impl Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
         DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
-        DetectError: From<<Self as Pipeline<'a, GroundStation, Spacecraft>>::Error>,
+        DetectError: From<<Self as Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>>::Error>,
     {
         self.refine_visibility(ensemble, move |interval| {
             AdaptiveSampler::new(step, interval.duration().max(step))
@@ -106,7 +106,7 @@ where
         occulting_bodies: &'a [Origin],
         ephemeris: &'a E,
         step: TimeDelta,
-    ) -> impl Pipeline<'a, GroundStation, Spacecraft>
+    ) -> impl Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
@@ -115,9 +115,9 @@ where
         DefaultRotationProvider: TryRotation<Frame, R, TimeScale>,
         <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
             std::error::Error + Send + Sync + 'static,
-        DetectError: From<<Self as Pipeline<'a, GroundStation, Spacecraft>>::Error>,
+        DetectError: From<<Self as Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>>::Error>,
     {
-        self.refine_trajectory(ensemble, move |gs, (_, sc_traj), interval| {
+        self.refine_trajectory(ensemble, move |(gs, _, sc_traj), interval| {
             let make_los = |body: Origin| {
                 LineOfSightDetectFn {
                     gs: gs.location(),
@@ -138,7 +138,10 @@ where
     }
 }
 
-impl<'a, T> GroundSpacePipeline<'a> for T where T: Pipeline<'a, GroundStation, Spacecraft> + Sync {}
+impl<'a, T> GroundSpacePipeline<'a> for T where
+    T: Pipeline<'a, (&'a GroundStation, &'a Spacecraft)> + Sync
+{
+}
 
 enum EitherIterator<I1, I2> {
     Iter1(I1),
@@ -160,7 +163,7 @@ where
     }
 }
 
-pub trait InterSatelitePipeline<'a>: Pipeline<'a, Spacecraft, Spacecraft>
+pub trait InterSatelitePipeline<'a>: Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
 where
     Self: Sync,
 {
@@ -168,20 +171,24 @@ where
         self,
         ensemble: &'a Ensemble<AssetId, O, R>,
         f: F,
-    ) -> impl Pipeline<'a, Spacecraft, Spacecraft>
+    ) -> impl Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
         F: Fn(
-                (&'a Spacecraft, &'a Trajectory<O, R>),
-                (&'a Spacecraft, &'a Trajectory<O, R>),
+                (
+                    &'a Spacecraft,
+                    &'a Trajectory<O, R>,
+                    &'a Spacecraft,
+                    &'a Trajectory<O, R>,
+                ),
                 TimeInterval,
             ) -> I
             + Sync,
         I: Iterator<Item = Result<TimeInterval, E>> + Send + Sync + 'a,
-        E: From<<Self as Pipeline<'a, Spacecraft, Spacecraft>>::Error> + Send + Sync,
+        E: From<<Self as Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>>::Error> + Send + Sync,
     {
-        self.refine(move |sc1, sc2, interval| {
+        self.refine(move |(sc1, sc2), interval| {
             let traj1 = ensemble
                 .get(sc1.id())
                 .expect("trajectory not found in ensemble");
@@ -189,7 +196,7 @@ where
                 .get(sc2.id())
                 .expect("trajectory not found in ensemble");
 
-            f((sc1, traj1), (sc2, traj2), interval)
+            f((sc1, traj1, sc2, traj2), interval)
         })
     }
 
@@ -199,13 +206,13 @@ where
         step: TimeDelta,
         min: Distance,
         max: Distance,
-    ) -> impl Pipeline<'a, Spacecraft, Spacecraft>
+    ) -> impl Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        DetectError: From<<Self as Pipeline<'a, Spacecraft, Spacecraft>>::Error>,
+        DetectError: From<<Self as Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>>::Error>,
     {
-        self.refine_trajectories(ensemble, move |(_, traj1), (_, traj2), interval| {
+        self.refine_trajectories(ensemble, move |(_, traj1, _, traj2), interval| {
             let min = InterSatelliteRangeDetectFn {
                 sc1: traj1,
                 sc2: traj2,
@@ -231,13 +238,13 @@ where
         step: TimeDelta,
         threshold: Distance,
         direction: RangeDirection,
-    ) -> impl Pipeline<'a, Spacecraft, Spacecraft>
+    ) -> impl Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        DetectError: From<<Self as Pipeline<'a, Spacecraft, Spacecraft>>::Error>,
+        DetectError: From<<Self as Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>>::Error>,
     {
-        self.refine_trajectories(ensemble, move |(_, traj1), (_, traj2), interval| {
+        self.refine_trajectories(ensemble, move |(_, traj1, _, traj2), interval| {
             InterSatelliteRangeDetectFn {
                 sc1: traj1,
                 sc2: traj2,
@@ -252,13 +259,13 @@ where
         self,
         ensemble: &'a Ensemble<AssetId, O, R>,
         step: TimeDelta,
-    ) -> impl Pipeline<'a, Spacecraft, Spacecraft>
+    ) -> impl Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        DetectError: From<<Self as Pipeline<'a, Spacecraft, Spacecraft>>::Error>,
+        DetectError: From<<Self as Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>>::Error>,
     {
-        self.refine_trajectories(ensemble, move |(sc1, traj1), (sc2, traj2), interval| {
+        self.refine_trajectories(ensemble, move |(sc1, traj1, sc2, traj2), interval| {
             let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
                 (Some(a), Some(b)) => {
                     Some(if a.to_radians_per_second() < b.to_radians_per_second() {
@@ -292,13 +299,13 @@ where
         ensemble: &'a Ensemble<AssetId, O, R>,
         step: TimeDelta,
         central_body: Origin,
-    ) -> impl Pipeline<'a, Spacecraft, Spacecraft>
+    ) -> impl Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        DetectError: From<<Self as Pipeline<'a, Spacecraft, Spacecraft>>::Error>,
+        DetectError: From<<Self as Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>>::Error>,
     {
-        self.refine_trajectories(ensemble, move |(_, traj1), (_, traj2), interval| {
+        self.refine_trajectories(ensemble, move |(_, traj1, _, traj2), interval| {
             InterSatLosCentralBodyDetectFn {
                 sc1: traj1,
                 sc2: traj2,
@@ -314,7 +321,7 @@ where
         occulting_bodies: &'a [Origin],
         ephemeris: &'a E,
         step: TimeDelta,
-    ) -> impl Pipeline<'a, Spacecraft, Spacecraft>
+    ) -> impl Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
@@ -323,9 +330,9 @@ where
         DefaultRotationProvider: TryRotation<Frame, R, TimeScale>,
         <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
             std::error::Error + Send + Sync + 'static,
-        DetectError: From<<Self as Pipeline<'a, Spacecraft, Spacecraft>>::Error>,
+        DetectError: From<<Self as Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>>::Error>,
     {
-        self.refine_trajectories(ensemble, move |(_, traj1), (_, traj2), interval| {
+        self.refine_trajectories(ensemble, move |(_, traj1, _, traj2), interval| {
             let make_los = |body: Origin| {
                 InterSatLosOccluderDetectFn {
                     sc1: traj1,
@@ -346,4 +353,7 @@ where
     }
 }
 
-impl<'a, T> InterSatelitePipeline<'a> for T where T: Pipeline<'a, Spacecraft, Spacecraft> + Sync {}
+impl<'a, T> InterSatelitePipeline<'a> for T where
+    T: Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)> + Sync
+{
+}
