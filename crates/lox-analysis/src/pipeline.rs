@@ -1,6 +1,6 @@
 use std::collections::HashMap;
+use std::convert::Infallible;
 use std::hash::Hash;
-use std::{convert::Infallible, marker::PhantomData};
 
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -111,15 +111,13 @@ pub trait Pipeline<'a>: Sized {
     type Window: Send + Copy;
     type Error: Send + Sync;
 
-    fn refine<R, I, E>(self, refinement: R) -> Refine<Self, R, I, E>
+    fn refine<R, I>(self, refinement: R) -> Refine<Self, R>
     where
-        R: Fn(Self::Asset, Self::Window) -> I,
-        I: Iterator<Item = Result<Self::Window, E>> + 'a,
+        R: RefineFn<Self::Asset, Self::Window> + Fn(Self::Asset, Self::Window) -> I,
     {
         Refine {
             wrapped: self,
             refinement,
-            __: PhantomData,
         }
     }
 
@@ -221,46 +219,65 @@ pub trait Pipeline<'a>: Sized {
     }
 }
 
-pub struct Refine<W, R, I, E> {
-    wrapped: W,
-    refinement: R,
-    __: PhantomData<(I, E)>,
+pub trait RefineFn<A, W> {
+    type Error: Send + Sync;
+    type Iter: Iterator<Item = Result<W, Self::Error>>;
+
+    fn refine(&self, asset: A, window: W) -> Self::Iter;
 }
 
-impl<'a, W, R, I, E> Refine<W, R, I, E>
+impl<T, A, W, I, E> RefineFn<A, W> for T
+where
+    T: Fn(A, W) -> I,
+    I: Iterator<Item = Result<W, E>>,
+    E: Send + Sync,
+{
+    type Iter = I;
+    type Error = E;
+
+    fn refine(&self, asset: A, window: W) -> Self::Iter {
+        self(asset, window)
+    }
+}
+
+pub struct Refine<W, R> {
+    wrapped: W,
+    refinement: R,
+}
+
+impl<'a, W, R> Refine<W, R>
 where
     W: Pipeline<'a>,
-    R: Fn(W::Asset, W::Window) -> I,
-    I: Iterator<Item = Result<W::Window, E>> + 'a,
-    E: From<W::Error>,
+    R: RefineFn<W::Asset, W::Window>,
+    R::Error: From<W::Error>,
 {
     fn map_item(
         f: &R,
         item: PipelineItem<W::Asset, W::Window, W::Error>,
-    ) -> PipelineItem<W::Asset, W::Window, E> {
+    ) -> PipelineItem<W::Asset, W::Window, R::Error> {
         let (t, windows) = item?;
 
         Ok((
             t,
             windows
                 .into_iter()
-                .flat_map(|window| f(t, window))
+                .flat_map(|window| f.refine(t, window))
                 .collect::<Result<Vec<_>, _>>()?,
         ))
     }
 }
 
-impl<'a, W, R, I, E> Pipeline<'a> for Refine<W, R, I, E>
+impl<'a, W, R> Pipeline<'a> for Refine<W, R>
 where
     W: Pipeline<'a> + Sync,
-    R: Fn(W::Asset, W::Window) -> I + Sync,
-    I: Iterator<Item = Result<W::Window, E>> + Sync + 'a,
-    E: From<W::Error> + Send + Sync,
+    R: RefineFn<W::Asset, W::Window> + Sync,
+    R::Error: From<W::Error>,
+    R::Iter: Sync + 'a + Send + Sync,
 {
     type Asset = W::Asset;
     type Key = W::Key;
     type Window = W::Window;
-    type Error = E;
+    type Error = R::Error;
 
     fn iter(
         &self,
