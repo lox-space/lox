@@ -20,7 +20,8 @@ use crate::{
     },
 };
 
-pub trait GroundSpacePipeline<'a>: Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>
+pub trait GroundSpacePipeline<'a>:
+    Pipeline<'a, (&'a GroundStation, &'a Spacecraft), Window = TimeInterval>
 where
     Self: Sync,
 {
@@ -139,7 +140,7 @@ where
 }
 
 impl<'a, T> GroundSpacePipeline<'a> for T where
-    T: Pipeline<'a, (&'a GroundStation, &'a Spacecraft)> + Sync
+    T: Pipeline<'a, (&'a GroundStation, &'a Spacecraft), Window = TimeInterval> + Sync
 {
 }
 
@@ -163,7 +164,8 @@ where
     }
 }
 
-pub trait InterSatelitePipeline<'a>: Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
+pub trait InterSatelitePipeline<'a>:
+    Pipeline<'a, (&'a Spacecraft, &'a Spacecraft), Window = TimeInterval>
 where
     Self: Sync,
 {
@@ -354,6 +356,6 @@ where
 }
 
 impl<'a, T> InterSatelitePipeline<'a> for T where
-    T: Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)> + Sync
+    T: Pipeline<'a, (&'a Spacecraft, &'a Spacecraft), Window = TimeInterval> + Sync
 {
 }
