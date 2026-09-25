@@ -60,8 +60,8 @@ impl<'a, T1, T2> AssetPairAnalysis<'a, T1, T2> {
 
 impl<'a, T1, T2> Pipeline<'a> for AssetPairAnalysis<'a, T1, T2>
 where
-    T1: AsKey<AssetId> + Sync,
-    T2: AsKey<AssetId> + Sync,
+    T1: AsKey<AssetId>,
+    T2: AsKey<AssetId>,
     (&'a T1, &'a T2): AsKey<(AssetId, AssetId)>,
 {
     type Asset = (&'a T1, &'a T2);
@@ -78,7 +78,14 @@ where
                 .map(move |item2| Ok(((item1, item2), vec![self.interval])))
         })
     }
+}
 
+impl<'a, T1, T2> ParallelPipeline<'a> for AssetPairAnalysis<'a, T1, T2>
+where
+    T1: AsKey<AssetId> + Sync,
+    T2: AsKey<AssetId> + Sync,
+    (&'a T1, &'a T2): AsKey<(AssetId, AssetId)>,
+{
     fn par_iter(
         &self,
     ) -> impl ParallelIterator<Item = PipelineItem<(&'a T1, &'a T2), Self::Window, Self::Error>> + '_
@@ -89,7 +96,14 @@ where
                 .map(move |item2| Ok(((item1, item2), vec![self.interval])))
         })
     }
+}
 
+impl<'a, T1, T2> StreamPipeline<'a> for AssetPairAnalysis<'a, T1, T2>
+where
+    T1: AsKey<AssetId> + Sync,
+    T2: AsKey<AssetId> + Sync,
+    (&'a T1, &'a T2): AsKey<(AssetId, AssetId)>,
+{
     async fn stream<'sc>(
         &'sc self,
         _scope: &RelayScope<'sc>,
@@ -108,8 +122,8 @@ pub trait AsKey<K> {
 pub trait Pipeline<'a>: Sized {
     type Asset: Copy + 'a;
     type Key: Eq + Hash + core::fmt::Debug;
-    type Window: Send + Copy;
-    type Error: Send + Sync;
+    type Window: Copy;
+    type Error;
 
     fn refine<R, I>(self, refinement: R) -> Refine<Self, R>
     where
@@ -131,36 +145,16 @@ pub trait Pipeline<'a>: Sized {
         }
     }
 
-    fn filter_asset<F>(
-        self,
-        f: F,
-    ) -> impl Pipeline<
-        'a,
-        Asset = Self::Asset,
-        Error = Self::Error,
-        Key = Self::Key,
-        Window = Self::Window,
-    >
+    fn filter_asset<F>(self, f: F) -> Filter<Self, impl Fn(Self::Asset, Self::Window) -> bool>
     where
         F: Fn(Self::Asset) -> bool + Sync + 'a,
-        Self: Sync,
     {
         self.filter(move |t, _| f(t))
     }
 
-    fn filter_window<F>(
-        self,
-        f: F,
-    ) -> impl Pipeline<
-        'a,
-        Asset = Self::Asset,
-        Error = Self::Error,
-        Key = Self::Key,
-        Window = Self::Window,
-    >
+    fn filter_window<F>(self, f: F) -> Filter<Self, impl Fn(Self::Asset, Self::Window) -> bool>
     where
         F: Fn(Self::Window) -> bool + Sync + 'a,
-        Self: Sync,
     {
         self.filter(move |_, window| f(window))
     }
@@ -174,32 +168,43 @@ pub trait Pipeline<'a>: Sized {
         Self::Asset: AsKey<Self::Key>,
     {
         self.iter()
-            .map(|item| item.map(|(t, interval)| (t.as_key(), interval)))
+            .map(|item| item.map(|(t, window)| (t.as_key(), window)))
             .collect()
     }
+}
 
+pub trait ParallelPipeline<'a>: Pipeline<'a>
+where
+    Self::Asset: Sync + Send,
+    Self::Window: Send,
+    Self::Error: Send,
+{
     fn par_iter(
         &self,
-    ) -> impl ParallelIterator<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + '_
-    where
-        Self::Asset: Sync + Send;
+    ) -> impl ParallelIterator<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + '_;
 
     fn par_collect(self) -> Result<AnalysisMap<Self::Key, Self::Window>, Self::Error>
     where
-        Self::Asset: AsKey<Self::Key> + Sync + Send,
+        Self::Asset: AsKey<Self::Key>,
         Self::Key: Send,
     {
         self.par_iter()
-            .map(|item| item.map(|(t, interval)| (t.as_key(), interval)))
+            .map(|item| item.map(|(t, window)| (t.as_key(), window)))
             .collect()
     }
+}
 
+pub trait StreamPipeline<'a>: Pipeline<'a>
+where
+    Self::Asset: Sync + Send,
+    Self::Window: Send,
+    Self::Error: Send,
+{
     async fn stream<'sc>(
         &'sc self,
         scope: &RelayScope<'sc>,
     ) -> impl Stream<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + 'sc
     where
-        Self::Asset: Sync + Send,
         'a: 'sc;
 
     async fn stream_collect<S>(
@@ -207,20 +212,20 @@ pub trait Pipeline<'a>: Sized {
         spawner: &'a S,
     ) -> Result<AnalysisMap<Self::Key, Self::Window>, Self::Error>
     where
-        Self::Asset: AsKey<Self::Key> + Sync + Send,
+        Self::Asset: AsKey<Self::Key>,
         S: Spawn + Clone + Send,
     {
         let scope = new_relay_scope!(spawner);
         self.stream(scope)
             .await
-            .map(|item| item.map(|(t, intervals)| (t.as_key(), intervals)))
+            .map(|item| item.map(|(t, window)| (t.as_key(), window)))
             .try_collect()
             .await
     }
 }
 
 pub trait RefineFn<A, W> {
-    type Error: Send + Sync;
+    type Error;
     type Iter: Iterator<Item = Result<W, Self::Error>>;
 
     fn refine(&self, asset: A, window: W) -> Self::Iter;
@@ -230,7 +235,6 @@ impl<T, A, W, I, E> RefineFn<A, W> for T
 where
     T: Fn(A, W) -> I,
     I: Iterator<Item = Result<W, E>>,
-    E: Send + Sync,
 {
     type Iter = I;
     type Error = E;
@@ -269,10 +273,9 @@ where
 
 impl<'a, W, R> Pipeline<'a> for Refine<W, R>
 where
-    W: Pipeline<'a> + Sync,
-    R: RefineFn<W::Asset, W::Window> + Sync,
+    W: Pipeline<'a>,
+    R: RefineFn<W::Asset, W::Window>,
     R::Error: From<W::Error>,
-    R::Iter: Sync + 'a + Send + Sync,
 {
     type Asset = W::Asset;
     type Key = W::Key;
@@ -286,24 +289,43 @@ where
             .iter()
             .map(move |item| Self::map_item(&self.refinement, item))
     }
+}
 
+impl<'a, W, R> ParallelPipeline<'a> for Refine<W, R>
+where
+    W: ParallelPipeline<'a> + Sync,
+    W::Asset: Sync + Send,
+    W::Window: Send,
+    W::Error: Send,
+    R: RefineFn<W::Asset, W::Window> + Sync,
+    R::Error: From<W::Error> + Send,
+    R::Iter: Send + Sync + 'a,
+{
     fn par_iter(
         &self,
     ) -> impl ParallelIterator<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + '_
-    where
-        Self::Asset: Sync + Send,
     {
         self.wrapped
             .par_iter()
             .map(move |item| Self::map_item(&self.refinement, item))
     }
+}
 
+impl<'a, W, R> StreamPipeline<'a> for Refine<W, R>
+where
+    W: StreamPipeline<'a> + Sync,
+    W::Asset: Sync + Send,
+    W::Window: Send,
+    W::Error: Send,
+    R: RefineFn<W::Asset, W::Window> + Sync,
+    R::Error: From<W::Error> + Send,
+    R::Iter: Send + Sync + 'a,
+{
     async fn stream<'sc>(
         &'sc self,
         scope: &RelayScope<'sc>,
     ) -> impl Stream<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + 'sc
     where
-        Self::Asset: Sync + Send,
         'a: 'sc,
     {
         let (tx, rx) = unbounded();
@@ -362,8 +384,8 @@ where
 
 impl<'a, W, F> Pipeline<'a> for Filter<W, F>
 where
-    W: Pipeline<'a> + Sync,
-    F: Fn(W::Asset, W::Window) -> bool + Sync,
+    W: Pipeline<'a>,
+    F: Fn(W::Asset, W::Window) -> bool,
 {
     type Asset = W::Asset;
     type Key = W::Key;
@@ -377,24 +399,39 @@ where
             .iter()
             .filter_map(|item| Self::filter_item(&self.filter, item))
     }
+}
 
+impl<'a, W, F> ParallelPipeline<'a> for Filter<W, F>
+where
+    W: ParallelPipeline<'a> + Sync,
+    W::Asset: Sync + Send,
+    W::Window: Send,
+    W::Error: Send,
+    F: Fn(W::Asset, W::Window) -> bool + Sync,
+{
     fn par_iter(
         &self,
     ) -> impl ParallelIterator<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + '_
-    where
-        Self::Asset: Sync + Send,
     {
         self.wrapped
             .par_iter()
             .filter_map(|item| Self::filter_item(&self.filter, item))
     }
+}
 
+impl<'a, W, F> StreamPipeline<'a> for Filter<W, F>
+where
+    W: StreamPipeline<'a> + Sync,
+    W::Asset: Sync + Send,
+    W::Window: Send,
+    W::Error: Send,
+    F: Fn(W::Asset, W::Window) -> bool + Sync,
+{
     async fn stream<'sc>(
         &'sc self,
         scope: &RelayScope<'sc>,
     ) -> impl Stream<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + 'sc
     where
-        Self::Asset: Sync + Send,
         'a: 'sc,
     {
         let (tx, rx) = unbounded();
@@ -422,7 +459,6 @@ where
 mod tests {
     use std::collections::HashMap;
 
-    use crate::visibility::VisibilityError;
     use crate::{assets::Scenario, events::DetectFnExt};
     use futures::executor::{ThreadPool, block_on};
     use lox_bodies::Origin;
