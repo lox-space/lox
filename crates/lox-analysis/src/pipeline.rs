@@ -58,12 +58,13 @@ impl<'a, T1, T2> AssetPairAnalysis<'a, T1, T2> {
     }
 }
 
-impl<'a, T1, T2> Pipeline<'a, (&'a T1, &'a T2)> for AssetPairAnalysis<'a, T1, T2>
+impl<'a, T1, T2> Pipeline<'a> for AssetPairAnalysis<'a, T1, T2>
 where
     T1: AsKey<AssetId> + Sync,
     T2: AsKey<AssetId> + Sync,
     (&'a T1, &'a T2): AsKey<(AssetId, AssetId)>,
 {
+    type Asset = (&'a T1, &'a T2);
     type Key = (AssetId, AssetId);
     type Window = TimeInterval;
     type Error = Infallible;
@@ -104,17 +105,15 @@ pub trait AsKey<K> {
     fn as_key(&self) -> K;
 }
 
-pub trait Pipeline<'a, T>: Sized
-where
-    T: Copy + 'a,
-{
+pub trait Pipeline<'a>: Sized {
+    type Asset: Copy + 'a;
     type Key: Eq + Hash + core::fmt::Debug;
     type Window: Send + Copy;
     type Error: Send + Sync;
 
-    fn refine<R, I, E>(self, refinement: R) -> Refine<T, Self, R, I, E>
+    fn refine<R, I, E>(self, refinement: R) -> Refine<Self, R, I, E>
     where
-        R: Fn(T, Self::Window) -> I,
+        R: Fn(Self::Asset, Self::Window) -> I,
         I: Iterator<Item = Result<Self::Window, E>> + 'a,
     {
         Refine {
@@ -124,23 +123,28 @@ where
         }
     }
 
-    fn filter<F>(self, filter: F) -> Filter<T, Self, F>
+    fn filter<F>(self, filter: F) -> Filter<Self, F>
     where
-        F: Fn(T, Self::Window) -> bool,
+        F: Fn(Self::Asset, Self::Window) -> bool,
     {
         Filter {
             wrapped: self,
             filter,
-            __: PhantomData,
         }
     }
 
     fn filter_asset<F>(
         self,
         f: F,
-    ) -> impl Pipeline<'a, T, Error = Self::Error, Key = Self::Key, Window = Self::Window>
+    ) -> impl Pipeline<
+        'a,
+        Asset = Self::Asset,
+        Error = Self::Error,
+        Key = Self::Key,
+        Window = Self::Window,
+    >
     where
-        F: Fn(T) -> bool + Sync + 'a,
+        F: Fn(Self::Asset) -> bool + Sync + 'a,
         Self: Sync,
     {
         self.filter(move |t, _| f(t))
@@ -149,7 +153,13 @@ where
     fn filter_window<F>(
         self,
         f: F,
-    ) -> impl Pipeline<'a, T, Error = Self::Error, Key = Self::Key, Window = Self::Window>
+    ) -> impl Pipeline<
+        'a,
+        Asset = Self::Asset,
+        Error = Self::Error,
+        Key = Self::Key,
+        Window = Self::Window,
+    >
     where
         F: Fn(Self::Window) -> bool + Sync + 'a,
         Self: Sync,
@@ -157,11 +167,13 @@ where
         self.filter(move |_, window| f(window))
     }
 
-    fn iter(&self) -> impl Iterator<Item = PipelineItem<T, Self::Window, Self::Error>> + '_;
+    fn iter(
+        &self,
+    ) -> impl Iterator<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + '_;
 
     fn collect(self) -> Result<AnalysisMap<Self::Key, Self::Window>, Self::Error>
     where
-        T: AsKey<Self::Key>,
+        Self::Asset: AsKey<Self::Key>,
     {
         self.iter()
             .map(|item| item.map(|(t, interval)| (t.as_key(), interval)))
@@ -170,13 +182,13 @@ where
 
     fn par_iter(
         &self,
-    ) -> impl ParallelIterator<Item = PipelineItem<T, Self::Window, Self::Error>> + '_
+    ) -> impl ParallelIterator<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + '_
     where
-        T: Sync + Send;
+        Self::Asset: Sync + Send;
 
     fn par_collect(self) -> Result<AnalysisMap<Self::Key, Self::Window>, Self::Error>
     where
-        T: AsKey<Self::Key> + Sync + Send,
+        Self::Asset: AsKey<Self::Key> + Sync + Send,
         Self::Key: Send,
     {
         self.par_iter()
@@ -187,9 +199,9 @@ where
     async fn stream<'sc>(
         &'sc self,
         scope: &RelayScope<'sc>,
-    ) -> impl Stream<Item = PipelineItem<T, Self::Window, Self::Error>> + 'sc
+    ) -> impl Stream<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + 'sc
     where
-        T: Sync + Send,
+        Self::Asset: Sync + Send,
         'a: 'sc;
 
     async fn stream_collect<S>(
@@ -197,7 +209,7 @@ where
         spawner: &'a S,
     ) -> Result<AnalysisMap<Self::Key, Self::Window>, Self::Error>
     where
-        T: AsKey<Self::Key> + Sync + Send,
+        Self::Asset: AsKey<Self::Key> + Sync + Send,
         S: Spawn + Clone + Send,
     {
         let scope = new_relay_scope!(spawner);
@@ -209,24 +221,23 @@ where
     }
 }
 
-pub struct Refine<T, W, R, I, E> {
+pub struct Refine<W, R, I, E> {
     wrapped: W,
     refinement: R,
-    __: PhantomData<(T, I, E)>,
+    __: PhantomData<(I, E)>,
 }
 
-impl<'a, T, W, R, I, E> Refine<T, W, R, I, E>
+impl<'a, W, R, I, E> Refine<W, R, I, E>
 where
-    T: Copy + 'a,
-    W: Pipeline<'a, T>,
-    R: Fn(T, W::Window) -> I,
+    W: Pipeline<'a>,
+    R: Fn(W::Asset, W::Window) -> I,
     I: Iterator<Item = Result<W::Window, E>> + 'a,
     E: From<W::Error>,
 {
     fn map_item(
         f: &R,
-        item: PipelineItem<T, W::Window, W::Error>,
-    ) -> PipelineItem<T, W::Window, E> {
+        item: PipelineItem<W::Asset, W::Window, W::Error>,
+    ) -> PipelineItem<W::Asset, W::Window, E> {
         let (t, windows) = item?;
 
         Ok((
@@ -239,19 +250,21 @@ where
     }
 }
 
-impl<'a, T, W, R, I, E> Pipeline<'a, T> for Refine<T, W, R, I, E>
+impl<'a, W, R, I, E> Pipeline<'a> for Refine<W, R, I, E>
 where
-    T: Copy + 'a,
-    W: Pipeline<'a, T> + Sync,
-    R: Fn(T, W::Window) -> I + Sync,
+    W: Pipeline<'a> + Sync,
+    R: Fn(W::Asset, W::Window) -> I + Sync,
     I: Iterator<Item = Result<W::Window, E>> + Sync + 'a,
     E: From<W::Error> + Send + Sync,
 {
+    type Asset = W::Asset;
     type Key = W::Key;
     type Window = W::Window;
     type Error = E;
 
-    fn iter(&self) -> impl Iterator<Item = PipelineItem<T, Self::Window, Self::Error>> + '_ {
+    fn iter(
+        &self,
+    ) -> impl Iterator<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + '_ {
         self.wrapped
             .iter()
             .map(move |item| Self::map_item(&self.refinement, item))
@@ -259,9 +272,9 @@ where
 
     fn par_iter(
         &self,
-    ) -> impl ParallelIterator<Item = PipelineItem<T, Self::Window, Self::Error>> + '_
+    ) -> impl ParallelIterator<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + '_
     where
-        T: Sync + Send,
+        Self::Asset: Sync + Send,
     {
         self.wrapped
             .par_iter()
@@ -271,9 +284,9 @@ where
     async fn stream<'sc>(
         &'sc self,
         scope: &RelayScope<'sc>,
-    ) -> impl Stream<Item = PipelineItem<T, Self::Window, Self::Error>> + 'sc
+    ) -> impl Stream<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + 'sc
     where
-        T: Sync + Send,
+        Self::Asset: Sync + Send,
         'a: 'sc,
     {
         let (tx, rx) = unbounded();
@@ -298,22 +311,20 @@ where
     }
 }
 
-pub struct Filter<T, W, F> {
+pub struct Filter<W, F> {
     wrapped: W,
     filter: F,
-    __: PhantomData<T>,
 }
 
-impl<'a, T, W, F> Filter<T, W, F>
+impl<'a, W, F> Filter<W, F>
 where
-    T: Copy + 'a,
-    W: Pipeline<'a, T>,
-    F: Fn(T, W::Window) -> bool,
+    W: Pipeline<'a>,
+    F: Fn(W::Asset, W::Window) -> bool,
 {
     fn filter_item<E>(
         f: &F,
-        item: PipelineItem<T, W::Window, E>,
-    ) -> Option<PipelineItem<T, W::Window, E>> {
+        item: PipelineItem<W::Asset, W::Window, E>,
+    ) -> Option<PipelineItem<W::Asset, W::Window, E>> {
         match item {
             Ok((t, windows)) => {
                 let windows = windows
@@ -332,17 +343,19 @@ where
     }
 }
 
-impl<'a, T, W, F> Pipeline<'a, T> for Filter<T, W, F>
+impl<'a, W, F> Pipeline<'a> for Filter<W, F>
 where
-    T: Copy + 'a,
-    W: Pipeline<'a, T> + Sync,
-    F: Fn(T, W::Window) -> bool + Sync,
+    W: Pipeline<'a> + Sync,
+    F: Fn(W::Asset, W::Window) -> bool + Sync,
 {
+    type Asset = W::Asset;
     type Key = W::Key;
     type Window = W::Window;
     type Error = W::Error;
 
-    fn iter(&self) -> impl Iterator<Item = PipelineItem<T, Self::Window, Self::Error>> + '_ {
+    fn iter(
+        &self,
+    ) -> impl Iterator<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + '_ {
         self.wrapped
             .iter()
             .filter_map(|item| Self::filter_item(&self.filter, item))
@@ -350,9 +363,9 @@ where
 
     fn par_iter(
         &self,
-    ) -> impl ParallelIterator<Item = PipelineItem<T, Self::Window, Self::Error>> + '_
+    ) -> impl ParallelIterator<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + '_
     where
-        T: Sync + Send,
+        Self::Asset: Sync + Send,
     {
         self.wrapped
             .par_iter()
@@ -362,9 +375,9 @@ where
     async fn stream<'sc>(
         &'sc self,
         scope: &RelayScope<'sc>,
-    ) -> impl Stream<Item = PipelineItem<T, Self::Window, Self::Error>> + 'sc
+    ) -> impl Stream<Item = PipelineItem<Self::Asset, Self::Window, Self::Error>> + 'sc
     where
-        T: Sync + Send,
+        Self::Asset: Sync + Send,
         'a: 'sc,
     {
         let (tx, rx) = unbounded();

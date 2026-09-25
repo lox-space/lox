@@ -21,7 +21,12 @@ use crate::{
 };
 
 pub trait GroundSpacePipeline<'a>:
-    Pipeline<'a, (&'a GroundStation, &'a Spacecraft), Window = TimeInterval>
+    Pipeline<
+        'a,
+        Asset = (&'a GroundStation, &'a Spacecraft),
+        Window = TimeInterval,
+        Key = (AssetId, AssetId),
+    >
 where
     Self: Sync,
 {
@@ -29,7 +34,7 @@ where
         self,
         ensemble: &'a Ensemble<AssetId, O, R>,
         f: F,
-    ) -> impl Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>
+    ) -> impl GroundSpacePipeline<'a>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
@@ -37,7 +42,7 @@ where
             + Sync
             + 'a,
         I: Iterator<Item = Result<TimeInterval, E>> + Send + Sync + 'a,
-        E: From<<Self as Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>>::Error> + Sync + Send,
+        E: From<<Self as Pipeline<'a>>::Error> + Sync + Send,
     {
         self.refine(move |(gs, sc), interval| {
             let sc_traj = ensemble.get(sc.id()).expect(
@@ -52,14 +57,14 @@ where
         self,
         ensemble: &'a Ensemble<AssetId, O, R>,
         sampler: F,
-    ) -> impl Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>
+    ) -> impl GroundSpacePipeline<'a>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
         S: Sampler<ElevationDetectFn<'a, O, R>> + Sync + Send + 'a,
         F: Fn(TimeInterval) -> S + Sync + 'a,
         DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
-        DetectError: From<<Self as Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>>::Error>,
+        DetectError: From<<Self as Pipeline<'a>>::Error>,
     {
         self.refine_trajectory(ensemble, move |(gs, _, sc_traj), interval| {
             let elev = ElevationDetectFn {
@@ -75,12 +80,12 @@ where
         self,
         ensemble: &'a Ensemble<AssetId, O, R>,
         step: TimeDelta,
-    ) -> impl Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>
+    ) -> impl GroundSpacePipeline<'a>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
         DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
-        DetectError: From<<Self as Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>>::Error>,
+        DetectError: From<<Self as Pipeline<'a>>::Error>,
     {
         self.refine_visibility(ensemble, move |_| UniformSampler::new(step))
     }
@@ -89,12 +94,12 @@ where
         self,
         ensemble: &'a Ensemble<AssetId, O, R>,
         step: TimeDelta,
-    ) -> impl Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>
+    ) -> impl GroundSpacePipeline<'a>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
         DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
-        DetectError: From<<Self as Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>>::Error>,
+        DetectError: From<<Self as Pipeline<'a>>::Error>,
     {
         self.refine_visibility(ensemble, move |interval| {
             AdaptiveSampler::new(step, interval.duration().max(step))
@@ -107,7 +112,7 @@ where
         occulting_bodies: &'a [Origin],
         ephemeris: &'a E,
         step: TimeDelta,
-    ) -> impl Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>
+    ) -> impl GroundSpacePipeline<'a>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
@@ -116,7 +121,7 @@ where
         DefaultRotationProvider: TryRotation<Frame, R, TimeScale>,
         <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
             std::error::Error + Send + Sync + 'static,
-        DetectError: From<<Self as Pipeline<'a, (&'a GroundStation, &'a Spacecraft)>>::Error>,
+        DetectError: From<<Self as Pipeline<'a>>::Error>,
     {
         self.refine_trajectory(ensemble, move |(gs, _, sc_traj), interval| {
             let make_los = |body: Origin| {
@@ -140,7 +145,12 @@ where
 }
 
 impl<'a, T> GroundSpacePipeline<'a> for T where
-    T: Pipeline<'a, (&'a GroundStation, &'a Spacecraft), Window = TimeInterval> + Sync
+    T: Pipeline<
+            'a,
+            Asset = (&'a GroundStation, &'a Spacecraft),
+            Window = TimeInterval,
+            Key = (AssetId, AssetId),
+        > + Sync
 {
 }
 
@@ -165,7 +175,12 @@ where
 }
 
 pub trait InterSatelitePipeline<'a>:
-    Pipeline<'a, (&'a Spacecraft, &'a Spacecraft), Window = TimeInterval>
+    Pipeline<
+        'a,
+        Asset = (&'a Spacecraft, &'a Spacecraft),
+        Window = TimeInterval,
+        Key = (AssetId, AssetId),
+    >
 where
     Self: Sync,
 {
@@ -173,7 +188,7 @@ where
         self,
         ensemble: &'a Ensemble<AssetId, O, R>,
         f: F,
-    ) -> impl Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
+    ) -> impl InterSatelitePipeline<'a>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
@@ -188,7 +203,7 @@ where
             ) -> I
             + Sync,
         I: Iterator<Item = Result<TimeInterval, E>> + Send + Sync + 'a,
-        E: From<<Self as Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>>::Error> + Send + Sync,
+        E: From<<Self as Pipeline<'a>>::Error> + Send + Sync,
     {
         self.refine(move |(sc1, sc2), interval| {
             let traj1 = ensemble
@@ -208,11 +223,11 @@ where
         step: TimeDelta,
         min: Distance,
         max: Distance,
-    ) -> impl Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
+    ) -> impl InterSatelitePipeline<'a>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        DetectError: From<<Self as Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>>::Error>,
+        DetectError: From<<Self as Pipeline<'a>>::Error>,
     {
         self.refine_trajectories(ensemble, move |(_, traj1, _, traj2), interval| {
             let min = InterSatelliteRangeDetectFn {
@@ -240,11 +255,11 @@ where
         step: TimeDelta,
         threshold: Distance,
         direction: RangeDirection,
-    ) -> impl Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
+    ) -> impl InterSatelitePipeline<'a>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        DetectError: From<<Self as Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>>::Error>,
+        DetectError: From<<Self as Pipeline<'a>>::Error>,
     {
         self.refine_trajectories(ensemble, move |(_, traj1, _, traj2), interval| {
             InterSatelliteRangeDetectFn {
@@ -261,11 +276,11 @@ where
         self,
         ensemble: &'a Ensemble<AssetId, O, R>,
         step: TimeDelta,
-    ) -> impl Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
+    ) -> impl InterSatelitePipeline<'a>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        DetectError: From<<Self as Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>>::Error>,
+        DetectError: From<<Self as Pipeline<'a>>::Error>,
     {
         self.refine_trajectories(ensemble, move |(sc1, traj1, sc2, traj2), interval| {
             let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
@@ -301,11 +316,11 @@ where
         ensemble: &'a Ensemble<AssetId, O, R>,
         step: TimeDelta,
         central_body: Origin,
-    ) -> impl Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
+    ) -> impl InterSatelitePipeline<'a>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        DetectError: From<<Self as Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>>::Error>,
+        DetectError: From<<Self as Pipeline<'a>>::Error>,
     {
         self.refine_trajectories(ensemble, move |(_, traj1, _, traj2), interval| {
             InterSatLosCentralBodyDetectFn {
@@ -323,7 +338,7 @@ where
         occulting_bodies: &'a [Origin],
         ephemeris: &'a E,
         step: TimeDelta,
-    ) -> impl Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>
+    ) -> impl InterSatelitePipeline<'a>
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
@@ -332,7 +347,7 @@ where
         DefaultRotationProvider: TryRotation<Frame, R, TimeScale>,
         <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
             std::error::Error + Send + Sync + 'static,
-        DetectError: From<<Self as Pipeline<'a, (&'a Spacecraft, &'a Spacecraft)>>::Error>,
+        DetectError: From<<Self as Pipeline<'a>>::Error>,
     {
         self.refine_trajectories(ensemble, move |(_, traj1, _, traj2), interval| {
             let make_los = |body: Origin| {
@@ -356,6 +371,11 @@ where
 }
 
 impl<'a, T> InterSatelitePipeline<'a> for T where
-    T: Pipeline<'a, (&'a Spacecraft, &'a Spacecraft), Window = TimeInterval> + Sync
+    T: Pipeline<
+            'a,
+            Asset = (&'a Spacecraft, &'a Spacecraft),
+            Window = TimeInterval,
+            Key = (AssetId, AssetId),
+        > + Sync
 {
 }
