@@ -26,38 +26,26 @@ impl From<Infallible> for DetectError {
     }
 }
 
-pub trait AssetIdExt {
-    type AssetId: Eq + Hash + Sync + Send;
-
-    fn asset_id(&self) -> Self::AssetId;
-}
-
-impl AssetIdExt for Spacecraft {
-    type AssetId = AssetId;
-
-    fn asset_id(&self) -> AssetId {
+impl AsKey<AssetId> for Spacecraft {
+    fn as_key(&self) -> AssetId {
         self.id().clone()
     }
 }
 
-impl AssetIdExt for GroundStation {
-    type AssetId = AssetId;
-
-    fn asset_id(&self) -> AssetId {
+impl AsKey<AssetId> for GroundStation {
+    fn as_key(&self) -> AssetId {
         self.id().clone()
     }
 }
 
-impl<'a, T1, T2> AssetIdExt for (&'a T1, &'a T2)
+impl<'a, T1, T2> AsKey<(AssetId, AssetId)> for (&'a T1, &'a T2)
 where
-    T1: AssetIdExt,
-    T2: AssetIdExt,
+    T1: AsKey<AssetId>,
+    T2: AsKey<AssetId>,
 {
-    type AssetId = (T1::AssetId, T2::AssetId);
-
-    fn asset_id(&self) -> Self::AssetId {
+    fn as_key(&self) -> (AssetId, AssetId) {
         let (t1, t2) = self;
-        (t1.asset_id(), t2.asset_id())
+        (t1.as_key(), t2.as_key())
     }
 }
 
@@ -75,10 +63,11 @@ impl<'a, T1, T2> AssetPairAnalysis<'a, T1, T2> {
 
 impl<'a, T1, T2> Pipeline<'a, (&'a T1, &'a T2)> for AssetPairAnalysis<'a, T1, T2>
 where
-    T1: AssetIdExt + Sync,
-    T2: AssetIdExt + Sync,
-    (&'a T1, &'a T2): AssetIdExt,
+    T1: AsKey<AssetId> + Sync,
+    T2: AsKey<AssetId> + Sync,
+    (&'a T1, &'a T2): AsKey<(AssetId, AssetId)>,
 {
+    type Key = (AssetId, AssetId);
     type Error = Infallible;
 
     fn iter(&self) -> impl Iterator<Item = PipelineItem<(&'a T1, &'a T2), Self::Error>> + '_ {
@@ -110,10 +99,15 @@ where
     }
 }
 
+pub trait AsKey<K> {
+    fn as_key(&self) -> K;
+}
+
 pub trait Pipeline<'a, T>: Sized
 where
-    T: AssetIdExt + Copy + 'a,
+    T: Copy + 'a,
 {
+    type Key: Eq + Hash + core::fmt::Debug;
     type Error: Send + Sync;
 
     fn refine<R, I, E>(self, refinement: R) -> Refine<T, Self, R, I, E>
@@ -139,7 +133,7 @@ where
         }
     }
 
-    fn filter_asset<F>(self, f: F) -> impl Pipeline<'a, T, Error = Self::Error>
+    fn filter_asset<F>(self, f: F) -> impl Pipeline<'a, T, Error = Self::Error, Key = Self::Key>
     where
         F: Fn(T) -> bool + Sync + 'a,
         Self: Sync,
@@ -147,7 +141,7 @@ where
         self.filter(move |t, _| f(t))
     }
 
-    fn filter_interval<F>(self, f: F) -> impl Pipeline<'a, T, Error = Self::Error>
+    fn filter_interval<F>(self, f: F) -> impl Pipeline<'a, T, Error = Self::Error, Key = Self::Key>
     where
         F: Fn(TimeInterval) -> bool + Sync + 'a,
         Self: Sync,
@@ -157,9 +151,12 @@ where
 
     fn iter(&self) -> impl Iterator<Item = PipelineItem<T, Self::Error>> + '_;
 
-    fn collect(self) -> Result<IntervalMap<T::AssetId>, Self::Error> {
+    fn collect(self) -> Result<IntervalMap<Self::Key>, Self::Error>
+    where
+        T: AsKey<Self::Key>,
+    {
         self.iter()
-            .map(|item| item.map(|(t, interval)| (t.asset_id(), interval)))
+            .map(|item| item.map(|(t, interval)| (t.as_key(), interval)))
             .collect()
     }
 
@@ -167,12 +164,13 @@ where
     where
         T: Sync + Send;
 
-    fn par_collect(self) -> Result<IntervalMap<T::AssetId>, Self::Error>
+    fn par_collect(self) -> Result<IntervalMap<Self::Key>, Self::Error>
     where
-        T: Sync + Send,
+        T: AsKey<Self::Key> + Sync + Send,
+        Self::Key: Send,
     {
         self.par_iter()
-            .map(|item| item.map(|(t, interval)| (t.asset_id(), interval)))
+            .map(|item| item.map(|(t, interval)| (t.as_key(), interval)))
             .collect()
     }
 
@@ -184,15 +182,15 @@ where
         T: Sync + Send,
         'a: 'sc;
 
-    async fn stream_collect<S>(self, spawner: &'a S) -> Result<IntervalMap<T::AssetId>, Self::Error>
+    async fn stream_collect<S>(self, spawner: &'a S) -> Result<IntervalMap<Self::Key>, Self::Error>
     where
-        T: Sync + Send,
+        T: AsKey<Self::Key> + Sync + Send,
         S: Spawn + Clone + Send,
     {
         let scope = new_relay_scope!(spawner);
         self.stream(scope)
             .await
-            .map(|item| item.map(|(t, intervals)| (t.asset_id(), intervals)))
+            .map(|item| item.map(|(t, intervals)| (t.as_key(), intervals)))
             .try_collect()
             .await
     }
@@ -206,7 +204,7 @@ pub struct Refine<T, W, R, I, E> {
 
 impl<'a, T, W, R, I, E> Refine<T, W, R, I, E>
 where
-    T: AssetIdExt + Copy + 'a,
+    T: Copy + 'a,
     W: Pipeline<'a, T>,
     R: Fn(T, TimeInterval) -> I,
     I: Iterator<Item = Result<TimeInterval, E>> + 'a,
@@ -227,12 +225,13 @@ where
 
 impl<'a, T, W, R, I, E> Pipeline<'a, T> for Refine<T, W, R, I, E>
 where
-    T: AssetIdExt + Copy + 'a,
+    T: Copy + 'a,
     W: Pipeline<'a, T> + Sync,
     R: Fn(T, TimeInterval) -> I + Sync,
     I: Iterator<Item = Result<TimeInterval, E>> + Sync + 'a,
     E: From<W::Error> + Send + Sync,
 {
+    type Key = W::Key;
     type Error = E;
 
     fn iter(&self) -> impl Iterator<Item = PipelineItem<T, Self::Error>> + '_ {
@@ -288,7 +287,7 @@ pub struct Filter<T, W, F> {
 
 impl<'a, T, W, F> Filter<T, W, F>
 where
-    T: AssetIdExt + Copy + 'a,
+    T: Copy + 'a,
     F: Fn(T, TimeInterval) -> bool,
 {
     fn filter_item<E>(f: &F, item: PipelineItem<T, E>) -> Option<PipelineItem<T, E>> {
@@ -312,10 +311,11 @@ where
 
 impl<'a, T, W, F> Pipeline<'a, T> for Filter<T, W, F>
 where
-    T: AssetIdExt + Copy + 'a,
+    T: Copy + 'a,
     W: Pipeline<'a, T> + Sync,
     F: Fn(T, TimeInterval) -> bool + Sync,
 {
+    type Key = W::Key;
     type Error = W::Error;
 
     fn iter(&self) -> impl Iterator<Item = PipelineItem<T, Self::Error>> + '_ {

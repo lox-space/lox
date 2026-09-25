@@ -12,7 +12,7 @@ use crate::visibility::{InterSatLosOccluderDetectFn, LineOfSightDetectFn};
 use crate::{
     assets::{AssetId, GroundStation, Spacecraft},
     events::{DetectError, DetectFn, DetectFnExt, UniformSampler},
-    pipeline::{AssetIdExt, Pipeline},
+    pipeline::Pipeline,
     power::SpacecraftFilter,
     visibility::{
         ElevationDetectFn, InterSatLosCentralBodyDetectFn, InterSatelliteRangeDetectFn,
