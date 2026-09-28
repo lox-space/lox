@@ -1,3 +1,4 @@
+use itertools::Either;
 use lox_bodies::{CoordinateOrigin, Origin, TrySpheroid};
 use lox_core::units::{AngularRate, Distance};
 use lox_ephem::Ephemeris;
@@ -12,7 +13,7 @@ use crate::visibility::{InterSatLosOccluderDetectFn, LineOfSightDetectFn};
 use crate::{
     assets::{AssetId, GroundStation, Spacecraft},
     events::{DetectError, DetectFn, DetectFnExt, UniformSampler},
-    pipeline::Pipeline,
+    pipeline::{ConvertResult, Pipeline},
     power::SpacecraftFilter,
     visibility::{
         ElevationDetectFn, InterSatLosCentralBodyDetectFn, InterSatelliteRangeDetectFn,
@@ -38,11 +39,15 @@ where
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        F: Fn((&'a GroundStation, &'a Spacecraft, &'a Trajectory<O, R>), TimeInterval) -> I
+        F: Fn(
+                (&'a GroundStation, &'a Spacecraft, &'a Trajectory<O, R>),
+                TimeInterval,
+            ) -> Result<I, E>
             + Sync
             + 'a,
         I: Iterator<Item = Result<TimeInterval, E>> + Send + Sync + 'a,
-        E: From<<Self as Pipeline<'a>>::Error> + Sync + Send,
+        E: Sync + Send + core::fmt::Debug,
+        <Self as Pipeline<'a>>::ConvertResult: ConvertResult<<Self as Pipeline<'a>>::Error, E>,
     {
         self.refine(move |(gs, sc), interval| {
             let sc_traj = ensemble.get(sc.id()).expect(
@@ -64,7 +69,8 @@ where
         S: Sampler<ElevationDetectFn<'a, O, R>> + Sync + Send + 'a,
         F: Fn(TimeInterval) -> S + Sync + 'a,
         DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
-        DetectError: From<<Self as Pipeline<'a>>::Error>,
+        <Self as Pipeline<'a>>::ConvertResult:
+            ConvertResult<<Self as Pipeline<'a>>::Error, DetectError>,
     {
         self.refine_trajectory(ensemble, move |(gs, _, sc_traj), interval| {
             let elev = ElevationDetectFn {
@@ -72,7 +78,7 @@ where
                 mask: gs.mask(),
                 sc: sc_traj,
             };
-            elev.into_intervals(sampler(interval), interval)
+            Ok(elev.into_intervals(sampler(interval), interval))
         })
     }
 
@@ -85,7 +91,8 @@ where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
         DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
-        DetectError: From<<Self as Pipeline<'a>>::Error>,
+        <Self as Pipeline<'a>>::ConvertResult:
+            ConvertResult<<Self as Pipeline<'a>>::Error, DetectError>,
     {
         self.refine_visibility(ensemble, move |_| UniformSampler::new(step))
     }
@@ -99,7 +106,8 @@ where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
         DefaultRotationProvider: TryRotation<R, Frame, TimeScale>,
-        DetectError: From<<Self as Pipeline<'a>>::Error>,
+        <Self as Pipeline<'a>>::ConvertResult:
+            ConvertResult<<Self as Pipeline<'a>>::Error, DetectError>,
     {
         self.refine_visibility(ensemble, move |interval| {
             AdaptiveSampler::new(step, interval.duration().max(step))
@@ -121,7 +129,8 @@ where
         DefaultRotationProvider: TryRotation<Frame, R, TimeScale>,
         <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
             std::error::Error + Send + Sync + 'static,
-        DetectError: From<<Self as Pipeline<'a>>::Error>,
+        <Self as Pipeline<'a>>::ConvertResult:
+            ConvertResult<<Self as Pipeline<'a>>::Error, DetectError>,
     {
         self.refine_trajectory(ensemble, move |(gs, _, sc_traj), interval| {
             let make_los = |body: Origin| {
@@ -139,7 +148,7 @@ where
             for &body in &occulting_bodies[1..] {
                 los = Box::new(los.intersect(make_los(body)));
             }
-            los
+            Ok(los)
         })
     }
 }
@@ -152,26 +161,6 @@ impl<'a, T> GroundSpacePipeline<'a> for T where
             Key = (AssetId, AssetId),
         > + Sync
 {
-}
-
-enum EitherIterator<I1, I2> {
-    Iter1(I1),
-    Iter2(I2),
-}
-
-impl<I1, I2, Item> Iterator for EitherIterator<I1, I2>
-where
-    I1: Iterator<Item = Item>,
-    I2: Iterator<Item = Item>,
-{
-    type Item = Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            EitherIterator::Iter1(iter) => iter.next(),
-            EitherIterator::Iter2(iter) => iter.next(),
-        }
-    }
 }
 
 pub trait InterSatelitePipeline<'a>:
@@ -200,10 +189,11 @@ where
                     &'a Trajectory<O, R>,
                 ),
                 TimeInterval,
-            ) -> I
+            ) -> Result<I, E>
             + Sync,
         I: Iterator<Item = Result<TimeInterval, E>> + Send + Sync + 'a,
-        E: From<<Self as Pipeline<'a>>::Error> + Send + Sync,
+        E: Send + Sync + core::fmt::Debug,
+        <Self as Pipeline<'a>>::ConvertResult: ConvertResult<<Self as Pipeline<'a>>::Error, E>,
     {
         self.refine(move |(sc1, sc2), interval| {
             let traj1 = ensemble
@@ -227,7 +217,8 @@ where
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        DetectError: From<<Self as Pipeline<'a>>::Error>,
+        <Self as Pipeline<'a>>::ConvertResult:
+            ConvertResult<<Self as Pipeline<'a>>::Error, DetectError>,
     {
         self.refine_trajectories(ensemble, move |(_, traj1, _, traj2), interval| {
             let min = InterSatelliteRangeDetectFn {
@@ -245,7 +236,7 @@ where
             }
             .into_intervals(UniformSampler::new(step), interval);
 
-            max.intersect(min)
+            Ok(max.intersect(min))
         })
     }
 
@@ -259,16 +250,17 @@ where
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        DetectError: From<<Self as Pipeline<'a>>::Error>,
+        <Self as Pipeline<'a>>::ConvertResult:
+            ConvertResult<<Self as Pipeline<'a>>::Error, DetectError>,
     {
         self.refine_trajectories(ensemble, move |(_, traj1, _, traj2), interval| {
-            InterSatelliteRangeDetectFn {
+            Ok(InterSatelliteRangeDetectFn {
                 sc1: traj1,
                 sc2: traj2,
                 threshold,
                 direction,
             }
-            .into_intervals(UniformSampler::new(step), interval)
+            .into_intervals(UniformSampler::new(step), interval))
         })
     }
 
@@ -280,7 +272,8 @@ where
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        DetectError: From<<Self as Pipeline<'a>>::Error>,
+        <Self as Pipeline<'a>>::ConvertResult:
+            ConvertResult<<Self as Pipeline<'a>>::Error, DetectError>,
     {
         self.refine_trajectories(ensemble, move |(sc1, traj1, sc2, traj2), interval| {
             let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
@@ -296,8 +289,8 @@ where
                 (None, None) => None,
             };
 
-            if let Some(threshold) = effective_slew_rate {
-                EitherIterator::Iter1(
+            Ok(if let Some(threshold) = effective_slew_rate {
+                Either::Left(
                     InterSatelliteSlewRateDetectFn {
                         sc1: traj1,
                         sc2: traj2,
@@ -306,8 +299,8 @@ where
                     .into_intervals(UniformSampler::new(step), interval),
                 )
             } else {
-                EitherIterator::Iter2([Ok(interval)].into_iter())
-            }
+                Either::Right([Ok(interval)].into_iter())
+            })
         })
     }
 
@@ -320,15 +313,16 @@ where
     where
         O: CoordinateOrigin + TrySpheroid + Copy + Sync,
         R: ReferenceFrame + Copy + Sync,
-        DetectError: From<<Self as Pipeline<'a>>::Error>,
+        <Self as Pipeline<'a>>::ConvertResult:
+            ConvertResult<<Self as Pipeline<'a>>::Error, DetectError>,
     {
         self.refine_trajectories(ensemble, move |(_, traj1, _, traj2), interval| {
-            InterSatLosCentralBodyDetectFn {
+            Ok(InterSatLosCentralBodyDetectFn {
                 sc1: traj1,
                 sc2: traj2,
                 body: central_body,
             }
-            .into_intervals(UniformSampler::new(step), interval)
+            .into_intervals(UniformSampler::new(step), interval))
         })
     }
 
@@ -347,7 +341,8 @@ where
         DefaultRotationProvider: TryRotation<Frame, R, TimeScale>,
         <DefaultRotationProvider as TryRotation<Frame, R, TimeScale>>::Error:
             std::error::Error + Send + Sync + 'static,
-        DetectError: From<<Self as Pipeline<'a>>::Error>,
+        <Self as Pipeline<'a>>::ConvertResult:
+            ConvertResult<<Self as Pipeline<'a>>::Error, DetectError>,
     {
         self.refine_trajectories(ensemble, move |(_, traj1, _, traj2), interval| {
             let make_los = |body: Origin| {
@@ -365,7 +360,7 @@ where
             for &body in &occulting_bodies[1..] {
                 los = Box::new(los.intersect(make_los(body)));
             }
-            los
+            Ok(los)
         })
     }
 }
