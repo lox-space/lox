@@ -22,3 +22,5 @@ mod parallel;
 pub mod power;
 /// Visibility analysis: line-of-sight, horizon masks, passes, and interval computation.
 pub mod visibility;
+
+pub mod pipeline;
