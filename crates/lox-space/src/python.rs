@@ -5,10 +5,11 @@
 use std::f64::consts::PI;
 
 use crate::analysis::python::{
-    PyAccessResults, PyAccessWindow, PyAoi, PyEnsemble, PyEvent, PyGroundStation, PyHorizonMask,
-    PyLookSide, PyObservables, PyOpticalAccessAnalysis, PyOpticalPayload, PyPass, PyPassDirection,
+    PyAccessResults, PyAccessWindow, PyAoi, PyCarrierPlan, PyEnsemble, PyEvent, PyGroundStation,
+    PyHorizonMask, PyLinkBudgetAnalysis, PyLinkBudgetResults, PyLinkWindow, PyLookSide,
+    PyObservables, PyOpticalAccessAnalysis, PyOpticalPayload, PyPass, PyPassDirection,
     PyPowerBudgetAnalysis, PyPowerBudgetResults, PySarAccessAnalysis, PySarPayload, PyScenario,
-    PySpacecraft, PyVisibilityAnalysis, PyVisibilityResults,
+    PySpacecraft, PyTerminalId, PyVisibilityAnalysis, PyVisibilityResults,
 };
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
@@ -118,6 +119,11 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyVisibilityResults>()?;
     m.add_class::<PyPowerBudgetAnalysis>()?;
     m.add_class::<PyPowerBudgetResults>()?;
+    m.add_class::<PyTerminalId>()?;
+    m.add_class::<PyCarrierPlan>()?;
+    m.add_class::<PyLinkWindow>()?;
+    m.add_class::<PyLinkBudgetAnalysis>()?;
+    m.add_class::<PyLinkBudgetResults>()?;
     m.add_class::<PyAoi>()?;
     m.add_class::<PyPassDirection>()?;
     m.add_class::<PyAccessWindow>()?;

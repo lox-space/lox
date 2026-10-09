@@ -222,7 +222,7 @@ where
 /// with the step to the next one. Fusing evaluation and stepping lets
 /// adaptive samplers derive the step from per-point information (e.g. a
 /// [`RateBounded`] rate bound) from a single evaluation.
-pub trait Sampler<F: DetectFn> {
+pub trait Sampler<F: DetectFn>: Clone {
     /// Evaluates `f` at `time` and returns the value and the step to the
     /// next sample point.
     ///
@@ -232,6 +232,7 @@ pub trait Sampler<F: DetectFn> {
 }
 
 /// Samples with a fixed step.
+#[derive(Clone)]
 pub struct UniformSampler {
     step: TimeDelta,
 }
@@ -273,6 +274,7 @@ where
 ///
 /// If `max_slope` does not actually bound the derivative, crossings may be
 /// missed anywhere.
+#[derive(Clone)]
 pub struct LipschitzSampler {
     max_slope: f64,
     min_step: TimeDelta,
@@ -329,6 +331,7 @@ const ADAPTIVE_SAFETY: f64 = 0.9;
 /// falls back to `min_step`, matching the uniform-grid behaviour for that
 /// stride; as with [`UniformSampler`], excursions shorter than `min_step`
 /// may be missed.
+#[derive(Clone)]
 pub struct AdaptiveSampler {
     min_step: TimeDelta,
     max_step: TimeDelta,

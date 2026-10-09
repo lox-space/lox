@@ -36,7 +36,7 @@ use lox_orbits::propagators::semi_analytical::Vallado;
 use lox_orbits::propagators::{OrbitSource, PropagateError};
 
 /// Unique identifier for a ground station or spacecraft.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AssetId(String);
 
@@ -55,6 +55,43 @@ impl AssetId {
 impl fmt::Display for AssetId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+/// Identifies one terminal: the asset carrying it and its name on that asset.
+///
+/// Terminal names are unique only within an asset, so neither half identifies
+/// a terminal on its own.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct TerminalId {
+    asset: AssetId,
+    name: String,
+}
+
+impl TerminalId {
+    /// Creates a new terminal identifier.
+    pub fn new(asset: AssetId, name: impl Into<String>) -> Self {
+        Self {
+            asset,
+            name: name.into(),
+        }
+    }
+
+    /// Returns the identifier of the asset carrying this terminal.
+    pub fn asset(&self) -> &AssetId {
+        &self.asset
+    }
+
+    /// Returns the terminal's name on its asset.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl fmt::Display for TerminalId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}/{}", self.asset, self.name)
     }
 }
 

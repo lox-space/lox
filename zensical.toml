@@ -26,6 +26,7 @@ nav = [
             { "SAR" = "sar.md" },
         ]},
         { "Communications" = "comms.md" },
+        { "Link Budget Analysis" = "link-budget.md" },
         { "Atmospheric Propagation" = "itur.md" },
         { "Constellations" = "constellations.md" },
         { "Data Providers" = "data.md" },

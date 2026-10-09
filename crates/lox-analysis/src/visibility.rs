@@ -439,9 +439,9 @@ impl From<RotationError> for EvalError {
 /// 2. Rotates the state into the body-fixed frame via `TryRotation<R, Frame, TimeScale>`
 /// 3. Computes observables (azimuth, elevation, range, range rate)
 /// 4. Returns elevation minus the station's elevation threshold
-struct ElevationDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    gs: &'a GroundStation,
-    sc: &'a Trajectory<O, R>,
+pub struct ElevationDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub gs: &'a GroundStation,
+    pub sc: &'a Trajectory<O, R>,
 }
 
 impl<O, R> DetectFn for ElevationDetectFn<'_, O, R>
@@ -519,11 +519,11 @@ where
 /// function's rate bound and `step` acts as the minimum stride.
 /// Line-of-sight between a ground station and spacecraft, relative to an
 /// occulting body.
-struct LineOfSightDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    gs: &'a EllipsoidLocation,
-    sc: &'a Trajectory<O, R>,
-    body: Origin,
-    ephemeris: &'a E,
+pub struct LineOfSightDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
+    pub gs: &'a EllipsoidLocation,
+    pub sc: &'a Trajectory<O, R>,
+    pub body: Origin,
+    pub ephemeris: &'a E,
 }
 
 impl<O, R, E: Ephemeris> DetectFn for LineOfSightDetectFn<'_, O, R, E>
@@ -558,11 +558,11 @@ where
 
 /// Line-of-sight between two spacecraft, relative to a non-central occulting body. Uses the
 /// ephemeris to compute the body position.
-struct InterSatLosOccluderDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
-    sc1: &'a Trajectory<O, R>,
-    sc2: &'a Trajectory<O, R>,
-    body: Origin,
-    ephemeris: &'a E,
+pub struct InterSatLosOccluderDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame, E> {
+    pub sc1: &'a Trajectory<O, R>,
+    pub sc2: &'a Trajectory<O, R>,
+    pub body: Origin,
+    pub ephemeris: &'a E,
 }
 
 impl<O, R, E: Ephemeris> DetectFn for InterSatLosOccluderDetectFn<'_, O, R, E>
@@ -588,10 +588,10 @@ where
 /// Line-of-sight between two spacecraft when the occluding body is the
 /// trajectories' origin. `r_body == 0` by construction, so no ephemeris
 /// lookup is required.
-struct InterSatLosCentralBodyDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    sc1: &'a Trajectory<O, R>,
-    sc2: &'a Trajectory<O, R>,
-    body: Origin,
+pub struct InterSatLosCentralBodyDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub sc1: &'a Trajectory<O, R>,
+    pub sc2: &'a Trajectory<O, R>,
+    pub body: Origin,
 }
 
 impl<O, R> DetectFn for InterSatLosCentralBodyDetectFn<'_, O, R>
@@ -609,7 +609,8 @@ where
 }
 
 /// Direction for inter-satellite range threshold comparison.
-enum RangeDirection {
+#[derive(Clone, Copy)]
+pub enum RangeDirection {
     /// Positive when range < threshold (i.e. `threshold - range`).
     Max,
     /// Positive when range > threshold (i.e. `range - threshold`).
@@ -617,11 +618,11 @@ enum RangeDirection {
 }
 
 /// Range threshold detector for inter-satellite pairs.
-struct InterSatelliteRangeDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    sc1: &'a Trajectory<O, R>,
-    sc2: &'a Trajectory<O, R>,
-    threshold: Distance,
-    direction: RangeDirection,
+pub struct InterSatelliteRangeDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub sc1: &'a Trajectory<O, R>,
+    pub sc2: &'a Trajectory<O, R>,
+    pub threshold: Distance,
+    pub direction: RangeDirection,
 }
 
 impl<O, R> DetectFn for InterSatelliteRangeDetectFn<'_, O, R>
@@ -693,10 +694,10 @@ where
 /// The angular rate ω = |r × v| / |r|² is symmetric between the two
 /// spacecraft.  The detector returns `threshold - ω`, positive when the
 /// angular rate is within the limit.
-struct InterSatelliteSlewRateDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    sc1: &'a Trajectory<O, R>,
-    sc2: &'a Trajectory<O, R>,
-    threshold: AngularRate,
+pub struct InterSatelliteSlewRateDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub sc1: &'a Trajectory<O, R>,
+    pub sc2: &'a Trajectory<O, R>,
+    pub threshold: AngularRate,
 }
 
 impl<O, R> DetectFn for InterSatelliteSlewRateDetectFn<'_, O, R>
@@ -734,7 +735,7 @@ pub enum PairType {
     InterSatellite,
 }
 
-type IntervalMap = HashMap<(AssetId, AssetId), Vec<TimeInterval>>;
+pub type IntervalMap = HashMap<(AssetId, AssetId), Vec<TimeInterval>>;
 type PairTypeMap = HashMap<(AssetId, AssetId), PairType>;
 type GroundSpaceFilter<'a> = Box<dyn Fn(&GroundStation, &Spacecraft) -> bool + 'a>;
 type InterSatelliteFilter<'a> = Box<dyn Fn(&Spacecraft, &Spacecraft) -> bool + 'a>;
@@ -931,6 +932,7 @@ where
 /// This is the primary result type for visibility analysis. Intervals are
 /// cheap to compute; conversion to [`Pass`] (with observables) happens
 /// separately and on demand.
+#[derive(Debug, Clone, Default)]
 pub struct VisibilityResults {
     intervals: IntervalMap,
     pair_types: PairTypeMap,

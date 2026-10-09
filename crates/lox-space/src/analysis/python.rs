@@ -3,12 +3,18 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use std::collections::{HashMap, HashSet};
+use std::hash::{DefaultHasher, Hash, Hasher};
 
-use crate::analysis::assets::{AssetId, ConstellationId, GroundStation, Scenario, Spacecraft};
+use crate::analysis::assets::{
+    AssetId, ConstellationId, GroundStation, Scenario, Spacecraft, TerminalId,
+};
 use crate::analysis::events::{Event, ZeroCrossing};
 use crate::analysis::imaging::{
     AccessError, Aoi, AoiId, LookSide, OpticalAccessAnalysis, OpticalPayload, SarAccessAnalysis,
     SarPayload,
+};
+use crate::analysis::link_budget::{
+    CarrierPlan, LinkAnalysisError, LinkBudgetAnalysis, LinkBudgetResults, LinkWindow,
 };
 use crate::analysis::power::{
     PowerBudgetAnalysis, PowerBudgetResults, PowerError, SpacecraftFilter,
@@ -21,7 +27,8 @@ use crate::analysis::visibility::{
 use crate::bodies::Origin;
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
-    build_rx_terminal, build_tx_terminal, rx_terminal_to_py, tx_terminal_to_py,
+    PyChannel, PyDecibel, PyModCod, PyPropagationLosses, build_rx_terminal, build_tx_terminal,
+    rx_terminal_to_py, tx_terminal_to_py,
 };
 use crate::ephem::python::PySpk;
 use crate::ephem::spk::parser::Spk;
@@ -36,7 +43,7 @@ use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::intervals::PyInterval;
 use crate::time::python::time::PyTime;
 use crate::time::python::time_series::PyTimeSeries;
-use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyVelocity};
+use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyFrequency, PyVelocity};
 use lox_frames::Frame;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_orbits::orbits::Ensemble;
@@ -1916,5 +1923,413 @@ impl PySarAccessAnalysis {
         let aoi_count = self.aois.len();
         let aoi_label = if aoi_count == 1 { "AOI" } else { "AOIs" };
         format!("SarAccessAnalysis({sc_count} spacecraft, {aoi_count} {aoi_label})")
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Link budget Python bindings
+// ---------------------------------------------------------------------------
+
+struct PyLinkAnalysisError(LinkAnalysisError);
+
+impl From<PyLinkAnalysisError> for PyErr {
+    fn from(err: PyLinkAnalysisError) -> Self {
+        PyValueError::new_err(err.0.to_string())
+    }
+}
+
+/// Identifies one terminal: the asset carrying it and its name on that asset.
+///
+/// Terminal names are unique only within an asset, so neither half identifies
+/// a terminal on its own.
+///
+/// Args:
+///     asset: Identifier of the ground station or spacecraft.
+///     name: The terminal's name on that asset.
+#[pyclass(name = "TerminalId", module = "lox_space", frozen, from_py_object)]
+#[derive(Clone, Debug)]
+pub struct PyTerminalId(pub TerminalId);
+
+#[pymethods]
+impl PyTerminalId {
+    #[new]
+    fn new(asset: &str, name: &str) -> Self {
+        Self(TerminalId::new(AssetId::new(asset), name))
+    }
+
+    /// Identifier of the asset carrying this terminal.
+    #[getter]
+    fn asset(&self) -> String {
+        self.0.asset().as_str().to_string()
+    }
+
+    /// The terminal's name on its asset.
+    #[getter]
+    fn name(&self) -> String {
+        self.0.name().to_string()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "TerminalId(\"{}\", \"{}\")",
+            self.0.asset().as_str(),
+            self.0.name()
+        )
+    }
+
+    fn __str__(&self) -> String {
+        self.0.to_string()
+    }
+
+    fn __eq__(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+
+    fn __hash__(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.0.hash(&mut hasher);
+        hasher.finish()
+    }
+}
+
+/// The carrier, waveform, and coding a link is evaluated against.
+///
+/// The MODCOD table drives adaptive coding and modulation: each closing window
+/// is annotated with the highest-efficiency mode that closes at its peak. The
+/// detection MODCOD — by default the most robust entry in the table — defines
+/// the window boundaries themselves.
+///
+/// Args:
+///     carrier: Carrier frequency.
+///     channel: The waveform the link is evaluated on.
+///     modcods: Candidate MODCODs, e.g. ``ModCod.dvb_s2()``.
+///     design_margin: Margin applied on top of the MODCOD threshold. Defaults to 0 dB.
+///     losses: Propagation losses applied to every sample. Defaults to none.
+///     detection_modcod: MODCOD whose margin defines the window boundaries. Must be one of `modcods`.
+#[pyclass(name = "CarrierPlan", module = "lox_space", frozen, from_py_object)]
+#[derive(Clone, Debug)]
+pub struct PyCarrierPlan(pub CarrierPlan);
+
+#[pymethods]
+impl PyCarrierPlan {
+    #[new]
+    #[pyo3(signature = (carrier, channel, modcods, design_margin=None, losses=None, detection_modcod=None))]
+    fn new(
+        carrier: PyFrequency,
+        channel: PyChannel,
+        modcods: Vec<PyModCod>,
+        design_margin: Option<PyDecibel>,
+        losses: Option<PyPropagationLosses>,
+        detection_modcod: Option<PyModCod>,
+    ) -> PyResult<Self> {
+        let table = modcods.into_iter().map(|mc| mc.0).collect();
+        let mut plan =
+            CarrierPlan::new(carrier.0, channel.0, table).map_err(PyLinkAnalysisError)?;
+        if let Some(margin) = design_margin {
+            plan = plan.with_design_margin(margin.0);
+        }
+        if let Some(losses) = losses {
+            plan = plan.with_losses(losses.0);
+        }
+        if let Some(modcod) = detection_modcod {
+            plan = plan
+                .with_detection_modcod(modcod.0)
+                .map_err(PyLinkAnalysisError)?;
+        }
+        Ok(Self(plan))
+    }
+
+    /// Carrier frequency.
+    #[getter]
+    fn carrier(&self) -> PyFrequency {
+        PyFrequency(self.0.carrier())
+    }
+
+    /// The waveform the link is evaluated on.
+    #[getter]
+    fn channel(&self) -> PyChannel {
+        PyChannel(self.0.channel().clone())
+    }
+
+    /// Design margin applied on top of the MODCOD threshold.
+    #[getter]
+    fn design_margin(&self) -> PyDecibel {
+        PyDecibel(self.0.design_margin())
+    }
+
+    /// Propagation losses applied to every sample.
+    #[getter]
+    fn losses(&self) -> PyPropagationLosses {
+        PyPropagationLosses(self.0.losses().clone())
+    }
+
+    /// MODCOD whose margin defines the window boundaries.
+    #[getter]
+    fn detection_modcod(&self) -> PyModCod {
+        PyModCod(self.0.detection_modcod().clone())
+    }
+
+    /// Candidate MODCODs for adaptive coding and modulation.
+    #[getter]
+    fn modcods(&self) -> Vec<PyModCod> {
+        self.0.modcods().iter().cloned().map(PyModCod).collect()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "CarrierPlan({:.3} GHz, {} modcods, design_margin={:.1} dB)",
+            self.0.carrier().to_gigahertz(),
+            self.0.modcods().len(),
+            self.0.design_margin().as_f64()
+        )
+    }
+}
+
+/// An interval in which a link closes, with the throughput it supports.
+#[pyclass(name = "LinkWindow", module = "lox_space", frozen, skip_from_py_object)]
+#[derive(Clone, Debug)]
+pub struct PyLinkWindow(pub LinkWindow);
+
+#[pymethods]
+impl PyLinkWindow {
+    /// The interval over which the link closes.
+    #[getter]
+    fn interval(&self) -> PyInterval {
+        PyInterval(*self.0.interval())
+    }
+
+    /// Direction of the link: "uplink", "downlink", or "crosslink".
+    #[getter]
+    fn direction(&self) -> String {
+        self.0.direction().to_string()
+    }
+
+    /// Highest margin reached within the window, against the detection MODCOD.
+    #[getter]
+    fn peak_margin(&self) -> PyDecibel {
+        PyDecibel(self.0.peak_margin())
+    }
+
+    /// Lowest margin within the window.
+    ///
+    /// Zero at a boundary the root finder placed, and positive only where the
+    /// window was clipped against the start or the end of a visibility
+    /// interval.
+    #[getter]
+    fn min_margin(&self) -> PyDecibel {
+        PyDecibel(self.0.min_margin())
+    }
+
+    /// MODCOD adaptive coding and modulation selects at the peak, or None when
+    /// no entry in the table closes there.
+    #[getter]
+    fn peak_modcod(&self) -> Option<PyModCod> {
+        self.0.peak_modcod().cloned().map(PyModCod)
+    }
+
+    /// Information rate supported at the peak, or zero when no MODCOD closes there.
+    #[getter]
+    fn peak_information_rate(&self) -> PyFrequency {
+        PyFrequency(self.0.peak_information_rate())
+    }
+
+    /// Data volume deliverable over the window in bits, integrating the
+    /// adaptively selected information rate.
+    #[getter]
+    fn data_volume(&self) -> f64 {
+        self.0.data_volume()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "LinkWindow({}, peak_margin={:.2} dB, {:.3} Gbit)",
+            self.0.direction(),
+            self.0.peak_margin().as_f64(),
+            self.0.data_volume() / 1e9
+        )
+    }
+}
+
+/// Refines visibility windows into the intervals in which links close.
+///
+/// Pairs every transmit terminal with every receive terminal on the other
+/// asset whose band contains the plan's carrier, in both directions, and scans
+/// each resulting link inside the visibility windows the pair already has.
+///
+/// Args:
+///     scenario: The scenario whose assets carry the terminals.
+///     visibility: Results of a visibility analysis over the same scenario.
+///     plan: Default carrier plan applied to every link.
+///     ensemble: Optional propagated trajectories. Propagated automatically when omitted.
+///     step: Sampling step for detection. Must be positive. Defaults to 60 seconds.
+///     overrides: Optional list of (tx, rx, plan) triples overriding the default plan.
+#[pyclass(name = "LinkBudgetAnalysis", module = "lox_space", frozen)]
+pub struct PyLinkBudgetAnalysis {
+    scenario: Scenario,
+    ensemble: Option<Ensemble<AssetId, Origin, Frame>>,
+    visibility: VisibilityResults,
+    plan: CarrierPlan,
+    overrides: Vec<(TerminalId, TerminalId, CarrierPlan)>,
+    step: TimeDelta,
+}
+
+#[pymethods]
+impl PyLinkBudgetAnalysis {
+    #[new]
+    #[pyo3(signature = (scenario, visibility, plan, ensemble=None, step=None, overrides=None))]
+    fn new(
+        scenario: PyScenario,
+        visibility: &PyVisibilityResults,
+        plan: PyCarrierPlan,
+        ensemble: Option<PyEnsemble>,
+        step: Option<PyTimeDelta>,
+        overrides: Option<Vec<(PyTerminalId, PyTerminalId, PyCarrierPlan)>>,
+    ) -> Self {
+        Self {
+            scenario: scenario.0,
+            ensemble: ensemble.map(|e| e.0),
+            visibility: visibility.results.clone(),
+            plan: plan.0,
+            overrides: overrides
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(tx, rx, plan)| (tx.0, rx.0, plan.0))
+                .collect(),
+            step: step
+                .map(|s| s.0)
+                .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
+        }
+    }
+
+    /// Compute the intervals in which each compatible link closes.
+    ///
+    /// Returns:
+    ///     LinkBudgetResults keyed by terminal pair.
+    ///
+    /// Raises:
+    ///     ValueError: If the step is not positive, if a spacecraft in the
+    ///         scenario has no trajectory in the ensemble, or if two assets
+    ///         share an id.
+    fn compute(&self, py: Python<'_>) -> PyResult<PyLinkBudgetResults> {
+        let scenario = &self.scenario;
+        let step = self.step;
+
+        // Auto-propagate if no ensemble was provided.
+        let auto_ensemble;
+        let ensemble = match &self.ensemble {
+            Some(e) => e,
+            None => {
+                auto_ensemble = scenario
+                    .propagate(&DefaultRotationProvider)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
+                &auto_ensemble
+            }
+        };
+
+        let results = py.detach(|| {
+            let mut analysis =
+                LinkBudgetAnalysis::new(scenario, ensemble, &self.visibility, self.plan.clone())
+                    .with_step(step);
+            for (tx, rx, plan) in &self.overrides {
+                analysis = analysis.with_override(tx.clone(), rx.clone(), plan.clone());
+            }
+            analysis.compute()
+        });
+
+        Ok(PyLinkBudgetResults {
+            results: results.map_err(PyLinkAnalysisError)?,
+        })
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "LinkBudgetAnalysis({} ground stations, {} spacecraft, {} overrides)",
+            self.scenario.ground_stations().len(),
+            self.scenario.spacecraft().len(),
+            self.overrides.len()
+        )
+    }
+}
+
+/// Results of a link budget analysis.
+#[pyclass(name = "LinkBudgetResults", module = "lox_space", frozen)]
+pub struct PyLinkBudgetResults {
+    results: LinkBudgetResults,
+}
+
+#[pymethods]
+impl PyLinkBudgetResults {
+    /// Windows in which the link between two terminals closes.
+    ///
+    /// Args:
+    ///     tx: Transmit terminal.
+    ///     rx: Receive terminal.
+    ///
+    /// Returns:
+    ///     List of LinkWindow objects, or an empty list for a pair that is not a link.
+    fn windows(&self, tx: &PyTerminalId, rx: &PyTerminalId) -> Vec<PyLinkWindow> {
+        self.results
+            .windows_for(&tx.0, &rx.0)
+            .iter()
+            .cloned()
+            .map(PyLinkWindow)
+            .collect()
+    }
+
+    /// All windows keyed by ("asset/name", "asset/name") terminal pair.
+    fn all_windows(&self) -> HashMap<(String, String), Vec<PyLinkWindow>> {
+        self.results
+            .all_windows()
+            .iter()
+            .map(|((tx, rx), windows)| {
+                (
+                    (tx.to_string(), rx.to_string()),
+                    windows.iter().cloned().map(PyLinkWindow).collect(),
+                )
+            })
+            .collect()
+    }
+
+    /// The terminal pairs that form a link.
+    fn link_ids(&self) -> Vec<(PyTerminalId, PyTerminalId)> {
+        self.results
+            .link_ids()
+            .map(|(tx, rx)| (PyTerminalId(tx.clone()), PyTerminalId(rx.clone())))
+            .collect()
+    }
+
+    /// Total data volume in bits deliverable over a link.
+    ///
+    /// Args:
+    ///     tx: Transmit terminal.
+    ///     rx: Receive terminal.
+    ///
+    /// Returns:
+    ///     Data volume in bits, or 0.0 for a pair that is not a link.
+    fn data_volume(&self, tx: &PyTerminalId, rx: &PyTerminalId) -> f64 {
+        self.results.data_volume_for(&tx.0, &rx.0)
+    }
+
+    /// Number of links that closed at least once.
+    fn num_links(&self) -> usize {
+        self.results.num_links()
+    }
+
+    /// Total number of windows across all links.
+    fn total_windows(&self) -> usize {
+        self.results.total_windows()
+    }
+
+    /// True when no link closed anywhere.
+    fn is_empty(&self) -> bool {
+        self.results.is_empty()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "LinkBudgetResults({} links, {} windows)",
+            self.results.num_links(),
+            self.results.total_windows()
+        )
     }
 }

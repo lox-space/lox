@@ -30,6 +30,8 @@ geojson = { workspace = true, optional = true }
 itertools.workspace = true
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
+futures = { version = "0.3.34", features = ["thread-pool"] }
+futures-scopes = "0.4.0"
 
 # wasm targets have no threads — Pyodide's CPython is built without pthreads —
 # so the fan-out in `parallel` collects sequentially there instead.
