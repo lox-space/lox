@@ -2,11 +2,12 @@ use std::collections::HashMap;
 use std::convert::Infallible;
 use std::hash::Hash;
 
-use futures::stream::FuturesOrdered;
+use futures::stream::{FuturesOrdered, FuturesUnordered};
 use futures::task::Spawn;
 use futures::{StreamExt, TryStreamExt};
 use futures_scopes::relay::new_relay_scope;
 use futures_scopes::{ScopedSpawnExt, SpawnScope};
+use itertools::Either;
 use lox_time::intervals::TimeInterval;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
@@ -15,23 +16,35 @@ use crate::assets::{AssetId, GroundStation, Spacecraft};
 
 type AnalysisMap<K, V> = HashMap<K, Vec<V>>;
 
-impl AsKey<AssetId> for Spacecraft {
+pub trait AsKey {
+    type Key: Eq + Hash + core::fmt::Debug;
+
+    fn as_key(&self) -> Self::Key;
+}
+
+impl AsKey for Spacecraft {
+    type Key = AssetId;
+
     fn as_key(&self) -> AssetId {
         self.id().clone()
     }
 }
 
-impl AsKey<AssetId> for GroundStation {
+impl AsKey for GroundStation {
+    type Key = AssetId;
+
     fn as_key(&self) -> AssetId {
         self.id().clone()
     }
 }
 
-impl<'a, T1, T2> AsKey<(AssetId, AssetId)> for (&'a T1, &'a T2)
+impl<'a, T1, T2> AsKey for (&'a T1, &'a T2)
 where
-    T1: AsKey<AssetId>,
-    T2: AsKey<AssetId>,
+    T1: AsKey<Key = AssetId>,
+    T2: AsKey<Key = AssetId>,
 {
+    type Key = (AssetId, AssetId);
+
     fn as_key(&self) -> (AssetId, AssetId) {
         let (t1, t2) = self;
         (t1.as_key(), t2.as_key())
@@ -64,21 +77,24 @@ where
     }
 }
 
-pub trait AsKey<K> {
-    fn as_key(&self) -> K;
-}
-
 pub trait Pipeline<'a>: Sized {
-    type Asset: Copy + 'a;
-    type Key: Eq + Hash + core::fmt::Debug;
-    type Window;
+    type Asset: 'a;
+    type Window: Clone;
     type Error: core::fmt::Debug;
     type ConvertResult;
+
+    fn map_asset<F, O, I>(self, f: F) -> MapAsset<Self, F>
+    where
+        F: Fn(Self::Asset) -> I,
+        I: Iterator<Item = O>,
+    {
+        MapAsset { wrapped: self, f }
+    }
 
     fn refine<R, I>(self, refinement: R) -> Refine<Self, R>
     where
         R: RefineFn<Self::Asset, Self::Window>
-            + Fn(Self::Asset, Self::Window) -> Result<I, R::Error>,
+            + Fn(&Self::Asset, Self::Window) -> Result<I, R::Error>,
     {
         Refine {
             wrapped: self,
@@ -88,7 +104,7 @@ pub trait Pipeline<'a>: Sized {
 
     fn filter<F>(self, filter: F) -> Filter<Self, F>
     where
-        F: Fn(Self::Asset, &Self::Window) -> bool,
+        F: Fn(&Self::Asset, &Self::Window) -> bool,
     {
         Filter {
             wrapped: self,
@@ -96,77 +112,90 @@ pub trait Pipeline<'a>: Sized {
         }
     }
 
-    fn filter_asset<F>(self, f: F) -> Filter<Self, impl Fn(Self::Asset, &Self::Window) -> bool>
+    fn filter_asset<F>(self, f: F) -> Filter<Self, impl Fn(&Self::Asset, &Self::Window) -> bool>
     where
-        F: Fn(Self::Asset) -> bool + Sync + 'a,
+        F: Fn(&Self::Asset) -> bool + Sync + 'a,
     {
         self.filter(move |t, _| f(t))
     }
 
-    fn filter_window<F>(self, f: F) -> Filter<Self, impl Fn(Self::Asset, &Self::Window) -> bool>
+    fn filter_window<F>(self, f: F) -> Filter<Self, impl Fn(&Self::Asset, &Self::Window) -> bool>
     where
         F: Fn(&Self::Window) -> bool + Sync + 'a,
     {
         self.filter(move |_, window| f(window))
     }
 
-    fn compute_one(
+    fn batches(&self) -> usize;
+
+    fn iter_batch(
         &self,
-        asset: Self::Asset,
-        window: Self::Window,
-    ) -> Result<impl Iterator<Item = Result<Self::Window, Self::Error>>, Self::Error>;
+        batch: usize,
+    ) -> impl Iterator<Item = Result<(Self::Asset, Vec<Self::Window>), Self::Error>>;
 
-    fn initial_window(&self) -> Self::Window;
-
-    fn collect_one(
+    fn compute_batch(
         &self,
-        asset: Self::Asset,
-        window: Self::Window,
-    ) -> Result<(Self::Key, Vec<Self::Window>), Self::Error>
+        batch: usize,
+    ) -> Result<AnalysisMap<<Self::Asset as AsKey>::Key, Self::Window>, Self::Error>
     where
-        Self::Asset: AsKey<Self::Key>,
+        Self::Asset: AsKey,
     {
-        self.compute_one(asset, window)?
-            .collect::<Result<Vec<_>, _>>()
-            .map(|windows| (asset.as_key(), windows))
-    }
-
-    fn filter_emtpy(item: &Result<(Self::Key, Vec<Self::Window>), Self::Error>) -> bool {
-        match item {
-            Ok((_, windows)) => !windows.is_empty(),
-            Err(_) => true,
-        }
-    }
-
-    fn collect(self) -> Result<AnalysisMap<Self::Key, Self::Window>, Self::Error>
-    where
-        Self::Asset: AsKey<Self::Key>,
-    {
-        self.iter_assets()
-            .map(|asset| self.collect_one(asset, self.initial_window()))
-            .filter(Self::filter_emtpy)
+        self.iter_batch(batch)
+            .filter_map(|item| match item {
+                Ok((asset, windows)) => {
+                    if !windows.is_empty() {
+                        Some(Ok((asset.as_key(), windows)))
+                    } else {
+                        None
+                    }
+                }
+                Err(err) => Some(Err(err)),
+            })
             .collect()
     }
 
-    fn iter_assets(&self) -> impl Iterator<Item = Self::Asset>;
+    fn compute(self) -> Result<AnalysisMap<<Self::Asset as AsKey>::Key, Self::Window>, Self::Error>
+    where
+        Self::Asset: AsKey,
+    {
+        (0..self.batches())
+            .map(|batch| self.compute_batch(batch))
+            .fold(Ok(HashMap::new()), |map, batch_map| {
+                let mut map = map?;
+                let batch_map = batch_map?;
+
+                map.extend(batch_map);
+
+                Ok(map)
+            })
+    }
 }
 
 pub trait ParallelPipeline<'a>: Pipeline<'a> {
-    fn par_collect(self) -> Result<AnalysisMap<Self::Key, Self::Window>, Self::Error>
+    fn par_collect(
+        self,
+    ) -> Result<AnalysisMap<<Self::Asset as AsKey>::Key, Self::Window>, Self::Error>
     where
         Self: Sync,
-        Self::Asset: AsKey<Self::Key> + Sync + Send,
+        Self::Asset: AsKey + Sync + Send,
         Self::Window: Send,
         Self::Error: Send,
-        Self::Key: Send,
+        <Self::Asset as AsKey>::Key: Send,
     {
-        let assets = self.iter_assets().collect::<Vec<_>>();
-
-        assets
+        (0..self.batches())
             .into_par_iter()
-            .map(|asset| self.collect_one(asset, self.initial_window()))
-            .filter(Self::filter_emtpy)
-            .collect()
+            .map(|batch| self.compute_batch(batch))
+            .reduce(
+                || Ok(HashMap::new()),
+                |map, batch_map| {
+                    let mut map = map?;
+                    let batch_map = batch_map?;
+
+                    map.extend(batch_map);
+
+                    Ok(map)
+                },
+            )
     }
 }
 
@@ -176,34 +205,36 @@ pub trait StreamPipeline<'a>: Pipeline<'a> {
     async fn stream_collect<S>(
         self,
         spawner: &'a S,
-    ) -> Result<AnalysisMap<Self::Key, Self::Window>, Self::Error>
+    ) -> Result<AnalysisMap<<Self::Asset as AsKey>::Key, Self::Window>, Self::Error>
     where
-        Self::Asset: AsKey<Self::Key> + Sync + Send,
+        Self::Asset: AsKey + Sync + Send,
         S: Spawn + Clone + Send,
         Self: Send + Sync + 'a,
-        Self::Key: Send + 'static,
+        <Self::Asset as AsKey>::Key: Send + 'static,
         Self::Window: Send + 'static,
         Self::Error: Send + 'static,
     {
         let this = &self;
         let scope = new_relay_scope!(spawner);
 
-        let handles = self
-            .iter_assets()
-            .map(|asset| {
+        let handles = (0..self.batches())
+            .map(|batch| {
                 scope
                     .spawner()
-                    .spawn_scoped_with_handle(async move {
-                        let window = this.initial_window();
-                        this.collect_one(asset, window)
-                    })
+                    .spawn_scoped_with_handle(async move { this.compute_batch(batch) })
                     .unwrap()
             })
-            .collect::<FuturesOrdered<_>>();
+            .collect::<FuturesUnordered<_>>();
 
         handles
-            .filter(|item| futures::future::ready(Self::filter_emtpy(item)))
-            .try_collect()
+            .fold(Ok(HashMap::new()), async |map, batch_map| {
+                let mut map = map?;
+                let batch_map = batch_map?;
+
+                map.extend(batch_map);
+
+                Ok(map)
+            })
             .await
     }
 }
@@ -224,51 +255,105 @@ impl<'a, T1, T2> AssetPairAnalysis<'a, T1, T2> {
 
 impl<'a, T1, T2> Pipeline<'a> for AssetPairAnalysis<'a, T1, T2>
 where
-    T1: AsKey<AssetId>,
-    T2: AsKey<AssetId>,
-    (&'a T1, &'a T2): AsKey<(AssetId, AssetId)>,
+    T1: AsKey,
+    T2: AsKey,
+    (&'a T1, &'a T2): AsKey,
 {
     type Asset = (&'a T1, &'a T2);
-    type Key = (AssetId, AssetId);
     type Window = TimeInterval;
     type Error = Infallible;
     type ConvertResult = InfallibleResult;
 
-    fn compute_one(
+    fn batches(&self) -> usize {
+        self.t1.len() * self.t2.len()
+    }
+
+    fn iter_batch(
         &self,
-        _asset: Self::Asset,
-        window: Self::Window,
-    ) -> Result<impl Iterator<Item = Result<Self::Window, Self::Error>>, Self::Error> {
-        Ok(std::iter::once(Ok(window)))
+        batch: usize,
+    ) -> impl Iterator<Item = Result<(Self::Asset, Vec<Self::Window>), Self::Error>> {
+        let i = batch % self.t1.len();
+        let j = batch / self.t1.len();
+        let asset = (&self.t1[i], &self.t2[j]);
+
+        std::iter::once(Ok((asset, vec![self.interval])))
+    }
+}
+
+pub trait MapFn<'a, IN> {
+    type Out: 'a;
+    type Iter: Iterator<Item = Self::Out>;
+
+    fn map(&self, input: IN) -> Self::Iter;
+}
+
+impl<'a, IN, OUT, F, I> MapFn<'a, IN> for F
+where
+    OUT: 'a,
+    F: Fn(IN) -> I,
+    I: Iterator<Item = OUT>,
+{
+    type Out = OUT;
+    type Iter = I;
+
+    fn map(&self, input: IN) -> I {
+        self(input)
+    }
+}
+
+pub struct MapAsset<W, F> {
+    wrapped: W,
+    f: F,
+}
+
+impl<'a, W, F> Pipeline<'a> for MapAsset<W, F>
+where
+    W: Pipeline<'a>,
+    F: MapFn<'a, W::Asset>,
+{
+    type Asset = F::Out;
+    type Window = W::Window;
+    type Error = W::Error;
+    type ConvertResult = W::ConvertResult;
+
+    fn batches(&self) -> usize {
+        self.wrapped.batches()
     }
 
-    fn initial_window(&self) -> Self::Window {
-        self.interval
-    }
-
-    fn iter_assets(&self) -> impl Iterator<Item = Self::Asset> {
-        self.t1
-            .iter()
-            .flat_map(move |item1| self.t2.iter().map(move |item2| (item1, item2)))
+    fn iter_batch(
+        &self,
+        batch: usize,
+    ) -> impl Iterator<Item = Result<(Self::Asset, Vec<Self::Window>), Self::Error>> {
+        self.wrapped.iter_batch(batch).flat_map(|item| match item {
+            Ok((asset, windows)) => Either::Left(
+                self.f
+                    .map(asset)
+                    .map(move |asset| Ok((asset, windows.clone()))),
+            ),
+            Err(err) => Either::Right(std::iter::once(Err(err))),
+        })
     }
 }
 
 pub trait RefineFn<A, W> {
     type Error;
-    type Iter: Iterator<Item = Result<W, Self::Error>>;
+    type OutWindow: Clone;
+    type Iter: Iterator<Item = Result<Self::OutWindow, Self::Error>>;
 
-    fn refine(&self, asset: A, window: W) -> Result<Self::Iter, Self::Error>;
+    fn refine(&self, asset: &A, window: W) -> Result<Self::Iter, Self::Error>;
 }
 
-impl<T, A, W, E, I> RefineFn<A, W> for T
+impl<T, A, WI, WO, E, I> RefineFn<A, WI> for T
 where
-    T: Fn(A, W) -> Result<I, E>,
-    I: Iterator<Item = Result<W, E>>,
+    T: Fn(&A, WI) -> Result<I, E>,
+    I: Iterator<Item = Result<WO, E>>,
+    WO: Clone,
 {
     type Error = E;
+    type OutWindow = WO;
     type Iter = I;
 
-    fn refine(&self, asset: A, window: W) -> Result<Self::Iter, Self::Error> {
+    fn refine(&self, asset: &A, window: WI) -> Result<Self::Iter, Self::Error> {
         self(asset, window)
     }
 }
@@ -286,34 +371,31 @@ where
     W::ConvertResult: ConvertResult<W::Error, R::Error>,
 {
     type Asset = W::Asset;
-    type Key = W::Key;
-    type Window = W::Window;
+    type Window = R::OutWindow;
     type Error = R::Error;
     type ConvertResult = FallibleResult;
 
-    fn compute_one(
+    fn batches(&self) -> usize {
+        self.wrapped.batches()
+    }
+
+    fn iter_batch(
         &self,
-        asset: Self::Asset,
-        window: Self::Window,
-    ) -> Result<impl Iterator<Item = Result<Self::Window, Self::Error>>, Self::Error> {
-        W::ConvertResult::convert(self.wrapped.compute_one(asset, window)).map(|windows| {
-            windows
-                .flat_map(move |window| {
-                    let window = W::ConvertResult::convert(window);
-                    window
-                        .map(|window| self.refinement.refine(asset, window))
-                        .flatten()
-                })
-                .flatten()
+        batch: usize,
+    ) -> impl Iterator<Item = Result<(Self::Asset, Vec<Self::Window>), Self::Error>> {
+        self.wrapped.iter_batch(batch).map(move |item| {
+            let (asset, windows) = W::ConvertResult::convert(item)?;
+
+            let mut sub_windows = Vec::new();
+
+            for window in windows {
+                for sub_window in self.refinement.refine(&asset, window)? {
+                    sub_windows.push(sub_window?);
+                }
+            }
+
+            Ok((asset, sub_windows))
         })
-    }
-
-    fn initial_window(&self) -> Self::Window {
-        self.wrapped.initial_window()
-    }
-
-    fn iter_assets(&self) -> impl Iterator<Item = Self::Asset> {
-        self.wrapped.iter_assets()
     }
 }
 
@@ -325,33 +407,31 @@ pub struct Filter<W, F> {
 impl<'a, W, F> Pipeline<'a> for Filter<W, F>
 where
     W: Pipeline<'a>,
-    F: Fn(W::Asset, &W::Window) -> bool,
+    F: Fn(&W::Asset, &W::Window) -> bool,
 {
     type Asset = W::Asset;
-    type Key = W::Key;
     type Window = W::Window;
     type Error = W::Error;
     type ConvertResult = W::ConvertResult;
 
-    fn compute_one(
+    fn batches(&self) -> usize {
+        self.wrapped.batches()
+    }
+
+    fn iter_batch(
         &self,
-        asset: Self::Asset,
-        window: Self::Window,
-    ) -> Result<impl Iterator<Item = Result<Self::Window, Self::Error>>, Self::Error> {
-        self.wrapped.compute_one(asset, window).map(|windows| {
-            windows.filter(move |window| match window {
-                Ok(window) => (self.filter)(asset, window),
-                Err(_) => true,
-            })
+        batch: usize,
+    ) -> impl Iterator<Item = Result<(Self::Asset, Vec<Self::Window>), Self::Error>> {
+        self.wrapped.iter_batch(batch).map(move |item| {
+            let (asset, windows) = item?;
+
+            let windows = windows
+                .into_iter()
+                .filter(|window| (self.filter)(&asset, window))
+                .collect();
+
+            Ok((asset, windows))
         })
-    }
-
-    fn initial_window(&self) -> Self::Window {
-        self.wrapped.initial_window()
-    }
-
-    fn iter_assets(&self) -> impl Iterator<Item = Self::Asset> {
-        self.wrapped.iter_assets()
     }
 }
 
@@ -370,10 +450,7 @@ mod tests {
     use lox_time::deltas::TimeDelta;
     use lox_time::time_scales::TimeScale;
 
-    use crate::{
-        events::UniformSampler,
-        visibility::{ElevationDetectFn},
-    };
+    use crate::{events::UniformSampler, visibility::ElevationDetectFn};
 
     use super::*;
 
@@ -442,7 +519,7 @@ mod tests {
                 Ok(elev.into_intervals(UniformSampler::new(step), interval))
             })
             .filter_window(|window| window.duration() > TimeDelta::from_seconds(40000))
-            .collect()
+            .compute()
             .unwrap();
 
         let result_par = AssetPairAnalysis::new(&ground_assets, &space_assets, interval)
@@ -499,7 +576,7 @@ mod tests {
                 Ok(elev.into_intervals(UniformSampler::new(step), interval))
             })
             .filter_window(|window| window.duration() > TimeDelta::from_seconds(40000))
-            .collect()
+            .compute()
             .unwrap();
 
         let result_stream = {

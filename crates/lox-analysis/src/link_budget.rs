@@ -109,12 +109,12 @@ pub enum LinkAnalysisError {
 /// — defines the window boundaries themselves.
 #[derive(Debug, Clone)]
 pub struct CarrierPlan {
-    carrier: Frequency,
-    channel: Channel,
-    modcods: Vec<ModCod>,
-    design_margin: Decibel,
-    losses: PropagationLosses,
-    detection_modcod: ModCod,
+    pub carrier: Frequency,
+    pub channel: Channel,
+    pub modcods: Vec<ModCod>,
+    pub design_margin: Decibel,
+    pub losses: PropagationLosses,
+    pub detection_modcod: ModCod,
 }
 
 impl CarrierPlan {
@@ -237,7 +237,7 @@ fn most_robust(table: &[ModCod]) -> Option<&ModCod> {
 // ---------------------------------------------------------------------------
 
 /// The pair of ends a link spans, and how to resolve the range between them.
-enum LinkGeometry<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+pub enum LinkGeometry<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     /// A ground station and a spacecraft.
     GroundSpace {
         gs: &'a EllipsoidLocation,
@@ -259,7 +259,7 @@ where
         std::error::Error + Send + Sync + 'static,
 {
     /// Returns the slant range between the two ends at the given time.
-    fn range(&self, time: Time) -> Result<Distance, EvalError> {
+    pub fn range(&self, time: Time) -> Result<Distance, EvalError> {
         match self {
             Self::GroundSpace { gs, sc } => {
                 let state = sc.at(time.into_dynamic());
@@ -283,15 +283,15 @@ where
 
 /// One directed link between two terminals, with the visibility windows it is
 /// refined within.
-struct Link<'a, O: CoordinateOrigin, R: ReferenceFrame> {
-    tx_id: TerminalId,
-    rx_id: TerminalId,
-    direction: LinkDirection,
-    tx: &'a TxTerminal,
-    rx: &'a RxTerminal,
-    plan: &'a CarrierPlan,
-    geometry: LinkGeometry<'a, O, R>,
-    visibility: &'a [TimeInterval],
+pub struct Link<'a, O: CoordinateOrigin, R: ReferenceFrame> {
+    pub tx_id: TerminalId,
+    pub rx_id: TerminalId,
+    pub direction: LinkDirection,
+    pub tx: &'a TxTerminal,
+    pub rx: &'a RxTerminal,
+    pub plan: &'a CarrierPlan,
+    pub geometry: LinkGeometry<'a, O, R>,
+    pub visibility: &'a [TimeInterval],
 }
 
 impl<O, R> Link<'_, O, R>
@@ -331,7 +331,7 @@ where
 ///
 /// Positive while the link closes, negative while it does not, so its roots are
 /// the window boundaries.
-struct LinkMarginDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame>(&'a Link<'a, O, R>);
+pub struct LinkMarginDetectFn<'a, O: CoordinateOrigin, R: ReferenceFrame>(pub &'a Link<'a, O, R>);
 
 impl<O, R> DetectFn for LinkMarginDetectFn<'_, O, R>
 where
@@ -726,7 +726,7 @@ where
 ///
 /// Returns [`LinkEvalError::NonFiniteMargin`] when the margin is not finite at
 /// any sample.
-fn summarize<O, R>(
+pub fn summarize<O, R>(
     link: &Link<'_, O, R>,
     interval: TimeInterval,
     step: TimeDelta,
