@@ -193,7 +193,7 @@ macro_rules! assert_approx_eq {
         $crate::assert_approx_eq!($lhs, $rhs, atol <= 0.0, rtol <= $crate::default_rtol(0.0))
     };
     ($lhs:expr, $rhs:expr, rtol <= $rtol:expr) => {
-        $crate::assert_approx_eq!($lhs, $rhs, atol <= 0.0, rtol <= $rtol);
+        $crate::assert_approx_eq!($lhs, $rhs, atol <= 0.0, rtol <= $rtol)
     };
     ($lhs:expr, $rhs:expr, atol <= $atol:expr) => {{
         let atol = $atol;
