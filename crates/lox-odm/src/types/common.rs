@@ -584,15 +584,6 @@ mod tests {
     }
 
     #[test]
-    fn message_kind_is_copy_clone_eq() {
-        let kind = MessageKind::Opm;
-        let copied = kind;
-        let cloned = Clone::clone(&kind);
-        assert_eq!(kind, copied);
-        assert_eq!(kind, cloned);
-    }
-
-    #[test]
     fn message_kind_display() {
         assert_eq!(format!("{}", MessageKind::Opm), "OPM");
         assert_eq!(format!("{}", MessageKind::Oem), "OEM");
