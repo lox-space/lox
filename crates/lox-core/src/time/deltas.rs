@@ -905,7 +905,7 @@ fn two_sum(a: f64, b: f64) -> (f64, f64) {
 #[inline]
 fn two_prod(a: f64, b: f64) -> (f64, f64) {
     let p = a * b;
-    let e = mul_add(a, b, -p); // FMA: a * b - p
+    let e = mul_add(a, b, -p);
     (p, e)
 }
 /// A builder for constructing [`TimeDelta`] values from individual time components.
@@ -1475,6 +1475,23 @@ mod tests {
 
         // Combined should give the correct value
         assert!(abs(tf.to_f64() - (-725803167.816)) < 1e-9);
+    }
+
+    #[test]
+    fn test_two_prod_is_error_free() {
+        // (1 + 2⁻³⁰)² = 1 + 2⁻²⁹ + 2⁻⁶⁰; the last term is below half an ulp of the product
+        let a = 1.0 + 2f64.powi(-30);
+        let (p, e) = two_prod(a, a);
+        assert_eq!(p, 1.0 + 2f64.powi(-29));
+        assert_eq!(e, 2f64.powi(-60));
+    }
+
+    #[test]
+    fn test_seconds_mul_keeps_low_order_part() {
+        let a = 1.0 + 2f64.powi(-30);
+        let prod = Seconds::from_f64(a) * a;
+        assert_eq!(prod.hi, 1.0 + 2f64.powi(-29));
+        assert_eq!(prod.lo, 2f64.powi(-60));
     }
 
     #[test]
