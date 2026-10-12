@@ -38,32 +38,32 @@ lox-test-utils = { path = "crates/lox-test-utils" }
 lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.27" }
 lox-units = { path = "crates/lox-units", version = "0.1.0-alpha.16" }
 
-arrayvec = "0.7.6"
-chrono = "0.4.43"
+arrayvec = "0.7.8"
+chrono = "0.4.45"
 csv = "1.4.0"
-differential-equations = "0.6.1"
+differential-equations = "0.7.0"
 divan = { package = "codspeed-divan-compat", version = "4.3.0" }
 fast_polynomial = { version = "0.3.0", default-features = false }
 geo = "0.33"
 geojson = "1.0"
-glam = { version = "0.33.1", default-features = false, features = ["f64"] }
-itertools = "0.14.0"
-libm = "0.2.15"
+glam = { version = "0.34.1", default-features = false, features = ["f64"] }
+itertools = "0.15.0"
+libm = "0.2.16"
 nalgebra = "0.35.0"
 nom = { version = "8.0.0", default-features = false }
 numpy = "0.29.0"
-proptest = "1.9.0"
-pyo3 = "0.29.0"
-quick-xml = { version = "0.41.0", features = ["serde", "serialize"] }
-rayon = "1.11.0"
-rstest = "0.26.1"
-serde = { version = "1.0.228", features = ["derive", "rc"] }
-serde_json = "1.0.145"
-sgp4 = "2.3.0"
+proptest = "1.12.0"
+pyo3 = "0.29.3"
+quick-xml = { version = "0.42.0", features = ["serde", "serialize"] }
+rayon = "1.12.0"
+rstest = "0.27.0"
+serde = { version = "1.0.229", features = ["derive", "rc"] }
+serde_json = "1.0.154"
+sgp4 = "2.4.0"
 sha2 = "0.11"
 tempfile = "3"
-thiserror = { version = "2.0.17", default-features = false }
-zip = { version = "8", default-features = false, features = ["deflate"] }
+thiserror = { version = "2", default-features = false }
+zip = { version = "9", default-features = false, features = ["deflate"] }
 
 [profile.release]
 lto = "thin"
