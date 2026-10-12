@@ -5,6 +5,8 @@
 
 use std::f64::consts::TAU;
 
+use lox_core::math::float::mul_add_relaxed;
+use lox_core::math::poly::poly_array;
 use lox_core::units::{Angle, AngleUnits};
 use thiserror::Error;
 
@@ -129,7 +131,7 @@ fn oceanic_tidal_correction(tidal_args: &TidalArgs) -> OceanicTidalCorrection {
         let mut agg = 0.0;
         for (i, arg) in tidal_args.iter().enumerate() {
             let coeff = term.coefficients[i] as f64;
-            agg = arg.to_radians().mul_add(coeff, agg);
+            agg = mul_add_relaxed(arg.to_radians(), coeff, agg);
         }
         agg %= TAU;
 
@@ -190,16 +192,16 @@ fn julian_centuries_since_j2000(mjd: ModifiedJulianDate) -> f64 {
 
 /// GMST + π.
 fn chi(julian_centuries_since_j2000: f64) -> Angle {
-    let mut arcsec = fast_polynomial::poly_array(
+    let mut arcsec = poly_array(
         julian_centuries_since_j2000,
         &[
             67310.54841,
-            876600.0f64.mul_add(3600.0, 8640184.812866),
+            mul_add_relaxed(876600.0, 3600.0, 8640184.812866),
             0.093104,
             -6.2e-6,
         ],
     );
-    arcsec = arcsec.mul_add(15.0, 648000.0);
+    arcsec = mul_add_relaxed(arcsec, 15.0, 648000.0);
     arcsec.arcsec().mod_two_pi_signed()
 }
 

@@ -20,7 +20,6 @@ readme = "README.md"
 lox-approx = { workspace = true, default-features = false, features = ["derive", "glam"] }
 
 chrono = { workspace = true, optional = true }
-fast_polynomial.workspace = true
 glam.workspace = true
 libm = { workspace = true, optional = true }
 nom = { workspace = true, features = ["alloc"] }
@@ -32,7 +31,6 @@ default = ["std"]
 std = [
     "glam/std",
     "nom/std",
-    "fast_polynomial/std",
     "lox-approx/std",
     "chrono?/std",
     "serde?/std",
@@ -40,7 +38,6 @@ std = [
 libm = [
     "dep:libm",
     "glam/libm",
-    "fast_polynomial/libm",
 ]
 chrono = ["dep:chrono"]
 serde = ["dep:serde", "glam/serde"]

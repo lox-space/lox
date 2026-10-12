@@ -6,7 +6,7 @@
 //! Module s06 exposes a function for calculating the Celestial Intermediate Origin (CIO) locator,
 //! s, using IAU 2006 precession and IAU 2000A nutation.
 
-use fast_polynomial::poly_array;
+use lox_core::math::poly::poly_array;
 use lox_core::types::units::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};
 use lox_time::Time;

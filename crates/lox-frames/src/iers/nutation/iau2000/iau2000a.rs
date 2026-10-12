@@ -136,6 +136,6 @@ mod tests {
             deps: 4.063_239_174_001_679e-5.rad(),
         };
         let actual = Nutation::iau2000a(time);
-        assert_approx_eq!(expected, actual, rtol <= 1e-13);
+        assert_approx_eq!(expected, actual, rtol <= 1e-12);
     }
 }

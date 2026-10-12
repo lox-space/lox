@@ -8,6 +8,7 @@
 //! References:
 //! - IERS Conventions (2003), IERS Technical Note No. 32
 
+use lox_core::math::poly::poly_array;
 use lox_core::types::units::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};
 
@@ -22,7 +23,7 @@ use lox_core::units::{Angle, AngleUnits};
 /// The general accumulated precession in longitude in radians
 #[inline]
 pub fn pa_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    fast_polynomial::poly_array(
+    poly_array(
         centuries_since_j2000_tdb,
         &[0.0, 0.024381750, 0.00000538691],
     )
@@ -40,7 +41,7 @@ pub fn pa_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// The mean elongation D in radians, normalized to [-π, π]
 #[inline]
 pub fn d_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(poly_array(
         centuries_since_j2000_tdb,
         &[
             1072260.703692,
@@ -63,7 +64,7 @@ pub fn d_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// The Sun's mean anomaly l' in radians, normalized to [-π, π]
 #[inline]
 pub fn lp_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(poly_array(
         centuries_since_j2000_tdb,
         &[
             1287104.793048,
@@ -86,7 +87,7 @@ pub fn lp_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// The Moon's mean anomaly l in radians, normalized to [-π, π]
 #[inline]
 pub fn l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(poly_array(
         centuries_since_j2000_tdb,
         &[
             485868.249036,
@@ -112,7 +113,7 @@ pub fn l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// The Moon's mean argument of latitude F in radians, normalized to [-π, π]
 #[inline]
 pub fn f_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(poly_array(
         centuries_since_j2000_tdb,
         &[
             335779.526232,
@@ -135,7 +136,7 @@ pub fn f_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// The mean longitude of the Moon's ascending node Ω in radians, normalized to [-π, π]
 #[inline]
 pub fn omega_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(poly_array(
         centuries_since_j2000_tdb,
         &[450160.398036, -6962890.5431, 7.4722, 0.007702, -0.00005939],
     ))

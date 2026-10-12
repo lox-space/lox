@@ -10,6 +10,7 @@
 //!   Laskar, J. (1994). Numerical expressions for precession formulae and mean elements
 //!   for the Moon and the planets. Astronomy and Astrophysics, 282(2), 663-683.
 
+use lox_core::math::poly::poly_array;
 use lox_core::types::units::JulianCenturies;
 use lox_core::units::Angle;
 
@@ -24,7 +25,7 @@ use lox_core::units::Angle;
 /// The mean elongation D in radians, normalized to [-π, π]
 #[inline]
 pub fn d_simon1994(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(poly_array(
         centuries_since_j2000_tdb,
         &[1072260.70369, 1602961601.2090],
     ))
@@ -41,7 +42,7 @@ pub fn d_simon1994(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// The Sun's mean anomaly l' in radians, normalized to [-π, π]
 #[inline]
 pub fn lp_simon1994(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(poly_array(
         centuries_since_j2000_tdb,
         &[1287104.79305, 129596581.0481],
     ))
@@ -58,7 +59,7 @@ pub fn lp_simon1994(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// The Moon's mean anomaly l in radians, normalized to [-π, π]
 #[inline]
 pub fn l_simon1994(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(poly_array(
         centuries_since_j2000_tdb,
         &[485868.249036, 1717915923.2178],
     ))
@@ -78,7 +79,7 @@ pub fn l_simon1994(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// The Moon's mean argument of latitude F in radians, normalized to [-π, π]
 #[inline]
 pub fn f_simon1994(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(poly_array(
         centuries_since_j2000_tdb,
         &[335779.526232, 1739527262.8478],
     ))
@@ -95,7 +96,7 @@ pub fn f_simon1994(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// The mean longitude of the Moon's ascending node Ω in radians, normalized to [-π, π]
 #[inline]
 pub fn omega_simon1994(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(poly_array(
         centuries_since_j2000_tdb,
         &[450160.398036, -6962890.5431],
     ))

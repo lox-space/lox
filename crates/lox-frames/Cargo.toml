@@ -24,7 +24,6 @@ lox-core = { workspace = true, features = ["std"] }
 lox-time.workspace = true
 lox-units.workspace = true
 
-fast_polynomial = { workspace = true, features = ["std"] }
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 
