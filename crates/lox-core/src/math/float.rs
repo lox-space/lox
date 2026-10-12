@@ -5,6 +5,9 @@
 //! `f64` math dispatched per build mode: inherent methods under `std`,
 //! [`libm`](https://docs.rs/libm) under no_std. Free-function form (`sqrt(x)` not `x.sqrt()`) so
 //! call sites don't need `cfg`-gated trait imports.
+//!
+//! Exception: [`mul_add_relaxed`] dispatches on the target's FMA support rather than the build
+//! mode, see its docs and [`mul_add`] for the strict variant.
 
 // Rounding helpers
 // ================
@@ -146,7 +149,23 @@ pub fn powf(x: f64, n: f64) -> f64 {
     }
 }
 
-/// Fused multiply-add: `a * b + c` with a single rounding.
+/// Multiply-add `a * b + c`, fused only where the target has hardware FMA.
+///
+/// Faster than [`mul_add`] on targets without hardware FMA, where a fused multiply-add is a
+/// slow library call, at the cost of target-dependent rounding in the last bit.
+#[inline]
+pub fn mul_add_relaxed(a: f64, b: f64, c: f64) -> f64 {
+    #[cfg(all(feature = "std", any(target_feature = "fma", target_arch = "aarch64")))]
+    {
+        a.mul_add(b, c)
+    }
+    #[cfg(not(all(feature = "std", any(target_feature = "fma", target_arch = "aarch64"))))]
+    {
+        a * b + c
+    }
+}
+
+/// Fused multiply-add `a * b + c` with a single rounding.
 #[inline]
 pub fn mul_add(a: f64, b: f64, c: f64) -> f64 {
     #[cfg(feature = "std")]
@@ -410,5 +429,33 @@ mod tests {
     #[test]
     fn test_atan2() {
         assert!(abs(atan2(1.0, 1.0) - core::f64::consts::FRAC_PI_4) < 1e-15);
+    }
+
+    #[test]
+    fn test_mul_add_single_rounding() {
+        // (1 + 2⁻³⁰)² = 1 + 2⁻²⁹ + 2⁻⁶⁰; only a fused operation recovers the 2⁻⁶⁰ term
+        let a = 1.0 + powi(2.0, -30);
+        let p = a * a;
+        assert_eq!(mul_add(a, a, -p), powi(2.0, -60));
+    }
+
+    #[test]
+    fn test_mul_add_relaxed_exact_inputs() {
+        assert_eq!(mul_add_relaxed(3.0, 4.0, 5.0), 17.0);
+        assert_eq!(mul_add_relaxed(-0.5, 0.25, 1.0), 0.875);
+    }
+
+    #[test]
+    fn test_mul_add_relaxed_is_fused_or_unfused() {
+        let a = 1.0 + powi(2.0, -30);
+        let p = a * a;
+        let fused = mul_add(a, a, -p);
+        let unfused = a * a - p;
+        let actual = mul_add_relaxed(a, a, -p);
+        #[cfg(all(feature = "std", any(target_feature = "fma", target_arch = "aarch64")))]
+        assert_eq!(actual, fused);
+        #[cfg(not(all(feature = "std", any(target_feature = "fma", target_arch = "aarch64"))))]
+        assert_eq!(actual, unfused);
+        assert!(actual == fused || actual == unfused);
     }
 }
