@@ -20,6 +20,8 @@ concurrency:
 
 env:
   UV_PROJECT: .
+  # Pinned until all dev dependencies ship wheels for the latest CPython
+  UV_PYTHON: "3.14"
 
 jobs:
   codspeed-python:
