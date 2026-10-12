@@ -25,7 +25,6 @@ lox-io.workspace = true
 lox-time.workspace = true
 
 csv.workspace = true
-fast_polynomial = { workspace = true, features = ["std"] }
 serde.workspace = true
 thiserror.workspace = true
 

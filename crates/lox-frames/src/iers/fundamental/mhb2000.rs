@@ -13,6 +13,7 @@
 //!   New nutation series for nonrigid Earth and insights into the Earth's interior.
 //!   Journal of Geophysical Research, 107(B4).
 
+use lox_core::math::poly::poly_array;
 use lox_core::types::units::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};
 
@@ -27,7 +28,7 @@ use lox_core::units::{Angle, AngleUnits};
 /// The mean elongation D in radians, normalized to [-π, π]
 #[inline]
 pub fn d_mhb2000_luni_solar(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(poly_array(
         centuries_since_j2000_tdb,
         &[
             1072260.70369,
@@ -50,7 +51,7 @@ pub fn d_mhb2000_luni_solar(centuries_since_j2000_tdb: JulianCenturies) -> Angle
 /// The mean elongation D in radians, normalized to [-π, π]
 #[inline]
 pub fn d_mhb2000_planetary(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    fast_polynomial::poly_array(centuries_since_j2000_tdb, &[5.198466741, 7771.3771468121])
+    poly_array(centuries_since_j2000_tdb, &[5.198466741, 7771.3771468121])
         .rad()
         .mod_two_pi_signed()
 }
@@ -66,7 +67,7 @@ pub fn d_mhb2000_planetary(centuries_since_j2000_tdb: JulianCenturies) -> Angle 
 /// The Sun's mean anomaly l' in radians, normalized to [-π, π]
 #[inline]
 pub fn lp_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(fast_polynomial::poly_array(
+    Angle::arcseconds_normalized_signed(poly_array(
         centuries_since_j2000_tdb,
         &[
             1287104.79305,
@@ -89,7 +90,7 @@ pub fn lp_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// The Moon's mean anomaly l in radians, normalized to [-π, π]
 #[inline]
 pub fn l_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    fast_polynomial::poly_array(centuries_since_j2000_tdb, &[2.35555598, 8328.6914269554])
+    poly_array(centuries_since_j2000_tdb, &[2.35555598, 8328.6914269554])
         .rad()
         .mod_two_pi_signed()
 }
@@ -108,7 +109,7 @@ pub fn l_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// The Moon's mean argument of latitude F in radians, normalized to [-π, π]
 #[inline]
 pub fn f_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    fast_polynomial::poly_array(centuries_since_j2000_tdb, &[1.627905234, 8433.466158131])
+    poly_array(centuries_since_j2000_tdb, &[1.627905234, 8433.466158131])
         .rad()
         .mod_two_pi_signed()
 }
@@ -124,7 +125,7 @@ pub fn f_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// The mean longitude of the Moon's ascending node Ω in radians, normalized to [-π, π]
 #[inline]
 pub fn omega_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    fast_polynomial::poly_array(centuries_since_j2000_tdb, &[2.18243920, -33.757045])
+    poly_array(centuries_since_j2000_tdb, &[2.18243920, -33.757045])
         .rad()
         .mod_two_pi_signed()
 }
@@ -140,7 +141,7 @@ pub fn omega_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// Neptune's mean longitude in radians, normalized to [-π, π]
 #[inline]
 pub fn neptune_l_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    fast_polynomial::poly_array(centuries_since_j2000_tdb, &[5.3211590, 3.81277740])
+    poly_array(centuries_since_j2000_tdb, &[5.3211590, 3.81277740])
         .rad()
         .mod_two_pi_signed()
 }

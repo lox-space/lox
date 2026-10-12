@@ -9,6 +9,7 @@ use lox_core::elements::{
     Keplerian, LongitudeOfAscendingNode, NegativeEccentricityError, SemiMajorAxis,
 };
 use lox_core::glam::Azimuth;
+use lox_core::math::float::mul_add_relaxed;
 use lox_core::time::julian_dates::JulianDate;
 use lox_core::time::time_of_day::TimeOfDay;
 use lox_core::units::DistanceUnits;
@@ -139,7 +140,7 @@ where
     // G: Mean anomaly of the Sun
     let m_sun = lp_iers03(tdb.centuries_since_j2000());
     // L: Mean longitude of the Sun
-    let l_sun = t_ut1.mul_add(36000.77, 280.460).deg();
+    let l_sun = mul_add_relaxed(t_ut1, 36000.77, 280.460).deg();
     // λ: Longitude of the ecliptic
     let l_ecliptic_part2 =
         (1.914666471 * m_sun.sin() + 0.019994643 * (2.0 * m_sun.as_f64()).sin()).deg();

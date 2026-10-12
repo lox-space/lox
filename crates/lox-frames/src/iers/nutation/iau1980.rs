@@ -5,6 +5,7 @@
 
 use std::f64::consts::TAU;
 
+use lox_core::math::poly::poly_array;
 use lox_core::types::units::{Arcseconds, JulianCenturies};
 use lox_core::units::{Angle, AngleUnits};
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tdb};
@@ -66,7 +67,7 @@ impl Nutation {
 /// `l`, the mean longitude of the Moon measured from the mean position of the perigee,
 /// normalized to the range [0, 2π).
 fn l(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    let l_poly: Arcseconds = fast_polynomial::poly_array(
+    let l_poly: Arcseconds = poly_array(
         centuries_since_j2000_tdb,
         &[485866.733, 715922.633, 31.31, 0.064],
     );
@@ -77,7 +78,7 @@ fn l(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// `l'`, the mean longitude of the Sun measured from the mean position of the perigee,
 /// normalized to the range [0, 2π).
 fn lp(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    let lp_poly: Arcseconds = fast_polynomial::poly_array(
+    let lp_poly: Arcseconds = poly_array(
         centuries_since_j2000_tdb,
         &[1287099.804, 1292581.224, -0.577, -0.012],
     );
@@ -88,7 +89,7 @@ fn lp(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// `F`, the mean longitude of the Moon minus the mean longitude of the Moon's ascending node,
 /// normalized to the range [0, 2π).
 fn f(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    let f_poly: Arcseconds = fast_polynomial::poly_array(
+    let f_poly: Arcseconds = poly_array(
         centuries_since_j2000_tdb,
         &[335778.877, 295263.137, -13.257, 0.011],
     );
@@ -98,7 +99,7 @@ fn f(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 
 /// `D`, the mean elongation of the Moon from the Sun, normalized to the range [0, 2π).
 fn d(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    let d_poly: Arcseconds = fast_polynomial::poly_array(
+    let d_poly: Arcseconds = poly_array(
         centuries_since_j2000_tdb,
         &[1072261.307, 1105601.328, -6.891, 0.019],
     );
@@ -109,7 +110,7 @@ fn d(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 /// `Ω`, the longitude of the mean ascending node of the lunar orbit on the ecliptic, measured from
 /// the mean equinox of date.
 fn omega(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    let om_poly: Arcseconds = fast_polynomial::poly_array(
+    let om_poly: Arcseconds = poly_array(
         centuries_since_j2000_tdb,
         &[450160.280, -482890.539, 7.455, 0.008],
     );

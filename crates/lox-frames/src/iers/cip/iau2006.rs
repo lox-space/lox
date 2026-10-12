@@ -7,6 +7,7 @@
 //! Pole (CIP) using the IAU 2006 precession and IAU 2000A nutation models.
 
 use lox_core::glam::DVec2;
+use lox_core::math::poly::poly_array;
 
 use lox_core::types::units::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};
@@ -37,7 +38,7 @@ struct NutationComponents {
 pub fn cip_coords(centuries_since_j2000_tdb: JulianCenturies) -> (Angle, Angle) {
     let powers_of_t = powers_of_t(centuries_since_j2000_tdb);
     let fundamental_args = fundamental_args(centuries_since_j2000_tdb);
-    let polynomial_components = polynomial_components(&powers_of_t);
+    let polynomial_components = polynomial_components(centuries_since_j2000_tdb);
     let nutation_components = nutation_components(&powers_of_t, &fundamental_args);
     calculate_cip_unit_vector(&polynomial_components, &nutation_components)
 }
@@ -73,13 +74,11 @@ fn fundamental_args(centuries_since_j2000_tdb: JulianCenturies) -> FundamentalAr
     ]
 }
 
-fn polynomial_components(powers_of_t: &PowersOfT) -> DVec2 {
-    let mut result = DVec2::default();
-    for (i, power_of_t) in powers_of_t.iter().enumerate().rev() {
-        result[0] += polynomial::COEFFICIENTS.x[i] * power_of_t;
-        result[1] += polynomial::COEFFICIENTS.y[i] * power_of_t;
-    }
-    result
+fn polynomial_components(centuries_since_j2000_tdb: JulianCenturies) -> DVec2 {
+    DVec2::new(
+        poly_array(centuries_since_j2000_tdb, &polynomial::COEFFICIENTS.x),
+        poly_array(centuries_since_j2000_tdb, &polynomial::COEFFICIENTS.y),
+    )
 }
 
 fn nutation_components(

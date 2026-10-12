@@ -11,7 +11,7 @@ use alloc::vec::Vec;
 use core::fmt;
 use core::str::FromStr;
 
-use fast_polynomial::poly_array;
+use crate::math::poly::poly_array;
 use thiserror::Error;
 
 use crate::math::float::powi;

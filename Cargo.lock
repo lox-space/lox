@@ -489,15 +489,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fast_polynomial"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62eea6ee590b08a5f8b1139f4d6caee195b646d0c07e4b1808fbd5c4dea4829a"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
 name = "fastrand"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1027,7 +1018,6 @@ name = "lox-core"
 version = "0.1.0-alpha.15"
 dependencies = [
  "chrono",
- "fast_polynomial",
  "glam 0.34.1",
  "libm",
  "lox-approx",
@@ -1054,7 +1044,6 @@ name = "lox-earth"
 version = "0.1.0-alpha.30"
 dependencies = [
  "csv",
- "fast_polynomial",
  "lox-approx",
  "lox-core",
  "lox-frames",
@@ -1084,7 +1073,6 @@ dependencies = [
 name = "lox-frames"
 version = "0.1.0-alpha.21"
 dependencies = [
- "fast_polynomial",
  "lox-approx",
  "lox-bodies",
  "lox-core",

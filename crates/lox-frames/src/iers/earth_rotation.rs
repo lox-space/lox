@@ -8,10 +8,10 @@
 use std::f64::consts::TAU;
 use std::iter::zip;
 
-use fast_polynomial::poly_array;
 use lox_approx::ApproxEq;
 use lox_core::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use lox_core::glam::DMat3;
+use lox_core::math::poly::poly_array;
 use lox_core::units::{Angle, AngleUnits, Sign};
 use lox_time::time_scales::{Tdb, Tt, Ut1};
 use lox_time::{Time, julian_dates::JulianDate};
