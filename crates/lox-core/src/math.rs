@@ -11,6 +11,7 @@ pub mod float;
 pub mod glam;
 pub mod linear_algebra;
 pub mod optim;
+pub mod poly;
 pub mod roots;
 pub mod series;
 pub mod slices;
