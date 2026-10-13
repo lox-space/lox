@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Eivind Bergem <eivind.bergem@gmail.com>
+//
+// SPDX-License-Identifier: MPL-2.0
+
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::hash::Hash;
@@ -68,12 +72,9 @@ where
 
 pub enum InfallibleResult {}
 
-impl<IN, OUT> ConvertResult<IN, OUT> for InfallibleResult
-where
-    IN: core::fmt::Debug,
-{
-    fn convert<T>(input: Result<T, IN>) -> Result<T, OUT> {
-        Ok(input.unwrap())
+impl<OUT> ConvertResult<Infallible, OUT> for InfallibleResult {
+    fn convert<T>(input: Result<T, Infallible>) -> Result<T, OUT> {
+        input.map_err(|err| match err {})
     }
 }
 
@@ -154,7 +155,7 @@ pub trait Pipeline<'a>: Sized {
             .collect()
     }
 
-    fn compute(self) -> Result<AnalysisMap<<Self::Asset as AsKey>::Key, Self::Window>, Self::Error>
+    fn compute(&self) -> Result<AnalysisMap<<Self::Asset as AsKey>::Key, Self::Window>, Self::Error>
     where
         Self::Asset: AsKey,
     {
@@ -172,8 +173,8 @@ pub trait Pipeline<'a>: Sized {
 }
 
 pub trait ParallelPipeline<'a>: Pipeline<'a> {
-    fn par_collect(
-        self,
+    fn par_compute(
+        &self,
     ) -> Result<AnalysisMap<<Self::Asset as AsKey>::Key, Self::Window>, Self::Error>
     where
         Self: Sync,
@@ -202,14 +203,14 @@ pub trait ParallelPipeline<'a>: Pipeline<'a> {
 impl<'a, T> ParallelPipeline<'a> for T where T: Pipeline<'a> {}
 
 pub trait StreamPipeline<'a>: Pipeline<'a> {
-    async fn stream_collect<S>(
-        self,
-        spawner: &'a S,
+    async fn stream_compute<'s, S>(
+        &'s self,
+        spawner: &'s S,
     ) -> Result<AnalysisMap<<Self::Asset as AsKey>::Key, Self::Window>, Self::Error>
     where
         Self::Asset: AsKey + Sync + Send,
         S: Spawn + Clone + Send,
-        Self: Send + Sync + 'a,
+        Self: Send + Sync + 's,
         <Self::Asset as AsKey>::Key: Send + 'static,
         Self::Window: Send + 'static,
         Self::Error: Send + 'static,
@@ -439,11 +440,23 @@ where
 mod tests {
     use std::collections::HashMap;
 
+    #[cfg(feature = "comms")]
+    use crate::assets::TerminalId;
+    use crate::events::DetectError;
+    #[cfg(feature = "comms")]
+    use crate::link_budget::CarrierPlan;
+    use crate::link_budget::{Link, LinkAnalysisError, LinkWindow};
+    use crate::visibility2::{Asset, Window};
     use crate::{assets::Scenario, events::DetectFnExt};
     use futures::executor::{ThreadPool, block_on};
-    use lox_bodies::Origin;
+    use lox_bodies::{CoordinateOrigin, Origin};
+    use lox_comms::channel::Channel;
+    use lox_comms::modcod::dvb_s2;
+    use lox_comms::terminal::{EirpModel, GtModel, RxTerminal, TxTerminal};
+    use lox_comms::{FrequencyBand, PropagationLosses};
+    use lox_core::units::{Decibel, Frequency};
     use lox_core::{coords::LonLatAlt, units::Angle};
-    use lox_frames::Frame;
+    use lox_frames::{Frame, ReferenceFrame};
     use lox_orbits::orbits::Ensemble;
     use lox_orbits::{ground::EllipsoidLocation, orbits::Trajectory, propagators::OrbitSource};
     use lox_test_utils::read_data_file;
@@ -492,113 +505,147 @@ mod tests {
         EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap()
     }
 
+    /// A lumped downlink with the given EIRP and G/T, both in X band.
+    fn lumped(eirp_dbw: f64, gt_db_k: f64) -> (TxTerminal, RxTerminal) {
+        let band = FrequencyBand::X;
+        (
+            EirpModel::new(band, Decibel::new(eirp_dbw)).unwrap().into(),
+            GtModel::new(band, Decibel::new(gt_db_k)).unwrap().into(),
+        )
+    }
+
+    struct TestAnalysis {
+        gs: Vec<GroundStation>,
+        sc: Vec<Spacecraft>,
+        interval: TimeInterval,
+        ensemble: Ensemble<AssetId, Origin, Frame>,
+    }
+
+    impl TestAnalysis {
+        fn new() -> Self {
+            let sc_traj = spacecraft_trajectory_dynamic();
+            let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
+            let (tx, rx) = lumped(200.0, 40.0);
+            let gs = vec![
+                GroundStation::new("cebreros", location_dynamic()).with_rx_terminal("GS RX", rx),
+            ];
+            let sc = vec![
+                Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj))
+                    .with_tx_terminal("SC TX", tx),
+            ];
+            let (_scenario, ensemble) = make_scenario_and_ensemble(&gs, &sc, interval);
+
+            Self {
+                interval,
+                gs,
+                sc,
+                ensemble,
+            }
+        }
+
+        fn visibility(
+            &self,
+        ) -> impl ParallelPipeline<
+            '_,
+            Asset = (&GroundStation, &Spacecraft),
+            Window = TimeInterval,
+            Error = DetectError,
+            ConvertResult = FallibleResult,
+        > {
+            let step = TimeDelta::from_seconds(60);
+
+            AssetPairAnalysis::new(&self.gs, &self.sc, self.interval)
+                .refine(move |(gs, sc), interval| {
+                    let sc_traj = self.ensemble.get(sc.id()).unwrap();
+
+                    interval.elevation_detect(UniformSampler::new(step), gs, sc_traj)
+                })
+                .filter_window(|window| window.duration() > TimeDelta::from_seconds(40000))
+        }
+
+        #[cfg(feature = "comms")]
+        fn link_budget<'a>(
+            &'a self,
+            plan: &'a CarrierPlan,
+            overrides: &'a HashMap<(TerminalId, TerminalId), CarrierPlan>,
+        ) -> impl Pipeline<
+            'a,
+            Asset = Link<'a, Origin, Frame>,
+            Window = LinkWindow,
+            Error = LinkAnalysisError,
+            ConvertResult = FallibleResult,
+        > {
+            let step = TimeDelta::from_seconds(60);
+
+            self.visibility()
+                .map_asset(move |asset| asset.links(&self.ensemble, plan, overrides))
+                .refine(move |link, interval| {
+                    let windows = interval.link_margin_detect(step, link)?.collect::<Vec<_>>();
+
+                    Ok(windows.into_iter())
+                })
+        }
+    }
+
     #[test]
     fn refinement() {
-        let gs_loc = location_dynamic();
-        let sc_traj = spacecraft_trajectory_dynamic();
-        let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
-        let gs = GroundStation::new("cebreros", gs_loc);
-        let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
-        let ground_assets = [gs.clone()];
-        let space_assets = [sc.clone()];
-        let step = TimeDelta::from_seconds(60);
+        let analysis = TestAnalysis::new();
+        let pipeline = analysis.visibility();
 
-        let (scenario, ensemble) =
-            make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
+        let result = pipeline.compute().unwrap();
 
-        let result = AssetPairAnalysis::new(&ground_assets, &space_assets, interval)
-            .refine(|(gs, sc), interval| {
-                let sc_traj = ensemble.get(sc.id()).expect(
-                "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
-            );
-                let elev = ElevationDetectFn {
-                    gs: gs,
-                    sc: sc_traj,
-                };
-
-                Ok(elev.into_intervals(UniformSampler::new(step), interval))
-            })
-            .filter_window(|window| window.duration() > TimeDelta::from_seconds(40000))
-            .compute()
-            .unwrap();
-
-        let result_par = AssetPairAnalysis::new(&ground_assets, &space_assets, interval)
-            .refine(|(gs, sc), interval| {
-                let sc_traj = ensemble.get(sc.id()).expect(
-                    "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
-        	);
-                let elev = ElevationDetectFn {
-                    gs: gs,
-                    sc: sc_traj,
-                };
-
-		Ok(elev.into_intervals(UniformSampler::new(step), interval))
-            })
-            .filter_window(|window| window.duration() > TimeDelta::from_seconds(40000))
-            .par_collect().unwrap();
-
-        dbg!(
-            result
-                .get(&(gs.id().clone(), sc.id().clone()))
-                .unwrap()
-                .len(),
-            result_par
-                .get(&(gs.id().clone(), sc.id().clone()))
-                .unwrap()
-                .len()
-        );
+        let result_par = pipeline.par_compute().unwrap();
         assert_eq!(result, result_par);
     }
 
     #[test]
     fn refinement_stream() {
-        let gs_loc = location_dynamic();
-        let sc_traj = spacecraft_trajectory_dynamic();
-        let interval = TimeInterval::new(sc_traj.start_time(), sc_traj.end_time());
-        let gs = GroundStation::new("cebreros", gs_loc);
-        let sc = Spacecraft::new("lunar", OrbitSource::Trajectory(sc_traj.clone()));
-        let ground_assets = [gs.clone()];
-        let space_assets = [sc.clone()];
-        let step = TimeDelta::from_seconds(60);
+        let analysis = TestAnalysis::new();
+        let pipeline = analysis.visibility();
 
-        let (scenario, ensemble) =
-            make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
-
-        let result = AssetPairAnalysis::new(&ground_assets, &space_assets, interval)
-            .refine(|(gs, sc), interval| {
-                let sc_traj = ensemble.get(sc.id()).expect(
-                "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
-            );
-                let elev = ElevationDetectFn {
-                    gs: gs,
-                    sc: sc_traj,
-                };
-                Ok(elev.into_intervals(UniformSampler::new(step), interval))
-            })
-            .filter_window(|window| window.duration() > TimeDelta::from_seconds(40000))
-            .compute()
-            .unwrap();
+        let result = pipeline.compute().unwrap();
 
         let result_stream = {
             let pool = ThreadPool::new().unwrap();
 
-            let pipeline = AssetPairAnalysis::new(&ground_assets, &space_assets, interval)
-                .refine(|(gs, sc), interval| {
-                    let sc_traj = ensemble.get(sc.id()).expect(
-                        "trajectory not found in ensemble; did you forget to propagate this spacecraft?",
-                    );
-                    let elev = ElevationDetectFn {
-                        gs: gs,
-                        sc: sc_traj,
-                    };
-
-                    Ok(elev.into_intervals(UniformSampler::new(step), interval))
-                })
-                .filter_window(|window| window.duration() > TimeDelta::from_seconds(40000));
-
-            block_on(pipeline.stream_collect(&pool)).unwrap()
+            block_on(pipeline.stream_compute(&pool)).unwrap()
         };
 
         assert_eq!(result, result_stream);
+    }
+
+    #[test]
+    fn link_budget() {
+        const CARRIER: Frequency = Frequency::gigahertz(8.2);
+        let losses = PropagationLosses::builder()
+            .rain(Decibel::new(1.2))
+            .gaseous(Decibel::new(0.4))
+            .build()
+            .unwrap();
+        let channel = Channel::builder(Frequency::megahertz(1.0)).build().unwrap();
+        let plan = CarrierPlan::new(CARRIER, channel, dvb_s2().to_vec())
+            .unwrap()
+            .with_losses(losses.clone());
+        let overrides = HashMap::new();
+
+        let analysis = TestAnalysis::new();
+
+        let visibility = analysis.visibility().compute().unwrap();
+        let visibility_windows = visibility
+            .get(&(AssetId::new("cebreros"), AssetId::new("lunar")))
+            .unwrap();
+
+        let pipeline = analysis.link_budget(&plan, &overrides);
+        let result = pipeline.compute().unwrap();
+
+        let tx_id = TerminalId::new(AssetId::new("lunar"), "SC TX");
+        let rx_id = TerminalId::new(AssetId::new("cebreros"), "GS RX");
+        let windows = result.get(&(tx_id, rx_id)).unwrap();
+
+        assert_eq!(windows.len(), visibility_windows.len());
+        for (window, expected) in windows.iter().zip(visibility_windows) {
+            assert_eq!(window.interval().start(), expected.start());
+            assert_eq!(window.interval().end(), expected.end());
+        }
     }
 }

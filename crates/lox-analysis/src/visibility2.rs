@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Eivind Bergem <eivind.bergem@gmail.com>
+//
+// SPDX-License-Identifier: MPL-2.0
+
 #[cfg(feature = "comms")]
 use std::collections::HashMap;
 
@@ -82,7 +86,7 @@ pub struct TerminalPair<'a> {
     rx: (TerminalId, &'a RxTerminal),
 }
 
-pub trait MapAsset<'a>: Copy {
+pub trait Asset<'a>: Copy {
     #[cfg(feature = "comms")]
     fn iter_terminals(self) -> impl Iterator<Item = TerminalPair<'a>>;
 
@@ -119,7 +123,7 @@ pub trait MapAsset<'a>: Copy {
     }
 }
 
-impl<'a> MapAsset<'a> for (&'a GroundStation, &'a Spacecraft) {
+impl<'a> Asset<'a> for (&'a GroundStation, &'a Spacecraft) {
     #[cfg(feature = "comms")]
     fn iter_terminals(self) -> impl Iterator<Item = TerminalPair<'a>> {
         let (gs, sc) = self;
@@ -165,7 +169,7 @@ impl<'a> MapAsset<'a> for (&'a GroundStation, &'a Spacecraft) {
     }
 }
 
-impl<'a> MapAsset<'a> for (&'a Spacecraft, &'a Spacecraft) {
+impl<'a> Asset<'a> for (&'a Spacecraft, &'a Spacecraft) {
     #[cfg(feature = "comms")]
     fn iter_terminals(self) -> impl Iterator<Item = TerminalPair<'a>> {
         let (sc1, sc2) = self;
@@ -294,7 +298,7 @@ impl Window for TimeInterval {
 #[cfg(feature = "comms")]
 pub trait LinkPipeline<'a, T>: Pipeline<'a, Asset = T, Window = TimeInterval>
 where
-    T: MapAsset<'a>,
+    T: Asset<'a>,
 {
     fn map_to_links<O, R>(
         self,
@@ -338,12 +342,7 @@ where
         ConvertResult = FallibleResult,
     > {
         self.refine(move |link, interval| {
-            let detector = LinkMarginDetectFn(link);
-            let mut windows = Vec::new();
-
-            for window in detector.iter_intervals(UniformSampler::new(step), interval) {
-                windows.push(Ok(summarize(link, window?, step)?));
-            }
+            let windows = interval.link_margin_detect(step, link)?.collect::<Vec<_>>();
 
             Ok(windows.into_iter())
         })
