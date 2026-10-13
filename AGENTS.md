@@ -108,7 +108,7 @@ Key details:
   between the two files.
 - **Error handling**: Use `thiserror` with domain-specific enum error types (e.g., `TimeError`, `TrajectoryError`).
 - **Type safety**: Zero-sized marker traits for time scales (`TimeScale`) and reference frames (`ReferenceFrame`). Prefer compile-time guarantees over runtime checks.
-- **Builder pattern**: Used for complex types (`AzElBuilder`, `TimeBuilder`, `CartesianBuilder`).
+- **Builder pattern**: Used for complex types (`TimeBuilder`, `CartesianBuilder`).
 - **Provider injection**: EOP and SPK providers are passed explicitly — no global state.
 - **Feature flags**: Crate functionality is feature-gated in `lox-space` for minimal dependency footprint.
 - **Clippy**: Runs with `-D warnings` (warnings are errors in CI).

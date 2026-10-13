@@ -7,7 +7,7 @@
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use core::f64::consts::{FRAC_PI_2, TAU};
+use core::f64::consts::FRAC_PI_2;
 use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use glam::{DMat3, DVec3};
@@ -21,88 +21,6 @@ use crate::{
     time::deltas::TimeDelta,
     units::{Angle, AngularRate, Distance, Velocity},
 };
-
-/// Azimuth-elevation pair for representing direction in a topocentric frame.
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct AzEl(Angle, Angle);
-
-impl AzEl {
-    /// Returns a new [`AzElBuilder`].
-    pub fn builder() -> AzElBuilder {
-        AzElBuilder::default()
-    }
-
-    /// Returns the azimuth angle.
-    pub fn azimuth(&self) -> Angle {
-        self.0
-    }
-
-    /// Returns the elevation angle.
-    pub fn elevation(&self) -> Angle {
-        self.1
-    }
-}
-
-/// Error returned when constructing an [`AzEl`] with invalid angles.
-#[derive(Copy, Clone, Debug, Error, PartialEq)]
-pub enum AzElError {
-    /// The azimuth angle is outside the valid range [0°, 360°].
-    #[error("azimuth must be between 0 deg and 360 deg but was {0}")]
-    InvalidAzimuth(Angle),
-    /// The elevation angle is outside the valid range [0°, 360°].
-    #[error("elevation must be between 0 deg and 360 deg but was {0}")]
-    InvalidElevation(Angle),
-}
-
-/// Builder for constructing validated [`AzEl`] instances.
-#[derive(Copy, Clone, Debug)]
-pub struct AzElBuilder {
-    azimuth: Result<Angle, AzElError>,
-    elevation: Result<Angle, AzElError>,
-}
-
-impl Default for AzElBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl AzElBuilder {
-    /// Creates a new builder with default (zero) angles.
-    pub fn new() -> Self {
-        Self {
-            azimuth: Ok(Angle::default()),
-            elevation: Ok(Angle::default()),
-        }
-    }
-
-    /// Sets the azimuth angle. Must be between 0° and 360°.
-    pub fn azimuth(&mut self, azimuth: Angle) -> &mut Self {
-        self.azimuth = match azimuth.to_radians() {
-            lon if lon < 0.0 => Err(AzElError::InvalidAzimuth(azimuth)),
-            lon if lon > TAU => Err(AzElError::InvalidAzimuth(azimuth)),
-            _ => Ok(azimuth),
-        };
-        self
-    }
-
-    /// Sets the elevation angle. Must be between 0° and 360°.
-    pub fn elevation(&mut self, elevation: Angle) -> &mut Self {
-        self.elevation = match elevation.to_radians() {
-            lat if lat < 0.0 => Err(AzElError::InvalidElevation(elevation)),
-            lat if lat > TAU => Err(AzElError::InvalidElevation(elevation)),
-            _ => Ok(elevation),
-        };
-        self
-    }
-
-    /// Builds the [`AzEl`], returning an error if any angle is invalid.
-    pub fn build(&self) -> Result<AzEl, AzElError> {
-        Ok(AzEl(self.azimuth?, self.elevation?))
-    }
-}
-
 /// Reference ellipsoid (rotational, oblate) defined by its equatorial
 /// radius and flattening. Construction validates that `equatorial_radius
 /// > 0` and `flattening ∈ [0, 1)`.
@@ -1226,28 +1144,6 @@ mod tests {
     use crate::units::{AngleUnits, AngularRate, DistanceUnits, VelocityUnits};
 
     use super::*;
-
-    #[test]
-    fn test_azel_api() {
-        let azel = AzEl::builder()
-            .azimuth(45.0.deg())
-            .elevation(45.0.deg())
-            .build()
-            .unwrap();
-        assert_eq!(azel.azimuth(), 45.0.deg());
-        assert_eq!(azel.elevation(), 45.0.deg());
-    }
-
-    #[rstest]
-    #[case(0.0.deg(), 0.0.deg(), Ok(AzEl(0.0.deg(), 0.0.deg())))]
-    #[case(-1.0.deg(), 0.0.deg(), Err(AzElError::InvalidAzimuth(-1.0.deg())))]
-    #[case(361.0.deg(), 0.0.deg(), Err(AzElError::InvalidAzimuth(361.0.deg())))]
-    #[case(0.0.deg(), -1.0.deg(), Err(AzElError::InvalidElevation(-1.0.deg())))]
-    #[case(0.0.deg(), 361.0.deg(), Err(AzElError::InvalidElevation(361.0.deg())))]
-    fn test_azel(#[case] az: Angle, #[case] el: Angle, #[case] exp: Result<AzEl, AzElError>) {
-        let act = AzEl::builder().azimuth(az).elevation(el).build();
-        assert_eq!(act, exp)
-    }
 
     #[test]
     fn test_lla_api() {
