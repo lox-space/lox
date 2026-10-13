@@ -23,7 +23,7 @@ implementation for any `T: Pipeline`.
 
 `AssetPairAnalysis` can be used to start a pipeline:
 
-```
+```Rust
 let pipeline = AssetPairanalysis::new(scenario.ground_stations(), scenario.spacecraft(), initial_interval);
 ```
 
