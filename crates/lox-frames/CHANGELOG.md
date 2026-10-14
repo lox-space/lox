@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.22](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.21...lox-frames-v0.1.0-alpha.22) - 2026-10-14
+
+### Other
+
+- depend on lox-core directly instead of lox-units/lox-math
+- *(lox-core)* [**breaking**] remove types module
+- use custom poly_array impl
+
 ## [0.1.0-alpha.21](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.20...lox-frames-v0.1.0-alpha.21) - 2026-08-25
 
 ### Added
@@ -39,23 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(lox-frames)* fuse TEME<->ICRF, evaluate nutation once
 - *(lox-frames)* simplify composed rotations via ICRF
 - *(lox-core/lox-time)* remove TimeDelta sentinels
-<!--
-SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
-
-SPDX-License-Identifier: MPL-2.0
--->
-
-# Changelog
-
-## [Unreleased]
-
-## [0.1.0-alpha.22](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.21...lox-frames-v0.1.0-alpha.22) - 2026-10-14
-
-### Other
-
-- depend on lox-core directly instead of lox-units/lox-math
-- *(lox-core)* [**breaking**] remove types module
-- use custom poly_array impl
 
 ### Changed
 

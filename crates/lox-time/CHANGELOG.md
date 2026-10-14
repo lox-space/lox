@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.28](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.27...lox-time-v0.1.0-alpha.28) - 2026-10-14
+
+### Fixed
+
+- *(lox-time)* re-enable chrono interop
+
+### Other
+
+- *(lox-core)* [**breaking**] remove types module
+
 ## [0.1.0-alpha.27](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.26...lox-time-v0.1.0-alpha.27) - 2026-08-25
 
 ### Added
@@ -32,29 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - rename Origin trait to CoordinateOrigin, TimeScale trait to ContinuousTimeScale
 - dependency cleanup
 - *(lox-core/lox-time)* remove TimeDelta sentinels
-<!--
-SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
-
-SPDX-License-Identifier: MPL-2.0
--->
-
-# Changelog
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-## [0.1.0-alpha.28](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.27...lox-time-v0.1.0-alpha.28) - 2026-10-14
-
-### Fixed
-
-- *(lox-time)* re-enable chrono interop
-
-### Other
-
-- *(lox-core)* [**breaking**] remove types module
 
 ### Changed
 
