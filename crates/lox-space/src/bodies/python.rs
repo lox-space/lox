@@ -7,7 +7,6 @@ use crate::bodies::{
     TryTriaxialEllipsoid, UnknownOriginId, UnknownOriginName,
 };
 use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyGravitationalParameter};
-use lox_core::types::units::Seconds;
 use lox_units::{Angle, AngularRate};
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
@@ -168,7 +167,7 @@ impl PyOrigin {
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
-    pub fn rotational_elements(&self, et: Seconds) -> PyResult<(PyAngle, PyAngle, PyAngle)> {
+    pub fn rotational_elements(&self, et: f64) -> PyResult<(PyAngle, PyAngle, PyAngle)> {
         let (ra, dec, rot) = self
             .0
             .try_rotational_elements(et)
@@ -192,7 +191,7 @@ impl PyOrigin {
     ///     UndefinedOriginPropertyError: If not defined for this body.
     pub fn rotational_element_rates(
         &self,
-        et: Seconds,
+        et: f64,
     ) -> PyResult<(PyAngularRate, PyAngularRate, PyAngularRate)> {
         let (ra_rate, dec_rate, rot_rate) = self
             .0
@@ -209,7 +208,7 @@ impl PyOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
-    pub fn right_ascension(&self, et: Seconds) -> PyResult<PyAngle> {
+    pub fn right_ascension(&self, et: f64) -> PyResult<PyAngle> {
         Ok(PyAngle(Angle::radians(
             self.0
                 .try_right_ascension(et)
@@ -221,7 +220,7 @@ impl PyOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
-    pub fn right_ascension_rate(&self, et: Seconds) -> PyResult<PyAngularRate> {
+    pub fn right_ascension_rate(&self, et: f64) -> PyResult<PyAngularRate> {
         Ok(PyAngularRate(AngularRate::radians_per_second(
             self.0
                 .try_right_ascension_rate(et)
@@ -233,7 +232,7 @@ impl PyOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
-    pub fn declination(&self, et: Seconds) -> PyResult<PyAngle> {
+    pub fn declination(&self, et: f64) -> PyResult<PyAngle> {
         Ok(PyAngle(Angle::radians(
             self.0
                 .try_declination(et)
@@ -245,7 +244,7 @@ impl PyOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
-    pub fn declination_rate(&self, et: Seconds) -> PyResult<PyAngularRate> {
+    pub fn declination_rate(&self, et: f64) -> PyResult<PyAngularRate> {
         Ok(PyAngularRate(AngularRate::radians_per_second(
             self.0
                 .try_declination_rate(et)
@@ -257,7 +256,7 @@ impl PyOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
-    pub fn rotation_angle(&self, et: Seconds) -> PyResult<PyAngle> {
+    pub fn rotation_angle(&self, et: f64) -> PyResult<PyAngle> {
         Ok(PyAngle(Angle::radians(
             self.0
                 .try_rotation_angle(et)
@@ -269,7 +268,7 @@ impl PyOrigin {
     ///
     /// Args:
     ///     et: Ephemeris time in seconds from J2000.
-    pub fn rotation_rate(&self, et: Seconds) -> PyResult<PyAngularRate> {
+    pub fn rotation_rate(&self, et: f64) -> PyResult<PyAngularRate> {
         Ok(PyAngularRate(AngularRate::radians_per_second(
             self.0
                 .try_rotation_rate(et)

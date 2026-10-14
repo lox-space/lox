@@ -9,7 +9,7 @@
 use lox_core::glam::DVec2;
 use lox_core::math::poly::poly_array;
 
-use lox_core::types::units::JulianCenturies;
+use lox_core::time::julian_dates::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};
 
 use crate::iers::fundamental::iers03::{

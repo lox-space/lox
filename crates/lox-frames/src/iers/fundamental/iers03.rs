@@ -9,7 +9,7 @@
 //! - IERS Conventions (2003), IERS Technical Note No. 32
 
 use lox_core::math::poly::poly_array;
-use lox_core::types::units::JulianCenturies;
+use lox_core::time::julian_dates::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};
 
 /// General accumulated precession in longitude (p_A).

@@ -18,7 +18,7 @@ use lox_approx::ApproxEq;
 use lox_approx::ApproxEqResults;
 use lox_core::f64;
 use lox_core::i64;
-use lox_core::types::units::Days;
+use lox_core::time::julian_dates::Days;
 use thiserror::Error;
 
 use crate::calendar_dates::CalendarDate;
