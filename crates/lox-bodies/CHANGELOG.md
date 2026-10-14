@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.28](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.27...lox-bodies-v0.1.0-alpha.28) - 2026-10-14
+
+### Other
+
+- update Cargo.toml dependencies
+
 ### Changed
 
 - [**breaking**] rename the `Origin` trait to `CoordinateOrigin`

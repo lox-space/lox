@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.17](https://github.com/lox-space/lox/compare/lox-comms-v0.1.0-alpha.16...lox-comms-v0.1.0-alpha.17) - 2026-10-14
+
+### Other
+
+- update Cargo.toml dependencies
+
 ## [0.1.0-alpha.16](https://github.com/lox-space/lox/compare/lox-comms-v0.1.0-alpha.15...lox-comms-v0.1.0-alpha.16) - 2026-08-25
 
 ### Added

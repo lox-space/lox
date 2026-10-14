@@ -5,7 +5,7 @@
 [package]
 name = "lox-units"
 description = "Deprecated: use lox-core (lox_core::units) instead"
-version = "0.1.0-alpha.16"
+version = "0.1.0-alpha.17"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true

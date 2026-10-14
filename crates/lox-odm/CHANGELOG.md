@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.5](https://github.com/lox-space/lox/compare/lox-odm-v0.1.0-alpha.4...lox-odm-v0.1.0-alpha.5) - 2026-10-14
+
+### Other
+
+- update deps
+
 ## [0.1.0-alpha.4](https://github.com/lox-space/lox/compare/lox-odm-v0.1.0-alpha.3...lox-odm-v0.1.0-alpha.4) - 2026-08-25
 
 ### Other
