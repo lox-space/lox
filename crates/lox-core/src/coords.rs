@@ -809,6 +809,9 @@ impl Neg for Cartesian {
 /// so we serialize/deserialize as a `Vec<T>` on the wire.
 #[cfg(feature = "serde")]
 mod const_array_serde {
+    use alloc::format;
+    use alloc::vec::Vec;
+
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
     pub fn serialize<S, T, const N: usize>(arr: &[T; N], serializer: S) -> Result<S::Ok, S::Error>
