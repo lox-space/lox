@@ -273,12 +273,9 @@ where
         let origin = self.initial_state.origin();
         let frame = self.initial_state.reference_frame();
 
-        Ok(solution
-            .iter()
-            .map(|(t, s)| {
-                CartesianOrbit::new(s.0, start + TimeDelta::from_seconds_f64(*t), origin, frame)
-            })
-            .collect())
+        Ok(Trajectory::try_new(solution.iter().map(|(t, s)| {
+            CartesianOrbit::new(s.0, start + TimeDelta::from_seconds_f64(*t), origin, frame)
+        }))?)
     }
 
     fn propagate_to(
@@ -314,12 +311,9 @@ where
         let origin = self.initial_state.origin();
         let frame = self.initial_state.reference_frame();
 
-        Ok(solution
-            .iter()
-            .map(|(t, s)| {
-                CartesianOrbit::new(s.0, t0 + TimeDelta::from_seconds_f64(*t), origin, frame)
-            })
-            .collect())
+        Ok(Trajectory::try_new(solution.iter().map(|(t, s)| {
+            CartesianOrbit::new(s.0, t0 + TimeDelta::from_seconds_f64(*t), origin, frame)
+        }))?)
     }
 }
 

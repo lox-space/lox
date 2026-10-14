@@ -262,15 +262,15 @@ where
     fn range(&self, time: Time) -> Result<Distance, EvalError> {
         match self {
             Self::GroundSpace { gs, sc } => {
-                let state = sc.at(time.into_dynamic());
+                let state = sc.at(time.into_dynamic())?;
                 let state = state
                     .try_to_frame(gs.frame(), &DefaultRotationProvider)
                     .map_err(|e| EvalError::Rotation(Box::new(e)))?;
                 Ok(gs.range_to(state))
             }
             Self::InterSatellite { sc1, sc2 } => {
-                let r1 = sc1.at(time.into_dynamic()).position();
-                let r2 = sc2.at(time.into_dynamic()).position();
+                let r1 = sc1.at(time.into_dynamic())?.position();
+                let r2 = sc2.at(time.into_dynamic())?.position();
                 Ok(Distance::meters((r1 - r2).length()))
             }
         }

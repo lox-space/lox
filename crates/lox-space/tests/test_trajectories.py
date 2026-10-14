@@ -26,10 +26,9 @@ def orbit():
 @pytest.fixture
 def trajectory(orbit):
     dt = orbit.orbital_period()
-    rng = lox.Interval(orbit.time(), orbit.time() + dt).step_by(1 * lox.seconds)
     s0 = orbit.to_cartesian()
     prop = lox.Vallado(s0)
-    return prop.propagate(rng)
+    return prop.propagate(orbit.time(), end=orbit.time() + dt)
 
 
 def test_from_numpy():
@@ -50,6 +49,51 @@ def test_from_numpy():
     )
     states1 = trajectory.to_numpy()
     npt.assert_allclose(states, states1)
+
+
+def test_at_outside_trajectory_raises():
+    utc = lox.UTC(2023, 3, 25, 21, 8, 0.0)
+    time = utc.to_scale("TDB")
+    states = np.array(
+        [
+            [0.0, 1e3, 1e3, 1e3, 1e3, 1e3, 1e3],
+            [1.0, 2e3, 2e3, 2e3, 1e3, 1e3, 1e3],
+        ]
+    )
+    trajectory = lox.Trajectory.from_numpy(time, states)
+
+    trajectory.at(time + lox.TimeDelta(1.0))
+    with pytest.raises(ValueError, match="outside the trajectory"):
+        trajectory.at(time + lox.TimeDelta(1.5))
+    with pytest.raises(ValueError, match="outside the trajectory"):
+        trajectory.at(lox.TimeDelta(-0.5))
+
+
+def test_interval():
+    utc = lox.UTC(2023, 3, 25, 21, 8, 0.0)
+    time = utc.to_scale("TDB")
+    states = np.array(
+        [
+            [0.0, 1e3, 1e3, 1e3, 1e3, 1e3, 1e3],
+            [1.0, 2e3, 2e3, 2e3, 1e3, 1e3, 1e3],
+            [3.0, 4e3, 4e3, 4e3, 1e3, 1e3, 1e3],
+        ]
+    )
+    a = lox.Trajectory.from_numpy(time, states)
+    b = lox.Trajectory.from_numpy(time + lox.TimeDelta(2.0), states)
+
+    assert a.interval().start() == time
+    assert float(a.interval().duration()) == pytest.approx(3.0)
+    overlap = a.interval().intersect(b.interval())
+    assert overlap.start() == time + lox.TimeDelta(2.0)
+    assert float(overlap.duration()) == pytest.approx(1.0)
+
+
+def test_propagate_covers_interval_end(orbit):
+    end = orbit.time() + orbit.orbital_period()
+    trajectory = lox.Vallado(orbit.to_cartesian()).propagate(orbit.time(), end=end)
+
+    trajectory.at(end)
 
 
 def test_interpolation(orbit, trajectory):

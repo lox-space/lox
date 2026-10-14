@@ -103,7 +103,7 @@ where
             .ephemeris
             .position(tdb, self.sc.origin(), Sun)
             .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
-        let r_sc = self.sc.at(time).position();
+        let r_sc = self.sc.at(time)?.position();
         // line_of_sight returns positive when the two vectors have mutual LOS
         // (spacecraft is sunlit) and negative when occluded (eclipse).
         Ok(self.sc.origin().line_of_sight(r_sc, r_sun)?)
@@ -295,7 +295,7 @@ where
 
         for time in interval.step_by(self.step) {
             let tdb = time.to_scale(Tdb);
-            let state = sc_traj.at(time.into_dynamic());
+            let state = sc_traj.at(time.into_dynamic()).map_err(EvalError::from)?;
             let r = state.position();
             let v = state.velocity();
             let h = r.cross(v);

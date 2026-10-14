@@ -20,6 +20,7 @@ use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError, TrajectoryTrans
 use crate::time::Time;
 use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
+use crate::time::python::intervals::PyInterval;
 use crate::time::python::time::PyTime;
 use crate::time::time_scales::Tai;
 use crate::units::python::{PyAngle, PyDistance, PyVelocity};
@@ -108,7 +109,7 @@ fn propagate_dispatch<'py>(
     }
     if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
         let states: Result<Vec<_>, _> = steps.into_iter().map(|s| state_at(s.0)).collect();
-        let traj = PyTrajectory(Trajectory::new(states?));
+        let traj = PyTrajectory(Trajectory::try_new(states?).map_err(PyTrajectoryError)?);
         return match frame {
             Some(frame) => Ok(Bound::new(py, traj.to_frame_inner(frame, provider)?)?.into_any()),
             None => Ok(Bound::new(py, traj)?.into_any()),
@@ -1142,6 +1143,11 @@ impl PyTrajectory {
         PyFrame(self.0.reference_frame())
     }
 
+    /// Return the interval from the first to the last state.
+    fn interval(&self) -> PyInterval {
+        PyInterval(self.0.interval())
+    }
+
     /// Export trajectory to a numpy array.
     ///
     /// Returns:
@@ -1165,13 +1171,15 @@ impl PyTrajectory {
     ///     Interpolated State at the requested time.
     ///
     /// Raises:
-    ///     ValueError: If the time argument is invalid.
+    ///     ValueError: If the time argument is invalid or outside the trajectory.
     fn at(&self, time: &Bound<'_, PyAny>) -> PyResult<PyCartesian> {
         if let Ok(delta) = time.extract::<PyTimeDelta>() {
-            return Ok(PyCartesian(self.0.at_delta(delta.0)));
+            let state = self.0.at_delta(delta.0).map_err(PyTrajectoryError)?;
+            return Ok(PyCartesian(state));
         }
         if let Ok(time) = time.extract::<PyTime>() {
-            return Ok(PyCartesian(self.0.at(time.0)));
+            let state = self.0.at(time.0).map_err(PyTrajectoryError)?;
+            return Ok(PyCartesian(state));
         }
         Err(PyValueError::new_err("invalid time argument"))
     }
@@ -1208,7 +1216,9 @@ impl PyTrajectory {
         for s in self.states() {
             states.push(s.to_origin_inner(target.clone(), ephemeris)?.0);
         }
-        Ok(Self(Trajectory::new(states)))
+        Ok(Self(
+            Trajectory::try_new(states).map_err(PyTrajectoryError)?,
+        ))
     }
 
     /// Return the developer-facing string representation of this trajectory.
@@ -1232,7 +1242,9 @@ impl PyTrajectory {
         for s in self.0.states() {
             states.push(PyCartesian(s).to_frame_inner(frame.clone(), provider)?.0);
         }
-        Ok(PyTrajectory(Trajectory::new(states)))
+        Ok(PyTrajectory(
+            Trajectory::try_new(states).map_err(PyTrajectoryError)?,
+        ))
     }
 }
 

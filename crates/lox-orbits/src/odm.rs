@@ -35,7 +35,7 @@ use lox_odm::types::opm::{Opm, OpmMetadata};
 use lox_time::offsets::{DefaultOffsetProvider, OffsetProvider};
 use lox_time::time::Time;
 
-use crate::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
+use crate::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory, TrajectoryError};
 use crate::propagators::sgp4::{Sgp4, Sgp4Error};
 
 /// Default value for the CCSDS `ORIGINATOR` header field used by all
@@ -126,6 +126,9 @@ pub enum OemFromOdmError {
     /// The segment contains fewer than 2 state vectors.
     #[error("OEM segment has {0} state vector(s); at least 2 are required")]
     InsufficientStates(usize),
+    /// The state vectors do not form a valid trajectory.
+    #[error(transparent)]
+    Trajectory(#[from] TrajectoryError),
 }
 
 /// Composite error for `Trajectory::from_oem_str` / `from_oem_file`.
@@ -824,7 +827,7 @@ impl Trajectory {
             })
             .collect();
 
-        Ok(Trajectory::new(orbits))
+        Ok(Trajectory::try_new(orbits)?)
     }
 
     /// Parses an OEM from `input` (auto-detecting wire format) and converts it
@@ -1493,7 +1496,7 @@ mod tests {
             Origin::Earth,
             Frame::Icrf,
         );
-        Trajectory::new(vec![s0, s1, s2])
+        Trajectory::try_new(vec![s0, s1, s2]).unwrap()
     }
 
     // -------------------------------------------------------------------------

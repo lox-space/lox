@@ -217,7 +217,8 @@ mod tests {
     fn test_imaging_analysis_multiple_spacecraft_and_aois() {
         let traj_a = sentinel2a_trajectory();
         let traj_b = sentinel2b_trajectory();
-        let interval = TimeInterval::new(traj_a.start_time(), traj_a.end_time());
+        // Both trajectories must cover the scenario interval.
+        let interval = traj_a.interval().intersect(traj_b.interval());
 
         let payload = OpticalPayload::nadir_only(Distance::kilometers(290.0));
 

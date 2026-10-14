@@ -32,7 +32,7 @@ use crate::events::{
 };
 use crate::parallel;
 use lox_orbits::ground::{EllipsoidLocation, Observables};
-use lox_orbits::orbits::{Ensemble, Trajectory};
+use lox_orbits::orbits::{Ensemble, Trajectory, TrajectoryError};
 
 // ---------------------------------------------------------------------------
 // Line-of-sight geometry
@@ -276,7 +276,9 @@ impl Pass {
         let mut pass_observables = Vec::new();
 
         for current_time in interval.step_by(time_resolution) {
-            let state = sc.at(current_time);
+            let state = sc
+                .at(current_time)
+                .expect("pass interval should lie within the trajectory");
             let state_bf = state
                 .try_to_frame(gs.location().frame(), &DefaultRotationProvider)
                 .unwrap();
@@ -411,6 +413,9 @@ pub enum EvalError {
     /// Ephemeris lookup failed.
     #[error("ephemeris error: {0}")]
     Ephemeris(Box<dyn std::error::Error + Send + Sync>),
+    /// The trajectory does not cover the requested time.
+    #[error(transparent)]
+    Trajectory(#[from] TrajectoryError),
 }
 
 // `events::DetectFn` requires `Error: Into<LoxError>` so the lazy machinery can
@@ -455,7 +460,7 @@ where
     type Error = EvalError;
 
     fn eval(&self, time: Time) -> Result<f64, Self::Error> {
-        let sc = self.sc.at(time.into_dynamic());
+        let sc = self.sc.at(time.into_dynamic())?;
         let sc = sc
             .try_to_frame(self.gs.location().frame(), &DefaultRotationProvider)
             .map_err(|e| EvalError::Rotation(Box::new(e)))?;
@@ -473,7 +478,7 @@ where
         std::error::Error + Send + Sync + 'static,
 {
     fn eval_bounded(&self, time: Time) -> Result<(f64, f64), Self::Error> {
-        let sc = self.sc.at(time);
+        let sc = self.sc.at(time)?;
         let sc = sc
             .try_to_frame(self.gs.location().frame(), &DefaultRotationProvider)
             .map_err(|e| EvalError::Rotation(Box::new(e)))?;
@@ -544,7 +549,7 @@ where
             .ephemeris
             .position(tdb, self.sc.origin(), self.body)
             .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
-        let r_sc = self.sc.at(time.into_dynamic()).position() - r_body;
+        let r_sc = self.sc.at(time.into_dynamic())?.position() - r_body;
         // Compute ground station position in the scenario frame R by rotating
         // from body-fixed → R.
         let rot = DefaultRotationProvider
@@ -579,8 +584,8 @@ where
             .ephemeris
             .position(tdb, self.sc1.origin(), self.body)
             .map_err(|e| EvalError::Ephemeris(Box::new(e)))?;
-        let r_sc1 = self.sc1.at(time.into_dynamic()).position() - r_body;
-        let r_sc2 = self.sc2.at(time.into_dynamic()).position() - r_body;
+        let r_sc1 = self.sc1.at(time.into_dynamic())?.position() - r_body;
+        let r_sc2 = self.sc2.at(time.into_dynamic())?.position() - r_body;
         Ok(self.body.line_of_sight(r_sc1, r_sc2)?)
     }
 }
@@ -602,8 +607,8 @@ where
     type Error = EvalError;
 
     fn eval(&self, time: Time) -> Result<f64, Self::Error> {
-        let r_sc1 = self.sc1.at(time.into_dynamic()).position();
-        let r_sc2 = self.sc2.at(time.into_dynamic()).position();
+        let r_sc1 = self.sc1.at(time.into_dynamic())?.position();
+        let r_sc2 = self.sc2.at(time.into_dynamic())?.position();
         Ok(self.body.line_of_sight(r_sc1, r_sc2)?)
     }
 }
@@ -632,8 +637,8 @@ where
     type Error = EvalError;
 
     fn eval(&self, time: Time) -> Result<f64, Self::Error> {
-        let r1 = self.sc1.at(time.into_dynamic()).position();
-        let r2 = self.sc2.at(time.into_dynamic()).position();
+        let r1 = self.sc1.at(time.into_dynamic())?.position();
+        let r2 = self.sc2.at(time.into_dynamic())?.position();
         let range = (r1 - r2).length();
         let threshold = self.threshold.to_meters();
         Ok(match self.direction {
@@ -649,8 +654,8 @@ where
     R: ReferenceFrame + Copy,
 {
     fn eval_bounded(&self, time: Time) -> Result<(f64, f64), Self::Error> {
-        let s1 = self.sc1.at(time);
-        let s2 = self.sc2.at(time);
+        let s1 = self.sc1.at(time)?;
+        let s2 = self.sc2.at(time)?;
         let range = (s1.position() - s2.position()).length();
         let threshold = self.threshold.to_meters();
         let value = match self.direction {
@@ -671,8 +676,8 @@ where
     R: ReferenceFrame + Copy,
 {
     fn eval_derivative(&self, time: Time) -> Result<(f64, f64), Self::Error> {
-        let s1 = self.sc1.at(time);
-        let s2 = self.sc2.at(time);
+        let s1 = self.sc1.at(time)?;
+        let s2 = self.sc2.at(time)?;
         let r = s1.position() - s2.position();
         let v = s1.velocity() - s2.velocity();
         let range = r.length();
@@ -707,8 +712,8 @@ where
     type Error = EvalError;
 
     fn eval(&self, time: Time) -> Result<f64, Self::Error> {
-        let s1 = self.sc1.at(time.into_dynamic());
-        let s2 = self.sc2.at(time.into_dynamic());
+        let s1 = self.sc1.at(time.into_dynamic())?;
+        let s2 = self.sc2.at(time.into_dynamic())?;
         let r = s2.position() - s1.position();
         let v = s2.velocity() - s1.velocity();
         let r_len_sq = r.length_squared();

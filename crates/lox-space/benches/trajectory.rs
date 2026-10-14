@@ -66,7 +66,7 @@ fn lunar_irregular() -> &'static Trajectory {
             .enumerate()
             .filter(|(i, _)| *i == 0 || *i == last || rng.next_f64() >= 1.0 / 3.0)
             .map(|(_, s)| s);
-        Trajectory::new(kept)
+        Trajectory::try_new(kept).unwrap()
     })
 }
 
@@ -136,7 +136,7 @@ fn at_sequential(bencher: Bencher, name: &str) {
     let epochs = sequential_epochs(traj);
     bencher.counter(ItemsCount::new(QUERIES)).bench(|| {
         for &t in &epochs {
-            black_box(traj.at(black_box(t)));
+            black_box(traj.at(black_box(t)).unwrap());
         }
     });
 }
@@ -147,7 +147,7 @@ fn at_random(bencher: Bencher, name: &str) {
     let epochs = random_epochs(traj);
     bencher.counter(ItemsCount::new(QUERIES)).bench(|| {
         for &t in &epochs {
-            black_box(traj.at(black_box(t)));
+            black_box(traj.at(black_box(t)).unwrap());
         }
     });
 }
@@ -159,7 +159,7 @@ fn position_sequential(bencher: Bencher, name: &str) {
     let epochs = sequential_epochs(traj);
     bencher.counter(ItemsCount::new(QUERIES)).bench(|| {
         for &t in &epochs {
-            black_box(traj.at(black_box(t)).position());
+            black_box(traj.at(black_box(t)).unwrap().position());
         }
     });
 }

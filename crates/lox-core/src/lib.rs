@@ -25,5 +25,6 @@ pub mod i64;
 pub mod math;
 pub mod sync;
 pub mod time;
+pub mod trajectory;
 pub mod units;
 pub mod utils;
