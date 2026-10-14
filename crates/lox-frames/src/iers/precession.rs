@@ -5,8 +5,8 @@
 use lox_approx::ApproxEq;
 use lox_core::glam::DMat3;
 use lox_core::math::poly::poly_array;
+use lox_core::units::Angle;
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tt};
-use lox_units::Angle;
 
 use crate::iers::{ReferenceSystem, ecliptic::MeanObliquity};
 
@@ -231,7 +231,7 @@ impl PrecessionCorrectionsIau2000 {
 #[cfg(test)]
 mod tests {
     use lox_approx::assert_approx_eq;
-    use lox_units::AngleUnits;
+    use lox_core::units::AngleUnits;
 
     use crate::iers::Iau2000Model;
 

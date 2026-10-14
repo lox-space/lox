@@ -186,10 +186,10 @@ where
 #[cfg(test)]
 mod tests {
     use lox_bodies::{Earth, PointMass};
+    use lox_core::units::AngleUnits;
     use lox_frames::Icrf;
     use lox_time::time;
     use lox_time::time_scales::Tdb;
-    use lox_units::AngleUnits;
 
     use lox_core::elements::Keplerian;
     use lox_core::units::Distance;

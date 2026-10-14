@@ -44,13 +44,13 @@ use crate::time::python::intervals::PyInterval;
 use crate::time::python::time::PyTime;
 use crate::time::python::time_series::PyTimeSeries;
 use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyFrequency, PyVelocity};
+use lox_core::units::Distance;
 use lox_frames::Frame;
 use lox_frames::providers::DefaultRotationProvider;
 use lox_orbits::orbits::Ensemble;
 use lox_orbits::propagators::OrbitSource;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
-use lox_units::Distance;
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

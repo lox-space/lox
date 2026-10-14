@@ -198,7 +198,7 @@ mod tests {
     use lox_time::time_scales::TimeScale;
     use std::collections::HashSet;
 
-    use lox_units::{AngleUnits, DistanceUnits};
+    use lox_core::units::{AngleUnits, DistanceUnits};
 
     use super::*;
 

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-pub use lox_math::*;
+pub use lox_core::math::*;
 
 #[cfg(feature = "python")]
 /// Python bindings exposed via PyO3.

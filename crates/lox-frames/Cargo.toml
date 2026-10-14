@@ -22,7 +22,6 @@ lox-approx = { workspace = true, features = ["std", "glam", "derive"] }
 lox-bodies.workspace = true
 lox-core = { workspace = true, features = ["std"] }
 lox-time.workspace = true
-lox-units.workspace = true
 
 serde = { workspace = true, optional = true }
 thiserror.workspace = true

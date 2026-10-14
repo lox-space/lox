@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+use lox_core::units::Angle;
 use lox_frames::Frame;
 use lox_orbits::constellations::{
     Constellation, ConstellationError, ConstellationPropagator,
@@ -9,7 +10,6 @@ use lox_orbits::constellations::{
     WalkerDeltaBuilder, WalkerStarBuilder,
 };
 use lox_time::time_scales::Tai;
-use lox_units::Angle;
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

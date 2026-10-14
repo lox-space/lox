@@ -467,11 +467,11 @@ where
 mod tests {
     use lox_approx::assert_approx_eq;
     use lox_bodies::Earth;
+    use lox_core::units::{DistanceUnits, VelocityUnits};
     use lox_frames::Icrf;
     use lox_time::intervals::Interval;
     use lox_time::time;
     use lox_time::time_scales::Tdb;
-    use lox_units::{DistanceUnits, VelocityUnits};
 
     use super::*;
 

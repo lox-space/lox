@@ -7,7 +7,7 @@ use crate::bodies::{
     TryTriaxialEllipsoid, UnknownOriginId, UnknownOriginName,
 };
 use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyGravitationalParameter};
-use lox_units::{Angle, AngularRate};
+use lox_core::units::{Angle, AngularRate};
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
 use pyo3::prelude::*;

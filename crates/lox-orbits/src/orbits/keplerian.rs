@@ -198,10 +198,10 @@ where
 #[cfg(test)]
 mod tests {
     use lox_bodies::{Earth, MeanRadius};
+    use lox_core::units::DistanceUnits;
     use lox_frames::Icrf;
     use lox_time::time_scales::TimeScale;
     use lox_time::{Time, utc::Utc};
-    use lox_units::DistanceUnits;
 
     use super::*;
 
@@ -249,8 +249,8 @@ mod tests {
     #[test]
     fn test_try_from_keplerian_to_cartesian() {
         use lox_core::elements::Keplerian;
+        use lox_core::units::DistanceUnits;
         use lox_core::units::{AngleUnits, Distance};
-        use lox_units::DistanceUnits;
 
         let time = Time::j2000(TimeScale::Tai);
         let kep = Keplerian::builder()
