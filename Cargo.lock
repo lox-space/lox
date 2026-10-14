@@ -1112,13 +1112,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lox-math"
-version = "0.1.0-alpha.25"
-dependencies = [
- "lox-core",
-]
-
-[[package]]
 name = "lox-odm"
 version = "0.1.0-alpha.5"
 dependencies = [
@@ -1199,13 +1192,6 @@ dependencies = [
  "rstest",
  "serde",
  "thiserror",
-]
-
-[[package]]
-name = "lox-units"
-version = "0.1.0-alpha.17"
-dependencies = [
- "lox-core",
 ]
 
 [[package]]
