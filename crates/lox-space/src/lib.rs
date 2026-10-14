@@ -117,7 +117,6 @@ pub mod constellations;
 pub mod comms;
 
 /// Core numeric types, units, and constants (re-exports [`lox_core`]).
-#[cfg(feature = "core")]
 pub mod core;
 
 /// Earth-specific models such as geodesy and orientation (re-exports [`lox_earth`]).
@@ -141,7 +140,6 @@ pub mod io;
 pub mod itur;
 
 /// Math utilities used across the toolkit (re-exports [`lox_core::math`]).
-#[cfg(feature = "math")]
 pub mod math;
 
 /// CCSDS Orbit Data Message types and (de-)serialization (re-exports [`lox_odm`]).
@@ -177,7 +175,6 @@ macro_rules! utc {
 pub use lox_time::utc as __private_utc;
 
 /// Physical units and quantities (re-exports [`lox_core::units`]).
-#[cfg(feature = "units")]
 pub mod units;
 
 pub mod prelude;

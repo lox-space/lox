@@ -27,7 +27,7 @@ lox-approx = { workspace = true, features = ["std", "derive"] }
 lox-analysis = { workspace = true, optional = true }
 lox-bodies = { workspace = true, optional = true }
 lox-comms = { workspace = true, optional = true }
-lox-core = { workspace = true, optional = true, features = ["std"] }
+lox-core = { workspace = true, features = ["std"] }
 lox-earth = { workspace = true, optional = true }
 lox-ephem = { workspace = true, optional = true }
 lox-frames = { workspace = true, optional = true }
@@ -79,62 +79,50 @@ default = [
   "analysis",
   "bodies",
   "comms",
-  "core",
   "earth",
   "itur",
   "ephem",
   "frames",
   "imaging",
   "io",
-  "math",
   "odm",
   "orbits",
   "time",
-  "units",
 ]
 analysis = ["orbits", "dep:lox-analysis", "lox-analysis?/comms"]
 imaging = ["analysis", "dep:geo", "lox-analysis?/imaging", "lox-analysis?/geojson"]
-bodies = ["math", "units", "dep:lox-bodies"]
-comms = ["units", "dep:lox-comms"]
-core = ["dep:lox-core"]
+bodies = ["dep:lox-bodies"]
+comms = ["dep:lox-comms"]
 itur = ["comms", "dep:lox-itur"]
-earth = ["bodies", "math", "io", "time", "units", "dep:lox-earth"]
-ephem = ["math", "dep:lox-ephem"]
-frames = ["bodies", "earth", "math", "time", "units", "dep:lox-frames"]
+earth = ["bodies", "io", "time", "dep:lox-earth"]
+ephem = ["dep:lox-ephem"]
+frames = ["bodies", "earth", "time", "dep:lox-frames"]
 io = ["dep:lox-io"]
-math = ["core"]
 odm = ["orbits", "dep:lox-odm", "lox-orbits?/odm"]
 orbits = [
   "bodies",
-  "core",
   "earth",
   "ephem",
   "frames",
-  "math",
   "time",
-  "units",
-  "dep:lox-core",
   "dep:lox-orbits",
 ]
 python = [
   "analysis",
   "comms",
-  "core",
   "imaging",
   "itur",
   "time",
-  "units",
   "dep:numpy",
   "dep:pyo3",
   "dep:sgp4",
 ]
-time = ["io", "math", "units", "dep:lox-time"]
-units = ["core"]
+time = ["io", "dep:lox-time"]
 serde = [
   "lox-analysis?/serde",
   "lox-bodies?/serde",
   "lox-comms?/serde",
-  "lox-core?/serde",
+  "lox-core/serde",
   "lox-ephem?/serde",
   "lox-frames?/serde",
   "lox-orbits?/serde",
