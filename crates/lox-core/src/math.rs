@@ -8,7 +8,6 @@
 
 pub mod callback;
 pub mod float;
-pub mod glam;
 pub mod linear_algebra;
 pub mod optim;
 pub mod poly;
