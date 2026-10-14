@@ -16,10 +16,8 @@ Lox is a safe, ergonomic Rust astrodynamics library with Python bindings (via Py
 
 ```
 crates/
-  lox-core/        # Foundation: coordinates, orbital elements, anomalies
-  lox-units/       # Physical unit newtypes (Angle, Distance, Velocity, etc.)
+  lox-core/        # Foundation: coordinates, orbital elements, anomalies, units, math
   lox-time/        # Astronomical time scales (TAI, TT, TDB, TCB, TCG, UT1, UTC)
-  lox-math/        # Series evaluation, interpolation
   lox-bodies/      # Celestial body definitions (SPICE-derived constants)
   lox-frames/      # Reference frame transformations (ICRF, J2000, ITRF, TEME, IAU_*)
   lox-ephem/       # Ephemeris parsing (SPK/SPICE kernels)
@@ -37,7 +35,7 @@ data/              # Reference data (IERS, SPICE kernels, TLEs, CSV trajectories
 ### Crate Dependency Graph
 
 ```
-lox-core ← lox-units, lox-math, lox-time, lox-bodies
+lox-core ← lox-time, lox-bodies
          ← lox-frames, lox-ephem, lox-earth, lox-io
          ← lox-orbits ← lox-space (facade + Python bindings)
 ```
