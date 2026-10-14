@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.16](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.15...lox-core-v0.1.0-alpha.16) - 2026-10-14
+
+### Added
+
+- *(lox-math)* add Horner-based poly_array
+- *(lox-math)* add mul_add_relaxed with unfused fallback
+
+### Fixed
+
+- *(lox-core)* import alloc items in no_std serde helper
+
+### Other
+
+- *(lox-core)* [**breaking**] remove types module
+- *(lox-core)* remove obsolete glam module
+- *(lox-core)* remove obsolete aliases
+- *(lox-core)* remove unused type
+- use custom poly_array impl
+
 ## [0.1.0-alpha.15](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.14...lox-core-v0.1.0-alpha.15) - 2026-08-25
 
 ### Added

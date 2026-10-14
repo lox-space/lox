@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.31](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.30...lox-earth-v0.1.0-alpha.31) - 2026-10-14
+
+### Other
+
+- *(lox-core)* [**breaking**] remove types module
+- *(lox-core)* remove obsolete aliases
+- use custom poly_array impl
+
 ## [0.1.0-alpha.30](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.29...lox-earth-v0.1.0-alpha.30) - 2026-08-25
 
 ### Added

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/lox-space/lox/compare/lox-approx-v0.1.1...lox-approx-v0.1.2) - 2026-10-14
+
+### Other
+
+- *(lox-approx)* make clippy happy
+
 ## [0.1.1](https://github.com/lox-space/lox/compare/lox-approx-v0.1.0...lox-approx-v0.1.1) - 2026-08-25
 
 ### Other

@@ -49,6 +49,14 @@ SPDX-License-Identifier: MPL-2.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.22](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.21...lox-frames-v0.1.0-alpha.22) - 2026-10-14
+
+### Other
+
+- depend on lox-core directly instead of lox-units/lox-math
+- *(lox-core)* [**breaking**] remove types module
+- use custom poly_array impl
+
 ### Changed
 
 - [**breaking**] move the top-level `iau` module to `rotations::to_iau`, beside `rotations::to_icrf`
