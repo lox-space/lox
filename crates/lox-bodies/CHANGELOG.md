@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.28](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.27...lox-bodies-v0.1.0-alpha.28) - 2026-10-14
+
+### Other
+
+- update Cargo.toml dependencies
+
 ## [0.1.0-alpha.27](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.26...lox-bodies-v0.1.0-alpha.27) - 2026-08-25
 
 ### Added
@@ -20,25 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - privatize the dynamic modules as origin/frame, re-export at crate root
 - rename DynOrigin/DynFrame/DynTimeScale to Origin/Frame/TimeScale
 - rename Origin trait to CoordinateOrigin, TimeScale trait to ContinuousTimeScale
-<!--
-SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
-
-SPDX-License-Identifier: MPL-2.0
--->
-
-# Changelog
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-## [0.1.0-alpha.28](https://github.com/lox-space/lox/compare/lox-bodies-v0.1.0-alpha.27...lox-bodies-v0.1.0-alpha.28) - 2026-10-14
-
-### Other
-
-- update Cargo.toml dependencies
 
 ### Changed
 

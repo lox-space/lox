@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.41](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.40...lox-orbits-v0.1.0-alpha.41) - 2026-10-14
+
+### Added
+
+- *(lox-analysis)* implement eager LinkBudgetAnalysis
+
+### Other
+
+- depend on lox-core directly instead of lox-units/lox-math
+- use custom poly_array impl
+
 ## [0.1.0-alpha.40](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.39...lox-orbits-v0.1.0-alpha.40) - 2026-08-25
 
 ### Added
@@ -37,30 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(lox-core/lox-time)* remove TimeDelta sentinels
 - *(deps)* bump geo to 0.33 and geojson to 1.0
 - *(deps)* bump differential-equations to 0.6, nalgebra to 0.35, quick-xml to 0.40
-<!--
-SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
-
-SPDX-License-Identifier: MPL-2.0
--->
-
-# Changelog
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-## [0.1.0-alpha.41](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.40...lox-orbits-v0.1.0-alpha.41) - 2026-10-14
-
-### Added
-
-- *(lox-analysis)* implement eager LinkBudgetAnalysis
-
-### Other
-
-- depend on lox-core directly instead of lox-units/lox-math
-- use custom poly_array impl
 
 ### Changed
 

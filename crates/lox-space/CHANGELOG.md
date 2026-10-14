@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.51](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.50...lox-space-v0.1.0-alpha.51) - 2026-10-14
+
+### Added
+
+- *(lox-analysis)* implement eager LinkBudgetAnalysis
+
+### Other
+
+- *(lox-space)* [**breaking**] remove core, math and units features
+- depend on lox-core directly instead of lox-units/lox-math
+- *(lox-core)* [**breaking**] remove types module
+- *(lox-analysis)* [**breaking**] normalise HorizonMask azimuths to make it domain-independent
+- *(lox-analysis)* [**breaking**] split ElevationMask into HorizonMask and a min-elevation floor
+- generate README from lox-space crate docs with cargo-rdme
+- Run readme as doctests to ensure examples are valid
+
 ### Changed
 
 - [**breaking**] `ElevationMask` is now `HorizonMask` in the Python API and only models the measured azimuth→elevation skyline profile: the `fixed`/`variable` constructors and `fixed_elevation` are gone, and `min_elevation(azimuth)` is now `elevation_at(azimuth)`. `GroundStation` takes optional `min_elevation` and `horizon_mask` keyword arguments instead of a mask, exposes them via `min_elevation()`/`horizon_mask()`, and resolves the effective constraint via `threshold_at(azimuth)` (the maximum of horizon and floor; omitting both reproduces the old fixed 0° mask).
@@ -66,35 +82,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(lox-comms)* use Angle::ZERO everywhere
 - *(lox-comms)* use antenna frame for patterned antenna
 - *(lox-comms)* remove beamwidth from AntennaGain trait
-<!--
-SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
-
-SPDX-License-Identifier: MPL-2.0
--->
-
-# Changelog
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-## [0.1.0-alpha.51](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.50...lox-space-v0.1.0-alpha.51) - 2026-10-14
-
-### Added
-
-- *(lox-analysis)* implement eager LinkBudgetAnalysis
-
-### Other
-
-- *(lox-space)* [**breaking**] remove core, math and units features
-- depend on lox-core directly instead of lox-units/lox-math
-- *(lox-core)* [**breaking**] remove types module
-- *(lox-analysis)* [**breaking**] normalise HorizonMask azimuths to make it domain-independent
-- *(lox-analysis)* [**breaking**] split ElevationMask into HorizonMask and a min-elevation floor
-- generate README from lox-space crate docs with cargo-rdme
-- Run readme as doctests to ensure examples are valid
 
 ### Changed
 

@@ -56,13 +56,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(deps)* bump geo to 0.33 and geojson to 1.0
 - *(lox-core)* [**breaking**] move FrequencyBand and FrequencyRange to new comms module
 - *(lox-analysis)* [**breaking**] attach named comms terminals to assets
-<!--
-SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
-
-SPDX-License-Identifier: MPL-2.0
--->
-
-
 ### Changed
 
 - [**breaking**] `Scenario` is now runtime-scaled: `Scenario::new`, `with_interval` and `interval` take/return `Time`/`TimeInterval` instead of their TAI-pinned forms. The analysis layer no longer references `Tai` at all.

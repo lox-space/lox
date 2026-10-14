@@ -79,13 +79,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(lox-comms)* fix tautological ConstantAntenna doc comment
 - *(lox-comms)* rename Antenna Simple/Complex to Constant/Patterned
 - *(lox-comms)* return Result from CommunicationSystem accessors
-<!--
-SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
-
-SPDX-License-Identifier: MPL-2.0
--->
-
-
 ### Changed
 
 - *(lox-comms)* Antenna variants renamed: `Simple`/`Complex` → `Constant`/`Patterned` (inner structs follow: `ConstantAntenna`/`PatternedAntenna`)

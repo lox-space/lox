@@ -24,13 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(lox-odm)* rename OdmTimeScale to OdmTimeSystem to match CCSDS TIME_SYSTEM
 - *(lox-odm)* use new ApproxEq impls
 - *(lox-core/lox-time)* remove TimeDelta sentinels
-<!--
-SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
-
-SPDX-License-Identifier: MPL-2.0
--->
-
-
 ### Changed
 
 - [**breaking**] rename `OdmTimeScale` to `OdmTimeSystem` to match the CCSDS `TIME_SYSTEM` keyword
