@@ -12,6 +12,12 @@ use crate::i64::consts::SECONDS_BETWEEN_JD_AND_J2000;
 
 use super::deltas::TimeDelta;
 
+/// A Julian date or a duration in days, as an `f64`.
+pub type Days = f64;
+
+/// A duration in Julian centuries (36525 days), as an `f64`.
+pub type JulianCenturies = f64;
+
 /// 4713 BC January 1 12:00
 pub const J0: TimeDelta = TimeDelta::from_seconds(-SECONDS_BETWEEN_JD_AND_J2000);
 

@@ -11,7 +11,7 @@
 //!   for the Moon and the planets. Astronomy and Astrophysics, 282(2), 663-683.
 
 use lox_core::math::poly::poly_array;
-use lox_core::types::units::JulianCenturies;
+use lox_core::time::julian_dates::JulianCenturies;
 use lox_core::units::Angle;
 
 /// Mean elongation of the Moon from the Sun (D).

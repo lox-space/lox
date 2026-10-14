@@ -14,7 +14,7 @@
 //!   Journal of Geophysical Research, 107(B4).
 
 use lox_core::math::poly::poly_array;
-use lox_core::types::units::JulianCenturies;
+use lox_core::time::julian_dates::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};
 
 /// Mean elongation of the Moon from the Sun (D) for luni-solar nutation.
@@ -150,7 +150,7 @@ pub fn neptune_l_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 mod tests {
 
     use lox_approx::assert_approx_eq;
-    use lox_core::types::units::JulianCenturies;
+    use lox_core::time::julian_dates::JulianCenturies;
 
     use super::*;
 

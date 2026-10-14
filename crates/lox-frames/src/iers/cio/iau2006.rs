@@ -7,7 +7,7 @@
 //! s, using IAU 2006 precession and IAU 2000A nutation.
 
 use lox_core::math::poly::poly_array;
-use lox_core::types::units::JulianCenturies;
+use lox_core::time::julian_dates::JulianCenturies;
 use lox_core::units::{Angle, AngleUnits};
 use lox_time::Time;
 use lox_time::julian_dates::JulianDate;

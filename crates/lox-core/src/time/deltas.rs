@@ -28,7 +28,7 @@ use crate::i64::consts::{
     SECONDS_BETWEEN_JD_AND_J2000, SECONDS_PER_DAY as I64_SECONDS_PER_DAY,
     SECONDS_PER_HOUR as I64_SECONDS_PER_HOUR, SECONDS_PER_MINUTE as I64_SECONDS_PER_MINUTE,
 };
-use crate::types::units::Days;
+use crate::time::julian_dates::Days;
 
 use super::julian_dates::{Epoch, JulianDate, Unit};
 use super::subsecond::Subsecond;

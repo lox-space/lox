@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_core::types::units::JulianCenturies;
+use lox_core::time::julian_dates::JulianCenturies;
 use lox_core::units::AngleUnits;
 use lox_time::Time;
 use lox_time::julian_dates::JulianDate;
