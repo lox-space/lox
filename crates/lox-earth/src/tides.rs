@@ -11,7 +11,6 @@ use lox_core::units::{Angle, AngleUnits};
 use thiserror::Error;
 
 use lox_core::f64::consts::{DAYS_PER_JULIAN_CENTURY, MJD_J2000};
-use lox_core::types::julian_dates::ModifiedJulianDate;
 use lox_core::types::units::{Arcseconds, Seconds};
 use lox_frames::iers::fundamental::iers03::{
     d_iers03, f_iers03, l_iers03, lp_iers03, omega_iers03,
@@ -22,6 +21,7 @@ use crate::tides::constants::{LUNI_SOLAR_TIDAL_TERMS, OCEANIC_TIDAL_TERMS};
 mod constants;
 
 type Microarcseconds = f64;
+type ModifiedJulianDate = f64;
 
 #[derive(Clone, Copy, Debug, Error, PartialEq)]
 #[error(
