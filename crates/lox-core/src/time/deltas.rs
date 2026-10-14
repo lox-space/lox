@@ -552,12 +552,6 @@ impl PartialOrd for TimeDelta {
     }
 }
 
-impl From<f64> for TimeDelta {
-    fn from(value: f64) -> Self {
-        Self::from_seconds_f64(value)
-    }
-}
-
 impl Display for TimeDelta {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{} s", self.to_seconds().to_f64())
@@ -630,18 +624,6 @@ impl Mul<TimeDelta> for f64 {
     /// [`TimeDelta::try_mul`] for a fallible alternative.
     fn mul(self, rhs: TimeDelta) -> Self::Output {
         rhs.mul_const(self)
-    }
-}
-
-impl From<i64> for TimeDelta {
-    fn from(value: i64) -> Self {
-        TimeDelta::from_seconds(value)
-    }
-}
-
-impl From<i32> for TimeDelta {
-    fn from(value: i32) -> Self {
-        TimeDelta::from_seconds(value as i64)
     }
 }
 
@@ -1325,15 +1307,6 @@ mod tests {
 
         let dt = TimeDelta::new(-2, 500_000_000_000_000_000);
         assert_eq!(dt.to_seconds().to_f64(), -1.5);
-    }
-
-    #[test]
-    fn test_from_integer() {
-        let dt: TimeDelta = 42i32.into();
-        assert_eq!(dt.seconds(), 42);
-
-        let dt: TimeDelta = 42i64.into();
-        assert_eq!(dt.seconds(), 42);
     }
 
     #[test]
