@@ -2,6 +2,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! **Deprecated:** this crate is no longer maintained. Depend on `lox-core` and use
+//! [`lox_core::units`] instead.
+//!
 //! Physical unit types re-exported from [`lox_core::units`].
 
 #![cfg_attr(not(feature = "std"), no_std)]

@@ -6,7 +6,8 @@ SPDX-License-Identifier: MPL-2.0
 
 # lox-math
 
-Mathematical utilities for the [Lox](https://github.com/lox-space/lox) ecosystem, including
-interpolation, root finding, and series evaluation.
+> **Deprecated:** this crate is no longer maintained and will not receive further releases.
+> Depend on [`lox-core`](https://crates.io/crates/lox-core) and use `lox_core::math` instead,
+> which this crate merely re-exports.
 
 Part of [Lox – Oxidized Astrodynamics](https://github.com/lox-space/lox).
