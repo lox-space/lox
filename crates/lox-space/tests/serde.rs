@@ -687,8 +687,8 @@ fn test_unit_types_serialize_transparently() {
     // `Angle`, `Distance` and `Velocity` are newtypes over f64, so making the
     // accessors unitful must not change the wire format of anything that
     // stores them. Guards previously-written scenario files.
+    use lox_core::units::{Distance, Velocity};
     use lox_orbits::ground::Observables;
-    use lox_units::{Distance, Velocity};
 
     let obs = Observables::new(
         Angle::radians(1.0),

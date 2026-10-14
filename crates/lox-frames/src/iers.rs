@@ -8,7 +8,7 @@ use std::{
 };
 
 use lox_core::glam::{DMat3, DVec3};
-use lox_units::Angle;
+use lox_core::units::Angle;
 
 use crate::iers::{cip::CipCoords, ecliptic::MeanObliquity, nutation::Nutation};
 

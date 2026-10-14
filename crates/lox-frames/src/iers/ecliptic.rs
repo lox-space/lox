@@ -4,8 +4,8 @@
 
 use lox_approx::ApproxEq;
 use lox_core::math::poly::poly_array;
+use lox_core::units::Angle;
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tt};
-use lox_units::Angle;
 
 use crate::iers::ReferenceSystem;
 

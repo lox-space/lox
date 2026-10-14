@@ -205,8 +205,8 @@ mod tests {
     use lox_frames::Icrf;
     use lox_time::Time;
 
+    use lox_core::units::{AngleUnits, DistanceUnits};
     use lox_time::time_scales::TimeScale;
-    use lox_units::{AngleUnits, DistanceUnits};
 
     fn make_constellation() -> Constellation<Earth, Icrf> {
         WalkerDeltaBuilder::new(6, 3)

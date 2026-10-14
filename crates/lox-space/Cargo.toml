@@ -33,11 +33,9 @@ lox-ephem = { workspace = true, optional = true }
 lox-frames = { workspace = true, optional = true }
 lox-io = { workspace = true, optional = true }
 lox-itur = { workspace = true, optional = true }
-lox-math = { workspace = true, optional = true }
 lox-odm = { workspace = true, optional = true }
 lox-orbits = { workspace = true, optional = true }
 lox-time = { workspace = true, optional = true, features = ["chrono"] }
-lox-units = { workspace = true, optional = true }
 
 geo = { workspace = true, optional = true }
 numpy = { workspace = true, optional = true }
@@ -104,7 +102,7 @@ earth = ["bodies", "math", "io", "time", "units", "dep:lox-earth"]
 ephem = ["math", "dep:lox-ephem"]
 frames = ["bodies", "earth", "math", "time", "units", "dep:lox-frames"]
 io = ["dep:lox-io"]
-math = ["dep:lox-math"]
+math = ["core"]
 odm = ["orbits", "dep:lox-odm", "lox-orbits?/odm"]
 orbits = [
   "bodies",
@@ -131,7 +129,7 @@ python = [
   "dep:sgp4",
 ]
 time = ["io", "math", "units", "dep:lox-time"]
-units = ["dep:lox-units"]
+units = ["core"]
 serde = [
   "lox-analysis?/serde",
   "lox-bodies?/serde",
@@ -139,8 +137,6 @@ serde = [
   "lox-core?/serde",
   "lox-ephem?/serde",
   "lox-frames?/serde",
-  "lox-math?/serde",
   "lox-orbits?/serde",
   "lox-time?/serde",
-  "lox-units?/serde",
 ]

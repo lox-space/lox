@@ -26,7 +26,6 @@ lox-frames.workspace = true
 lox-approx = { workspace = true, features = ["std", "glam"] }
 lox-odm = { workspace = true, optional = true }
 lox-time = { workspace = true, features = ["chrono"] }
-lox-units.workspace = true
 
 chrono = { workspace = true, optional = true }
 csv.workspace = true

@@ -10,7 +10,9 @@ use pyo3::{Bound, Python, pyclass, pymethods, types::PyComplex};
 use std::format;
 use std::string::{String, ToString};
 
-use lox_units::{Angle, AngularRate, Distance, Frequency, Power, Pressure, Temperature, Velocity};
+use lox_core::units::{
+    Angle, AngularRate, Distance, Frequency, Power, Pressure, Temperature, Velocity,
+};
 
 /// Formats an f64 as a valid Python float literal (always includes a decimal point).
 fn repr_f64(v: f64) -> String {

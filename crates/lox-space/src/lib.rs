@@ -140,7 +140,7 @@ pub mod io;
 #[cfg(feature = "itur")]
 pub mod itur;
 
-/// Math utilities used across the toolkit (re-exports [`lox_math`]).
+/// Math utilities used across the toolkit (re-exports [`lox_core::math`]).
 #[cfg(feature = "math")]
 pub mod math;
 
@@ -176,7 +176,7 @@ macro_rules! utc {
 #[doc(hidden)]
 pub use lox_time::utc as __private_utc;
 
-/// Physical units and quantities (re-exports [`lox_units`]).
+/// Physical units and quantities (re-exports [`lox_core::units`]).
 #[cfg(feature = "units")]
 pub mod units;
 

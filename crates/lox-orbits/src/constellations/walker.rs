@@ -245,7 +245,7 @@ mod tests {
     use std::collections::HashSet;
 
     use lox_approx::assert_approx_eq;
-    use lox_units::{AngleUnits, DistanceUnits};
+    use lox_core::units::{AngleUnits, DistanceUnits};
 
     use super::*;
 
