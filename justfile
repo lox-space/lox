@@ -97,7 +97,7 @@ readme *ARGS:
     cargo rdme {{ARGS}}
     cargo rdme --readme-path README.md {{ARGS}}
 
-# Add SPDX headers to new files
+# Add the current author's SPDX header to new or modified files
 headers:
     uv run --no-project tools/add_spdx_headers.py
 
