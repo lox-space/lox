@@ -35,13 +35,13 @@ impl Ellipsoid {
     /// Creates an `Ellipsoid` from equatorial radius and flattening.
     ///
     /// `const fn` for compile-time use (e.g., associated constants).
-    /// **Panics** if `equatorial_radius <= 0` or `flattening` is not in
+    /// **Panics** if `equatorial_radius` is not finite and positive or `flattening` is not in
     /// `[0, 1)`. Use [`Ellipsoid::try_new`] for runtime values that may
     /// not satisfy the invariants.
     pub const fn new(equatorial_radius: Distance, flattening: f64) -> Self {
         assert!(
-            equatorial_radius.to_meters() > 0.0,
-            "equatorial radius must be > 0"
+            equatorial_radius.to_meters().is_finite() && equatorial_radius.to_meters() > 0.0,
+            "equatorial radius must be finite and > 0"
         );
         assert!(
             flattening >= 0.0 && flattening < 1.0,
@@ -55,7 +55,8 @@ impl Ellipsoid {
 
     /// Fallible constructor for runtime values.
     pub fn try_new(equatorial_radius: Distance, flattening: f64) -> Result<Self, EllipsoidError> {
-        if equatorial_radius.to_meters() <= 0.0 {
+        let radius = equatorial_radius.to_meters();
+        if !radius.is_finite() || radius <= 0.0 {
             return Err(EllipsoidError::InvalidEquatorialRadius(equatorial_radius));
         }
         if !(0.0..1.0).contains(&flattening) {
@@ -88,8 +89,8 @@ impl Ellipsoid {
 /// Error returned when constructing an [`Ellipsoid`] with invalid parameters.
 #[derive(Copy, Clone, Debug, Error, PartialEq)]
 pub enum EllipsoidError {
-    /// Equatorial radius must be strictly positive.
-    #[error("equatorial radius must be > 0, got {0}")]
+    /// Equatorial radius must be finite and strictly positive.
+    #[error("equatorial radius must be finite and > 0, got {0}")]
     InvalidEquatorialRadius(Distance),
     /// Flattening must be in `[0, 1)`.
     #[error("flattening must be in [0, 1), got {0}")]
@@ -296,20 +297,20 @@ impl LonLatAltBuilder {
 
     /// Sets the longitude. Must be between -180° and 180°.
     pub fn longitude(&mut self, longitude: Angle) -> &mut Self {
-        self.longitude = match longitude.to_degrees() {
-            lon if lon < -180.0 => Err(LonLatAltError::InvalidLongitude(longitude)),
-            lon if lon > 180.0 => Err(LonLatAltError::InvalidLongitude(longitude)),
-            _ => Ok(longitude),
+        self.longitude = if (-180.0..=180.0).contains(&longitude.to_degrees()) {
+            Ok(longitude)
+        } else {
+            Err(LonLatAltError::InvalidLongitude(longitude))
         };
         self
     }
 
     /// Sets the latitude. Must be between -90° and 90°.
     pub fn latitude(&mut self, latitude: Angle) -> &mut Self {
-        self.latitude = match latitude.to_degrees() {
-            lat if lat < -90.0 => Err(LonLatAltError::InvalidLatitude(latitude)),
-            lat if lat > 90.0 => Err(LonLatAltError::InvalidLatitude(latitude)),
-            _ => Ok(latitude),
+        self.latitude = if (-90.0..=90.0).contains(&latitude.to_degrees()) {
+            Ok(latitude)
+        } else {
+            Err(LonLatAltError::InvalidLatitude(latitude))
         };
         self
     }
@@ -1515,6 +1516,38 @@ mod tests {
         assert!(matches!(
             Ellipsoid::try_new(Distance::meters(6378137.0), 1.0),
             Err(EllipsoidError::InvalidFlattening(_))
+        ));
+    }
+
+    #[test]
+    fn test_ellipsoid_try_new_non_finite_radius() {
+        assert!(matches!(
+            Ellipsoid::try_new(Distance::meters(f64::INFINITY), 0.003),
+            Err(EllipsoidError::InvalidEquatorialRadius(_))
+        ));
+    }
+
+    #[test]
+    fn test_ellipsoid_try_new_nan() {
+        assert!(matches!(
+            Ellipsoid::try_new(Distance::meters(f64::NAN), 0.003),
+            Err(EllipsoidError::InvalidEquatorialRadius(_))
+        ));
+        assert!(matches!(
+            Ellipsoid::try_new(Distance::meters(6378137.0), f64::NAN),
+            Err(EllipsoidError::InvalidFlattening(_))
+        ));
+    }
+
+    #[test]
+    fn test_lla_builder_nan() {
+        assert!(matches!(
+            LonLatAlt::builder().longitude(f64::NAN.deg()).build(),
+            Err(LonLatAltError::InvalidLongitude(_))
+        ));
+        assert!(matches!(
+            LonLatAlt::builder().latitude(f64::NAN.deg()).build(),
+            Err(LonLatAltError::InvalidLatitude(_))
         ));
     }
 

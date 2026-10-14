@@ -85,10 +85,10 @@ impl Display for OrbitType {
     }
 }
 
-/// Error returned when attempting to create an [`Eccentricity`] with a negative value.
+/// Error returned when attempting to create an [`Eccentricity`] from a negative or non-finite value.
 #[derive(Debug, Clone, Error)]
-#[error("eccentricity cannot be negative but was {0}")]
-pub struct NegativeEccentricityError(f64);
+#[error("eccentricity must be finite and non-negative but was {0}")]
+pub struct EccentricityError(f64);
 
 /// Orbital eccentricity.
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
@@ -101,10 +101,10 @@ impl Eccentricity {
     ///
     /// # Errors
     ///
-    /// Returns a [`NegativeEccentricityError`] if the value is smaller than zero.
-    pub const fn try_new(ecc: f64) -> Result<Eccentricity, NegativeEccentricityError> {
-        if ecc < 0.0 {
-            return Err(NegativeEccentricityError(ecc));
+    /// Returns an [`EccentricityError`] if the value is negative or not finite.
+    pub const fn try_new(ecc: f64) -> Result<Eccentricity, EccentricityError> {
+        if !ecc.is_finite() || ecc < 0.0 {
+            return Err(EccentricityError(ecc));
         }
         Ok(Eccentricity(ecc))
     }
@@ -171,7 +171,7 @@ impl Inclination {
     /// Tries to create a new [`Inclination`] from an angle. Must be between 0 and π.
     pub const fn try_new(inclination: Angle) -> Result<Inclination, InclinationError> {
         let inc = inclination.as_f64();
-        if inc < 0.0 || inc > PI {
+        if !(inc >= 0.0 && inc <= PI) {
             return Err(InclinationError(inclination));
         }
         Ok(Inclination(inclination))
@@ -206,7 +206,7 @@ impl LongitudeOfAscendingNode {
         longitude_of_ascending_node: Angle,
     ) -> Result<LongitudeOfAscendingNode, LongitudeOfAscendingNodeError> {
         let node = longitude_of_ascending_node.as_f64();
-        if node < 0.0 || node > TAU {
+        if !(node >= 0.0 && node <= TAU) {
             return Err(LongitudeOfAscendingNodeError(longitude_of_ascending_node));
         }
         Ok(LongitudeOfAscendingNode(longitude_of_ascending_node))
@@ -241,7 +241,7 @@ impl ArgumentOfPeriapsis {
         argument_of_periapsis: Angle,
     ) -> Result<ArgumentOfPeriapsis, ArgumentOfPeriapsisError> {
         let arg = argument_of_periapsis.as_f64();
-        if arg < 0.0 || arg > TAU {
+        if !(arg >= 0.0 && arg <= TAU) {
             return Err(ArgumentOfPeriapsisError(argument_of_periapsis));
         }
         Ok(ArgumentOfPeriapsis(argument_of_periapsis))
@@ -483,9 +483,9 @@ impl Cartesian {
 /// Error returned when constructing a [`Keplerian`] via the builder.
 #[derive(Debug, Clone, Error)]
 pub enum KeplerianError {
-    /// The eccentricity is negative.
+    /// The eccentricity is invalid.
     #[error(transparent)]
-    NegativeEccentricity(#[from] NegativeEccentricityError),
+    InvalidEccentricity(#[from] EccentricityError),
     /// The semi-major axis sign is inconsistent with the eccentricity.
     #[error(
         "{} semi-major axis ({semi_major_axis}) for {} eccentricity ({eccentricity})",
@@ -520,10 +520,7 @@ pub enum KeplerianError {
 /// Builder for constructing validated [`Keplerian`] elements.
 #[derive(Debug, Default, Clone)]
 pub struct KeplerianBuilder {
-    shape: Option<(
-        SemiMajorAxis,
-        Result<Eccentricity, NegativeEccentricityError>,
-    )>,
+    shape: Option<(SemiMajorAxis, Result<Eccentricity, EccentricityError>)>,
     inclination: Angle,
     longitude_of_ascending_node: Angle,
     argument_of_periapsis: Angle,
@@ -656,6 +653,19 @@ mod tests {
     use crate::units::VelocityUnits;
 
     use super::*;
+
+    #[test]
+    fn test_eccentricity_rejects_infinity() {
+        assert!(Eccentricity::try_new(f64::INFINITY).is_err());
+    }
+
+    #[test]
+    fn test_element_validators_reject_nan() {
+        assert!(Eccentricity::try_new(f64::NAN).is_err());
+        assert!(Inclination::try_new(Angle::radians(f64::NAN)).is_err());
+        assert!(LongitudeOfAscendingNode::try_new(Angle::radians(f64::NAN)).is_err());
+        assert!(ArgumentOfPeriapsis::try_new(Angle::radians(f64::NAN)).is_err());
+    }
 
     #[test]
     fn test_cartesian_to_keplerian_roundtrip() {
