@@ -74,6 +74,10 @@ harness = false
 name = "frames"
 harness = false
 
+[[bench]]
+name = "trajectory"
+harness = false
+
 [features]
 default = [
   "analysis",
