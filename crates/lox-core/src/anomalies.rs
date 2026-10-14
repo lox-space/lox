@@ -17,13 +17,13 @@
 //! - Parabolic anomaly (D): tan(ν/2) for parabolic orbits (unbounded)
 //! - Mean anomaly (M): time-like parameter proportional to time since periapsis, range (-π, π]
 //!
-//! # Anomaly Enum Convention
-//! The [`Anomaly`] enum uses an overloaded convention for `Anomaly::Eccentric`:
+//! # Eccentric Anomaly Convention
+//! [`EccentricAnomaly`] uses an overloaded convention:
 //! - For elliptic/circular orbits: represents eccentric anomaly E
 //! - For hyperbolic orbits: represents hyperbolic anomaly F
 //! - For parabolic orbits: represents parabolic anomaly D (stored as radians)
 
-use lox_approx::{ApproxEq, ApproxEqResults};
+use lox_approx::ApproxEq;
 use thiserror::Error;
 
 use crate::math::float::{abs, atan, atanh, cbrt, cos, cosh, powi, sin, sinh, sqrt, tan, tanh};
@@ -34,137 +34,83 @@ use crate::{
 
 use core::{
     fmt::Display,
-    marker::PhantomData,
     ops::{Add, Neg, Sub},
 };
 
-/// Sealed marker trait for anomaly kinds
-pub trait AnomalyKind: sealed::Sealed + core::fmt::Debug {}
-
-mod sealed {
-    /// Sealed trait to prevent external implementation
-    pub trait Sealed {}
-    impl Sealed for super::TrueKind {}
-    impl Sealed for super::EccentricKind {}
-    impl Sealed for super::MeanKind {}
-}
-
-/// Marker type for true anomaly
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct TrueKind;
-
-/// Marker type for eccentric anomaly (E for elliptic, F for hyperbolic, D for parabolic)
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct EccentricKind;
-
-/// Marker type for mean anomaly
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct MeanKind;
-
-impl AnomalyKind for TrueKind {}
-impl AnomalyKind for EccentricKind {}
-impl AnomalyKind for MeanKind {}
-
-/// Generic anomaly type parameterized by kind marker
-#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(bound = ""))]
-pub struct Anomaly<K: AnomalyKind> {
-    anomaly: Angle,
-    _kind: PhantomData<K>,
-}
-
-impl<K> Display for Anomaly<K>
-where
-    K: AnomalyKind,
-{
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        self.anomaly.fmt(f)
-    }
-}
-
-impl<K> Anomaly<K>
-where
-    K: AnomalyKind,
-{
-    /// Returns the angle value
-    pub fn as_angle(self) -> Angle {
-        self.anomaly
-    }
-
-    /// Returns the raw f64 value
-    pub fn as_f64(self) -> f64 {
-        self.anomaly.as_f64()
-    }
-}
-
-impl<K> Add for Anomaly<K>
-where
-    K: AnomalyKind,
-{
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Anomaly {
-            anomaly: self.anomaly + rhs.anomaly,
-            _kind: PhantomData,
-        }
-    }
-}
-
-impl<K> Sub for Anomaly<K>
-where
-    K: AnomalyKind,
-{
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Anomaly {
-            anomaly: self.anomaly - rhs.anomaly,
-            _kind: PhantomData,
-        }
-    }
-}
-
-impl<K> Neg for Anomaly<K>
-where
-    K: AnomalyKind,
-{
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        Anomaly {
-            anomaly: -self.anomaly,
-            _kind: PhantomData,
-        }
-    }
-}
-
 /// True anomaly (ν): angle from periapsis to the position vector
-pub type TrueAnomaly = Anomaly<TrueKind>;
+#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct TrueAnomaly(Angle);
 
 /// Eccentric anomaly: E for elliptic, F for hyperbolic, D for parabolic
-pub type EccentricAnomaly = Anomaly<EccentricKind>;
+#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct EccentricAnomaly(Angle);
 
 /// Mean anomaly: M for elliptic/circular, M_h for hyperbolic, M_p for parabolic
-pub type MeanAnomaly = Anomaly<MeanKind>;
+#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct MeanAnomaly(Angle);
 
-// ============================================================================
-// CONVERSION IMPLEMENTATIONS
-// ============================================================================
+macro_rules! anomaly_impls {
+    ($($anomaly:ident),*) => {
+        $(
+            impl $anomaly {
+                /// Creates a new anomaly
+                pub fn new(anomaly: Angle) -> Self {
+                    Self(anomaly)
+                }
+
+                /// Returns the angle value
+                pub fn as_angle(self) -> Angle {
+                    self.0
+                }
+
+                /// Returns the raw f64 value
+                pub fn as_f64(self) -> f64 {
+                    self.0.as_f64()
+                }
+            }
+
+            impl Display for $anomaly {
+                fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                    self.0.fmt(f)
+                }
+            }
+
+            impl Add for $anomaly {
+                type Output = Self;
+
+                fn add(self, rhs: Self) -> Self::Output {
+                    Self(self.0 + rhs.0)
+                }
+            }
+
+            impl Sub for $anomaly {
+                type Output = Self;
+
+                fn sub(self, rhs: Self) -> Self::Output {
+                    Self(self.0 - rhs.0)
+                }
+            }
+
+            impl Neg for $anomaly {
+                type Output = Self;
+
+                fn neg(self) -> Self::Output {
+                    Self(-self.0)
+                }
+            }
+        )*
+    };
+}
+
+anomaly_impls!(TrueAnomaly, EccentricAnomaly, MeanAnomaly);
 
 impl TrueAnomaly {
-    /// Creates a new anomaly
-    pub fn new(anomaly: Angle) -> Self {
-        Self {
-            anomaly,
-            _kind: PhantomData,
-        }
-    }
-
     /// Converts true anomaly to eccentric anomaly
     ///
     /// Can fail for hyperbolic orbits if true anomaly is outside asymptote limits
@@ -172,15 +118,12 @@ impl TrueAnomaly {
         let orbit = ecc.orbit_type();
         match orbit {
             OrbitType::Circular | OrbitType::Elliptic => {
-                Ok(EccentricAnomaly::new(true_to_eccentric(self.anomaly, ecc)))
+                Ok(EccentricAnomaly::new(true_to_eccentric(self.0, ecc)))
             }
-            OrbitType::Hyperbolic => Ok(EccentricAnomaly::new(true_to_hyperbolic(
-                self.anomaly,
-                ecc,
-            )?)),
+            OrbitType::Hyperbolic => Ok(EccentricAnomaly::new(true_to_hyperbolic(self.0, ecc)?)),
             OrbitType::Parabolic => {
                 // For parabolic orbits, Eccentric represents parabolic anomaly D
-                Ok(EccentricAnomaly::new(true_to_parabolic(self.anomaly).rad()))
+                Ok(EccentricAnomaly::new(true_to_parabolic(self.0).rad()))
             }
         }
     }
@@ -193,41 +136,30 @@ impl TrueAnomaly {
         match orbit {
             OrbitType::Circular => {
                 // For circular orbits, mean anomaly equals true anomaly
-                Ok(MeanAnomaly::new(self.anomaly))
+                Ok(MeanAnomaly::new(self.0))
             }
-            OrbitType::Elliptic => Ok(MeanAnomaly::new(true_to_mean(self.anomaly, ecc))),
+            OrbitType::Elliptic => Ok(MeanAnomaly::new(true_to_mean(self.0, ecc))),
             OrbitType::Parabolic => {
                 // For parabolic orbits, store parabolic mean anomaly M_p as angle
-                Ok(MeanAnomaly::new(true_to_mean_parabolic(self.anomaly).rad()))
+                Ok(MeanAnomaly::new(true_to_mean_parabolic(self.0).rad()))
             }
-            OrbitType::Hyperbolic => Ok(MeanAnomaly::new(true_to_mean_hyperbolic(
-                self.anomaly,
-                ecc,
-            )?)),
+            OrbitType::Hyperbolic => Ok(MeanAnomaly::new(true_to_mean_hyperbolic(self.0, ecc)?)),
         }
     }
 }
 
 impl EccentricAnomaly {
-    /// Creates a new anomaly
-    pub fn new(anomaly: Angle) -> Self {
-        Self {
-            anomaly,
-            _kind: PhantomData,
-        }
-    }
-
     /// Converts eccentric anomaly to true anomaly.
     pub fn to_true(self, ecc: Eccentricity) -> TrueAnomaly {
         let orbit = ecc.orbit_type();
         match orbit {
             OrbitType::Circular | OrbitType::Elliptic => {
-                TrueAnomaly::new(eccentric_to_true(self.anomaly, ecc))
+                TrueAnomaly::new(eccentric_to_true(self.0, ecc))
             }
-            OrbitType::Hyperbolic => TrueAnomaly::new(hyperbolic_to_true(self.anomaly, ecc)),
+            OrbitType::Hyperbolic => TrueAnomaly::new(hyperbolic_to_true(self.0, ecc)),
             OrbitType::Parabolic => {
                 // For parabolic orbits, Eccentric represents parabolic anomaly D
-                TrueAnomaly::new(parabolic_to_true(self.anomaly.as_f64()))
+                TrueAnomaly::new(parabolic_to_true(self.0.as_f64()))
             }
         }
     }
@@ -237,26 +169,18 @@ impl EccentricAnomaly {
         let orbit = ecc.orbit_type();
         match orbit {
             OrbitType::Circular | OrbitType::Elliptic => {
-                MeanAnomaly::new(eccentric_to_mean(self.anomaly, ecc))
+                MeanAnomaly::new(eccentric_to_mean(self.0, ecc))
             }
-            OrbitType::Hyperbolic => MeanAnomaly::new(hyperbolic_to_mean(self.anomaly, ecc)),
+            OrbitType::Hyperbolic => MeanAnomaly::new(hyperbolic_to_mean(self.0, ecc)),
             OrbitType::Parabolic => {
                 // For parabolic orbits, Eccentric represents parabolic anomaly D
-                MeanAnomaly::new(parabolic_to_mean(self.anomaly.as_f64()).rad())
+                MeanAnomaly::new(parabolic_to_mean(self.0.as_f64()).rad())
             }
         }
     }
 }
 
 impl MeanAnomaly {
-    /// Creates a new anomaly
-    pub fn new(anomaly: Angle) -> Self {
-        Self {
-            anomaly,
-            _kind: PhantomData,
-        }
-    }
-
     /// Converts mean anomaly to true anomaly
     ///
     /// Can fail due to convergence issues in iterative solvers
@@ -265,19 +189,14 @@ impl MeanAnomaly {
         match orbit {
             OrbitType::Circular => {
                 // For circular orbits, mean anomaly equals true anomaly
-                Ok(TrueAnomaly::new(self.anomaly))
+                Ok(TrueAnomaly::new(self.0))
             }
-            OrbitType::Elliptic => Ok(TrueAnomaly::new(mean_to_true(self.anomaly, ecc)?)),
+            OrbitType::Elliptic => Ok(TrueAnomaly::new(mean_to_true(self.0, ecc)?)),
             OrbitType::Parabolic => {
                 // For parabolic orbits, value stores M_p
-                Ok(TrueAnomaly::new(mean_parabolic_to_true(
-                    self.anomaly.as_f64(),
-                )))
+                Ok(TrueAnomaly::new(mean_parabolic_to_true(self.0.as_f64())))
             }
-            OrbitType::Hyperbolic => Ok(TrueAnomaly::new(mean_hyperbolic_to_true(
-                self.anomaly,
-                ecc,
-            )?)),
+            OrbitType::Hyperbolic => Ok(TrueAnomaly::new(mean_hyperbolic_to_true(self.0, ecc)?)),
         }
     }
 
@@ -288,27 +207,18 @@ impl MeanAnomaly {
         let orbit = ecc.orbit_type();
         match orbit {
             OrbitType::Circular | OrbitType::Elliptic => Ok(EccentricAnomaly::new(
-                mean_to_eccentric(self.anomaly, ecc, None, None)?,
+                mean_to_eccentric(self.0, ecc, None, None)?,
             )),
             OrbitType::Hyperbolic => Ok(EccentricAnomaly::new(mean_to_hyperbolic(
-                self.anomaly,
-                ecc,
-                None,
-                None,
+                self.0, ecc, None, None,
             )?)),
             OrbitType::Parabolic => {
                 // For parabolic orbits, Eccentric represents parabolic anomaly D
                 Ok(EccentricAnomaly::new(
-                    mean_to_parabolic(self.anomaly.as_f64()).rad(),
+                    mean_to_parabolic(self.0.as_f64()).rad(),
                 ))
             }
         }
-    }
-}
-
-impl<K: AnomalyKind> ApproxEq for Anomaly<K> {
-    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
-        self.anomaly.approx_eq(&rhs.anomaly, atol, rtol)
     }
 }
 
@@ -335,10 +245,6 @@ pub enum AnomalyError {
 
 /// A type alias for `Result<T, AnomalyError>`.
 pub type Result<T> = core::result::Result<T, AnomalyError>;
-
-// ============================================================================
-// ELLIPTIC ORBIT CONVERSIONS (0 < e < 1)
-// ============================================================================
 
 /// Convert true anomaly to eccentric anomaly for elliptic orbits.
 ///
@@ -475,10 +381,6 @@ pub fn mean_to_true(mean: Angle, e: Eccentricity) -> Result<Angle> {
     Ok(eccentric_to_true(ecc, e))
 }
 
-// ============================================================================
-// PARABOLIC ORBIT CONVERSIONS (e = 1)
-// ============================================================================
-
 /// Convert true anomaly to parabolic anomaly.
 ///
 /// Parabolic anomaly D = tan(ν/2)
@@ -552,10 +454,6 @@ pub fn mean_parabolic_to_true(mean_parabolic: f64) -> Angle {
     let d = mean_to_parabolic(mean_parabolic);
     parabolic_to_true(d)
 }
-
-// ============================================================================
-// HYPERBOLIC ORBIT CONVERSIONS (e > 1)
-// ============================================================================
 
 /// Convert true anomaly to hyperbolic eccentric anomaly.
 ///
@@ -685,10 +583,6 @@ pub fn mean_hyperbolic_to_true(mean_hyperbolic: Angle, e: Eccentricity) -> Resul
     Ok(hyperbolic_to_true(f, e))
 }
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
 /// Get the maximum true anomaly for a hyperbolic orbit (asymptote angle)
 ///
 /// # Arguments
@@ -801,10 +695,6 @@ mod anomaly_tests {
 
     const EPSILON: f64 = 1e-9;
 
-    // ========================================================================
-    // ELLIPTIC ORBIT TESTS
-    // ========================================================================
-
     #[test]
     fn test_anomaly_elliptic_true_to_eccentric() {
         let e = Eccentricity::try_new(0.5).unwrap();
@@ -869,10 +759,6 @@ mod anomaly_tests {
         assert!((mean.as_f64() - mean_back.as_angle().as_f64()).abs() < EPSILON);
     }
 
-    // ========================================================================
-    // CIRCULAR ORBIT TESTS
-    // ========================================================================
-
     #[test]
     fn test_anomaly_circular_mean_equals_true() {
         let e = Eccentricity::try_new(0.0).unwrap();
@@ -900,10 +786,6 @@ mod anomaly_tests {
 
         assert!((nu.as_f64() - true_back.as_angle().as_f64()).abs() < EPSILON);
     }
-
-    // ========================================================================
-    // HYPERBOLIC ORBIT TESTS
-    // ========================================================================
 
     #[test]
     fn test_anomaly_hyperbolic_true_to_eccentric() {
@@ -974,10 +856,6 @@ mod anomaly_tests {
         }
     }
 
-    // ========================================================================
-    // PARABOLIC ORBIT TESTS
-    // ========================================================================
-
     #[test]
     fn test_anomaly_parabolic_true_to_mean() {
         let e = Eccentricity::try_new(1.0).unwrap();
@@ -1038,10 +916,6 @@ mod anomaly_tests {
         assert!((d - ecc_back.as_angle().as_f64()).abs() < EPSILON);
     }
 
-    // ========================================================================
-    // ROUND-TRIP TESTS
-    // ========================================================================
-
     #[test]
     fn test_anomaly_elliptic_full_round_trip() {
         let e = Eccentricity::try_new(0.5).unwrap();
@@ -1071,4 +945,75 @@ mod anomaly_tests {
 
         assert!((nu.as_f64() - true_back.as_angle().as_f64()).abs() < EPSILON);
     }
+
+    macro_rules! newtype_tests {
+        ($($module:ident: $anomaly:ident),*) => {
+            $(
+                mod $module {
+                    use alloc::string::ToString;
+
+                    use lox_approx::{assert_approx_eq, assert_approx_ne};
+
+                    use super::*;
+
+                    #[test]
+                    fn test_accessors() {
+                        let anomaly = $anomaly::new(1.5.rad());
+                        assert_eq!(anomaly.as_angle(), 1.5.rad());
+                        assert_eq!(anomaly.as_f64(), 1.5);
+                    }
+
+                    #[test]
+                    fn test_default_is_zero() {
+                        assert_eq!($anomaly::default().as_f64(), 0.0);
+                    }
+
+                    #[test]
+                    fn test_arithmetic() {
+                        let a = $anomaly::new(1.5.rad());
+                        let b = $anomaly::new(0.5.rad());
+                        assert_eq!(a + b, $anomaly::new(2.0.rad()));
+                        assert_eq!(a - b, $anomaly::new(1.0.rad()));
+                        assert_eq!(-a, $anomaly::new(-1.5.rad()));
+                    }
+
+                    #[test]
+                    fn test_ordering() {
+                        assert!($anomaly::new(0.5.rad()) < $anomaly::new(1.5.rad()));
+                        assert!($anomaly::new(f64::NAN.rad())
+                            .partial_cmp(&$anomaly::new(0.0.rad()))
+                            .is_none());
+                    }
+
+                    #[test]
+                    fn test_display_matches_angle() {
+                        assert_eq!($anomaly::new(1.5.rad()).to_string(), 1.5.rad().to_string());
+                    }
+
+                    #[test]
+                    fn test_approx_eq() {
+                        let a = $anomaly::new(1.5.rad());
+                        assert_approx_eq!(a, $anomaly::new((1.5 + 1e-12).rad()), rtol <= 1e-10);
+                        assert_approx_ne!(a, $anomaly::new(1.6.rad()), rtol <= 1e-10);
+                    }
+
+                    #[cfg(feature = "serde")]
+                    #[test]
+                    fn test_serde_round_trip_as_bare_angle() {
+                        let anomaly = $anomaly::new(1.5.rad());
+                        let json = serde_json::to_string(&anomaly).unwrap();
+                        assert_eq!(json, serde_json::to_string(&1.5.rad()).unwrap());
+                        let round_trip: $anomaly = serde_json::from_str(&json).unwrap();
+                        assert_eq!(anomaly, round_trip);
+                    }
+                }
+            )*
+        };
+    }
+
+    newtype_tests!(
+        true_anomaly: TrueAnomaly,
+        eccentric_anomaly: EccentricAnomaly,
+        mean_anomaly: MeanAnomaly
+    );
 }
