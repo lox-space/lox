@@ -67,19 +67,17 @@ proptest! {
     ) {
         let eccentric = EccentricAnomaly::new(angle);
         let mean_anom = eccentric.to_mean(ecc);
+        let true_anom = mean_anom.to_true(ecc).expect("solver should converge");
+        let back = true_anom.to_eccentric(ecc).expect("conversion should succeed");
 
-        // Convert back via true anomaly - may fail for some inputs due to solver convergence
-        if let Ok(true_anom) = mean_anom.to_true(ecc)
-            && let Ok(back) = true_anom.to_eccentric(ecc) {
-                // Normalize both angles to [0, 2π) for comparison
-                let original = eccentric.as_angle().mod_two_pi();
-                let roundtrip = back.as_angle().mod_two_pi();
+        // Normalize both angles to [0, 2π) for comparison
+        let original = eccentric.as_angle().mod_two_pi();
+        let roundtrip = back.as_angle().mod_two_pi();
 
-                prop_assert!(
-                    approx_eq!(original.as_f64(), roundtrip.as_f64(), rtol <= 1e-9),
-                    "Original: {}, Roundtrip: {}", original, roundtrip
-                );
-            }
+        prop_assert!(
+            approx_eq!(original.as_f64(), roundtrip.as_f64(), rtol <= 1e-9),
+            "Original: {}, Roundtrip: {}", original, roundtrip
+        );
     }
 
     #[test]
@@ -111,18 +109,16 @@ proptest! {
     ) {
         let true_anom = TrueAnomaly::new(angle);
         let mean_anom = true_anom.to_mean(ecc).expect("conversion should succeed");
+        let back = mean_anom.to_true(ecc).expect("solver should converge");
 
-        // Conversion back may fail for some inputs due to solver convergence
-        if let Ok(back) = mean_anom.to_true(ecc) {
-            // Normalize both angles to [0, 2π) for comparison
-            let original = true_anom.as_angle().mod_two_pi();
-            let roundtrip = back.as_angle().mod_two_pi();
+        // Normalize both angles to [0, 2π) for comparison
+        let original = true_anom.as_angle().mod_two_pi();
+        let roundtrip = back.as_angle().mod_two_pi();
 
-            prop_assert!(
-                approx_eq!(original.as_f64(), roundtrip.as_f64(), rtol <= 1e-9),
-                "Original: {}, Roundtrip: {}", original, roundtrip
-            );
-        }
+        prop_assert!(
+            approx_eq!(original.as_f64(), roundtrip.as_f64(), rtol <= 1e-9),
+            "Original: {}, Roundtrip: {}", original, roundtrip
+        );
     }
 
     #[test]
@@ -131,20 +127,17 @@ proptest! {
         angle in angle_rad()
     ) {
         let mean_anom = MeanAnomaly::new(angle);
+        let true_anom = mean_anom.to_true(ecc).expect("solver should converge");
+        let back = true_anom.to_mean(ecc).expect("conversion should succeed");
 
-        // Conversion may fail for some inputs due to solver convergence
-        if let Ok(true_anom) = mean_anom.to_true(ecc) {
-            let back = true_anom.to_mean(ecc).expect("conversion should succeed");
+        // Normalize both angles to [0, 2π) for comparison
+        let original = mean_anom.as_angle().mod_two_pi();
+        let roundtrip = back.as_angle().mod_two_pi();
 
-            // Normalize both angles to [0, 2π) for comparison
-            let original = mean_anom.as_angle().mod_two_pi();
-            let roundtrip = back.as_angle().mod_two_pi();
-
-            prop_assert!(
-                approx_eq!(original.as_f64(), roundtrip.as_f64(), rtol <= 1e-9),
-                "Original: {}, Roundtrip: {}", original, roundtrip
-            );
-        }
+        prop_assert!(
+            approx_eq!(original.as_f64(), roundtrip.as_f64(), rtol <= 1e-9),
+            "Original: {}, Roundtrip: {}", original, roundtrip
+        );
     }
 }
 

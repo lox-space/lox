@@ -331,7 +331,7 @@ pub fn mean_to_eccentric(
     // Initial guess (NASA approach)
     let mut ecc_anomaly = if ecc < 0.8 {
         m
-    } else if m < Angle::PI.as_f64() {
+    } else if m >= 0.0 {
         m + ecc / 2.0
     } else {
         m - ecc / 2.0
@@ -348,8 +348,8 @@ pub fn mean_to_eccentric(
         // First derivative: f'(E) = 1 - e*cos(E)
         let df = 1.0 - ecc * cos_e;
 
-        // Second-order correction (NASA algorithm)
-        let d_prime = df + 0.5 * f * ecc * sin_e / df;
+        // Second-order (Halley) correction: f'' = e*sin(E)
+        let d_prime = df - 0.5 * f * ecc * sin_e / df;
 
         let delta = f / d_prime;
         ecc_anomaly -= delta;
@@ -596,6 +596,8 @@ pub fn hyperbolic_asymptote_angle(e: Eccentricity) -> Angle {
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
+
     use super::*;
 
     const EPSILON: f64 = 1e-9;
@@ -620,6 +622,21 @@ mod tests {
         let ecc_back = mean_to_eccentric(mean, e, None, None).unwrap();
 
         assert!((ecc.as_f64() - ecc_back.as_f64()).abs() < EPSILON);
+    }
+
+    // Negative mean anomalies at high eccentricity, where the solver used to diverge
+    #[rstest]
+    #[case(-0.1, 0.95)]
+    #[case(-0.5, 0.9)]
+    #[case(-1.0, 0.85)]
+    #[case(-2.0, 0.99)]
+    fn test_keplers_equation_high_eccentricity(#[case] mean: f64, #[case] e: f64) {
+        let e = Eccentricity::try_new(e).unwrap();
+
+        let ecc = mean_to_eccentric(Angle::new(mean), e, None, None).unwrap();
+
+        let residual = ecc.as_f64() - e.as_f64() * ecc.sin() - mean;
+        assert!(residual.abs() < EPSILON, "residual: {residual}");
     }
 
     #[test]
