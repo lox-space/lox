@@ -6,7 +6,8 @@ SPDX-License-Identifier: MPL-2.0
 
 # lox-units
 
-Physical units for the [Lox](https://github.com/lox-space/lox) ecosystem, including distance,
-velocity, angle, and gravitational parameter types.
+> **Deprecated:** this crate is no longer maintained and will not receive further releases.
+> Depend on [`lox-core`](https://crates.io/crates/lox-core) and use `lox_core::units` instead,
+> which this crate merely re-exports.
 
 Part of [Lox – Oxidized Astrodynamics](https://github.com/lox-space/lox).
