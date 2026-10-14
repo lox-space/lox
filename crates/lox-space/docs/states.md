@@ -83,6 +83,7 @@ sso = lox.Keplerian.sso(
 
 # Work with trajectories
 trajectory = lox.Trajectory([state1, state2, state3])
+# Raises ValueError for times outside the span of the states
 interpolated = trajectory.at(t + lox.TimeDelta(100))
 ```
 

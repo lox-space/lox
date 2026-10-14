@@ -28,7 +28,7 @@ use lox_time::intervals::TimeInterval;
 use thiserror::Error;
 
 use crate::orbits::{CartesianOrbit, KeplerianOrbit, Trajectory, TrajectoryError};
-use crate::propagators::Propagator;
+use crate::propagators::{Propagator, step_times};
 
 use super::kozai::{self, BodyConstants, SecularRates};
 
@@ -175,8 +175,8 @@ where
     }
 
     fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<O, R>, J4Error> {
-        let states: Result<Vec<_>, _> = interval
-            .step_by(self.step)
+        let states: Result<Vec<_>, _> = step_times(interval, self.step)
+            .into_iter()
             .map(|t| self.state_at(t))
             .collect();
         Ok(Trajectory::try_new(states?)?)

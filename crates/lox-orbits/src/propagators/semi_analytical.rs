@@ -11,7 +11,7 @@ use thiserror::Error;
 use lox_bodies::{CoordinateOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
-use crate::propagators::{Propagator, stumpff};
+use crate::propagators::{Propagator, step_times, stumpff};
 use lox_frames::{
     Frame, NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial,
 };
@@ -209,8 +209,8 @@ where
 
     fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<O, R>, ValladoError> {
         let step = self.step.unwrap_or(TimeDelta::from_seconds(1));
-        let states = interval
-            .step_by(step)
+        let states = step_times(interval, step)
+            .into_iter()
             .map(|t| self.state_at(t))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(Trajectory::try_new(states)?)
@@ -309,7 +309,7 @@ mod tests {
         let t_end = time + period;
         let interval = Interval::new(time, t_end);
         let trajectory = Vallado::new(s0).propagate(interval.into_dynamic()).unwrap();
-        let s1 = trajectory.at_delta(period);
+        let s1 = trajectory.at_delta(period).unwrap();
         let k1 = s1.to_keplerian();
 
         assert_approx_eq!(
