@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn test_poly_array_derivative_coefficients() {
-        // Matches the derivative evaluation in `Series`: d/dx (1 + 2x + 3x² + 4x³)
+        // d/dx (1 + 2x + 3x² + 4x³)
         let c = [1.0, 2.0, 3.0, 4.0];
         let x = 1.5;
         let expected = 2.0 + 6.0 * x + 12.0 * x * x;
