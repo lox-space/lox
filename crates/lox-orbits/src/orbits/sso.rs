@@ -5,8 +5,8 @@
 use lox_bodies::{Earth, PointMass, Spheroid};
 use lox_core::anomalies::TrueAnomaly;
 use lox_core::elements::{
-    ArgumentOfPeriapsis, ArgumentOfPeriapsisError, Eccentricity, Inclination, InclinationError,
-    Keplerian, LongitudeOfAscendingNode, NegativeEccentricityError, SemiMajorAxis,
+    ArgumentOfPeriapsis, ArgumentOfPeriapsisError, Eccentricity, EccentricityError, Inclination,
+    InclinationError, Keplerian, LongitudeOfAscendingNode, SemiMajorAxis,
 };
 use lox_core::glam::Azimuth;
 use lox_core::math::float::mul_add_relaxed;
@@ -49,7 +49,7 @@ pub enum SsoError {
     Inclination(#[from] InclinationError),
     /// Negative eccentricity value.
     #[error(transparent)]
-    Eccentricity(#[from] NegativeEccentricityError),
+    Eccentricity(#[from] EccentricityError),
     /// Invalid argument of periapsis value.
     #[error(transparent)]
     ArgumentOfPeriapsis(#[from] ArgumentOfPeriapsisError),
@@ -243,7 +243,7 @@ impl KeplerianOrbit<Earth, Icrf> {
 pub struct SsoBuilder<'a, P: TryOffset<TimeScale, Ut1> + TryOffset<TimeScale, Tdb>> {
     time: Time,
     semi_major_axis: Option<SemiMajorAxis>,
-    eccentricity: Result<Eccentricity, NegativeEccentricityError>,
+    eccentricity: Result<Eccentricity, EccentricityError>,
     inclination: Option<Result<Inclination, InclinationError>>,
     ltan: Result<LocalTimeOfNode, TimeOfDayError>,
     argument_of_periapsis: Result<ArgumentOfPeriapsis, ArgumentOfPeriapsisError>,
