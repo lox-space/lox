@@ -319,8 +319,7 @@ impl Angle {
         Self(self.0 % TAU)
     }
 
-    /// Returns a new angle that is normalized to a (-π, π) interval
-    /// centered around `center`.
+    /// Returns a new angle that is normalized to the `[center - π, center + π)` interval.
     pub const fn normalize_two_pi(&self, center: Self) -> Self {
         // Inline const-compatible floor (f64::floor isn't const in no_std).
         // The quotient is bounded by the angle range so the `as i64` cast is safe.

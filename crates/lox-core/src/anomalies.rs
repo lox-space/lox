@@ -8,14 +8,17 @@
 //! for all conic section orbit types: circular, elliptic, parabolic, and hyperbolic.
 //!
 //! # Conventions
-//! - All angles use the [`Angle`] type, normalized to (-π, π] unless otherwise specified
+//! - All angles use the [`Angle`] type
+//! - Conversions do not normalize: the result stays in the same revolution as the input, so
+//!   each conversion is continuous and monotonic across revolutions. Use
+//!   [`Angle::normalize_two_pi`] to reduce an anomaly to a single revolution
 //! - Eccentricity uses the [`Eccentricity`] type which validates e >= 0
 //! - Orbit types: circular (e≈0), elliptic (0<e<1), parabolic (e≈1), hyperbolic (e>1)
 //! - True anomaly (ν): angle from periapsis to the position vector
-//! - Eccentric anomaly (E): auxiliary angle for elliptic orbits, range (-π, π]
+//! - Eccentric anomaly (E): auxiliary angle for elliptic orbits
 //! - Hyperbolic anomaly (F): hyperbolic angle for hyperbolic orbits (unbounded)
 //! - Parabolic anomaly (D): tan(ν/2) for parabolic orbits (unbounded)
-//! - Mean anomaly (M): time-like parameter proportional to time since periapsis, range (-π, π]
+//! - Mean anomaly (M): time-like parameter proportional to time since periapsis
 //!
 //! # Eccentric Anomaly Convention
 //! [`EccentricAnomaly`] uses an overloaded convention:
@@ -26,13 +29,16 @@
 use lox_approx::ApproxEq;
 use thiserror::Error;
 
-use crate::math::float::{abs, atan, atanh, cbrt, cos, cosh, powi, sin, sinh, sqrt, tan, tanh};
+use crate::math::float::{
+    abs, atan, atanh, cbrt, cos, cosh, powi, round, sin, sinh, sqrt, tan, tanh,
+};
 use crate::{
     elements::{Eccentricity, OrbitType},
     units::{Angle, AngleUnits},
 };
 
 use core::{
+    f64::consts::TAU,
     fmt::Display,
     ops::{Add, Neg, Sub},
 };
@@ -255,16 +261,13 @@ pub type Result<T> = core::result::Result<T, AnomalyError>;
 /// * `e` - Eccentricity (should be elliptic: 0 < e < 1)
 ///
 /// # Returns
-/// Eccentric anomaly, normalized to (-π, π]
+/// Eccentric anomaly, in the same revolution as `nu`
 pub fn true_to_eccentric(nu: Angle, e: Eccentricity) -> Angle {
     let ecc = e.as_f64();
     // Half-angle formula (most numerically stable)
     let factor = sqrt((1.0_f64 - ecc) / (1.0_f64 + ecc));
-    let ecc_half = Angle::from_atan(factor * tan(nu.as_f64() / 2.0));
-    let ecc_angle = Angle::new(2.0 * ecc_half.as_f64());
-
-    // Normalize to (-π, π]
-    ecc_angle.normalize_two_pi(Angle::ZERO)
+    let principal = 2.0 * atan(factor * tan(nu.as_f64() / 2.0));
+    Angle::new(same_revolution(principal, nu.as_f64()))
 }
 
 /// Convert eccentric anomaly to true anomaly for elliptic orbits.
@@ -276,16 +279,21 @@ pub fn true_to_eccentric(nu: Angle, e: Eccentricity) -> Angle {
 /// * `e` - Eccentricity (should be elliptic: 0 < e < 1)
 ///
 /// # Returns
-/// True anomaly, normalized to (-π, π]
+/// True anomaly, in the same revolution as `ecc`
 pub fn eccentric_to_true(ecc: Angle, e: Eccentricity) -> Angle {
     let ecc_val = e.as_f64();
     // Half-angle formula
     let factor = sqrt((1.0_f64 + ecc_val) / (1.0_f64 - ecc_val));
-    let nu_half = Angle::from_atan(factor * tan(ecc.as_f64() / 2.0));
-    let nu = Angle::new(2.0 * nu_half.as_f64());
+    let principal = 2.0 * atan(factor * tan(ecc.as_f64() / 2.0));
+    Angle::new(same_revolution(principal, ecc.as_f64()))
+}
 
-    // Normalize to (-π, π]
-    nu.normalize_two_pi(Angle::ZERO)
+/// Shifts `principal` by whole revolutions to lie within half a revolution of `reference`.
+///
+/// True and eccentric anomaly always differ by less than half a revolution, so this recovers
+/// the revolution of the input from the principal value of the half-angle formula.
+fn same_revolution(principal: f64, reference: f64) -> f64 {
+    principal + TAU * round((reference - principal) / TAU)
 }
 
 /// Convert eccentric anomaly to mean anomaly for elliptic orbits.
@@ -297,10 +305,9 @@ pub fn eccentric_to_true(ecc: Angle, e: Eccentricity) -> Angle {
 /// * `e` - Eccentricity (should be elliptic: 0 < e < 1)
 ///
 /// # Returns
-/// Mean anomaly, normalized to (-π, π]
+/// Mean anomaly, in the same revolution as `ecc`
 pub fn eccentric_to_mean(ecc: Angle, e: Eccentricity) -> Angle {
-    let mean = Angle::new(ecc.as_f64() - e.as_f64() * ecc.sin());
-    mean.normalize_two_pi(Angle::ZERO)
+    Angle::new(ecc.as_f64() - e.as_f64() * ecc.sin())
 }
 
 /// Convert mean anomaly to eccentric anomaly for elliptic orbits.
@@ -314,7 +321,7 @@ pub fn eccentric_to_mean(ecc: Angle, e: Eccentricity) -> Angle {
 /// * `max_iter` - Maximum iterations (default: 50)
 ///
 /// # Returns
-/// Eccentric anomaly
+/// Eccentric anomaly, in the same revolution as `mean`
 pub fn mean_to_eccentric(
     mean: Angle,
     e: Eccentricity,
@@ -325,8 +332,9 @@ pub fn mean_to_eccentric(
     let max_iterations = max_iter.unwrap_or(50);
     let ecc = e.as_f64();
 
-    // Normalize mean anomaly to (-π, π]
+    // Solve within a single revolution [-π, π) and add the whole revolutions back afterwards
     let m = mean.normalize_two_pi(Angle::ZERO).as_f64();
+    let revolutions = mean.as_f64() - m;
 
     // Initial guess (NASA approach)
     let mut ecc_anomaly = if ecc < 0.8 {
@@ -355,7 +363,7 @@ pub fn mean_to_eccentric(
         ecc_anomaly -= delta;
 
         if abs(delta) < tol {
-            return Ok(Angle::new(ecc_anomaly).normalize_two_pi(Angle::ZERO));
+            return Ok(Angle::new(ecc_anomaly + revolutions));
         }
     }
 
@@ -640,6 +648,32 @@ mod tests {
     }
 
     #[test]
+    fn test_eccentric_to_mean_does_not_wrap_at_pi() {
+        let e = Eccentricity::try_new(0.3).unwrap();
+
+        let mean = eccentric_to_mean(Angle::PI, e);
+
+        assert!((mean.as_f64() - Angle::PI.as_f64()).abs() < EPSILON);
+    }
+
+    #[test]
+    fn test_conversions_keep_revolution() {
+        let e = Eccentricity::try_new(0.3).unwrap();
+        let rev = Angle::new(TAU);
+        let nu = Angle::new(1.0);
+
+        let ecc = true_to_eccentric(nu, e);
+        let mean = eccentric_to_mean(ecc, e);
+
+        let close = |a: Angle, b: Angle| (a - b).as_f64().abs() < EPSILON;
+        assert!(close(true_to_eccentric(nu + rev, e), ecc + rev));
+        assert!(close(eccentric_to_true(ecc - rev, e), nu - rev));
+        assert!(close(eccentric_to_mean(ecc + rev, e), mean + rev));
+        let ecc_back = mean_to_eccentric(mean + rev, e, None, None).unwrap();
+        assert!(close(ecc_back, ecc + rev));
+    }
+
+    #[test]
     fn test_parabolic_round_trip() {
         let nu = Angle::new(1.0);
 
@@ -699,10 +733,9 @@ mod tests {
         let nu = Angle::PI;
 
         let ecc = true_to_eccentric(nu, e);
-        // At apoapsis, eccentric anomaly should also be π (or -π, which is equivalent)
-        // The normalize_two_pi function normalizes to (-π, π], so π stays as π, but -π is also valid
-        let diff = (ecc.as_f64().abs() - Angle::PI.as_f64()).abs();
-        assert!(diff < EPSILON, "Expected π or -π, got {}", ecc.as_f64());
+        // At apoapsis, eccentric anomaly should also be π
+        let diff = (ecc.as_f64() - Angle::PI.as_f64()).abs();
+        assert!(diff < EPSILON, "Expected π, got {}", ecc.as_f64());
     }
 }
 
