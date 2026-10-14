@@ -18,7 +18,7 @@ use lox_time::time_scales::Tai;
 use lox_time::utc::UtcError;
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
-use crate::propagators::Propagator;
+use crate::propagators::{Propagator, step_times};
 
 /// Errors that can occur during SGP4 propagation.
 #[derive(Debug, Error)]
@@ -102,8 +102,8 @@ impl Propagator<Earth> for Sgp4 {
         let interval =
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
         let step = self.step.unwrap_or(TimeDelta::from_seconds(60));
-        let states = interval
-            .step_by(step)
+        let states = step_times(interval, step)
+            .into_iter()
             .map(|t| self.state_at(t))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(Trajectory::try_new(states)?)

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
-use crate::propagators::Propagator;
+use crate::propagators::{Propagator, step_times};
 use lox_bodies::CoordinateOrigin;
 use lox_core::coords::{Cartesian, Ellipsoid, LonLatAlt};
 use lox_core::glam::{DMat3, DVec3};
@@ -376,8 +376,8 @@ where
     fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<R::Origin, R>, Self::Error> {
         let pos = self.location.body_fixed_position();
         let step = self.step.unwrap_or(TimeDelta::from_seconds(60));
-        let states: Vec<_> = interval
-            .step_by(step)
+        let states: Vec<_> = step_times(interval, step)
+            .into_iter()
             .map(|t| {
                 CartesianOrbit::new(
                     Cartesian::from_vecs(pos, DVec3::ZERO),
