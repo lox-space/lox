@@ -31,6 +31,7 @@ path = [
   "**/Cargo.lock",
   "**/uv.lock",
   "**/proptest-regressions/**",
+  "**/*.proptest-regressions",
 ]
 SPDX-FileCopyrightText = "NONE"
 SPDX-License-Identifier = "CC0-1.0"

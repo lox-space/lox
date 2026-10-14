@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 98dec07d02fe47f13479b87dfecfdb44559e57085612adcb8be31a2b993dd15b # shrinks to ecc = Eccentricity(1e-6), angle = Angle(23.742385088039878)
+cc 688de7cf6a56ce5811d3d4d8005a9385b022a63cabeb7e824d69c7d842322065 # shrinks to ecc = Eccentricity(1e-6), angle = Angle(46.37347599797579), step = 0.9587969825247497
+cc 014482c9fc3b594bdd0088542bfc516a020896ed51b3c2ddd1036bcc4ee430e6 # shrinks to ecc = Eccentricity(0.9899601707996306), angle = Angle(30.072321262406504)

@@ -36,10 +36,6 @@ fn hyperbolic_ecc_and_angle() -> impl Strategy<Value = (Eccentricity, Angle)> {
     })
 }
 
-// ============================================================================
-// Elliptic orbit property tests
-// ============================================================================
-
 proptest! {
     #[test]
     fn elliptic_eccentric_to_true_to_eccentric_roundtrip(
@@ -141,9 +137,84 @@ proptest! {
     }
 }
 
-// ============================================================================
-// Circular orbit property tests
-// ============================================================================
+// Strategy for generating angles spanning several revolutions in both directions
+fn multi_rev_angle_rad() -> impl Strategy<Value = Angle> {
+    (-10.0 * std::f64::consts::TAU..10.0 * std::f64::consts::TAU).prop_map(|rad| rad.rad())
+}
+
+proptest! {
+    #[test]
+    fn elliptic_multi_rev_eccentric_to_true_to_eccentric_roundtrip(
+        ecc in elliptic_eccentricity(),
+        angle in multi_rev_angle_rad()
+    ) {
+        let eccentric = EccentricAnomaly::new(angle);
+        let back = eccentric.to_true(ecc).to_eccentric(ecc).expect("conversion should succeed");
+
+        prop_assert!(
+            approx_eq!(eccentric.as_f64(), back.as_f64(), atol <= 1e-9),
+            "Original: {}, Roundtrip: {}", eccentric, back
+        );
+    }
+
+    #[test]
+    fn elliptic_multi_rev_true_to_eccentric_to_true_roundtrip(
+        ecc in elliptic_eccentricity(),
+        angle in multi_rev_angle_rad()
+    ) {
+        let true_anom = TrueAnomaly::new(angle);
+        let back = true_anom.to_eccentric(ecc).expect("conversion should succeed").to_true(ecc);
+
+        prop_assert!(
+            approx_eq!(true_anom.as_f64(), back.as_f64(), atol <= 1e-9),
+            "Original: {}, Roundtrip: {}", true_anom, back
+        );
+    }
+
+    #[test]
+    fn elliptic_multi_rev_eccentric_to_mean_to_eccentric_roundtrip(
+        ecc in elliptic_eccentricity(),
+        angle in multi_rev_angle_rad()
+    ) {
+        let eccentric = EccentricAnomaly::new(angle);
+        let back = eccentric.to_mean(ecc).to_eccentric(ecc).expect("solver should converge");
+
+        prop_assert!(
+            approx_eq!(eccentric.as_f64(), back.as_f64(), atol <= 1e-9),
+            "Original: {}, Roundtrip: {}", eccentric, back
+        );
+    }
+
+    #[test]
+    fn elliptic_multi_rev_mean_to_true_to_mean_roundtrip(
+        ecc in elliptic_eccentricity(),
+        angle in multi_rev_angle_rad()
+    ) {
+        let mean_anom = MeanAnomaly::new(angle);
+        let back = mean_anom
+            .to_true(ecc)
+            .expect("solver should converge")
+            .to_mean(ecc)
+            .expect("conversion should succeed");
+
+        prop_assert!(
+            approx_eq!(mean_anom.as_f64(), back.as_f64(), atol <= 1e-9),
+            "Original: {}, Roundtrip: {}", mean_anom, back
+        );
+    }
+
+    #[test]
+    fn elliptic_eccentric_to_mean_is_monotonic(
+        ecc in elliptic_eccentricity(),
+        angle in multi_rev_angle_rad(),
+        step in 1e-3..1.0_f64
+    ) {
+        let m0 = EccentricAnomaly::new(angle).to_mean(ecc);
+        let m1 = EccentricAnomaly::new(angle + step.rad()).to_mean(ecc);
+
+        prop_assert!(m1.as_f64() > m0.as_f64(), "M({}) = {} >= M({}) = {}", angle, m0, angle + step.rad(), m1);
+    }
+}
 
 proptest! {
     #[test]
@@ -170,10 +241,6 @@ proptest! {
         );
     }
 }
-
-// ============================================================================
-// Hyperbolic orbit property tests
-// ============================================================================
 
 proptest! {
     #[test]
@@ -236,10 +303,6 @@ proptest! {
         }
     }
 }
-
-// ============================================================================
-// Parabolic orbit property tests
-// ============================================================================
 
 proptest! {
     #[test]
