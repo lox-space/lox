@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.42](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.41...lox-orbits-v0.1.0-alpha.42) - 2026-10-14
+
+### Fixed
+
+- *(lox-core)* [**breaking**] reject NaN and infinity in element and geodetic validators
+
+### Other
+
+- repair changelogs broken by SPDX headers
+
 ## [0.1.0-alpha.41](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.40...lox-orbits-v0.1.0-alpha.41) - 2026-10-14
 
 ### Added
