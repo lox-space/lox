@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.17](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.16...lox-core-v0.1.0-alpha.17) - 2026-10-23
+
+### Fixed
+
+- *(lox-core)* correct Halley step and initial guess in Kepler solver
+- *(lox-core)* [**breaking**] reject NaN and infinity in element and geodetic validators
+
+### Other
+
+- *(lox-core)* [**breaking**] keep revolution in anomaly conversions
+- *(lox-core)* [**breaking**] replace generic Anomaly<K> with plain anomaly newtypes
+- *(core)* [**breaking**] remove primitive From impls for TimeDelta
+
 ## [0.1.0-alpha.16](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.15...lox-core-v0.1.0-alpha.16) - 2026-10-14
 
 ### Added
