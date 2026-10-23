@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.52](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.51...lox-space-v0.1.0-alpha.52) - 2026-10-23
+
+### Other
+
+- *(lox-space)* add trajectory interpolation benchmarks
+- repair changelogs broken by SPDX headers
+
 ## [0.1.0-alpha.51](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.50...lox-space-v0.1.0-alpha.51) - 2026-10-14
 
 ### Added
