@@ -1604,6 +1604,9 @@ class Trajectory:
     def reference_frame(self) -> Frame:
         """Return the reference frame of this trajectory."""
         ...
+    def interval(self) -> Interval:
+        """Return the interval from the first to the last state."""
+        ...
     def to_numpy(self) -> np.ndarray:
         """Export trajectory to a numpy array with columns [t(s), x(m), y(m), z(m), vx(m/s), vy(m/s), vz(m/s)]."""
         ...
@@ -1615,6 +1618,9 @@ class Trajectory:
 
         Args:
             time: Either a Time (absolute) or TimeDelta (relative to trajectory start).
+
+        Raises:
+            ValueError: If the time lies outside the trajectory.
         """
         ...
     def to_frame(self, frame: str | Frame, provider: EOPProvider | None = None) -> Self:

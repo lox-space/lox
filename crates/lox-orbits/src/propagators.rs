@@ -2,10 +2,13 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+use std::ops::{Add, Sub};
+
 use lox_bodies::CoordinateOrigin;
 use lox_frames::ReferenceFrame;
 use lox_time::Time;
-use lox_time::intervals::TimeInterval;
+use lox_time::deltas::TimeDelta;
+use lox_time::intervals::{Interval, TimeInterval};
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
 
@@ -66,6 +69,10 @@ where
 /// pre-computed trajectory.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "held once per spacecraft, never in bulk"
+)]
 pub enum OrbitSource {
     /// SGP4 propagator initialized from a TLE.
     Sgp4(Sgp4),
@@ -116,6 +123,21 @@ impl OrbitSource {
     }
 }
 
+/// Returns the times from the start of `interval` in steps of `step`, ending
+/// exactly at the end of the interval.
+///
+/// The last step is shorter if the interval is not a multiple of `step`.
+pub(crate) fn step_times<T>(interval: Interval<T>, step: TimeDelta) -> Vec<T>
+where
+    T: Copy + Ord + Add<TimeDelta, Output = T> + Sub<Output = TimeDelta>,
+{
+    let mut times: Vec<T> = interval.step_by(step).collect();
+    if times.last() != Some(&interval.end()) {
+        times.push(interval.end());
+    }
+    times
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,5 +164,22 @@ mod tests {
         let source = OrbitSource::Trajectory(traj.clone());
         let result = source.propagate(interval).unwrap();
         assert_eq!(result.states().len(), traj.states().len());
+    }
+
+    #[test]
+    fn test_step_times_ends_at_interval_end() {
+        let start = Time::j2000(TimeScale::Tai);
+        let step = TimeDelta::from_seconds(60);
+
+        let partial = TimeInterval::new(start, start + TimeDelta::from_seconds(150));
+        let times = step_times(partial, step);
+        let offsets: Vec<_> = times.iter().map(|&t| t - start).collect();
+        assert_eq!(
+            offsets,
+            [0, 60, 120, 150].map(TimeDelta::from_seconds).to_vec()
+        );
+
+        let exact = TimeInterval::new(start, start + TimeDelta::from_seconds(120));
+        assert_eq!(step_times(exact, step).len(), 3);
     }
 }

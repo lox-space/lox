@@ -5,8 +5,9 @@
 use std::num::ParseFloatError;
 
 use lox_bodies::{CoordinateOrigin, Origin};
-use lox_core::coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian};
+use lox_core::coords::Cartesian;
 use lox_core::glam::DVec3;
+use lox_core::trajectory::{HermiteTrajectory, TimeAxisError};
 use lox_ephem::Ephemeris;
 use lox_frames::{Frame, Icrf, ReferenceFrame, rotations::TryRotation, traits::frame_key};
 use lox_time::{Time, deltas::TimeDelta, time_scales::TimeScale, utc::Utc};
@@ -29,7 +30,7 @@ pub struct Trajectory<O: CoordinateOrigin = Origin, R: ReferenceFrame = Frame> {
     epoch: Time,
     origin: O,
     frame: R,
-    data: CartesianTrajectory,
+    data: HermiteTrajectory,
 }
 
 impl<O, R> Trajectory<O, R>
@@ -37,33 +38,30 @@ where
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
-    /// Constructs a trajectory from an iterator of Cartesian orbital states.
+    /// Constructs a trajectory from Cartesian orbital states.
     ///
-    /// # Panics
+    /// The origin and reference frame are taken from the first state.
     ///
-    /// Panics if the iterator yields fewer than 2 states. The Hermite cubic
-    /// spline requires at least two knots; callers responsible for that
-    /// invariant should use [`Self::try_new`] for a fallible variant.
-    pub fn new(states: impl IntoIterator<Item = CartesianOrbit<O, R>>) -> Self {
+    /// # Errors
+    ///
+    /// Returns an error if fewer than 2 states are provided or the states are
+    /// not in strictly increasing time order.
+    pub fn try_new(
+        states: impl IntoIterator<Item = CartesianOrbit<O, R>>,
+    ) -> Result<Self, TrajectoryError> {
         let mut states = states.into_iter().peekable();
-        let first = states.peek().unwrap();
+        let first = states.peek().ok_or(TimeAxisError::TooFewKnots(0))?;
         let epoch = first.time();
         let origin = first.origin();
         let frame = first.reference_frame();
-        let data = states
-            .map(|orb| {
-                let time = orb.time() - epoch;
-                TimeStampedCartesian {
-                    time,
-                    state: orb.state(),
-                }
-            })
-            .collect();
-        Self::from_parts(epoch, origin, frame, data)
+        let data = HermiteTrajectory::try_new(states.map(|orb| (orb.time() - epoch, orb.state())))?;
+        Ok(Self::from_parts(epoch, origin, frame, data))
     }
 
     /// Constructs a trajectory from its constituent parts.
-    pub fn from_parts(epoch: Time, origin: O, frame: R, data: CartesianTrajectory) -> Self {
+    ///
+    /// `epoch` is the absolute time of the first knot of `data`.
+    pub fn from_parts(epoch: Time, origin: O, frame: R, data: HermiteTrajectory) -> Self {
         Self {
             epoch,
             origin,
@@ -73,30 +71,45 @@ where
     }
 
     /// Decomposes this trajectory into its constituent parts.
-    pub fn into_parts(self) -> (Time, O, R, CartesianTrajectory) {
+    pub fn into_parts(self) -> (Time, O, R, HermiteTrajectory) {
         (self.epoch, self.origin, self.frame, self.data)
     }
 
-    /// Constructs a trajectory, returning an error if fewer than 2 states are provided.
-    pub fn try_new(
-        states: impl IntoIterator<Item = CartesianOrbit<O, R>>,
-    ) -> Result<Self, TrajectoryError> {
-        let mut iter = states.into_iter();
-        let first = iter.next().ok_or(TrajectoryError::InsufficientStates(0))?;
-        let second = iter.next().ok_or(TrajectoryError::InsufficientStates(1))?;
-        Ok(Self::new([first, second].into_iter().chain(iter)))
-    }
-
     /// Interpolates the trajectory at the given absolute time.
-    pub fn at(&self, time: Time) -> CartesianOrbit<O, R> {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TrajectoryError::OutOfRange`] if `time` lies outside the
+    /// trajectory.
+    pub fn at(&self, time: Time) -> Result<CartesianOrbit<O, R>, TrajectoryError> {
         self.at_delta(time - self.epoch)
     }
 
     /// Interpolates the trajectory at the given time delta from the trajectory start.
-    pub fn at_delta(&self, dt: TimeDelta) -> CartesianOrbit<O, R> {
-        let t = dt.to_seconds().to_f64();
-        let state = self.data.at(t);
-        Orbit::from_state(state, self.epoch + dt, self.origin, self.frame)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TrajectoryError::OutOfRange`] if `dt` lies outside the
+    /// trajectory.
+    pub fn at_delta(&self, dt: TimeDelta) -> Result<CartesianOrbit<O, R>, TrajectoryError> {
+        let state = self
+            .data
+            .at(dt.to_seconds().to_f64())
+            .ok_or_else(|| self.out_of_range(self.epoch + dt))?;
+        Ok(Orbit::from_state(
+            state,
+            self.epoch + dt,
+            self.origin,
+            self.frame,
+        ))
+    }
+
+    fn out_of_range(&self, time: Time) -> TrajectoryError {
+        TrajectoryError::OutOfRange {
+            time,
+            start: self.start_time(),
+            end: self.end_time(),
+        }
     }
 
     /// Transforms the entire trajectory into a different reference frame.
@@ -114,26 +127,13 @@ where
             ));
         }
 
-        let data: Result<CartesianTrajectory, P::Error> = self
-            .data
-            .into_iter()
-            .map(|TimeStampedCartesian { time, state }| {
-                let t = self.epoch + time;
-                provider
-                    .try_rotation(self.frame, frame, t)
-                    .map(|rot| TimeStampedCartesian {
-                        time,
-                        state: rot * state,
-                    })
-            })
-            .collect();
+        let data = self.data.try_map_states(|dt, state| {
+            provider
+                .try_rotation(self.frame, frame, self.epoch + dt)
+                .map(|rot| rot * state)
+        })?;
 
-        Ok(Trajectory::from_parts(
-            self.epoch,
-            self.origin,
-            frame,
-            data?,
-        ))
+        Ok(Trajectory::from_parts(self.epoch, self.origin, frame, data))
     }
 
     /// Returns the central body origin.
@@ -146,45 +146,51 @@ where
         self.frame
     }
 
-    /// Returns the start time of the trajectory.
+    /// Returns the time of the first state.
     pub fn start_time(&self) -> Time {
         self.epoch
     }
 
-    /// Returns the end time of the trajectory.
+    /// Returns the time of the last state.
     pub fn end_time(&self) -> Time {
-        let time_steps = self.data.time_steps();
-        let last = time_steps.last().copied().unwrap_or(0.0);
-        self.epoch + TimeDelta::from_seconds_f64(last)
+        self.epoch + self.data.axis().span()
     }
 
-    /// Returns the absolute times of all data points in the trajectory.
+    /// Returns the interval from the first to the last state.
+    pub fn interval(&self) -> TimeInterval {
+        TimeInterval::from_duration(self.epoch, self.data.axis().span())
+    }
+
+    /// Returns the times of all states.
     pub fn times(&self) -> Vec<Time> {
-        let time_steps = self.data.time_steps();
-        time_steps
+        self.data
+            .axis()
+            .knots()
             .iter()
-            .map(|&t| self.epoch + TimeDelta::from_seconds_f64(t))
+            .map(|&dt| self.epoch + dt)
             .collect()
     }
 
-    /// Returns all orbital states at the original data points.
+    /// Returns all states.
     pub fn states(&self) -> Vec<CartesianOrbit<O, R>> {
         self.data
-            .clone()
-            .into_iter()
-            .map(|TimeStampedCartesian { time, state }| {
-                Orbit::from_state(state, self.epoch + time, self.origin, self.frame)
-            })
+            .iter()
+            .map(|(dt, state)| Orbit::from_state(state, self.epoch + dt, self.origin, self.frame))
             .collect()
     }
 
-    /// Returns the trajectory as a vector of `[t, x, y, z, vx, vy, vz]` rows.
+    /// Returns the trajectory as `[t, x, y, z, vx, vy, vz]` rows, with `t` in
+    /// seconds since the first state.
     pub fn to_vec(&self) -> Vec<Vec<f64>> {
-        let time_steps = self.data.time_steps();
-        let (x, y, z) = (self.data.x(), self.data.y(), self.data.z());
-        let (vx, vy, vz) = (self.data.vx(), self.data.vy(), self.data.vz());
-        (0..time_steps.len())
-            .map(|i| vec![time_steps[i], x[i], y[i], z[i], vx[i], vy[i], vz[i]])
+        self.data
+            .axis()
+            .seconds()
+            .iter()
+            .zip(self.data.states())
+            .map(|(&t, s)| {
+                let (p, v) = (s.position(), s.velocity());
+                vec![t, p.x, p.y, p.z, v.x, v.y, v.z]
+            })
             .collect()
     }
 }
@@ -214,28 +220,38 @@ where
     type Error = TrajectoryError;
 
     fn state_at(&self, time: Time) -> Result<CartesianOrbit<O, R>, TrajectoryError> {
-        Ok(self.at(time))
+        self.at(time)
     }
 
     fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<O, R>, Self::Error> {
         let mut states = Vec::new();
-        states.push(self.at(interval.start()));
+        states.push(self.at(interval.start())?);
         for s in self.states() {
             if s.time() > interval.start() && s.time() < interval.end() {
                 states.push(s);
             }
         }
-        states.push(self.at(interval.end()));
+        states.push(self.at(interval.end())?);
         Trajectory::try_new(states)
     }
 }
 
-/// Errors that can occur when constructing or parsing a trajectory.
+/// Errors that can occur when constructing, evaluating or parsing a trajectory.
 #[derive(Clone, Debug, Error, PartialEq)]
 pub enum TrajectoryError {
-    /// Too few states were provided.
-    #[error("`states` must have at least 2 elements but had {0}")]
-    InsufficientStates(usize),
+    /// The states do not form a valid time axis.
+    #[error(transparent)]
+    InvalidTimeAxis(#[from] TimeAxisError),
+    /// The requested time lies outside the trajectory.
+    #[error("{time} is outside the trajectory from {start} to {end}")]
+    OutOfRange {
+        /// The requested time.
+        time: Time,
+        /// The time of the first state.
+        start: Time,
+        /// The time of the last state.
+        end: Time,
+    },
     /// An error occurred while parsing CSV data.
     #[error("CSV error: {0}")]
     CsvError(String),
@@ -285,7 +301,7 @@ where
                 })
             })
             .collect();
-        Ok(Trajectory::new(states?))
+        Ok(Trajectory::try_new(states?)?)
     }
 }
 
@@ -296,11 +312,7 @@ where
 {
     /// Parses a trajectory from CSV data with columns `[time, x, y, z, vx, vy, vz]` in km and km/s.
     pub fn from_csv(csv: &str, origin: O, frame: R) -> Result<Self, TrajectoryError> {
-        let states = parse_csv_states(csv, origin, frame)?;
-        if states.len() < 2 {
-            return Err(TrajectoryError::InsufficientStates(states.len()));
-        }
-        Ok(Trajectory::new(states))
+        Trajectory::try_new(parse_csv_states(csv, origin, frame)?)
     }
 }
 
@@ -312,19 +324,6 @@ impl Trajectory {
         frame: Frame,
     ) -> Result<Trajectory, TrajectoryError> {
         Ok(Trajectory::from_csv(csv, origin, frame)?.into_dynamic())
-    }
-}
-
-impl<O, R> FromIterator<CartesianOrbit<O, R>> for Trajectory<O, R>
-where
-    O: CoordinateOrigin + Copy,
-    R: ReferenceFrame + Copy,
-{
-    /// Delegates to [`Trajectory::new`] and inherits its panic on fewer
-    /// than 2 states. Callers without that guarantee should collect into
-    /// a `Vec` first and use [`Trajectory::try_new`].
-    fn from_iter<U: IntoIterator<Item = CartesianOrbit<O, R>>>(iter: U) -> Self {
-        Self::new(iter)
     }
 }
 
@@ -412,7 +411,7 @@ mod tests {
             Earth,
             Icrf,
         );
-        Trajectory::new(vec![s0, s1, s2])
+        Trajectory::try_new(vec![s0, s1, s2]).unwrap()
     }
 
     #[test]
@@ -428,6 +427,17 @@ mod tests {
             TimeScale::Tdb
         );
         assert_eq!(dynamic_traj.states().first().unwrap().position(), first_pos);
+    }
+
+    #[test]
+    fn test_trajectory_interval() {
+        let traj = sample_trajectory();
+
+        let interval = traj.interval();
+
+        assert_eq!(interval.start(), traj.start_time());
+        assert_eq!(interval.end(), traj.end_time());
+        assert_eq!(interval.duration(), TimeDelta::from_seconds(120));
     }
 
     #[test]

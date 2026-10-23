@@ -14,10 +14,10 @@ use lox_bodies::{
 use lox_core::units::{AngleUnits, Distance};
 use lox_core::{
     anomalies::{EccentricAnomaly, TrueAnomaly},
-    coords::{CartesianTrajectory, TimeStampedCartesian},
     elements::{
         ArgumentOfPeriapsis, Eccentricity, Inclination, Keplerian, LongitudeOfAscendingNode,
     },
+    trajectory::HermiteTrajectory,
     utils::Linspace,
 };
 use lox_frames::{NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial};
@@ -163,19 +163,18 @@ where
         let state = self.state();
         let state_iter = state.iter_trace(self.try_gravitational_parameter().ok()?, n);
 
-        let data: CartesianTrajectory = zip(Linspace::new(-PI, PI, n), state_iter)
+        let samples: Vec<_> = zip(Linspace::new(-PI, PI, n), state_iter)
             .map(|(ecc, state)| {
                 let mean_anomaly = EccentricAnomaly::new(ecc.rad()).to_mean(self.eccentricity());
                 let time_of_flight = (mean_anomaly - mean_anomaly_at_epoch).as_f64() / mean_motion;
-                TimeStampedCartesian {
-                    time: TimeDelta::from_seconds_f64(time_of_flight),
-                    state,
-                }
+                (TimeDelta::from_seconds_f64(time_of_flight), state)
             })
             .collect();
+        let epoch = self.time() + samples.first()?.0;
+        let data = HermiteTrajectory::try_new(samples).ok()?;
 
         Some(Trajectory::from_parts(
-            self.time(),
+            epoch,
             self.origin(),
             self.reference_frame(),
             data,
@@ -264,5 +263,31 @@ mod tests {
         let kep_orbit = KeplerianOrbit::new(kep, time, Earth, Icrf);
         let cart: CartesianOrbit<_, _> = kep_orbit.try_into().unwrap();
         assert!(cart.position().length() > 6_000.0.km().as_f64());
+    }
+
+    #[test]
+    fn test_trace_interpolates_at_sample_times() {
+        let time = Time::j2000(TimeScale::Tai);
+        let kep = Keplerian::builder()
+            .with_semi_major_axis(Distance::new(7_000_000.0), 0.001)
+            .with_inclination(51.6.deg())
+            .with_longitude_of_ascending_node(0.0.rad())
+            .with_argument_of_periapsis(0.0.rad())
+            .with_true_anomaly(30.0.deg())
+            .build()
+            .unwrap();
+        let orbit = KeplerianOrbit::new(kep, time, Earth, Icrf);
+        let traj = orbit.trace(100).unwrap();
+        let states = traj.states();
+
+        let seconds_between = |a: Time, b: Time| (a - b).to_seconds().to_f64().abs();
+        assert!(seconds_between(traj.start_time(), states[0].time()) < 1e-6);
+        assert!(seconds_between(traj.end_time(), states[states.len() - 1].time()) < 1e-6);
+
+        for state in &states {
+            let interpolated = traj.at(state.time()).unwrap();
+            let error = (interpolated.position() - state.position()).length();
+            assert!(error < 1e-3, "position error of {error} m at a knot");
+        }
     }
 }
