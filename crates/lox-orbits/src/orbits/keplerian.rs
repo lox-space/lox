@@ -2,18 +2,15 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::{
-    f64::consts::{PI, TAU},
-    iter::zip,
-};
+use std::{f64::consts::PI, iter::zip};
 
 use super::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
 use lox_bodies::{
     CoordinateOrigin, PointMass, TryMeanRadius, TryPointMass, UndefinedOriginPropertyError,
 };
-use lox_core::units::{AngleUnits, Distance};
+use lox_core::units::{Angle, AngleUnits, AngularRate, Distance};
 use lox_core::{
-    anomalies::{EccentricAnomaly, TrueAnomaly},
+    anomalies::{AnomalyError, EccentricAnomaly, TrueAnomaly},
     coords::{CartesianTrajectory, TimeStampedCartesian},
     elements::{
         ArgumentOfPeriapsis, Eccentricity, Inclination, Keplerian, LongitudeOfAscendingNode,
@@ -53,12 +50,8 @@ where
     where
         O: TryMeanRadius,
     {
-        let a_km = k.semi_major_axis().to_kilometers();
-        let e = k.eccentricity().as_f64();
-        let perigee_km = a_km * (1.0 - e);
-
         if let Ok(body_mean_radius) = origin.try_mean_radius()
-            && perigee_km < body_mean_radius.to_kilometers()
+            && k.periapsis_radius() < body_mean_radius
         {
             return Err(KeplerianOrbitError::PeriapsisCrossesBodyRadius);
         }
@@ -112,6 +105,91 @@ where
         self.state().true_anomaly()
     }
 
+    /// Returns the semi-parameter (semi-latus rectum).
+    pub fn semi_parameter(&self) -> Distance {
+        self.state().semi_parameter()
+    }
+
+    /// Returns the periapsis radius.
+    pub fn periapsis_radius(&self) -> Distance {
+        self.state().periapsis_radius()
+    }
+
+    /// Returns the apoapsis radius, or `None` for open orbits.
+    pub fn apoapsis_radius(&self) -> Option<Distance> {
+        self.state().apoapsis_radius()
+    }
+
+    /// Returns the periapsis altitude above the origin's mean radius.
+    pub fn periapsis_altitude(&self) -> Result<Distance, UndefinedOriginPropertyError>
+    where
+        O: TryMeanRadius,
+    {
+        Ok(self
+            .state()
+            .periapsis_altitude(self.origin.try_mean_radius()?))
+    }
+
+    /// Returns the apoapsis altitude above the origin's mean radius, or `None` for open orbits.
+    pub fn apoapsis_altitude(&self) -> Result<Option<Distance>, UndefinedOriginPropertyError>
+    where
+        O: TryMeanRadius,
+    {
+        Ok(self
+            .state()
+            .apoapsis_altitude(self.origin.try_mean_radius()?))
+    }
+
+    /// Returns the argument of latitude in the interval [0, 2π).
+    pub fn argument_of_latitude(&self) -> Angle {
+        self.state().argument_of_latitude()
+    }
+
+    /// Returns the true longitude in the interval [0, 2π).
+    pub fn true_longitude(&self) -> Angle {
+        self.state().true_longitude()
+    }
+
+    /// Returns the mean longitude, see [`Keplerian::mean_longitude`].
+    pub fn mean_longitude(&self) -> Result<Angle, AnomalyError> {
+        self.state().mean_longitude()
+    }
+
+    /// Returns the flight-path angle.
+    pub fn flight_path_angle(&self) -> Angle {
+        self.state().flight_path_angle()
+    }
+
+    /// Returns the mean motion.
+    pub fn mean_motion(&self) -> Result<AngularRate, UndefinedOriginPropertyError>
+    where
+        O: TryPointMass,
+    {
+        Ok(self
+            .state()
+            .mean_motion(self.try_gravitational_parameter()?))
+    }
+
+    /// Returns the specific orbital energy in J/kg (m²/s²).
+    pub fn specific_orbital_energy(&self) -> Result<f64, UndefinedOriginPropertyError>
+    where
+        O: TryPointMass,
+    {
+        Ok(self
+            .state()
+            .specific_orbital_energy(self.try_gravitational_parameter()?))
+    }
+
+    /// Returns the magnitude of the specific angular momentum in m²/s.
+    pub fn specific_angular_momentum(&self) -> Result<f64, UndefinedOriginPropertyError>
+    where
+        O: TryPointMass,
+    {
+        Ok(self
+            .state()
+            .specific_angular_momentum(self.try_gravitational_parameter()?))
+    }
+
     /// Converts this Keplerian orbit to Cartesian position and velocity.
     pub fn to_cartesian(&self) -> CartesianOrbit<O, R>
     where
@@ -156,12 +234,11 @@ where
         O: TryPointMass + Copy,
         R: Copy,
     {
-        let period = self.orbital_period()?;
-        let mean_motion = TAU / period.as_seconds_f64();
-        let mean_anomaly_at_epoch = self.true_anomaly().to_mean(self.eccentricity()).ok()?;
-
+        let grav_param = self.try_gravitational_parameter().ok()?;
         let state = self.state();
-        let state_iter = state.iter_trace(self.try_gravitational_parameter().ok()?, n)?;
+        let state_iter = state.iter_trace(grav_param, n)?;
+        let mean_motion = state.mean_motion(grav_param).as_f64();
+        let mean_anomaly_at_epoch = self.true_anomaly().to_mean(self.eccentricity()).ok()?;
 
         let data: CartesianTrajectory = zip(Linspace::new(-PI, PI, n), state_iter)
             .map(|(ecc, state)| {
@@ -265,4 +342,5 @@ mod tests {
         let cart: CartesianOrbit<_, _> = kep_orbit.try_into().unwrap();
         assert!(cart.position().length() > 6_000.0.km().as_f64());
     }
+
 }
