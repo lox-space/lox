@@ -2,7 +2,10 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
+import math
+
 import lox_space as lox
+import numpy as np
 import numpy.testing as npt
 import pytest
 
@@ -233,6 +236,70 @@ def test_keplerian_defaults():
     assert float(k.longitude_of_ascending_node()) == pytest.approx(0.0, abs=1e-15)
     assert float(k.argument_of_periapsis()) == pytest.approx(0.0, abs=1e-15)
     assert float(k.true_anomaly()) == pytest.approx(0.0, abs=1e-15)
+
+
+def test_keplerian_derived_quantities():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    a = 7178.0
+    e = 0.01
+    k = lox.Keplerian(
+        time,
+        a * lox.km,
+        e,
+        inclination=97.0 * lox.deg,
+        longitude_of_ascending_node=10.0 * lox.deg,
+        argument_of_periapsis=20.0 * lox.deg,
+        true_anomaly=30.0 * lox.deg,
+    )
+    earth = lox.Origin("Earth")
+    mu = earth.gravitational_parameter().to_km3_per_s2()
+    r_mean = earth.mean_radius().to_kilometers()
+
+    assert k.semi_parameter().to_kilometers() == pytest.approx(a * (1 - e**2))
+    assert k.periapsis_radius().to_kilometers() == pytest.approx(a * (1 - e))
+    assert k.apoapsis_radius().to_kilometers() == pytest.approx(a * (1 + e))
+    assert k.periapsis_altitude().to_kilometers() == pytest.approx(a * (1 - e) - r_mean)
+    assert k.apoapsis_altitude().to_kilometers() == pytest.approx(a * (1 + e) - r_mean)
+    assert k.argument_of_latitude().to_degrees() == pytest.approx(50.0)
+    assert k.true_longitude().to_degrees() == pytest.approx(60.0)
+    assert 0.0 <= float(k.mean_longitude()) < 2 * math.pi
+    assert float(k.mean_motion()) == pytest.approx(math.sqrt(mu / a**3))
+    assert k.specific_orbital_energy() == pytest.approx(-mu / (2 * a))
+    assert k.specific_angular_momentum() == pytest.approx(math.sqrt(mu * a * (1 - e**2)))
+
+    # Consistency with the Cartesian state
+    state = k.to_cartesian()
+    r = state.position() * 1e-3
+    v = state.velocity() * 1e-3
+    r_norm = float(np.linalg.norm(r))
+    v_norm = float(np.linalg.norm(v))
+    assert float(k.flight_path_angle()) == pytest.approx(
+        math.asin(float(np.dot(r, v)) / (r_norm * v_norm))
+    )
+    assert k.specific_orbital_energy() == pytest.approx(v_norm**2 / 2 - mu / r_norm)
+    assert k.specific_angular_momentum() == pytest.approx(
+        float(np.linalg.norm(np.cross(r, v)))
+    )
+
+
+def test_keplerian_derived_quantities_open_orbit():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian(time, -20000.0 * lox.km, 1.5)
+    assert k.apoapsis_radius() is None
+    assert k.apoapsis_altitude() is None
+    assert k.periapsis_radius().to_kilometers() == pytest.approx(10000.0)
+    assert k.specific_orbital_energy() > 0.0
+
+
+def test_keplerian_altitude_requires_mean_radius():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian(
+        time, 7000.0 * lox.km, 0.01, origin=lox.Origin("Earth Barycenter")
+    )
+    with pytest.raises(lox.UndefinedOriginPropertyError, match="mean radius"):
+        k.periapsis_altitude()
+    with pytest.raises(lox.UndefinedOriginPropertyError, match="mean radius"):
+        k.apoapsis_altitude()
 
 
 def test_keplerian_mean_anomaly():

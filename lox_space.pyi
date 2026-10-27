@@ -1648,6 +1648,75 @@ class Keplerian:
     def true_anomaly(self) -> Angle:
         """Return the true anomaly."""
         ...
+    def semi_parameter(self) -> Distance:
+        """Return the semi-parameter (semi-latus rectum)."""
+        ...
+    def periapsis_radius(self) -> Distance:
+        """Return the periapsis radius."""
+        ...
+    def apoapsis_radius(self) -> Distance | None:
+        """Return the apoapsis radius, or ``None`` for open orbits."""
+        ...
+    def periapsis_altitude(self) -> Distance:
+        """Return the periapsis altitude above the origin's mean radius.
+
+        Raises:
+            UndefinedOriginPropertyError: If the origin has no mean radius.
+        """
+        ...
+    def apoapsis_altitude(self) -> Distance | None:
+        """Return the apoapsis altitude above the origin's mean radius, or ``None`` for open orbits.
+
+        Raises:
+            UndefinedOriginPropertyError: If the origin has no mean radius.
+        """
+        ...
+    def argument_of_latitude(self) -> Angle:
+        """Return the argument of latitude in the interval [0, 2π)."""
+        ...
+    def true_longitude(self) -> Angle:
+        """Return the true longitude in the interval [0, 2π)."""
+        ...
+    def mean_longitude(self) -> Angle:
+        """Return the mean longitude.
+
+        For closed orbits the result lies in the interval [0, 2π).
+
+        Raises:
+            ValueError: If the true anomaly cannot be converted to a mean anomaly.
+        """
+        ...
+    def flight_path_angle(self) -> Angle:
+        """Return the flight-path angle.
+
+        The angle between the velocity vector and the local horizontal. It is positive while
+        the orbit is moving away from periapsis.
+        """
+        ...
+    def mean_motion(self) -> AngularRate:
+        """Return the mean motion, i.e. the rate of change of the mean anomaly.
+
+        Raises:
+            UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+        """
+        ...
+    def specific_orbital_energy(self) -> float:
+        """Return the specific orbital energy in km²/s².
+
+        The energy is negative for closed orbits, zero for parabolic orbits, and positive for
+        hyperbolic orbits.
+
+        Raises:
+            UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+        """
+        ...
+    def specific_angular_momentum(self) -> float:
+        """Return the magnitude of the specific angular momentum in km²/s.
+
+        Raises:
+            UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+        """
+        ...
     def to_cartesian(self) -> Cartesian:
         """Convert these Keplerian elements to a Cartesian state."""
         ...
