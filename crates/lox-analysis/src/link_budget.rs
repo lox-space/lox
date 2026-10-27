@@ -540,7 +540,7 @@ where
     pub fn compute(&self) -> Result<LinkBudgetResults, LinkAnalysisError> {
         if !self.step.is_positive() {
             return Err(LinkAnalysisError::NonPositiveStep(
-                self.step.to_seconds().to_f64(),
+                self.step.as_seconds_f64(),
             ));
         }
 
@@ -740,8 +740,8 @@ where
 {
     let plan = link.plan;
     let start = interval.start();
-    let duration = interval.duration().to_seconds().to_f64();
-    let step_seconds = step.to_seconds().to_f64();
+    let duration = interval.duration().as_seconds_f64();
+    let step_seconds = step.as_seconds_f64();
     let subdivisions = if step_seconds > 0.0 {
         ((duration / step_seconds).ceil() as usize).max(2)
     } else {
@@ -1399,7 +1399,7 @@ mod tests {
         assert!(!windows.is_empty(), "expected the link to close somewhere");
 
         for window in windows {
-            let duration = window.interval().duration().to_seconds().to_f64();
+            let duration = window.interval().duration().as_seconds_f64();
             assert_approx_eq!(window.data_volume(), rate * duration, rtol <= 1e-12);
         }
     }

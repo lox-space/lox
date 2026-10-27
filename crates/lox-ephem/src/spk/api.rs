@@ -10,7 +10,8 @@ use itertools::Itertools;
 use lox_bodies::CoordinateOrigin;
 use lox_core::coords::Cartesian;
 use lox_core::glam::DVec3;
-use lox_core::time::deltas::{Seconds, ToDelta};
+use lox_core::math::float::mul_add_relaxed;
+use lox_core::time::deltas::{TimeDelta, ToDelta};
 use lox_time::Time;
 use lox_time::time_scales::Tdb;
 
@@ -74,21 +75,22 @@ impl Spk {
         let (segment, sign) = self.find_segment(origin, target)?;
 
         // Coarse epoch bounds check using f64
-        let epoch = time.to_delta().to_seconds().to_f64();
+        let epoch = time.to_delta().as_seconds_f64();
         if epoch < segment.initial_epoch || epoch > segment.final_epoch {
             return Err(DafSpkError::UnableToFindMatchingSegment);
         }
 
         let SpkArray::Type2(array) = &segment.data;
 
-        // High-precision time computation using two-part Seconds
-        let time_seconds = time.to_delta().to_seconds();
-        let initial_seconds = Seconds::from_f64(segment.initial_epoch);
-        let seconds_from_start = time_seconds - initial_seconds;
+        // Offsets from the segment start are computed exactly with `TimeDelta` and
+        // only converted to f64 once they are small.
+        let from_start = time.to_delta() - TimeDelta::from_seconds_f64(segment.initial_epoch);
 
         let intlen = array.intlen as f64;
-        let mut record_number = (seconds_from_start.to_f64() / intlen).floor() as usize;
-        let mut fraction = seconds_from_start - Seconds::from_f64(record_number as f64 * intlen);
+        let mut record_number = (from_start.as_seconds_f64() / intlen).floor() as usize;
+        let mut fraction = (from_start
+            - TimeDelta::from_seconds(record_number as i64 * array.intlen as i64))
+        .as_seconds_f64();
 
         // Chebyshev piecewise polynomials overlap at patchpoints. This means that one
         // can safely take the end of the interval from the next record. But this implies
@@ -96,7 +98,7 @@ impl Spk {
         // draw from.
         if record_number == array.n as usize {
             record_number -= 1;
-            fraction = Seconds::from_f64(intlen);
+            fraction = intlen;
         }
 
         let record = array
@@ -104,8 +106,8 @@ impl Spk {
             .get(record_number)
             .ok_or(DafSpkError::UnableToFindMatchingRecord)?;
 
-        // Chebyshev argument in [-1, 1] with compensated arithmetic
-        let x = (fraction * (2.0 / intlen) - Seconds::from_f64(1.0)).to_f64();
+        // Chebyshev argument in [-1, 1]
+        let x = mul_add_relaxed(fraction, 2.0 / intlen, -1.0);
         let n = array.degree_of_polynomial() as usize;
 
         Ok(ChebyshevSetup {

@@ -402,9 +402,7 @@ mod integration_tests {
             "expected at least one access window over Western Europe in 6h",
         );
         for w in windows {
-            let dur = (w.interval.end() - w.interval.start())
-                .to_seconds()
-                .to_f64();
+            let dur = (w.interval.end() - w.interval.start()).as_seconds_f64();
             assert!(dur > 0.0, "zero-length window");
             assert!(
                 dur < 600.0,

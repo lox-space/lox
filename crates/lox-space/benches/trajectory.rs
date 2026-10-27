@@ -108,7 +108,7 @@ impl Lcg {
 }
 
 fn span_seconds(traj: &Trajectory) -> f64 {
-    (traj.end_time() - traj.start_time()).to_seconds().to_f64()
+    (traj.end_time() - traj.start_time()).as_seconds_f64()
 }
 
 /// Evenly spaced epochs across the span, offset so they rarely hit a knot.

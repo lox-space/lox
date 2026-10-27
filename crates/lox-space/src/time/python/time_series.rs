@@ -49,7 +49,7 @@ impl PyTimeSeries {
         let epoch = times[0].0;
         let x: Vec<f64> = times
             .iter()
-            .map(|t| (t.0 - epoch).to_seconds().to_f64())
+            .map(|t| (t.0 - epoch).as_seconds_f64())
             .collect();
         let ts = TimeSeries::try_new(epoch, x, values, interpolation).map_err(PySeriesError)?;
         Ok(PyTimeSeries(ts))

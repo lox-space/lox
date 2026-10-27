@@ -74,7 +74,7 @@ impl Sgp4 {
 
     /// Propagate to a single time, returning a TEME state.
     pub fn state_at(&self, time: Time<Tai>) -> Result<CartesianOrbit<Earth, Teme>, Sgp4Error> {
-        let dt = (time - self.time).to_seconds().to_f64() / SECONDS_PER_MINUTE;
+        let dt = (time - self.time).as_seconds_f64() / SECONDS_PER_MINUTE;
         let prediction = self.constants.propagate(MinutesSinceEpoch(dt))?;
         // sgp4 crate returns km and km/s, convert to m and m/s
         let position = DVec3::from_array(prediction.position) * 1e3;
@@ -135,7 +135,7 @@ mod tests {
         let s1_icrf = s1.try_to_frame(Icrf, &DefaultRotationProvider).unwrap();
         let k1 = s1_icrf.to_keplerian();
         assert_approx_eq!(
-            k1.orbital_period().unwrap().to_seconds().to_f64() / SECONDS_PER_MINUTE,
+            k1.orbital_period().unwrap().as_seconds_f64() / SECONDS_PER_MINUTE,
             orbital_period,
             rtol <= 1e-4
         );

@@ -916,7 +916,7 @@ impl CartesianTrajectory {
         let mut vz: Vec<f64> = Vec::with_capacity(n);
 
         iter.for_each(|TimeStampedCartesian { time, state }| {
-            time_steps.push((time - epoch).to_seconds().to_f64());
+            time_steps.push((time - epoch).as_seconds_f64());
             x.push(state.x().as_f64());
             y.push(state.y().as_f64());
             z.push(state.z().as_f64());

@@ -160,7 +160,7 @@ where
     /// Panics if `n < 2`.
     pub fn linspace(&self, n: usize) -> Vec<T> {
         assert!(n >= 2, "linspace requires at least 2 points");
-        let step_secs = self.duration.to_seconds().to_f64() / (n - 1) as f64;
+        let step_secs = self.duration.as_seconds_f64() / (n - 1) as f64;
         (0..n)
             .map(|i| self.epoch + TimeDelta::from_seconds_f64(step_secs * i as f64))
             .collect()

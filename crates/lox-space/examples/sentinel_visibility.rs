@@ -51,7 +51,7 @@ fn tle_to_sgp4(name: &str, line_1: &[u8], line_2: &[u8]) -> Result<Sgp4, Box<dyn
 }
 
 fn format_duration(d: TimeDelta) -> String {
-    let total = d.to_seconds().to_f64() as i64;
+    let total = d.as_seconds_f64() as i64;
     let hours = total / 3600;
     let minutes = (total % 3600) / 60;
     let seconds = total % 60;

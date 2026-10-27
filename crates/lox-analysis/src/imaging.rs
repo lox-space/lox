@@ -174,9 +174,7 @@ mod tests {
 
         // Each window should be short (a few minutes at most for a LEO pass).
         for w in windows {
-            let duration_s = (w.interval.end() - w.interval.start())
-                .to_seconds()
-                .to_f64();
+            let duration_s = (w.interval.end() - w.interval.start()).as_seconds_f64();
             assert!(duration_s > 0.0, "zero-length interval");
             assert!(
                 duration_s < 600.0,
@@ -298,19 +296,11 @@ mod tests {
         // Agile satellite should have at least as much total coverage time.
         let nadir_total: f64 = nadir_windows
             .iter()
-            .map(|w| {
-                (w.interval.end() - w.interval.start())
-                    .to_seconds()
-                    .to_f64()
-            })
+            .map(|w| (w.interval.end() - w.interval.start()).as_seconds_f64())
             .sum();
         let off_nadir_total: f64 = off_nadir_windows
             .iter()
-            .map(|w| {
-                (w.interval.end() - w.interval.start())
-                    .to_seconds()
-                    .to_f64()
-            })
+            .map(|w| (w.interval.end() - w.interval.start()).as_seconds_f64())
             .sum();
         assert!(
             off_nadir_total >= nadir_total - 1.0,

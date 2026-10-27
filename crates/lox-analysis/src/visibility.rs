@@ -313,7 +313,7 @@ impl Pass {
         let epoch = interval.start();
         let time_seconds: Vec<f64> = times
             .iter()
-            .map(|t| (*t - epoch).to_seconds().to_f64())
+            .map(|t| (*t - epoch).as_seconds_f64())
             .collect();
         let azimuths: Vec<f64> = observables
             .iter()
@@ -2257,11 +2257,11 @@ mod tests {
         // The constrained intervals should be strictly shorter in total duration.
         let total_no_limit: f64 = intervals_no_limit
             .iter()
-            .map(|i| (i.end() - i.start()).to_seconds().to_f64())
+            .map(|i| (i.end() - i.start()).as_seconds_f64())
             .sum();
         let total_limited: f64 = intervals_limited
             .iter()
-            .map(|i| (i.end() - i.start()).to_seconds().to_f64())
+            .map(|i| (i.end() - i.start()).as_seconds_f64())
             .sum();
         assert!(
             total_limited < total_no_limit,
@@ -2618,13 +2618,10 @@ mod tests {
         assert!(!with_moon.is_empty());
 
         // An additional occluder can only remove visibility, never add it.
-        let dur_basic: f64 = basic
-            .iter()
-            .map(|iv| iv.duration().to_seconds().to_f64())
-            .sum();
+        let dur_basic: f64 = basic.iter().map(|iv| iv.duration().as_seconds_f64()).sum();
         let dur_moon: f64 = with_moon
             .iter()
-            .map(|iv| iv.duration().to_seconds().to_f64())
+            .map(|iv| iv.duration().as_seconds_f64())
             .sum();
         assert!(dur_moon <= dur_basic + 1e-6);
     }
@@ -2702,7 +2699,7 @@ mod tests {
         let total = |intervals: &[TimeInterval]| -> f64 {
             intervals
                 .iter()
-                .map(|iv| iv.duration().to_seconds().to_f64())
+                .map(|iv| iv.duration().as_seconds_f64())
                 .sum()
         };
 
