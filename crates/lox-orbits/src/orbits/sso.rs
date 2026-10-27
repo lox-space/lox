@@ -6,7 +6,7 @@ use lox_bodies::{Earth, PointMass, Spheroid};
 use lox_core::anomalies::TrueAnomaly;
 use lox_core::elements::{
     ArgumentOfPeriapsis, ArgumentOfPeriapsisError, Eccentricity, EccentricityError, Inclination,
-    InclinationError, Keplerian, LongitudeOfAscendingNode, SemiMajorAxis,
+    InclinationError, Keplerian, KeplerianError, LongitudeOfAscendingNode,
 };
 use lox_core::glam::Azimuth;
 use lox_core::math::float::mul_add_relaxed;
@@ -53,6 +53,9 @@ pub enum SsoError {
     /// Invalid argument of periapsis value.
     #[error(transparent)]
     ArgumentOfPeriapsis(#[from] ArgumentOfPeriapsisError),
+    /// The resulting Keplerian elements are invalid.
+    #[error(transparent)]
+    Keplerian(#[from] KeplerianError),
 }
 
 /// Specifies the local time of the ascending or descending node.
@@ -160,12 +163,12 @@ where
 
 #[derive(Debug)]
 enum SemiMajorAxisOrInclination {
-    SemiMajorAxis(SemiMajorAxis),
+    SemiMajorAxis(Distance),
     Inclination(Inclination),
 }
 
 impl SemiMajorAxisOrInclination {
-    fn semi_major_axis(&self, eccentricity: Eccentricity) -> SemiMajorAxis {
+    fn semi_major_axis(&self, eccentricity: Eccentricity) -> Distance {
         match self {
             SemiMajorAxisOrInclination::SemiMajorAxis(semi_major_axis) => *semi_major_axis,
             SemiMajorAxisOrInclination::Inclination(inclination) => {
@@ -202,14 +205,13 @@ where
         LongitudeOfAscendingNode::try_new(longitude_of_ascending_node_sso(time, ltan, provider)?)
             .expect("SSO RAAN should be valid");
 
-    Ok(Keplerian::new(
-        semi_major_axis,
-        eccentricity,
-        inclination,
-        longitude_of_ascending_node,
-        argument_of_periapsis,
-        true_anomaly,
-    ))
+    Ok(Keplerian::builder()
+        .with_semi_major_axis(semi_major_axis, eccentricity.as_f64())
+        .with_inclination(inclination.as_angle())
+        .with_longitude_of_ascending_node(longitude_of_ascending_node.as_angle())
+        .with_argument_of_periapsis(argument_of_periapsis.as_angle())
+        .with_true_anomaly(true_anomaly.as_angle())
+        .build()?)
 }
 
 impl KeplerianOrbit<Earth, Icrf> {
@@ -242,7 +244,7 @@ impl KeplerianOrbit<Earth, Icrf> {
 #[derive(Debug, Clone)]
 pub struct SsoBuilder<'a, P: TryOffset<TimeScale, Ut1> + TryOffset<TimeScale, Tdb>> {
     time: Time,
-    semi_major_axis: Option<SemiMajorAxis>,
+    semi_major_axis: Option<Distance>,
     eccentricity: Result<Eccentricity, EccentricityError>,
     inclination: Option<Result<Inclination, InclinationError>>,
     ltan: Result<LocalTimeOfNode, TimeOfDayError>,
@@ -322,7 +324,7 @@ where
     P: TryOffset<TimeScale, Ut1> + TryOffset<TimeScale, Tdb>,
 {
     /// Sets the semi-major axis (mutually exclusive with inclination).
-    pub fn with_semi_major_axis(mut self, semi_major_axis: SemiMajorAxis) -> Self {
+    pub fn with_semi_major_axis(mut self, semi_major_axis: Distance) -> Self {
         self.semi_major_axis = Some(semi_major_axis);
         self
     }
@@ -463,6 +465,20 @@ mod tests {
         let act =
             longitude_of_ascending_node_sso(epoch.into_dynamic(), ltan, eop_provider()).unwrap();
         assert_approx_eq!(exp, act, atol <= 4e-3);
+    }
+
+    #[test]
+    fn test_sso_builder_rejects_open_orbit() {
+        let result = SsoBuilder::default()
+            .with_provider(eop_provider())
+            .with_semi_major_axis(7178.1363.km())
+            .with_eccentricity(1.5)
+            .with_ltan(13, 30)
+            .build();
+        assert!(matches!(
+            result,
+            Err(SsoError::Keplerian(KeplerianError::InvalidShape { .. }))
+        ));
     }
 
     #[test]

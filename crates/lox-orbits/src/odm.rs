@@ -13,16 +13,11 @@ use std::f64::consts::PI;
 
 use chrono::{DateTime, Utc as ChronoUtc};
 use lox_bodies::{CoordinateOrigin, Origin};
-use lox_core::anomalies::{AnomalyError, MeanAnomaly};
+use lox_core::anomalies::AnomalyError;
 use lox_core::coords::Cartesian;
-use lox_core::elements::{
-    Keplerian, MeanElements,
-    keplerian::{
-        ArgumentOfPeriapsis, Eccentricity, Inclination, LongitudeOfAscendingNode, SemiMajorAxis,
-    },
-};
+use lox_core::elements::{Keplerian, MeanElements};
 use lox_core::f64::consts::SECONDS_PER_DAY;
-use lox_core::units::Angle;
+use lox_core::units::{Angle, Distance};
 use lox_frames::{Frame, ReferenceFrame};
 use lox_odm::Format;
 use lox_odm::OdmError;
@@ -1348,24 +1343,14 @@ impl KeplerianOrbit {
             })?;
         let me = &omm.mean_elements.elements;
 
-        let eccentricity = Eccentricity::try_new(me.e)
+        let kep = Keplerian::builder()
+            .with_semi_major_axis(Distance::meters(me.a), me.e)
+            .with_inclination(Angle::radians(me.i))
+            .with_longitude_of_ascending_node(Angle::radians(me.raan))
+            .with_argument_of_periapsis(Angle::radians(me.aop))
+            .with_mean_anomaly(Angle::radians(me.m))
+            .build()
             .map_err(|e| OmmFromOdmError::InvalidElement(e.to_string()))?;
-        let mean_anomaly = MeanAnomaly::new(Angle::radians(me.m));
-        let true_anomaly = mean_anomaly
-            .to_true(eccentricity)
-            .map_err(|e| OmmFromOdmError::InvalidElement(e.to_string()))?;
-
-        let kep = Keplerian::new(
-            SemiMajorAxis::meters(me.a),
-            eccentricity,
-            Inclination::try_new(Angle::radians(me.i))
-                .map_err(|e| OmmFromOdmError::InvalidElement(e.to_string()))?,
-            LongitudeOfAscendingNode::try_new(Angle::radians(me.raan))
-                .map_err(|e| OmmFromOdmError::InvalidElement(e.to_string()))?,
-            ArgumentOfPeriapsis::try_new(Angle::radians(me.aop))
-                .map_err(|e| OmmFromOdmError::InvalidElement(e.to_string()))?,
-            true_anomaly,
-        );
 
         // Use raw `Orbit::from_state` because TEME is not in
         // `Frame::TryQuasiInertial`'s permitted set, but for typed-view
