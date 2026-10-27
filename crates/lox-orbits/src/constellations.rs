@@ -64,8 +64,8 @@ pub enum ConstellationError {
     /// The street-of-coverage optimizer failed to converge.
     #[error("street-of-coverage optimization did not converge")]
     SocNotConverged,
-    /// Neither perigee altitude nor semi-major axis was provided.
-    #[error("neither perigee altitude nor semi-major axis was provided")]
+    /// Neither periapsis altitude nor semi-major axis was provided.
+    #[error("neither periapsis altitude nor semi-major axis was provided")]
     MissingShape,
     /// A required body property is not defined for the chosen origin.
     #[error("required body property is not defined: {0}")]

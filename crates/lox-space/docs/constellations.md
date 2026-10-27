@@ -89,7 +89,7 @@ constellation = lox.Constellation.street_of_coverage(
 ## Flower
 
 Flower constellations produce repeating ground tracks. The orbital shape
-can be computed from a perigee altitude (the mean radius, gravitational
+can be computed from a periapsis altitude (the mean radius, gravitational
 parameter, and rotation rate are derived from the origin automatically)
 or provided directly as semi-major axis and eccentricity.
 
@@ -104,7 +104,7 @@ constellation = lox.Constellation.flower(
     phasing_numerator=1,
     phasing_denominator=28,
     inclination=53 * lox.deg,
-    perigee_altitude=780 * lox.km,
+    periapsis_altitude=780 * lox.km,
 )
 ```
 

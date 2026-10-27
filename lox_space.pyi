@@ -707,7 +707,7 @@ class Constellation:
         phasing_numerator: int,
         phasing_denominator: int,
         inclination: Angle,
-        perigee_altitude: Distance | None = None,
+        periapsis_altitude: Distance | None = None,
         semi_major_axis: Distance | None = None,
         eccentricity: float | None = None,
         argument_of_periapsis: Angle | None = None,

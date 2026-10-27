@@ -126,7 +126,7 @@ class TestStreetOfCoverage:
 
 
 class TestFlower:
-    def test_with_perigee_altitude(self, epoch):
+    def test_with_periapsis_altitude(self, epoch):
         c = lox.Constellation.flower(
             "flower14",
             epoch,
@@ -137,7 +137,7 @@ class TestFlower:
             phasing_numerator=1,
             phasing_denominator=28,
             inclination=53 * lox.deg,
-            perigee_altitude=780 * lox.km,
+            periapsis_altitude=780 * lox.km,
         )
         assert len(c) == 28
         assert c.name == "flower14"
@@ -205,7 +205,7 @@ class TestFlowerEdgeCases:
                 phasing_numerator=1,
                 phasing_denominator=28,
                 inclination=53 * lox.deg,
-                perigee_altitude=780 * lox.km,
+                periapsis_altitude=780 * lox.km,
                 semi_major_axis=7000 * lox.km,
                 eccentricity=0.01,
             )

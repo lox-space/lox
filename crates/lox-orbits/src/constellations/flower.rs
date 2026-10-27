@@ -32,7 +32,7 @@ pub struct FlowerBuilder {
 
 #[derive(Debug, Clone)]
 enum FlowerShape {
-    PerigeeAltitude { altitude: Distance },
+    PeriapsisAltitude { altitude: Distance },
     SemiMajorAxis { sma: Distance, eccentricity: f64 },
 }
 
@@ -58,12 +58,12 @@ impl FlowerBuilder {
         }
     }
 
-    /// Compute SMA and eccentricity from perigee altitude.
+    /// Compute SMA and eccentricity from periapsis altitude.
     ///
     /// The mean radius, gravitational parameter, and rotation rate are
     /// retrieved from the origin in [`build_constellation`](Self::build_constellation).
-    pub fn with_perigee_altitude(mut self, altitude: Distance) -> Self {
-        self.shape = Some(FlowerShape::PerigeeAltitude { altitude });
+    pub fn with_periapsis_altitude(mut self, altitude: Distance) -> Self {
+        self.shape = Some(FlowerShape::PeriapsisAltitude { altitude });
         self
     }
 
@@ -139,7 +139,7 @@ impl FlowerBuilder {
     }
 
     /// Build the constellation, resolving body parameters from the origin
-    /// when using perigee altitude.
+    /// when using periapsis altitude.
     pub fn build_constellation<O, R>(
         &self,
         name: impl Into<String>,
@@ -152,7 +152,7 @@ impl FlowerBuilder {
         R: ReferenceFrame,
     {
         let (sma, ecc) = match &self.shape {
-            Some(FlowerShape::PerigeeAltitude { altitude }) => {
+            Some(FlowerShape::PeriapsisAltitude { altitude }) => {
                 let mean_radius = origin
                     .try_mean_radius()
                     .map_err(|e| ConstellationError::UndefinedProperty(e.to_string()))?;
@@ -199,7 +199,7 @@ mod tests {
     fn test_flower_basic() {
         let epoch = Time::j2000(TimeScale::Tai);
         let c = FlowerBuilder::new(14, 1, 28, 1, 28)
-            .with_perigee_altitude(780.0.km())
+            .with_periapsis_altitude(780.0.km())
             .with_inclination(53.0.deg())
             .build_constellation("flower", epoch, Earth, Icrf)
             .unwrap();
@@ -221,7 +221,7 @@ mod tests {
 
         let epoch = Time::j2000(TimeScale::Tai);
         let c = FlowerBuilder::new(14, 1, 2, 1, 28)
-            .with_perigee_altitude(780.0.km())
+            .with_periapsis_altitude(780.0.km())
             .with_inclination(53.0.deg())
             .build_constellation("flower", epoch, Earth, Icrf)
             .unwrap();
@@ -264,7 +264,7 @@ mod tests {
     fn test_flower_zero_satellites() {
         let epoch = Time::j2000(TimeScale::Tai);
         let result = FlowerBuilder::new(14, 1, 0, 1, 28)
-            .with_perigee_altitude(780.0.km())
+            .with_periapsis_altitude(780.0.km())
             .with_inclination(53.0.deg())
             .build_constellation("flower", epoch, Earth, Icrf);
 
@@ -275,7 +275,7 @@ mod tests {
     fn test_flower_with_argument_of_periapsis() {
         let epoch = Time::j2000(TimeScale::Tai);
         let c = FlowerBuilder::new(14, 1, 5, 1, 28)
-            .with_perigee_altitude(780.0.km())
+            .with_periapsis_altitude(780.0.km())
             .with_inclination(53.0.deg())
             .with_argument_of_periapsis(45.0.deg())
             .build_constellation("flower", epoch, Earth, Icrf)
