@@ -139,6 +139,24 @@ def test_cartesian_to_origin_string(ephemeris):
     assert s2.origin().name() == "Moon"
 
 
+def test_exceptions_are_exported():
+    assert issubclass(lox.UndefinedOriginPropertyError, Exception)
+    assert issubclass(lox.FrameTransformationError, Exception)
+
+
+def test_to_frame_raises_frame_transformation_error(provider):
+    time = lox.UTC(2200, 1, 1).to_scale("TAI")
+    state = lox.Cartesian(
+        time,
+        position=[7000e3, 0.0, 0.0],
+        velocity=[0.0, 7500.0, 0.0],
+        origin=lox.Origin("Earth"),
+        frame=lox.Frame("ICRF"),
+    )
+    with pytest.raises(lox.FrameTransformationError, match="extrapolated"):
+        state.to_frame(lox.Frame("ITRF"), provider)
+
+
 # --- Keplerian constructor tests ---
 
 
@@ -410,7 +428,9 @@ def test_modified_equinoctial_errors():
         l=0.0 * lox.deg,
         origin="Itokawa",
     )
-    with pytest.raises(Exception, match="undefined property 'gravitational parameter'"):
+    with pytest.raises(
+        lox.UndefinedOriginPropertyError, match="undefined property 'gravitational parameter'"
+    ):
         mee_no_mu.to_cartesian()
         
     # Cartesian -> MEE with Itokawa origin
@@ -420,7 +440,9 @@ def test_modified_equinoctial_errors():
         velocity=[0.0, 7000.0, 0.0],
         origin="Itokawa"
     )
-    with pytest.raises(Exception, match="undefined property 'gravitational parameter'"):
+    with pytest.raises(
+        lox.UndefinedOriginPropertyError, match="undefined property 'gravitational parameter'"
+    ):
         cart.to_modified_equinoctial()
 
     # Invalid shape for Keplerian conversion should fail
