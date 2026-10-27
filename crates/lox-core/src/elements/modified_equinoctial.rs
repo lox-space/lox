@@ -115,8 +115,8 @@ impl ModifiedEquinoctial {
         let kep = Keplerian::builder()
             .with_semi_parameter(self.p, e)
             .with_inclination(i.rad())
-            .with_longitude_of_ascending_node(big_omega.rad().mod_two_pi())
-            .with_argument_of_periapsis(omega.rad().mod_two_pi())
+            .with_longitude_of_ascending_node(big_omega.rad())
+            .with_argument_of_periapsis(omega.rad())
             .with_true_anomaly(nu.rad())
             .build()?;
 

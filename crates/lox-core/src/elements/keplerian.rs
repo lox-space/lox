@@ -742,13 +742,13 @@ impl KeplerianBuilder {
         self
     }
 
-    /// Sets the longitude of ascending node.
+    /// Sets the longitude of ascending node. Any finite angle is accepted.
     pub fn with_longitude_of_ascending_node(mut self, longitude_of_ascending_node: Angle) -> Self {
         self.longitude_of_ascending_node = longitude_of_ascending_node;
         self
     }
 
-    /// Sets the argument of periapsis.
+    /// Sets the argument of periapsis. Any finite angle is accepted.
     pub fn with_argument_of_periapsis(mut self, argument_of_periapsis: Angle) -> Self {
         self.argument_of_periapsis = argument_of_periapsis;
         self
@@ -785,6 +785,7 @@ impl KeplerianBuilder {
 
     /// Validates all parameters and builds the [`Keplerian`] elements.
     ///
+    /// The longitude of ascending node and the argument of periapsis are normalised to [0, 2π).
     /// The true anomaly is normalised to [0, 2π) for closed orbits and to [-π, π) for open orbits.
     ///
     /// # Errors
@@ -800,8 +801,9 @@ impl KeplerianBuilder {
 
         let inclination = Inclination::try_new(self.inclination)?;
         let longitude_of_ascending_node =
-            LongitudeOfAscendingNode::try_new(self.longitude_of_ascending_node)?;
-        let argument_of_periapsis = ArgumentOfPeriapsis::try_new(self.argument_of_periapsis)?;
+            LongitudeOfAscendingNode::try_new(self.longitude_of_ascending_node.mod_two_pi())?;
+        let argument_of_periapsis =
+            ArgumentOfPeriapsis::try_new(self.argument_of_periapsis.mod_two_pi())?;
 
         if self.ambiguous_anomaly {
             return Err(KeplerianError::AmbiguousAnomaly);
@@ -1145,6 +1147,27 @@ mod tests {
             .build()
             .unwrap();
         assert_approx_eq!(k.true_anomaly().as_angle(), 350.0.deg(), rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_builder_normalizes_node_and_argument_of_periapsis() {
+        let k = Keplerian::builder()
+            .with_semi_major_axis(7000.0.km(), 0.1)
+            .with_inclination(45.0.deg())
+            .with_longitude_of_ascending_node(-30.0.deg())
+            .with_argument_of_periapsis(400.0.deg())
+            .build()
+            .unwrap();
+        assert_approx_eq!(
+            k.longitude_of_ascending_node().as_f64(),
+            330.0_f64.to_radians(),
+            rtol <= 1e-12
+        );
+        assert_approx_eq!(
+            k.argument_of_periapsis().as_f64(),
+            40.0_f64.to_radians(),
+            rtol <= 1e-12
+        );
     }
 
     #[test]
