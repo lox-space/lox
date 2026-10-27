@@ -14,6 +14,7 @@
 */
 
 use core::fmt::Display;
+use core::iter::Sum;
 use core::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use lox_approx::ApproxEq;
@@ -632,6 +633,24 @@ impl ApproxEq for TimeDelta {
         self.to_seconds()
             .to_f64()
             .approx_eq(&rhs.to_seconds().to_f64(), atol, rtol)
+    }
+}
+
+impl Sum for TimeDelta {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        let mut sum = TimeDelta::ZERO;
+
+        for delta in iter {
+            sum += delta;
+        }
+
+        sum
+    }
+}
+
+impl<'a> Sum<&'a TimeDelta> for TimeDelta {
+    fn sum<I: Iterator<Item = &'a TimeDelta>>(iter: I) -> Self {
+        TimeDelta::sum(iter.copied())
     }
 }
 
@@ -1573,5 +1592,21 @@ mod tests {
         let dt = TimeDelta::from_attoseconds(ATTOSECONDS_IN_SECOND + 42);
         assert_eq!(dt.seconds(), 1);
         assert_eq!(dt.attoseconds(), 42);
+    }
+
+    #[test]
+    fn test_sum_owned() {
+        let deltas = [TimeDelta::from_seconds(42), TimeDelta::from_seconds(43)];
+        let sum = deltas.into_iter().sum::<TimeDelta>();
+
+        assert_eq!(sum, TimeDelta::from_seconds(85));
+    }
+
+    #[test]
+    fn test_sum_borrowed() {
+        let deltas = [TimeDelta::from_seconds(42), TimeDelta::from_seconds(43)];
+        let sum = deltas.iter().sum::<TimeDelta>();
+
+        assert_eq!(sum, TimeDelta::from_seconds(85));
     }
 }
