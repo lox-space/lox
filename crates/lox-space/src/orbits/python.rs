@@ -789,24 +789,22 @@ impl PyKeplerian {
 
     /// Return the inclination.
     fn inclination(&self) -> PyAngle {
-        PyAngle(Angle::radians(self.0.inclination().as_f64()))
+        PyAngle(self.0.inclination().as_angle())
     }
 
     /// Return the longitude of the ascending node (RAAN).
     fn longitude_of_ascending_node(&self) -> PyAngle {
-        PyAngle(Angle::radians(
-            self.0.longitude_of_ascending_node().as_f64(),
-        ))
+        PyAngle(self.0.longitude_of_ascending_node().as_angle())
     }
 
     /// Return the argument of periapsis.
     fn argument_of_periapsis(&self) -> PyAngle {
-        PyAngle(Angle::radians(self.0.argument_of_periapsis().as_f64()))
+        PyAngle(self.0.argument_of_periapsis().as_angle())
     }
 
     /// Return the true anomaly.
     fn true_anomaly(&self) -> PyAngle {
-        PyAngle(Angle::radians(self.0.true_anomaly().as_f64()))
+        PyAngle(self.0.true_anomaly().as_angle())
     }
 
     /// Convert these Keplerian elements to a Cartesian state.

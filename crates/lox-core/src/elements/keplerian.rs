@@ -181,6 +181,11 @@ impl Inclination {
     pub const fn as_f64(&self) -> f64 {
         self.0.as_f64()
     }
+
+    /// Returns the inclination as an [`Angle`].
+    pub const fn as_angle(&self) -> Angle {
+        self.0
+    }
 }
 
 impl Display for Inclination {
@@ -216,6 +221,11 @@ impl LongitudeOfAscendingNode {
     pub const fn as_f64(&self) -> f64 {
         self.0.as_f64()
     }
+
+    /// Returns the longitude of ascending node as an [`Angle`].
+    pub const fn as_angle(&self) -> Angle {
+        self.0
+    }
 }
 
 impl Display for LongitudeOfAscendingNode {
@@ -250,6 +260,11 @@ impl ArgumentOfPeriapsis {
     /// Returns the argument of periapsis in radians as an `f64`.
     pub const fn as_f64(&self) -> f64 {
         self.0.as_f64()
+    }
+
+    /// Returns the argument of periapsis as an [`Angle`].
+    pub const fn as_angle(&self) -> Angle {
+        self.0
     }
 }
 
@@ -665,6 +680,24 @@ mod tests {
         assert!(Inclination::try_new(Angle::radians(f64::NAN)).is_err());
         assert!(LongitudeOfAscendingNode::try_new(Angle::radians(f64::NAN)).is_err());
         assert!(ArgumentOfPeriapsis::try_new(Angle::radians(f64::NAN)).is_err());
+    }
+
+    #[test]
+    fn test_element_angles_as_angle() {
+        assert_eq!(
+            Inclination::try_new(0.5.rad()).unwrap().as_angle(),
+            0.5.rad()
+        );
+        assert_eq!(
+            LongitudeOfAscendingNode::try_new(1.5.rad())
+                .unwrap()
+                .as_angle(),
+            1.5.rad()
+        );
+        assert_eq!(
+            ArgumentOfPeriapsis::try_new(2.5.rad()).unwrap().as_angle(),
+            2.5.rad()
+        );
     }
 
     #[test]
