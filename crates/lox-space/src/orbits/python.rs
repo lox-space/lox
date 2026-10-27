@@ -22,7 +22,7 @@ use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
 use crate::time::time_scales::Tai;
-use crate::units::python::{PyAngle, PyDistance, PyVelocity};
+use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyVelocity};
 use lox_core::coords::{Cartesian, Ellipsoid, LonLatAlt};
 use lox_core::glam::DVec3;
 use lox_core::units::{Angle, Distance, Velocity};
@@ -805,6 +805,115 @@ impl PyKeplerian {
     /// Return the true anomaly.
     fn true_anomaly(&self) -> PyAngle {
         PyAngle(self.0.true_anomaly().as_angle())
+    }
+
+    /// Return the semi-parameter (semi-latus rectum).
+    fn semi_parameter(&self) -> PyDistance {
+        PyDistance(self.0.semi_parameter())
+    }
+
+    /// Return the periapsis radius.
+    fn periapsis_radius(&self) -> PyDistance {
+        PyDistance(self.0.periapsis_radius())
+    }
+
+    /// Return the apoapsis radius, or ``None`` for open orbits.
+    fn apoapsis_radius(&self) -> Option<PyDistance> {
+        self.0.apoapsis_radius().map(PyDistance)
+    }
+
+    /// Return the periapsis altitude above the origin's mean radius.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If the origin has no mean radius.
+    fn periapsis_altitude(&self) -> PyResult<PyDistance> {
+        Ok(PyDistance(
+            self.0
+                .periapsis_altitude()
+                .map_err(PyUndefinedOriginPropertyError)?,
+        ))
+    }
+
+    /// Return the apoapsis altitude above the origin's mean radius, or ``None`` for open orbits.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If the origin has no mean radius.
+    fn apoapsis_altitude(&self) -> PyResult<Option<PyDistance>> {
+        Ok(self
+            .0
+            .apoapsis_altitude()
+            .map_err(PyUndefinedOriginPropertyError)?
+            .map(PyDistance))
+    }
+
+    /// Return the argument of latitude in the interval [0, 2π).
+    fn argument_of_latitude(&self) -> PyAngle {
+        PyAngle(self.0.argument_of_latitude())
+    }
+
+    /// Return the true longitude in the interval [0, 2π).
+    fn true_longitude(&self) -> PyAngle {
+        PyAngle(self.0.true_longitude())
+    }
+
+    /// Return the mean longitude.
+    ///
+    /// For closed orbits the result lies in the interval [0, 2π).
+    ///
+    /// Raises:
+    ///     ValueError: If the true anomaly cannot be converted to a mean anomaly.
+    fn mean_longitude(&self) -> PyResult<PyAngle> {
+        self.0
+            .mean_longitude()
+            .map(PyAngle)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Return the flight-path angle.
+    ///
+    /// The angle between the velocity vector and the local horizontal. It is positive while
+    /// the orbit is moving away from periapsis.
+    fn flight_path_angle(&self) -> PyAngle {
+        PyAngle(self.0.flight_path_angle())
+    }
+
+    /// Return the mean motion, i.e. the rate of change of the mean anomaly.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+    fn mean_motion(&self) -> PyResult<PyAngularRate> {
+        Ok(PyAngularRate(
+            self.0
+                .mean_motion()
+                .map_err(PyUndefinedOriginPropertyError)?,
+        ))
+    }
+
+    /// Return the specific orbital energy in km²/s².
+    ///
+    /// The energy is negative for closed orbits, zero for parabolic orbits, and positive for
+    /// hyperbolic orbits.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+    fn specific_orbital_energy(&self) -> PyResult<f64> {
+        let energy = self
+            .0
+            .specific_orbital_energy()
+            .map_err(PyUndefinedOriginPropertyError)?;
+        Ok(energy * 1e-6)
+    }
+
+    /// Return the magnitude of the specific angular momentum in km²/s.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+    fn specific_angular_momentum(&self) -> PyResult<f64> {
+        let angular_momentum = self
+            .0
+            .specific_angular_momentum()
+            .map_err(PyUndefinedOriginPropertyError)?;
+        Ok(angular_momentum * 1e-6)
     }
 
     /// Convert these Keplerian elements to a Cartesian state.

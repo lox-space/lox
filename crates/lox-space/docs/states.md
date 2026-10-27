@@ -65,6 +65,12 @@ kep = lox.Keplerian(
     apoapsis_altitude=1000.0 * lox.km,
 )
 
+# Derived quantities
+print(f"hp = {kep.periapsis_altitude().to_kilometers():.1f} km")
+print(f"ha = {kep.apoapsis_altitude().to_kilometers():.1f} km")
+print(f"n = {float(kep.mean_motion()):.3e} rad/s")
+print(f"energy = {kep.specific_orbital_energy():.3f} km²/s²")
+
 # Create a circular orbit from altitude
 circ = lox.Keplerian.circular(
     t,
