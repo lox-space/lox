@@ -2545,8 +2545,8 @@ class Time:
     def femtosecond(self) -> int:
         """Return the femtosecond component (0-999)."""
         ...
-    def decimal_seconds(self) -> float:
-        """Return the decimal seconds within the current minute."""
+    def second_float(self) -> float:
+        """Return the second within the current minute, including the fractional part."""
         ...
     def to_scale(
         self, scale: Scale | TimeScale, provider: EOPProvider | None = None
@@ -2634,8 +2634,8 @@ class TimeDelta:
     def from_attoseconds(cls, atto: int) -> Self:
         """Create from integer attoseconds."""
         ...
-    def to_decimal_seconds(self) -> float:
-        """Return the duration as decimal seconds."""
+    def to_seconds(self) -> float:
+        """Return the duration in seconds."""
         ...
     @classmethod
     def range(cls, start: int, end: int, step: int | None = None) -> list[Self]:
@@ -2712,8 +2712,8 @@ class UTC:
     def picosecond(self) -> int:
         """Return the picosecond component (0-999)."""
         ...
-    def decimal_seconds(self) -> float:
-        """Return the decimal seconds within the current minute."""
+    def second_float(self) -> float:
+        """Return the second within the current minute, including the fractional part."""
         ...
     def to_scale(
         self, scale: Scale | TimeScale, provider: EOPProvider | None = None

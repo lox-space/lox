@@ -75,17 +75,17 @@ def test_time_delta():
 
 def test_time_delta_constructors():
     td = lox.TimeDelta.from_seconds(123)
-    assert td.to_decimal_seconds() == 123.0
+    assert td.to_seconds() == 123.0
     td = lox.TimeDelta.from_minutes(2.0)
-    assert td.to_decimal_seconds() == 120.0
+    assert td.to_seconds() == 120.0
     td = lox.TimeDelta.from_hours(2.0)
-    assert td.to_decimal_seconds() == 7200.0
+    assert td.to_seconds() == 7200.0
     td = lox.TimeDelta.from_days(2.0)
-    assert td.to_decimal_seconds() == 172800.0
+    assert td.to_seconds() == 172800.0
     td = lox.TimeDelta.from_julian_years(2.0)
-    assert td.to_decimal_seconds() == 63115200.0
+    assert td.to_seconds() == 63115200.0
     td = lox.TimeDelta.from_julian_centuries(2.0)
-    assert td.to_decimal_seconds() == 6311520000.0
+    assert td.to_seconds() == 6311520000.0
 
 
 def test_time_repr():
@@ -108,7 +108,7 @@ def test_time_accessors():
     assert time.nanosecond() == 789
     assert time.picosecond() == 123
     assert time.femtosecond() == 0
-    assert time.decimal_seconds() == pytest.approx(12.123456789123, rel=1e-15)
+    assert time.second_float() == pytest.approx(12.123456789123, rel=1e-15)
 
 
 def test_time_invalid_date():
@@ -208,7 +208,7 @@ def test_utc_accessors():
     assert utc.microsecond() == 456
     assert utc.nanosecond() == 789
     assert utc.picosecond() == 123
-    assert utc.decimal_seconds() == 14.123456789123
+    assert utc.second_float() == 14.123456789123
     assert str(utc) == "2000-01-01T12:13:14.123 UTC"
     assert repr(utc) == "UTC(2000, 1, 1, 12, 13, 14.123456789123)"
 
@@ -224,10 +224,10 @@ def test_utc_from_iso_invalid():
 
 
 def test_time_delta_units():
-    assert (60 * lox.seconds).to_decimal_seconds() == 60.0
-    assert (2 * lox.minutes).to_decimal_seconds() == 120.0
-    assert (0.5 * lox.hours).to_decimal_seconds() == 1800.0
-    assert (1 * lox.days).to_decimal_seconds() == 86400.0
+    assert (60 * lox.seconds).to_seconds() == 60.0
+    assert (2 * lox.minutes).to_seconds() == 120.0
+    assert (0.5 * lox.hours).to_seconds() == 1800.0
+    assert (1 * lox.days).to_seconds() == 86400.0
 
 
 def test_time_delta_subsecond_constructors():
@@ -235,9 +235,9 @@ def test_time_delta_subsecond_constructors():
     assert td.seconds() == 1
     assert td.subsecond() == 0.5
     td = lox.TimeDelta.from_microseconds(1_000_000)
-    assert td.to_decimal_seconds() == 1.0
+    assert td.to_seconds() == 1.0
     td = lox.TimeDelta.from_nanoseconds(500_000_000)
-    assert td.to_decimal_seconds() == 0.5
+    assert td.to_seconds() == 0.5
 
 
 def test_eop_provider_invalid_path():

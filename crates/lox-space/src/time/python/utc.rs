@@ -95,7 +95,7 @@ impl PyUtc {
             self.0.day(),
             self.0.hour(),
             self.0.minute(),
-            self.0.as_seconds_f64()
+            self.0.second_f64()
         )
     }
 
@@ -168,9 +168,9 @@ impl PyUtc {
         self.0.picosecond()
     }
 
-    /// Return the decimal seconds (seconds + fractional part).
-    pub fn decimal_seconds(&self) -> f64 {
-        self.0.as_seconds_f64()
+    /// Return the second within the current minute, including the fractional part.
+    pub fn second_float(&self) -> f64 {
+        self.0.second_f64()
     }
 
     /// Convert this UTC timestamp to a Time object in the specified scale.
