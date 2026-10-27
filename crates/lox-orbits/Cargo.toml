@@ -31,7 +31,7 @@ chrono = { workspace = true, optional = true }
 csv.workspace = true
 differential-equations.workspace = true
 libm.workspace = true
-serde = { workspace = true, optional = true }
+serde = { workspace = true, optional = true, features = ["std"] }
 sgp4.workspace = true
 thiserror.workspace = true
 

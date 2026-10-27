@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-#![cfg(feature = "serde")]
+#![cfg(all(feature = "serde", feature = "imaging"))]
 
 use lox_core::coords::Cartesian;
 use lox_core::coords::LonLatAlt;

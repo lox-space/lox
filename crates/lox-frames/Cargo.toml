@@ -23,7 +23,7 @@ lox-bodies.workspace = true
 lox-core = { workspace = true, features = ["std"] }
 lox-time.workspace = true
 
-serde = { workspace = true, optional = true }
+serde = { workspace = true, optional = true, features = ["std"] }
 thiserror.workspace = true
 
 [features]
