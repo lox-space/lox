@@ -388,18 +388,18 @@ impl From<&Opm> for OpmXml {
             ),
             eccentricity: kep.elements.eccentricity().as_f64(),
             inclination: ValueWithUnits::new(
-                kep.elements.inclination().as_f64().to_degrees(),
+                kep.elements.inclination().as_angle().to_degrees(),
                 "deg",
             ),
             ra_of_asc_node: ValueWithUnits::new(
                 kep.elements
                     .longitude_of_ascending_node()
-                    .as_f64()
+                    .as_angle()
                     .to_degrees(),
                 "deg",
             ),
             arg_of_pericenter: ValueWithUnits::new(
-                kep.elements.argument_of_periapsis().as_f64().to_degrees(),
+                kep.elements.argument_of_periapsis().as_angle().to_degrees(),
                 "deg",
             ),
             true_anomaly: Some(ValueWithUnits::new(

@@ -128,7 +128,7 @@ fn build_data_section(opm: &Opm) -> KvnSection {
         ));
         entries.push(fld(
             "INCLINATION",
-            format!("{}", kep.elements.inclination().as_f64().to_degrees()),
+            format!("{}", kep.elements.inclination().as_angle().to_degrees()),
             Some("deg"),
         ));
         entries.push(fld(
@@ -137,7 +137,7 @@ fn build_data_section(opm: &Opm) -> KvnSection {
                 "{}",
                 kep.elements
                     .longitude_of_ascending_node()
-                    .as_f64()
+                    .as_angle()
                     .to_degrees()
             ),
             Some("deg"),
@@ -146,7 +146,7 @@ fn build_data_section(opm: &Opm) -> KvnSection {
             "ARG_OF_PERICENTER",
             format!(
                 "{}",
-                kep.elements.argument_of_periapsis().as_f64().to_degrees()
+                kep.elements.argument_of_periapsis().as_angle().to_degrees()
             ),
             Some("deg"),
         ));
