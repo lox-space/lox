@@ -3,10 +3,139 @@
 # SPDX-License-Identifier: MPL-2.0
 
 from collections.abc import Callable
-from typing import Literal, Self, overload
+from typing import Literal, Self, final, overload
 import numpy as np
 from numpy.typing import ArrayLike
 import os
+
+# Overloaded methods keep an implementation signature after their overloads,
+# marked `# type: ignore[misc]`: mypy rejects implementations in stubs, but
+# griffe (mkdocstrings) drops overload-only methods from the API docs.
+
+__all__ = [
+    "AccessResults",
+    "AccessWindow",
+    "AmplifierTransmitter",
+    "Angle",
+    "AngularRate",
+    "AntennaFrame",
+    "Aoi",
+    "au",
+    "CarrierPlan",
+    "Cartesian",
+    "CascadeReceiver",
+    "Channel",
+    "combine_carrier_to_noise",
+    "complement_intervals",
+    "ConstantAntenna",
+    "Constellation",
+    "ConstellationSatellite",
+    "days",
+    "dB",
+    "Decibel",
+    "deg",
+    "deg_per_s",
+    "DipolePattern",
+    "Distance",
+    "EirpModel",
+    "Ellipsoid",
+    "EllipsoidLocation",
+    "Ensemble",
+    "EopParserError",
+    "EOPProvider",
+    "EopProviderError",
+    "Event",
+    "Frame",
+    "freq_overlap",
+    "Frequency",
+    "FrequencyRange",
+    "fspl",
+    "gaseous_attenuation_slant_path",
+    "GaussianPattern",
+    "GHz",
+    "GravitationalParameter",
+    "GroundPropagator",
+    "GroundStation",
+    "GtModel",
+    "HorizonMask",
+    "hours",
+    "hPa",
+    "Hz",
+    "InterferenceStats",
+    "intersect_intervals",
+    "Interval",
+    "ItuProvider",
+    "J2",
+    "J4",
+    "K",
+    "Keplerian",
+    "kHz",
+    "km",
+    "km_per_s",
+    "kW",
+    "LinkBudget",
+    "LinkBudgetAnalysis",
+    "LinkBudgetResults",
+    "LinkWindow",
+    "LookSide",
+    "m",
+    "m_per_s",
+    "MHz",
+    "minutes",
+    "ModCod",
+    "ModifiedEquinoctial",
+    "ModulatedLinkBudget",
+    "Modulation",
+    "NoiseStage",
+    "NoiseTempReceiver",
+    "Numerical",
+    "Observables",
+    "OpticalAccessAnalysis",
+    "OpticalPayload",
+    "Origin",
+    "Pa",
+    "ParabolicPattern",
+    "Pass",
+    "PassDirection",
+    "PatternedAntenna",
+    "PfdMask",
+    "Power",
+    "power_flux_density",
+    "PowerBudgetAnalysis",
+    "PowerBudgetResults",
+    "Pressure",
+    "PropagationLosses",
+    "rad",
+    "rad_per_s",
+    "rain_specific_attenuation",
+    "RxChain",
+    "SarAccessAnalysis",
+    "SarPayload",
+    "Scenario",
+    "seconds",
+    "Series",
+    "SGP4",
+    "slant_range",
+    "Spacecraft",
+    "SPK",
+    "Temperature",
+    "TerminalId",
+    "THz",
+    "Time",
+    "TimeDelta",
+    "TimeScale",
+    "TimeSeries",
+    "TLE",
+    "Trajectory",
+    "TxChain",
+    "union_intervals",
+    "UTC",
+    "Vallado",
+    "Velocity",
+    "VisibilityAnalysis",
+    "VisibilityResults",
+    "W",
+]
 
 type Scale = Literal["TAI", "TCB", "TCG", "TDB", "TT", "UT1"]
 type Epoch = Literal["jd", "mjd", "j1950", "j2000"]
@@ -22,6 +151,7 @@ class EopProviderError(Exception):
     ...
 
 # Unit classes
+@final
 class Angle:
     """Angle type for type-safe angular values.
 
@@ -29,12 +159,12 @@ class Angle:
     Convert to float with `float(angle)` (returns radians).
     """
     def __new__(cls, value: float) -> Self: ...
-    def __add__(self, other: Angle) -> Angle: ...
-    def __sub__(self, other: Angle) -> Angle: ...
+    def __add__(self, other: Angle, /) -> Angle: ...
+    def __sub__(self, other: Angle, /) -> Angle: ...
     def __neg__(self) -> Angle: ...
-    def __mul__(self, other: float) -> Angle: ...
-    def __rmul__(self, other: float) -> Angle: ...
-    def __eq__(self, other: object) -> bool: ...
+    def __mul__(self, other: float, /) -> Angle: ...
+    def __rmul__(self, other: float, /) -> Angle: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
@@ -50,6 +180,7 @@ class Angle:
         """Returns the value in arcseconds."""
         ...
 
+@final
 class AngularRate:
     """Angular rate type for type-safe angular velocity values.
 
@@ -57,12 +188,12 @@ class AngularRate:
     Convert to float with `float(rate)` (returns rad/s).
     """
     def __new__(cls, value: float) -> Self: ...
-    def __add__(self, other: AngularRate) -> AngularRate: ...
-    def __sub__(self, other: AngularRate) -> AngularRate: ...
+    def __add__(self, other: AngularRate, /) -> AngularRate: ...
+    def __sub__(self, other: AngularRate, /) -> AngularRate: ...
     def __neg__(self) -> AngularRate: ...
-    def __mul__(self, other: float) -> AngularRate: ...
-    def __rmul__(self, other: float) -> AngularRate: ...
-    def __eq__(self, other: object) -> bool: ...
+    def __mul__(self, other: float, /) -> AngularRate: ...
+    def __rmul__(self, other: float, /) -> AngularRate: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
@@ -75,6 +206,7 @@ class AngularRate:
         """Returns the value in degrees per second."""
         ...
 
+@final
 class Distance:
     """Distance type for type-safe length values.
 
@@ -82,12 +214,12 @@ class Distance:
     Convert to float with `float(distance)` (returns meters).
     """
     def __new__(cls, value: float) -> Self: ...
-    def __add__(self, other: Distance) -> Distance: ...
-    def __sub__(self, other: Distance) -> Distance: ...
+    def __add__(self, other: Distance, /) -> Distance: ...
+    def __sub__(self, other: Distance, /) -> Distance: ...
     def __neg__(self) -> Distance: ...
-    def __mul__(self, other: float) -> Distance: ...
-    def __rmul__(self, other: float) -> Distance: ...
-    def __eq__(self, other: object) -> bool: ...
+    def __mul__(self, other: float, /) -> Distance: ...
+    def __rmul__(self, other: float, /) -> Distance: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
@@ -103,6 +235,7 @@ class Distance:
         """Returns the value in astronomical units."""
         ...
 
+@final
 class Frequency:
     """Frequency type for type-safe frequency values.
 
@@ -110,12 +243,12 @@ class Frequency:
     Convert to float with `float(frequency)` (returns Hz).
     """
     def __new__(cls, value: float) -> Self: ...
-    def __add__(self, other: Frequency) -> Frequency: ...
-    def __sub__(self, other: Frequency) -> Frequency: ...
+    def __add__(self, other: Frequency, /) -> Frequency: ...
+    def __sub__(self, other: Frequency, /) -> Frequency: ...
     def __neg__(self) -> Frequency: ...
-    def __mul__(self, other: float) -> Frequency: ...
-    def __rmul__(self, other: float) -> Frequency: ...
-    def __eq__(self, other: object) -> bool: ...
+    def __mul__(self, other: float, /) -> Frequency: ...
+    def __rmul__(self, other: float, /) -> Frequency: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
@@ -137,6 +270,7 @@ class Frequency:
         """Returns the value in terahertz."""
         ...
 
+@final
 class GravitationalParameter:
     """Gravitational parameter (GM) type.
 
@@ -155,10 +289,11 @@ class GravitationalParameter:
         """Returns the value in km³/s²."""
         ...
     def __float__(self) -> float: ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
 
+@final
 class Power:
     """Power type for type-safe power values.
 
@@ -166,12 +301,12 @@ class Power:
     Convert to float with `float(power)` (returns Watts).
     """
     def __new__(cls, value: float) -> Self: ...
-    def __add__(self, other: Power) -> Power: ...
-    def __sub__(self, other: Power) -> Power: ...
+    def __add__(self, other: Power, /) -> Power: ...
+    def __sub__(self, other: Power, /) -> Power: ...
     def __neg__(self) -> Power: ...
-    def __mul__(self, other: float) -> Power: ...
-    def __rmul__(self, other: float) -> Power: ...
-    def __eq__(self, other: object) -> bool: ...
+    def __mul__(self, other: float, /) -> Power: ...
+    def __rmul__(self, other: float, /) -> Power: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
@@ -187,6 +322,7 @@ class Power:
         """Returns the value in dBW."""
         ...
 
+@final
 class Temperature:
     """Temperature type for type-safe temperature values.
 
@@ -194,12 +330,12 @@ class Temperature:
     Convert to float with `float(temp)` (returns Kelvin).
     """
     def __new__(cls, value: float) -> Self: ...
-    def __add__(self, other: Temperature) -> Temperature: ...
-    def __sub__(self, other: Temperature) -> Temperature: ...
+    def __add__(self, other: Temperature, /) -> Temperature: ...
+    def __sub__(self, other: Temperature, /) -> Temperature: ...
     def __neg__(self) -> Temperature: ...
-    def __mul__(self, other: float) -> Temperature: ...
-    def __rmul__(self, other: float) -> Temperature: ...
-    def __eq__(self, other: object) -> bool: ...
+    def __mul__(self, other: float, /) -> Temperature: ...
+    def __rmul__(self, other: float, /) -> Temperature: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
@@ -209,6 +345,7 @@ class Temperature:
         """Returns the value in Kelvin."""
         ...
 
+@final
 class Pressure:
     """Pressure type for type-safe pressure values.
 
@@ -216,12 +353,12 @@ class Pressure:
     Convert to float with `float(pressure)` (returns Pa).
     """
     def __new__(cls, value: float) -> Self: ...
-    def __add__(self, other: Pressure) -> Pressure: ...
-    def __sub__(self, other: Pressure) -> Pressure: ...
+    def __add__(self, other: Pressure, /) -> Pressure: ...
+    def __sub__(self, other: Pressure, /) -> Pressure: ...
     def __neg__(self) -> Pressure: ...
-    def __mul__(self, other: float) -> Pressure: ...
-    def __rmul__(self, other: float) -> Pressure: ...
-    def __eq__(self, other: object) -> bool: ...
+    def __mul__(self, other: float, /) -> Pressure: ...
+    def __rmul__(self, other: float, /) -> Pressure: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
@@ -234,6 +371,7 @@ class Pressure:
         """Returns the value in pascals."""
         ...
 
+@final
 class Velocity:
     """Velocity type for type-safe speed values.
 
@@ -241,12 +379,12 @@ class Velocity:
     Convert to float with `float(velocity)` (returns m/s).
     """
     def __new__(cls, value: float) -> Self: ...
-    def __add__(self, other: Velocity) -> Velocity: ...
-    def __sub__(self, other: Velocity) -> Velocity: ...
+    def __add__(self, other: Velocity, /) -> Velocity: ...
+    def __sub__(self, other: Velocity, /) -> Velocity: ...
     def __neg__(self) -> Velocity: ...
-    def __mul__(self, other: float) -> Velocity: ...
-    def __rmul__(self, other: float) -> Velocity: ...
-    def __eq__(self, other: object) -> bool: ...
+    def __mul__(self, other: float, /) -> Velocity: ...
+    def __rmul__(self, other: float, /) -> Velocity: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
@@ -309,6 +447,7 @@ hours: TimeDelta
 days: TimeDelta
 """86400 seconds"""
 
+@final
 class GroundStation:
     """A named ground station for visibility analysis.
 
@@ -366,6 +505,7 @@ class GroundStation:
         """Return the named receive terminals as a dict."""
         ...
 
+@final
 class Spacecraft:
     """A named spacecraft for visibility analysis.
 
@@ -417,6 +557,7 @@ class Spacecraft:
         """Return the named receive terminals as a dict."""
         ...
 
+@final
 class Scenario:
     """A scenario grouping spacecraft, ground stations, and a time interval.
 
@@ -457,6 +598,7 @@ class Scenario:
         """Return the end time."""
         ...
 
+@final
 class Ensemble:
     """A collection of propagated trajectories keyed by spacecraft id.
 
@@ -470,6 +612,7 @@ class Ensemble:
     def __len__(self) -> int: ...
     def __repr__(self) -> str: ...
 
+@final
 class ConstellationSatellite:
     """A single satellite in a constellation."""
     @property
@@ -482,6 +625,7 @@ class ConstellationSatellite:
         ...
     def __repr__(self) -> str: ...
 
+@final
 class Constellation:
     """A named collection of satellites produced by a constellation design algorithm.
 
@@ -577,6 +721,7 @@ class Constellation:
     def __len__(self) -> int: ...
     def __repr__(self) -> str: ...
 
+@final
 class PowerBudgetAnalysis:
     """Power budget analysis for spacecraft in a scenario.
 
@@ -616,6 +761,7 @@ class PowerBudgetAnalysis:
         """
         ...
 
+@final
 class PowerBudgetResults:
     """Results of a power budget analysis.
 
@@ -673,6 +819,7 @@ class PowerBudgetResults:
         """
         ...
 
+@final
 class VisibilityAnalysis:
     """Computes ground-station-to-spacecraft and inter-satellite visibility.
 
@@ -725,20 +872,26 @@ class VisibilityAnalysis:
         min_range: Distance | None = None,
         max_range: Distance | None = None,
     ) -> Self: ...
-    def compute(self, ephemeris: SPK) -> VisibilityResults:
+    def compute(self, ephemeris: SPK | None = None) -> VisibilityResults:
         """Compute visibility intervals for all pairs.
 
         If no ensemble was provided at construction, the scenario is
         propagated automatically (trajectories transformed to ICRF).
 
         Args:
-            ephemeris: SPK ephemeris data.
+            ephemeris: SPK ephemeris data. Required when ``occulting_bodies``
+                is non-empty; optional otherwise.
 
         Returns:
             VisibilityResults containing intervals for all pairs.
+
+        Raises:
+            ValueError: if occulting bodies are configured but no
+                ephemeris is provided.
         """
         ...
 
+@final
 class VisibilityResults:
     """Results of a visibility analysis.
 
@@ -820,6 +973,7 @@ class VisibilityResults:
         """Return the total number of visibility intervals across all pairs."""
         ...
 
+@final
 class TerminalId:
     """Identifies one terminal: the asset carrying it and its name on that asset.
 
@@ -839,11 +993,12 @@ class TerminalId:
     def name(self) -> str:
         """The terminal's name on its asset."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __hash__(self) -> int: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
 
+@final
 class CarrierPlan:
     """The carrier, waveform, and coding a link is evaluated against.
 
@@ -896,6 +1051,7 @@ class CarrierPlan:
         ...
     def __repr__(self) -> str: ...
 
+@final
 class LinkWindow:
     """An interval in which a link closes, with the throughput it supports."""
     @property
@@ -935,6 +1091,7 @@ class LinkWindow:
         ...
     def __repr__(self) -> str: ...
 
+@final
 class LinkBudgetAnalysis:
     """Refines visibility windows into the intervals in which links close.
 
@@ -973,6 +1130,7 @@ class LinkBudgetAnalysis:
         ...
     def __repr__(self) -> str: ...
 
+@final
 class LinkBudgetResults:
     """Results of a link budget analysis."""
     def windows(self, tx: TerminalId, rx: TerminalId) -> list[LinkWindow]:
@@ -1014,6 +1172,7 @@ class LinkBudgetResults:
         ...
     def __repr__(self) -> str: ...
 
+@final
 class HorizonMask:
     """A measured horizon profile for visibility analysis.
 
@@ -1089,6 +1248,7 @@ def complement_intervals(intervals: list[Interval], bound: Interval) -> list[Int
     """
     ...
 
+@final
 class Origin:
     """Represents a celestial body (planet, moon, barycenter, etc.).
 
@@ -1159,6 +1319,7 @@ class Origin:
         """Return the rotation rate."""
         ...
 
+@final
 class Frame:
     """Represents a reference frame for positioning and transformations.
 
@@ -1188,6 +1349,7 @@ class Frame:
         """Return the abbreviation of this reference frame."""
         ...
 
+@final
 class SPK:
     """SPICE SPK (Spacecraft and Planet Kernel) ephemeris data.
 
@@ -1207,6 +1369,7 @@ class SPK:
     """
     def __new__(cls, path: os.PathLike) -> Self: ...
 
+@final
 class Cartesian:
     """Represents an orbital state (position and velocity) at a specific time.
 
@@ -1309,6 +1472,7 @@ class Cartesian:
 
 # Keep old name as alias
 
+@final
 class Keplerian:
     """Represents an orbit using Keplerian (classical) orbital elements.
 
@@ -1488,6 +1652,7 @@ class Keplerian:
         """Return the orbital period."""
         ...
 
+@final
 class ModifiedEquinoctial:
     """Represents an orbit using Modified Equinoctial Elements (MEE).
 
@@ -1569,6 +1734,7 @@ class ModifiedEquinoctial:
         """Convert these modified equinoctial elements to Keplerian orbital elements."""
         ...
 
+@final
 class Trajectory:
     """A time-series of orbital states with interpolation support.
 
@@ -1585,7 +1751,7 @@ class Trajectory:
     def from_numpy(
         cls,
         start_time: Time,
-        states: np.ndarray,
+        array: np.ndarray,
         origin: str | int | Origin | None = None,
         frame: str | Frame | None = None,
     ) -> Self:
@@ -1593,7 +1759,7 @@ class Trajectory:
 
         Args:
             start_time: Reference epoch for the trajectory.
-            states: 2D array with columns [t(s), x(m), y(m), z(m), vx(m/s), vy(m/s), vz(m/s)].
+            array: 2D array with columns [t(s), x(m), y(m), z(m), vx(m/s), vy(m/s), vz(m/s)].
             origin: Central body (default: Earth).
             frame: Reference frame (default: ICRF).
         """
@@ -1624,6 +1790,7 @@ class Trajectory:
         """Transform all states to a different central body."""
         ...
 
+@final
 class Event:
     """Represents a detected event (zero-crossing of a function).
 
@@ -1631,6 +1798,7 @@ class Event:
     The crossing direction indicates "up" (negative to positive)
     or "down" (positive to negative).
     """
+    def __new__(cls, time: Time, crossing: Literal["up", "down"]) -> Self: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
     def time(self) -> Time:
@@ -1640,6 +1808,7 @@ class Event:
         """Return the crossing direction ("up" or "down")."""
         ...
 
+@final
 class Interval:
     """Represents a time interval between two times.
 
@@ -1687,6 +1856,7 @@ class Interval:
         """
         ...
 
+@final
 class Vallado:
     """Semi-analytical Keplerian orbit propagator using Vallado's method.
 
@@ -1703,10 +1873,30 @@ class Vallado:
     """
     def __new__(cls, initial_state: Cartesian, max_iter: int | None = None) -> Self: ...
     @overload
-    def propagate(self, steps: Time) -> Cartesian: ...
-    @overload
-    def propagate(self, steps: list[Time]) -> Trajectory: ...
     def propagate(
+        self,
+        steps: Time,
+        end: None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Cartesian: ...
+    @overload
+    def propagate(
+        self,
+        steps: Time,
+        end: Time,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Trajectory: ...
+    @overload
+    def propagate(
+        self,
+        steps: list[Time],
+        end: None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Trajectory: ...
+    def propagate(  # type: ignore[misc]
         self,
         steps: Time | list[Time],
         end: Time | None = None,
@@ -1716,6 +1906,7 @@ class Vallado:
         """Propagate the orbit to one or more times."""
         ...
 
+@final
 class Numerical:
     """Numerical orbit propagator using Dormand-Prince 8(5,3) integration.
 
@@ -1741,10 +1932,30 @@ class Numerical:
         max_steps: int | None = None,
     ) -> Self: ...
     @overload
-    def propagate(self, steps: Time) -> Cartesian: ...
-    @overload
-    def propagate(self, steps: list[Time]) -> Trajectory: ...
     def propagate(
+        self,
+        steps: Time,
+        end: None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Cartesian: ...
+    @overload
+    def propagate(
+        self,
+        steps: Time,
+        end: Time,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Trajectory: ...
+    @overload
+    def propagate(
+        self,
+        steps: list[Time],
+        end: None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Trajectory: ...
+    def propagate(  # type: ignore[misc]
         self,
         steps: Time | list[Time],
         end: Time | None = None,
@@ -1754,6 +1965,7 @@ class Numerical:
         """Propagate the orbit to one or more times."""
         ...
 
+@final
 class J2:
     """Analytical J2 orbit propagator (Kozai secular ± Kwok short-period).
 
@@ -1773,10 +1985,30 @@ class J2:
         step: TimeDelta | None = None,
     ) -> Self: ...
     @overload
-    def propagate(self, steps: Time) -> Cartesian: ...
-    @overload
-    def propagate(self, steps: list[Time]) -> Trajectory: ...
     def propagate(
+        self,
+        steps: Time,
+        end: None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Cartesian: ...
+    @overload
+    def propagate(
+        self,
+        steps: Time,
+        end: Time,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Trajectory: ...
+    @overload
+    def propagate(
+        self,
+        steps: list[Time],
+        end: None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Trajectory: ...
+    def propagate(  # type: ignore[misc]
         self,
         steps: Time | list[Time],
         end: Time | None = None,
@@ -1786,6 +2018,7 @@ class J2:
         """Propagate the orbit to one or more times."""
         ...
 
+@final
 class J4:
     """Analytical J4 orbit propagator (Kozai secular with J2²+J4 ± Kwok short-period).
 
@@ -1805,10 +2038,30 @@ class J4:
         step: TimeDelta | None = None,
     ) -> Self: ...
     @overload
-    def propagate(self, steps: Time) -> Cartesian: ...
-    @overload
-    def propagate(self, steps: list[Time]) -> Trajectory: ...
     def propagate(
+        self,
+        steps: Time,
+        end: None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Cartesian: ...
+    @overload
+    def propagate(
+        self,
+        steps: Time,
+        end: Time,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Trajectory: ...
+    @overload
+    def propagate(
+        self,
+        steps: list[Time],
+        end: None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Trajectory: ...
+    def propagate(  # type: ignore[misc]
         self,
         steps: Time | list[Time],
         end: Time | None = None,
@@ -1818,6 +2071,7 @@ class J4:
         """Propagate the orbit to one or more times."""
         ...
 
+@final
 class Ellipsoid:
     """A reference ellipsoid, defined by its equatorial radius and flattening.
 
@@ -1842,6 +2096,7 @@ class Ellipsoid:
         """Return the flattening factor."""
         ...
 
+@final
 class EllipsoidLocation:
     """Represents a location on the surface of a celestial body.
 
@@ -1905,6 +2160,7 @@ class EllipsoidLocation:
         """Return the rotation matrix from body-fixed to topocentric frame."""
         ...
 
+@final
 class GroundPropagator:
     """Propagator for ground station positions.
 
@@ -1918,10 +2174,30 @@ class GroundPropagator:
     """
     def __new__(cls, location: EllipsoidLocation) -> Self: ...
     @overload
-    def propagate(self, steps: Time) -> Cartesian: ...
-    @overload
-    def propagate(self, steps: list[Time]) -> Trajectory: ...
     def propagate(
+        self,
+        steps: Time,
+        end: None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Cartesian: ...
+    @overload
+    def propagate(
+        self,
+        steps: Time,
+        end: Time,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Trajectory: ...
+    @overload
+    def propagate(
+        self,
+        steps: list[Time],
+        end: None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Trajectory: ...
+    def propagate(  # type: ignore[misc]
         self,
         steps: Time | list[Time],
         end: Time | None = None,
@@ -1931,6 +2207,7 @@ class GroundPropagator:
         """Propagate the ground station to one or more times."""
         ...
 
+@final
 class TLE:
     """Two-Line Element set (TLE) for satellite orbit data.
 
@@ -1995,6 +2272,7 @@ class TLE:
     def __str__(self) -> str: ...
     def __getnewargs__(self) -> tuple[str]: ...
 
+@final
 class SGP4:
     """SGP4 (Simplified General Perturbations 4) orbit propagator.
 
@@ -2020,13 +2298,29 @@ class SGP4:
         ...
     @overload
     def propagate(
-        self, steps: Time, provider: EOPProvider | None = None
+        self,
+        steps: Time,
+        end: None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
     ) -> Cartesian: ...
     @overload
     def propagate(
-        self, steps: list[Time], provider: EOPProvider | None = None
+        self,
+        steps: Time,
+        end: Time,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
     ) -> Trajectory: ...
+    @overload
     def propagate(
+        self,
+        steps: list[Time],
+        end: None = None,
+        frame: str | Frame | None = None,
+        provider: EOPProvider | None = None,
+    ) -> Trajectory: ...
+    def propagate(  # type: ignore[misc]
         self,
         steps: Time | list[Time],
         end: Time | None = None,
@@ -2036,6 +2330,7 @@ class SGP4:
         """Propagate the orbit to one or more times."""
         ...
 
+@final
 class Observables:
     """Observation data from a ground station to a target.
 
@@ -2061,6 +2356,7 @@ class Observables:
         """Return the range rate."""
         ...
 
+@final
 class Pass:
     """Represents a visibility pass between a ground station and spacecraft.
 
@@ -2084,6 +2380,7 @@ class Pass:
         ...
     def __repr__(self) -> str: ...
 
+@final
 class TimeScale:
     """Represents an astronomical time scale.
 
@@ -2111,6 +2408,7 @@ class TimeScale:
         """Return the full name of the time scale."""
         ...
 
+@final
 class Time:
     """Represents an instant in time on a specific astronomical time scale.
 
@@ -2158,7 +2456,7 @@ class Time:
         cls,
         scale: Scale | TimeScale,
         year: int,
-        doy: int,
+        day: int,
         hour: int = 0,
         minute: int = 0,
         seconds: float = 0.0,
@@ -2183,16 +2481,18 @@ class Time:
         ...
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
-    def __add__(self, other: TimeDelta) -> Self: ...
+    def __add__(self, other: TimeDelta, /) -> Self: ...
     @overload
-    def __sub__(self, other: TimeDelta) -> Self: ...
+    def __sub__(self, other: TimeDelta, /) -> Self: ...
     @overload
-    def __sub__(self, other: Time) -> TimeDelta: ...
-    def __eq__(self, other: object) -> bool: ...
-    def __lt__(self, other: object) -> bool: ...
-    def __le__(self, other: object) -> bool: ...
+    def __sub__(self, other: Time, /) -> TimeDelta: ...
+    def __eq__(self, other: object, /) -> bool: ...
+    def __lt__(self, other: object, /) -> bool: ...
+    def __le__(self, other: object, /) -> bool: ...
+    def __gt__(self, other: object, /) -> bool: ...
+    def __ge__(self, other: object, /) -> bool: ...
     def isclose(
-        self, other: Time, rel_tol: float = 1e-8, abs_tol: float = 1e-14
+        self, rhs: Time, rel_tol: float = 1e-8, abs_tol: float = 1e-14
     ) -> bool:
         """Check if two times are approximately equal."""
         ...
@@ -2257,6 +2557,7 @@ class Time:
         """Convert to UTC."""
         ...
 
+@final
 class TimeDelta:
     """Represents a duration or time difference.
 
@@ -2275,10 +2576,10 @@ class TimeDelta:
     def __str__(self) -> str: ...
     def __float__(self) -> float: ...
     def __neg__(self) -> Self: ...
-    def __add__(self, other: Self) -> Self: ...
-    def __sub__(self, other: Self) -> Self: ...
-    def __mul__(self, other: float) -> Self: ...
-    def __rmul__(self, other: float) -> Self: ...
+    def __add__(self, other: Self, /) -> Self: ...
+    def __sub__(self, other: Self, /) -> Self: ...
+    def __mul__(self, other: float, /) -> Self: ...
+    def __rmul__(self, other: float, /) -> Self: ...
     def seconds(self) -> int:
         """Return integer seconds."""
         ...
@@ -2341,6 +2642,7 @@ class TimeDelta:
         """Generate a range of TimeDelta values."""
         ...
 
+@final
 class UTC:
     """Represents a UTC (Coordinated Universal Time) timestamp.
 
@@ -2374,7 +2676,7 @@ class UTC:
         ...
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def isclose(
         self, other: UTC, rel_tol: float = 1e-8, abs_tol: float = 1e-14
     ) -> bool:
@@ -2419,6 +2721,7 @@ class UTC:
         """Convert to a continuous time scale."""
         ...
 
+@final
 class EOPProvider:
     """Earth Orientation Parameters (EOP) data provider.
 
@@ -2438,6 +2741,7 @@ class EOPProvider:
     """
     def __new__(cls, *args: os.PathLike) -> Self: ...
 
+@final
 class Series:
     """Interpolation series for 1D data.
 
@@ -2463,6 +2767,7 @@ class Series:
         """Interpolate a y value at the given x coordinate."""
         ...
 
+@final
 class TimeSeries:
     """Time-indexed interpolation series.
 
@@ -2519,6 +2824,7 @@ class TimeSeries:
 
 # Communications
 
+@final
 class Decibel:
     """A value in decibels.
 
@@ -2534,15 +2840,16 @@ class Decibel:
         """Returns the linear power ratio."""
         ...
     def __float__(self) -> float: ...
-    def __add__(self, other: Decibel) -> Decibel: ...
-    def __sub__(self, other: Decibel) -> Decibel: ...
-    def __mul__(self, other: float) -> Decibel: ...
-    def __rmul__(self, other: float) -> Decibel: ...
+    def __add__(self, other: Decibel, /) -> Decibel: ...
+    def __sub__(self, other: Decibel, /) -> Decibel: ...
+    def __mul__(self, other: float, /) -> Decibel: ...
+    def __rmul__(self, other: float, /) -> Decibel: ...
     def __neg__(self) -> Decibel: ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
 
+@final
 class Modulation:
     """Digital modulation scheme.
 
@@ -2553,9 +2860,10 @@ class Modulation:
     def bits_per_symbol(self) -> int:
         """Returns the number of bits per symbol."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class ParabolicPattern:
     """Parabolic antenna gain pattern.
 
@@ -2588,9 +2896,10 @@ class ParabolicPattern:
     def peak_gain(self, frequency: Frequency) -> Decibel:
         """Returns the peak gain in dBi."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class GaussianPattern:
     """Gaussian antenna gain pattern.
 
@@ -2610,9 +2919,10 @@ class GaussianPattern:
     def peak_gain(self, frequency: Frequency) -> Decibel:
         """Returns the peak gain in dBi."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class DipolePattern:
     """Dipole antenna gain pattern.
 
@@ -2628,9 +2938,10 @@ class DipolePattern:
     def peak_gain(self, frequency: Frequency) -> Decibel:
         """Returns the peak gain in dBi."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class ConstantAntenna:
     """An antenna with constant gain.
 
@@ -2638,9 +2949,10 @@ class ConstantAntenna:
         gain: Peak gain as Decibel.
     """
     def __new__(cls, gain: Decibel) -> Self: ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class AntennaFrame:
     """Right-handed antenna coordinate frame expressed in a parent frame.
 
@@ -2672,9 +2984,10 @@ class AntennaFrame:
     def angles_for(self, direction: list[float]) -> tuple[Angle, Angle]:
         """Returns the pattern angles for a parent-frame direction vector."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class PatternedAntenna:
     """An antenna with a physics-based gain pattern and antenna frame.
 
@@ -2704,6 +3017,7 @@ class PatternedAntenna:
         ...
     def __repr__(self) -> str: ...
 
+@final
 class AmplifierTransmitter:
     """A radio transmitter with an RF power amplifier.
 
@@ -2724,9 +3038,10 @@ class AmplifierTransmitter:
     def output_back_off(self) -> Decibel:
         """Output back-off."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class NoiseTempReceiver:
     """A receiver characterised by a single equivalent noise temperature.
 
@@ -2744,9 +3059,10 @@ class NoiseTempReceiver:
     def noise_temperature(self) -> Temperature:
         """Equivalent noise temperature referred to the receiver's input connector."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class NoiseStage:
     """A single stage in an RF receiver chain.
 
@@ -2757,6 +3073,7 @@ class NoiseStage:
     def __new__(cls, gain: Decibel, noise_temperature: Temperature) -> Self: ...
     def __repr__(self) -> str: ...
 
+@final
 class CascadeReceiver:
     """An N-stage cascade receiver using the Friis noise formula.
 
@@ -2787,9 +3104,10 @@ class CascadeReceiver:
     def chain_gain(self) -> Decibel:
         """Returns the total RF chain gain in dB."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class Channel:
     """A communication channel: the waveform's occupancy of spectrum.
 
@@ -2831,9 +3149,10 @@ class Channel:
     def processing_gain(self) -> Decibel | None:
         """Returns the DSSS processing gain in dB, or None for narrowband."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class ModCod:
     """A modulation and coding scheme with its performance threshold.
 
@@ -2907,9 +3226,10 @@ class ModCod:
     def information_rate(self, symbol_rate: Frequency) -> Frequency:
         """Returns the information bit rate at the given symbol rate."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class PropagationLosses:
     """Itemized excess propagation losses along a link path, beyond
     free-space path loss.
@@ -2946,9 +3266,10 @@ class PropagationLosses:
     def lines(self) -> list[tuple[str, Decibel, bool]]:
         """The loss lines as (label, value, absorptive) tuples, in insertion order."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class FrequencyRange:
     """A contiguous frequency range with inclusive bounds.
 
@@ -2972,7 +3293,7 @@ class FrequencyRange:
     def contains(self, frequency: Frequency) -> bool:
         """Returns whether the frequency lies within the range (bounds inclusive)."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
 
@@ -2982,6 +3303,7 @@ TxTerminal = TxChain | EirpModel
 RxTerminal = RxChain | GtModel
 """A receive terminal: a component-tier chain or a lumped G/T figure."""
 
+@final
 class TxChain:
     """A transmit chain: an antenna fed by a transmitter.
 
@@ -3028,9 +3350,10 @@ class TxChain:
         Raises ValueError when the carrier lies outside the chain's band.
         """
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class RxChain:
     """A receive chain: a receiver fed by an antenna.
 
@@ -3088,9 +3411,10 @@ class RxChain:
         Raises ValueError when the carrier lies outside the chain's band.
         """
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class EirpModel:
     """A lumped transmit terminal: an aggregate EIRP figure over a band.
 
@@ -3119,9 +3443,10 @@ class EirpModel:
         Raises ValueError when the carrier lies outside the band.
         """
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class GtModel:
     """A lumped receive terminal: an aggregate G/T figure over a band.
 
@@ -3154,9 +3479,10 @@ class GtModel:
         Raises ValueError when the carrier lies outside the band.
         """
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
+@final
 class LinkBudget:
     """A modulation-agnostic link budget between two link terminals.
 
@@ -3266,6 +3592,7 @@ class LinkBudget:
         ...
     def __repr__(self) -> str: ...
 
+@final
 class InterferenceStats:
     """Interference statistics for a link with a given interferer power."""
     @property
@@ -3286,6 +3613,7 @@ class InterferenceStats:
         ...
     def __repr__(self) -> str: ...
 
+@final
 class ModulatedLinkBudget:
     """Link-budget output with a modulation and coding scheme applied."""
     @property
@@ -3389,6 +3717,7 @@ def power_flux_density(
     """
     ...
 
+@final
 class PfdMask:
     """A piecewise-linear PFD mask over elevation in dBW/m²/ref_bw.
 
@@ -3413,7 +3742,7 @@ class PfdMask:
     def nodes(self) -> list[tuple[Angle, Decibel]]:
         """Returns the mask breakpoints as (elevation, value) tuples."""
         ...
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object, /) -> bool: ...
     def __repr__(self) -> str: ...
 
 def slant_range(elevation: Angle, earth_radius: Distance, altitude: Distance) -> Distance:
@@ -3433,6 +3762,7 @@ def slant_range(elevation: Angle, earth_radius: Distance, altitude: Distance) ->
 # Imaging analysis
 # ---------------------------------------------------------------------------
 
+@final
 class Aoi:
     """An area of interest (AOI) defined as a geographic polygon.
 
@@ -3455,6 +3785,7 @@ class Aoi:
         """
         ...
 
+@final
 class OpticalPayload:
     """Optical sensor payload describing a spacecraft's ground coverage capability.
 
@@ -3484,6 +3815,7 @@ class OpticalPayload:
         """
         ...
 
+@final
 class OpticalAccessAnalysis:
     """AOI optical access analysis: computes imaging windows for spacecraft over AOIs.
 
@@ -3521,6 +3853,7 @@ class OpticalAccessAnalysis:
         """
         ...
 
+@final
 class AccessResults:
     """Results of an access analysis.
 
@@ -3542,6 +3875,7 @@ class AccessResults:
         ...
 
 
+@final
 class PassDirection:
     """Direction of orbital motion at the time of an access window: moving
     northward (``Ascending``) or southward (``Descending``), sampled at the
@@ -3552,6 +3886,7 @@ class PassDirection:
     Descending: "PassDirection"
 
 
+@final
 class AccessWindow:
     """A single access window: time interval plus pass direction at the midpoint.
 
@@ -3571,6 +3906,7 @@ class AccessWindow:
     def __repr__(self) -> str: ...
 
 
+@final
 class LookSide:
     """Which side of the ground track a SAR payload can image.
 
@@ -3583,6 +3919,7 @@ class LookSide:
     Either: "LookSide"
 
 
+@final
 class SarPayload:
     """SAR (Synthetic Aperture Radar) payload — side-looking annular access geometry.
 
@@ -3604,6 +3941,7 @@ class SarPayload:
     def side(self) -> LookSide: ...
 
 
+@final
 class SarAccessAnalysis:
     """SAR access analysis: per-(spacecraft, AOI) access windows.
 
@@ -3644,6 +3982,7 @@ class SarAccessAnalysis:
 
 # ITU-R atmospheric propagation
 
+@final
 class ItuProvider:
     """An open ITU-R data bundle (``lox-itur-data.npz``).
 
@@ -3652,7 +3991,7 @@ class ItuProvider:
 
         cargo run -p lox-itur --bin pack -- <itur-wheel.whl> lox-itur-data.npz
     """
-    def __init__(self, path: str) -> None: ...
+    def __new__(cls, path: str | os.PathLike[str]) -> Self: ...
     def upstream_version(self) -> str:
         """The upstream ``itur`` package version this bundle was built from."""
         ...

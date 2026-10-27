@@ -2,39 +2,37 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-"""The type stub must cover every public runtime export."""
+"""The type stub must match the runtime module."""
 
-import ast
+import os
 import pathlib
+import subprocess
+import sys
 
-import lox_space as lox
+import pytest
+
+pytest.importorskip("mypy", reason="stubtest needs mypy (dev dependency group)")
+
+ROOT = pathlib.Path(__file__).parents[3]
 
 
-def test_stub_covers_all_exports():
-    stub = pathlib.Path(__file__).parents[3] / "lox_space.pyi"
-    tree = ast.parse(stub.read_text(encoding="utf-8"))
-    stub_names = {
-        node.name
-        for node in tree.body
-        if isinstance(node, (ast.ClassDef, ast.FunctionDef))
-    }
-    stub_names |= {
-        target.id
-        for node in tree.body
-        if isinstance(node, ast.Assign)
-        for target in node.targets
-        if isinstance(target, ast.Name)
-    }
-    stub_names |= {
-        node.target.id
-        for node in tree.body
-        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)
-    }
-
-    exported = {
-        name
-        for name in dir(lox)
-        if not name.startswith("_") and name != "lox_space"
-    }
-    missing = exported - stub_names
-    assert not missing, f"exported but missing from the stub: {sorted(missing)}"
+def test_stubtest():
+    # Runs against the `lox_space` installed in this interpreter, i.e. exactly
+    # the build the rest of the suite tests. `MYPYPATH` points stubtest at the
+    # repository's stub rather than the copy bundled into that build. Since the
+    # stub declares `__all__`, this also catches runtime exports it is missing.
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "mypy.stubtest",
+            "lox_space",
+            "--allowlist",
+            str(ROOT / "stubtest-allowlist.txt"),
+        ],
+        cwd=ROOT,
+        env={**os.environ, "MYPYPATH": str(ROOT)},
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr

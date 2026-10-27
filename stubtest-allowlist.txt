@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+# Allowlist for `mypy.stubtest` (see crates/lox-space/tests/test_stubs.py). Entries are regexes.
+# Keep this short: every entry should be a runtime artefact that the stub
+# deliberately does not model, never a real stub/runtime mismatch.
+
+# PyO3 fills the reflected number slots whenever it implements `__add__` and
+# `__sub__`; they return `NotImplemented` for anything but the class itself,
+# so they add nothing over the forward operators declared in the stub.
+lox_space\.\w+\.__r(add|sub)__
+
+# Stub-only type aliases used in annotations; they do not exist at runtime.
+lox_space\.(Epoch|RxTerminal|Scale|TxTerminal|Unit)
+
+# The extension module exposes itself as an attribute.
+lox_space\.lox_space
