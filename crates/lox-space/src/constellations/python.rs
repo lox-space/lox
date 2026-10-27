@@ -256,7 +256,7 @@ impl PyConstellation {
         phasing_numerator,
         phasing_denominator,
         inclination,
-        perigee_altitude=None,
+        periapsis_altitude=None,
         semi_major_axis=None,
         eccentricity=None,
         argument_of_periapsis=None,
@@ -275,7 +275,7 @@ impl PyConstellation {
         phasing_numerator: u32,
         phasing_denominator: u32,
         inclination: PyAngle,
-        perigee_altitude: Option<PyDistance>,
+        periapsis_altitude: Option<PyDistance>,
         semi_major_axis: Option<PyDistance>,
         eccentricity: Option<f64>,
         argument_of_periapsis: Option<PyAngle>,
@@ -300,9 +300,9 @@ impl PyConstellation {
         .with_argument_of_periapsis(aop)
         .with_longitude_of_ascending_node(lan);
 
-        match (perigee_altitude, semi_major_axis) {
+        match (periapsis_altitude, semi_major_axis) {
             (Some(alt), None) => {
-                builder = builder.with_perigee_altitude(alt.0);
+                builder = builder.with_periapsis_altitude(alt.0);
             }
             (None, Some(sma)) => {
                 let ecc = eccentricity.ok_or_else(|| {
@@ -312,12 +312,12 @@ impl PyConstellation {
             }
             (None, None) => {
                 return Err(PyValueError::new_err(
-                    "either perigee_altitude or semi_major_axis must be provided",
+                    "either periapsis_altitude or semi_major_axis must be provided",
                 ));
             }
             (Some(_), Some(_)) => {
                 return Err(PyValueError::new_err(
-                    "perigee_altitude and semi_major_axis are mutually exclusive",
+                    "periapsis_altitude and semi_major_axis are mutually exclusive",
                 ));
             }
         }

@@ -31,9 +31,9 @@ pub enum KeplerianOrbitError {
     #[error(transparent)]
     NonQuasiInertial(#[from] NonQuasiInertialFrameError),
 
-    /// The perigee radius is below the central body's mean radius.
-    #[error("perigee radius is below the origin mean radius")]
-    PerigeeCrossesBodyRadius,
+    /// The periapsis radius is below the central body's mean radius.
+    #[error("periapsis radius is below the origin mean radius")]
+    PeriapsisCrossesBodyRadius,
 }
 
 impl<O, R> KeplerianOrbit<O, R>
@@ -60,13 +60,13 @@ where
         if let Ok(body_mean_radius) = origin.try_mean_radius()
             && perigee_km < body_mean_radius.to_kilometers()
         {
-            return Err(KeplerianOrbitError::PerigeeCrossesBodyRadius);
+            return Err(KeplerianOrbitError::PeriapsisCrossesBodyRadius);
         }
 
         Ok(())
     }
 
-    /// Constructs a Keplerian orbit with validation of the frame and perigee radius.
+    /// Constructs a Keplerian orbit with validation of the frame and periapsis radius.
     pub fn try_from_keplerian(
         keplerian: Keplerian,
         time: lox_time::Time,
