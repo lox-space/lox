@@ -51,6 +51,10 @@ lox-itur-pack wheel:
 pytest *FLAGS:
     uv run pytest {{FLAGS}}
 
+# Check lox_space.pyi against the extension with mypy.stubtest (also part of `just pytest`).
+stubtest *FLAGS:
+    uv run pytest crates/lox-space/tests/test_stubs.py {{FLAGS}}
+
 rstest *FLAGS:
     cargo nextest run --all-features --lib --bins --tests --examples {{FLAGS}}
 

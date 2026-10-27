@@ -33,6 +33,7 @@ dev = [
   "black",
   "ipython",
   "maturin",
+  "mypy>=2.4.0",
   "pytest",
   "pytest-codspeed",
   "pytest-cov>=6.0.0",
