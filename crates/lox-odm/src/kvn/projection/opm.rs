@@ -1638,6 +1638,51 @@ GM = 398600.4415 [km**3/s**2]
     }
 
     #[test]
+    fn read_opm_with_negative_keplerian_angles() {
+        // The NDM/XML schema allows angles in [-180, 360) deg.
+        let kvn = "\
+CCSDS_OPM_VERS = 3.0
+CREATION_DATE = 2024-01-01T00:00:00
+ORIGINATOR = TEST
+OBJECT_NAME = TEST-SAT
+OBJECT_ID = 2024-000A
+CENTER_NAME = EARTH
+REF_FRAME = ICRF
+TIME_SYSTEM = TAI
+EPOCH = 2024-01-01T00:00:00
+X = 7000.0 [km]
+Y = 0.0 [km]
+Z = 0.0 [km]
+X_DOT = 0.0 [km/s]
+Y_DOT = 7.5 [km/s]
+Z_DOT = 0.0 [km/s]
+SEMI_MAJOR_AXIS = 7000.0 [km]
+ECCENTRICITY = 0.001
+INCLINATION = 45.0 [deg]
+RA_OF_ASC_NODE = -30.0 [deg]
+ARG_OF_PERICENTER = -170.0 [deg]
+TRUE_ANOMALY = -10.0 [deg]
+";
+        let parsed = read_opm(kvn).expect("parse failed");
+        let kep = parsed.keplerian.expect("keplerian block should be present");
+        assert_approx_eq!(
+            kep.elements.longitude_of_ascending_node().as_f64(),
+            330.0_f64.to_radians(),
+            rtol <= 1e-12
+        );
+        assert_approx_eq!(
+            kep.elements.argument_of_periapsis().as_f64(),
+            190.0_f64.to_radians(),
+            rtol <= 1e-12
+        );
+        assert_approx_eq!(
+            kep.elements.true_anomaly().as_f64(),
+            350.0_f64.to_radians(),
+            rtol <= 1e-12
+        );
+    }
+
+    #[test]
     fn read_opm_missing_true_anomaly_returns_error() {
         let kvn = "\
 CCSDS_OPM_VERS = 3.0
