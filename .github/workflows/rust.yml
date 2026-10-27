@@ -67,6 +67,22 @@ jobs:
       - name: Linting
         run: just lint-clippy
 
+  features:
+    name: Feature isolation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: features
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack
+      - uses: taiki-e/install-action@just
+      - name: Check each lox-space feature in isolation
+        run: just lint-features
+
   readme:
     name: README
     runs-on: ubuntu-latest

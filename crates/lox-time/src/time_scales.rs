@@ -194,7 +194,7 @@ macro_rules! impl_time_scale_serde {
                 if s == $abbrev {
                     Ok($ty)
                 } else {
-                    Err(format!("expected \"{}\", got \"{}\"", $abbrev, s))
+                    Err(alloc::format!("expected \"{}\", got \"{}\"", $abbrev, s))
                 }
             }
         }

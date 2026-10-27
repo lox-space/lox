@@ -47,36 +47,55 @@ divan.workspace = true
 geo.workspace = true
 lox-test-utils.workspace = true
 pyo3 = { workspace = true, features = ["auto-initialize"] }
-serde.workspace = true
+serde = { workspace = true, features = ["std"] }
 serde_json.workspace = true
 
 [[bench]]
 name = "spk"
 harness = false
+required-features = ["bodies", "ephem", "time"]
 
 [[bench]]
 name = "visibility"
 harness = false
+required-features = ["analysis"]
 
 [[bench]]
 name = "geometry"
 harness = false
+required-features = ["analysis"]
 
 [[bench]]
 name = "power"
 harness = false
+required-features = ["analysis"]
 
 [[bench]]
 name = "imaging"
 harness = false
+required-features = ["imaging"]
 
 [[bench]]
 name = "frames"
 harness = false
+required-features = ["frames"]
 
 [[bench]]
 name = "trajectory"
 harness = false
+required-features = ["analysis"]
+
+[[example]]
+name = "iss"
+required-features = ["orbits"]
+
+[[example]]
+name = "sentinel_visibility"
+required-features = ["analysis"]
+
+[[example]]
+name = "x_band_downlink"
+required-features = ["comms"]
 
 [features]
 default = [
@@ -93,10 +112,10 @@ default = [
   "orbits",
   "time",
 ]
-analysis = ["orbits", "dep:lox-analysis", "lox-analysis?/comms"]
+analysis = ["orbits", "dep:lox-analysis"]
 imaging = ["analysis", "dep:geo", "lox-analysis?/imaging", "lox-analysis?/geojson"]
 bodies = ["dep:lox-bodies"]
-comms = ["dep:lox-comms"]
+comms = ["dep:lox-comms", "lox-analysis?/comms"]
 itur = ["comms", "dep:lox-itur"]
 earth = ["bodies", "io", "time", "dep:lox-earth"]
 ephem = ["dep:lox-ephem"]

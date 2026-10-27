@@ -81,6 +81,12 @@ lint-clippy *ARGS:
 # (`rustup target add thumbv7em-none-eabi`).
 lint-clippy-embedded *ARGS:
     cargo clippy -p lox-core -p lox-approx -p lox-bodies -p lox-time --no-default-features --features libm --target thumbv7em-none-eabi {{ARGS}} -- -D warnings
+    cargo clippy -p lox-core -p lox-approx -p lox-bodies -p lox-time --no-default-features --features libm,serde --target thumbv7em-none-eabi {{ARGS}} -- -D warnings
+
+# Check that every lox-space feature compiles on its own, so downstream
+# crates can depend on a slice of the toolbox. Requires cargo-hack.
+lint-features *ARGS:
+    cargo hack check -p lox-space --each-feature --all-targets {{ARGS}}
 
 lint-rustfmt *ARGS:
     cargo fmt --check {{ARGS}}

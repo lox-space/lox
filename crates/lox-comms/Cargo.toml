@@ -20,7 +20,7 @@ readme = "README.md"
 lox-core = { workspace = true, features = ["std"] }
 thiserror = { workspace = true, features = ["std"] }
 
-serde = { workspace = true, optional = true }
+serde = { workspace = true, optional = true, features = ["std"] }
 
 [features]
 serde = ["dep:serde", "lox-core/serde"]

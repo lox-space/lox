@@ -14,6 +14,7 @@ use geojson::GeoJson;
 #[cfg(feature = "geojson")]
 use std::convert::TryInto;
 
+#[cfg(feature = "geojson")]
 use thiserror::Error;
 
 /// Densify a polygon by inserting intermediate vertices via linear lon/lat
