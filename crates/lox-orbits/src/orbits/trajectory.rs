@@ -94,7 +94,7 @@ where
 
     /// Interpolates the trajectory at the given time delta from the trajectory start.
     pub fn at_delta(&self, dt: TimeDelta) -> CartesianOrbit<O, R> {
-        let t = dt.to_seconds().to_f64();
+        let t = dt.as_seconds_f64();
         let state = self.data.at(t);
         Orbit::from_state(state, self.epoch + dt, self.origin, self.frame)
     }

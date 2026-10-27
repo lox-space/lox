@@ -168,7 +168,7 @@ where
     type Error = J2Error;
 
     fn state_at(&self, time: Time) -> Result<CartesianOrbit<O, R>, J2Error> {
-        let dt = (time - self.initial_orbit.time()).to_seconds().to_f64();
+        let dt = (time - self.initial_orbit.time()).as_seconds_f64();
         let el = kozai::propagate_mean(&self.kep, self.m0, &self.rates, dt);
         let cartesian = if self.osculating {
             kozai::kwok_osculating_cartesian(&el, &self.body)?

@@ -209,7 +209,7 @@ impl PyTimeDelta {
     /// Returns:
     ///     The duration as a float in seconds.
     pub fn to_decimal_seconds(&self) -> f64 {
-        self.0.to_seconds().to_f64()
+        self.0.as_seconds_f64()
     }
 }
 

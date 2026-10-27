@@ -46,7 +46,7 @@ impl<T: ContinuousTimeScale + Copy + Eq> TimeSeries<T> {
     /// Converts `time - epoch` to seconds and delegates to the underlying [`Series`].
     pub fn interpolate(&self, time: Time<T>) -> f64 {
         let dt = time - self.epoch;
-        self.series.interpolate(delta_to_f64(dt))
+        self.series.interpolate(dt.as_seconds_f64())
     }
 
     /// Returns the start epoch.
@@ -93,10 +93,6 @@ impl<T: ContinuousTimeScale + Copy + Eq> TimeSeries<T> {
         let (x, y) = self.series.last();
         (self.epoch + TimeDelta::from_seconds_f64(x), y)
     }
-}
-
-fn delta_to_f64(delta: TimeDelta) -> f64 {
-    delta.to_seconds().to_f64()
 }
 
 #[cfg(test)]

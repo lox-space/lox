@@ -563,7 +563,7 @@ where
                 Some(crossing) => crossing,
                 None => continue,
             };
-            let bracket = (0.0, (next - t0).to_seconds().to_f64());
+            let bracket = (0.0, (next - t0).as_seconds_f64());
             return match self.refiner.refine(&self.f, t0, bracket, (f0, f1)) {
                 Ok(t) => {
                     let time = t0 + TimeDelta::from_seconds_f64(t);
@@ -1041,13 +1041,13 @@ mod tests {
         type Error = std::convert::Infallible;
 
         fn eval(&self, time: Time) -> Result<f64, Self::Error> {
-            Ok(time.to_delta().to_seconds().to_f64().sin())
+            Ok(time.to_delta().as_seconds_f64().sin())
         }
     }
 
     impl Differentiable for SinDetector {
         fn eval_derivative(&self, time: Time) -> Result<(f64, f64), Self::Error> {
-            let t = time.to_delta().to_seconds().to_f64();
+            let t = time.to_delta().as_seconds_f64();
             Ok((t.sin(), t.cos()))
         }
     }
@@ -1070,7 +1070,7 @@ mod tests {
         ];
         assert_eq!(events.len(), expected.len());
         for (event, (time, crossing)) in events.iter().zip(expected) {
-            let seconds = event.time().to_delta().to_seconds().to_f64();
+            let seconds = event.time().to_delta().as_seconds_f64();
             assert!(
                 (seconds - time).abs() < 1e-5,
                 "expected event near {time}, got {seconds}"
@@ -1107,7 +1107,7 @@ mod tests {
         type Error = LoxError;
 
         fn eval(&self, time: Time) -> Result<f64, Self::Error> {
-            let t = time.to_delta().to_seconds().to_f64();
+            let t = time.to_delta().as_seconds_f64();
             if t > 2.5 {
                 Err("out of domain".into())
             } else {
@@ -1127,8 +1127,8 @@ mod tests {
     }
 
     fn assert_interval_approx(interval: TimeInterval, start: f64, end: f64) {
-        let actual_start = interval.start().to_delta().to_seconds().to_f64();
-        let actual_end = interval.end().to_delta().to_seconds().to_f64();
+        let actual_start = interval.start().to_delta().as_seconds_f64();
+        let actual_end = interval.end().to_delta().as_seconds_f64();
         assert!(
             (actual_start - start).abs() < 1e-5 && (actual_end - end).abs() < 1e-5,
             "expected interval [{start}, {end}), got [{actual_start}, {actual_end})"
@@ -1204,7 +1204,7 @@ mod tests {
         // A plain closure matches the SinDetector results exactly.
         let interval = TimeInterval::new(seconds(0.0), seconds(10.0));
         let sampler = || UniformSampler::new(TimeDelta::from_seconds(1));
-        let from_closure = FnDetect(|time: Time| time.to_delta().to_seconds().to_f64().sin())
+        let from_closure = FnDetect(|time: Time| time.to_delta().as_seconds_f64().sin())
             .events(sampler(), interval)
             .expect("detection should succeed");
         let from_struct = SinDetector
@@ -1221,7 +1221,7 @@ mod tests {
 
         let interval = TimeInterval::new(seconds(0.0), seconds(10.0));
         let detector = TryFnDetect(|time: Time| {
-            let t = time.to_delta().to_seconds().to_f64();
+            let t = time.to_delta().as_seconds_f64();
             if t > 2.5 {
                 Err(OutOfDomain)
             } else {
@@ -1244,7 +1244,7 @@ mod tests {
             .collect::<Result<_, _>>()
             .expect("detection should succeed");
         assert_eq!(events.len(), 3);
-        let first = events[0].time().to_delta().to_seconds().to_f64();
+        let first = events[0].time().to_delta().as_seconds_f64();
         assert!(
             (first - PI).abs() < 1e-9,
             "expected tighter root near π, got {first}"
@@ -1269,8 +1269,8 @@ mod tests {
         assert_eq!(newton.len(), brent.len());
         for (n, b) in newton.iter().zip(&brent) {
             assert_eq!(n.crossing(), b.crossing());
-            let tn = n.time().to_delta().to_seconds().to_f64();
-            let tb = b.time().to_delta().to_seconds().to_f64();
+            let tn = n.time().to_delta().as_seconds_f64();
+            let tb = b.time().to_delta().as_seconds_f64();
             assert!(
                 (tn - tb).abs() < 1e-5,
                 "refiners disagree: newton {tn}, brent {tb}"
@@ -1288,14 +1288,14 @@ mod tests {
             type Error = std::convert::Infallible;
 
             fn eval(&self, time: Time) -> Result<f64, Self::Error> {
-                Ok(time.to_delta().to_seconds().to_f64().sin())
+                Ok(time.to_delta().as_seconds_f64().sin())
             }
         }
 
         impl Differentiable for CountingSin {
             fn eval_derivative(&self, time: Time) -> Result<(f64, f64), Self::Error> {
                 self.0.set(self.0.get() + 1);
-                let t = time.to_delta().to_seconds().to_f64();
+                let t = time.to_delta().as_seconds_f64();
                 Ok((t.sin(), t.cos()))
             }
         }
@@ -1388,14 +1388,14 @@ mod tests {
             type Error = std::convert::Infallible;
 
             fn eval(&self, time: Time) -> Result<f64, Self::Error> {
-                Ok(time.to_delta().to_seconds().to_f64().sin())
+                Ok(time.to_delta().as_seconds_f64().sin())
             }
         }
 
         impl RateBounded for BoundedSin {
             fn eval_bounded(&self, time: Time) -> Result<(f64, f64), Self::Error> {
                 self.0.set(self.0.get() + 1);
-                Ok((time.to_delta().to_seconds().to_f64().sin(), 1.0))
+                Ok((time.to_delta().as_seconds_f64().sin(), 1.0))
             }
         }
 
@@ -1415,8 +1415,8 @@ mod tests {
         assert_eq!(adaptive.len(), uniform.len());
         for (a, u) in adaptive.iter().zip(&uniform) {
             assert_eq!(a.crossing(), u.crossing());
-            let ta = a.time().to_delta().to_seconds().to_f64();
-            let tu = u.time().to_delta().to_seconds().to_f64();
+            let ta = a.time().to_delta().as_seconds_f64();
+            let tu = u.time().to_delta().as_seconds_f64();
             assert!(
                 (ta - tu).abs() < 1e-5,
                 "samplers disagree: adaptive {ta}, uniform {tu}"
@@ -1451,8 +1451,8 @@ mod tests {
         assert_eq!(adaptive.len(), uniform.len());
         for (a, u) in adaptive.iter().zip(&uniform) {
             assert_eq!(a.crossing(), u.crossing());
-            let ta = a.time().to_delta().to_seconds().to_f64();
-            let tu = u.time().to_delta().to_seconds().to_f64();
+            let ta = a.time().to_delta().as_seconds_f64();
+            let tu = u.time().to_delta().as_seconds_f64();
             assert!(
                 (ta - tu).abs() < 1e-5,
                 "samplers disagree: lipschitz {ta}, uniform {tu}"
@@ -1466,7 +1466,7 @@ mod tests {
         type Error = std::convert::Infallible;
 
         fn eval(&self, time: Time) -> Result<f64, Self::Error> {
-            Ok(time.to_delta().to_seconds().to_f64().cos())
+            Ok(time.to_delta().as_seconds_f64().cos())
         }
     }
 

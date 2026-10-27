@@ -142,7 +142,7 @@ impl PowerBudgetResults {
         let intervals = self.eclipse_intervals.get(id)?;
         let total_eclipse: f64 = intervals
             .iter()
-            .map(|i| (i.end() - i.start()).to_seconds().to_f64())
+            .map(|i| (i.end() - i.start()).as_seconds_f64())
             .sum();
         Some(total_eclipse / self.scenario_duration)
     }
@@ -241,7 +241,7 @@ where
                 .collect(),
             None => all_spacecraft.iter().collect(),
         };
-        let duration_s = (interval.end() - interval.start()).to_seconds().to_f64();
+        let duration_s = (interval.end() - interval.start()).as_seconds_f64();
 
         let results: Result<Vec<_>, PowerError> = parallel::try_map(&spacecraft, |sc| {
             self.compute_spacecraft(sc, interval.into_dynamic())
@@ -307,7 +307,7 @@ where
                 .map_err(|e| PowerError::Eval(EvalError::Ephemeris(Box::new(e))))?;
             let sun_hat = r_sun.normalize();
 
-            offsets.push((time - epoch).to_seconds().to_f64());
+            offsets.push((time - epoch).as_seconds_f64());
             beta_values.push(beta_angle(h_hat, sun_hat));
             flux_values.push(solar_flux(r_sun.length()));
         }

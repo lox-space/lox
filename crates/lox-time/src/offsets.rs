@@ -211,13 +211,13 @@ const M_0: f64 = 6.239996;
 const M_1: f64 = 1.99096871e-7;
 
 fn tt_to_tdb(delta: TimeDelta) -> TimeDelta {
-    let tt = delta.to_seconds().to_f64();
+    let tt = delta.as_seconds_f64();
     let g = M_0 + M_1 * tt;
     TimeDelta::from_seconds_f64(K * sin(g + EB * sin(g)))
 }
 
 fn tdb_to_tt(delta: TimeDelta) -> TimeDelta {
-    let tdb = delta.to_seconds().to_f64();
+    let tdb = delta.as_seconds_f64();
     let mut offset = 0.0;
     for _ in 1..3 {
         let g = M_0 + M_1 * (tdb + offset);
@@ -270,13 +270,13 @@ mod tests {
         let offset = DefaultOffsetProvider
             .try_offset(Tai, Ut1, tai.to_delta())
             .unwrap();
-        assert_approx_eq!(offset.to_seconds().to_f64(), -37.0, rtol <= 1e-9);
+        assert_approx_eq!(offset.as_seconds_f64(), -37.0, rtol <= 1e-9);
 
         // UT1 must land back on the UTC wall clock, not 74 s past it.
         let ut1 = tai.to_scale(Ut1);
         assert_approx_eq!(
-            ut1.to_delta().to_seconds().to_f64(),
-            utc.to_delta().to_seconds().to_f64(),
+            ut1.to_delta().as_seconds_f64(),
+            utc.to_delta().as_seconds_f64(),
             atol <= 1e-9
         );
     }
@@ -342,8 +342,7 @@ mod tests {
         let act = provider
             .try_offset(scale1, scale2, dt)
             .unwrap()
-            .to_seconds()
-            .to_f64();
+            .as_seconds_f64();
         assert_approx_eq!(act, exp, atol <= tol.unwrap_or(DEFAULT_TOL));
     }
 
@@ -373,7 +372,7 @@ mod tests {
             .unwrap();
         let final_delta = intermediate_delta + offset2;
 
-        let diff = (final_delta - original_delta).to_seconds().to_f64().abs();
+        let diff = (final_delta - original_delta).as_seconds_f64().abs();
         assert!(
             diff < tol,
             "Round-trip conversion {} -> {} -> {} failed: difference = {:.2e} seconds, tolerance = {:.2e} seconds",
@@ -387,15 +386,13 @@ mod tests {
 
     #[test]
     fn test_offset_constants() {
-        let tdb_0 = TDB_0.to_seconds();
-        assert!((tdb_0.to_f64() - (-6.55e-5)).abs() < 1e-15);
+        assert!((TDB_0.as_seconds_f64() - (-6.55e-5)).abs() < 1e-15);
 
-        let j77 = J77_TT.to_seconds();
         // For negative times, internal representation stores one less second
         // and a positive subsecond fraction: -725803167.816 = -725803168 + 0.184
-        assert_eq!(j77.hi, -725803168.0);
-        assert!((j77.lo - 0.184).abs() < 1e-15);
+        assert_eq!(J77_TT.seconds(), -725803168);
+        assert!((J77_TT.subsecond() - 0.184).abs() < 1e-15);
         // But the total should be correct
-        assert!((j77.to_f64() - (-725803167.816)).abs() < 1e-9);
+        assert!((J77_TT.as_seconds_f64() - (-725803167.816)).abs() < 1e-9);
     }
 }

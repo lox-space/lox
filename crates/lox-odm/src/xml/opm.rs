@@ -460,7 +460,7 @@ impl From<&Opm> for OpmXml {
             .map(|man| ManeuverParametersXml {
                 comments: man.comments.clone(),
                 man_epoch_ignition: man.ignition_epoch.iso(),
-                man_duration: ValueWithUnits::new(man.duration.to_seconds().to_f64(), "s"),
+                man_duration: ValueWithUnits::new(man.duration.as_seconds_f64(), "s"),
                 man_delta_mass: ValueWithUnits::new(man.delta_mass.to_kilograms(), "kg"),
                 man_ref_frame: man.frame.as_ref().map(|f| f.name().into_owned()),
                 man_dv_1: ValueWithUnits::new(man.delta_v[0].to_kilometers_per_second(), "km/s"),

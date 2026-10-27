@@ -234,7 +234,7 @@ where
     fn state_at(&self, time: Time) -> Result<CartesianOrbit<O, R>, NumericalError> {
         let epoch = self.initial_state.time();
         let t0 = 0.0_f64;
-        let t1 = (time - epoch).to_seconds().to_f64();
+        let t1 = (time - epoch).as_seconds_f64();
         let s0 = CartesianState::from(*self.initial_state());
 
         let solution = IVP::ode(self, t0, t1, s0)
@@ -263,7 +263,7 @@ where
         }
         .into();
 
-        let t1 = (interval.end() - start).to_seconds().to_f64();
+        let t1 = (interval.end() - start).as_seconds_f64();
 
         let solution = IVP::ode(self, 0.0, t1, s0)
             .method(self.solver())
@@ -291,10 +291,7 @@ where
         }
 
         let t0 = times[0];
-        let steps: Vec<f64> = times
-            .iter()
-            .map(|t| (*t - t0).to_seconds().to_f64())
-            .collect();
+        let steps: Vec<f64> = times.iter().map(|t| (*t - t0).as_seconds_f64()).collect();
         let t1 = *steps.last().unwrap();
 
         // Propagate to first time step

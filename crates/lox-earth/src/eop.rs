@@ -172,7 +172,7 @@ impl EopParser {
                     .as_ref()
                     .map(|lsp| lsp.delta_utc_tai(utc))
                     .unwrap_or_else(|| DefaultLeapSecondsProvider.delta_utc_tai(utc));
-                delta_ut1_tai.push(delta_ut1_utc + delta_tai_utc.to_seconds().to_f64())
+                delta_ut1_tai.push(delta_ut1_utc + delta_tai_utc.as_seconds_f64())
             }
 
             if let (Some(xp), Some(yp)) = (r.x_pole, r.y_pole) {

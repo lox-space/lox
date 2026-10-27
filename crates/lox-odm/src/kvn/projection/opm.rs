@@ -259,7 +259,7 @@ fn build_data_section(opm: &Opm) -> KvnSection {
         ));
         entries.push(fld(
             "MAN_DURATION",
-            format!("{}", maneuver.duration.to_seconds().to_f64()),
+            format!("{}", maneuver.duration.as_seconds_f64()),
             Some("s"),
         ));
         entries.push(fld(
@@ -1534,8 +1534,8 @@ USER_DEFINED_OPERATOR = GSOC
             "expected 2 maneuvers, got {}",
             parsed.maneuvers.len()
         );
-        assert!((parsed.maneuvers[0].duration.to_seconds().to_f64() - 60.0).abs() < 0.001);
-        assert!((parsed.maneuvers[1].duration.to_seconds().to_f64() - 120.0).abs() < 0.001);
+        assert!((parsed.maneuvers[0].duration.as_seconds_f64() - 60.0).abs() < 0.001);
+        assert!((parsed.maneuvers[1].duration.as_seconds_f64() - 120.0).abs() < 0.001);
     }
 
     #[test]

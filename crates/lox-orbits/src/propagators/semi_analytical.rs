@@ -133,7 +133,7 @@ where
         let origin = self.origin();
         let mu = self.gravitational_parameter();
         let t0 = self.initial_state.time();
-        let dt = (time - t0).to_seconds().to_f64();
+        let dt = (time - t0).as_seconds_f64();
         let sqrt_mu = mu.sqrt();
         let p0 = self.initial_state.position();
         let v0 = self.initial_state.velocity();
