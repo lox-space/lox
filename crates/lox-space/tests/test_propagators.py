@@ -96,7 +96,7 @@ def test_sgp4_from_tle_object():
     t1 = sgp4.time() + lox.TimeDelta.from_minutes(92.821)
     s1 = sgp4.propagate(t1).to_frame(lox.Frame("ICRF"))
     k1 = s1.to_keplerian()
-    assert k1.orbital_period().to_decimal_seconds() == pytest.approx(
+    assert k1.orbital_period().to_seconds() == pytest.approx(
         92.821 * 60, rel=1e-4
     )
 
@@ -125,7 +125,7 @@ def test_sgp4():
     # SGP4 now returns TEME states; convert to ICRF for Keplerian conversion
     s1 = sgp4.propagate(t1).to_frame(lox.Frame("ICRF"))
     k1 = s1.to_keplerian()
-    assert k1.orbital_period().to_decimal_seconds() == pytest.approx(
+    assert k1.orbital_period().to_seconds() == pytest.approx(
         92.821 * 60, rel=1e-4
     )
 

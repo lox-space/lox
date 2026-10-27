@@ -93,7 +93,7 @@ pub trait CivilTime {
     }
 
     /// Returns the second including the subsecond fraction as an `f64`.
-    fn as_seconds_f64(&self) -> f64 {
+    fn second_f64(&self) -> f64 {
         self.time().subsecond().as_seconds_f64() + self.time().second() as f64
     }
 
@@ -322,7 +322,7 @@ impl TimeOfDay {
     }
 
     /// Returns the second including the subsecond fraction as an `f64`.
-    pub fn seconds_f64(&self) -> f64 {
+    pub fn second_f64(&self) -> f64 {
         self.subsecond.as_seconds_f64() + self.second as f64
     }
 
@@ -336,7 +336,7 @@ impl TimeOfDay {
     pub fn to_day_fraction(&self) -> f64 {
         let total_seconds = self.hour as f64 * SECONDS_PER_HOUR as f64
             + self.minute as f64 * SECONDS_PER_MINUTE as f64
-            + self.seconds_f64();
+            + self.second_f64();
         total_seconds / SECONDS_PER_DAY as f64
     }
 
@@ -354,7 +354,7 @@ impl TimeOfDay {
             Sign::Positive,
             self.hour as u32,
             self.minute,
-            self.seconds_f64(),
+            self.second_f64(),
         )
     }
 }
@@ -457,7 +457,7 @@ mod tests {
         let tod = TimeOfDay::from_day_fraction(0.987654321).unwrap();
         assert_eq!(tod.hour(), 23);
         assert_eq!(tod.minute(), 42);
-        assert_approx_eq!(tod.seconds_f64(), 13.3333, atol <= 1e-4);
+        assert_approx_eq!(tod.second_f64(), 13.3333, atol <= 1e-4);
     }
 
     #[test]
@@ -495,10 +495,6 @@ mod tests {
         let recovered = TimeOfDay::from_day_fraction(d).unwrap();
         assert_eq!(recovered.hour(), original.hour());
         assert_eq!(recovered.minute(), original.minute());
-        assert_approx_eq!(
-            recovered.seconds_f64(),
-            original.seconds_f64(),
-            atol <= 1e-10
-        );
+        assert_approx_eq!(recovered.second_f64(), original.second_f64(), atol <= 1e-10);
     }
 }

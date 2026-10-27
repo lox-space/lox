@@ -133,7 +133,7 @@ impl PyTime {
             self.0.day(),
             self.0.hour(),
             self.0.minute(),
-            self.0.as_seconds_f64(),
+            self.0.second_f64(),
         )
     }
 
@@ -319,7 +319,7 @@ impl PyTime {
             self.0.day(),
             self.0.hour(),
             self.0.minute(),
-            self.0.as_seconds_f64(),
+            self.0.second_f64(),
         )
     }
 
@@ -471,9 +471,9 @@ impl PyTime {
         self.0.femtosecond()
     }
 
-    /// Return the decimal seconds (seconds + fractional part).
-    pub fn decimal_seconds(&self) -> f64 {
-        self.0.as_seconds_f64()
+    /// Return the second within the current minute, including the fractional part.
+    pub fn second_float(&self) -> f64 {
+        self.0.second_f64()
     }
 
     /// Convert this Time to another time scale.

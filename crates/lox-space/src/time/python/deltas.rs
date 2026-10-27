@@ -37,17 +37,17 @@ impl PyTimeDelta {
 
     /// Returns the developer representation of the `TimeDelta`.
     pub fn __repr__(&self) -> String {
-        format!("TimeDelta({})", self.to_decimal_seconds())
+        format!("TimeDelta({})", self.to_seconds())
     }
 
     /// Returns the human-readable string representation of the `TimeDelta`.
     pub fn __str__(&self) -> String {
-        format!("{} seconds", self.to_decimal_seconds())
+        format!("{} seconds", self.to_seconds())
     }
 
-    /// Returns the duration as a `float` in decimal seconds.
+    /// Returns the duration as a `float` in seconds.
     pub fn __float__(&self) -> f64 {
-        self.to_decimal_seconds()
+        self.to_seconds()
     }
 
     /// Returns the negation of the `TimeDelta`.
@@ -204,11 +204,11 @@ impl PyTimeDelta {
         Ok(interval.step_by(step).map(Self).collect())
     }
 
-    /// Convert to decimal seconds.
+    /// Convert to seconds.
     ///
     /// Returns:
     ///     The duration as a float in seconds.
-    pub fn to_decimal_seconds(&self) -> f64 {
+    pub fn to_seconds(&self) -> f64 {
         self.0.as_seconds_f64()
     }
 }
