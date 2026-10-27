@@ -1146,6 +1146,7 @@ dependencies = [
  "lox-odm",
  "lox-test-utils",
  "lox-time",
+ "rstest",
  "serde",
  "sgp4",
  "thiserror",

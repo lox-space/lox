@@ -48,6 +48,7 @@ serde = [
 
 [dev-dependencies]
 lox-test-utils.workspace = true
+rstest.workspace = true
 
 [lib]
 doctest = false

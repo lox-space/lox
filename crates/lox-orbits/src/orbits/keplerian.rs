@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::{f64::consts::PI, iter::zip};
+use std::{f64::consts::TAU, iter::zip};
 
 use super::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
 use lox_bodies::{
@@ -10,7 +10,7 @@ use lox_bodies::{
 };
 use lox_core::units::{Angle, AngleUnits, AngularRate, Distance};
 use lox_core::{
-    anomalies::{AnomalyError, EccentricAnomaly, TrueAnomaly},
+    anomalies::{AnomalyError, EccentricAnomaly, MeanAnomaly, TrueAnomaly},
     coords::{CartesianTrajectory, TimeStampedCartesian},
     elements::{
         ArgumentOfPeriapsis, Eccentricity, Inclination, Keplerian, LongitudeOfAscendingNode,
@@ -238,21 +238,32 @@ where
         let state = self.state();
         let state_iter = state.iter_trace(grav_param, n)?;
         let mean_motion = state.mean_motion(grav_param).as_f64();
-        let mean_anomaly_at_epoch = self.true_anomaly().to_mean(self.eccentricity()).ok()?;
+        // The samples span one revolution in [0, 2π], so the epoch must fall in the same range.
+        let mean_anomaly_at_epoch = MeanAnomaly::new(
+            self.true_anomaly()
+                .to_mean(self.eccentricity())
+                .ok()?
+                .as_angle()
+                .mod_two_pi(),
+        );
 
-        let data: CartesianTrajectory = zip(Linspace::new(-PI, PI, n), state_iter)
-            .map(|(ecc, state)| {
-                let mean_anomaly = EccentricAnomaly::new(ecc.rad()).to_mean(self.eccentricity());
-                let time_of_flight = (mean_anomaly - mean_anomaly_at_epoch).as_f64() / mean_motion;
-                TimeStampedCartesian {
-                    time: TimeDelta::from_seconds_f64(time_of_flight),
-                    state,
-                }
+        let time_of_flight = |ecc: f64| {
+            let mean_anomaly = EccentricAnomaly::new(ecc.rad()).to_mean(self.eccentricity());
+            TimeDelta::from_seconds_f64(
+                (mean_anomaly - mean_anomaly_at_epoch).as_f64() / mean_motion,
+            )
+        };
+
+        let data: CartesianTrajectory = zip(Linspace::new(0.0, TAU, n), state_iter)
+            .map(|(ecc, state)| TimeStampedCartesian {
+                time: time_of_flight(ecc),
+                state,
             })
             .collect();
 
+        // The trajectory data is relative to its first sample, at periapsis on or before the epoch.
         Some(Trajectory::from_parts(
-            self.time(),
+            self.time() + time_of_flight(0.0),
             self.origin(),
             self.reference_frame(),
             data,
@@ -274,11 +285,13 @@ where
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
     use lox_bodies::{Earth, MeanRadius};
     use lox_core::units::DistanceUnits;
     use lox_frames::Icrf;
     use lox_time::time_scales::TimeScale;
     use lox_time::{Time, utc::Utc};
+    use rstest::rstest;
 
     use super::*;
 
@@ -343,4 +356,33 @@ mod tests {
         assert!(cart.position().length() > 6_000.0.km().as_f64());
     }
 
+    #[rstest]
+    #[case::periapsis(0.0)]
+    #[case::ascending(90.0)]
+    #[case::apoapsis(180.0)]
+    #[case::descending(270.0)]
+    #[case::before_periapsis(359.0)]
+    fn test_trace_matches_epoch_state(#[case] true_anomaly: f64) {
+        let time = Time::j2000(TimeScale::Tai);
+        let kep = Keplerian::builder()
+            .with_semi_major_axis(7000.0.km(), 0.1)
+            .with_inclination(51.6.deg())
+            .with_true_anomaly(true_anomaly.deg())
+            .build()
+            .unwrap();
+        let orbit = KeplerianOrbit::new(kep, time, Earth, Icrf);
+        let trajectory = orbit.trace(100).unwrap();
+
+        assert!(trajectory.start_time() <= time && time <= trajectory.end_time());
+        assert_approx_eq!(
+            (trajectory.end_time() - trajectory.start_time()).as_seconds_f64(),
+            orbit.orbital_period().unwrap().as_seconds_f64(),
+            rtol <= 1e-12
+        );
+
+        let expected = orbit.to_cartesian();
+        let actual = trajectory.at(time);
+        assert_approx_eq!(actual.position(), expected.position(), atol <= 1.0);
+        assert_approx_eq!(actual.velocity(), expected.velocity(), atol <= 0.1);
+    }
 }
