@@ -46,6 +46,7 @@ __all__ = [
     "EopProviderError",
     "Event",
     "Frame",
+    "FrameTransformationError",
     "freq_overlap",
     "Frequency",
     "FrequencyRange",
@@ -128,6 +129,7 @@ __all__ = [
     "TLE",
     "Trajectory",
     "TxChain",
+    "UndefinedOriginPropertyError",
     "union_intervals",
     "UTC",
     "Vallado",
@@ -148,7 +150,11 @@ class EopParserError(Exception):
 class EopProviderError(Exception):
     """Raised when Earth orientation parameters cannot be provided."""
 
-    ...
+class FrameTransformationError(Exception):
+    """Raised when a frame transformation cannot be performed."""
+
+class UndefinedOriginPropertyError(Exception):
+    """Raised when a body property is not defined for a given origin."""
 
 # Unit classes
 @final

@@ -11,7 +11,7 @@ use crate::analysis::python::{
     PyPowerBudgetAnalysis, PyPowerBudgetResults, PySarAccessAnalysis, PySarPayload, PyScenario,
     PySpacecraft, PyTerminalId, PyVisibilityAnalysis, PyVisibilityResults,
 };
-use crate::bodies::python::PyOrigin;
+use crate::bodies::python::{PyOrigin, UndefinedOriginPropertyError};
 use crate::comms::python::{
     PyAmplifierTransmitter, PyAntennaFrame, PyCascadeReceiver, PyChannel, PyConstantAntenna,
     PyDecibel, PyDipolePattern, PyEirpModel, PyFrequencyRange, PyGaussianPattern, PyGtModel,
@@ -23,7 +23,7 @@ use crate::comms::python::{
 use crate::constellations::python::{PyConstellation, PyConstellationSatellite};
 use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
 use crate::ephem::python::PySpk;
-use crate::frames::python::PyFrame;
+use crate::frames::python::{FrameTransformationError, PyFrame};
 use crate::itur::python::PyItuProvider;
 use crate::itur::python::register_itur_functions;
 use crate::math::python::PySeries;
@@ -56,6 +56,10 @@ use pyo3::prelude::*;
 pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // bodies
     m.add_class::<PyOrigin>()?;
+    m.add(
+        "UndefinedOriginPropertyError",
+        m.py().get_type::<UndefinedOriginPropertyError>(),
+    )?;
 
     // comms
     m.add_class::<PyDecibel>()?;
@@ -103,6 +107,10 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // frames
     m.add_class::<PyFrame>()?;
+    m.add(
+        "FrameTransformationError",
+        m.py().get_type::<FrameTransformationError>(),
+    )?;
 
     // math
     m.add_class::<PySeries>()?;
