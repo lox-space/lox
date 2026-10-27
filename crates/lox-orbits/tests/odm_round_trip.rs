@@ -12,7 +12,7 @@ use lox_core::anomalies::TrueAnomaly;
 use lox_core::coords::Cartesian;
 use lox_core::elements::Keplerian;
 use lox_core::elements::keplerian::{
-    ArgumentOfPeriapsis, Eccentricity, Inclination, LongitudeOfAscendingNode, SemiMajorAxis,
+    ArgumentOfPeriapsis, Eccentricity, Inclination, LongitudeOfAscendingNode,
 };
 use lox_core::units::Angle;
 use lox_core::units::{Distance, Velocity};
@@ -426,10 +426,12 @@ fn dynamic_keplerian_orbit_from_omm_iss() {
 fn omm_builder_returns_typed_error_for_hyperbolic_beyond_asymptote() {
     // Hyperbolic orbit (e = 2.0). Asymptote at acos(-1/e) ≈ 120 deg.
     // True anomaly of 170 deg is beyond the asymptote — geometrically
-    // impossible — so `to_mean` must fail.
+    // impossible — so `to_mean` must fail. The builder rejects such elements,
+    // so they are constructed directly.
     let ecc = Eccentricity::try_new(2.0).unwrap();
-    let kep = Keplerian::new(
-        SemiMajorAxis::meters(-1.0e7),
+    let kep = Keplerian::from_semi_parameter(
+        // p = a(1 - e²) with a = -1e7 m
+        Distance::new(3.0e7),
         ecc,
         Inclination::try_new(Angle::radians(0.5)).unwrap(),
         LongitudeOfAscendingNode::try_new(Angle::radians(0.1)).unwrap(),

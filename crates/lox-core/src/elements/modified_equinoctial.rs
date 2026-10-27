@@ -111,14 +111,13 @@ impl ModifiedEquinoctial {
 
         let omega = pomega - big_omega;
         let nu = self.l.as_f64() - pomega;
-        let semi_major_axis = Distance::new(self.p.as_f64() / (1.0 - e * e));
 
         let kep = Keplerian::builder()
-            .with_semi_major_axis(semi_major_axis, e)
+            .with_semi_parameter(self.p, e)
             .with_inclination(i.rad())
             .with_longitude_of_ascending_node(big_omega.rad().mod_two_pi())
             .with_argument_of_periapsis(omega.rad().mod_two_pi())
-            .with_true_anomaly(nu.rad().mod_two_pi())
+            .with_true_anomaly(nu.rad())
             .build()?;
 
         Ok(kep)
@@ -452,7 +451,7 @@ mod tests {
             crate::elements::keplerian::KeplerianError::MissingShape.into();
         assert_eq!(
             err1.to_string(),
-            "no orbital shape parameters (semi-major axis and eccentricity, radii, or altitudes) were provided"
+            "no orbital shape parameters (semi-major axis or semi-parameter and eccentricity, radii, or altitudes) were provided"
         );
 
         let err2: ModifiedEquinoctialError = crate::anomalies::AnomalyError::InvalidTrueAnomaly {

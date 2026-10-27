@@ -445,7 +445,7 @@ def test_modified_equinoctial_errors():
     ):
         cart.to_modified_equinoctial()
 
-    # Invalid shape for Keplerian conversion should fail
+    # A negative semi-parameter is invalid for Keplerian conversion
     mee_invalid = lox.ModifiedEquinoctial(
         time,
         p=-7000.0 * lox.km,
@@ -455,5 +455,5 @@ def test_modified_equinoctial_errors():
         k=0.0,
         l=0.0 * lox.deg,
     )
-    with pytest.raises(ValueError, match="negative semi-major axis"):
+    with pytest.raises(ValueError, match="semi-parameter must be finite and positive"):
         mee_invalid.to_keplerian()

@@ -161,7 +161,7 @@ where
         let mean_anomaly_at_epoch = self.true_anomaly().to_mean(self.eccentricity()).ok()?;
 
         let state = self.state();
-        let state_iter = state.iter_trace(self.try_gravitational_parameter().ok()?, n);
+        let state_iter = state.iter_trace(self.try_gravitational_parameter().ok()?, n)?;
 
         let data: CartesianTrajectory = zip(Linspace::new(-PI, PI, n), state_iter)
             .map(|(ecc, state)| {
@@ -210,7 +210,7 @@ mod tests {
 
     #[test]
     fn test_valid_keplerian() {
-        let elements = Keplerian::new(
+        let elements = Keplerian::from_semi_parameter(
             MeanRadius::mean_radius(&Earth) + 500.0.km(),
             Eccentricity::try_new(0.0).unwrap(),
             Inclination::try_new(97.0.deg()).unwrap(),
@@ -230,7 +230,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_invalid_sma() {
-        let elements = Keplerian::new(
+        let elements = Keplerian::from_semi_parameter(
             // negative altitude
             MeanRadius::mean_radius(&Earth) - 500.0.km(),
             Eccentricity::try_new(0.0).unwrap(),

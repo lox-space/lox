@@ -14,17 +14,17 @@ use lox_approx::ApproxEq;
 use lox_approx::approx_eq;
 use thiserror::Error;
 
-use crate::math::float::{ln, powf, powi, signum, sqrt};
+use crate::math::float::{abs, powf, powi, signum, sqrt};
 
-use crate::anomalies::AnomalyError;
 use crate::anomalies::MeanAnomaly;
+use crate::anomalies::{AnomalyError, hyperbolic_asymptote_angle};
 use crate::anomalies::{EccentricAnomaly, TrueAnomaly};
 use crate::time::deltas::TimeDelta;
 use crate::utils::Linspace;
 use crate::{
     coords::Cartesian,
     glam::Azimuth,
-    units::{Angle, AngleUnits, Distance, DistanceUnits},
+    units::{Angle, AngleUnits, AngularRate, Distance, DistanceUnits},
 };
 
 /// The standard gravitational parameter of a celestial body µ = GM.
@@ -56,9 +56,6 @@ impl Display for GravitationalParameter {
         write!(f, " km³/s²")
     }
 }
-
-/// Type alias for the semi-major axis of an orbit, stored as a [`Distance`].
-pub type SemiMajorAxis = Distance;
 
 /// The Keplerian orbit types or conic sections.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -275,10 +272,13 @@ impl Display for ArgumentOfPeriapsis {
 }
 
 /// A set of Keplerian orbital elements.
+///
+/// The orbit's shape is stored as the semi-parameter (semi-latus rectum) `p` and the eccentricity,
+/// which are finite for every conic section, including parabolic orbits.
 #[derive(Debug, Clone, Copy, PartialEq, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Keplerian {
-    semi_major_axis: SemiMajorAxis,
+    semi_parameter: Distance,
     eccentricity: Eccentricity,
     inclination: Inclination,
     longitude_of_ascending_node: LongitudeOfAscendingNode,
@@ -287,9 +287,13 @@ pub struct Keplerian {
 }
 
 impl Keplerian {
-    /// Creates a new set of Keplerian elements from pre-validated components.
-    pub fn new(
-        semi_major_axis: SemiMajorAxis,
+    /// Creates a new set of Keplerian elements from pre-validated components, using the
+    /// semi-parameter (semi-latus rectum) as the shape parameter.
+    ///
+    /// Use [`Keplerian::builder`] to construct elements from other shape parameters, such as the
+    /// semi-major axis, or from unvalidated input.
+    pub fn from_semi_parameter(
+        semi_parameter: Distance,
         eccentricity: Eccentricity,
         inclination: Inclination,
         longitude_of_ascending_node: LongitudeOfAscendingNode,
@@ -297,7 +301,7 @@ impl Keplerian {
         true_anomaly: TrueAnomaly,
     ) -> Self {
         Self {
-            semi_major_axis,
+            semi_parameter,
             eccentricity,
             inclination,
             longitude_of_ascending_node,
@@ -312,8 +316,16 @@ impl Keplerian {
     }
 
     /// Returns the semi-major axis.
-    pub fn semi_major_axis(&self) -> SemiMajorAxis {
-        self.semi_major_axis
+    ///
+    /// The semi-major axis is negative for hyperbolic orbits and infinite for parabolic orbits.
+    pub fn semi_major_axis(&self) -> Distance {
+        if self.eccentricity.is_parabolic() {
+            return Distance::new(f64::INFINITY);
+        }
+        if self.eccentricity.is_circular() {
+            return self.semi_parameter;
+        }
+        Distance::new(self.semi_parameter.as_f64() / (1.0 - powi(self.eccentricity.0, 2)))
     }
 
     /// Returns the eccentricity.
@@ -343,18 +355,113 @@ impl Keplerian {
 
     /// Returns the semi-parameter (semi-latus rectum) of the orbit.
     pub fn semi_parameter(&self) -> Distance {
-        if self.eccentricity.is_circular() {
-            self.semi_major_axis
-        } else {
-            Distance::new(self.semi_major_axis.as_f64() * (1.0 - powi(self.eccentricity.0, 2)))
+        self.semi_parameter
+    }
+
+    /// Returns the periapsis radius.
+    pub fn periapsis_radius(&self) -> Distance {
+        Distance::new(self.semi_parameter.as_f64() / (1.0 + self.eccentricity.0))
+    }
+
+    /// Returns the apoapsis radius, or `None` for open orbits.
+    pub fn apoapsis_radius(&self) -> Option<Distance> {
+        if !self.eccentricity.is_circular_or_elliptic() {
+            return None;
         }
+        Some(Distance::new(
+            self.semi_parameter.as_f64() / (1.0 - self.eccentricity.0),
+        ))
+    }
+
+    /// Returns the periapsis altitude above a body with the given mean radius.
+    pub fn periapsis_altitude(&self, mean_radius: Distance) -> Distance {
+        self.periapsis_radius() - mean_radius
+    }
+
+    /// Returns the apoapsis altitude above a body with the given mean radius, or `None` for
+    /// open orbits.
+    pub fn apoapsis_altitude(&self, mean_radius: Distance) -> Option<Distance> {
+        Some(self.apoapsis_radius()? - mean_radius)
+    }
+
+    /// Returns the argument of latitude, i.e. the angle from the ascending node to the position,
+    /// in the interval [0, 2π).
+    pub fn argument_of_latitude(&self) -> Angle {
+        (self.argument_of_periapsis.0 + self.true_anomaly.as_angle()).mod_two_pi()
+    }
+
+    /// Returns the true longitude in the interval [0, 2π).
+    pub fn true_longitude(&self) -> Angle {
+        (self.longitude_of_ascending_node.0
+            + self.argument_of_periapsis.0
+            + self.true_anomaly.as_angle())
+        .mod_two_pi()
+    }
+
+    /// Returns the mean longitude.
+    ///
+    /// For closed orbits the result lies in the interval [0, 2π).
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`AnomalyError`] if the true anomaly cannot be converted to a mean anomaly.
+    pub fn mean_longitude(&self) -> Result<Angle, AnomalyError> {
+        let mean_anomaly = self.true_anomaly.to_mean(self.eccentricity)?;
+        let mean_longitude = self.longitude_of_ascending_node.0
+            + self.argument_of_periapsis.0
+            + mean_anomaly.as_angle();
+        if self.eccentricity.is_circular_or_elliptic() {
+            Ok(mean_longitude.mod_two_pi())
+        } else {
+            Ok(mean_longitude)
+        }
+    }
+
+    /// Returns the flight-path angle, i.e. the angle between the velocity vector and the local
+    /// horizontal. It is positive while the orbit is moving away from periapsis.
+    pub fn flight_path_angle(&self) -> Angle {
+        let ecc = self.eccentricity.as_f64();
+        let (sin_nu, cos_nu) = self.true_anomaly.as_angle().sin_cos();
+        Angle::from_atan2(ecc * sin_nu, 1.0 + ecc * cos_nu)
+    }
+
+    /// Returns the mean motion, i.e. the rate of change of the [`MeanAnomaly`].
+    ///
+    /// The mean anomaly follows the conventions of the [`anomalies`](crate::anomalies) module,
+    /// so the mean motion is defined for every orbit type.
+    pub fn mean_motion(&self, grav_param: GravitationalParameter) -> AngularRate {
+        let mu = grav_param.as_f64();
+        if self.eccentricity.is_parabolic() {
+            let p = self.semi_parameter.as_f64();
+            return AngularRate::new(2.0 * sqrt(mu / powi(p, 3)));
+        }
+        let a = self.semi_major_axis().as_f64();
+        AngularRate::new(sqrt(mu / powi(abs(a), 3)))
+    }
+
+    // TODO: Return unitful types from `specific_orbital_energy` and `specific_angular_momentum`
+    // once `lox_core::units` has types for specific energy and specific angular momentum.
+
+    /// Returns the specific orbital energy in J/kg (m²/s²).
+    ///
+    /// The energy is negative for closed orbits, zero for parabolic orbits, and positive for
+    /// hyperbolic orbits.
+    pub fn specific_orbital_energy(&self, grav_param: GravitationalParameter) -> f64 {
+        let mu = grav_param.as_f64();
+        let p = self.semi_parameter.as_f64();
+        -mu * (1.0 - powi(self.eccentricity.0, 2)) / (2.0 * p)
+    }
+
+    /// Returns the magnitude of the specific angular momentum in m²/s.
+    pub fn specific_angular_momentum(&self, grav_param: GravitationalParameter) -> f64 {
+        sqrt(grav_param.as_f64() * self.semi_parameter.as_f64())
     }
 
     /// Converts the orbital elements to position and velocity in the perifocal frame.
     pub fn to_perifocal(&self, grav_param: GravitationalParameter) -> (DVec3, DVec3) {
         let ecc = self.eccentricity.as_f64();
         let mu = grav_param.as_f64();
-        let semiparameter = self.semi_parameter().as_f64();
+        let semiparameter = self.semi_parameter.as_f64();
         let (sin_nu, cos_nu) = self.true_anomaly.as_angle().sin_cos();
         let sqrt_mu_p = sqrt(mu / semiparameter);
 
@@ -379,33 +486,45 @@ impl Keplerian {
             return None;
         }
         let mu = grav_param.as_f64();
-        let a = self.semi_major_axis.as_f64();
+        let a = self.semi_major_axis().as_f64();
         Some(TimeDelta::from_seconds_f64(TAU * sqrt(powf(a, 3.0) / mu)))
     }
 
-    /// Returns an iterator over `n` Cartesian positions equally spaced around the orbit.
+    /// Returns an iterator over `n` Cartesian positions equally spaced in eccentric anomaly around
+    /// the orbit, or `None` for non-elliptic orbits.
     pub fn iter_trace(
         &self,
         grav_param: GravitationalParameter,
         n: usize,
-    ) -> impl Iterator<Item = Cartesian> {
-        assert!(self.eccentricity().is_circular_or_elliptic());
-        Linspace::new(-PI, PI, n).map(move |ecc| {
-            let true_anomaly = EccentricAnomaly::new(ecc.rad()).to_true(self.eccentricity);
-            Keplerian {
-                true_anomaly,
-                ..*self
-            }
-            .to_cartesian(grav_param)
-        })
-    }
-
-    /// Returns `n` Cartesian positions equally spaced around the orbit, or `None` for non-elliptic orbits.
-    pub fn trace(&self, grav_param: GravitationalParameter, n: usize) -> Option<Vec<Cartesian>> {
+    ) -> Option<impl Iterator<Item = Cartesian>> {
         if !self.eccentricity().is_circular_or_elliptic() {
             return None;
         }
-        Some(self.iter_trace(grav_param, n).collect())
+        let elements = *self;
+        Some(Linspace::new(-PI, PI, n).map(move |ecc| {
+            let true_anomaly = EccentricAnomaly::new(ecc.rad()).to_true(elements.eccentricity);
+            Keplerian {
+                true_anomaly,
+                ..elements
+            }
+            .to_cartesian(grav_param)
+        }))
+    }
+
+    /// Returns `n` Cartesian positions equally spaced in eccentric anomaly around the orbit, or
+    /// `None` for non-elliptic orbits.
+    pub fn trace(&self, grav_param: GravitationalParameter, n: usize) -> Option<Vec<Cartesian>> {
+        Some(self.iter_trace(grav_param, n)?.collect())
+    }
+}
+
+/// Normalises a true anomaly to [0, 2π) for closed orbits and to [-π, π) for open orbits.
+fn normalize_true_anomaly(true_anomaly: TrueAnomaly, eccentricity: Eccentricity) -> TrueAnomaly {
+    let nu = true_anomaly.as_angle();
+    if eccentricity.is_circular_or_elliptic() {
+        TrueAnomaly::new(nu.mod_two_pi())
+    } else {
+        TrueAnomaly::new(nu.normalize_two_pi(Angle::ZERO))
     }
 }
 
@@ -430,7 +549,6 @@ impl Cartesian {
         let mu = grav_param.as_f64();
 
         let rm = r.length();
-        let vm = v.length();
         let h = r.cross(v);
         let hm = h.length();
         let node = DVec3::Z.cross(h);
@@ -438,20 +556,19 @@ impl Cartesian {
         let eccentricity = Eccentricity(e.length());
         let inclination = h.angle_between(DVec3::Z).rad();
 
-        let equatorial = approx_eq!(inclination, Angle::ZERO, atol <= 1e-8);
+        let equatorial = approx_eq!(inclination, Angle::ZERO, atol <= 1e-8)
+            || approx_eq!(inclination, Angle::new(PI), atol <= 1e-8);
         let circular = eccentricity.is_circular();
+        // In-plane angles of retrograde equatorial orbits are measured clockwise from the x-axis.
+        let direction = signum(h.z);
 
-        let semi_major_axis = if circular {
-            powi(hm, 2) / mu
-        } else {
-            -mu / (2.0 * (powi(vm, 2) / 2.0 - mu / rm))
-        };
+        let semi_parameter = powi(hm, 2) / mu;
 
         let (longitude_of_ascending_node, argument_of_periapsis, true_anomaly) =
             if equatorial && !circular {
                 (
                     Angle::ZERO,
-                    e.azimuth(),
+                    direction * e.azimuth(),
                     TrueAnomaly::new(Angle::from_atan2(h.dot(e.cross(r)) / hm, r.dot(e))),
                 )
             } else if !equatorial && circular {
@@ -461,18 +578,17 @@ impl Cartesian {
                     TrueAnomaly::new(Angle::from_atan2(r.dot(h.cross(node)) / hm, r.dot(node))),
                 )
             } else if equatorial && circular {
-                (Angle::ZERO, Angle::ZERO, TrueAnomaly::new(r.azimuth()))
+                (
+                    Angle::ZERO,
+                    Angle::ZERO,
+                    TrueAnomaly::new(direction * r.azimuth()),
+                )
             } else {
-                let true_anomaly = if semi_major_axis > 0.0 {
-                    let e_se = r.dot(v) / sqrt(mu * semi_major_axis);
-                    let e_ce = (rm * powi(vm, 2)) / mu - 1.0;
-                    EccentricAnomaly::new(Angle::from_atan2(e_se, e_ce)).to_true(eccentricity)
-                } else {
-                    let e_sh = r.dot(v) / sqrt(-mu * semi_major_axis);
-                    let e_ch = (rm * powi(vm, 2)) / mu - 1.0;
-                    EccentricAnomaly::new((ln((e_ch + e_sh) / (e_ch - e_sh)) / 2.0).rad())
-                        .to_true(eccentricity)
-                };
+                // e·sin(ν) = h·(r·v) / (µ·r) and e·cos(ν) = p/r - 1 hold for every conic section.
+                let true_anomaly = TrueAnomaly::new(Angle::from_atan2(
+                    hm * r.dot(v) / (mu * rm),
+                    semi_parameter / rm - 1.0,
+                ));
                 let px = r.dot(node);
                 let py = r.dot(h.cross(node)) / hm;
                 (
@@ -483,14 +599,14 @@ impl Cartesian {
             };
 
         Keplerian {
-            semi_major_axis: semi_major_axis.m(),
+            semi_parameter: semi_parameter.m(),
             eccentricity,
             inclination: Inclination(inclination),
             longitude_of_ascending_node: LongitudeOfAscendingNode(
                 longitude_of_ascending_node.mod_two_pi(),
             ),
             argument_of_periapsis: ArgumentOfPeriapsis(argument_of_periapsis.mod_two_pi()),
-            true_anomaly,
+            true_anomaly: normalize_true_anomaly(true_anomaly, eccentricity),
         }
     }
 }
@@ -501,21 +617,24 @@ pub enum KeplerianError {
     /// The eccentricity is invalid.
     #[error(transparent)]
     InvalidEccentricity(#[from] EccentricityError),
-    /// The semi-major axis sign is inconsistent with the eccentricity.
+    /// The semi-major axis is inconsistent with the eccentricity.
     #[error(
-        "{} semi-major axis ({semi_major_axis}) for {} eccentricity ({eccentricity})",
-        if signum(.semi_major_axis.as_f64()) == -1.0 {"negative"} else {"positive"},
+        "semi-major axis ({semi_major_axis}) {} for {} eccentricity ({eccentricity})",
+        semi_major_axis_requirement(.eccentricity),
         .eccentricity.orbit_type()
     )]
     InvalidShape {
         /// The invalid semi-major axis.
-        semi_major_axis: SemiMajorAxis,
-        /// The eccentricity that conflicts with the semi-major axis sign.
+        semi_major_axis: Distance,
+        /// The eccentricity that conflicts with the semi-major axis.
         eccentricity: Eccentricity,
     },
+    /// The semi-parameter is not finite and positive.
+    #[error("semi-parameter must be finite and positive but was {0}")]
+    InvalidSemiParameter(Distance),
     /// No shape parameters were provided.
     #[error(
-        "no orbital shape parameters (semi-major axis and eccentricity, radii, or altitudes) were provided"
+        "no orbital shape parameters (semi-major axis or semi-parameter and eccentricity, radii, or altitudes) were provided"
     )]
     MissingShape,
     /// The inclination is invalid.
@@ -527,20 +646,47 @@ pub enum KeplerianError {
     /// The argument of periapsis is invalid.
     #[error(transparent)]
     InvalidArgumentOfPeriapsis(#[from] ArgumentOfPeriapsisError),
-    /// The anomaly conversion failed.
+    /// More than one anomaly was provided.
+    #[error("only one of true, eccentric, or mean anomaly may be specified")]
+    AmbiguousAnomaly,
+    /// The anomaly is not finite.
+    #[error("anomaly must be finite but was {0}")]
+    NonFiniteAnomaly(Angle),
+    /// The anomaly conversion failed or the true anomaly is outside the valid range.
     #[error(transparent)]
     Anomaly(#[from] AnomalyError),
+}
+
+fn semi_major_axis_requirement(eccentricity: &Eccentricity) -> &'static str {
+    match eccentricity.orbit_type() {
+        OrbitType::Circular | OrbitType::Elliptic => "must be finite and positive",
+        OrbitType::Parabolic => "is undefined",
+        OrbitType::Hyperbolic => "must be finite and negative",
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Shape {
+    SemiMajorAxis(Distance),
+    SemiParameter(Distance),
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Anomaly {
+    True(Angle),
+    Eccentric(Angle),
+    Mean(Angle),
 }
 
 /// Builder for constructing validated [`Keplerian`] elements.
 #[derive(Debug, Default, Clone)]
 pub struct KeplerianBuilder {
-    shape: Option<(SemiMajorAxis, Result<Eccentricity, EccentricityError>)>,
+    shape: Option<(Shape, Result<Eccentricity, EccentricityError>)>,
     inclination: Angle,
     longitude_of_ascending_node: Angle,
     argument_of_periapsis: Angle,
-    true_anomaly: Option<Angle>,
-    mean_anomaly: Option<Angle>,
+    anomaly: Option<Anomaly>,
+    ambiguous_anomaly: bool,
 }
 
 impl KeplerianBuilder {
@@ -550,26 +696,32 @@ impl KeplerianBuilder {
     }
 
     /// Sets the semi-major axis and eccentricity.
-    pub fn with_semi_major_axis(
-        mut self,
-        semi_major_axis: SemiMajorAxis,
-        eccentricity: f64,
-    ) -> Self {
-        self.shape = Some((semi_major_axis, Eccentricity::try_new(eccentricity)));
+    ///
+    /// The semi-major axis must be positive for closed orbits and negative for hyperbolic orbits.
+    /// It is undefined for parabolic orbits; use
+    /// [`with_semi_parameter`](Self::with_semi_parameter) for those.
+    pub fn with_semi_major_axis(mut self, semi_major_axis: Distance, eccentricity: f64) -> Self {
+        self.shape = Some((
+            Shape::SemiMajorAxis(semi_major_axis),
+            Eccentricity::try_new(eccentricity),
+        ));
+        self
+    }
+
+    /// Sets the semi-parameter (semi-latus rectum) and eccentricity.
+    pub fn with_semi_parameter(mut self, semi_parameter: Distance, eccentricity: f64) -> Self {
+        self.shape = Some((
+            Shape::SemiParameter(semi_parameter),
+            Eccentricity::try_new(eccentricity),
+        ));
         self
     }
 
     /// Sets the orbit shape from periapsis and apoapsis radii.
-    pub fn with_radii(mut self, periapsis_radius: Distance, apoapsis_radius: Distance) -> Self {
+    pub fn with_radii(self, periapsis_radius: Distance, apoapsis_radius: Distance) -> Self {
         let rp = periapsis_radius.as_f64();
         let ra = apoapsis_radius.as_f64();
-        let semi_major_axis = SemiMajorAxis::new((rp + ra) / 2.0);
-
-        let eccentricity = Eccentricity::try_new((ra - rp) / (ra + rp));
-
-        self.shape = Some((semi_major_axis, eccentricity));
-
-        self
+        self.with_semi_major_axis(Distance::new((rp + ra) / 2.0), (ra - rp) / (ra + rp))
     }
 
     /// Sets the orbit shape from periapsis and apoapsis altitudes above a mean radius.
@@ -603,68 +755,148 @@ impl KeplerianBuilder {
     }
 
     /// Sets the true anomaly.
-    pub fn with_true_anomaly(mut self, true_anomaly: Angle) -> Self {
-        self.true_anomaly = Some(true_anomaly);
-        self
+    ///
+    /// Only one of the true, eccentric, or mean anomaly may be set.
+    pub fn with_true_anomaly(self, true_anomaly: Angle) -> Self {
+        self.with_anomaly(Anomaly::True(true_anomaly))
+    }
+
+    /// Sets the eccentric anomaly (converted to true anomaly during build).
+    ///
+    /// For hyperbolic and parabolic orbits, this is the hyperbolic and parabolic anomaly
+    /// respectively, see [`EccentricAnomaly`]. Only one of the true, eccentric, or mean anomaly
+    /// may be set.
+    pub fn with_eccentric_anomaly(self, eccentric_anomaly: Angle) -> Self {
+        self.with_anomaly(Anomaly::Eccentric(eccentric_anomaly))
     }
 
     /// Sets the mean anomaly (converted to true anomaly during build).
-    pub fn with_mean_anomaly(mut self, mean_anomaly: Angle) -> Self {
-        self.mean_anomaly = Some(mean_anomaly);
+    ///
+    /// Only one of the true, eccentric, or mean anomaly may be set.
+    pub fn with_mean_anomaly(self, mean_anomaly: Angle) -> Self {
+        self.with_anomaly(Anomaly::Mean(mean_anomaly))
+    }
+
+    fn with_anomaly(mut self, anomaly: Anomaly) -> Self {
+        self.ambiguous_anomaly |= self.anomaly.is_some();
+        self.anomaly = Some(anomaly);
         self
     }
 
     /// Validates all parameters and builds the [`Keplerian`] elements.
+    ///
+    /// The true anomaly is normalised to [0, 2π) for closed orbits and to [-π, π) for open orbits.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`KeplerianError`] if any parameter is invalid or not finite, if more than one
+    /// anomaly was set, or if the true anomaly lies outside the asymptotes of a hyperbolic orbit.
     pub fn build(self) -> Result<Keplerian, KeplerianError> {
-        let (semi_major_axis, eccentricity) = self.shape.ok_or(KeplerianError::MissingShape)?;
+        let (shape, eccentricity) = self.shape.ok_or(KeplerianError::MissingShape)?;
 
         let eccentricity = eccentricity?;
 
-        Self::check_shape(semi_major_axis, eccentricity)?;
+        let semi_parameter = Self::semi_parameter(shape, eccentricity)?;
 
         let inclination = Inclination::try_new(self.inclination)?;
         let longitude_of_ascending_node =
             LongitudeOfAscendingNode::try_new(self.longitude_of_ascending_node)?;
         let argument_of_periapsis = ArgumentOfPeriapsis::try_new(self.argument_of_periapsis)?;
 
-        let true_anomaly = match self.true_anomaly {
-            Some(true_anomaly) => TrueAnomaly::new(true_anomaly),
-            None => match self.mean_anomaly {
-                Some(mean_anomaly) => MeanAnomaly::new(mean_anomaly).to_true(eccentricity)?,
-                None => TrueAnomaly::new(Angle::ZERO),
-            },
+        if self.ambiguous_anomaly {
+            return Err(KeplerianError::AmbiguousAnomaly);
+        }
+
+        if let Some(Anomaly::True(anomaly) | Anomaly::Eccentric(anomaly) | Anomaly::Mean(anomaly)) =
+            self.anomaly
+            && !anomaly.as_f64().is_finite()
+        {
+            return Err(KeplerianError::NonFiniteAnomaly(anomaly));
+        }
+
+        let true_anomaly = match self.anomaly {
+            None => TrueAnomaly::new(Angle::ZERO),
+            Some(Anomaly::True(nu)) => {
+                Self::check_true_anomaly(TrueAnomaly::new(nu), eccentricity)?
+            }
+            Some(Anomaly::Eccentric(ecc)) => EccentricAnomaly::new(ecc).to_true(eccentricity),
+            Some(Anomaly::Mean(mean)) => MeanAnomaly::new(mean).to_true(eccentricity)?,
         };
 
         Ok(Keplerian {
-            semi_major_axis,
+            semi_parameter,
             eccentricity,
             inclination,
             longitude_of_ascending_node,
             argument_of_periapsis,
-            true_anomaly,
+            true_anomaly: normalize_true_anomaly(true_anomaly, eccentricity),
         })
     }
 
-    fn check_shape(
-        semi_major_axis: SemiMajorAxis,
+    fn semi_parameter(
+        shape: Shape,
         eccentricity: Eccentricity,
-    ) -> Result<(), KeplerianError> {
-        let ecc = eccentricity.as_f64();
-        let sma = semi_major_axis.as_f64();
-        if (ecc > 1.0 && sma > 0.0) || (ecc < 1.0 && sma < 0.0) {
-            return Err(KeplerianError::InvalidShape {
-                semi_major_axis,
-                eccentricity,
+    ) -> Result<Distance, KeplerianError> {
+        let semi_parameter = match shape {
+            Shape::SemiMajorAxis(semi_major_axis) => {
+                let ecc = eccentricity.as_f64();
+                let sma = semi_major_axis.as_f64();
+                let valid = sma.is_finite()
+                    && match eccentricity.orbit_type() {
+                        OrbitType::Circular | OrbitType::Elliptic => sma > 0.0,
+                        OrbitType::Parabolic => false,
+                        OrbitType::Hyperbolic => sma < 0.0,
+                    };
+                if !valid {
+                    return Err(KeplerianError::InvalidShape {
+                        semi_major_axis,
+                        eccentricity,
+                    });
+                }
+                if eccentricity.is_circular() {
+                    semi_major_axis
+                } else {
+                    Distance::new(sma * (1.0 - powi(ecc, 2)))
+                }
+            }
+            Shape::SemiParameter(semi_parameter) => semi_parameter,
+        };
+        let p = semi_parameter.as_f64();
+        if !p.is_finite() || p <= 0.0 {
+            return Err(KeplerianError::InvalidSemiParameter(semi_parameter));
+        }
+        Ok(semi_parameter)
+    }
+
+    fn check_true_anomaly(
+        true_anomaly: TrueAnomaly,
+        eccentricity: Eccentricity,
+    ) -> Result<TrueAnomaly, AnomalyError> {
+        let max_nu = match eccentricity.orbit_type() {
+            OrbitType::Circular | OrbitType::Elliptic => return Ok(true_anomaly),
+            OrbitType::Parabolic => Angle::new(PI),
+            OrbitType::Hyperbolic => hyperbolic_asymptote_angle(eccentricity),
+        };
+        let nu = true_anomaly.as_angle().normalize_two_pi(Angle::ZERO);
+        if abs(nu.as_f64()) >= max_nu.as_f64() {
+            return Err(AnomalyError::InvalidTrueAnomaly {
+                nu: true_anomaly.as_angle(),
+                max_nu,
             });
         }
-        Ok(())
+        Ok(TrueAnomaly::new(nu))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use lox_approx::assert_approx_eq;
+    use alloc::string::ToString;
+    use core::f64::consts::FRAC_PI_2;
 
+    use lox_approx::assert_approx_eq;
+    use proptest::prelude::*;
+
+    use crate::math::float::{asin, sin_cos};
     use crate::units::VelocityUnits;
 
     use super::*;
@@ -724,6 +956,30 @@ mod tests {
     }
 
     #[test]
+    fn test_retrograde_equatorial_round_trip() {
+        // Exactly in the equatorial plane, so the node vector is exactly zero.
+        let states = [
+            // Elliptic
+            Cartesian::from_vecs(
+                DVec3::new(-4838.214e3, -4489.062e3, 0.0),
+                DVec3::new(-5.0e3, 6.0e3, 0.0),
+            ),
+            // Circular
+            Cartesian::from_vecs(
+                DVec3::new(7000e3, 0.0, 0.0),
+                DVec3::new(0.0, -sqrt(MU_EARTH.as_f64() / 7000e3), 0.0),
+            ),
+        ];
+        for state in states {
+            let k = state.to_keplerian(MU_EARTH);
+            assert_approx_eq!(k.inclination().as_f64(), PI, rtol <= 1e-15);
+            let state1 = k.to_cartesian(MU_EARTH);
+            assert_approx_eq!(state.position(), state1.position(), atol <= 1e-6);
+            assert_approx_eq!(state.velocity(), state1.velocity(), atol <= 1e-9);
+        }
+    }
+
+    #[test]
     fn test_keplerian_builder() {
         let mu = GravitationalParameter::km3_per_s2(398600.43550702266f64);
 
@@ -744,5 +1000,418 @@ mod tests {
             .unwrap();
         let k1 = k.to_cartesian(mu).to_keplerian(mu);
         assert_approx_eq!(k, k1);
+    }
+
+    const MU_EARTH: GravitationalParameter = GravitationalParameter::km3_per_s2(398600.43550702266);
+
+    fn elliptic() -> Keplerian {
+        Keplerian::builder()
+            .with_semi_major_axis(24464.560.km(), 0.7311)
+            .with_inclination(0.122138.rad())
+            .with_longitude_of_ascending_node(1.00681.rad())
+            .with_argument_of_periapsis(3.10686.rad())
+            .with_true_anomaly(0.44369564302687126.rad())
+            .build()
+            .unwrap()
+    }
+
+    #[test]
+    fn test_parabolic_round_trip() {
+        let k = Keplerian::builder()
+            .with_semi_parameter(10000.0.km(), 1.0)
+            .with_inclination(0.5.rad())
+            .with_longitude_of_ascending_node(1.0.rad())
+            .with_argument_of_periapsis(2.0.rad())
+            .with_true_anomaly(1.0.rad())
+            .build()
+            .unwrap();
+        assert!(k.eccentricity().is_parabolic());
+        assert_eq!(k.semi_major_axis().as_f64(), f64::INFINITY);
+        assert_eq!(k.periapsis_radius(), 5000.0.km());
+        assert!(k.apoapsis_radius().is_none());
+        assert_approx_eq!(k.specific_orbital_energy(MU_EARTH), 0.0, atol <= 1e-12);
+
+        let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH);
+        assert_approx_eq!(k, k1, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_hyperbolic_round_trip() {
+        let k = Keplerian::builder()
+            .with_semi_major_axis(-20000.0.km(), 1.5)
+            .with_inclination(0.5.rad())
+            .with_longitude_of_ascending_node(1.0.rad())
+            .with_argument_of_periapsis(2.0.rad())
+            .with_true_anomaly(-1.0.rad())
+            .build()
+            .unwrap();
+        assert_approx_eq!(k.semi_major_axis(), -20000.0.km(), rtol <= 1e-14);
+        assert!(k.specific_orbital_energy(MU_EARTH) > 0.0);
+
+        let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH);
+        assert_approx_eq!(k, k1, rtol <= 1e-10);
+    }
+
+    #[test]
+    fn test_semi_major_axis_rejected_for_parabolic() {
+        let result = Keplerian::builder()
+            .with_semi_major_axis(10000.0.km(), 1.0)
+            .build();
+        assert!(matches!(result, Err(KeplerianError::InvalidShape { .. })));
+    }
+
+    #[test]
+    fn test_semi_major_axis_rejected_for_wrong_sign_or_zero() {
+        for (sma, ecc, requirement) in [
+            (0.0.km(), 0.5, "must be finite and positive"),
+            (
+                Distance::new(f64::INFINITY),
+                0.0,
+                "must be finite and positive",
+            ),
+            (-7000.0.km(), 0.1, "must be finite and positive"),
+            (7000.0.km(), 1.5, "must be finite and negative"),
+            (7000.0.km(), 1.0, "is undefined"),
+        ] {
+            let err = Keplerian::builder()
+                .with_semi_major_axis(sma, ecc)
+                .build()
+                .unwrap_err();
+            assert!(matches!(err, KeplerianError::InvalidShape { .. }));
+            assert!(err.to_string().contains(requirement), "{err}");
+        }
+    }
+
+    #[test]
+    fn test_invalid_semi_parameter() {
+        let result = Keplerian::builder()
+            .with_semi_parameter(-1.0.km(), 0.5)
+            .build();
+        assert!(matches!(
+            result,
+            Err(KeplerianError::InvalidSemiParameter(_))
+        ));
+    }
+
+    #[test]
+    fn test_builder_ambiguous_anomaly() {
+        let result = Keplerian::builder()
+            .with_semi_major_axis(7000.0.km(), 0.1)
+            .with_true_anomaly(0.1.rad())
+            .with_mean_anomaly(0.1.rad())
+            .build();
+        assert!(matches!(result, Err(KeplerianError::AmbiguousAnomaly)));
+    }
+
+    #[test]
+    fn test_builder_eccentric_anomaly() {
+        let ecc = Eccentricity::try_new(0.3).unwrap();
+        let k = Keplerian::builder()
+            .with_semi_major_axis(7000.0.km(), 0.3)
+            .with_eccentric_anomaly(1.0.rad())
+            .build()
+            .unwrap();
+        let expected = EccentricAnomaly::new(1.0.rad()).to_true(ecc);
+        assert_approx_eq!(k.true_anomaly(), expected, rtol <= 1e-14);
+    }
+
+    #[test]
+    fn test_builder_rejects_true_anomaly_beyond_asymptote() {
+        // The asymptote angle for e = 2 is 120°.
+        let result = Keplerian::builder()
+            .with_semi_major_axis(-20000.0.km(), 2.0)
+            .with_true_anomaly(130.0.deg())
+            .build();
+        assert!(matches!(
+            result,
+            Err(KeplerianError::Anomaly(
+                AnomalyError::InvalidTrueAnomaly { .. }
+            ))
+        ));
+    }
+
+    #[test]
+    fn test_builder_normalizes_true_anomaly() {
+        let k = Keplerian::builder()
+            .with_semi_major_axis(-20000.0.km(), 2.0)
+            .with_true_anomaly(350.0.deg())
+            .build()
+            .unwrap();
+        assert_approx_eq!(k.true_anomaly().as_angle(), -10.0.deg(), rtol <= 1e-12);
+
+        let k = Keplerian::builder()
+            .with_semi_major_axis(7000.0.km(), 0.1)
+            .with_true_anomaly(-10.0.deg())
+            .build()
+            .unwrap();
+        assert_approx_eq!(k.true_anomaly().as_angle(), 350.0.deg(), rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_builder_rejects_non_finite_angles() {
+        let result = Keplerian::builder()
+            .with_semi_major_axis(7000.0.km(), 0.1)
+            .with_longitude_of_ascending_node(Angle::new(f64::INFINITY))
+            .build();
+        assert!(matches!(
+            result,
+            Err(KeplerianError::InvalidLongitudeOfAscendingNode(_))
+        ));
+        let result = Keplerian::builder()
+            .with_semi_major_axis(7000.0.km(), 0.1)
+            .with_argument_of_periapsis(Angle::new(f64::NAN))
+            .build();
+        assert!(matches!(
+            result,
+            Err(KeplerianError::InvalidArgumentOfPeriapsis(_))
+        ));
+        for builder in [
+            Keplerian::builder().with_true_anomaly(Angle::new(f64::NAN)),
+            Keplerian::builder().with_eccentric_anomaly(Angle::new(f64::INFINITY)),
+            Keplerian::builder().with_mean_anomaly(Angle::new(f64::NEG_INFINITY)),
+        ] {
+            let result = builder.with_semi_major_axis(7000.0.km(), 0.1).build();
+            assert!(matches!(result, Err(KeplerianError::NonFiniteAnomaly(_))));
+        }
+    }
+
+    #[test]
+    fn test_derived_quantities() {
+        let k = elliptic();
+        let a = 24464.560e3;
+        let e = 0.7311;
+        let mu = MU_EARTH.as_f64();
+        let state = k.to_cartesian(MU_EARTH);
+        let r = state.position();
+        let v = state.velocity();
+
+        assert_approx_eq!(k.semi_major_axis().as_f64(), a, rtol <= 1e-14);
+        assert_approx_eq!(k.periapsis_radius().as_f64(), a * (1.0 - e), rtol <= 1e-14);
+        assert_approx_eq!(
+            k.apoapsis_radius().unwrap().as_f64(),
+            a * (1.0 + e),
+            rtol <= 1e-14
+        );
+        assert_approx_eq!(
+            k.periapsis_altitude(6371.0.km()).as_f64(),
+            a * (1.0 - e) - 6371e3,
+            rtol <= 1e-14
+        );
+        assert_approx_eq!(
+            k.mean_motion(MU_EARTH).as_f64(),
+            sqrt(mu / powi(a, 3)),
+            rtol <= 1e-14
+        );
+        assert_approx_eq!(
+            k.specific_orbital_energy(MU_EARTH),
+            v.length_squared() / 2.0 - mu / r.length(),
+            rtol <= 1e-10
+        );
+        assert_approx_eq!(
+            k.specific_angular_momentum(MU_EARTH),
+            r.cross(v).length(),
+            rtol <= 1e-10
+        );
+        assert_approx_eq!(
+            k.flight_path_angle().as_f64(),
+            asin(r.dot(v) / (r.length() * v.length())),
+            rtol <= 1e-10
+        );
+        assert_approx_eq!(
+            k.argument_of_latitude().as_f64(),
+            (3.10686 + 0.44369564302687126) % TAU,
+            rtol <= 1e-14
+        );
+        assert_approx_eq!(
+            k.true_longitude().as_f64(),
+            (1.00681 + 3.10686 + 0.44369564302687126) % TAU,
+            rtol <= 1e-14
+        );
+        let mean_anomaly = k.true_anomaly().to_mean(k.eccentricity()).unwrap();
+        assert_approx_eq!(
+            k.mean_longitude().unwrap().as_f64(),
+            (1.00681 + 3.10686 + mean_anomaly.as_f64()) % TAU,
+            rtol <= 1e-14
+        );
+    }
+
+    #[test]
+    fn test_iter_trace_open_orbit() {
+        let k = Keplerian::builder()
+            .with_semi_major_axis(-20000.0.km(), 1.5)
+            .build()
+            .unwrap();
+        assert!(k.iter_trace(MU_EARTH, 10).is_none());
+        assert!(k.trace(MU_EARTH, 10).is_none());
+        assert_eq!(elliptic().trace(MU_EARTH, 10).unwrap().len(), 10);
+    }
+
+    /// Eccentricities covering every orbit type, including the exact edge values and both
+    /// sides of the circular and parabolic classification thresholds.
+    fn any_eccentricity() -> impl Strategy<Value = f64> {
+        prop_oneof![
+            Just(0.0),
+            0.0..2e-8,
+            2e-8..0.95,
+            1.0 - 2e-8..1.0 + 2e-8,
+            Just(1.0),
+            1.05..5.0,
+        ]
+    }
+
+    fn any_inclination() -> impl Strategy<Value = f64> {
+        prop_oneof![Just(0.0), Just(PI), 0.0..=PI]
+    }
+
+    /// Builds elements from a true anomaly given as a fraction of the valid range, i.e.
+    /// [-π, π) for closed orbits and the open interval between the asymptotes otherwise.
+    fn elements(p: f64, ecc: f64, inc: f64, node: f64, argp: f64, nu_fraction: f64) -> Keplerian {
+        let eccentricity = Eccentricity::try_new(ecc).unwrap();
+        let max_nu = match eccentricity.orbit_type() {
+            OrbitType::Circular | OrbitType::Elliptic => PI,
+            OrbitType::Parabolic => 0.95 * PI,
+            OrbitType::Hyperbolic => 0.95 * hyperbolic_asymptote_angle(eccentricity).as_f64(),
+        };
+        Keplerian::builder()
+            .with_semi_parameter(p.m(), ecc)
+            .with_inclination(inc.rad())
+            .with_longitude_of_ascending_node(node.rad())
+            .with_argument_of_periapsis(argp.rad())
+            .with_true_anomaly((nu_fraction * max_nu).rad())
+            .build()
+            .unwrap()
+    }
+
+    fn assert_states_close(expected: Cartesian, actual: Cartesian, rtol: f64) {
+        let r = expected.position();
+        let v = expected.velocity();
+        let dr = (actual.position() - r).length();
+        let dv = (actual.velocity() - v).length();
+        assert!(
+            dr <= rtol * r.length(),
+            "position: {r} vs {}",
+            actual.position()
+        );
+        assert!(
+            dv <= rtol * v.length(),
+            "velocity: {v} vs {}",
+            actual.velocity()
+        );
+    }
+
+    fn angle_difference(a: Angle, b: Angle) -> f64 {
+        abs((a - b).normalize_two_pi(Angle::ZERO).as_f64())
+    }
+
+    proptest! {
+        #[test]
+        fn prop_cartesian_round_trip_from_elements(
+            p in 6.6e6..1e8f64,
+            ecc in any_eccentricity(),
+            inc in any_inclination(),
+            node in 0.0..TAU,
+            argp in 0.0..TAU,
+            nu_fraction in -1.0..1.0f64,
+        ) {
+            let k = elements(p, ecc, inc, node, argp, nu_fraction);
+            let state = k.to_cartesian(MU_EARTH);
+            let state1 = state.to_keplerian(MU_EARTH).to_cartesian(MU_EARTH);
+            assert_states_close(state, state1, 1e-7);
+        }
+
+        #[test]
+        fn prop_cartesian_round_trip_from_states(
+            r in 6.6e6..1e8f64,
+            lon in 0.0..TAU,
+            lat in -FRAC_PI_2..FRAC_PI_2,
+            // Classical elements are singular for rectilinear orbits (h → 0), where the
+            // reconstruction loses accuracy as eps / (1 - e), so radial velocities are excluded.
+            flight_path_angle in -1.5..1.5f64,
+            heading in 0.0..TAU,
+            // Up to 1.5 times the escape velocity
+            v_scale in 0.05..1.5f64,
+            equatorial in prop_oneof![Just(None), Just(Some(1.0)), Just(Some(-1.0))],
+        ) {
+            let (sin_lon, cos_lon) = sin_cos(lon);
+            let east = DVec3::new(-sin_lon, cos_lon, 0.0);
+            let (r_dir, horizontal) = match equatorial {
+                // Exactly in the equatorial plane, prograde or retrograde
+                Some(direction) => (DVec3::new(cos_lon, sin_lon, 0.0), direction * east),
+                None => {
+                    let (sin_lat, cos_lat) = sin_cos(lat);
+                    let r_dir = DVec3::new(cos_lat * cos_lon, cos_lat * sin_lon, sin_lat);
+                    let north = DVec3::new(-sin_lat * cos_lon, -sin_lat * sin_lon, cos_lat);
+                    let (sin_h, cos_h) = sin_cos(heading);
+                    (r_dir, cos_h * east + sin_h * north)
+                }
+            };
+            let (sin_fpa, cos_fpa) = sin_cos(flight_path_angle);
+            let v = v_scale * sqrt(2.0 * MU_EARTH.as_f64() / r);
+            let state = Cartesian::from_vecs(r * r_dir, v * (sin_fpa * r_dir + cos_fpa * horizontal));
+            let state1 = state.to_keplerian(MU_EARTH).to_cartesian(MU_EARTH);
+            assert_states_close(state, state1, 1e-8);
+        }
+
+        #[test]
+        fn prop_keplerian_round_trip(
+            p in 6.6e6..1e8f64,
+            ecc in prop_oneof![1e-3..0.95, 1.05..5.0],
+            inc in 1e-3..PI - 1e-3,
+            node in 0.0..TAU,
+            argp in 0.0..TAU,
+            nu_fraction in -1.0..1.0f64,
+        ) {
+            let k = elements(p, ecc, inc, node, argp, nu_fraction);
+            let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH);
+            assert_approx_eq!(k.semi_parameter(), k1.semi_parameter(), rtol <= 1e-10);
+            assert_approx_eq!(k.eccentricity(), k1.eccentricity(), rtol <= 1e-8);
+            assert_approx_eq!(k.inclination(), k1.inclination(), atol <= 1e-10);
+            let angles = [
+                (k.longitude_of_ascending_node().0, k1.longitude_of_ascending_node().0),
+                (k.argument_of_periapsis().0, k1.argument_of_periapsis().0),
+                (k.true_anomaly().as_angle(), k1.true_anomaly().as_angle()),
+            ];
+            for (expected, actual) in angles {
+                prop_assert!(angle_difference(expected, actual) < 1e-7, "{expected} vs {actual}");
+            }
+            let nu = k1.true_anomaly().as_f64();
+            if k1.eccentricity().is_circular_or_elliptic() {
+                prop_assert!((0.0..TAU).contains(&nu));
+            } else {
+                prop_assert!((-PI..PI).contains(&nu));
+            }
+        }
+
+        /// Ω and ω are undefined for circular and equatorial orbits, so only the angles that
+        /// remain defined are compared.
+        #[test]
+        fn prop_keplerian_round_trip_degenerate(
+            p in 6.6e6..1e8f64,
+            ecc in prop_oneof![Just(0.0), 1e-3..0.95, 1.05..5.0],
+            inc in prop_oneof![Just(0.0), Just(PI), 1e-3..PI - 1e-3],
+            node in 0.0..TAU,
+            argp in 0.0..TAU,
+            nu_fraction in -1.0..1.0f64,
+        ) {
+            let k = elements(p, ecc, inc, node, argp, nu_fraction);
+            let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH);
+            let (expected, actual) = if ecc != 0.0 && inc != 0.0 && inc != PI {
+                return Ok(());
+            } else if inc == 0.0 || inc == PI {
+                // The azimuth of the position in the equatorial plane
+                let azimuth = |k: &Keplerian| k.to_cartesian(MU_EARTH).position().azimuth();
+                (azimuth(&k), azimuth(&k1))
+            } else {
+                (k.argument_of_latitude(), k1.argument_of_latitude())
+            };
+            prop_assert!(angle_difference(expected, actual) < 1e-7, "{expected} vs {actual}");
+            for angle in [
+                k1.longitude_of_ascending_node().as_f64(),
+                k1.argument_of_periapsis().as_f64(),
+                k1.true_anomaly().as_f64(),
+            ] {
+                prop_assert!(angle.is_finite());
+            }
+        }
     }
 }
