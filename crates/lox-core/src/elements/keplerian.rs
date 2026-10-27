@@ -501,7 +501,7 @@ impl Keplerian {
             return None;
         }
         let elements = *self;
-        Some(Linspace::new(-PI, PI, n).map(move |ecc| {
+        Some(Linspace::new(0.0, TAU, n).map(move |ecc| {
             let true_anomaly = EccentricAnomaly::new(ecc.rad()).to_true(elements.eccentricity);
             Keplerian {
                 true_anomaly,
