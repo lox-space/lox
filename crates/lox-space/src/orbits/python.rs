@@ -777,9 +777,11 @@ impl PyKeplerian {
         PyOrigin(self.0.origin())
     }
 
-    /// Return the semi-major axis.
-    fn semi_major_axis(&self) -> PyDistance {
-        PyDistance(self.0.semi_major_axis())
+    /// Return the semi-major axis, or ``None`` for parabolic orbits.
+    ///
+    /// The semi-major axis is negative for hyperbolic orbits.
+    fn semi_major_axis(&self) -> Option<PyDistance> {
+        self.0.semi_major_axis().map(PyDistance)
     }
 
     /// Return the orbital eccentricity.
@@ -957,7 +959,8 @@ impl PyKeplerian {
         format!(
             "Keplerian({}, {}, {}, {}, {}, {}, {}, origin={})",
             self.time().__repr__(),
-            self.semi_major_axis().__repr__(),
+            self.semi_major_axis()
+                .map_or("None".to_string(), |a| a.__repr__()),
             repr_f64(self.eccentricity()),
             self.inclination().__repr__(),
             self.longitude_of_ascending_node().__repr__(),

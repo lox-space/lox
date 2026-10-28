@@ -315,17 +315,19 @@ impl Keplerian {
         KeplerianBuilder::default()
     }
 
-    /// Returns the semi-major axis.
+    /// Returns the semi-major axis, or `None` for parabolic orbits.
     ///
-    /// The semi-major axis is negative for hyperbolic orbits and infinite for parabolic orbits.
-    pub fn semi_major_axis(&self) -> Distance {
+    /// The semi-major axis is negative for hyperbolic orbits.
+    pub fn semi_major_axis(&self) -> Option<Distance> {
         if self.eccentricity.is_parabolic() {
-            return Distance::new(f64::INFINITY);
+            return None;
         }
         if self.eccentricity.is_circular() {
-            return self.semi_parameter;
+            return Some(self.semi_parameter);
         }
-        Distance::new(self.semi_parameter.as_f64() / (1.0 - powi(self.eccentricity.0, 2)))
+        Some(Distance::new(
+            self.semi_parameter.as_f64() / (1.0 - powi(self.eccentricity.0, 2)),
+        ))
     }
 
     /// Returns the eccentricity.
@@ -431,12 +433,13 @@ impl Keplerian {
     /// so the mean motion is defined for every orbit type.
     pub fn mean_motion(&self, grav_param: GravitationalParameter) -> AngularRate {
         let mu = grav_param.as_f64();
-        if self.eccentricity.is_parabolic() {
-            let p = self.semi_parameter.as_f64();
-            return AngularRate::new(2.0 * sqrt(mu / powi(p, 3)));
+        match self.semi_major_axis() {
+            Some(a) => AngularRate::new(sqrt(mu / powi(abs(a.as_f64()), 3))),
+            None => {
+                let p = self.semi_parameter.as_f64();
+                AngularRate::new(2.0 * sqrt(mu / powi(p, 3)))
+            }
         }
-        let a = self.semi_major_axis().as_f64();
-        AngularRate::new(sqrt(mu / powi(abs(a), 3)))
     }
 
     // TODO: Return unitful types from `specific_orbital_energy` and `specific_angular_momentum`
@@ -486,7 +489,7 @@ impl Keplerian {
             return None;
         }
         let mu = grav_param.as_f64();
-        let a = self.semi_major_axis().as_f64();
+        let a = self.semi_major_axis()?.as_f64();
         Some(TimeDelta::from_seconds_f64(TAU * sqrt(powf(a, 3.0) / mu)))
     }
 
@@ -1028,7 +1031,7 @@ mod tests {
             .build()
             .unwrap();
         assert!(k.eccentricity().is_parabolic());
-        assert_eq!(k.semi_major_axis().as_f64(), f64::INFINITY);
+        assert!(k.semi_major_axis().is_none());
         assert_eq!(k.periapsis_radius(), 5000.0.km());
         assert!(k.apoapsis_radius().is_none());
         assert_approx_eq!(k.specific_orbital_energy(MU_EARTH), 0.0, atol <= 1e-12);
@@ -1047,7 +1050,7 @@ mod tests {
             .with_true_anomaly(-1.0.rad())
             .build()
             .unwrap();
-        assert_approx_eq!(k.semi_major_axis(), -20000.0.km(), rtol <= 1e-14);
+        assert_approx_eq!(k.semi_major_axis().unwrap(), -20000.0.km(), rtol <= 1e-14);
         assert!(k.specific_orbital_energy(MU_EARTH) > 0.0);
 
         let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH);
@@ -1208,7 +1211,7 @@ mod tests {
         let r = state.position();
         let v = state.velocity();
 
-        assert_approx_eq!(k.semi_major_axis().as_f64(), a, rtol <= 1e-14);
+        assert_approx_eq!(k.semi_major_axis().unwrap().as_f64(), a, rtol <= 1e-14);
         assert_approx_eq!(k.periapsis_radius().as_f64(), a * (1.0 - e), rtol <= 1e-14);
         assert_approx_eq!(
             k.apoapsis_radius().unwrap().as_f64(),

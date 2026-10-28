@@ -267,8 +267,8 @@ mod tests {
         let kep2 = eq.to_keplerian().unwrap();
 
         assert_approx_eq!(
-            kep.semi_major_axis().as_f64(),
-            kep2.semi_major_axis().as_f64(),
+            kep.semi_major_axis().unwrap().as_f64(),
+            kep2.semi_major_axis().unwrap().as_f64(),
             rtol <= 1e-12
         );
         assert_approx_eq!(

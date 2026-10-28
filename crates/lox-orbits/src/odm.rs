@@ -886,6 +886,10 @@ pub enum OmmBuildError {
     /// where this conversion is total.
     #[error("failed to convert true anomaly to mean anomaly: {0}")]
     Anomaly(#[from] AnomalyError),
+    /// The orbit is parabolic, so the semi-major axis required by the OMM
+    /// mean elements is undefined.
+    #[error("OMM mean elements are undefined for parabolic orbits")]
+    Parabolic,
     /// An epoch could not be re-expressed in the requested `TIME_SYSTEM`.
     #[error(transparent)]
     TimeSystem(#[from] OdmTimeError),
@@ -1222,6 +1226,7 @@ where
     /// - [`OmmBuildError::Anomaly`] if the orbit's true anomaly cannot be
     ///   converted to a mean anomaly — only possible for hyperbolic
     ///   orbits whose true anomaly is outside the asymptote limits.
+    /// - [`OmmBuildError::Parabolic`] if the orbit is parabolic.
     /// - [`OmmBuildError::TimeSystem`] if a [`time_system`](Self::time_system)
     ///   override requires an offset that the builder's
     ///   [`OffsetProvider`] can't resolve for the orbit's epoch.
@@ -1232,9 +1237,10 @@ where
         // it can fail when the true anomaly exceeds the asymptote limit;
         // propagate that as a typed error instead of panicking.
         let mean_anomaly_rad = kep.true_anomaly().to_mean(ecc)?.as_f64();
+        let semi_major_axis = kep.semi_major_axis().ok_or(OmmBuildError::Parabolic)?;
 
         let mean_elements = MeanElements {
-            a: kep.semi_major_axis().to_meters(),
+            a: semi_major_axis.to_meters(),
             e: ecc.as_f64(),
             i: kep.inclination().as_f64(),
             raan: kep.longitude_of_ascending_node().as_f64(),

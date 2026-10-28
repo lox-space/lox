@@ -157,7 +157,7 @@ fn legacy_fixture_keplerian_with_wire_gm() {
     let kep = opm.keplerian.expect("Keplerian block missing");
 
     // Semi-major axis round-trip (km)
-    let sma_km = kep.elements.semi_major_axis().to_kilometers();
+    let sma_km = kep.elements.semi_major_axis().unwrap().to_kilometers();
     let diff_sma = (sma_km - 6730.96).abs();
     assert!(diff_sma < 1e-6, "SMA unexpected: {sma_km}");
 

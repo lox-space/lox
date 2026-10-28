@@ -227,7 +227,11 @@ mod tests {
             .unwrap();
 
         assert_approx_eq!(
-            c.satellites()[0].elements.semi_major_axis().as_f64(),
+            c.satellites()[0]
+                .elements
+                .semi_major_axis()
+                .unwrap()
+                .as_f64(),
             expected_sma,
             rtol <= 1e-10
         );

@@ -75,8 +75,8 @@ where
         Ok(Orbit::from_state(keplerian, time, origin, frame))
     }
 
-    /// Returns the semi-major axis.
-    pub fn semi_major_axis(&self) -> Distance {
+    /// Returns the semi-major axis, or `None` for parabolic orbits.
+    pub fn semi_major_axis(&self) -> Option<Distance> {
         self.state().semi_major_axis()
     }
 

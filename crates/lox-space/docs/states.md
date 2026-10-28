@@ -38,6 +38,7 @@ print(f"x = {state.x.to_kilometers():.1f} km")
 
 # Convert to Keplerian elements
 kep = state.to_keplerian()
+# semi_major_axis() returns None for parabolic orbits
 print(f"a = {kep.semi_major_axis().to_kilometers():.1f} km")
 print(f"e = {kep.eccentricity():.6f}")
 print(f"i = {kep.inclination().to_degrees():.2f} deg")

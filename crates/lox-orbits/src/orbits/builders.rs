@@ -366,7 +366,11 @@ mod tests {
             .build()
             .unwrap();
 
-        assert_approx_eq!(orbit.semi_major_axis(), 7178.1363.km(), rtol <= 1e-10);
+        assert_approx_eq!(
+            orbit.semi_major_axis().unwrap(),
+            7178.1363.km(),
+            rtol <= 1e-10
+        );
         assert_approx_eq!(orbit.eccentricity().as_f64(), 0.001, atol <= 1e-15);
         assert_approx_eq!(
             orbit.inclination().as_f64(),
@@ -388,7 +392,7 @@ mod tests {
         let exp_sma = 7200.0.km();
         let exp_ecc = (7400.0 - 7000.0) / (7400.0 + 7000.0);
 
-        assert_approx_eq!(orbit.semi_major_axis(), exp_sma, rtol <= 1e-10);
+        assert_approx_eq!(orbit.semi_major_axis().unwrap(), exp_sma, rtol <= 1e-10);
         assert_approx_eq!(orbit.eccentricity().as_f64(), exp_ecc, rtol <= 1e-10);
     }
 
@@ -408,7 +412,7 @@ mod tests {
         let exp_sma = Distance::new((rp + ra) / 2.0);
         let exp_ecc = (ra - rp) / (ra + rp);
 
-        assert_approx_eq!(orbit.semi_major_axis(), exp_sma, rtol <= 1e-10);
+        assert_approx_eq!(orbit.semi_major_axis().unwrap(), exp_sma, rtol <= 1e-10);
         assert_approx_eq!(orbit.eccentricity().as_f64(), exp_ecc, rtol <= 1e-10);
     }
 
@@ -443,7 +447,7 @@ mod tests {
             .build()
             .unwrap();
 
-        assert_approx_eq!(orbit.semi_major_axis(), 7178.0.km(), rtol <= 1e-10);
+        assert_approx_eq!(orbit.semi_major_axis().unwrap(), 7178.0.km(), rtol <= 1e-10);
         assert_approx_eq!(orbit.eccentricity().as_f64(), 0.0, atol <= 1e-15);
         assert_approx_eq!(
             orbit.inclination().as_f64(),
@@ -463,7 +467,7 @@ mod tests {
             .unwrap();
 
         let exp_sma = Distance::new(altitude.as_f64() + mean_radius.as_f64());
-        assert_approx_eq!(orbit.semi_major_axis(), exp_sma, rtol <= 1e-10);
+        assert_approx_eq!(orbit.semi_major_axis().unwrap(), exp_sma, rtol <= 1e-10);
         assert_approx_eq!(orbit.eccentricity().as_f64(), 0.0, atol <= 1e-15);
     }
 

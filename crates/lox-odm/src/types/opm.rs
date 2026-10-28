@@ -106,6 +106,8 @@ pub struct Opm {
     /// block (between metadata and `EPOCH`).
     pub state_comments: Vec<String>,
     /// Optional osculating Keplerian element section (CCSDS §3.4.2).
+    ///
+    /// Writers omit the section for parabolic orbits, whose semi-major axis is undefined.
     pub keplerian: Option<OpmKeplerian>,
     /// Optional spacecraft physical properties.
     pub spacecraft: Option<SpacecraftParameters>,

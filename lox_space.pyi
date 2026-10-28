@@ -1630,8 +1630,11 @@ class Keplerian:
     def origin(self) -> Origin:
         """Return the central body (origin) of this orbit."""
         ...
-    def semi_major_axis(self) -> Distance:
-        """Return the semi-major axis."""
+    def semi_major_axis(self) -> Distance | None:
+        """Return the semi-major axis, or ``None`` for parabolic orbits.
+
+        The semi-major axis is negative for hyperbolic orbits.
+        """
         ...
     def eccentricity(self) -> float:
         """Return the orbital eccentricity."""

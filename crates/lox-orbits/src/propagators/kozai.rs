@@ -149,10 +149,17 @@ pub fn j4_secular_rates(
 /// secular rates.
 ///
 /// `a`, `e`, `i` are constant; `raan`, `aop`, `M` are linearly propagated.
+///
+/// # Panics
+///
+/// Panics if `kep` is parabolic, since its semi-major axis is undefined.
 pub fn propagate_mean(kep: &Keplerian, m0: f64, rates: &SecularRates, dt: f64) -> MeanElements {
     use std::f64::consts::TAU;
     MeanElements {
-        a: kep.semi_major_axis().as_f64(),
+        a: kep
+            .semi_major_axis()
+            .expect("mean elements require a semi-major axis")
+            .as_f64(),
         e: kep.eccentricity().as_f64(),
         i: kep.inclination().as_f64(),
         raan: (kep.longitude_of_ascending_node().as_f64() + rates.raan_dot * dt).rem_euclid(TAU),
