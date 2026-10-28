@@ -110,15 +110,17 @@ fn build_data_section(opm: &Opm) -> KvnSection {
     entries.push(fld("Y_DOT", format!("{}", vel.y / 1000.0), Some("km/s")));
     entries.push(fld("Z_DOT", format!("{}", vel.z / 1000.0), Some("km/s")));
 
-    // Optional Keplerian block
-    if let Some(kep) = &opm.keplerian {
+    // Optional Keplerian block, omitted for parabolic orbits since SEMI_MAJOR_AXIS must be finite
+    if let Some(kep) = &opm.keplerian
+        && let Some(semi_major_axis) = kep.elements.semi_major_axis()
+    {
         for comment in &kep.comments {
             entries.push(KvnEntry::Comment(comment.clone()));
         }
 
         entries.push(fld(
             "SEMI_MAJOR_AXIS",
-            format!("{}", kep.elements.semi_major_axis().to_kilometers()),
+            format!("{}", semi_major_axis.to_kilometers()),
             Some("km"),
         ));
         entries.push(fld(
@@ -1079,6 +1081,31 @@ mod tests {
             output.contains("Z_DOT = 0 [km/s]"),
             "missing Z_DOT; got:\n{output}"
         );
+    }
+
+    #[test]
+    fn write_opm_omits_keplerian_block_for_parabolic_orbit() {
+        let mut opm = sample_opm();
+        let elements = Keplerian::builder()
+            .with_semi_parameter(Distance::kilometers(10000.0), 1.0)
+            .build()
+            .expect("valid Keplerian elements");
+        opm.keplerian = Some(OpmKeplerian {
+            comments: vec!["Keplerian block".to_string()],
+            elements,
+            gm: Some(GravitationalParameter::km3_per_s2(398600.4415)),
+        });
+
+        let output = write_opm(&opm);
+
+        for keyword in ["Keplerian block", "SEMI_MAJOR_AXIS", "ECCENTRICITY", "GM ="] {
+            assert!(
+                !output.contains(keyword),
+                "unexpected {keyword}; got:\n{output}"
+            );
+        }
+        let parsed = read_opm(&output).expect("parse failed");
+        assert!(parsed.keplerian.is_none());
     }
 
     #[test]

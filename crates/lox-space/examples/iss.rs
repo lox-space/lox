@@ -33,7 +33,9 @@ fn main() {
     println!("{}", "=".repeat(title.len()));
     println!(
         "Semi-major axis: {:.3} km",
-        iss.semi_major_axis().to_kilometers()
+        iss.semi_major_axis()
+            .expect("the ISS orbit is elliptic")
+            .to_kilometers()
     );
     println!("Eccentricity: {:.6}", iss.eccentricity().as_f64());
     println!(

@@ -263,7 +263,7 @@ mod tests {
 
         let k1 = s1.to_keplerian();
         assert_approx_eq!(
-            k1.semi_major_axis().as_f64(),
+            k1.semi_major_axis().unwrap().as_f64(),
             semi_major.km().as_f64(),
             rtol <= 1e-8
         );
@@ -313,7 +313,7 @@ mod tests {
         let k1 = s1.to_keplerian();
 
         assert_approx_eq!(
-            k1.semi_major_axis().as_f64(),
+            k1.semi_major_axis().unwrap().as_f64(),
             semi_major.km().as_f64(),
             rtol <= 1e-8
         );

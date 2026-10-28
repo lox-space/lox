@@ -111,7 +111,10 @@ where
             return Err(J2Error::NonElliptic(ecc.orbit_type()));
         }
 
-        let a = kep.semi_major_axis().as_f64();
+        let a = kep
+            .semi_major_axis()
+            .expect("closed orbits have a semi-major axis")
+            .as_f64();
         let e = ecc.as_f64();
         let i = kep.inclination().as_f64();
         let m0 = kep.true_anomaly().to_mean(ecc)?.as_f64();

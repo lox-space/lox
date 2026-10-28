@@ -57,6 +57,9 @@ pub enum EquinoctialError {
     /// The Keplerian conversion failed.
     #[error(transparent)]
     Keplerian(#[from] KeplerianError),
+    /// The orbit is parabolic, so its semi-major axis is undefined.
+    #[error("equinoctial elements are undefined for parabolic orbits")]
+    Parabolic,
 }
 
 impl Equinoctial {
@@ -80,7 +83,13 @@ impl Equinoctial {
     ///
     /// Requires the true anomaly → mean anomaly conversion, which can fail
     /// for hyperbolic orbits beyond the asymptote angle.
-    pub fn from_keplerian(kep: &Keplerian) -> Result<Self, AnomalyError> {
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`EquinoctialError`] if the orbit is parabolic or the anomaly conversion
+    /// fails.
+    pub fn from_keplerian(kep: &Keplerian) -> Result<Self, EquinoctialError> {
+        let a = kep.semi_major_axis().ok_or(EquinoctialError::Parabolic)?;
         let m = kep.true_anomaly().to_mean(kep.eccentricity())?.as_f64();
         let e = kep.eccentricity().as_f64();
         let i = kep.inclination().as_f64();
@@ -96,7 +105,7 @@ impl Equinoctial {
         let lambda = m + pomega;
 
         Ok(Self {
-            a: kep.semi_major_axis(),
+            a,
             k,
             h,
             p,
@@ -130,7 +139,7 @@ impl Equinoctial {
     pub fn from_cartesian(
         cart: &Cartesian,
         mu: GravitationalParameter,
-    ) -> Result<Self, AnomalyError> {
+    ) -> Result<Self, EquinoctialError> {
         Self::from_keplerian(&cart.to_keplerian(mu))
     }
 
@@ -205,14 +214,26 @@ mod tests {
     }
 
     #[test]
+    fn test_from_keplerian_rejects_parabolic() {
+        let kep = Keplerian::builder()
+            .with_semi_parameter(10000.0.km(), 1.0)
+            .build()
+            .unwrap();
+        assert!(matches!(
+            Equinoctial::from_keplerian(&kep),
+            Err(EquinoctialError::Parabolic)
+        ));
+    }
+
+    #[test]
     fn test_keplerian_roundtrip() {
         let kep = general_orbit_keplerian();
         let eq = Equinoctial::from_keplerian(&kep).unwrap();
         let kep2 = eq.to_keplerian().unwrap();
 
         assert_approx_eq!(
-            kep.semi_major_axis().as_f64(),
-            kep2.semi_major_axis().as_f64(),
+            kep.semi_major_axis().unwrap().as_f64(),
+            kep2.semi_major_axis().unwrap().as_f64(),
             rtol <= 1e-12
         );
         assert_approx_eq!(

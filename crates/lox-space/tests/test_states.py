@@ -289,6 +289,28 @@ def test_keplerian_derived_quantities_open_orbit():
     assert k.apoapsis_altitude() is None
     assert k.periapsis_radius().to_kilometers() == pytest.approx(10000.0)
     assert k.specific_orbital_energy() > 0.0
+    assert k.semi_major_axis().to_kilometers() == pytest.approx(-20000.0)
+
+
+def test_keplerian_parabolic_has_no_semi_major_axis():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    mu = lox.Origin("Earth").gravitational_parameter().to_km3_per_s2()
+    r = 7000.0
+    v_escape = math.sqrt(2.0 * mu / r)
+    state = lox.Cartesian(
+        time,
+        x=r * lox.km,
+        y=0.0 * lox.km,
+        z=0.0 * lox.km,
+        vx=0.0 * lox.km_per_s,
+        vy=v_escape * lox.km_per_s,
+        vz=0.0 * lox.km_per_s,
+    )
+    k = state.to_keplerian()
+    assert k.eccentricity() == pytest.approx(1.0)
+    assert k.semi_major_axis() is None
+    assert k.periapsis_radius().to_kilometers() == pytest.approx(r)
+    assert "Keplerian(" in repr(k)
 
 
 def test_keplerian_altitude_requires_mean_radius():

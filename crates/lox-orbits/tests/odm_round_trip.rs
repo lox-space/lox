@@ -462,3 +462,26 @@ fn omm_builder_returns_typed_error_for_hyperbolic_beyond_asymptote() {
         "expected OmmWriteError::Build(Anomaly), got {err:?}"
     );
 }
+
+/// `OmmBuilder::build` returns a typed error for parabolic orbits, whose
+/// semi-major axis is undefined.
+#[test]
+fn omm_builder_returns_typed_error_for_parabolic() {
+    let kep = Keplerian::builder()
+        .with_semi_parameter(Distance::kilometers(10000.0), 1.0)
+        .with_inclination(Angle::radians(0.5))
+        .build()
+        .unwrap();
+    let orbit: KeplerianOrbit =
+        Orbit::from_state(kep, Time::j2000(TimeScale::Tai), Origin::Earth, Frame::Icrf);
+
+    let err = orbit
+        .build_omm("PARA", "2024-PAR-001A")
+        .originator("TEST")
+        .build()
+        .expect_err("parabolic build should fail");
+    assert!(
+        matches!(err, OmmBuildError::Parabolic),
+        "expected OmmBuildError::Parabolic, got {err:?}"
+    );
+}

@@ -380,36 +380,37 @@ impl From<&Opm> for OpmXml {
             z_dot: ValueWithUnits::new(vel.z / 1000.0, "km/s"),
         };
 
-        let keplerian_elements = opm.keplerian.as_ref().map(|kep| KeplerianElementsXml {
-            comments: kep.comments.clone(),
-            semi_major_axis: ValueWithUnits::new(
-                kep.elements.semi_major_axis().to_kilometers(),
-                "km",
-            ),
-            eccentricity: kep.elements.eccentricity().as_f64(),
-            inclination: ValueWithUnits::new(
-                kep.elements.inclination().as_angle().to_degrees(),
-                "deg",
-            ),
-            ra_of_asc_node: ValueWithUnits::new(
-                kep.elements
-                    .longitude_of_ascending_node()
-                    .as_angle()
-                    .to_degrees(),
-                "deg",
-            ),
-            arg_of_pericenter: ValueWithUnits::new(
-                kep.elements.argument_of_periapsis().as_angle().to_degrees(),
-                "deg",
-            ),
-            true_anomaly: Some(ValueWithUnits::new(
-                kep.elements.true_anomaly().as_angle().to_degrees(),
-                "deg",
-            )),
-            mean_anomaly: None,
-            gm: kep
-                .gm
-                .map(|g| ValueWithUnits::new(g.as_f64() / 1e9, "km**3/s**2")),
+        // Omitted for parabolic orbits since SEMI_MAJOR_AXIS must be finite.
+        let keplerian_elements = opm.keplerian.as_ref().and_then(|kep| {
+            let semi_major_axis = kep.elements.semi_major_axis()?;
+            Some(KeplerianElementsXml {
+                comments: kep.comments.clone(),
+                semi_major_axis: ValueWithUnits::new(semi_major_axis.to_kilometers(), "km"),
+                eccentricity: kep.elements.eccentricity().as_f64(),
+                inclination: ValueWithUnits::new(
+                    kep.elements.inclination().as_angle().to_degrees(),
+                    "deg",
+                ),
+                ra_of_asc_node: ValueWithUnits::new(
+                    kep.elements
+                        .longitude_of_ascending_node()
+                        .as_angle()
+                        .to_degrees(),
+                    "deg",
+                ),
+                arg_of_pericenter: ValueWithUnits::new(
+                    kep.elements.argument_of_periapsis().as_angle().to_degrees(),
+                    "deg",
+                ),
+                true_anomaly: Some(ValueWithUnits::new(
+                    kep.elements.true_anomaly().as_angle().to_degrees(),
+                    "deg",
+                )),
+                mean_anomaly: None,
+                gm: kep
+                    .gm
+                    .map(|g| ValueWithUnits::new(g.as_f64() / 1e9, "km**3/s**2")),
+            })
         });
 
         let spacecraft_parameters = opm.spacecraft.as_ref().map(|sp| SpacecraftParametersXml {
@@ -869,6 +870,25 @@ mod tests {
         let xml_str = write_opm(&opm).unwrap();
         let parsed = read_opm(&xml_str).expect("full round-trip parse failed");
         assert_eq!(opm, parsed, "full round-trip mismatch");
+    }
+
+    #[test]
+    fn write_opm_omits_keplerian_block_for_parabolic_orbit() {
+        let mut opm = sample_opm();
+        let elements = Keplerian::builder()
+            .with_semi_parameter(Distance::kilometers(10000.0), 1.0)
+            .build()
+            .expect("valid elements");
+        opm.keplerian = Some(OpmKeplerian {
+            comments: Vec::new(),
+            elements,
+            gm: Some(GravitationalParameter::km3_per_s2(398600.4415)),
+        });
+
+        let xml_str = write_opm(&opm).unwrap();
+        assert!(!xml_str.contains("keplerianElements"), "got:\n{xml_str}");
+        let parsed = read_opm(&xml_str).expect("parse failed");
+        assert!(parsed.keplerian.is_none());
     }
 
     // -----------------------------------------------------------------------
