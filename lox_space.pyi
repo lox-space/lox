@@ -1488,9 +1488,10 @@ class Cartesian:
 class Keplerian:
     """Represents an orbit using Keplerian (classical) orbital elements.
 
-    The orbital shape can be specified in three ways:
+    The orbital shape can be specified in four ways:
 
     - ``semi_major_axis`` + ``eccentricity``
+    - ``semi_parameter`` + ``eccentricity`` (keyword-only), which also supports parabolic orbits
     - ``periapsis_radius`` + ``apoapsis_radius`` (keyword-only)
     - ``periapsis_altitude`` + ``apoapsis_altitude`` (keyword-only)
 
@@ -1503,6 +1504,7 @@ class Keplerian:
         argument_of_periapsis: Argument of periapsis as Angle (default 0).
         true_anomaly: True anomaly as Angle (default 0).
         origin: Central body (default: Earth).
+        semi_parameter: Semi-parameter (semi-latus rectum) as Distance (keyword-only).
         periapsis_radius: Periapsis radius as Distance (keyword-only).
         apoapsis_radius: Apoapsis radius as Distance (keyword-only).
         periapsis_altitude: Periapsis altitude as Distance (keyword-only).
@@ -1516,6 +1518,14 @@ class Keplerian:
         ...     semi_major_axis=6678.0 * lox.km,
         ...     eccentricity=0.001,
         ...     inclination=51.6 * lox.deg,
+        ... )
+
+        From the semi-parameter, e.g. for a parabolic orbit:
+
+        >>> orbit = lox.Keplerian(
+        ...     t,
+        ...     semi_parameter=14000.0 * lox.km,
+        ...     eccentricity=1.0,
         ... )
 
         From radii:
@@ -1545,6 +1555,7 @@ class Keplerian:
         true_anomaly: Angle | None = None,
         origin: str | int | Origin | None = None,
         *,
+        semi_parameter: Distance | None = None,
         periapsis_radius: Distance | None = None,
         apoapsis_radius: Distance | None = None,
         periapsis_altitude: Distance | None = None,

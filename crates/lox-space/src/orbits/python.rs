@@ -453,8 +453,9 @@ impl PyCartesian {
 /// Keplerian elements describe an orbit using six parameters that define
 /// its shape, orientation, and position along the orbit.
 ///
-/// The orbital shape can be specified in three ways:
+/// The orbital shape can be specified in four ways:
 /// - ``semi_major_axis`` + ``eccentricity``
+/// - ``semi_parameter`` + ``eccentricity`` (keyword-only), which also supports parabolic orbits
 /// - ``periapsis_radius`` + ``apoapsis_radius`` (keyword-only)
 /// - ``periapsis_altitude`` + ``apoapsis_altitude`` (keyword-only)
 ///
@@ -467,6 +468,7 @@ impl PyCartesian {
 ///     argument_of_periapsis: Argument of periapsis as Angle (default 0).
 ///     true_anomaly: True anomaly as Angle (default 0).
 ///     origin: Central body (default: Earth).
+///     semi_parameter: Semi-parameter (semi-latus rectum) as Distance (keyword-only).
 ///     periapsis_radius: Periapsis radius as Distance (keyword-only).
 ///     apoapsis_radius: Apoapsis radius as Distance (keyword-only).
 ///     periapsis_altitude: Periapsis altitude as Distance (keyword-only).
@@ -488,6 +490,7 @@ impl PyKeplerian {
         true_anomaly=None,
         origin=None,
         *,
+        semi_parameter=None,
         periapsis_radius=None,
         apoapsis_radius=None,
         periapsis_altitude=None,
@@ -504,6 +507,7 @@ impl PyKeplerian {
         argument_of_periapsis: Option<PyAngle>,
         true_anomaly: Option<PyAngle>,
         origin: Option<&Bound<'_, PyAny>>,
+        semi_parameter: Option<PyDistance>,
         periapsis_radius: Option<PyDistance>,
         apoapsis_radius: Option<PyDistance>,
         periapsis_altitude: Option<PyDistance>,
@@ -528,25 +532,30 @@ impl PyKeplerian {
 
         match (
             semi_major_axis,
+            semi_parameter,
             eccentricity,
             periapsis_radius,
             apoapsis_radius,
             periapsis_altitude,
             apoapsis_altitude,
         ) {
-            (Some(sma), Some(ecc), None, None, None, None) => {
+            (Some(sma), None, Some(ecc), None, None, None, None) => {
                 builder = builder.with_semi_major_axis(sma.0, ecc);
             }
-            (None, None, Some(rp), Some(ra), None, None) => {
+            (None, Some(p), Some(ecc), None, None, None, None) => {
+                builder = builder.with_semi_parameter(p.0, ecc);
+            }
+            (None, None, None, Some(rp), Some(ra), None, None) => {
                 builder = builder.with_radii(rp.0, ra.0);
             }
-            (None, None, None, None, Some(alt_p), Some(alt_a)) => {
+            (None, None, None, None, None, Some(alt_p), Some(alt_a)) => {
                 builder = builder.with_altitudes(alt_p.0, alt_a.0);
             }
-            (None, None, None, None, None, None) => {
+            (None, None, None, None, None, None, None) => {
                 return Err(PyValueError::new_err(
                     "orbital shape must be specified via one of: \
                      (semi_major_axis, eccentricity), \
+                     (semi_parameter, eccentricity), \
                      (periapsis_radius, apoapsis_radius), or \
                      (periapsis_altitude, apoapsis_altitude)",
                 ));
@@ -555,6 +564,7 @@ impl PyKeplerian {
                 return Err(PyValueError::new_err(
                     "orbital shape must be specified via exactly one of: \
                      (semi_major_axis, eccentricity), \
+                     (semi_parameter, eccentricity), \
                      (periapsis_radius, apoapsis_radius), or \
                      (periapsis_altitude, apoapsis_altitude)",
                 ));

@@ -372,6 +372,43 @@ def test_keplerian_no_shape_raises():
         lox.Keplerian(time)
 
 
+def test_keplerian_semi_parameter():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian(time, semi_parameter=8000.0 * lox.km, eccentricity=0.1)
+    assert k.semi_parameter().to_kilometers() == pytest.approx(8000.0)
+    assert k.semi_major_axis().to_kilometers() == pytest.approx(8000.0 / (1.0 - 0.1**2))
+
+
+def test_keplerian_semi_parameter_parabolic():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    k = lox.Keplerian(
+        time,
+        semi_parameter=14000.0 * lox.km,
+        eccentricity=1.0,
+        true_anomaly=90.0 * lox.deg,
+    )
+    assert k.semi_major_axis() is None
+    assert k.periapsis_radius().to_kilometers() == pytest.approx(7000.0)
+    assert k.specific_orbital_energy() == pytest.approx(0.0, abs=1e-12)
+
+
+def test_keplerian_semi_parameter_requires_eccentricity():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    with pytest.raises(ValueError, match="orbital shape"):
+        lox.Keplerian(time, semi_parameter=7000.0 * lox.km)
+
+
+def test_keplerian_semi_parameter_and_semi_major_axis_raises():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    with pytest.raises(ValueError, match="exactly one"):
+        lox.Keplerian(
+            time,
+            7000.0 * lox.km,
+            0.1,
+            semi_parameter=7000.0 * lox.km,
+        )
+
+
 def test_keplerian_mixed_shape_raises():
     """Test that mixing shape params raises ValueError."""
     time = lox.UTC(2024, 1, 1).to_scale("TDB")
