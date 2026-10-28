@@ -412,7 +412,8 @@ impl Keplerian {
 
     /// Returns the mean longitude.
     ///
-    /// For closed orbits the result lies in the interval [0, 2π).
+    /// For closed orbits the result lies in the interval [0, 2π). The mean anomaly it is based on
+    /// depends on the [`OrbitType`], see [`Keplerian::mean_motion`].
     ///
     /// # Errors
     ///
@@ -440,7 +441,12 @@ impl Keplerian {
     /// Returns the mean motion, i.e. the rate of change of the [`MeanAnomaly`].
     ///
     /// The mean anomaly follows the conventions of the [`anomalies`](crate::anomalies) module,
-    /// so the mean motion is defined for every orbit type.
+    /// so the mean motion is defined for every orbit type. These conventions normalise the mean
+    /// anomaly differently for each [`OrbitType`], however, so the mean motion is discontinuous
+    /// at the parabolic threshold of [`Eccentricity::orbit_type`]: for a fixed semi-parameter
+    /// `p`, it tends to zero as the eccentricity approaches one from either side but is
+    /// `2·√(µ/p³)` for parabolic orbits. Mean anomalies and mean motions are therefore only
+    /// comparable between orbits of the same [`OrbitType`].
     pub fn mean_motion(&self, grav_param: GravitationalParameter) -> AngularRate {
         let mu = grav_param.as_f64();
         match self.semi_major_axis() {
@@ -828,7 +834,9 @@ impl KeplerianBuilder {
 
     /// Sets the mean anomaly (converted to true anomaly during build).
     ///
-    /// Only one of the true, eccentric, or mean anomaly may be set.
+    /// The mean anomaly is interpreted according to the [`OrbitType`] of the eccentricity, so the
+    /// same value describes a different position on either side of the parabolic threshold, see
+    /// [`Keplerian::mean_motion`]. Only one of the true, eccentric, or mean anomaly may be set.
     pub fn with_mean_anomaly(self, mean_anomaly: Angle) -> Self {
         self.with_anomaly(Anomaly::Mean(mean_anomaly))
     }

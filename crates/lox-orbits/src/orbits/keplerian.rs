@@ -160,7 +160,7 @@ where
         self.state().flight_path_angle()
     }
 
-    /// Returns the mean motion.
+    /// Returns the mean motion, see [`Keplerian::mean_motion`].
     pub fn mean_motion(&self) -> Result<AngularRate, UndefinedOriginPropertyError>
     where
         O: TryPointMass,
