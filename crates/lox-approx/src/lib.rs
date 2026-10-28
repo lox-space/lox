@@ -273,6 +273,7 @@ where
 mod tests {
     use alloc::string::ToString;
     use alloc::vec;
+    use core::f64::consts::TAU;
 
     use crate::{approx_eq, approx_ne, assert_approx_eq, assert_approx_ne};
 
@@ -315,6 +316,30 @@ mod tests {
             };
             assert_approx_eq!(v1, v2);
             assert_approx_ne!(v3, v4);
+        }
+
+        #[derive(ApproxEq, Debug)]
+        struct Orientation {
+            #[approx(periodic = TAU)]
+            angle: f64,
+            length: f64,
+        }
+
+        #[test]
+        fn test_approx_eq_derive_periodic_field() {
+            let o = |angle, length| Orientation { angle, length };
+            assert_approx_eq!(o(TAU - 1e-12, 1.0), o(1e-12, 1.0), atol <= 1e-11);
+            assert_approx_ne!(o(TAU - 1e-12, 1.0), o(1e-12, 1.0 + TAU), atol <= 1e-11);
+            assert_approx_ne!(o(0.1, 1.0), o(TAU - 0.1, 1.0), atol <= 1e-11);
+        }
+
+        #[derive(ApproxEq, Debug)]
+        struct Wrapped(#[approx(periodic = 360.0)] f64);
+
+        #[test]
+        fn test_approx_eq_derive_periodic_tuple_field() {
+            assert_approx_eq!(Wrapped(359.5), Wrapped(-0.5), atol <= 1e-12);
+            assert_approx_ne!(Wrapped(359.5), Wrapped(0.5), atol <= 1e-12);
         }
 
         #[derive(ApproxEq, Debug)]

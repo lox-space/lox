@@ -13,7 +13,8 @@
 use proc_macro_crate::{FoundCrate, crate_name};
 use quote::quote;
 use syn::{
-    Data, DeriveInput, Error, Fields, GenericParam, Generics, Index, parse_macro_input, parse_quote,
+    Attribute, Data, DeriveInput, Error, Expr, Fields, GenericParam, Generics, Member,
+    parse_macro_input, parse_quote,
 };
 
 fn add_trait_bounds(mut generics: Generics) -> Generics {
@@ -26,11 +27,31 @@ fn add_trait_bounds(mut generics: Generics) -> Generics {
     generics
 }
 
+/// Returns the period from a field's `#[approx(periodic = <expr>)]` attribute, if present.
+fn periodic_attr(attrs: &[Attribute]) -> syn::Result<Option<Expr>> {
+    let mut period = None;
+    for attr in attrs.iter().filter(|attr| attr.path().is_ident("approx")) {
+        attr.parse_nested_meta(|meta| {
+            if meta.path.is_ident("periodic") {
+                period = Some(meta.value()?.parse()?);
+                Ok(())
+            } else {
+                Err(meta.error("unsupported `approx` attribute, expected `periodic`"))
+            }
+        })?;
+    }
+    Ok(period)
+}
+
 /// Derives the `ApproxEq` trait for structs with named or unnamed fields.
 ///
 /// All fields must implement `ApproxEq` and `Debug`. The generated implementation
 /// compares each field individually, collecting per-field results.
-#[proc_macro_derive(ApproxEq)]
+///
+/// A field marked `#[approx(periodic = <period>)]` is instead compared modulo the period with
+/// `ApproxEqResult::periodic`, for example `#[approx(periodic = TAU)]` for an angle. The field
+/// must be `Copy` and convertible into `f64`.
+#[proc_macro_derive(ApproxEq, attributes(approx))]
 pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let DeriveInput {
         ident,
@@ -48,24 +69,13 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         Err(_) => quote!(::lox_approx),
     };
 
-    let fields: Vec<proc_macro2::TokenStream> = match data {
-        Data::Struct(data) => match data.fields {
-            Fields::Named(fields) => fields
-                .named
-                .into_iter()
-                .map(|f| {
-                    let f = f.ident.expect("named field must have an identifier");
-                    quote! {#f}
-                })
-                .collect::<Vec<proc_macro2::TokenStream>>(),
-            Fields::Unnamed(fields) => fields
-                .unnamed
-                .into_iter()
-                .enumerate()
-                .map(|(idx, _)| {
-                    let idx = Index::from(idx);
-                    quote! {#idx}
-                })
+    let fields: Vec<(Member, &[Attribute])> = match &data {
+        Data::Struct(data) => match &data.fields {
+            Fields::Named(_) | Fields::Unnamed(_) => data
+                .fields
+                .iter()
+                .zip(data.fields.members())
+                .map(|(field, member)| (member, field.attrs.as_slice()))
                 .collect(),
             Fields::Unit => {
                 return Error::new(ident.span(), "unit structs are not supported")
@@ -78,25 +88,44 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 .into_compile_error()
                 .into();
         }
+    };
+
+    let results = quote! {#lox_approx::ApproxEqResults};
+
+    let mut comparisons = Vec::with_capacity(fields.len());
+    for (f, attrs) in fields {
+        let period = match periodic_attr(attrs) {
+            Ok(period) => period,
+            Err(err) => return err.into_compile_error().into(),
+        };
+        let name = match &f {
+            Member::Named(ident) => ident.to_string(),
+            Member::Unnamed(index) => index.index.to_string(),
+        };
+        comparisons.push(match period {
+            Some(period) => quote! {
+                results.merge(#name, #results::single(#lox_approx::ApproxEqResult::periodic(
+                    ::core::convert::Into::<f64>::into(self.#f),
+                    ::core::convert::Into::<f64>::into(rhs.#f),
+                    #period,
+                    atol,
+                    rtol,
+                )));
+            },
+            None => quote! {
+                results.merge(#name, self.#f.approx_eq(&rhs.#f, atol, rtol));
+            },
+        });
     }
-    .iter()
-    .map(|f| {
-        quote! {
-            results.merge(stringify!(#f), self.#f.approx_eq(&rhs.#f, atol, rtol));
-        }
-    })
-    .collect();
 
     let generics = add_trait_bounds(generics);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
-    let results = quote! {#lox_approx::ApproxEqResults};
 
     let output = quote! {
         impl #impl_generics #lox_approx::ApproxEq for #ident #ty_generics #where_clause {
             fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> #results {
                 let mut results = #results::new();
-                #(#fields)*
+                #(#comparisons)*
                 results
             }
         }
