@@ -42,13 +42,13 @@ where
 
 /// Brent's method for finding the minimum of a unimodal function in a bracket.
 ///
-/// Combines golden section search with parabolic interpolation.
+/// Combines golden section search with parabolic interpolation. The returned
+/// minimizer is accurate to within `abs_tol + rel_tol * |x|`.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct BrentMinimizer {
-    /// Maximum number of iterations.
-    pub max_iter: u32,
-    /// Absolute tolerance for convergence.
-    pub abs_tol: f64,
+    max_iter: u32,
+    abs_tol: f64,
+    rel_tol: f64,
 }
 
 impl Default for BrentMinimizer {
@@ -56,7 +56,28 @@ impl Default for BrentMinimizer {
         Self {
             max_iter: 500,
             abs_tol: 1e-10,
+            rel_tol: 1e-10,
         }
+    }
+}
+
+impl BrentMinimizer {
+    /// Sets the maximum number of iterations.
+    pub fn with_max_iter(mut self, max_iter: u32) -> Self {
+        self.max_iter = max_iter;
+        self
+    }
+
+    /// Sets the absolute tolerance on the minimizer.
+    pub fn with_abs_tol(mut self, abs_tol: f64) -> Self {
+        self.abs_tol = abs_tol;
+        self
+    }
+
+    /// Sets the relative tolerance on the minimizer.
+    pub fn with_rel_tol(mut self, rel_tol: f64) -> Self {
+        self.rel_tol = rel_tol;
+        self
     }
 }
 
@@ -90,7 +111,7 @@ where
 
         for _ in 0..self.max_iter {
             let midpoint = 0.5 * (a + b);
-            let tol1 = self.abs_tol * abs(x) + 1e-10;
+            let tol1 = self.rel_tol * abs(x) + self.abs_tol;
             let tol2 = 2.0 * tol1;
 
             // Check convergence.
@@ -219,10 +240,9 @@ mod tests {
 
     #[test]
     fn test_brent_minimizer_custom_tolerance() {
-        let minimizer = BrentMinimizer {
-            max_iter: 100,
-            abs_tol: 1e-4,
-        };
+        let minimizer = BrentMinimizer::default()
+            .with_max_iter(100)
+            .with_rel_tol(1e-4);
         let x = minimizer
             .find_minimum_in_bracket(|x: f64| powi(x - 1.0, 2), (-2.0, 5.0))
             .expect("should converge");
@@ -230,11 +250,29 @@ mod tests {
     }
 
     #[test]
+    fn test_brent_minimizer_abs_tol() {
+        // The minimum is at zero, where the relative tolerance vanishes, so
+        // convergence within the iteration budget depends on `abs_tol` alone.
+        let f = |x: f64| abs(x);
+        let bracket = (-2.0, 5.0);
+
+        let loose = BrentMinimizer::default()
+            .with_max_iter(15)
+            .with_abs_tol(0.1);
+        let x = loose
+            .find_minimum_in_bracket(f, bracket)
+            .expect("should converge");
+        assert_approx_eq!(x, 0.0, atol <= 0.5);
+
+        let tight = BrentMinimizer::default().with_max_iter(15);
+        assert!(tight.find_minimum_in_bracket(f, bracket).is_err());
+    }
+
+    #[test]
     fn test_brent_minimizer_not_converged() {
-        let minimizer = BrentMinimizer {
-            max_iter: 0,
-            abs_tol: 1e-15,
-        };
+        let minimizer = BrentMinimizer::default()
+            .with_max_iter(0)
+            .with_abs_tol(1e-15);
         let result = minimizer.find_minimum_in_bracket(|x: f64| powi(x - 1.0, 2), (0.0, 5.0));
         assert!(result.is_err());
     }
