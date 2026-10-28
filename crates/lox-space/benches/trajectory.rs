@@ -159,7 +159,7 @@ fn position_sequential(bencher: Bencher, name: &str) {
     let epochs = sequential_epochs(traj);
     bencher.counter(ItemsCount::new(QUERIES)).bench(|| {
         for &t in &epochs {
-            black_box(traj.at(black_box(t)).position());
+            black_box(traj.at(black_box(t)).unwrap().position());
         }
     });
 }

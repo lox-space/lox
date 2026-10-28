@@ -468,6 +468,17 @@ class TestInterval:
 
 
 class TestIntervalOperations:
+    def test_step_by_inclusive(self, t0):
+        w = lox.Interval(t0, t0 + lox.TimeDelta(150))
+        times = w.step_by_inclusive(lox.TimeDelta(60))
+        assert times == [t0 + lox.TimeDelta(s) for s in (0, 60, 120, 150)]
+        assert w.step_by(lox.TimeDelta(60)) == times[:-1]
+
+    def test_step_by_inclusive_zero_raises(self, t0):
+        w = lox.Interval(t0, t0 + lox.TimeDelta(150))
+        with pytest.raises(ValueError):
+            w.step_by_inclusive(lox.TimeDelta(0))
+
     def test_intersect_intervals(self, t0):
         t1 = t0 + lox.TimeDelta(100)
         t2 = t0 + lox.TimeDelta(200)

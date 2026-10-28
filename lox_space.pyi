@@ -1887,6 +1887,24 @@ class Trajectory:
 
         Args:
             time: Either a Time (absolute) or TimeDelta (relative to trajectory start).
+
+        Raises:
+            ValueError: If the time argument is invalid or lies beyond the
+                extrapolation limit.
+        """
+        ...
+    def extrapolation_limit(self) -> TimeDelta:
+        """Return how far the trajectory is extrapolated before the first and after the last state (default: 1 ms)."""
+        ...
+    def with_extrapolation_limit(self, limit: TimeDelta) -> Self:
+        """Return a copy of the trajectory with a different extrapolation limit.
+
+        Extrapolation continues the cubic of the first or last interval, so its
+        accuracy degrades quickly beyond a fraction of the step size.
+
+        Args:
+            limit: How far to extrapolate before the first and after the last
+                state. A negative limit is treated as zero.
         """
         ...
     def to_frame(self, frame: str | Frame, provider: EOPProvider | None = None) -> Self:
@@ -1949,6 +1967,16 @@ class Interval:
         ...
     def step_by(self, step: TimeDelta) -> list[Time]:
         """Return a list of times spaced by the given step within this interval.
+
+        Raises:
+            ValueError: If step is zero.
+        """
+        ...
+    def step_by_inclusive(self, step: TimeDelta) -> list[Time]:
+        """Return a list of times spaced by the given step, followed by the end.
+
+        Unlike `step_by`, the end is always included. If it does not fall on a
+        step, the last step is shorter.
 
         Raises:
             ValueError: If step is zero.

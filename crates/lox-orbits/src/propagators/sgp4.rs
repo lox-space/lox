@@ -103,7 +103,7 @@ impl Propagator<Earth> for Sgp4 {
             TimeInterval::new(interval.start().to_scale(Tai), interval.end().to_scale(Tai));
         let step = self.step.unwrap_or(TimeDelta::from_seconds(60));
         let states = interval
-            .step_by(step)
+            .step_by_inclusive(step)
             .map(|t| self.state_at(t))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(Trajectory::try_new(states)?)

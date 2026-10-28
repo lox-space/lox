@@ -383,7 +383,7 @@ mod tests {
         assert_eq!(states.last().unwrap().time(), trajectory.end_time());
 
         let expected = orbit.to_cartesian();
-        let actual = trajectory.at(time);
+        let actual = trajectory.at(time).unwrap();
         assert_approx_eq!(actual.position(), expected.position(), atol <= 1.0);
         assert_approx_eq!(actual.velocity(), expected.velocity(), atol <= 0.1);
     }

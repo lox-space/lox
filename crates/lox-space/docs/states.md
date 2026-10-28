@@ -98,6 +98,13 @@ sso = lox.Keplerian.sso(
 # Work with trajectories
 trajectory = lox.Trajectory([state1, state2, state3])
 interpolated = trajectory.at(t + lox.TimeDelta(100))
+
+# Queries up to 1 ms before the first or after the last state are
+# extrapolated, queries beyond raise a ValueError. Widen the limit on demand:
+extended = trajectory.with_extrapolation_limit(lox.TimeDelta(10))
+
+# Use step_by_inclusive to sample an interval including its end
+times = lox.Interval(t, t + lox.TimeDelta(150)).step_by_inclusive(lox.TimeDelta(60))
 ```
 
 ---

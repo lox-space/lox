@@ -819,6 +819,7 @@ pub enum CartesianTrajectoryError {
 }
 
 /// A Cartesian state paired with its time offset within a [`CartesianTrajectory`].
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TimeStampedCartesian {
     /// The time offset of the state.
@@ -830,18 +831,34 @@ pub struct TimeStampedCartesian {
     pub state: Cartesian,
 }
 
+/// The default [extrapolation limit](CartesianTrajectory::extrapolation_limit) of a
+/// [`CartesianTrajectory`].
+pub const DEFAULT_EXTRAPOLATION_LIMIT: TimeDelta = TimeDelta::from_milliseconds(1);
+
 /// A sequence of Cartesian states with Hermite cubic interpolation.
 ///
 /// Times are relative to the first state, which defines `t = 0`. Position is
 /// interpolated from both position and velocity at each state, and velocity is
 /// the analytical derivative of the interpolated position, so the two are
 /// always consistent.
+///
+/// Queries outside of the trajectory are extrapolated up to the
+/// [extrapolation limit](Self::extrapolation_limit) before the first and after
+/// the last state, which defaults to [`DEFAULT_EXTRAPOLATION_LIMIT`]. Queries
+/// beyond it return `None`.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CartesianTrajectory {
     time_steps: Arc<[f64]>,
     data: [Arc<[f64]>; 6],
     series: [Series; 3],
+    #[cfg_attr(feature = "serde", serde(default = "default_extrapolation_limit"))]
+    extrapolation_limit: f64,
+}
+
+#[cfg(feature = "serde")]
+fn default_extrapolation_limit() -> f64 {
+    DEFAULT_EXTRAPOLATION_LIMIT.as_seconds_f64()
 }
 
 impl CartesianTrajectory {
@@ -907,6 +924,7 @@ impl CartesianTrajectory {
             time_steps,
             data,
             series,
+            extrapolation_limit: DEFAULT_EXTRAPOLATION_LIMIT.as_seconds_f64(),
         })
     }
 
@@ -932,6 +950,35 @@ impl CartesianTrajectory {
         self.time_steps.is_empty()
     }
 
+    /// Returns the time between the first and the last state.
+    pub fn span(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self.time_steps.last().unwrap())
+    }
+
+    /// Returns how far the trajectory is extrapolated before the first and after
+    /// the last state.
+    pub fn extrapolation_limit(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(self.extrapolation_limit)
+    }
+
+    /// Sets how far the trajectory is extrapolated before the first and after
+    /// the last state. A negative limit is treated as zero.
+    ///
+    /// Extrapolation continues the cubic of the first or last interval, so its
+    /// accuracy degrades quickly beyond a fraction of the step size.
+    pub fn with_extrapolation_limit(mut self, limit: TimeDelta) -> Self {
+        self.extrapolation_limit = limit.as_seconds_f64().max(0.0);
+        self
+    }
+
+    /// Returns `true` if `t` (seconds since the first state) lies within the
+    /// trajectory, extended by the extrapolation limit.
+    #[inline]
+    fn contains(&self, t: f64) -> bool {
+        let end = self.time_steps[self.time_steps.len() - 1];
+        t >= -self.extrapolation_limit && t <= end + self.extrapolation_limit
+    }
+
     /// Returns the times of the states in seconds since the first state.
     pub fn time_steps(&self) -> &[f64] {
         &self.time_steps
@@ -950,35 +997,51 @@ impl CartesianTrajectory {
     pub fn iter(&self) -> CartesianTrajectoryIter<'_> {
         CartesianTrajectoryIter {
             data: self,
-            curr: 0,
+            front: 0,
+            back: self.len(),
         }
     }
 
     /// Interpolates the position vector at time `t` (seconds since the first state).
+    ///
+    /// Returns `None` if `t` lies beyond the [extrapolation limit](Self::extrapolation_limit).
     #[inline]
-    pub fn position(&self, t: f64) -> DVec3 {
+    pub fn position(&self, t: f64) -> Option<DVec3> {
+        if !self.contains(t) {
+            return None;
+        }
         let idx = self.series[0].find_index(t);
-        DVec3::new(
+        Some(DVec3::new(
             self.series[0].interpolate_at_index(t, idx),
             self.series[1].interpolate_at_index(t, idx),
             self.series[2].interpolate_at_index(t, idx),
-        )
+        ))
     }
 
     /// Interpolates the velocity vector at time `t` (seconds since the first state).
+    ///
+    /// Returns `None` if `t` lies beyond the [extrapolation limit](Self::extrapolation_limit).
     #[inline]
-    pub fn velocity(&self, t: f64) -> DVec3 {
+    pub fn velocity(&self, t: f64) -> Option<DVec3> {
+        if !self.contains(t) {
+            return None;
+        }
         let idx = self.series[0].find_index(t);
-        DVec3::new(
+        Some(DVec3::new(
             self.series[0].derivative_at_index(t, idx),
             self.series[1].derivative_at_index(t, idx),
             self.series[2].derivative_at_index(t, idx),
-        )
+        ))
     }
 
     /// Interpolates the full Cartesian state at time `t` (seconds since the first state).
+    ///
+    /// Returns `None` if `t` lies beyond the [extrapolation limit](Self::extrapolation_limit).
     #[inline]
-    pub fn at(&self, t: f64) -> Cartesian {
+    pub fn at(&self, t: f64) -> Option<Cartesian> {
+        if !self.contains(t) {
+            return None;
+        }
         let idx = self.series[0].find_index(t);
         let pos = DVec3::new(
             self.series[0].interpolate_at_index(t, idx),
@@ -990,28 +1053,43 @@ impl CartesianTrajectory {
             self.series[1].derivative_at_index(t, idx),
             self.series[2].derivative_at_index(t, idx),
         );
-        Cartesian::from_vecs(pos, vel)
+        Some(Cartesian::from_vecs(pos, vel))
     }
 }
 
 /// Iterator over the states in a [`CartesianTrajectory`].
+#[derive(Debug, Clone)]
 pub struct CartesianTrajectoryIter<'a> {
     data: &'a CartesianTrajectory,
-    curr: usize,
+    front: usize,
+    back: usize,
 }
 
 impl Iterator for CartesianTrajectoryIter<'_> {
     type Item = TimeStampedCartesian;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = self.data.get(self.curr)?;
-        self.curr += 1;
+        if self.front == self.back {
+            return None;
+        }
+        let item = self.data.get(self.front)?;
+        self.front += 1;
         Some(item)
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let n = self.data.len() - self.curr;
+        let n = self.back - self.front;
         (n, Some(n))
+    }
+}
+
+impl DoubleEndedIterator for CartesianTrajectoryIter<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.front == self.back {
+            return None;
+        }
+        self.back -= 1;
+        self.data.get(self.back)
     }
 }
 
@@ -1029,6 +1107,8 @@ impl<'a> IntoIterator for &'a CartesianTrajectory {
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
+
     use lox_approx::assert_approx_eq;
     use rstest::rstest;
 
@@ -1568,6 +1648,107 @@ mod tests {
         let times: Vec<TimeDelta> = traj.iter().map(|s| s.time).collect();
         assert_eq!(times, [TimeDelta::ZERO, TimeDelta::from_seconds(60)]);
         assert!(traj.iter().all(|s| s.state == STATE));
+    }
+
+    #[test]
+    fn test_cartesian_trajectory_span() {
+        let traj = CartesianTrajectory::from_states(trajectory_states(
+            &[100, 160, 220],
+            &[STATE, STATE, STATE],
+        ));
+        assert_eq!(traj.span(), TimeDelta::from_seconds(120));
+    }
+
+    #[test]
+    fn test_cartesian_trajectory_iter_double_ended() {
+        let traj = CartesianTrajectory::from_states(trajectory_states(
+            &[0, 60, 120],
+            &[STATE, STATE, STATE],
+        ));
+        let rev: Vec<TimeDelta> = traj.iter().rev().map(|s| s.time).collect();
+        assert_eq!(
+            rev,
+            [120, 60, 0].map(TimeDelta::from_seconds),
+            "reverse iteration"
+        );
+
+        let mut iter = traj.iter();
+        assert_eq!(iter.next().unwrap().time, TimeDelta::ZERO);
+        assert_eq!(iter.next_back().unwrap().time, TimeDelta::from_seconds(120));
+        assert_eq!(iter.len(), 1);
+        assert_eq!(iter.next().unwrap().time, TimeDelta::from_seconds(60));
+        assert!(iter.next().is_none());
+        assert!(iter.next_back().is_none());
+        assert_eq!(iter.len(), 0);
+    }
+
+    /// A trajectory in uniform motion along y, which Hermite interpolation
+    /// reproduces exactly, also when extrapolating.
+    fn linear_trajectory() -> CartesianTrajectory {
+        let state = |t: f64| Cartesian::from_array([0.0, 7.5e3 * t, 0.0, 0.0, 7.5e3, 0.0]);
+        CartesianTrajectory::from_states(trajectory_states(
+            &[0, 60, 120],
+            &[state(0.0), state(60.0), state(120.0)],
+        ))
+    }
+
+    #[rstest]
+    #[case(0.0, Some(0.0))]
+    #[case(90.0, Some(7.5e3 * 90.0))]
+    #[case(120.0, Some(7.5e3 * 120.0))]
+    #[case(-1e-3, Some(-7.5))]
+    #[case(120.001, Some(7.5e3 * 120.001))]
+    #[case(-2e-3, None)]
+    #[case(120.002, None)]
+    #[case(f64::NAN, None)]
+    fn test_cartesian_trajectory_default_extrapolation_limit(
+        #[case] t: f64,
+        #[case] exp_y: Option<f64>,
+    ) {
+        let traj = linear_trajectory();
+        assert_eq!(traj.extrapolation_limit(), TimeDelta::from_milliseconds(1));
+        let act = traj.at(t);
+        assert_eq!(act.is_some(), exp_y.is_some());
+        assert_eq!(traj.position(t).is_some(), exp_y.is_some());
+        assert_eq!(traj.velocity(t).is_some(), exp_y.is_some());
+        if let (Some(act), Some(exp_y)) = (act, exp_y) {
+            assert_approx_eq!(act.position().y, exp_y, rtol <= 1e-12);
+            assert_approx_eq!(act.velocity().y, 7.5e3, rtol <= 1e-12);
+        }
+    }
+
+    #[test]
+    fn test_cartesian_trajectory_with_extrapolation_limit() {
+        let traj = linear_trajectory().with_extrapolation_limit(TimeDelta::from_seconds(10));
+        assert_eq!(traj.extrapolation_limit(), TimeDelta::from_seconds(10));
+        assert_approx_eq!(traj.at(-10.0).unwrap().position().y, -7.5e4, rtol <= 1e-12);
+        assert_approx_eq!(
+            traj.at(130.0).unwrap().position().y,
+            7.5e3 * 130.0,
+            rtol <= 1e-12
+        );
+        assert!(traj.at(-10.1).is_none());
+        assert!(traj.at(130.1).is_none());
+        // The limit does not widen the trajectory's own extent.
+        assert_eq!(traj.span(), TimeDelta::from_seconds(120));
+
+        let strict = linear_trajectory().with_extrapolation_limit(TimeDelta::ZERO);
+        assert!(strict.at(0.0).is_some());
+        assert!(strict.at(120.0).is_some());
+        assert!(strict.at(-1e-9).is_none());
+        assert!(strict.at(120.0 + 1e-9).is_none());
+    }
+
+    #[test]
+    fn test_time_stamped_cartesian_traits() {
+        let s = TimeStampedCartesian {
+            time: TimeDelta::from_seconds(60),
+            state: STATE,
+        };
+        let copy = s;
+        assert_eq!(s, copy);
+        assert_eq!(s, s.clone());
+        assert!(format!("{s:?}").starts_with("TimeStampedCartesian"));
     }
 
     #[test]
