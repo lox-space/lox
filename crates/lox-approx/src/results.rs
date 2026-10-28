@@ -143,8 +143,19 @@ impl ApproxEqResult {
             "period must be finite and positive"
         );
         Self::compare(left, right, atol, rtol, period / 2.0, || {
-            // `%` keeps the sign of the dividend, so the absolute value lies in [0, period).
-            let diff = ((left - right) % period).abs();
+            // Reducing each value before subtracting keeps the difference finite and precise for
+            // values far from the origin. `%` is exact and keeps the sign of the dividend, so
+            // tiny negative values are not rounded up to a whole period.
+            let (left, right) = (left % period, right % period);
+            let diff = left - right;
+            let diff = if diff.is_finite() {
+                (diff % period).abs()
+            } else {
+                // The remainders have opposite signs and the period exceeds `f64::MAX / 2`, so
+                // the difference lies in (period, 2 · period). Halving is exact at this
+                // magnitude.
+                2.0 * ((left / 2.0 - right / 2.0).abs() - period / 2.0)
+            };
             f64::min(diff, period - diff)
         })
     }
@@ -180,7 +191,7 @@ impl ApproxEqResult {
         // Effective tolerance
         let tol = f64::max(atol, rtol * scale);
         let diff = distance();
-        if diff > tol {
+        if diff.is_nan() || diff > tol {
             Self::Fail {
                 left,
                 right,
@@ -449,5 +460,16 @@ impl Display for ApproxEqResults {
             }
         }
         write!(f, "")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_nan_distance_fails() {
+        let result = ApproxEqResult::compare(1.0, 2.0, 1.0, 0.0, 1.0, || f64::NAN);
+        assert!(!result.is_pass());
     }
 }

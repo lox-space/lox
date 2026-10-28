@@ -273,7 +273,7 @@ where
 mod tests {
     use alloc::string::ToString;
     use alloc::vec;
-    use core::f64::consts::TAU;
+    use core::f64::consts::{PI, TAU};
 
     use crate::{approx_eq, approx_ne, assert_approx_eq, assert_approx_ne};
 
@@ -510,8 +510,6 @@ mod tests {
 
     #[test]
     fn test_periodic_wraps_around() {
-        use core::f64::consts::TAU;
-
         let pass = |l, r, atol| ApproxEqResult::periodic(l, r, TAU, atol, 0.0).is_pass();
         assert!(pass(TAU - 1e-12, 1e-12, 1e-11));
         assert!(pass(1e-12, TAU - 1e-12, 1e-11));
@@ -532,8 +530,6 @@ mod tests {
 
     #[test]
     fn test_periodic_rtol_scales_with_half_period() {
-        use core::f64::consts::{PI, TAU};
-
         // The tolerance does not depend on where the values lie on the circle.
         for base in [0.0, 1e-3, 3.0, TAU - 1e-3] {
             let pass = |delta| ApproxEqResult::periodic(base, base + delta, TAU, 0.0, 1e-8);
@@ -544,11 +540,48 @@ mod tests {
 
     #[test]
     fn test_periodic_non_finite() {
-        use core::f64::consts::TAU;
-
         assert!(ApproxEqResult::periodic(f64::INFINITY, f64::INFINITY, TAU, 0.0, 0.0).is_pass());
         assert!(!ApproxEqResult::periodic(f64::NAN, f64::NAN, TAU, 0.0, 0.0).is_pass());
         assert!(!ApproxEqResult::periodic(f64::INFINITY, 1.0, TAU, 0.0, 0.0).is_pass());
+    }
+
+    #[test]
+    fn test_periodic_far_from_origin() {
+        // The raw difference overflows to infinity.
+        assert!(!ApproxEqResult::periodic(1e308, -1e308, TAU, 0.0, 0.0).is_pass());
+        assert!(ApproxEqResult::periodic(1e308, 1e308, TAU, 0.0, 0.0).is_pass());
+        // The raw difference 2^53 + 1 rounds to 2^53, which would hide that the values are odd
+        // and even, i.e. half a period apart.
+        let (odd, even) = (4503599627370497.0, -4503599627370496.0);
+        assert!(!ApproxEqResult::periodic(odd, even, 2.0, 0.5, 0.0).is_pass());
+    }
+
+    #[test]
+    fn test_periodic_huge_period() {
+        // Both values are already reduced, but their difference 2e308 overflows.
+        let ApproxEqResult::Fail { diff, .. } =
+            ApproxEqResult::periodic(1e308, -1e308, 1.7e308, 0.0, 0.0)
+        else {
+            panic!("expected a failure");
+        };
+        assert_approx_eq!(diff.unwrap(), 3e307, rtol <= 1e-12);
+        // The difference 1.8e308 overflows, but wraps to 1e307.
+        assert!(ApproxEqResult::periodic(1e308, -0.8e308, 1.7e308, 1.01e307, 0.0).is_pass());
+        assert!(!ApproxEqResult::periodic(1e308, -0.8e308, 1.7e308, 0.99e307, 0.0).is_pass());
+    }
+
+    #[test]
+    fn test_periodic_tiny_negative_values() {
+        // Shifting -1e-20 into [0, 2π) would round it to 2π, a whole period from 0.
+        assert!(!ApproxEqResult::periodic(-1e-20, 0.0, TAU, 0.0, 0.0).is_pass());
+        assert!(!ApproxEqResult::periodic(0.0, -1e-20, TAU, 0.0, 0.0).is_pass());
+        assert!(ApproxEqResult::periodic(-1e-20, 0.0, TAU, 1e-20, 0.0).is_pass());
+        let ApproxEqResult::Fail { diff, .. } =
+            ApproxEqResult::periodic(-1e-20, 1e-20, TAU, 0.0, 0.0)
+        else {
+            panic!("expected a failure");
+        };
+        assert_eq!(diff, Some(2e-20));
     }
 
     #[test]
