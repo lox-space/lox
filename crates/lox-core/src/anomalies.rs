@@ -737,13 +737,6 @@ mod tests {
         let diff = (ecc.as_f64() - Angle::PI.as_f64()).abs();
         assert!(diff < EPSILON, "Expected π, got {}", ecc.as_f64());
     }
-}
-
-#[cfg(test)]
-mod anomaly_tests {
-    use super::*;
-
-    const EPSILON: f64 = 1e-9;
 
     #[test]
     fn test_anomaly_elliptic_true_to_eccentric() {
