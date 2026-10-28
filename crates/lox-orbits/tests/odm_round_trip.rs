@@ -123,7 +123,7 @@ fn sample_dynamic_trajectory() -> Trajectory {
             Frame::Icrf,
         )
     };
-    Trajectory::new(vec![mk(t0, 7000.0), mk(t1, 6999.0), mk(t2, 6996.0)])
+    Trajectory::try_new(vec![mk(t0, 7000.0), mk(t1, 6999.0), mk(t2, 6996.0)]).unwrap()
 }
 
 // ---------------------------------------------------------------------------
