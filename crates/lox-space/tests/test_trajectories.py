@@ -26,7 +26,9 @@ def orbit():
 @pytest.fixture
 def trajectory(orbit):
     dt = orbit.orbital_period()
-    rng = lox.Interval(orbit.time(), orbit.time() + dt).step_by(1 * lox.seconds)
+    rng = lox.Interval(orbit.time(), orbit.time() + dt).step_by_inclusive(
+        1 * lox.seconds
+    )
     s0 = orbit.to_cartesian()
     prop = lox.Vallado(s0)
     return prop.propagate(rng)
@@ -98,6 +100,26 @@ def test_interpolation(orbit, trajectory):
     assert float(orbit.true_anomaly()) == pytest.approx(
         float(k1.true_anomaly()), rel=1e-8
     )
+
+
+def test_extrapolation_limit(trajectory):
+    start = trajectory.states()[0].time()
+    end = trajectory.states()[-1].time()
+    assert float(trajectory.extrapolation_limit()) == pytest.approx(1e-3)
+    trajectory.at(start - lox.TimeDelta(0.5e-3))
+    trajectory.at(end + lox.TimeDelta(0.5e-3))
+    with pytest.raises(ValueError, match="outside of the trajectory"):
+        trajectory.at(end + lox.TimeDelta(1))
+    with pytest.raises(ValueError, match="outside of the trajectory"):
+        trajectory.at(lox.TimeDelta(-1))
+
+    extended = trajectory.with_extrapolation_limit(lox.TimeDelta(10))
+    assert float(extended.extrapolation_limit()) == 10.0
+    extended.at(end + lox.TimeDelta(1))
+    with pytest.raises(ValueError, match="outside of the trajectory"):
+        extended.at(end + lox.TimeDelta(11))
+    # The original trajectory is unchanged.
+    assert float(trajectory.extrapolation_limit()) == pytest.approx(1e-3)
 
 
 def test_keplerian_repr(orbit):

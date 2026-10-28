@@ -31,6 +31,7 @@ use lox_frames::rotations::TryRotation;
 use lox_frames::{Frame, ReferenceFrame};
 use lox_orbits::ground::EllipsoidLocation;
 use lox_orbits::orbits::{Ensemble, Trajectory};
+use lox_orbits::propagators::Propagator;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
@@ -262,15 +263,15 @@ where
     fn range(&self, time: Time) -> Result<Distance, EvalError> {
         match self {
             Self::GroundSpace { gs, sc } => {
-                let state = sc.at(time.into_dynamic());
+                let state = sc.state_at(time.into_dynamic())?;
                 let state = state
                     .try_to_frame(gs.frame(), &DefaultRotationProvider)
                     .map_err(|e| EvalError::Rotation(Box::new(e)))?;
                 Ok(gs.range_to(state))
             }
             Self::InterSatellite { sc1, sc2 } => {
-                let r1 = sc1.at(time.into_dynamic()).position();
-                let r2 = sc2.at(time.into_dynamic()).position();
+                let r1 = sc1.state_at(time.into_dynamic())?.position();
+                let r2 = sc2.state_at(time.into_dynamic())?.position();
                 Ok(Distance::meters((r1 - r2).length()))
             }
         }

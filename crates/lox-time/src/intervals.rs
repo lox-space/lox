@@ -127,8 +127,11 @@ impl<T> Interval<T>
 where
     T: Copy + Add<TimeDelta, Output = T> + PartialOrd,
 {
-    /// Returns an iterator of evenly-spaced points from start to end (inclusive)
-    /// with the given step size.
+    /// Returns an iterator of evenly-spaced points from the start with the given
+    /// step size, up to and including the end.
+    ///
+    /// The end is included only if it falls on a step. Use
+    /// [`step_by_inclusive`](Self::step_by_inclusive) to always include it.
     ///
     /// The step sign is automatically adjusted to match the interval direction:
     /// forward for a positive duration, backward for a negative one.
@@ -137,6 +140,26 @@ where
     ///
     /// Panics if `step` is zero.
     pub fn step_by(&self, step: TimeDelta) -> IntervalStepIter<T> {
+        self.step_iter(step, false)
+    }
+
+    /// Returns an iterator of evenly-spaced points from the start with the given
+    /// step size, followed by the end.
+    ///
+    /// Unlike [`step_by`](Self::step_by), the end is always included. If it does
+    /// not fall on a step, the last step is shorter than `step`.
+    ///
+    /// The step sign is automatically adjusted to match the interval direction:
+    /// forward for a positive duration, backward for a negative one.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `step` is zero.
+    pub fn step_by_inclusive(&self, step: TimeDelta) -> IntervalStepIter<T> {
+        self.step_iter(step, true)
+    }
+
+    fn step_iter(&self, step: TimeDelta, inclusive: bool) -> IntervalStepIter<T> {
         assert!(
             step.is_positive() || step.is_negative(),
             "step must be non-zero"
@@ -152,6 +175,8 @@ where
             end: self.end(),
             step,
             forward,
+            inclusive,
+            finished: false,
         }
     }
 
@@ -168,11 +193,15 @@ where
 }
 
 /// Iterator that steps through an interval with a fixed time step.
+///
+/// Created by [`Interval::step_by`] and [`Interval::step_by_inclusive`].
 pub struct IntervalStepIter<T> {
     current: T,
     end: T,
     step: TimeDelta,
     forward: bool,
+    inclusive: bool,
+    finished: bool,
 }
 
 impl<T> Iterator for IntervalStepIter<T>
@@ -182,13 +211,29 @@ where
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let done = if self.forward {
-            self.current > self.end
-        } else {
-            self.current < self.end
-        };
-        if done {
+        if self.finished {
             return None;
+        }
+        if self.inclusive {
+            let reached_end = if self.forward {
+                self.current >= self.end
+            } else {
+                self.current <= self.end
+            };
+            if reached_end {
+                self.finished = true;
+                return Some(self.end);
+            }
+        } else {
+            let past_end = if self.forward {
+                self.current > self.end
+            } else {
+                self.current < self.end
+            };
+            if past_end {
+                self.finished = true;
+                return None;
+            }
         }
         let value = self.current;
         self.current = self.current + self.step;
@@ -350,6 +395,8 @@ mod tests {
     use alloc::vec;
     use alloc::vec::Vec;
 
+    use rstest::rstest;
+
     use crate::{
         time,
         time_scales::{Tai, Tdb, Tt},
@@ -425,6 +472,39 @@ mod tests {
         let step = TimeDelta::from_minutes(20);
         let times: Vec<_> = interval.step_by(step).collect();
         assert_eq!(times.len(), 3); // 0, 20, 40 minutes (60 exceeds end)
+    }
+
+    #[rstest]
+    #[case::exact(60, 20, &[0, 20, 40, 60])]
+    #[case::non_exact(50, 20, &[0, 20, 40, 50])]
+    #[case::step_exceeds_duration(10, 20, &[0, 10])]
+    #[case::zero_duration(0, 20, &[0])]
+    #[case::backward_exact(-60, 20, &[0, -20, -40, -60])]
+    #[case::backward_non_exact(-50, 20, &[0, -20, -40, -50])]
+    #[case::backward_negative_step(-50, -20, &[0, -20, -40, -50])]
+    fn test_step_by_inclusive(
+        #[case] duration_min: i64,
+        #[case] step_min: i64,
+        #[case] exp_min: &[i64],
+    ) {
+        let t0 = time!(Tai, 2025, 11, 6).unwrap();
+        let interval = TimeInterval::new(t0, t0 + TimeDelta::from_minutes(duration_min));
+        let times: Vec<_> = interval
+            .step_by_inclusive(TimeDelta::from_minutes(step_min))
+            .collect();
+        let exp: Vec<_> = exp_min
+            .iter()
+            .map(|&m| t0 + TimeDelta::from_minutes(m))
+            .collect();
+        assert_eq!(times, exp);
+    }
+
+    #[test]
+    #[should_panic(expected = "step must be non-zero")]
+    fn test_step_by_inclusive_zero_panics() {
+        let t0 = time!(Tai, 2025, 11, 6).unwrap();
+        let interval = TimeInterval::new(t0, t0 + TimeDelta::from_minutes(60));
+        let _ = interval.step_by_inclusive(TimeDelta::default());
     }
 
     #[test]

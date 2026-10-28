@@ -202,7 +202,7 @@ where
 
     fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<O, R>, J2Error> {
         let states: Result<Vec<_>, _> = interval
-            .step_by(self.step)
+            .step_by_inclusive(self.step)
             .map(|t| self.state_at(t))
             .collect();
         Ok(Trajectory::try_new(states?)?)

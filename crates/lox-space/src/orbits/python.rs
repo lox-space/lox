@@ -1298,15 +1298,43 @@ impl PyTrajectory {
     ///     Interpolated State at the requested time.
     ///
     /// Raises:
-    ///     ValueError: If the time argument is invalid.
+    ///     ValueError: If the time argument is invalid or lies beyond the
+    ///         extrapolation limit.
     fn at(&self, time: &Bound<'_, PyAny>) -> PyResult<PyCartesian> {
-        if let Ok(delta) = time.extract::<PyTimeDelta>() {
-            return Ok(PyCartesian(self.0.at_delta(delta.0)));
-        }
-        if let Ok(time) = time.extract::<PyTime>() {
-            return Ok(PyCartesian(self.0.at(time.0)));
-        }
-        Err(PyValueError::new_err("invalid time argument"))
+        let time = if let Ok(delta) = time.extract::<PyTimeDelta>() {
+            self.0.start_time() + delta.0
+        } else if let Ok(time) = time.extract::<PyTime>() {
+            time.0
+        } else {
+            return Err(PyValueError::new_err("invalid time argument"));
+        };
+        Ok(PyCartesian(
+            self.0.state_at(time).map_err(PyTrajectoryError)?,
+        ))
+    }
+
+    /// Return how far the trajectory is extrapolated before the first and after
+    /// the last state.
+    ///
+    /// Returns:
+    ///     The extrapolation limit (default: 1 ms).
+    fn extrapolation_limit(&self) -> PyTimeDelta {
+        PyTimeDelta(self.0.extrapolation_limit())
+    }
+
+    /// Return a copy of the trajectory with a different extrapolation limit.
+    ///
+    /// Extrapolation continues the cubic of the first or last interval, so its
+    /// accuracy degrades quickly beyond a fraction of the step size.
+    ///
+    /// Args:
+    ///     limit: How far to extrapolate before the first and after the last
+    ///         state. A negative limit is treated as zero.
+    ///
+    /// Returns:
+    ///     A new Trajectory with the given extrapolation limit.
+    fn with_extrapolation_limit(&self, limit: PyTimeDelta) -> Self {
+        PyTrajectory(self.0.clone().with_extrapolation_limit(limit.0))
     }
 
     /// Transform all states in the trajectory to a different reference frame.

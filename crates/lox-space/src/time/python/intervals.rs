@@ -96,6 +96,26 @@ impl PyInterval {
         Ok(self.0.step_by(step.0).map(PyTime).collect())
     }
 
+    /// Return a list of times spaced by the given step, followed by the end.
+    ///
+    /// Unlike `step_by`, the end is always included. If it does not fall on a
+    /// step, the last step is shorter.
+    ///
+    /// Args:
+    ///     step: The step size (must be non-zero).
+    ///
+    /// Returns:
+    ///     List of Time objects.
+    ///
+    /// Raises:
+    ///     ValueError: If step is zero.
+    fn step_by_inclusive(&self, step: PyTimeDelta) -> PyResult<Vec<PyTime>> {
+        if step.0.is_zero() {
+            return Err(PyValueError::new_err("step must be non-zero"));
+        }
+        Ok(self.0.step_by_inclusive(step.0).map(PyTime).collect())
+    }
+
     /// Return a list of n evenly-spaced times within this interval.
     ///
     /// Args:

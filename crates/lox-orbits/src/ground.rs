@@ -377,7 +377,7 @@ where
         let pos = self.location.body_fixed_position();
         let step = self.step.unwrap_or(TimeDelta::from_seconds(60));
         let states: Vec<_> = interval
-            .step_by(step)
+            .step_by_inclusive(step)
             .map(|t| {
                 CartesianOrbit::new(
                     Cartesian::from_vecs(pos, DVec3::ZERO),

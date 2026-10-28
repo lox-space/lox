@@ -215,7 +215,9 @@ mod tests {
     fn test_imaging_analysis_multiple_spacecraft_and_aois() {
         let traj_a = sentinel2a_trajectory();
         let traj_b = sentinel2b_trajectory();
-        let interval = TimeInterval::new(traj_a.start_time(), traj_a.end_time());
+        // The trajectories start at their TLE epochs, so only their overlap is
+        // covered by both.
+        let interval = TimeInterval::new(traj_a.start_time(), traj_b.end_time());
 
         let payload = OpticalPayload::nadir_only(Distance::kilometers(290.0));
 

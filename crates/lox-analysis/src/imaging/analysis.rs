@@ -18,6 +18,7 @@ use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_frames::{Frame, ReferenceFrame};
 use lox_orbits::orbits::{Ensemble, Trajectory};
+use lox_orbits::propagators::Propagator;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::time_scales::TimeScale;
@@ -135,7 +136,7 @@ where
     <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         core::error::Error + Send + Sync + 'static,
 {
-    let state = trajectory.at(time.into_dynamic());
+    let state = trajectory.state_at(time.into_dynamic())?;
     let state_bf = state
         .try_to_frame(body_fixed_frame, &DefaultRotationProvider)
         .map_err(|e| EvalError::Rotation(Box::new(e)))?;

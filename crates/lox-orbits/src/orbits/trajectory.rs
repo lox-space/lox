@@ -25,6 +25,11 @@ use super::{CartesianOrbit, Orbit};
 /// Position is interpolated using Hermite cubic splines that incorporate both
 /// position and velocity at each knot point. Velocity is derived as the
 /// analytical derivative of the position spline.
+///
+/// Queries outside of the trajectory are extrapolated up to the
+/// [extrapolation limit](Self::extrapolation_limit) before the start and after
+/// the end time, which defaults to
+/// [`DEFAULT_EXTRAPOLATION_LIMIT`](lox_core::coords::DEFAULT_EXTRAPOLATION_LIMIT).
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Trajectory<O: CoordinateOrigin = Origin, R: ReferenceFrame = Frame> {
@@ -81,15 +86,42 @@ where
     }
 
     /// Interpolates the trajectory at the given absolute time.
-    pub fn at(&self, time: Time) -> CartesianOrbit<O, R> {
+    ///
+    /// Returns `None` if `time` lies beyond the
+    /// [extrapolation limit](Self::extrapolation_limit).
+    pub fn at(&self, time: Time) -> Option<CartesianOrbit<O, R>> {
         self.at_delta(time - self.epoch)
     }
 
     /// Interpolates the trajectory at the given time delta from the trajectory start.
-    pub fn at_delta(&self, dt: TimeDelta) -> CartesianOrbit<O, R> {
+    ///
+    /// Returns `None` if `dt` lies beyond the
+    /// [extrapolation limit](Self::extrapolation_limit).
+    pub fn at_delta(&self, dt: TimeDelta) -> Option<CartesianOrbit<O, R>> {
         let t = dt.as_seconds_f64();
-        let state = self.data.at(t);
-        Orbit::from_state(state, self.epoch + dt, self.origin, self.frame)
+        let state = self.data.at(t)?;
+        Some(Orbit::from_state(
+            state,
+            self.epoch + dt,
+            self.origin,
+            self.frame,
+        ))
+    }
+
+    /// Returns how far the trajectory is extrapolated before the start and after
+    /// the end time.
+    pub fn extrapolation_limit(&self) -> TimeDelta {
+        self.data.extrapolation_limit()
+    }
+
+    /// Sets how far the trajectory is extrapolated before the start and after
+    /// the end time. A negative limit is treated as zero.
+    ///
+    /// Extrapolation continues the cubic of the first or last interval, so its
+    /// accuracy degrades quickly beyond a fraction of the step size.
+    pub fn with_extrapolation_limit(mut self, limit: TimeDelta) -> Self {
+        self.data = self.data.with_extrapolation_limit(limit);
+        self
     }
 
     /// Transforms the entire trajectory into a different reference frame.
@@ -125,7 +157,8 @@ where
             self.epoch,
             self.origin,
             frame,
-            CartesianTrajectory::from_states(states?),
+            CartesianTrajectory::from_states(states?)
+                .with_extrapolation_limit(self.extrapolation_limit()),
         ))
     }
 
@@ -206,19 +239,19 @@ where
     type Error = TrajectoryError;
 
     fn state_at(&self, time: Time) -> Result<CartesianOrbit<O, R>, TrajectoryError> {
-        Ok(self.at(time))
+        self.at(time).ok_or(TrajectoryError::OutOfRange(time))
     }
 
     fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<O, R>, Self::Error> {
         let mut states = Vec::new();
-        states.push(self.at(interval.start()));
+        states.push(self.state_at(interval.start())?);
         for s in self.states() {
             if s.time() > interval.start() && s.time() < interval.end() {
                 states.push(s);
             }
         }
-        states.push(self.at(interval.end()));
-        Trajectory::try_new(states)
+        states.push(self.state_at(interval.end())?);
+        Ok(Trajectory::try_new(states)?.with_extrapolation_limit(self.extrapolation_limit()))
     }
 }
 
@@ -234,6 +267,9 @@ pub enum TrajectoryError {
     /// An error occurred while parsing CSV data.
     #[error("CSV error: {0}")]
     CsvError(String),
+    /// The requested time lies beyond the trajectory's extrapolation limit.
+    #[error("{0} lies outside of the trajectory")]
+    OutOfRange(Time),
 }
 
 impl From<CartesianTrajectoryError> for TrajectoryError {
@@ -291,7 +327,7 @@ where
                 })
             })
             .collect();
-        Ok(Trajectory::try_new(states?)?)
+        Ok(Trajectory::try_new(states?)?.with_extrapolation_limit(self.extrapolation_limit()))
     }
 }
 
@@ -369,6 +405,7 @@ mod tests {
     use super::*;
     use lox_bodies::{Earth, Origin};
     use lox_core::glam::DVec3;
+    use lox_frames::providers::DefaultRotationProvider;
     use lox_frames::{Frame, Icrf};
     use lox_time::time_scales::TimeScale;
     use lox_time::{time, time_scales::Tdb};
@@ -429,6 +466,66 @@ mod tests {
             TimeScale::Tdb
         );
         assert_eq!(dynamic_traj.states().first().unwrap().position(), first_pos);
+    }
+
+    #[test]
+    fn test_trajectory_at_extrapolation_limit() {
+        let traj = sample_trajectory();
+        let (start, end) = (traj.start_time(), traj.end_time());
+        let inside = TimeDelta::from_microseconds(999);
+        let outside = TimeDelta::from_microseconds(1001);
+
+        assert!(traj.at(start).is_some());
+        assert!(traj.at(end).is_some());
+        assert!(traj.at(start - inside).is_some());
+        assert!(traj.at(end + inside).is_some());
+        assert!(traj.at(start - outside).is_none());
+        assert!(traj.at(end + outside).is_none());
+        assert!(traj.at_delta(TimeDelta::from_seconds(-1)).is_none());
+
+        let err = traj.state_at(end + TimeDelta::from_seconds(1)).unwrap_err();
+        assert_eq!(
+            err,
+            TrajectoryError::OutOfRange(end + TimeDelta::from_seconds(1))
+        );
+
+        let traj = traj.with_extrapolation_limit(TimeDelta::from_seconds(10));
+        assert_eq!(traj.extrapolation_limit(), TimeDelta::from_seconds(10));
+        assert!(traj.at(start - TimeDelta::from_seconds(10)).is_some());
+        assert!(traj.at(end + TimeDelta::from_seconds(10)).is_some());
+        assert!(traj.at(end + TimeDelta::from_seconds(11)).is_none());
+        assert_eq!(traj.end_time(), end);
+    }
+
+    #[test]
+    fn test_trajectory_transformations_keep_extrapolation_limit() {
+        let limit = TimeDelta::from_seconds(10);
+        let traj = sample_trajectory().with_extrapolation_limit(limit);
+
+        let interval = TimeInterval::new(
+            traj.start_time() + TimeDelta::from_seconds(30),
+            traj.end_time(),
+        );
+        assert_eq!(
+            traj.propagate(interval).unwrap().extrapolation_limit(),
+            limit
+        );
+        assert_eq!(
+            traj.clone()
+                .into_frame(Icrf, &DefaultRotationProvider)
+                .unwrap()
+                .extrapolation_limit(),
+            limit
+        );
+        assert_eq!(
+            traj.clone()
+                .into_dynamic()
+                .into_frame(Frame::J2000, &DefaultRotationProvider)
+                .unwrap()
+                .extrapolation_limit(),
+            limit
+        );
+        assert_eq!(traj.into_dynamic().extrapolation_limit(), limit);
     }
 
     #[test]
