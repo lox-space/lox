@@ -140,7 +140,7 @@ impl Equinoctial {
         cart: &Cartesian,
         mu: GravitationalParameter,
     ) -> Result<Self, EquinoctialError> {
-        Self::from_keplerian(&cart.to_keplerian(mu))
+        Self::from_keplerian(&cart.to_keplerian(mu)?)
     }
 
     /// Converts equinoctial elements to a Cartesian state (via Keplerian).

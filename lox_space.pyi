@@ -1464,7 +1464,13 @@ class Cartesian:
         """Transform this state to a different central body."""
         ...
     def to_keplerian(self) -> Keplerian:
-        """Convert this Cartesian state to Keplerian orbital elements."""
+        """Convert this Cartesian state to Keplerian orbital elements.
+
+        Raises:
+            ValueError: If the state is not in an inertial frame or cannot be represented by
+                Keplerian elements, e.g. because its angular momentum is zero.
+            UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+        """
         ...
     def to_modified_equinoctial(self) -> ModifiedEquinoctial:
         """Convert this Cartesian state to modified equinoctial elements."""

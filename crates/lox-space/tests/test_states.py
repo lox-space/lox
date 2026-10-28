@@ -313,6 +313,21 @@ def test_keplerian_parabolic_has_no_semi_major_axis():
     assert "Keplerian(" in repr(k)
 
 
+def test_cartesian_to_keplerian_rejects_zero_angular_momentum():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    radial = lox.Cartesian(
+        time,
+        x=7000.0 * lox.km,
+        y=0.0 * lox.km,
+        z=0.0 * lox.km,
+        vx=1.0 * lox.km_per_s,
+        vy=0.0 * lox.km_per_s,
+        vz=0.0 * lox.km_per_s,
+    )
+    with pytest.raises(ValueError, match="zero angular momentum"):
+        radial.to_keplerian()
+
+
 def test_keplerian_altitude_requires_mean_radius():
     time = lox.UTC(2024, 1, 1).to_scale("TDB")
     k = lox.Keplerian(

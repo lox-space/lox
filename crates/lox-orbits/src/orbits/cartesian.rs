@@ -8,6 +8,7 @@ use lox_bodies::{CoordinateOrigin, Origin, PointMass, TryPointMass, UndefinedOri
 use lox_core::coords::Cartesian;
 use lox_core::coords::FromBodyFixedError;
 use lox_core::coords::LonLatAlt;
+use lox_core::elements::KeplerianError;
 use lox_core::glam::{DMat3, DVec3};
 use lox_ephem::Ephemeris;
 use lox_frames::BodyFixed;
@@ -44,28 +45,38 @@ where
     }
 
     /// Converts this Cartesian orbit to Keplerian elements.
-    pub fn to_keplerian(&self) -> KeplerianOrbit<O, R>
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`KeplerianError`] if the state cannot be represented by Keplerian elements,
+    /// see [`Cartesian::to_keplerian`].
+    pub fn to_keplerian(&self) -> Result<KeplerianOrbit<O, R>, KeplerianError>
     where
         O: Copy + PointMass,
         R: Copy,
     {
-        Orbit::from_state(
-            self.state().to_keplerian(self.gravitational_parameter()),
+        Ok(Orbit::from_state(
+            self.state().to_keplerian(self.gravitational_parameter())?,
             self.time(),
             self.origin(),
             self.reference_frame(),
-        )
+        ))
     }
 
-    /// Converts this Cartesian orbit to Keplerian elements, returning an error if the gravitational parameter is undefined.
-    pub fn try_to_keplerian(&self) -> Result<KeplerianOrbit<O, R>, UndefinedOriginPropertyError>
+    /// Converts this Cartesian orbit to Keplerian elements.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ToKeplerianError`] if the gravitational parameter is undefined or the state
+    /// cannot be represented by Keplerian elements, see [`Cartesian::to_keplerian`].
+    pub fn try_to_keplerian(&self) -> Result<KeplerianOrbit<O, R>, ToKeplerianError>
     where
         O: Copy + TryPointMass,
         R: Copy,
     {
         Ok(Orbit::from_state(
             self.state()
-                .to_keplerian(self.try_gravitational_parameter()?),
+                .to_keplerian(self.try_gravitational_parameter()?)?,
             self.time(),
             self.origin(),
             self.reference_frame(),
@@ -115,6 +126,17 @@ where
         let coords = LonLatAlt::from_body_fixed(self.position(), &ellipsoid)?;
         Ok(EllipsoidLocation::new(coords, self.frame))
     }
+}
+
+/// Errors that can occur when converting a Cartesian orbit to Keplerian elements.
+#[derive(Debug, Error)]
+pub enum ToKeplerianError {
+    /// The origin has no gravitational parameter.
+    #[error(transparent)]
+    UndefinedOriginProperty(#[from] UndefinedOriginPropertyError),
+    /// The state cannot be represented by Keplerian elements.
+    #[error(transparent)]
+    Keplerian(#[from] KeplerianError),
 }
 
 /// Errors that can occur when converting a dynamic Cartesian orbit to a ground location.
@@ -238,7 +260,7 @@ where
     O: CoordinateOrigin + TryPointMass + Copy,
     R: ReferenceFrame + Copy,
 {
-    type Error = UndefinedOriginPropertyError;
+    type Error = ToKeplerianError;
 
     fn try_from(orbit: CartesianOrbit<O, R>) -> Result<Self, Self::Error> {
         orbit.try_to_keplerian()
@@ -311,7 +333,7 @@ mod tests {
             Earth,
             Icrf,
         );
-        let cartesian1 = cartesian.to_keplerian().to_cartesian();
+        let cartesian1 = cartesian.to_keplerian().unwrap().to_cartesian();
 
         assert_eq!(cartesian1.time(), time.into_dynamic());
         assert_eq!(cartesian1.origin(), Earth);

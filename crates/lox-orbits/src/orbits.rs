@@ -12,7 +12,7 @@ mod keplerian;
 pub mod sso;
 mod trajectory;
 
-pub use cartesian::StateToGroundError;
+pub use cartesian::{StateToGroundError, ToKeplerianError};
 pub use ensemble::Ensemble;
 pub use trajectory::{Trajectory, TrajectoryError, TrajectoryTransformationError};
 

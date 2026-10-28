@@ -22,7 +22,9 @@ fn main() {
         Earth,
         Icrf,
     );
-    let iss = iss_cartesian.to_keplerian();
+    let iss = iss_cartesian
+        .to_keplerian()
+        .expect("the ISS state should be a valid orbit");
 
     let title = format!(
         "ISS Orbit for Julian Day Number {} ({})",

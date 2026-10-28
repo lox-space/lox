@@ -300,14 +300,11 @@ mod tests {
 
     #[test]
     fn test_valid_keplerian() {
-        let elements = Keplerian::from_semi_parameter(
-            MeanRadius::mean_radius(&Earth) + 500.0.km(),
-            Eccentricity::try_new(0.0).unwrap(),
-            Inclination::try_new(97.0.deg()).unwrap(),
-            LongitudeOfAscendingNode::try_new(0.0.deg()).unwrap(),
-            ArgumentOfPeriapsis::try_new(0.0.deg()).unwrap(),
-            TrueAnomaly::new(0.0.deg()),
-        );
+        let elements = Keplerian::builder()
+            .with_semi_major_axis(MeanRadius::mean_radius(&Earth) + 500.0.km(), 0.0)
+            .with_inclination(97.0.deg())
+            .build()
+            .unwrap();
 
         let epoch =
             Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2)).to_dynamic_time();
@@ -320,15 +317,12 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_invalid_sma() {
-        let elements = Keplerian::from_semi_parameter(
+        let elements = Keplerian::builder()
             // negative altitude
-            MeanRadius::mean_radius(&Earth) - 500.0.km(),
-            Eccentricity::try_new(0.0).unwrap(),
-            Inclination::try_new(97.0.deg()).unwrap(),
-            LongitudeOfAscendingNode::try_new(0.0.deg()).unwrap(),
-            ArgumentOfPeriapsis::try_new(0.0.deg()).unwrap(),
-            TrueAnomaly::new(0.0.deg()),
-        );
+            .with_semi_major_axis(MeanRadius::mean_radius(&Earth) - 500.0.km(), 0.0)
+            .with_inclination(97.0.deg())
+            .build()
+            .unwrap();
 
         let epoch =
             Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2)).to_dynamic_time();

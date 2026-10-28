@@ -16,7 +16,9 @@ use crate::orbits::propagators::j4::J4Propagator;
 use crate::orbits::propagators::numerical::{NumericalError, NumericalPropagator};
 use crate::orbits::propagators::semi_analytical::{Vallado, ValladoError};
 use crate::orbits::propagators::sgp4::{Sgp4, Sgp4Error};
-use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError, TrajectoryTransformationError};
+use crate::orbits::{
+    CartesianOrbit, ToKeplerianError, Trajectory, TrajectoryError, TrajectoryTransformationError,
+};
 use crate::time::Time;
 use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
@@ -310,7 +312,8 @@ impl PyCartesian {
     ///     Keplerian elements representing this orbit.
     ///
     /// Raises:
-    ///     ValueError: If the state is not in an inertial frame.
+    ///     ValueError: If the state is not in an inertial frame or cannot be represented by
+    ///         Keplerian elements, e.g. because its angular momentum is zero.
     ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
     fn to_keplerian(&self) -> PyResult<PyKeplerian> {
         if self.0.reference_frame() != Frame::Icrf {
@@ -318,11 +321,13 @@ impl PyCartesian {
                 "only inertial frames are supported for conversion to Keplerian elements",
             ));
         }
-        Ok(PyKeplerian(
-            self.0
-                .try_to_keplerian()
-                .map_err(PyUndefinedOriginPropertyError)?,
-        ))
+        let keplerian = self.0.try_to_keplerian().map_err(|err| match err {
+            ToKeplerianError::UndefinedOriginProperty(err) => {
+                PyUndefinedOriginPropertyError(err).into()
+            }
+            ToKeplerianError::Keplerian(err) => PyValueError::new_err(err.to_string()),
+        })?;
+        Ok(PyKeplerian(keplerian))
     }
 
     /// Compute the rotation matrix from inertial to LVLH (Local Vertical Local Horizontal) frame.
