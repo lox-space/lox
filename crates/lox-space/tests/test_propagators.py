@@ -101,6 +101,14 @@ def test_sgp4_from_tle_object():
     )
 
 
+@pytest.mark.parametrize("offsets", [[0, 0], [60, 0], [0]])
+def test_propagate_invalid_time_list(offsets):
+    sgp4 = lox.SGP4(ISS_TLE)
+    steps = [sgp4.time() + lox.TimeDelta(dt) for dt in offsets]
+    with pytest.raises(ValueError):
+        sgp4.propagate(steps)
+
+
 def test_sgp4_from_list():
     sgp4 = lox.SGP4(ISS_TLE_LINES)
     assert isinstance(sgp4.time(), lox.Time)

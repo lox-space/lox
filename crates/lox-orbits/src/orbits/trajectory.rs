@@ -39,16 +39,6 @@ where
     O: CoordinateOrigin + Copy,
     R: ReferenceFrame + Copy,
 {
-    /// Constructs a trajectory from an iterator of Cartesian orbital states.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the states are invalid. See [`Self::try_new`] for the
-    /// conditions and a fallible variant.
-    pub fn new(states: impl IntoIterator<Item = CartesianOrbit<O, R>>) -> Self {
-        Self::try_new(states).unwrap_or_else(|err| panic!("invalid trajectory states: {err}"))
-    }
-
     /// Constructs a trajectory from its constituent parts.
     pub fn from_parts(epoch: Time, origin: O, frame: R, data: CartesianTrajectory) -> Self {
         Self {
@@ -301,7 +291,7 @@ where
                 })
             })
             .collect();
-        Ok(Trajectory::new(states?))
+        Ok(Trajectory::try_new(states?)?)
     }
 }
 
@@ -312,11 +302,7 @@ where
 {
     /// Parses a trajectory from CSV data with columns `[time, x, y, z, vx, vy, vz]` in km and km/s.
     pub fn from_csv(csv: &str, origin: O, frame: R) -> Result<Self, TrajectoryError> {
-        let states = parse_csv_states(csv, origin, frame)?;
-        if states.len() < 2 {
-            return Err(TrajectoryError::InsufficientStates(states.len()));
-        }
-        Ok(Trajectory::new(states))
+        Trajectory::try_new(parse_csv_states(csv, origin, frame)?)
     }
 }
 
@@ -415,7 +401,19 @@ mod tests {
             Earth,
             Icrf,
         );
-        Trajectory::new(vec![s0, s1, s2])
+        Trajectory::try_new(vec![s0, s1, s2]).unwrap()
+    }
+
+    #[test]
+    fn test_trajectory_from_csv_rejects_non_finite_state() {
+        let csv = "time,x,y,z,vx,vy,vz\n\
+                   2023-01-01T12:00:00,7000,0,0,0,7.5,0\n\
+                   2023-01-01T12:01:00,NaN,0,0,0,7.5,0\n";
+        let err = Trajectory::from_csv(csv, Earth, Icrf).unwrap_err();
+        assert_eq!(
+            err,
+            TrajectoryError::InvalidStates(CartesianTrajectoryError::NonFinite(1))
+        );
     }
 
     #[test]

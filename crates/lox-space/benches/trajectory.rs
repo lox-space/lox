@@ -66,7 +66,7 @@ fn lunar_irregular() -> &'static Trajectory {
             .enumerate()
             .filter(|(i, _)| *i == 0 || *i == last || rng.next_f64() >= 1.0 / 3.0)
             .map(|(_, s)| s);
-        Trajectory::new(kept)
+        Trajectory::try_new(kept).unwrap()
     })
 }
 

@@ -30,7 +30,7 @@ use lox_odm::types::opm::{Opm, OpmMetadata};
 use lox_time::offsets::{DefaultOffsetProvider, OffsetProvider};
 use lox_time::time::Time;
 
-use crate::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
+use crate::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory, TrajectoryError};
 use crate::propagators::sgp4::{Sgp4, Sgp4Error};
 
 /// Default value for the CCSDS `ORIGINATOR` header field used by all
@@ -121,6 +121,9 @@ pub enum OemFromOdmError {
     /// The segment contains fewer than 2 state vectors.
     #[error("OEM segment has {0} state vector(s); at least 2 are required")]
     InsufficientStates(usize),
+    /// The state vectors do not form a valid trajectory.
+    #[error(transparent)]
+    Trajectory(#[from] TrajectoryError),
 }
 
 /// Composite error for `Trajectory::from_oem_str` / `from_oem_file`.
@@ -790,8 +793,8 @@ where
 impl Trajectory {
     /// Constructs a [`Trajectory`] from a typed OEM (first segment).
     ///
-    /// Returns an error if the OEM has no segments or fewer than 2 state
-    /// vectors in the first segment.
+    /// Returns an error if the OEM has no segments or its first segment does
+    /// not form a valid trajectory.
     pub fn from_oem(oem: &Oem) -> Result<Self, OemFromOdmError> {
         let segment = oem.segments.first().ok_or(OemFromOdmError::NoSegments)?;
         Self::from_oem_segment(segment)
@@ -819,7 +822,7 @@ impl Trajectory {
             })
             .collect();
 
-        Ok(Trajectory::new(orbits))
+        Ok(Trajectory::try_new(orbits)?)
     }
 
     /// Parses an OEM from `input` (auto-detecting wire format) and converts it
@@ -1388,7 +1391,8 @@ impl KeplerianOrbit {
 mod tests {
     use super::*;
     use lox_bodies::{Earth, Origin};
-    use lox_core::coords::Cartesian;
+    use lox_core::coords::{Cartesian, CartesianTrajectoryError};
+    use lox_core::glam::DVec3;
     use lox_core::units::{Distance, Velocity};
     use lox_frames::{Frame, Icrf};
     use lox_odm::Format;
@@ -1484,7 +1488,7 @@ mod tests {
             Origin::Earth,
             Frame::Icrf,
         );
-        Trajectory::new(vec![s0, s1, s2])
+        Trajectory::try_new(vec![s0, s1, s2]).unwrap()
     }
 
     // -------------------------------------------------------------------------
@@ -1665,6 +1669,24 @@ mod tests {
         assert_eq!(reconstructed.origin(), Origin::Earth);
         assert_eq!(reconstructed.reference_frame(), Frame::Icrf);
         assert_eq!(reconstructed.states().len(), expected_len);
+    }
+
+    #[test]
+    fn from_oem_rejects_non_finite_state() {
+        let mut oem = sample_dynamic_trajectory()
+            .build_oem("TEST-SAT", "2024-000A")
+            .originator("TEST_ORG")
+            .build()
+            .unwrap();
+        let (_, state) = &mut oem.segments[0].states[1];
+        *state = Cartesian::from_vecs(DVec3::new(f64::NAN, 0.0, 0.0), state.velocity());
+        let err = Trajectory::from_oem(&oem).unwrap_err();
+        assert!(matches!(
+            err,
+            OemFromOdmError::Trajectory(TrajectoryError::InvalidStates(
+                CartesianTrajectoryError::NonFinite(1)
+            ))
+        ));
     }
 
     #[test]

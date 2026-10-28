@@ -110,7 +110,7 @@ fn propagate_dispatch<'py>(
     }
     if let Ok(steps) = steps.extract::<Vec<PyTime>>() {
         let states: Result<Vec<_>, _> = steps.into_iter().map(|s| state_at(s.0)).collect();
-        let traj = PyTrajectory(Trajectory::new(states?));
+        let traj = PyTrajectory(Trajectory::try_new(states?).map_err(PyTrajectoryError)?);
         return match frame {
             Some(frame) => Ok(Bound::new(py, traj.to_frame_inner(frame, provider)?)?.into_any()),
             None => Ok(Bound::new(py, traj)?.into_any()),
@@ -1341,7 +1341,9 @@ impl PyTrajectory {
         for s in self.states() {
             states.push(s.to_origin_inner(target.clone(), ephemeris)?.0);
         }
-        Ok(Self(Trajectory::new(states)))
+        Ok(Self(
+            Trajectory::try_new(states).map_err(PyTrajectoryError)?,
+        ))
     }
 
     /// Return the developer-facing string representation of this trajectory.
@@ -1365,7 +1367,9 @@ impl PyTrajectory {
         for s in self.0.states() {
             states.push(PyCartesian(s).to_frame_inner(frame.clone(), provider)?.0);
         }
-        Ok(PyTrajectory(Trajectory::new(states)))
+        Ok(PyTrajectory(
+            Trajectory::try_new(states).map_err(PyTrajectoryError)?,
+        ))
     }
 }
 
