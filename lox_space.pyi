@@ -1700,7 +1700,8 @@ class Keplerian:
     def mean_longitude(self) -> Angle:
         """Return the mean longitude.
 
-        For closed orbits the result lies in the interval [0, 2π).
+        For closed orbits the result lies in the interval [0, 2π). The mean anomaly it is based
+        on depends on the orbit type, see ``mean_motion``.
 
         Raises:
             ValueError: If the true anomaly cannot be converted to a mean anomaly.
@@ -1715,6 +1716,12 @@ class Keplerian:
         ...
     def mean_motion(self) -> AngularRate:
         """Return the mean motion, i.e. the rate of change of the mean anomaly.
+
+        The mean anomaly is normalised differently for elliptic, parabolic and hyperbolic
+        orbits, so the mean motion is discontinuous at the parabolic threshold: for a fixed
+        semi-parameter it tends to zero as the eccentricity approaches one, but is
+        ``2·√(µ/p³)`` for parabolic orbits. Mean anomalies and mean motions are only comparable
+        between orbits of the same type.
 
         Raises:
             UndefinedOriginPropertyError: If the origin has no gravitational parameter.

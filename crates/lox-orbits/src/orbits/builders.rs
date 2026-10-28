@@ -165,7 +165,7 @@ impl<O: CoordinateOrigin> KeplerianOrbitBuilder<O> {
         self
     }
 
-    /// Sets the mean anomaly.
+    /// Sets the mean anomaly, see [`KeplerianBuilder::with_mean_anomaly`].
     pub fn with_mean_anomaly(mut self, mean_anomaly: Angle) -> Self {
         self.mean_anomaly = Some(mean_anomaly);
         self
