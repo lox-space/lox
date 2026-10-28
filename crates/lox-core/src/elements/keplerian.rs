@@ -287,27 +287,37 @@ pub struct Keplerian {
 }
 
 impl Keplerian {
-    /// Creates a new set of Keplerian elements from pre-validated components, using the
-    /// semi-parameter (semi-latus rectum) as the shape parameter.
-    ///
-    /// Use [`Keplerian::builder`] to construct elements from other shape parameters, such as the
-    /// semi-major axis, or from unvalidated input.
-    pub fn from_semi_parameter(
+    /// Validates the components and normalises the angles. Every [`Keplerian`] is constructed
+    /// through this function, so the elements always describe a valid conic section.
+    fn try_new(
         semi_parameter: Distance,
         eccentricity: Eccentricity,
-        inclination: Inclination,
-        longitude_of_ascending_node: LongitudeOfAscendingNode,
-        argument_of_periapsis: ArgumentOfPeriapsis,
+        inclination: Angle,
+        longitude_of_ascending_node: Angle,
+        argument_of_periapsis: Angle,
         true_anomaly: TrueAnomaly,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, KeplerianError> {
+        let p = semi_parameter.as_f64();
+        if !p.is_finite() || p <= 0.0 {
+            return Err(KeplerianError::InvalidSemiParameter(semi_parameter));
+        }
+        let inclination = Inclination::try_new(inclination)?;
+        let longitude_of_ascending_node =
+            LongitudeOfAscendingNode::try_new(longitude_of_ascending_node.mod_two_pi())?;
+        let argument_of_periapsis =
+            ArgumentOfPeriapsis::try_new(argument_of_periapsis.mod_two_pi())?;
+        if !true_anomaly.as_f64().is_finite() {
+            return Err(KeplerianError::NonFiniteAnomaly(true_anomaly.as_angle()));
+        }
+        let true_anomaly = check_true_anomaly(true_anomaly, eccentricity)?;
+        Ok(Self {
             semi_parameter,
             eccentricity,
             inclination,
             longitude_of_ascending_node,
             argument_of_periapsis,
-            true_anomaly,
-        }
+            true_anomaly: normalize_true_anomaly(true_anomaly, eccentricity),
+        })
     }
 
     /// Returns a new [`KeplerianBuilder`].
@@ -521,6 +531,29 @@ impl Keplerian {
     }
 }
 
+/// Checks that the true anomaly of an open orbit lies strictly between the asymptotes.
+fn check_true_anomaly(
+    true_anomaly: TrueAnomaly,
+    eccentricity: Eccentricity,
+) -> Result<TrueAnomaly, AnomalyError> {
+    let max_nu = match eccentricity.orbit_type() {
+        OrbitType::Circular | OrbitType::Elliptic => return Ok(true_anomaly),
+        OrbitType::Parabolic => Angle::new(PI),
+        OrbitType::Hyperbolic => hyperbolic_asymptote_angle(eccentricity),
+    };
+    let nu = true_anomaly.as_angle().normalize_two_pi(Angle::ZERO);
+    // Close to the asymptotes, 1 + e·cos(ν) can round to zero even though ν lies inside them,
+    // which would make the radius infinite.
+    let (_, cos_nu) = nu.sin_cos();
+    if abs(nu.as_f64()) >= max_nu.as_f64() || 1.0 + eccentricity.as_f64() * cos_nu <= 0.0 {
+        return Err(AnomalyError::InvalidTrueAnomaly {
+            nu: true_anomaly.as_angle(),
+            max_nu,
+        });
+    }
+    Ok(TrueAnomaly::new(nu))
+}
+
 /// Normalises a true anomaly to [0, 2π) for closed orbits and to [-π, π) for open orbits.
 fn normalize_true_anomaly(true_anomaly: TrueAnomaly, eccentricity: Eccentricity) -> TrueAnomaly {
     let nu = true_anomaly.as_angle();
@@ -546,17 +579,33 @@ impl Cartesian {
     }
 
     /// Converts the Cartesian state to Keplerian orbital elements.
-    pub fn to_keplerian(&self, grav_param: GravitationalParameter) -> Keplerian {
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`KeplerianError`] if the state is not finite, if its angular momentum is zero,
+    /// i.e. the orbit is rectilinear, or if the resulting elements are invalid. The latter can
+    /// happen for nearly rectilinear orbits.
+    pub fn to_keplerian(
+        &self,
+        grav_param: GravitationalParameter,
+    ) -> Result<Keplerian, KeplerianError> {
         let r = self.position();
         let v = self.velocity();
         let mu = grav_param.as_f64();
 
+        if !r.is_finite() || !v.is_finite() {
+            return Err(KeplerianError::NonFiniteState);
+        }
+
         let rm = r.length();
         let h = r.cross(v);
         let hm = h.length();
+        if hm == 0.0 {
+            return Err(KeplerianError::ZeroAngularMomentum);
+        }
         let node = DVec3::Z.cross(h);
         let e = self.eccentricity_vector(grav_param);
-        let eccentricity = Eccentricity(e.length());
+        let eccentricity = Eccentricity::try_new(e.length())?;
         let inclination = h.angle_between(DVec3::Z).rad();
 
         let equatorial = approx_eq!(inclination, Angle::ZERO, atol <= 1e-8)
@@ -601,20 +650,18 @@ impl Cartesian {
                 )
             };
 
-        Keplerian {
-            semi_parameter: semi_parameter.m(),
+        Keplerian::try_new(
+            semi_parameter.m(),
             eccentricity,
-            inclination: Inclination(inclination),
-            longitude_of_ascending_node: LongitudeOfAscendingNode(
-                longitude_of_ascending_node.mod_two_pi(),
-            ),
-            argument_of_periapsis: ArgumentOfPeriapsis(argument_of_periapsis.mod_two_pi()),
-            true_anomaly: normalize_true_anomaly(true_anomaly, eccentricity),
-        }
+            inclination,
+            longitude_of_ascending_node,
+            argument_of_periapsis,
+            true_anomaly,
+        )
     }
 }
 
-/// Error returned when constructing a [`Keplerian`] via the builder.
+/// Error returned when constructing [`Keplerian`] elements.
 #[derive(Debug, Clone, Error)]
 pub enum KeplerianError {
     /// The eccentricity is invalid.
@@ -658,6 +705,12 @@ pub enum KeplerianError {
     /// The anomaly conversion failed or the true anomaly is outside the valid range.
     #[error(transparent)]
     Anomaly(#[from] AnomalyError),
+    /// The Cartesian state is not finite.
+    #[error("Cartesian state must be finite")]
+    NonFiniteState,
+    /// The Cartesian state has zero angular momentum, e.g. a rectilinear orbit.
+    #[error("Keplerian elements are undefined for states with zero angular momentum")]
+    ZeroAngularMomentum,
 }
 
 fn semi_major_axis_requirement(eccentricity: &Eccentricity) -> &'static str {
@@ -802,12 +855,6 @@ impl KeplerianBuilder {
 
         let semi_parameter = Self::semi_parameter(shape, eccentricity)?;
 
-        let inclination = Inclination::try_new(self.inclination)?;
-        let longitude_of_ascending_node =
-            LongitudeOfAscendingNode::try_new(self.longitude_of_ascending_node.mod_two_pi())?;
-        let argument_of_periapsis =
-            ArgumentOfPeriapsis::try_new(self.argument_of_periapsis.mod_two_pi())?;
-
         if self.ambiguous_anomaly {
             return Err(KeplerianError::AmbiguousAnomaly);
         }
@@ -821,21 +868,19 @@ impl KeplerianBuilder {
 
         let true_anomaly = match self.anomaly {
             None => TrueAnomaly::new(Angle::ZERO),
-            Some(Anomaly::True(nu)) => {
-                Self::check_true_anomaly(TrueAnomaly::new(nu), eccentricity)?
-            }
+            Some(Anomaly::True(nu)) => TrueAnomaly::new(nu),
             Some(Anomaly::Eccentric(ecc)) => EccentricAnomaly::new(ecc).to_true(eccentricity),
             Some(Anomaly::Mean(mean)) => MeanAnomaly::new(mean).to_true(eccentricity)?,
         };
 
-        Ok(Keplerian {
+        Keplerian::try_new(
             semi_parameter,
             eccentricity,
-            inclination,
-            longitude_of_ascending_node,
-            argument_of_periapsis,
-            true_anomaly: normalize_true_anomaly(true_anomaly, eccentricity),
-        })
+            self.inclination,
+            self.longitude_of_ascending_node,
+            self.argument_of_periapsis,
+            true_anomaly,
+        )
     }
 
     fn semi_parameter(
@@ -866,30 +911,7 @@ impl KeplerianBuilder {
             }
             Shape::SemiParameter(semi_parameter) => semi_parameter,
         };
-        let p = semi_parameter.as_f64();
-        if !p.is_finite() || p <= 0.0 {
-            return Err(KeplerianError::InvalidSemiParameter(semi_parameter));
-        }
         Ok(semi_parameter)
-    }
-
-    fn check_true_anomaly(
-        true_anomaly: TrueAnomaly,
-        eccentricity: Eccentricity,
-    ) -> Result<TrueAnomaly, AnomalyError> {
-        let max_nu = match eccentricity.orbit_type() {
-            OrbitType::Circular | OrbitType::Elliptic => return Ok(true_anomaly),
-            OrbitType::Parabolic => Angle::new(PI),
-            OrbitType::Hyperbolic => hyperbolic_asymptote_angle(eccentricity),
-        };
-        let nu = true_anomaly.as_angle().normalize_two_pi(Angle::ZERO);
-        if abs(nu.as_f64()) >= max_nu.as_f64() {
-            return Err(AnomalyError::InvalidTrueAnomaly {
-                nu: true_anomaly.as_angle(),
-                max_nu,
-            });
-        }
-        Ok(TrueAnomaly::new(nu))
     }
 }
 
@@ -954,7 +976,7 @@ mod tests {
             )
             .build();
 
-        let cartesian1 = cartesian.to_keplerian(mu).to_cartesian(mu);
+        let cartesian1 = cartesian.to_keplerian(mu).unwrap().to_cartesian(mu);
 
         assert_approx_eq!(cartesian.position(), cartesian1.position(), rtol <= 1e-8);
         assert_approx_eq!(cartesian.velocity(), cartesian1.velocity(), rtol <= 1e-6);
@@ -976,12 +998,54 @@ mod tests {
             ),
         ];
         for state in states {
-            let k = state.to_keplerian(MU_EARTH);
+            let k = state.to_keplerian(MU_EARTH).unwrap();
             assert_approx_eq!(k.inclination().as_f64(), PI, rtol <= 1e-15);
             let state1 = k.to_cartesian(MU_EARTH);
             assert_approx_eq!(state.position(), state1.position(), atol <= 1e-6);
             assert_approx_eq!(state.velocity(), state1.velocity(), atol <= 1e-9);
         }
+    }
+
+    #[test]
+    fn test_to_keplerian_rejects_degenerate_states() {
+        let r = DVec3::new(7000e3, 0.0, 0.0);
+        let v = DVec3::new(0.0, 7.5e3, 0.0);
+        for (name, state) in [
+            ("radial", Cartesian::from_vecs(r, DVec3::new(1e3, 0.0, 0.0))),
+            ("zero velocity", Cartesian::from_vecs(r, DVec3::ZERO)),
+            ("zero position", Cartesian::from_vecs(DVec3::ZERO, v)),
+        ] {
+            let result = state.to_keplerian(MU_EARTH);
+            assert!(
+                matches!(result, Err(KeplerianError::ZeroAngularMomentum)),
+                "{name}: {result:?}"
+            );
+        }
+
+        for state in [
+            Cartesian::from_vecs(DVec3::new(f64::NAN, 0.0, 0.0), v),
+            Cartesian::from_vecs(r, DVec3::new(0.0, f64::INFINITY, 0.0)),
+        ] {
+            let result = state.to_keplerian(MU_EARTH);
+            assert!(
+                matches!(result, Err(KeplerianError::NonFiniteState)),
+                "{result:?}"
+            );
+        }
+
+        // Nearly radial: every element is finite, but the true anomaly lies so close to the
+        // asymptote that the radius 1 + e·cos(ν) rounds to zero.
+        let nearly_radial = Cartesian::from_vecs(r, DVec3::new(1e3, 1e-9, 0.0));
+        let result = nearly_radial.to_keplerian(MU_EARTH);
+        assert!(
+            matches!(
+                result,
+                Err(KeplerianError::Anomaly(
+                    AnomalyError::InvalidTrueAnomaly { .. }
+                ))
+            ),
+            "{result:?}"
+        );
     }
 
     #[test]
@@ -1003,7 +1067,7 @@ mod tests {
             .with_true_anomaly(true_anomaly)
             .build()
             .unwrap();
-        let k1 = k.to_cartesian(mu).to_keplerian(mu);
+        let k1 = k.to_cartesian(mu).to_keplerian(mu).unwrap();
         assert_approx_eq!(k, k1);
     }
 
@@ -1036,7 +1100,7 @@ mod tests {
         assert!(k.apoapsis_radius().is_none());
         assert_approx_eq!(k.specific_orbital_energy(MU_EARTH), 0.0, atol <= 1e-12);
 
-        let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH);
+        let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH).unwrap();
         assert_approx_eq!(k, k1, rtol <= 1e-10);
     }
 
@@ -1053,7 +1117,7 @@ mod tests {
         assert_approx_eq!(k.semi_major_axis().unwrap(), -20000.0.km(), rtol <= 1e-14);
         assert!(k.specific_orbital_energy(MU_EARTH) > 0.0);
 
-        let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH);
+        let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH).unwrap();
         assert_approx_eq!(k, k1, rtol <= 1e-10);
     }
 
@@ -1341,7 +1405,7 @@ mod tests {
         ) {
             let k = elements(p, ecc, inc, node, argp, nu_fraction);
             let state = k.to_cartesian(MU_EARTH);
-            let state1 = state.to_keplerian(MU_EARTH).to_cartesian(MU_EARTH);
+            let state1 = state.to_keplerian(MU_EARTH).unwrap().to_cartesian(MU_EARTH);
             assert_states_close(state, state1, 1e-7);
         }
 
@@ -1374,7 +1438,7 @@ mod tests {
             let (sin_fpa, cos_fpa) = sin_cos(flight_path_angle);
             let v = v_scale * sqrt(2.0 * MU_EARTH.as_f64() / r);
             let state = Cartesian::from_vecs(r * r_dir, v * (sin_fpa * r_dir + cos_fpa * horizontal));
-            let state1 = state.to_keplerian(MU_EARTH).to_cartesian(MU_EARTH);
+            let state1 = state.to_keplerian(MU_EARTH).unwrap().to_cartesian(MU_EARTH);
             assert_states_close(state, state1, 1e-8);
         }
 
@@ -1388,7 +1452,7 @@ mod tests {
             nu_fraction in -1.0..1.0f64,
         ) {
             let k = elements(p, ecc, inc, node, argp, nu_fraction);
-            let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH);
+            let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH).unwrap();
             assert_approx_eq!(k.semi_parameter(), k1.semi_parameter(), rtol <= 1e-10);
             assert_approx_eq!(k.eccentricity(), k1.eccentricity(), rtol <= 1e-8);
             assert_approx_eq!(k.inclination(), k1.inclination(), atol <= 1e-10);
@@ -1420,7 +1484,7 @@ mod tests {
             nu_fraction in -1.0..1.0f64,
         ) {
             let k = elements(p, ecc, inc, node, argp, nu_fraction);
-            let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH);
+            let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH).unwrap();
             let (expected, actual) = if ecc != 0.0 && inc != 0.0 && inc != PI {
                 return Ok(());
             } else if inc == 0.0 || inc == PI {

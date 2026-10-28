@@ -8,18 +8,14 @@
 #![cfg(feature = "odm")]
 
 use lox_bodies::Origin;
-use lox_core::anomalies::TrueAnomaly;
 use lox_core::coords::Cartesian;
 use lox_core::elements::Keplerian;
-use lox_core::elements::keplerian::{
-    ArgumentOfPeriapsis, Eccentricity, Inclination, LongitudeOfAscendingNode,
-};
 use lox_core::units::Angle;
 use lox_core::units::{Distance, Velocity};
 use lox_frames::Frame;
 use lox_odm::Format;
 use lox_odm::types::common::OdmTimeSystem;
-use lox_orbits::odm::{OmmBuildError, OmmWriteError};
+use lox_orbits::odm::OmmBuildError;
 use lox_orbits::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
 use lox_orbits::propagators::sgp4::Sgp4;
 use lox_time::deltas::TimeDelta;
@@ -418,49 +414,6 @@ fn dynamic_keplerian_orbit_from_omm_iss() {
     );
     let ecc = orbit.eccentricity().as_f64();
     assert!((ecc - 0.0010444).abs() < 1e-12, "ecc = {ecc}");
-}
-
-/// `OmmBuilder::build` returns a typed error (not a panic) when the
-/// orbit is hyperbolic and the true anomaly exceeds the asymptote.
-#[test]
-fn omm_builder_returns_typed_error_for_hyperbolic_beyond_asymptote() {
-    // Hyperbolic orbit (e = 2.0). Asymptote at acos(-1/e) ≈ 120 deg.
-    // True anomaly of 170 deg is beyond the asymptote — geometrically
-    // impossible — so `to_mean` must fail. The builder rejects such elements,
-    // so they are constructed directly.
-    let ecc = Eccentricity::try_new(2.0).unwrap();
-    let kep = Keplerian::from_semi_parameter(
-        // p = a(1 - e²) with a = -1e7 m
-        Distance::new(3.0e7),
-        ecc,
-        Inclination::try_new(Angle::radians(0.5)).unwrap(),
-        LongitudeOfAscendingNode::try_new(Angle::radians(0.1)).unwrap(),
-        ArgumentOfPeriapsis::try_new(Angle::radians(0.2)).unwrap(),
-        TrueAnomaly::new(Angle::radians(170.0_f64.to_radians())),
-    );
-    let orbit: KeplerianOrbit =
-        Orbit::from_state(kep, Time::j2000(TimeScale::Tai), Origin::Earth, Frame::Icrf);
-
-    let err = orbit
-        .build_omm("HYPER", "2024-HYP-001A")
-        .originator("TEST")
-        .build()
-        .expect_err("hyperbolic build should fail");
-    assert!(
-        matches!(err, OmmBuildError::Anomaly(_)),
-        "expected OmmBuildError::Anomaly, got {err:?}"
-    );
-
-    // The fallible `write_str` propagates the same error via OmmWriteError.
-    let err = orbit
-        .build_omm("HYPER", "2024-HYP-001A")
-        .originator("TEST")
-        .write_str(Format::Kvn)
-        .expect_err("write should fail");
-    assert!(
-        matches!(err, OmmWriteError::Build(OmmBuildError::Anomaly(_))),
-        "expected OmmWriteError::Build(Anomaly), got {err:?}"
-    );
 }
 
 /// `OmmBuilder::build` returns a typed error for parabolic orbits, whose

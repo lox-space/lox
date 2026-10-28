@@ -261,7 +261,7 @@ mod tests {
             .state_at(t1.into_dynamic())
             .expect("propagator should converge");
 
-        let k1 = s1.to_keplerian();
+        let k1 = s1.to_keplerian().unwrap();
         assert_approx_eq!(
             k1.semi_major_axis().unwrap().as_f64(),
             semi_major.km().as_f64(),
@@ -310,7 +310,7 @@ mod tests {
         let interval = Interval::new(time, t_end);
         let trajectory = Vallado::new(s0).propagate(interval.into_dynamic()).unwrap();
         let s1 = trajectory.at_delta(period);
-        let k1 = s1.to_keplerian();
+        let k1 = s1.to_keplerian().unwrap();
 
         assert_approx_eq!(
             k1.semi_major_axis().unwrap().as_f64(),

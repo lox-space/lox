@@ -133,7 +133,7 @@ mod tests {
         let t1 = sgp4.time() + TimeDelta::from_minutes_f64(orbital_period);
         let s1 = sgp4.state_at(t1).unwrap();
         let s1_icrf = s1.try_to_frame(Icrf, &DefaultRotationProvider).unwrap();
-        let k1 = s1_icrf.to_keplerian();
+        let k1 = s1_icrf.to_keplerian().unwrap();
         assert_approx_eq!(
             k1.orbital_period().unwrap().as_seconds_f64() / SECONDS_PER_MINUTE,
             orbital_period,

@@ -36,7 +36,7 @@ vel = state.velocity()   # shape (3,)
 # Access as unitful scalars
 print(f"x = {state.x.to_kilometers():.1f} km")
 
-# Convert to Keplerian elements
+# Convert to Keplerian elements (raises ValueError for states with zero angular momentum)
 kep = state.to_keplerian()
 # semi_major_axis() returns None for parabolic orbits
 print(f"a = {kep.semi_major_axis().to_kilometers():.1f} km")

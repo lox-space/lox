@@ -24,14 +24,16 @@ use lox_bodies::{
     CoordinateOrigin, Origin, TryJ2, TryPointMass, TrySpheroid, UndefinedOriginPropertyError,
 };
 use lox_core::anomalies::AnomalyError;
-use lox_core::elements::{Keplerian, OrbitType};
+use lox_core::elements::{Keplerian, KeplerianError, OrbitType};
 use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use thiserror::Error;
 
-use crate::orbits::{CartesianOrbit, KeplerianOrbit, Trajectory, TrajectoryError};
+use crate::orbits::{
+    CartesianOrbit, KeplerianOrbit, ToKeplerianError, Trajectory, TrajectoryError,
+};
 use crate::propagators::Propagator;
 
 use super::kozai::{self, BodyConstants, SecularRates};
@@ -51,9 +53,21 @@ pub enum J2Error {
     /// Anomaly conversion failed.
     #[error("anomaly conversion failed: {0}")]
     Anomaly(#[from] AnomalyError),
+    /// The state cannot be represented by Keplerian elements.
+    #[error(transparent)]
+    Keplerian(#[from] KeplerianError),
     /// Error constructing the output trajectory.
     #[error(transparent)]
     Trajectory(#[from] TrajectoryError),
+}
+
+impl From<ToKeplerianError> for J2Error {
+    fn from(err: ToKeplerianError) -> Self {
+        match err {
+            ToKeplerianError::UndefinedOriginProperty(err) => err.into(),
+            ToKeplerianError::Keplerian(err) => err.into(),
+        }
+    }
 }
 
 impl From<std::convert::Infallible> for J2Error {
@@ -270,7 +284,7 @@ mod tests {
         let result = j2
             .state_at(j2.epoch() + TimeDelta::from_seconds_f64(86400.0))
             .unwrap();
-        let kep_final = result.state().to_keplerian(mu);
+        let kep_final = result.state().to_keplerian(mu).unwrap();
 
         let draan = kep_final.longitude_of_ascending_node().as_f64()
             - orbit.state().longitude_of_ascending_node().as_f64();
