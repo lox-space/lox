@@ -52,6 +52,13 @@ kep = lox.Keplerian(
 )
 state = kep.to_cartesian()
 
+# Create from the semi-parameter, which also supports parabolic orbits
+kep = lox.Keplerian(
+    time=t,
+    semi_parameter=14000.0 * lox.km,
+    eccentricity=1.0,
+)
+
 # Create from periapsis/apoapsis radii
 kep = lox.Keplerian(
     time=t,

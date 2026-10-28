@@ -24,7 +24,7 @@ pub enum OrbitBuilderError {
     /// The origin body does not define a mean radius.
     #[error("the origin does not have a mean radius")]
     MissingMeanRadius,
-    /// No orbital shape (semi-major axis, radii, or altitudes) was specified.
+    /// No orbital shape (semi-major axis, semi-parameter, radii, or altitudes) was specified.
     #[error("no orbital shape was specified")]
     MissingShape,
     /// Both true anomaly and mean anomaly were provided.
@@ -39,6 +39,7 @@ pub enum OrbitBuilderError {
 #[derive(Debug, Clone)]
 enum Shape {
     SemiMajorAxis(Distance, f64),
+    SemiParameter(Distance, f64),
     Radii(Distance, Distance),
     Altitudes(Distance, Distance),
 }
@@ -116,6 +117,14 @@ impl<O: CoordinateOrigin> KeplerianOrbitBuilder<O> {
         self
     }
 
+    /// Sets the orbital shape via semi-parameter (semi-latus rectum) and eccentricity.
+    ///
+    /// Unlike the semi-major axis, the semi-parameter is defined for parabolic orbits.
+    pub fn with_semi_parameter(mut self, semi_parameter: Distance, eccentricity: f64) -> Self {
+        self.shape = Some(Shape::SemiParameter(semi_parameter, eccentricity));
+        self
+    }
+
     /// Sets the orbital shape via periapsis and apoapsis radii.
     pub fn with_radii(mut self, periapsis_radius: Distance, apoapsis_radius: Distance) -> Self {
         self.shape = Some(Shape::Radii(periapsis_radius, apoapsis_radius));
@@ -177,6 +186,7 @@ impl<O: CoordinateOrigin> KeplerianOrbitBuilder<O> {
 
         builder = match shape {
             Shape::SemiMajorAxis(sma, ecc) => builder.with_semi_major_axis(sma, ecc),
+            Shape::SemiParameter(p, ecc) => builder.with_semi_parameter(p, ecc),
             Shape::Radii(rp, ra) => builder.with_radii(rp, ra),
             Shape::Altitudes(alt_p, alt_a) => {
                 let mean_radius = self
@@ -355,6 +365,20 @@ mod tests {
             .to_dynamic_time()
             .to_scale(Tdb)
             .into_dynamic()
+    }
+
+    #[test]
+    fn test_keplerian_builder_semi_parameter() {
+        let orbit = KeplerianOrbitBuilder::new()
+            .with_time(epoch())
+            .with_semi_parameter(14000.0.km(), 1.0)
+            .with_inclination(30.0.deg())
+            .build()
+            .unwrap();
+
+        assert_eq!(orbit.semi_parameter(), 14000.0.km());
+        assert!(orbit.eccentricity().is_parabolic());
+        assert!(orbit.semi_major_axis().is_none());
     }
 
     #[test]
