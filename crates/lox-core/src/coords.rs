@@ -871,6 +871,20 @@ impl<const N: usize> TrajectoryData<N> {
     }
 }
 
+/// Error returned when constructing a [`CartesianTrajectory`] from invalid states.
+#[derive(Copy, Clone, Debug, Error, PartialEq, Eq)]
+pub enum CartesianTrajectoryError {
+    /// Fewer than 2 states were provided.
+    #[error("a trajectory needs at least 2 states but got {0}")]
+    InsufficientStates(usize),
+    /// The time step of the state at the given index is not strictly greater than its predecessor.
+    #[error("time step of state {0} is not strictly greater than its predecessor")]
+    NonMonotonic(usize),
+    /// The state at the given index contains a non-finite value.
+    #[error("state {0} contains a non-finite value")]
+    NonFinite(usize),
+}
+
 /// A Cartesian state paired with a timestamp.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TimeStampedCartesian {
@@ -896,15 +910,20 @@ impl CartesianTrajectory {
     /// are stored as cubic splines for raw data access but the [`velocity`](Self::velocity) and
     /// [`at`](Self::at) methods derive velocity from the position spline derivative.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if the iterator yields fewer than 2 states. Hermite cubic
-    /// interpolation requires at least two knots; callers must enforce this
-    /// invariant.
-    pub fn from_states(states: impl IntoIterator<Item = TimeStampedCartesian>) -> Self {
+    /// - [`CartesianTrajectoryError::InsufficientStates`] if fewer than 2 states are given.
+    /// - [`CartesianTrajectoryError::NonMonotonic`] if the time steps are not strictly
+    ///   increasing.
+    /// - [`CartesianTrajectoryError::NonFinite`] if a state contains a non-finite value.
+    pub fn try_from_states(
+        states: impl IntoIterator<Item = TimeStampedCartesian>,
+    ) -> Result<Self, CartesianTrajectoryError> {
         let mut iter = states.into_iter().peekable();
-        let epoch = iter.peek().expect("should have at least two states").time;
-        let _ = iter.peek().expect("should have at least two states");
+        let epoch = iter
+            .peek()
+            .ok_or(CartesianTrajectoryError::InsufficientStates(0))?
+            .time;
         let (n, _) = iter.size_hint();
 
         let mut time_steps: Vec<f64> = Vec::with_capacity(n);
@@ -915,15 +934,29 @@ impl CartesianTrajectory {
         let mut vy: Vec<f64> = Vec::with_capacity(n);
         let mut vz: Vec<f64> = Vec::with_capacity(n);
 
-        iter.for_each(|TimeStampedCartesian { time, state }| {
-            time_steps.push((time - epoch).as_seconds_f64());
-            x.push(state.x().as_f64());
-            y.push(state.y().as_f64());
-            z.push(state.z().as_f64());
-            vx.push(state.vx().as_f64());
-            vy.push(state.vy().as_f64());
-            vz.push(state.vz().as_f64());
-        });
+        for (idx, TimeStampedCartesian { time, state }) in iter.enumerate() {
+            let t = (time - epoch).as_seconds_f64();
+            if time_steps.last().is_some_and(|&prev| t <= prev) {
+                return Err(CartesianTrajectoryError::NonMonotonic(idx));
+            }
+            let (pos, vel) = (state.position(), state.velocity());
+            if !pos.is_finite() || !vel.is_finite() {
+                return Err(CartesianTrajectoryError::NonFinite(idx));
+            }
+            time_steps.push(t);
+            x.push(pos.x);
+            y.push(pos.y);
+            z.push(pos.z);
+            vx.push(vel.x);
+            vy.push(vel.y);
+            vz.push(vel.z);
+        }
+
+        if time_steps.len() < 2 {
+            return Err(CartesianTrajectoryError::InsufficientStates(
+                time_steps.len(),
+            ));
+        }
 
         let time_steps: Arc<[f64]> = Arc::from(time_steps);
 
@@ -955,12 +988,23 @@ impl CartesianTrajectory {
 
         let series = [sx, sy, sz, svx, svy, svz];
 
-        Self {
+        Ok(Self {
             epoch,
             time_steps,
             data,
             series,
-        }
+        })
+    }
+
+    /// Creates a trajectory from an iterator of timestamped Cartesian states.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the states are invalid. See [`Self::try_from_states`] for the
+    /// conditions and a fallible variant.
+    pub fn from_states(states: impl IntoIterator<Item = TimeStampedCartesian>) -> Self {
+        Self::try_from_states(states)
+            .unwrap_or_else(|err| panic!("invalid trajectory states: {err}"))
     }
 
     /// Returns the x position data points.
@@ -1131,12 +1175,6 @@ impl IntoIterator for CartesianTrajectory {
 
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter::new(self)
-    }
-}
-
-impl FromIterator<TimeStampedCartesian> for CartesianTrajectory {
-    fn from_iter<T: IntoIterator<Item = TimeStampedCartesian>>(iter: T) -> Self {
-        TrajectoryData::from_states(iter)
     }
 }
 
@@ -1633,5 +1671,58 @@ mod tests {
             atol <= 1e-14,
             rtol <= 1e-12
         );
+    }
+
+    fn trajectory_states(times: &[i64], states: &[Cartesian]) -> Vec<TimeStampedCartesian> {
+        times
+            .iter()
+            .zip(states)
+            .map(|(&t, &state)| TimeStampedCartesian {
+                time: TimeDelta::from_seconds(t),
+                state,
+            })
+            .collect()
+    }
+
+    const STATE: Cartesian = Cartesian::from_array([7e6, 0.0, 0.0, 0.0, 7.5e3, 0.0]);
+
+    #[rstest]
+    #[case(&[], &[], CartesianTrajectoryError::InsufficientStates(0))]
+    #[case(&[0], &[STATE], CartesianTrajectoryError::InsufficientStates(1))]
+    #[case(&[0, 0], &[STATE, STATE], CartesianTrajectoryError::NonMonotonic(1))]
+    #[case(&[0, 60, 30], &[STATE, STATE, STATE], CartesianTrajectoryError::NonMonotonic(2))]
+    #[case(
+        &[0, 60],
+        &[STATE, Cartesian::from_array([f64::NAN, 0.0, 0.0, 0.0, 7.5e3, 0.0])],
+        CartesianTrajectoryError::NonFinite(1),
+    )]
+    #[case(
+        &[0, 60],
+        &[Cartesian::from_array([7e6, 0.0, 0.0, 0.0, f64::INFINITY, 0.0]), STATE],
+        CartesianTrajectoryError::NonFinite(0),
+    )]
+    fn test_cartesian_trajectory_try_from_states_invalid(
+        #[case] times: &[i64],
+        #[case] states: &[Cartesian],
+        #[case] exp: CartesianTrajectoryError,
+    ) {
+        let act = CartesianTrajectory::try_from_states(trajectory_states(times, states));
+        assert_eq!(act.unwrap_err(), exp);
+    }
+
+    #[test]
+    fn test_cartesian_trajectory_try_from_states_two_states() {
+        let traj =
+            CartesianTrajectory::try_from_states(trajectory_states(&[0, 60], &[STATE, STATE]))
+                .unwrap();
+        assert_eq!(&*traj.time_steps(), &[0.0, 60.0]);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "invalid trajectory states: a trajectory needs at least 2 states but got 1"
+    )]
+    fn test_cartesian_trajectory_from_states_single_state() {
+        CartesianTrajectory::from_states(trajectory_states(&[0], &[STATE]));
     }
 }

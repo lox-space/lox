@@ -52,6 +52,32 @@ def test_from_numpy():
     npt.assert_allclose(states, states1)
 
 
+@pytest.mark.parametrize(
+    "rows, match",
+    [
+        ([[0.0, 1e3, 1e3, 1e3, 1e3, 1e3, 1e3]], "at least 2"),
+        (
+            [
+                [0.0, 1e3, 1e3, 1e3, 1e3, 1e3, 1e3],
+                [0.0, 2e3, 2e3, 2e3, 1e3, 1e3, 1e3],
+            ],
+            "not strictly greater",
+        ),
+        (
+            [
+                [0.0, 1e3, 1e3, 1e3, 1e3, 1e3, 1e3],
+                [1.0, np.nan, 2e3, 2e3, 1e3, 1e3, 1e3],
+            ],
+            "non-finite",
+        ),
+    ],
+)
+def test_from_numpy_invalid_states(rows, match):
+    time = lox.UTC(2023, 3, 25, 21, 8, 0.0).to_scale("TDB")
+    with pytest.raises(ValueError, match=match):
+        lox.Trajectory.from_numpy(time, np.array(rows))
+
+
 def test_interpolation(orbit, trajectory):
     dt = orbit.orbital_period()
     s1 = trajectory.at(dt)

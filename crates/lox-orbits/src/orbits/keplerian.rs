@@ -229,6 +229,9 @@ where
     }
 
     /// Generates a trajectory by tracing the full orbit with `n` evenly-spaced samples.
+    ///
+    /// Returns `None` for non-elliptical orbits, undefined gravitational parameters,
+    /// or fewer than 2 samples.
     pub fn trace(&self, n: usize) -> Option<Trajectory<O, R>>
     where
         O: TryPointMass + Copy,
@@ -254,12 +257,13 @@ where
             )
         };
 
-        let data: CartesianTrajectory = zip(Linspace::new(0.0, TAU, n), state_iter)
-            .map(|(ecc, state)| TimeStampedCartesian {
+        let data = CartesianTrajectory::try_from_states(
+            zip(Linspace::new(0.0, TAU, n), state_iter).map(|(ecc, state)| TimeStampedCartesian {
                 time: time_of_flight(ecc),
                 state,
-            })
-            .collect();
+            }),
+        )
+        .ok()?;
 
         // The trajectory data is relative to its first sample, at periapsis on or before the epoch.
         Some(Trajectory::from_parts(
