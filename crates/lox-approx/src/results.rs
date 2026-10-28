@@ -94,6 +94,72 @@ impl ApproxEqResult {
     /// ```
     #[inline]
     pub fn new(left: f64, right: f64, atol: f64, rtol: f64) -> Self {
+        Self::compare(
+            left,
+            right,
+            atol,
+            rtol,
+            f64::max(left.abs(), right.abs()),
+            || (left - right).abs(),
+        )
+    }
+
+    /// Creates a new comparison result for two values on a circle with the given period, such
+    /// as angles modulo 2π.
+    ///
+    /// # Parameters
+    ///
+    /// - `left`: The left-hand side value
+    /// - `right`: The right-hand side value
+    /// - `period`: The period after which the values repeat
+    /// - `atol`: Absolute tolerance
+    /// - `rtol`: Relative tolerance with respect to half the period
+    ///
+    /// The values are equal when their shortest distance around the circle `d` satisfies
+    /// `d ≤ max(atol, rtol * period / 2)`. Half the period is the largest possible distance, so
+    /// unlike for [`new`](Self::new), the result does not depend on where on the circle the
+    /// values lie.
+    ///
+    /// Non-finite values are handled like in [`new`](Self::new).
+    ///
+    /// # Panics
+    ///
+    /// Panics if either tolerance is negative (or NaN), or if the period is not finite and
+    /// positive.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use core::f64::consts::TAU;
+    /// use lox_approx::ApproxEqResult;
+    ///
+    /// let result = ApproxEqResult::periodic(TAU - 1e-12, 1e-12, TAU, 1e-11, 0.0);
+    /// assert!(result.is_pass());
+    /// ```
+    #[inline]
+    pub fn periodic(left: f64, right: f64, period: f64, atol: f64, rtol: f64) -> Self {
+        assert!(
+            period.is_finite() && period > 0.0,
+            "period must be finite and positive"
+        );
+        Self::compare(left, right, atol, rtol, period / 2.0, || {
+            // `%` keeps the sign of the dividend, so the absolute value lies in [0, period).
+            let diff = ((left - right) % period).abs();
+            f64::min(diff, period - diff)
+        })
+    }
+
+    /// Compares two values given the scale for the relative tolerance and the distance between
+    /// them, which is only evaluated for finite values.
+    #[inline]
+    fn compare(
+        left: f64,
+        right: f64,
+        atol: f64,
+        rtol: f64,
+        scale: f64,
+        distance: impl FnOnce() -> f64,
+    ) -> Self {
         assert!(
             atol >= 0.0 && rtol >= 0.0,
             "tolerances must be non-negative"
@@ -112,8 +178,8 @@ impl ApproxEqResult {
             };
         }
         // Effective tolerance
-        let tol = f64::max(atol, rtol * f64::max(left.abs(), right.abs()));
-        let diff = (left - right).abs();
+        let tol = f64::max(atol, rtol * scale);
+        let diff = distance();
         if diff > tol {
             Self::Fail {
                 left,

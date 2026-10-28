@@ -10,8 +10,8 @@ use core::f64::consts::TAU;
 use core::fmt::Display;
 
 use glam::DVec3;
-use lox_approx::ApproxEq;
 use lox_approx::approx_eq;
+use lox_approx::{ApproxEq, ApproxEqResult, ApproxEqResults};
 use thiserror::Error;
 
 use crate::math::float::{abs, powf, powi, signum, sqrt};
@@ -197,7 +197,7 @@ impl Display for Inclination {
 pub struct LongitudeOfAscendingNodeError(Angle);
 
 /// Longitude of ascending node.
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct LongitudeOfAscendingNode(Angle);
@@ -225,6 +225,19 @@ impl LongitudeOfAscendingNode {
     }
 }
 
+impl ApproxEq for LongitudeOfAscendingNode {
+    /// Compares modulo 2π, see [`ApproxEqResult::periodic`].
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        ApproxEqResults::single(ApproxEqResult::periodic(
+            self.as_f64(),
+            rhs.as_f64(),
+            TAU,
+            atol,
+            rtol,
+        ))
+    }
+}
+
 impl Display for LongitudeOfAscendingNode {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.0.fmt(f)
@@ -237,7 +250,7 @@ impl Display for LongitudeOfAscendingNode {
 pub struct ArgumentOfPeriapsisError(Angle);
 
 /// Argument of periapsis.
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct ArgumentOfPeriapsis(Angle);
@@ -262,6 +275,19 @@ impl ArgumentOfPeriapsis {
     /// Returns the argument of periapsis as an [`Angle`].
     pub const fn as_angle(&self) -> Angle {
         self.0
+    }
+}
+
+impl ApproxEq for ArgumentOfPeriapsis {
+    /// Compares modulo 2π, see [`ApproxEqResult::periodic`].
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        ApproxEqResults::single(ApproxEqResult::periodic(
+            self.as_f64(),
+            rhs.as_f64(),
+            TAU,
+            atol,
+            rtol,
+        ))
     }
 }
 
@@ -928,7 +954,7 @@ mod tests {
     use alloc::string::ToString;
     use core::f64::consts::FRAC_PI_2;
 
-    use lox_approx::assert_approx_eq;
+    use lox_approx::{assert_approx_eq, assert_approx_ne};
     use proptest::prelude::*;
 
     use crate::math::float::{asin, sin_cos};
@@ -965,6 +991,44 @@ mod tests {
             ArgumentOfPeriapsis::try_new(2.5.rad()).unwrap().as_angle(),
             2.5.rad()
         );
+    }
+
+    #[test]
+    fn test_element_angles_approx_eq_wraps_around() {
+        let near_zero = 1e-12.rad();
+        let near_two_pi = (TAU - 1e-12).rad();
+        assert_approx_eq!(
+            LongitudeOfAscendingNode(near_two_pi),
+            LongitudeOfAscendingNode(near_zero),
+            atol <= 1e-11
+        );
+        assert_approx_eq!(
+            ArgumentOfPeriapsis(near_zero),
+            ArgumentOfPeriapsis(near_two_pi),
+            atol <= 1e-11
+        );
+        assert_approx_ne!(
+            ArgumentOfPeriapsis(near_zero),
+            ArgumentOfPeriapsis(PI.rad()),
+            atol <= 1e-11
+        );
+        // Inclination is bounded to [0, π] and does not wrap.
+        assert_approx_ne!(Inclination(near_zero), Inclination(PI.rad()), atol <= 1e-11);
+    }
+
+    #[test]
+    fn test_keplerian_approx_eq_wraps_around() {
+        let k = |node: f64, argp: f64, nu: f64| {
+            Keplerian::builder()
+                .with_semi_major_axis(7000.0.km(), 0.1)
+                .with_inclination(45.0.deg())
+                .with_longitude_of_ascending_node(node.rad())
+                .with_argument_of_periapsis(argp.rad())
+                .with_true_anomaly(nu.rad())
+                .build()
+                .unwrap()
+        };
+        assert_approx_eq!(k(TAU - 1e-12, TAU - 1e-12, TAU - 1e-12), k(0.0, 0.0, 0.0));
     }
 
     #[test]
@@ -1464,14 +1528,13 @@ mod tests {
             assert_approx_eq!(k.semi_parameter(), k1.semi_parameter(), rtol <= 1e-10);
             assert_approx_eq!(k.eccentricity(), k1.eccentricity(), rtol <= 1e-8);
             assert_approx_eq!(k.inclination(), k1.inclination(), atol <= 1e-10);
-            let angles = [
-                (k.longitude_of_ascending_node().0, k1.longitude_of_ascending_node().0),
-                (k.argument_of_periapsis().0, k1.argument_of_periapsis().0),
-                (k.true_anomaly().as_angle(), k1.true_anomaly().as_angle()),
-            ];
-            for (expected, actual) in angles {
-                prop_assert!(angle_difference(expected, actual) < 1e-7, "{expected} vs {actual}");
-            }
+            assert_approx_eq!(
+                k.longitude_of_ascending_node(),
+                k1.longitude_of_ascending_node(),
+                atol <= 1e-7
+            );
+            assert_approx_eq!(k.argument_of_periapsis(), k1.argument_of_periapsis(), atol <= 1e-7);
+            assert_approx_eq!(k.true_anomaly(), k1.true_anomaly(), atol <= 1e-7);
             let nu = k1.true_anomaly().as_f64();
             if k1.eccentricity().is_circular_or_elliptic() {
                 prop_assert!((0.0..TAU).contains(&nu));
