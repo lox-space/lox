@@ -41,7 +41,7 @@ pub enum SeriesError {
 /// The interpolation method and its precomputed coefficients.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Interpolation {
+enum Interpolation {
     /// Linear interpolation between data points.
     Linear,
     /// Cubic spline interpolation with precomputed polynomial coefficients.
