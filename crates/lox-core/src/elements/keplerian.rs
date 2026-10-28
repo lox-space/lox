@@ -10,8 +10,8 @@ use core::f64::consts::TAU;
 use core::fmt::Display;
 
 use glam::DVec3;
+use lox_approx::ApproxEq;
 use lox_approx::approx_eq;
-use lox_approx::{ApproxEq, ApproxEqResult, ApproxEqResults};
 use thiserror::Error;
 
 use crate::math::float::{abs, powf, powi, signum, sqrt};
@@ -197,10 +197,10 @@ impl Display for Inclination {
 pub struct LongitudeOfAscendingNodeError(Angle);
 
 /// Longitude of ascending node.
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct LongitudeOfAscendingNode(Angle);
+pub struct LongitudeOfAscendingNode(#[approx(periodic = TAU)] Angle);
 
 impl LongitudeOfAscendingNode {
     /// Tries to create a new [`LongitudeOfAscendingNode`]. Must be between 0 and 2π.
@@ -225,19 +225,6 @@ impl LongitudeOfAscendingNode {
     }
 }
 
-impl ApproxEq for LongitudeOfAscendingNode {
-    /// Compares modulo 2π, see [`ApproxEqResult::periodic`].
-    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
-        ApproxEqResults::single(ApproxEqResult::periodic(
-            self.as_f64(),
-            rhs.as_f64(),
-            TAU,
-            atol,
-            rtol,
-        ))
-    }
-}
-
 impl Display for LongitudeOfAscendingNode {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.0.fmt(f)
@@ -250,10 +237,10 @@ impl Display for LongitudeOfAscendingNode {
 pub struct ArgumentOfPeriapsisError(Angle);
 
 /// Argument of periapsis.
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct ArgumentOfPeriapsis(Angle);
+pub struct ArgumentOfPeriapsis(#[approx(periodic = TAU)] Angle);
 
 impl ArgumentOfPeriapsis {
     /// Tries to create a new [`ArgumentOfPeriapsis`]. Must be between 0 and 2π.
@@ -278,19 +265,6 @@ impl ArgumentOfPeriapsis {
     }
 }
 
-impl ApproxEq for ArgumentOfPeriapsis {
-    /// Compares modulo 2π, see [`ApproxEqResult::periodic`].
-    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
-        ApproxEqResults::single(ApproxEqResult::periodic(
-            self.as_f64(),
-            rhs.as_f64(),
-            TAU,
-            atol,
-            rtol,
-        ))
-    }
-}
-
 impl Display for ArgumentOfPeriapsis {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.0.fmt(f)
@@ -301,6 +275,11 @@ impl Display for ArgumentOfPeriapsis {
 ///
 /// The orbit's shape is stored as the semi-parameter (semi-latus rectum) `p` and the eccentricity,
 /// which are finite for every conic section, including parabolic orbits.
+///
+/// Approximate comparisons treat the longitude of the ascending node, the argument of periapsis,
+/// and the true anomaly as angles modulo 2π. For these elements, `rtol` is relative to π rather
+/// than to their magnitude, see
+/// [`ApproxEqResult::periodic`](lox_approx::ApproxEqResult::periodic).
 #[derive(Debug, Clone, Copy, PartialEq, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Keplerian {
@@ -954,7 +933,7 @@ mod tests {
     use alloc::string::ToString;
     use core::f64::consts::FRAC_PI_2;
 
-    use lox_approx::{assert_approx_eq, assert_approx_ne};
+    use lox_approx::{ApproxEqResult, assert_approx_eq, assert_approx_ne};
     use proptest::prelude::*;
 
     use crate::math::float::{asin, sin_cos};
@@ -1461,10 +1440,6 @@ mod tests {
         );
     }
 
-    fn angle_difference(a: Angle, b: Angle) -> f64 {
-        abs((a - b).normalize_two_pi(Angle::ZERO).as_f64())
-    }
-
     proptest! {
         #[test]
         fn prop_cartesian_round_trip_from_elements(
@@ -1565,7 +1540,10 @@ mod tests {
             } else {
                 (k.argument_of_latitude(), k1.argument_of_latitude())
             };
-            prop_assert!(angle_difference(expected, actual) < 1e-7, "{expected} vs {actual}");
+            prop_assert!(
+                ApproxEqResult::periodic(expected.into(), actual.into(), TAU, 1e-7, 0.0).is_pass(),
+                "{expected} vs {actual}"
+            );
             for angle in [
                 k1.longitude_of_ascending_node().as_f64(),
                 k1.argument_of_periapsis().as_f64(),

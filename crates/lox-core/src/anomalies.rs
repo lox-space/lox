@@ -26,7 +26,7 @@
 //! - For hyperbolic orbits: represents hyperbolic anomaly F
 //! - For parabolic orbits: represents parabolic anomaly D (stored as radians)
 
-use lox_approx::{ApproxEq, ApproxEqResult, ApproxEqResults};
+use lox_approx::ApproxEq;
 use thiserror::Error;
 
 use crate::math::float::{
@@ -44,31 +44,24 @@ use core::{
 };
 
 /// True anomaly (ν): angle from periapsis to the position vector
-#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct TrueAnomaly(Angle);
-
-impl ApproxEq for TrueAnomaly {
-    /// Compares modulo 2π, see [`ApproxEqResult::periodic`].
-    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
-        ApproxEqResults::single(ApproxEqResult::periodic(
-            self.as_f64(),
-            rhs.as_f64(),
-            TAU,
-            atol,
-            rtol,
-        ))
-    }
-}
+pub struct TrueAnomaly(#[approx(periodic = TAU)] Angle);
 
 /// Eccentric anomaly: E for elliptic, F for hyperbolic, D for parabolic
+///
+/// Unlike [`TrueAnomaly`], approximate comparisons do not wrap around 2π, because the value is
+/// unbounded for parabolic and hyperbolic orbits.
 #[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct EccentricAnomaly(Angle);
 
 /// Mean anomaly: M for elliptic/circular, M_h for hyperbolic, M_p for parabolic
+///
+/// Unlike [`TrueAnomaly`], approximate comparisons do not wrap around 2π, because the value is
+/// unbounded for parabolic and hyperbolic orbits.
 #[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
@@ -617,6 +610,7 @@ pub fn hyperbolic_asymptote_angle(e: Eccentricity) -> Angle {
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::{assert_approx_eq, assert_approx_ne};
     use rstest::rstest;
 
     use super::*;
@@ -625,15 +619,18 @@ mod tests {
 
     #[test]
     fn test_true_anomaly_approx_eq_wraps_around() {
-        use core::f64::consts::TAU;
-        use lox_approx::{assert_approx_eq, assert_approx_ne};
-
         let near_zero = Angle::new(1e-12);
         let near_two_pi = Angle::new(TAU - 1e-12);
         assert_approx_eq!(
             TrueAnomaly::new(near_two_pi),
             TrueAnomaly::new(near_zero),
             atol <= 1e-11
+        );
+        assert_approx_ne!(
+            TrueAnomaly::new(Angle::new(-1e-20)),
+            TrueAnomaly::new(Angle::ZERO),
+            atol <= 0.0,
+            rtol <= 0.0
         );
         // Eccentric and mean anomalies are unbounded for open orbits and do not wrap.
         assert_approx_ne!(
