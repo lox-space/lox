@@ -12,8 +12,15 @@ use thiserror::Error;
 
 /// Error returned when the diagonal dimensions of a [`Tridiagonal`] matrix are inconsistent.
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
-#[error("lengths of `dl` and `du` must be `d.len() - 1 = {0}` but was {1} and {2}")]
-pub struct LoxTridiagonalError(usize, usize, usize);
+#[error("lengths of `dl` and `du` must be `d.len() - 1 = {expected}` but were {dl} and {du}")]
+pub struct TridiagonalError {
+    /// The required length of the off-diagonals, `d.len() - 1`.
+    pub expected: usize,
+    /// The actual length of the lower diagonal `dl`.
+    pub dl: usize,
+    /// The actual length of the upper diagonal `du`.
+    pub du: usize,
+}
 
 type Idx = (usize, usize);
 
@@ -27,10 +34,14 @@ pub struct Tridiagonal<'a> {
 
 impl<'a> Tridiagonal<'a> {
     /// Creates a new tridiagonal matrix from lower, main, and upper diagonals.
-    pub fn new(dl: &'a [f64], d: &'a [f64], du: &'a [f64]) -> Result<Self, LoxTridiagonalError> {
+    pub fn new(dl: &'a [f64], d: &'a [f64], du: &'a [f64]) -> Result<Self, TridiagonalError> {
         let expected = d.len().saturating_sub(1);
         if dl.len() != expected || du.len() != expected {
-            return Err(LoxTridiagonalError(expected, dl.len(), du.len()));
+            return Err(TridiagonalError {
+                expected,
+                dl: dl.len(),
+                du: du.len(),
+            });
         }
         Ok(Self { dl, d, du })
     }
@@ -40,9 +51,19 @@ impl<'a> Tridiagonal<'a> {
         (self.d.len(), self.d.len())
     }
 
-    /// Solves the tridiagonal system `Ax = d` using the Thomas algorithm.
+    /// Solves the tridiagonal system `Ax = d`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `d.len()` differs from the number of rows of the matrix.
     pub fn solve(&self, d: &[f64]) -> Vec<f64> {
         let n = self.d.len();
+        assert_eq!(
+            d.len(),
+            n,
+            "right-hand side must have length {n} but was {}",
+            d.len()
+        );
         if n == 0 {
             return Vec::new();
         }
@@ -130,7 +151,24 @@ mod tests {
         let dl = vec![6.0];
         let tri = Tridiagonal::new(&dl, &d, &du);
 
-        assert_eq!(tri, Err(LoxTridiagonalError(2, 1, 2)));
+        assert_eq!(
+            tri,
+            Err(TridiagonalError {
+                expected: 2,
+                dl: 1,
+                du: 2,
+            })
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "right-hand side must have length 3 but was 2")]
+    fn test_tridiagonal_solve_rhs_length_mismatch() {
+        let du = vec![1.0, 2.0];
+        let d = vec![3.0, 4.0, 5.0];
+        let dl = vec![6.0, 7.0];
+        let tri = Tridiagonal::new(&dl, &d, &du).expect("should be valid");
+        let _x = tri.solve(&[1.0, 2.0]);
     }
 
     #[test]
