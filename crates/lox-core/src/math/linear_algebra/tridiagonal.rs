@@ -28,11 +28,9 @@ pub struct Tridiagonal<'a> {
 impl<'a> Tridiagonal<'a> {
     /// Creates a new tridiagonal matrix from lower, main, and upper diagonals.
     pub fn new(dl: &'a [f64], d: &'a [f64], du: &'a [f64]) -> Result<Self, LoxTridiagonalError> {
-        let n = d.len();
-        if (dl.len() != n - 1 || du.len() != n - 1)
-            && !(d.is_empty() && dl.is_empty() && du.is_empty())
-        {
-            return Err(LoxTridiagonalError(n - 1, dl.len(), du.len()));
+        let expected = d.len().saturating_sub(1);
+        if dl.len() != expected || du.len() != expected {
+            return Err(LoxTridiagonalError(expected, dl.len(), du.len()));
         }
         Ok(Self { dl, d, du })
     }
@@ -45,6 +43,9 @@ impl<'a> Tridiagonal<'a> {
     /// Solves the tridiagonal system `Ax = d` using the Thomas algorithm.
     pub fn solve(&self, d: &[f64]) -> Vec<f64> {
         let n = self.d.len();
+        if n == 0 {
+            return Vec::new();
+        }
         let a = self.dl;
         let b = self.d;
         let c = self.du;
@@ -53,7 +54,9 @@ impl<'a> Tridiagonal<'a> {
         let mut g = vec![0.0; n];
         let mut p = vec![0.0; n];
 
-        w[0] = c[0] / b[0];
+        if n > 1 {
+            w[0] = c[0] / b[0];
+        }
         g[0] = d[0] / b[0];
 
         for i in 1..n - 1 {
@@ -128,6 +131,18 @@ mod tests {
         let tri = Tridiagonal::new(&dl, &d, &du);
 
         assert_eq!(tri, Err(LoxTridiagonalError(2, 1, 2)));
+    }
+
+    #[test]
+    fn test_tridiagonal_solve_single() {
+        let tri = Tridiagonal::new(&[], &[4.0], &[]).expect("should be valid");
+        assert_eq!(tri.solve(&[2.0]), vec![0.5]);
+    }
+
+    #[test]
+    fn test_tridiagonal_solve_empty() {
+        let tri = Tridiagonal::new(&[], &[], &[]).expect("should be valid");
+        assert!(tri.solve(&[]).is_empty());
     }
 
     #[test]
