@@ -5,7 +5,9 @@
 use std::num::ParseFloatError;
 
 use lox_bodies::{CoordinateOrigin, Origin};
-use lox_core::coords::{Cartesian, CartesianTrajectory, TimeStampedCartesian};
+use lox_core::coords::{
+    Cartesian, CartesianTrajectory, CartesianTrajectoryError, TimeStampedCartesian,
+};
 use lox_core::glam::DVec3;
 use lox_ephem::Ephemeris;
 use lox_frames::{Frame, Icrf, ReferenceFrame, rotations::TryRotation, traits::frame_key};
@@ -41,25 +43,10 @@ where
     ///
     /// # Panics
     ///
-    /// Panics if the iterator yields fewer than 2 states. The Hermite cubic
-    /// spline requires at least two knots; callers responsible for that
-    /// invariant should use [`Self::try_new`] for a fallible variant.
+    /// Panics if the states are invalid. See [`Self::try_new`] for the
+    /// conditions and a fallible variant.
     pub fn new(states: impl IntoIterator<Item = CartesianOrbit<O, R>>) -> Self {
-        let mut states = states.into_iter().peekable();
-        let first = states.peek().unwrap();
-        let epoch = first.time();
-        let origin = first.origin();
-        let frame = first.reference_frame();
-        let data = states
-            .map(|orb| {
-                let time = orb.time() - epoch;
-                TimeStampedCartesian {
-                    time,
-                    state: orb.state(),
-                }
-            })
-            .collect();
-        Self::from_parts(epoch, origin, frame, data)
+        Self::try_new(states).unwrap_or_else(|err| panic!("invalid trajectory states: {err}"))
     }
 
     /// Constructs a trajectory from its constituent parts.
@@ -77,14 +64,30 @@ where
         (self.epoch, self.origin, self.frame, self.data)
     }
 
-    /// Constructs a trajectory, returning an error if fewer than 2 states are provided.
+    /// Constructs a trajectory from an iterator of Cartesian orbital states.
+    ///
+    /// The origin and reference frame are taken from the first state.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TrajectoryError::InsufficientStates`] if fewer than 2 states are
+    /// given, and [`TrajectoryError::InvalidStates`] if the epochs are not strictly
+    /// increasing or a state contains a non-finite value.
     pub fn try_new(
         states: impl IntoIterator<Item = CartesianOrbit<O, R>>,
     ) -> Result<Self, TrajectoryError> {
-        let mut iter = states.into_iter();
-        let first = iter.next().ok_or(TrajectoryError::InsufficientStates(0))?;
-        let second = iter.next().ok_or(TrajectoryError::InsufficientStates(1))?;
-        Ok(Self::new([first, second].into_iter().chain(iter)))
+        let mut states = states.into_iter().peekable();
+        let first = states
+            .peek()
+            .ok_or(TrajectoryError::InsufficientStates(0))?;
+        let epoch = first.time();
+        let origin = first.origin();
+        let frame = first.reference_frame();
+        let data = CartesianTrajectory::try_from_states(states.map(|orb| TimeStampedCartesian {
+            time: orb.time() - epoch,
+            state: orb.state(),
+        }))?;
+        Ok(Self::from_parts(epoch, origin, frame, data))
     }
 
     /// Interpolates the trajectory at the given absolute time.
@@ -114,7 +117,7 @@ where
             ));
         }
 
-        let data: Result<CartesianTrajectory, P::Error> = self
+        let states: Result<Vec<TimeStampedCartesian>, P::Error> = self
             .data
             .into_iter()
             .map(|TimeStampedCartesian { time, state }| {
@@ -132,7 +135,7 @@ where
             self.epoch,
             self.origin,
             frame,
-            data?,
+            CartesianTrajectory::from_states(states?),
         ))
     }
 
@@ -236,9 +239,23 @@ pub enum TrajectoryError {
     /// Too few states were provided.
     #[error("`states` must have at least 2 elements but had {0}")]
     InsufficientStates(usize),
+    /// The states are not strictly increasing in time or contain non-finite values.
+    #[error("invalid states: {0}")]
+    InvalidStates(CartesianTrajectoryError),
     /// An error occurred while parsing CSV data.
     #[error("CSV error: {0}")]
     CsvError(String),
+}
+
+impl From<CartesianTrajectoryError> for TrajectoryError {
+    fn from(err: CartesianTrajectoryError) -> Self {
+        match err {
+            CartesianTrajectoryError::InsufficientStates(n) => {
+                TrajectoryError::InsufficientStates(n)
+            }
+            err => TrajectoryError::InvalidStates(err),
+        }
+    }
 }
 
 impl From<csv::Error> for TrajectoryError {
@@ -312,19 +329,6 @@ impl Trajectory {
         frame: Frame,
     ) -> Result<Trajectory, TrajectoryError> {
         Ok(Trajectory::from_csv(csv, origin, frame)?.into_dynamic())
-    }
-}
-
-impl<O, R> FromIterator<CartesianOrbit<O, R>> for Trajectory<O, R>
-where
-    O: CoordinateOrigin + Copy,
-    R: ReferenceFrame + Copy,
-{
-    /// Delegates to [`Trajectory::new`] and inherits its panic on fewer
-    /// than 2 states. Callers without that guarantee should collect into
-    /// a `Vec` first and use [`Trajectory::try_new`].
-    fn from_iter<U: IntoIterator<Item = CartesianOrbit<O, R>>>(iter: U) -> Self {
-        Self::new(iter)
     }
 }
 

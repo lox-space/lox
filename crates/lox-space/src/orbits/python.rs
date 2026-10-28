@@ -1223,7 +1223,8 @@ impl PyTrajectory {
     ///     A new Trajectory.
     ///
     /// Raises:
-    ///     ValueError: If the array has invalid shape.
+    ///     ValueError: If the array has invalid shape, has fewer than 2 rows,
+    ///         its times are not strictly increasing, or it contains non-finite values.
     #[classmethod]
     #[pyo3(signature = (start_time, array, origin=None, frame=None))]
     fn from_numpy(

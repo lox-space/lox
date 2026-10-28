@@ -1864,6 +1864,10 @@ class Trajectory:
             array: 2D array with columns [t(s), x(m), y(m), z(m), vx(m/s), vy(m/s), vz(m/s)].
             origin: Central body (default: Earth).
             frame: Reference frame (default: ICRF).
+
+        Raises:
+            ValueError: If the array has invalid shape, has fewer than 2 rows,
+                its times are not strictly increasing, or it contains non-finite values.
         """
         ...
     def origin(self) -> Origin:
