@@ -66,6 +66,7 @@ where
 /// pre-computed trajectory.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[allow(clippy::large_enum_variant)]
 pub enum OrbitSource {
     /// SGP4 propagator initialized from a TLE.
     Sgp4(Sgp4),
