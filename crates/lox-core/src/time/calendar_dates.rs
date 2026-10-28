@@ -250,7 +250,11 @@ impl Date {
         j2000_day_number(self.calendar, self.year, self.month, self.day)
     }
 
-    /// Converts this date to a [`TimeDelta`] relative to J2000.
+    /// Returns the duration from J2000 (2000-01-01T12:00:00) to midnight at the
+    /// start of this date.
+    ///
+    /// No time scale is implied; the value becomes an instant only when paired
+    /// with one.
     pub const fn to_delta(&self) -> TimeDelta {
         let seconds = self.j2000_day_number() * SECONDS_PER_DAY - SECONDS_PER_HALF_DAY;
         TimeDelta::from_seconds(seconds)
