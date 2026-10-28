@@ -26,7 +26,7 @@
 //! - For hyperbolic orbits: represents hyperbolic anomaly F
 //! - For parabolic orbits: represents parabolic anomaly D (stored as radians)
 
-use lox_approx::ApproxEq;
+use lox_approx::{ApproxEq, ApproxEqResult, ApproxEqResults};
 use thiserror::Error;
 
 use crate::math::float::{
@@ -44,10 +44,23 @@ use core::{
 };
 
 /// True anomaly (ν): angle from periapsis to the position vector
-#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, ApproxEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct TrueAnomaly(Angle);
+
+impl ApproxEq for TrueAnomaly {
+    /// Compares modulo 2π, see [`ApproxEqResult::periodic`].
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        ApproxEqResults::single(ApproxEqResult::periodic(
+            self.as_f64(),
+            rhs.as_f64(),
+            TAU,
+            atol,
+            rtol,
+        ))
+    }
+}
 
 /// Eccentric anomaly: E for elliptic, F for hyperbolic, D for parabolic
 #[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, ApproxEq)]
@@ -609,6 +622,31 @@ mod tests {
     use super::*;
 
     const EPSILON: f64 = 1e-9;
+
+    #[test]
+    fn test_true_anomaly_approx_eq_wraps_around() {
+        use core::f64::consts::TAU;
+        use lox_approx::{assert_approx_eq, assert_approx_ne};
+
+        let near_zero = Angle::new(1e-12);
+        let near_two_pi = Angle::new(TAU - 1e-12);
+        assert_approx_eq!(
+            TrueAnomaly::new(near_two_pi),
+            TrueAnomaly::new(near_zero),
+            atol <= 1e-11
+        );
+        // Eccentric and mean anomalies are unbounded for open orbits and do not wrap.
+        assert_approx_ne!(
+            EccentricAnomaly::new(near_two_pi),
+            EccentricAnomaly::new(near_zero),
+            atol <= 1e-11
+        );
+        assert_approx_ne!(
+            MeanAnomaly::new(near_two_pi),
+            MeanAnomaly::new(near_zero),
+            atol <= 1e-11
+        );
+    }
 
     #[test]
     fn test_elliptic_round_trip() {

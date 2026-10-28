@@ -484,6 +484,61 @@ mod tests {
     }
 
     #[test]
+    fn test_periodic_wraps_around() {
+        use core::f64::consts::TAU;
+
+        let pass = |l, r, atol| ApproxEqResult::periodic(l, r, TAU, atol, 0.0).is_pass();
+        assert!(pass(TAU - 1e-12, 1e-12, 1e-11));
+        assert!(pass(1e-12, TAU - 1e-12, 1e-11));
+        assert!(pass(-0.1, TAU - 0.1, 1e-12));
+        assert!(pass(0.5, 0.5 + 2.0 * TAU, 1e-12));
+        assert!(!pass(0.1, TAU - 0.1, 0.1));
+
+        // The reported difference is the wrapped one, the values are the original ones.
+        let ApproxEqResult::Fail {
+            left, right, diff, ..
+        } = ApproxEqResult::periodic(0.1, TAU - 0.1, TAU, 0.0, 0.0)
+        else {
+            panic!("expected a failure");
+        };
+        assert_eq!((left, right), (0.1, TAU - 0.1));
+        assert_approx_eq!(diff.unwrap(), 0.2, atol <= 1e-14);
+    }
+
+    #[test]
+    fn test_periodic_rtol_scales_with_half_period() {
+        use core::f64::consts::{PI, TAU};
+
+        // The tolerance does not depend on where the values lie on the circle.
+        for base in [0.0, 1e-3, 3.0, TAU - 1e-3] {
+            let pass = |delta| ApproxEqResult::periodic(base, base + delta, TAU, 0.0, 1e-8);
+            assert!(pass(0.99 * PI * 1e-8).is_pass(), "base = {base}");
+            assert!(!pass(1.01 * PI * 1e-8).is_pass(), "base = {base}");
+        }
+    }
+
+    #[test]
+    fn test_periodic_non_finite() {
+        use core::f64::consts::TAU;
+
+        assert!(ApproxEqResult::periodic(f64::INFINITY, f64::INFINITY, TAU, 0.0, 0.0).is_pass());
+        assert!(!ApproxEqResult::periodic(f64::NAN, f64::NAN, TAU, 0.0, 0.0).is_pass());
+        assert!(!ApproxEqResult::periodic(f64::INFINITY, 1.0, TAU, 0.0, 0.0).is_pass());
+    }
+
+    #[test]
+    #[should_panic(expected = "tolerances must be non-negative")]
+    fn test_periodic_negative_tolerance_panics() {
+        ApproxEqResult::periodic(1.0, 1.0, 1.0, -0.1, 0.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "period must be finite and positive")]
+    fn test_periodic_invalid_period_panics() {
+        ApproxEqResult::periodic(1.0, 1.0, 0.0, 0.0, 0.0);
+    }
+
+    #[test]
     fn test_approx_eq_non_finite() {
         // Equal infinities are approximately equal (PEP 485 math.isclose semantics).
         assert_approx_eq!(f64::INFINITY, f64::INFINITY);
