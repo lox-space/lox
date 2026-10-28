@@ -64,6 +64,20 @@ pub fn fract(x: f64) -> f64 {
     }
 }
 
+/// Least non-negative remainder of `x` modulo `y`, i.e. in `[0, |y|)` for finite operands.
+#[inline]
+pub fn rem_euclid(x: f64, y: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.rem_euclid(y)
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        let r = x % y;
+        if r < 0.0 { r + libm::fabs(y) } else { r }
+    }
+}
+
 // Algebraic
 // =========
 
@@ -94,6 +108,32 @@ pub fn signum(x: f64) -> f64 {
         } else {
             libm::copysign(1.0, x)
         }
+    }
+}
+
+/// Magnitude of `x` with the sign of `sign`.
+#[inline]
+pub fn copysign(x: f64, sign: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.copysign(sign)
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::copysign(x, sign)
+    }
+}
+
+/// Euclidean norm `sqrt(x² + y²)` without undue overflow or underflow.
+#[inline]
+pub fn hypot(x: f64, y: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.hypot(y)
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::hypot(x, y)
     }
 }
 
@@ -369,6 +409,32 @@ pub fn atanh(x: f64) -> f64 {
 // Exponential and logarithmic
 // ===========================
 
+/// Exponential `eˣ`.
+#[inline]
+pub fn exp(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.exp()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::exp(x)
+    }
+}
+
+/// `eˣ - 1`, accurate for `x` near zero.
+#[inline]
+pub fn exp_m1(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.exp_m1()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::expm1(x)
+    }
+}
+
 /// Natural logarithm.
 #[inline]
 pub fn ln(x: f64) -> f64 {
@@ -379,6 +445,32 @@ pub fn ln(x: f64) -> f64 {
     #[cfg(not(feature = "std"))]
     {
         libm::log(x)
+    }
+}
+
+/// `ln(1 + x)`, accurate for `x` near zero.
+#[inline]
+pub fn ln_1p(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.ln_1p()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::log1p(x)
+    }
+}
+
+/// Base-2 logarithm.
+#[inline]
+pub fn log2(x: f64) -> f64 {
+    #[cfg(feature = "std")]
+    {
+        x.log2()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        libm::log2(x)
     }
 }
 
@@ -457,5 +549,48 @@ mod tests {
         #[cfg(not(all(feature = "std", any(target_feature = "fma", target_arch = "aarch64"))))]
         assert_eq!(actual, unfused);
         assert!(actual == fused || actual == unfused);
+    }
+
+    #[test]
+    fn test_exp_ln_round_trip() {
+        assert!(abs(exp(1.0) - core::f64::consts::E) < 1e-15);
+        assert!(abs(ln(exp(2.5)) - 2.5) < 1e-15);
+    }
+
+    #[test]
+    fn test_exp_m1_ln_1p_small_argument() {
+        // exp(x) - 1 and ln(1 + x) lose all significant digits at this magnitude
+        let x = 1e-20;
+        assert_eq!(exp_m1(x), x);
+        assert_eq!(ln_1p(x), x);
+    }
+
+    #[test]
+    fn test_log2() {
+        assert_eq!(log2(1024.0), 10.0);
+        assert_eq!(log2(0.125), -3.0);
+    }
+
+    #[test]
+    fn test_hypot_avoids_overflow() {
+        assert_eq!(hypot(3.0, 4.0), 5.0);
+        let big = 1e300;
+        assert!(abs(hypot(big, big) / big - core::f64::consts::SQRT_2) < 1e-15);
+    }
+
+    #[test]
+    fn test_rem_euclid() {
+        assert_eq!(rem_euclid(7.0, 4.0), 3.0);
+        assert_eq!(rem_euclid(-7.0, 4.0), 1.0);
+        assert_eq!(rem_euclid(7.0, -4.0), 3.0);
+        assert_eq!(rem_euclid(-7.0, -4.0), 1.0);
+        assert!(rem_euclid(1.0, 0.0).is_nan());
+    }
+
+    #[test]
+    fn test_copysign() {
+        assert_eq!(copysign(2.0, -0.0), -2.0);
+        assert_eq!(copysign(-2.0, 1.0), 2.0);
+        assert!(copysign(f64::NAN, -1.0).is_sign_negative());
     }
 }
