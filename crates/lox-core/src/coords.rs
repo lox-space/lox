@@ -17,7 +17,7 @@ use crate::math::float::{abs, atan2, powi, sin_cos, sqrt};
 use thiserror::Error;
 
 use crate::{
-    math::series::{InterpolationType, Series},
+    math::series::Series,
     time::deltas::TimeDelta,
     units::{Angle, AngularRate, Distance, Velocity},
 };
@@ -804,73 +804,6 @@ impl Neg for Cartesian {
     }
 }
 
-/// Serde helper for `[T; N]` with const-generic `N`.
-///
-/// The derive macro cannot handle `[T; N]` when `N` is a const generic parameter,
-/// so we serialize/deserialize as a `Vec<T>` on the wire.
-#[cfg(feature = "serde")]
-mod const_array_serde {
-    use alloc::format;
-    use alloc::vec::Vec;
-
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-    pub fn serialize<S, T, const N: usize>(arr: &[T; N], serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-        T: Serialize,
-    {
-        arr.as_slice().serialize(serializer)
-    }
-
-    pub fn deserialize<'de, D, T, const N: usize>(deserializer: D) -> Result<[T; N], D::Error>
-    where
-        D: Deserializer<'de>,
-        T: Deserialize<'de>,
-    {
-        let vec = Vec::<T>::deserialize(deserializer)?;
-        vec.try_into().map_err(|v: Vec<T>| {
-            serde::de::Error::custom(format!("expected array of length {N}, got {}", v.len()))
-        })
-    }
-}
-
-/// Generic interpolated time series data with `N` components.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct TrajectoryData<const N: usize> {
-    epoch: TimeDelta,
-    time_steps: Arc<[f64]>,
-    #[cfg_attr(feature = "serde", serde(with = "const_array_serde"))]
-    data: [Arc<[f64]>; N],
-    #[cfg_attr(feature = "serde", serde(with = "const_array_serde"))]
-    series: [Series; N],
-}
-
-impl<const N: usize> TrajectoryData<N> {
-    /// Returns the time steps relative to the epoch in seconds.
-    pub fn time_steps(&self) -> Arc<[f64]> {
-        self.time_steps.clone()
-    }
-
-    /// Interpolates the `M`-th component at time `t` (seconds since epoch).
-    #[inline]
-    pub fn interpolate<const M: usize>(&self, t: f64) -> f64 {
-        const { assert!(M < N, "index is out-of-bounds") }
-
-        self.series[M].interpolate(t)
-    }
-
-    /// Interpolates all `N` components at time `t` (seconds since epoch).
-    #[inline]
-    pub fn interpolate_all(&self, t: f64) -> [f64; N] {
-        let idx = self.series[0].find_index(t);
-        self.series
-            .each_ref()
-            .map(|s| s.interpolate_at_index(t, idx))
-    }
-}
-
 /// Error returned when constructing a [`CartesianTrajectory`] from invalid states.
 #[derive(Copy, Clone, Debug, Error, PartialEq, Eq)]
 pub enum CartesianTrajectoryError {
@@ -885,30 +818,36 @@ pub enum CartesianTrajectoryError {
     NonFinite(usize),
 }
 
-/// A Cartesian state paired with a timestamp.
+/// A Cartesian state paired with its time offset within a [`CartesianTrajectory`].
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TimeStampedCartesian {
-    /// The timestamp of the state.
+    /// The time offset of the state.
+    ///
+    /// [`CartesianTrajectory`] yields offsets from its first state. As input, only
+    /// differences between offsets are significant, so any common reference works.
     pub time: TimeDelta,
     /// The Cartesian state vector.
     pub state: Cartesian,
 }
 
-/// A 6-component trajectory (x, y, z, vx, vy, vz) with Hermite cubic interpolation.
+/// A sequence of Cartesian states with Hermite cubic interpolation.
 ///
-/// Position components use Hermite cubic splines constructed from both position
-/// values and velocity derivatives at each knot point. Velocity is obtained as the
-/// analytical derivative of the position spline, guaranteeing physical consistency
-/// between interpolated position and velocity.
-pub type CartesianTrajectory = TrajectoryData<6>;
+/// Times are relative to the first state, which defines `t = 0`. Position is
+/// interpolated from both position and velocity at each state, and velocity is
+/// the analytical derivative of the interpolated position, so the two are
+/// always consistent.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct CartesianTrajectory {
+    time_steps: Arc<[f64]>,
+    data: [Arc<[f64]>; 6],
+    series: [Series; 3],
+}
 
 impl CartesianTrajectory {
     /// Creates a trajectory from an iterator of timestamped Cartesian states.
     ///
-    /// Position components (x, y, z) are interpolated with Hermite cubic splines
-    /// using velocity (vx, vy, vz) as the known derivatives. Velocity components
-    /// are stored as cubic splines for raw data access but the [`velocity`](Self::velocity) and
-    /// [`at`](Self::at) methods derive velocity from the position spline derivative.
+    /// The first state defines `t = 0`; all times are stored relative to it.
     ///
     /// # Errors
     ///
@@ -920,7 +859,7 @@ impl CartesianTrajectory {
         states: impl IntoIterator<Item = TimeStampedCartesian>,
     ) -> Result<Self, CartesianTrajectoryError> {
         let mut iter = states.into_iter().peekable();
-        let epoch = iter
+        let first = iter
             .peek()
             .ok_or(CartesianTrajectoryError::InsufficientStates(0))?
             .time;
@@ -935,7 +874,7 @@ impl CartesianTrajectory {
         let mut vz: Vec<f64> = Vec::with_capacity(n);
 
         for (idx, TimeStampedCartesian { time, state }) in iter.enumerate() {
-            let t = (time - epoch).as_seconds_f64();
+            let t = (time - first).as_seconds_f64();
             if time_steps.last().is_some_and(|&prev| t <= prev) {
                 return Err(CartesianTrajectoryError::NonMonotonic(idx));
             }
@@ -959,37 +898,12 @@ impl CartesianTrajectory {
         }
 
         let time_steps: Arc<[f64]> = Arc::from(time_steps);
-
-        let x: Arc<[f64]> = Arc::from(x);
-        let y: Arc<[f64]> = Arc::from(y);
-        let z: Arc<[f64]> = Arc::from(z);
-        let vx: Arc<[f64]> = Arc::from(vx);
-        let vy: Arc<[f64]> = Arc::from(vy);
-        let vz: Arc<[f64]> = Arc::from(vz);
-
-        let data = [
-            x.clone(),
-            y.clone(),
-            z.clone(),
-            vx.clone(),
-            vy.clone(),
-            vz.clone(),
-        ];
-
-        // Position series use Hermite cubic interpolation with velocity as derivatives.
-        let sx = Series::hermite_cubic(time_steps.clone(), x, vx.clone());
-        let sy = Series::hermite_cubic(time_steps.clone(), y, vy.clone());
-        let sz = Series::hermite_cubic(time_steps.clone(), z, vz.clone());
-
-        // Velocity series use standard cubic splines (used only for raw data access).
-        let svx = Series::new(time_steps.clone(), vx, InterpolationType::CubicSpline);
-        let svy = Series::new(time_steps.clone(), vy, InterpolationType::CubicSpline);
-        let svz = Series::new(time_steps.clone(), vz, InterpolationType::CubicSpline);
-
-        let series = [sx, sy, sz, svx, svy, svz];
+        let data: [Arc<[f64]>; 6] = [x, y, z, vx, vy, vz].map(Arc::from);
+        let series = [0, 1, 2].map(|i| {
+            Series::hermite_cubic(time_steps.clone(), data[i].clone(), data[i + 3].clone())
+        });
 
         Ok(Self {
-            epoch,
             time_steps,
             data,
             series,
@@ -1007,82 +921,40 @@ impl CartesianTrajectory {
             .unwrap_or_else(|err| panic!("invalid trajectory states: {err}"))
     }
 
-    /// Returns the x position data points.
-    pub fn x(&self) -> Arc<[f64]> {
-        self.data[0].clone()
+    /// Returns the number of states.
+    pub fn len(&self) -> usize {
+        self.time_steps.len()
     }
 
-    /// Returns the y position data points.
-    pub fn y(&self) -> Arc<[f64]> {
-        self.data[1].clone()
+    /// Returns `true` if the trajectory has no states. Always `false`, since a
+    /// trajectory holds at least 2 states.
+    pub fn is_empty(&self) -> bool {
+        self.time_steps.is_empty()
     }
 
-    /// Returns the z position data points.
-    pub fn z(&self) -> Arc<[f64]> {
-        self.data[2].clone()
+    /// Returns the times of the states in seconds since the first state.
+    pub fn time_steps(&self) -> &[f64] {
+        &self.time_steps
     }
 
-    /// Returns the x velocity data points.
-    pub fn vx(&self) -> Arc<[f64]> {
-        self.data[3].clone()
+    /// Returns the state at index `idx`, or `None` if it is out of bounds.
+    pub fn get(&self, idx: usize) -> Option<TimeStampedCartesian> {
+        let t = *self.time_steps.get(idx)?;
+        Some(TimeStampedCartesian {
+            time: TimeDelta::from_seconds_f64(t),
+            state: Cartesian::from_array(self.data.each_ref().map(|d| d[idx])),
+        })
     }
 
-    /// Returns the y velocity data points.
-    pub fn vy(&self) -> Arc<[f64]> {
-        self.data[4].clone()
+    /// Returns an iterator over the states.
+    pub fn iter(&self) -> CartesianTrajectoryIter<'_> {
+        CartesianTrajectoryIter {
+            data: self,
+            curr: 0,
+        }
     }
 
-    /// Returns the z velocity data points.
-    pub fn vz(&self) -> Arc<[f64]> {
-        self.data[5].clone()
-    }
-
-    /// Interpolates the x position at time `t` (seconds since epoch).
-    #[inline]
-    pub fn interpolate_x(&self, t: f64) -> f64 {
-        self.interpolate::<0>(t)
-    }
-
-    /// Interpolates the y position at time `t` (seconds since epoch).
-    #[inline]
-    pub fn interpolate_y(&self, t: f64) -> f64 {
-        self.interpolate::<1>(t)
-    }
-
-    /// Interpolates the z position at time `t` (seconds since epoch).
-    #[inline]
-    pub fn interpolate_z(&self, t: f64) -> f64 {
-        self.interpolate::<2>(t)
-    }
-
-    /// Interpolates the x velocity at time `t` (seconds since epoch).
-    ///
-    /// Derived as the analytical derivative of the Hermite position spline.
-    #[inline]
-    pub fn interpolate_vx(&self, t: f64) -> f64 {
-        let idx = self.series[0].find_index(t);
-        self.series[0].derivative_at_index(t, idx)
-    }
-
-    /// Interpolates the y velocity at time `t` (seconds since epoch).
-    ///
-    /// Derived as the analytical derivative of the Hermite position spline.
-    #[inline]
-    pub fn interpolate_vy(&self, t: f64) -> f64 {
-        let idx = self.series[1].find_index(t);
-        self.series[1].derivative_at_index(t, idx)
-    }
-
-    /// Interpolates the z velocity at time `t` (seconds since epoch).
-    ///
-    /// Derived as the analytical derivative of the Hermite position spline.
-    #[inline]
-    pub fn interpolate_vz(&self, t: f64) -> f64 {
-        let idx = self.series[2].find_index(t);
-        self.series[2].derivative_at_index(t, idx)
-    }
-
-    /// Interpolates the position vector at time `t` (seconds since epoch).
+    /// Interpolates the position vector at time `t` (seconds since the first state).
     #[inline]
     pub fn position(&self, t: f64) -> DVec3 {
         let idx = self.series[0].find_index(t);
@@ -1093,10 +965,7 @@ impl CartesianTrajectory {
         )
     }
 
-    /// Interpolates the velocity vector at time `t` (seconds since epoch).
-    ///
-    /// Velocity is derived as the analytical derivative of the Hermite position
-    /// spline, ensuring physical consistency with the interpolated position.
+    /// Interpolates the velocity vector at time `t` (seconds since the first state).
     #[inline]
     pub fn velocity(&self, t: f64) -> DVec3 {
         let idx = self.series[0].find_index(t);
@@ -1107,10 +976,7 @@ impl CartesianTrajectory {
         )
     }
 
-    /// Interpolates the full Cartesian state at time `t` (seconds since epoch).
-    ///
-    /// Position is interpolated from the Hermite spline; velocity is derived as
-    /// the analytical derivative of the same spline.
+    /// Interpolates the full Cartesian state at time `t` (seconds since the first state).
     #[inline]
     pub fn at(&self, t: f64) -> Cartesian {
         let idx = self.series[0].find_index(t);
@@ -1128,53 +994,36 @@ impl CartesianTrajectory {
     }
 }
 
-/// Iterator over the discrete states in a [`CartesianTrajectory`].
-pub struct CartesianTrajectoryIterator {
-    data: CartesianTrajectory,
+/// Iterator over the states in a [`CartesianTrajectory`].
+pub struct CartesianTrajectoryIter<'a> {
+    data: &'a CartesianTrajectory,
     curr: usize,
 }
 
-impl CartesianTrajectoryIterator {
-    fn new(data: CartesianTrajectory) -> Self {
-        Self { data, curr: 0 }
-    }
-
-    fn len(&self) -> usize {
-        self.data.time_steps.len()
-    }
-
-    fn get_item(&self, idx: usize) -> Option<TimeStampedCartesian> {
-        let n = self.len();
-        if idx >= n {
-            return None;
-        }
-
-        let time = self.data.time_steps[idx];
-        let state = Cartesian::from_array(self.data.data.clone().map(|d| d[idx]));
-        Some(TimeStampedCartesian {
-            time: self.data.epoch + TimeDelta::from_seconds_f64(time),
-            state,
-        })
-    }
-}
-
-impl Iterator for CartesianTrajectoryIterator {
+impl Iterator for CartesianTrajectoryIter<'_> {
     type Item = TimeStampedCartesian;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = self.get_item(self.curr);
+        let item = self.data.get(self.curr)?;
         self.curr += 1;
-        item
+        Some(item)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let n = self.data.len() - self.curr;
+        (n, Some(n))
     }
 }
 
-impl IntoIterator for CartesianTrajectory {
+impl ExactSizeIterator for CartesianTrajectoryIter<'_> {}
+
+impl<'a> IntoIterator for &'a CartesianTrajectory {
     type Item = TimeStampedCartesian;
 
-    type IntoIter = CartesianTrajectoryIterator;
+    type IntoIter = CartesianTrajectoryIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        Self::IntoIter::new(self)
+        self.iter()
     }
 }
 
@@ -1711,11 +1560,14 @@ mod tests {
     }
 
     #[test]
-    fn test_cartesian_trajectory_try_from_states_two_states() {
+    fn test_cartesian_trajectory_times_are_relative_to_first_state() {
         let traj =
-            CartesianTrajectory::try_from_states(trajectory_states(&[0, 60], &[STATE, STATE]))
+            CartesianTrajectory::try_from_states(trajectory_states(&[100, 160], &[STATE, STATE]))
                 .unwrap();
-        assert_eq!(&*traj.time_steps(), &[0.0, 60.0]);
+        assert_eq!(traj.time_steps(), &[0.0, 60.0]);
+        let times: Vec<TimeDelta> = traj.iter().map(|s| s.time).collect();
+        assert_eq!(times, [TimeDelta::ZERO, TimeDelta::from_seconds(60)]);
+        assert!(traj.iter().all(|s| s.state == STATE));
     }
 
     #[test]

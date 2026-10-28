@@ -119,7 +119,7 @@ where
 
         let states: Result<Vec<TimeStampedCartesian>, P::Error> = self
             .data
-            .into_iter()
+            .iter()
             .map(|TimeStampedCartesian { time, state }| {
                 let t = self.epoch + time;
                 provider
@@ -156,15 +156,14 @@ where
 
     /// Returns the end time of the trajectory.
     pub fn end_time(&self) -> Time {
-        let time_steps = self.data.time_steps();
-        let last = time_steps.last().copied().unwrap_or(0.0);
+        let last = self.data.time_steps().last().copied().unwrap_or(0.0);
         self.epoch + TimeDelta::from_seconds_f64(last)
     }
 
     /// Returns the absolute times of all data points in the trajectory.
     pub fn times(&self) -> Vec<Time> {
-        let time_steps = self.data.time_steps();
-        time_steps
+        self.data
+            .time_steps()
             .iter()
             .map(|&t| self.epoch + TimeDelta::from_seconds_f64(t))
             .collect()
@@ -173,8 +172,7 @@ where
     /// Returns all orbital states at the original data points.
     pub fn states(&self) -> Vec<CartesianOrbit<O, R>> {
         self.data
-            .clone()
-            .into_iter()
+            .iter()
             .map(|TimeStampedCartesian { time, state }| {
                 Orbit::from_state(state, self.epoch + time, self.origin, self.frame)
             })
@@ -183,11 +181,12 @@ where
 
     /// Returns the trajectory as a vector of `[t, x, y, z, vx, vy, vz]` rows.
     pub fn to_vec(&self) -> Vec<Vec<f64>> {
-        let time_steps = self.data.time_steps();
-        let (x, y, z) = (self.data.x(), self.data.y(), self.data.z());
-        let (vx, vy, vz) = (self.data.vx(), self.data.vy(), self.data.vz());
-        (0..time_steps.len())
-            .map(|i| vec![time_steps[i], x[i], y[i], z[i], vx[i], vy[i], vz[i]])
+        self.data
+            .iter()
+            .map(|TimeStampedCartesian { time, state }| {
+                let (p, v) = (state.position(), state.velocity());
+                vec![time.as_seconds_f64(), p.x, p.y, p.z, v.x, v.y, v.z]
+            })
             .collect()
     }
 }
