@@ -1031,7 +1031,7 @@ dependencies = [
 
 [[package]]
 name = "lox-derive"
-version = "0.1.0-alpha.13"
+version = "0.1.0"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
