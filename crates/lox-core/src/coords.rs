@@ -1739,6 +1739,26 @@ mod tests {
         assert!(strict.at(120.0 + 1e-9).is_none());
     }
 
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_cartesian_trajectory_serde_extrapolation_limit() {
+        let limit = TimeDelta::from_seconds(10);
+        let traj = linear_trajectory().with_extrapolation_limit(limit);
+        let mut json = serde_json::to_value(&traj).unwrap();
+
+        let round_trip: CartesianTrajectory = serde_json::from_value(json.clone()).unwrap();
+        assert_eq!(round_trip.extrapolation_limit(), limit);
+
+        // Data saved before the limit was introduced gets the default.
+        json.as_object_mut()
+            .unwrap()
+            .remove("extrapolation_limit")
+            .unwrap();
+        let legacy: CartesianTrajectory = serde_json::from_value(json).unwrap();
+        assert_eq!(legacy.extrapolation_limit(), DEFAULT_EXTRAPOLATION_LIMIT);
+        assert_eq!(legacy.time_steps(), traj.time_steps());
+    }
+
     #[test]
     fn test_time_stamped_cartesian_traits() {
         let s = TimeStampedCartesian {
