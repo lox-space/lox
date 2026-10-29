@@ -25,11 +25,13 @@ pub use crate::core::units::{Angle, AngleUnits, Distance, DistanceUnits, Velocit
 
 // Orbital elements & state
 pub use crate::core::coords::Cartesian;
-pub use crate::core::elements::Keplerian;
+pub use crate::core::elements::{Equinoctial, Keplerian, ModifiedEquinoctial};
 #[cfg(feature = "orbits")]
 pub use crate::orbits::sso::SsoBuilder;
 #[cfg(feature = "orbits")]
-pub use crate::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
+pub use crate::orbits::{
+    CartesianOrbit, EquinoctialOrbit, KeplerianOrbit, ModifiedEquinoctialOrbit, Orbit, Trajectory,
+};
 
 // Propagation
 #[cfg(feature = "orbits")]

@@ -6,7 +6,7 @@ SPDX-License-Identifier: MPL-2.0
 
 # Orbital States
 
-Representations of orbital states in Cartesian and Keplerian forms.
+Representations of orbital states in Cartesian, Keplerian, and equinoctial forms.
 
 ## Quick Example
 
@@ -95,6 +95,15 @@ sso = lox.Keplerian.sso(
     provider=eop,
 )
 
+# Equinoctial elements are non-singular for circular and equatorial orbits.
+# Retrograde orbits use the retrograde set (retrograde factor I = -1) automatically.
+eq = state.to_equinoctial()  # closed orbits only, raises ValueError otherwise
+print(f"λ = {eq.mean_longitude().to_degrees():.3f} deg, retrograde = {eq.retrograde()}")
+
+# Modified equinoctial elements also cover parabolic and hyperbolic orbits
+mee = state.to_modified_equinoctial()
+state = mee.to_equinoctial().to_cartesian()
+
 # Work with trajectories
 trajectory = lox.Trajectory([state1, state2, state3])
 interpolated = trajectory.at(t + lox.TimeDelta(100))
@@ -116,6 +125,12 @@ times = lox.Interval(t, t + lox.TimeDelta(150)).step_by_inclusive(lox.TimeDelta(
 ---
 
 ::: lox_space.Keplerian
+    options:
+      show_source: false
+
+---
+
+::: lox_space.Equinoctial
     options:
       show_source: false
 
