@@ -1472,7 +1472,7 @@ class Cartesian:
         """Convert this Cartesian state to Keplerian orbital elements.
 
         Raises:
-            ValueError: If the state is not in an inertial frame or cannot be represented by
+            ValueError: If the frame is not quasi-inertial or the state cannot be represented by
                 Keplerian elements, e.g. because its angular momentum is zero.
             UndefinedOriginPropertyError: If the origin has no gravitational parameter.
         """
