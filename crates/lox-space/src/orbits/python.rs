@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::analysis::python::PyObservables;
-use crate::bodies::TryPointMass;
 use crate::bodies::python::{PyOrigin, PyUndefinedOriginPropertyError};
+use crate::bodies::{Origin, TryPointMass};
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::ephem::python::{PyDafSpkError, PySpk};
 use crate::frames::Frame;
@@ -17,7 +17,9 @@ use crate::orbits::propagators::numerical::{NumericalError, NumericalPropagator}
 use crate::orbits::propagators::semi_analytical::{Vallado, ValladoError};
 use crate::orbits::propagators::sgp4::{Sgp4, Sgp4Error};
 use crate::orbits::{
-    CartesianOrbit, ToKeplerianError, Trajectory, TrajectoryError, TrajectoryTransformationError,
+    CartesianOrbit, EquinoctialOrbit, ModifiedEquinoctialOrbit, ToEquinoctialError,
+    ToKeplerianError, ToModifiedEquinoctialError, Trajectory, TrajectoryError,
+    TrajectoryTransformationError,
 };
 use crate::time::Time;
 use crate::time::deltas::TimeDelta;
@@ -26,7 +28,7 @@ use crate::time::python::time::PyTime;
 use crate::time::time_scales::Tai;
 use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyVelocity};
 use lox_core::coords::{Cartesian, Ellipsoid, LonLatAlt};
-use lox_core::elements::{ModifiedEquinoctial, RetrogradeFactor};
+use lox_core::elements::{Equinoctial, ModifiedEquinoctial, RetrogradeFactor};
 use lox_core::glam::DVec3;
 use lox_core::units::{Distance, Velocity};
 use lox_frames::providers::DefaultRotationProvider;
@@ -156,14 +158,7 @@ impl PyCartesian {
         origin: Option<&Bound<'_, PyAny>>,
         frame: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<Self> {
-        let origin = origin
-            .map(PyOrigin::try_from)
-            .transpose()?
-            .unwrap_or_default();
-        let frame = frame
-            .map(PyFrame::try_from)
-            .transpose()?
-            .unwrap_or_default();
+        let (origin, frame) = origin_and_frame(origin, frame)?;
 
         let pos = if let Some(arr) = position {
             if arr.len() != 3 {
@@ -202,8 +197,8 @@ impl PyCartesian {
         Ok(PyCartesian(CartesianOrbit::new(
             Cartesian::from_vecs(pos, vel),
             time.0,
-            origin.0,
-            frame.0,
+            origin,
+            frame,
         )))
     }
 
@@ -370,22 +365,42 @@ impl PyCartesian {
     ///
     /// Returns:
     ///     Modified equinoctial elements representing this orbit.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+    ///     ValueError: If the frame is not quasi-inertial or the state has zero angular momentum.
     fn to_modified_equinoctial(&self) -> PyResult<PyModifiedEquinoctial> {
-        let mu = self
-            .0
-            .try_gravitational_parameter()
-            .map_err(PyUndefinedOriginPropertyError)?;
         let mee = self
             .0
-            .state()
-            .to_modified_equinoctial(mu)
-            .map_err(|err| PyValueError::new_err(err.to_string()))?;
-        Ok(PyModifiedEquinoctial {
-            state: mee,
-            time: PyTime(self.0.time()),
-            origin: PyOrigin(self.0.origin()),
-            frame: PyFrame(self.0.reference_frame()),
-        })
+            .try_to_modified_equinoctial()
+            .map_err(|err| match err {
+                ToModifiedEquinoctialError::UndefinedOriginProperty(err) => {
+                    PyUndefinedOriginPropertyError(err).into()
+                }
+                ToModifiedEquinoctialError::NonQuasiInertial(err) => value_error(err),
+                ToModifiedEquinoctialError::ModifiedEquinoctial(err) => value_error(err),
+            })?;
+        Ok(PyModifiedEquinoctial(mee))
+    }
+
+    /// Convert this Cartesian state to equinoctial elements.
+    ///
+    /// Returns:
+    ///     Equinoctial elements representing this orbit.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+    ///     ValueError: If the frame is not quasi-inertial, the orbit is not closed, or the state
+    ///         has zero angular momentum.
+    fn to_equinoctial(&self) -> PyResult<PyEquinoctial> {
+        let eq = self.0.try_to_equinoctial().map_err(|err| match err {
+            ToEquinoctialError::UndefinedOriginProperty(err) => {
+                PyUndefinedOriginPropertyError(err).into()
+            }
+            ToEquinoctialError::NonQuasiInertial(err) => value_error(err),
+            ToEquinoctialError::Equinoctial(err) => value_error(err),
+        })?;
+        Ok(PyEquinoctial(eq))
     }
 
     fn __repr__(&self) -> String {
@@ -961,14 +976,19 @@ impl PyKeplerian {
     ///
     /// Returns:
     ///     Modified equinoctial elements representing this orbit.
-    fn to_modified_equinoctial(&self) -> PyResult<PyModifiedEquinoctial> {
-        let mee = self.0.state().to_modified_equinoctial();
-        Ok(PyModifiedEquinoctial {
-            state: mee,
-            time: PyTime(self.0.time()),
-            origin: PyOrigin(self.0.origin()),
-            frame: PyFrame(self.0.reference_frame()),
-        })
+    fn to_modified_equinoctial(&self) -> PyModifiedEquinoctial {
+        PyModifiedEquinoctial(self.0.to_modified_equinoctial())
+    }
+
+    /// Convert these Keplerian elements to equinoctial elements.
+    ///
+    /// Returns:
+    ///     Equinoctial elements representing this orbit.
+    ///
+    /// Raises:
+    ///     ValueError: If the orbit is not closed.
+    fn to_equinoctial(&self) -> PyResult<PyEquinoctial> {
+        Ok(PyEquinoctial(self.0.to_equinoctial().map_err(value_error)?))
     }
 
     /// Return the orbital period.
@@ -998,40 +1018,256 @@ impl PyKeplerian {
     }
 }
 
+fn retrograde_factor(retrograde: bool) -> RetrogradeFactor {
+    if retrograde {
+        RetrogradeFactor::Retrograde
+    } else {
+        RetrogradeFactor::Prograde
+    }
+}
+
+fn origin_and_frame(
+    origin: Option<&Bound<'_, PyAny>>,
+    frame: Option<&Bound<'_, PyAny>>,
+) -> PyResult<(Origin, Frame)> {
+    let origin = origin
+        .map(PyOrigin::try_from)
+        .transpose()?
+        .map(|o| o.0)
+        .unwrap_or_default();
+    let frame = frame
+        .map(PyFrame::try_from)
+        .transpose()?
+        .map(|f| f.0)
+        .unwrap_or_default();
+    Ok((origin, frame))
+}
+
+fn value_error(err: impl std::fmt::Display) -> PyErr {
+    PyValueError::new_err(err.to_string())
+}
+
+/// Represents an orbit using equinoctial elements.
+///
+/// Equinoctial elements are non-singular for circular (e = 0) and equatorial (i = 0 or
+/// i = 180°) orbits. They are defined for closed orbits only; use `ModifiedEquinoctial` for
+/// open orbits.
+///
+/// The elements are h = e·sin(ω + I·Ω), k = e·cos(ω + I·Ω), p = tanᴵ(i/2)·sin(Ω),
+/// q = tanᴵ(i/2)·cos(Ω), and the mean longitude λ = M + ω + I·Ω, where the retrograde factor
+/// I is -1 for the retrograde set and +1 otherwise.
+///
+/// Args:
+///     time: Epoch of the elements.
+///     a: Semi-major axis as Distance.
+///     h: Eccentricity vector component e·sin(ω + I·Ω).
+///     k: Eccentricity vector component e·cos(ω + I·Ω).
+///     p: Node vector component tanᴵ(i/2)·sin(Ω).
+///     q: Node vector component tanᴵ(i/2)·cos(Ω).
+///     mean_longitude: Mean longitude λ as Angle.
+///     origin: Central body (default: Earth).
+///     frame: Reference frame (default: ICRF).
+///     retrograde: Use the retrograde set of elements (retrograde factor I = -1), which is
+///         singular at i = 0 instead of i = 180° (default: False).
+///
+/// Raises:
+///     ValueError: If the semi-major axis is not positive, an element is not finite, the orbit
+///         is not closed, or the frame is not quasi-inertial.
+#[pyclass(name = "Equinoctial", module = "lox_space", frozen)]
+pub struct PyEquinoctial(pub EquinoctialOrbit);
+
+#[pymethods]
+impl PyEquinoctial {
+    #[new]
+    #[pyo3(signature = (
+        time,
+        a,
+        h,
+        k,
+        p,
+        q,
+        mean_longitude,
+        origin=None,
+        frame=None,
+        retrograde=false,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        time: PyTime,
+        a: PyDistance,
+        h: f64,
+        k: f64,
+        p: f64,
+        q: f64,
+        mean_longitude: PyAngle,
+        origin: Option<&Bound<'_, PyAny>>,
+        frame: Option<&Bound<'_, PyAny>>,
+        retrograde: bool,
+    ) -> PyResult<Self> {
+        let (origin, frame) = origin_and_frame(origin, frame)?;
+        let state = Equinoctial::try_new(
+            a.0,
+            h,
+            k,
+            p,
+            q,
+            mean_longitude.0,
+            retrograde_factor(retrograde),
+        )
+        .map_err(value_error)?;
+        Ok(Self(
+            EquinoctialOrbit::try_new(state, time.0, origin, frame).map_err(value_error)?,
+        ))
+    }
+
+    /// Return the epoch of this orbit.
+    fn time(&self) -> PyTime {
+        PyTime(self.0.time())
+    }
+
+    /// Return the central body (origin) of this orbit.
+    fn origin(&self) -> PyOrigin {
+        PyOrigin(self.0.origin())
+    }
+
+    /// Return the reference frame.
+    fn frame(&self) -> PyFrame {
+        PyFrame(self.0.reference_frame())
+    }
+
+    /// Return the semi-major axis `a`.
+    fn a(&self) -> PyDistance {
+        PyDistance(self.0.state().a())
+    }
+
+    /// Return `h` = e·sin(ω + I·Ω).
+    fn h(&self) -> f64 {
+        self.0.state().h()
+    }
+
+    /// Return `k` = e·cos(ω + I·Ω).
+    fn k(&self) -> f64 {
+        self.0.state().k()
+    }
+
+    /// Return `p` = tanᴵ(i/2)·sin(Ω).
+    fn p(&self) -> f64 {
+        self.0.state().p()
+    }
+
+    /// Return `q` = tanᴵ(i/2)·cos(Ω).
+    fn q(&self) -> f64 {
+        self.0.state().q()
+    }
+
+    /// Return the mean longitude λ = M + ω + I·Ω.
+    fn mean_longitude(&self) -> PyAngle {
+        PyAngle(self.0.state().lambda())
+    }
+
+    /// Return the true longitude L = ν + ω + I·Ω, in the same revolution as the mean longitude.
+    fn true_longitude(&self) -> PyAngle {
+        PyAngle(self.0.state().true_longitude())
+    }
+
+    /// Return the eccentric longitude F = E + ω + I·Ω, in the same revolution as the mean
+    /// longitude.
+    fn eccentric_longitude(&self) -> PyAngle {
+        PyAngle(self.0.state().eccentric_longitude())
+    }
+
+    /// Return whether the elements use the retrograde set (retrograde factor I = -1).
+    fn retrograde(&self) -> bool {
+        self.0.state().retrograde_factor() == RetrogradeFactor::Retrograde
+    }
+
+    /// Return the orbital eccentricity.
+    fn eccentricity(&self) -> f64 {
+        self.0.state().eccentricity().as_f64()
+    }
+
+    /// Return the orbital inclination.
+    fn inclination(&self) -> PyAngle {
+        PyAngle(self.0.state().inclination().as_angle())
+    }
+
+    /// Convert these equinoctial elements to a Cartesian state.
+    ///
+    /// Returns:
+    ///     Cartesian state representing this orbit.
+    fn to_cartesian(&self) -> PyResult<PyCartesian> {
+        Ok(PyCartesian(
+            self.0
+                .try_to_cartesian()
+                .map_err(PyUndefinedOriginPropertyError)?,
+        ))
+    }
+
+    /// Convert these equinoctial elements to Keplerian orbital elements.
+    ///
+    /// Returns:
+    ///     Keplerian elements representing this orbit.
+    fn to_keplerian(&self) -> PyKeplerian {
+        PyKeplerian(self.0.to_keplerian())
+    }
+
+    /// Convert these equinoctial elements to modified equinoctial elements.
+    ///
+    /// Returns:
+    ///     Modified equinoctial elements representing this orbit.
+    fn to_modified_equinoctial(&self) -> PyModifiedEquinoctial {
+        PyModifiedEquinoctial(self.0.to_modified_equinoctial())
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "Equinoctial({}, {}, {}, {}, {}, {}, {}, origin={}, frame={}, retrograde={})",
+            self.time().__repr__(),
+            self.a().__repr__(),
+            repr_f64(self.h()),
+            repr_f64(self.k()),
+            repr_f64(self.p()),
+            repr_f64(self.q()),
+            self.mean_longitude().__repr__(),
+            self.origin().__repr__(),
+            self.frame().__repr__(),
+            if self.retrograde() { "True" } else { "False" },
+        )
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__()
+    }
+}
+
 /// Represents an orbit using Modified Equinoctial Elements (MEE).
 ///
-/// Modified Equinoctial Elements are non-singular for circular (e = 0) and equatorial (i = 0)
-/// orbits. They also fully support parabolic (e = 1) orbits.
+/// Modified Equinoctial Elements are non-singular for circular (e = 0), equatorial (i = 0 or
+/// i = 180°), and parabolic (e = 1) orbits.
+///
+/// The elements are f = e·cos(ω + I·Ω), g = e·sin(ω + I·Ω), h = tanᴵ(i/2)·cos(Ω),
+/// k = tanᴵ(i/2)·sin(Ω), and the true longitude l = ν + ω + I·Ω, where the retrograde factor
+/// I is -1 for the retrograde set and +1 otherwise.
 ///
 /// Args:
 ///     time: Epoch of the elements.
 ///     p: Semi-latus rectum (semi-parameter) as Distance.
-///     f: Eccentricity vector component 1.
-///     g: Eccentricity vector component 2.
-///     h: Node vector component 1.
-///     k: Node vector component 2.
+///     f: Eccentricity vector component e·cos(ω + I·Ω).
+///     g: Eccentricity vector component e·sin(ω + I·Ω).
+///     h: Node vector component tanᴵ(i/2)·cos(Ω).
+///     k: Node vector component tanᴵ(i/2)·sin(Ω).
 ///     l: True longitude as Angle.
 ///     origin: Central body (default: Earth).
 ///     frame: Reference frame (default: ICRF).
 ///     retrograde: Use the retrograde set of elements (retrograde factor I = -1), which is
-///         singular at i = 0 instead of i = π (default: False).
+///         singular at i = 0 instead of i = 180° (default: False).
 ///
 /// Raises:
-///     ValueError: If the semi-parameter is not positive, an element is not finite, or the
-///         true longitude lies outside the asymptotes of an open orbit.
-#[pyclass(
-    name = "ModifiedEquinoctial",
-    module = "lox_space",
-    frozen,
-    from_py_object
-)]
-#[derive(Debug, Clone)]
-pub struct PyModifiedEquinoctial {
-    pub(crate) state: ModifiedEquinoctial,
-    pub(crate) time: PyTime,
-    pub(crate) origin: PyOrigin,
-    pub(crate) frame: PyFrame,
-}
+///     ValueError: If the semi-parameter is not positive, an element is not finite, the
+///         true longitude lies outside the asymptotes of an open orbit, or the frame is not
+///         quasi-inertial.
+#[pyclass(name = "ModifiedEquinoctial", module = "lox_space", frozen)]
+pub struct PyModifiedEquinoctial(pub ModifiedEquinoctialOrbit);
 
 #[pymethods]
 impl PyModifiedEquinoctial {
@@ -1061,89 +1297,73 @@ impl PyModifiedEquinoctial {
         frame: Option<&Bound<'_, PyAny>>,
         retrograde: bool,
     ) -> PyResult<Self> {
-        let origin = origin
-            .map(PyOrigin::try_from)
-            .transpose()?
-            .unwrap_or(PyOrigin(lox_bodies::Earth.into()));
-        let frame = frame
-            .map(PyFrame::try_from)
-            .transpose()?
-            .unwrap_or(PyFrame(Frame::Icrf));
-
-        let retrograde_factor = if retrograde {
-            RetrogradeFactor::Retrograde
-        } else {
-            RetrogradeFactor::Prograde
-        };
-        let state = ModifiedEquinoctial::try_new(p.0, f, g, h, k, l.0, retrograde_factor)
-            .map_err(|err| PyValueError::new_err(err.to_string()))?;
-
-        Ok(Self {
-            state,
-            time,
-            origin,
-            frame,
-        })
+        let (origin, frame) = origin_and_frame(origin, frame)?;
+        let state =
+            ModifiedEquinoctial::try_new(p.0, f, g, h, k, l.0, retrograde_factor(retrograde))
+                .map_err(value_error)?;
+        Ok(Self(
+            ModifiedEquinoctialOrbit::try_new(state, time.0, origin, frame).map_err(value_error)?,
+        ))
     }
 
     /// Return the epoch of this orbit.
     fn time(&self) -> PyTime {
-        self.time.clone()
-    }
-
-    /// Return the semi-latus rectum (semi-parameter) `p`.
-    fn p(&self) -> PyDistance {
-        PyDistance(self.state.p())
-    }
-
-    /// Return `f` = e·cos(ω + I·Ω).
-    fn f(&self) -> f64 {
-        self.state.f()
-    }
-
-    /// Return `g` = e·sin(ω + I·Ω).
-    fn g(&self) -> f64 {
-        self.state.g()
-    }
-
-    /// Return `h` = tanᴵ(i/2)·cos(Ω).
-    fn h(&self) -> f64 {
-        self.state.h()
-    }
-
-    /// Return `k` = tanᴵ(i/2)·sin(Ω).
-    fn k(&self) -> f64 {
-        self.state.k()
-    }
-
-    /// Return the true longitude `l` = ν + ω + I·Ω.
-    fn l(&self) -> PyAngle {
-        PyAngle(self.state.l())
-    }
-
-    /// Return whether the elements use the retrograde set (retrograde factor I = -1).
-    fn retrograde(&self) -> bool {
-        self.state.retrograde_factor() == RetrogradeFactor::Retrograde
-    }
-
-    /// Return the orbital eccentricity.
-    fn eccentricity(&self) -> f64 {
-        self.state.eccentricity().as_f64()
-    }
-
-    /// Return the orbital inclination.
-    fn inclination(&self) -> PyAngle {
-        PyAngle(self.state.inclination().as_angle())
+        PyTime(self.0.time())
     }
 
     /// Return the central body (origin) of this orbit.
     fn origin(&self) -> PyOrigin {
-        self.origin.clone()
+        PyOrigin(self.0.origin())
     }
 
     /// Return the reference frame.
     fn frame(&self) -> PyFrame {
-        self.frame.clone()
+        PyFrame(self.0.reference_frame())
+    }
+
+    /// Return the semi-latus rectum (semi-parameter) `p`.
+    fn p(&self) -> PyDistance {
+        PyDistance(self.0.state().p())
+    }
+
+    /// Return `f` = e·cos(ω + I·Ω).
+    fn f(&self) -> f64 {
+        self.0.state().f()
+    }
+
+    /// Return `g` = e·sin(ω + I·Ω).
+    fn g(&self) -> f64 {
+        self.0.state().g()
+    }
+
+    /// Return `h` = tanᴵ(i/2)·cos(Ω).
+    fn h(&self) -> f64 {
+        self.0.state().h()
+    }
+
+    /// Return `k` = tanᴵ(i/2)·sin(Ω).
+    fn k(&self) -> f64 {
+        self.0.state().k()
+    }
+
+    /// Return the true longitude `l` = ν + ω + I·Ω.
+    fn l(&self) -> PyAngle {
+        PyAngle(self.0.state().l())
+    }
+
+    /// Return whether the elements use the retrograde set (retrograde factor I = -1).
+    fn retrograde(&self) -> bool {
+        self.0.state().retrograde_factor() == RetrogradeFactor::Retrograde
+    }
+
+    /// Return the orbital eccentricity.
+    fn eccentricity(&self) -> f64 {
+        self.0.state().eccentricity().as_f64()
+    }
+
+    /// Return the orbital inclination.
+    fn inclination(&self) -> PyAngle {
+        PyAngle(self.0.state().inclination().as_angle())
     }
 
     /// Convert these modified equinoctial elements to a Cartesian state.
@@ -1151,35 +1371,33 @@ impl PyModifiedEquinoctial {
     /// Returns:
     ///     Cartesian state representing this orbit.
     fn to_cartesian(&self) -> PyResult<PyCartesian> {
-        let mu = self
-            .origin
-            .0
-            .try_gravitational_parameter()
-            .map_err(PyUndefinedOriginPropertyError)?;
-        let cart = self.state.to_cartesian(mu);
-        Ok(PyCartesian(crate::orbits::CartesianOrbit::from_state(
-            cart,
-            self.time.0,
-            self.origin.0,
-            self.frame.0,
-        )))
+        Ok(PyCartesian(
+            self.0
+                .try_to_cartesian()
+                .map_err(PyUndefinedOriginPropertyError)?,
+        ))
     }
 
     /// Convert these modified equinoctial elements to Keplerian orbital elements.
     ///
     /// Returns:
     ///     Keplerian elements representing this orbit.
+    ///
+    /// Raises:
+    ///     ValueError: If the elements of an open orbit lie too close to its asymptotes.
     fn to_keplerian(&self) -> PyResult<PyKeplerian> {
-        let kep = self
-            .state
-            .to_keplerian()
-            .map_err(|err| PyValueError::new_err(err.to_string()))?;
-        Ok(PyKeplerian(crate::orbits::KeplerianOrbit::from_state(
-            kep,
-            self.time.0,
-            self.origin.0,
-            self.frame.0,
-        )))
+        Ok(PyKeplerian(self.0.to_keplerian().map_err(value_error)?))
+    }
+
+    /// Convert these modified equinoctial elements to equinoctial elements.
+    ///
+    /// Returns:
+    ///     Equinoctial elements representing this orbit.
+    ///
+    /// Raises:
+    ///     ValueError: If the orbit is not closed.
+    fn to_equinoctial(&self) -> PyResult<PyEquinoctial> {
+        Ok(PyEquinoctial(self.0.to_equinoctial().map_err(value_error)?))
     }
 
     fn __repr__(&self) -> String {
@@ -1256,14 +1474,7 @@ impl PyTrajectory {
         origin: Option<&Bound<'_, PyAny>>,
         frame: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<Self> {
-        let origin = origin
-            .map(PyOrigin::try_from)
-            .transpose()?
-            .unwrap_or_default();
-        let frame = frame
-            .map(PyFrame::try_from)
-            .transpose()?
-            .unwrap_or_default();
+        let (origin, frame) = origin_and_frame(origin, frame)?;
         let array = array.to_owned_array();
         if array.ncols() != 7 {
             return Err(PyValueError::new_err("invalid shape"));
@@ -1278,8 +1489,8 @@ impl PyTrajectory {
             states.push(CartesianOrbit::new(
                 Cartesian::from_vecs(position, velocity),
                 time,
-                origin.0,
-                frame.0,
+                origin,
+                frame,
             ));
         }
         Ok(PyTrajectory(

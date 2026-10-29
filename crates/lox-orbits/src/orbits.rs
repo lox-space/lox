@@ -7,19 +7,23 @@ pub mod builders;
 mod cartesian;
 /// Collections of named trajectories.
 pub mod ensemble;
+mod equinoctial;
 mod keplerian;
+mod modified_equinoctial;
 /// Sun-synchronous orbit construction.
 pub mod sso;
 mod trajectory;
 
 pub use cartesian::{StateToGroundError, ToKeplerianError};
 pub use ensemble::Ensemble;
+pub use equinoctial::ToEquinoctialError;
+pub use modified_equinoctial::ToModifiedEquinoctialError;
 pub use trajectory::{Trajectory, TrajectoryError, TrajectoryTransformationError};
 
 use lox_bodies::{CoordinateOrigin, Origin, PointMass, TryPointMass, UndefinedOriginPropertyError};
 use lox_core::{
     coords::Cartesian,
-    elements::{GravitationalParameter, Keplerian},
+    elements::{Equinoctial, GravitationalParameter, Keplerian, ModifiedEquinoctial},
 };
 use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
@@ -88,6 +92,15 @@ where
         self.frame
     }
 
+    /// Returns an orbit with the same epoch, origin, and frame but a different state.
+    pub(crate) fn with_state<S1>(&self, state: S1) -> Orbit<S1, O, R>
+    where
+        O: Copy,
+        R: Copy,
+    {
+        Orbit::from_state(state, self.time, self.origin, self.frame)
+    }
+
     /// Returns the gravitational parameter of the origin, or an error if undefined.
     pub fn try_gravitational_parameter(
         &self,
@@ -126,3 +139,9 @@ pub type CartesianOrbit<O = Origin, R = Frame> = Orbit<Cartesian, O, R>;
 
 /// An orbit with classical Keplerian elements state.
 pub type KeplerianOrbit<O = Origin, R = Frame> = Orbit<Keplerian, O, R>;
+
+/// An orbit with equinoctial elements state.
+pub type EquinoctialOrbit<O = Origin, R = Frame> = Orbit<Equinoctial, O, R>;
+
+/// An orbit with modified equinoctial elements state.
+pub type ModifiedEquinoctialOrbit<O = Origin, R = Frame> = Orbit<ModifiedEquinoctial, O, R>;

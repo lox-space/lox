@@ -631,3 +631,136 @@ def test_modified_equinoctial_retrograde():
     npt.assert_allclose(
         rebuilt.to_cartesian().position(), kep.to_cartesian().position(), atol=1e-6
     )
+
+
+# --- Equinoctial tests ---
+
+
+def _general_keplerian(time, inclination=51.6 * lox.deg):
+    return lox.Keplerian(
+        time,
+        semi_major_axis=24464.56 * lox.km,
+        eccentricity=0.7311,
+        inclination=inclination,
+        longitude_of_ascending_node=57.7 * lox.deg,
+        argument_of_periapsis=178.0 * lox.deg,
+        true_anomaly=25.4 * lox.deg,
+    )
+
+
+def test_equinoctial_construction():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    eq = lox.Equinoctial(
+        time,
+        a=7000.0 * lox.km,
+        h=0.0,
+        k=0.0,
+        p=0.0,
+        q=0.0,
+        mean_longitude=90.0 * lox.deg,
+        origin="Earth",
+        frame="ICRF",
+    )
+    assert eq.a().to_kilometers() == pytest.approx(7000.0)
+    assert eq.mean_longitude().to_degrees() == pytest.approx(90.0)
+    assert eq.true_longitude().to_degrees() == pytest.approx(90.0)
+    assert eq.eccentric_longitude().to_degrees() == pytest.approx(90.0)
+    assert eq.eccentricity() == pytest.approx(0.0)
+    assert eq.inclination().to_degrees() == pytest.approx(0.0)
+    assert not eq.retrograde()
+    assert eq.origin().name() == "Earth"
+    assert repr(eq).startswith("Equinoctial(")
+    assert str(eq) == repr(eq)
+
+    pos = eq.to_cartesian().position()
+    npt.assert_allclose(pos, [0.0, 7000e3, 0.0], atol=1e-5)
+
+
+@pytest.mark.parametrize("inclination", [0.0, 51.6, 98.0, 180.0])
+def test_equinoctial_conversions_preserve_state(inclination):
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    kep = _general_keplerian(time, inclination * lox.deg)
+    expected = kep.to_cartesian()
+
+    for eq in [
+        kep.to_equinoctial(),
+        expected.to_equinoctial(),
+        kep.to_modified_equinoctial().to_equinoctial(),
+    ]:
+        assert eq.retrograde() == (inclination > 90.0)
+        assert eq.inclination().to_degrees() == pytest.approx(inclination, abs=1e-9)
+        for actual in [
+            eq.to_cartesian(),
+            eq.to_keplerian().to_cartesian(),
+            eq.to_modified_equinoctial().to_cartesian(),
+        ]:
+            npt.assert_allclose(actual.position(), expected.position(), rtol=1e-10, atol=1e-6)
+            npt.assert_allclose(actual.velocity(), expected.velocity(), rtol=1e-10, atol=1e-9)
+
+
+def test_equinoctial_broucke_cefola_definitions():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    e, i, node, periapsis = 0.1, 0.5, 1.0, 2.0
+    kep = lox.Keplerian(
+        time,
+        semi_major_axis=12000.0 * lox.km,
+        eccentricity=e,
+        inclination=i * lox.rad,
+        longitude_of_ascending_node=node * lox.rad,
+        argument_of_periapsis=periapsis * lox.rad,
+    )
+    eq = kep.to_equinoctial()
+    assert eq.h() == pytest.approx(e * math.sin(periapsis + node))
+    assert eq.k() == pytest.approx(e * math.cos(periapsis + node))
+    assert eq.p() == pytest.approx(math.tan(i / 2) * math.sin(node))
+    assert eq.q() == pytest.approx(math.tan(i / 2) * math.cos(node))
+
+
+def test_equinoctial_errors():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+
+    with pytest.raises(ValueError, match="semi-major axis must be finite and positive"):
+        lox.Equinoctial(time, -7000.0 * lox.km, 0.0, 0.0, 0.0, 0.0, 0.0 * lox.deg)
+    with pytest.raises(ValueError, match="circular or elliptic"):
+        lox.Equinoctial(time, 7000.0 * lox.km, 0.0, 1.5, 0.0, 0.0, 0.0 * lox.deg)
+    with pytest.raises(ValueError, match="quasi-inertial"):
+        lox.Equinoctial(
+            time, 7000.0 * lox.km, 0.0, 0.0, 0.0, 0.0, 0.0 * lox.deg, frame="ITRF"
+        )
+
+    hyperbolic = lox.Keplerian(
+        time, semi_parameter=20000.0 * lox.km, eccentricity=1.5
+    )
+    with pytest.raises(ValueError, match="circular or elliptic"):
+        hyperbolic.to_equinoctial()
+    with pytest.raises(ValueError, match="circular or elliptic"):
+        hyperbolic.to_cartesian().to_equinoctial()
+    with pytest.raises(ValueError, match="circular or elliptic"):
+        hyperbolic.to_modified_equinoctial().to_equinoctial()
+
+    no_mu = lox.Equinoctial(
+        time, 7000.0 * lox.km, 0.0, 0.0, 0.0, 0.0, 0.0 * lox.deg, origin="Itokawa"
+    )
+    with pytest.raises(lox.UndefinedOriginPropertyError):
+        no_mu.to_cartesian()
+
+
+def test_modified_equinoctial_rejects_rotating_frame():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    with pytest.raises(ValueError, match="quasi-inertial"):
+        lox.ModifiedEquinoctial(
+            time, 7000.0 * lox.km, 0.0, 0.0, 0.0, 0.0, 0.0 * lox.deg, frame="ITRF"
+        )
+
+
+@pytest.mark.parametrize("method", ["to_equinoctial", "to_modified_equinoctial"])
+def test_equinoctial_conversions_reject_rotating_frame(method):
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    cart = lox.Cartesian(
+        time,
+        position=[7000e3, 0.0, 0.0],
+        velocity=[0.0, 7500.0, 0.0],
+        frame="ITRF",
+    )
+    with pytest.raises(ValueError, match="quasi-inertial"):
+        getattr(cart, method)()

@@ -196,12 +196,7 @@ where
         O: Copy + PointMass,
         R: Copy,
     {
-        Orbit::from_state(
-            self.state().to_cartesian(self.gravitational_parameter()),
-            self.time(),
-            self.origin(),
-            self.reference_frame(),
-        )
+        self.with_state(self.state().to_cartesian(self.gravitational_parameter()))
     }
 
     /// Converts this Keplerian orbit to Cartesian, returning an error if the gravitational parameter is undefined.
@@ -210,12 +205,9 @@ where
         O: Copy + TryPointMass,
         R: Copy,
     {
-        Ok(Orbit::from_state(
+        Ok(self.with_state(
             self.state()
                 .to_cartesian(self.try_gravitational_parameter()?),
-            self.time(),
-            self.origin(),
-            self.reference_frame(),
         ))
     }
 

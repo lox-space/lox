@@ -44,6 +44,7 @@ __all__ = [
     "EopParserError",
     "EOPProvider",
     "EopProviderError",
+    "Equinoctial",
     "Event",
     "Frame",
     "FrameTransformationError",
@@ -1477,7 +1478,21 @@ class Cartesian:
         """
         ...
     def to_modified_equinoctial(self) -> ModifiedEquinoctial:
-        """Convert this Cartesian state to modified equinoctial elements."""
+        """Convert this Cartesian state to modified equinoctial elements.
+
+        Raises:
+            UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+            ValueError: If the frame is not quasi-inertial or the state has zero angular momentum.
+        """
+        ...
+    def to_equinoctial(self) -> Equinoctial:
+        """Convert this Cartesian state to equinoctial elements.
+
+        Raises:
+            UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+            ValueError: If the frame is not quasi-inertial, the orbit is not closed, or the state
+                has zero angular momentum.
+        """
         ...
     def rotation_lvlh(self) -> np.ndarray:
         """Compute the rotation matrix from inertial to LVLH frame."""
@@ -1754,33 +1769,151 @@ class Keplerian:
     def to_modified_equinoctial(self) -> ModifiedEquinoctial:
         """Convert these Keplerian elements to modified equinoctial elements."""
         ...
+    def to_equinoctial(self) -> Equinoctial:
+        """Convert these Keplerian elements to equinoctial elements.
+
+        Raises:
+            ValueError: If the orbit is not closed.
+        """
+        ...
     def orbital_period(self) -> TimeDelta:
         """Return the orbital period."""
+        ...
+
+@final
+class Equinoctial:
+    """Represents an orbit using equinoctial elements.
+
+    Equinoctial elements are non-singular for circular (e = 0) and equatorial (i = 0 or
+    i = 180°) orbits. They are defined for closed orbits only; use `ModifiedEquinoctial` for
+    open orbits.
+
+    The elements are h = e·sin(ω + I·Ω), k = e·cos(ω + I·Ω), p = tanᴵ(i/2)·sin(Ω),
+    q = tanᴵ(i/2)·cos(Ω), and the mean longitude λ = M + ω + I·Ω, where the retrograde factor
+    I is -1 for the retrograde set and +1 otherwise.
+
+    Args:
+        time: Epoch of the elements.
+        a: Semi-major axis as Distance.
+        h: Eccentricity vector component e·sin(ω + I·Ω).
+        k: Eccentricity vector component e·cos(ω + I·Ω).
+        p: Node vector component tanᴵ(i/2)·sin(Ω).
+        q: Node vector component tanᴵ(i/2)·cos(Ω).
+        mean_longitude: Mean longitude λ as Angle.
+        origin: Central body (default: Earth).
+        frame: Reference frame (default: ICRF).
+        retrograde: Use the retrograde set of elements (retrograde factor I = -1), which is
+            singular at i = 0 instead of i = 180° (default: False).
+
+    Raises:
+        ValueError: If the semi-major axis is not positive, an element is not finite, the orbit
+            is not closed, or the frame is not quasi-inertial.
+
+    Examples:
+        >>> t = lox.Time("TAI", 2024, 1, 1)
+        >>> eq = lox.Equinoctial(
+        ...     t,
+        ...     a=7000.0 * lox.km,
+        ...     h=0.001,
+        ...     k=0.0,
+        ...     p=0.2,
+        ...     q=0.3,
+        ...     mean_longitude=45.0 * lox.deg,
+        ... )
+    """
+    def __new__(
+        cls,
+        time: Time,
+        a: Distance,
+        h: float,
+        k: float,
+        p: float,
+        q: float,
+        mean_longitude: Angle,
+        origin: str | int | Origin | None = None,
+        frame: str | Frame | None = None,
+        retrograde: bool = False,
+    ) -> Self: ...
+    def time(self) -> Time:
+        """Return the epoch of this orbit."""
+        ...
+    def origin(self) -> Origin:
+        """Return the central body (origin) of this orbit."""
+        ...
+    def frame(self) -> Frame:
+        """Return the reference frame."""
+        ...
+    def a(self) -> Distance:
+        """Return the semi-major axis `a`."""
+        ...
+    def h(self) -> float:
+        """Return `h` = e·sin(ω + I·Ω)."""
+        ...
+    def k(self) -> float:
+        """Return `k` = e·cos(ω + I·Ω)."""
+        ...
+    def p(self) -> float:
+        """Return `p` = tanᴵ(i/2)·sin(Ω)."""
+        ...
+    def q(self) -> float:
+        """Return `q` = tanᴵ(i/2)·cos(Ω)."""
+        ...
+    def mean_longitude(self) -> Angle:
+        """Return the mean longitude λ = M + ω + I·Ω."""
+        ...
+    def true_longitude(self) -> Angle:
+        """Return the true longitude L = ν + ω + I·Ω, in the same revolution as the mean longitude."""
+        ...
+    def eccentric_longitude(self) -> Angle:
+        """Return the eccentric longitude F = E + ω + I·Ω, in the same revolution as the mean longitude."""
+        ...
+    def retrograde(self) -> bool:
+        """Return whether the elements use the retrograde set (retrograde factor I = -1)."""
+        ...
+    def eccentricity(self) -> float:
+        """Return the orbital eccentricity."""
+        ...
+    def inclination(self) -> Angle:
+        """Return the orbital inclination."""
+        ...
+    def to_cartesian(self) -> Cartesian:
+        """Convert these equinoctial elements to a Cartesian state."""
+        ...
+    def to_keplerian(self) -> Keplerian:
+        """Convert these equinoctial elements to Keplerian orbital elements."""
+        ...
+    def to_modified_equinoctial(self) -> ModifiedEquinoctial:
+        """Convert these equinoctial elements to modified equinoctial elements."""
         ...
 
 @final
 class ModifiedEquinoctial:
     """Represents an orbit using Modified Equinoctial Elements (MEE).
 
-    Modified Equinoctial Elements are non-singular for circular (e = 0) and equatorial (i = 0)
-    orbits. They also fully support parabolic (e = 1) orbits.
+    Modified Equinoctial Elements are non-singular for circular (e = 0), equatorial (i = 0 or
+    i = 180°), and parabolic (e = 1) orbits.
+
+    The elements are f = e·cos(ω + I·Ω), g = e·sin(ω + I·Ω), h = tanᴵ(i/2)·cos(Ω),
+    k = tanᴵ(i/2)·sin(Ω), and the true longitude l = ν + ω + I·Ω, where the retrograde factor
+    I is -1 for the retrograde set and +1 otherwise.
 
     Args:
         time: Epoch of the elements.
         p: Semi-latus rectum (semi-parameter) as Distance.
-        f: Eccentricity vector component 1.
-        g: Eccentricity vector component 2.
-        h: Node vector component 1.
-        k: Node vector component 2.
+        f: Eccentricity vector component e·cos(ω + I·Ω).
+        g: Eccentricity vector component e·sin(ω + I·Ω).
+        h: Node vector component tanᴵ(i/2)·cos(Ω).
+        k: Node vector component tanᴵ(i/2)·sin(Ω).
         l: True longitude as Angle.
         origin: Central body (default: Earth).
         frame: Reference frame (default: ICRF).
         retrograde: Use the retrograde set of elements (retrograde factor I = -1), which is
-            singular at i = 0 instead of i = π (default: False).
+            singular at i = 0 instead of i = 180° (default: False).
 
     Raises:
-        ValueError: If the semi-parameter is not positive, an element is not finite, or the
-            true longitude lies outside the asymptotes of an open orbit.
+        ValueError: If the semi-parameter is not positive, an element is not finite, the
+            true longitude lies outside the asymptotes of an open orbit, or the frame is not
+            quasi-inertial.
 
     Examples:
         >>> t = lox.Time("TAI", 2024, 1, 1)
@@ -1847,7 +1980,18 @@ class ModifiedEquinoctial:
         """Convert these modified equinoctial elements to a Cartesian state."""
         ...
     def to_keplerian(self) -> Keplerian:
-        """Convert these modified equinoctial elements to Keplerian orbital elements."""
+        """Convert these modified equinoctial elements to Keplerian orbital elements.
+
+        Raises:
+            ValueError: If the elements of an open orbit lie too close to its asymptotes.
+        """
+        ...
+    def to_equinoctial(self) -> Equinoctial:
+        """Convert these modified equinoctial elements to equinoctial elements.
+
+        Raises:
+            ValueError: If the orbit is not closed.
+        """
         ...
 
 @final
