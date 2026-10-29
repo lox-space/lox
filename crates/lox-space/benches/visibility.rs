@@ -245,7 +245,11 @@ fn to_passes(bencher: Bencher) {
     let results = VisibilityAnalysis::new(&scenario, &ensemble)
         .compute()
         .unwrap();
-    bencher.bench(|| VisibilityAnalysis::new(&scenario, &ensemble).to_passes(&results));
+    bencher.bench(|| {
+        VisibilityAnalysis::new(&scenario, &ensemble)
+            .to_passes(&results)
+            .unwrap()
+    });
 }
 
 #[divan::bench(sample_size = 1000)]
@@ -253,7 +257,7 @@ fn pass_interpolate(bencher: Bencher) {
     let (scenario, ensemble) = common::setup_dynamic();
     let analysis = VisibilityAnalysis::new(&scenario, &ensemble);
     let results = analysis.compute().unwrap();
-    let passes = analysis.to_passes(&results);
+    let passes = analysis.to_passes(&results).unwrap();
     let pass = passes.values().flatten().next().expect("at least one pass");
     // Interpolate at the middle sample time of the pass.
     let times = pass.times();

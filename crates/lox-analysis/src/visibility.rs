@@ -240,6 +240,10 @@ pub enum PassError {
     )]
     /// Passes are not supported for inter-satellite pairs; use intervals instead.
     InterSatellitePair(String, String),
+    /// Evaluating the observables failed, e.g. because the pass interval lies
+    /// outside of the trajectory.
+    #[error(transparent)]
+    Eval(#[from] EvalError),
 }
 
 // ---------------------------------------------------------------------------
@@ -267,22 +271,25 @@ impl Pass {
     /// the satellite is above the station's elevation threshold.
     ///
     /// Returns `None` if the satellite is never above the threshold within the interval.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PassError::Eval`] if the interval lies outside of the trajectory
+    /// or the state cannot be rotated into the station's frame.
     pub fn from_interval(
         interval: TimeInterval<TimeScale>,
         time_resolution: TimeDelta,
         gs: &GroundStation,
         sc: &lox_orbits::orbits::Trajectory,
-    ) -> Option<Pass> {
+    ) -> Result<Option<Pass>, PassError> {
         let mut pass_times = Vec::new();
         let mut pass_observables = Vec::new();
 
         for current_time in interval.step_by(time_resolution) {
-            let state = sc
-                .at(current_time)
-                .expect("pass interval lies within the trajectory");
+            let state = sc.state_at(current_time).map_err(EvalError::from)?;
             let state_bf = state
                 .try_to_frame(gs.location().frame(), &DefaultRotationProvider)
-                .unwrap();
+                .map_err(|e| EvalError::Rotation(Box::new(e)))?;
             let obs = gs.location().observables(state_bf);
 
             if obs.elevation() >= gs.threshold_at(obs.azimuth()) {
@@ -292,10 +299,10 @@ impl Pass {
         }
 
         if pass_times.is_empty() {
-            return None;
+            return Ok(None);
         }
 
-        Pass::try_new(interval, pass_times, pass_observables).ok()
+        Ok(Pass::try_new(interval, pass_times, pass_observables).ok())
     }
 }
 
@@ -1023,22 +1030,19 @@ impl VisibilityResults {
                 space_id.as_str().to_string(),
             ));
         }
-        Ok(self
-            .intervals
-            .get(&key)
-            .map(|intervals| {
-                intervals
-                    .iter()
-                    .filter_map(|interval| {
-                        let dynamic_interval = TimeInterval::new(
-                            interval.start().into_dynamic(),
-                            interval.end().into_dynamic(),
-                        );
-                        Pass::from_interval(dynamic_interval, time_resolution, gs, sc)
-                    })
-                    .collect()
+        let Some(intervals) = self.intervals.get(&key) else {
+            return Ok(Vec::new());
+        };
+        intervals
+            .iter()
+            .filter_map(|interval| {
+                let dynamic_interval = TimeInterval::new(
+                    interval.start().into_dynamic(),
+                    interval.end().into_dynamic(),
+                );
+                Pass::from_interval(dynamic_interval, time_resolution, gs, sc).transpose()
             })
-            .unwrap_or_default())
+            .collect()
     }
 }
 
@@ -1169,7 +1173,15 @@ where
     ///
     /// Inter-satellite pairs are skipped since passes with ground-station
     /// observables are not meaningful for them.
-    pub fn to_passes(&self, results: &VisibilityResults) -> HashMap<(AssetId, AssetId), Vec<Pass>> {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PassError::Eval`] if the observables of a pass cannot be
+    /// evaluated. See [`Pass::from_interval`].
+    pub fn to_passes(
+        &self,
+        results: &VisibilityResults,
+    ) -> Result<HashMap<(AssetId, AssetId), Vec<Pass>>, PassError> {
         let gs_map: HashMap<&AssetId, &GroundStation> = self
             .scenario
             .ground_stations()
@@ -1184,16 +1196,16 @@ where
                 let gs = gs_map.get(gs_id)?;
                 let sc_traj = self.ensemble.get(sc_id)?;
                 let intervals = results.intervals_for(gs_id, sc_id)?;
-                let passes: Vec<Pass> = intervals
+                let passes: Result<Vec<Pass>, PassError> = intervals
                     .iter()
                     .filter_map(|interval| {
                         // The trajectory may carry typed origin/frame; erase them
                         // for pass computation.
                         let dynamic_traj = sc_traj.clone().into_dynamic();
-                        Pass::from_interval(*interval, self.step, gs, &dynamic_traj)
+                        Pass::from_interval(*interval, self.step, gs, &dynamic_traj).transpose()
                     })
                     .collect();
-                Some(((gs_id.clone(), sc_id.clone()), passes))
+                Some(passes.map(|passes| ((gs_id.clone(), sc_id.clone()), passes)))
             })
             .collect()
     }
@@ -1920,7 +1932,7 @@ mod tests {
         let analysis = VisibilityAnalysis::new(&scenario, &ensemble)
             .with_occulting_bodies(spk, vec![Origin::Moon]);
         let results = analysis.compute().unwrap();
-        let passes = analysis.to_passes(&results);
+        let passes = analysis.to_passes(&results).unwrap();
         let key = (gs.id().clone(), sc.id().clone());
         let pair_passes = &passes[&key];
         let expected = contacts_combined();
@@ -1944,7 +1956,7 @@ mod tests {
             make_scenario_and_ensemble(&ground_assets, &space_assets, interval);
         let analysis = VisibilityAnalysis::new(&scenario, &ensemble);
         let results = analysis.compute().unwrap();
-        let passes = analysis.to_passes(&results);
+        let passes = analysis.to_passes(&results).unwrap();
         let key = (gs.id().clone(), sc.id().clone());
         let pair_passes = &passes[&key];
 
@@ -2491,6 +2503,21 @@ mod tests {
             )
             .unwrap_err();
         assert!(matches!(err, PassError::InterSatellitePair(_, _)));
+    }
+
+    #[test]
+    fn test_pass_from_interval_outside_trajectory() {
+        let gs = GroundStation::new("cebreros", location_dynamic());
+        let sc_traj = spacecraft_trajectory_dynamic();
+        let start = sc_traj.start_time() - TimeDelta::from_seconds(1);
+        let interval = TimeInterval::new(start, sc_traj.end_time());
+
+        let err =
+            Pass::from_interval(interval, TimeDelta::from_seconds(60), &gs, &sc_traj).unwrap_err();
+        assert!(matches!(
+            err,
+            PassError::Eval(EvalError::Trajectory(TrajectoryError::OutOfRange(t))) if t == start
+        ));
     }
 
     #[test]

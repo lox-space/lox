@@ -944,7 +944,8 @@ class VisibilityResults:
         elevation, range, and range rate for each time step.
 
         Raises:
-            ValueError: If the pair is an inter-satellite pair.
+            ValueError: If the pair is an inter-satellite pair, or the
+                observables of a pass cannot be computed.
 
         Args:
             ground_id: Ground asset identifier.
@@ -961,6 +962,9 @@ class VisibilityResults:
 
         Returns:
             Dictionary mapping (ground_id, space_id) to list of Pass objects.
+
+        Raises:
+            ValueError: If the observables of a pass cannot be computed.
         """
         ...
     def pair_ids(self) -> list[tuple[str, str]]:
