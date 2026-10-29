@@ -467,7 +467,7 @@ fn test_j2_propagator() {
         Earth,
         Icrf,
     );
-    let p = J2Propagator::try_new(orbit).unwrap();
+    let p = J2Propagator::try_new(orbit.to_keplerian().unwrap()).unwrap();
     round_trip_no_eq(&p);
 }
 
@@ -485,7 +485,7 @@ fn test_j4_propagator() {
         Earth,
         Icrf,
     );
-    let p = J4Propagator::try_new(orbit).unwrap();
+    let p = J4Propagator::try_new(orbit.to_keplerian().unwrap()).unwrap();
     round_trip_no_eq(&p);
 }
 
@@ -598,7 +598,7 @@ fn test_orbit_source_j2() {
         Earth,
         Icrf,
     );
-    let p = J2Propagator::try_new(orbit.into_dynamic()).unwrap();
+    let p = J2Propagator::try_new(orbit.to_keplerian().unwrap().into_dynamic()).unwrap();
     round_trip_no_eq(&OrbitSource::J2(p));
 }
 
@@ -617,7 +617,7 @@ fn test_orbit_source_j4() {
         Earth,
         Icrf,
     );
-    let p = J4Propagator::try_new(orbit.into_dynamic()).unwrap();
+    let p = J4Propagator::try_new(orbit.to_keplerian().unwrap().into_dynamic()).unwrap();
     round_trip_no_eq(&OrbitSource::J4(p));
 }
 

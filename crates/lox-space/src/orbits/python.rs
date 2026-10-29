@@ -1829,7 +1829,7 @@ impl PyNumericalPropagator {
 /// Analytical J2 orbit propagator (Kozai secular ± Kwok short-period).
 ///
 /// Args:
-///     initial_state: Initial orbital state (mean Keplerian elements).
+///     initial_state: Initial orbital state as mean Keplerian elements.
 ///     osculating: Enable Kwok short-period corrections (default: False).
 ///     step: Fixed time step for interval propagation (default: 60 seconds).
 #[pyclass(name = "J2", module = "lox_space", frozen, from_py_object)]
@@ -1841,11 +1841,12 @@ impl PyJ2Propagator {
     #[new]
     #[pyo3(signature = (initial_state, osculating=false, step=None))]
     fn new(
-        initial_state: PyCartesian,
+        initial_state: &Bound<'_, PyKeplerian>,
         osculating: bool,
         step: Option<PyTimeDelta>,
     ) -> PyResult<Self> {
-        let mut propagator = J2Propagator::try_new(initial_state.0)
+        let initial_orbit = initial_state.get().0;
+        let mut propagator = J2Propagator::try_new(initial_orbit)
             .map_err(|e| PyValueError::new_err(e.to_string()))?
             .with_osculating(osculating);
         if let Some(step) = step {
@@ -1897,7 +1898,7 @@ impl PyJ2Propagator {
 /// Analytical J4 orbit propagator (Kozai secular with J2²+J4 ± Kwok short-period).
 ///
 /// Args:
-///     initial_state: Initial orbital state (mean Keplerian elements).
+///     initial_state: Initial orbital state as mean Keplerian elements.
 ///     osculating: Enable Kwok short-period corrections (default: False).
 ///     step: Fixed time step for interval propagation (default: 60 seconds).
 #[pyclass(name = "J4", module = "lox_space", frozen, from_py_object)]
@@ -1909,11 +1910,12 @@ impl PyJ4Propagator {
     #[new]
     #[pyo3(signature = (initial_state, osculating=false, step=None))]
     fn new(
-        initial_state: PyCartesian,
+        initial_state: &Bound<'_, PyKeplerian>,
         osculating: bool,
         step: Option<PyTimeDelta>,
     ) -> PyResult<Self> {
-        let mut propagator = J4Propagator::try_new(initial_state.0)
+        let initial_orbit = initial_state.get().0;
+        let mut propagator = J4Propagator::try_new(initial_orbit)
             .map_err(|e| PyValueError::new_err(e.to_string()))?
             .with_osculating(osculating);
         if let Some(step) = step {

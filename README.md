@@ -39,9 +39,8 @@ sso = lox.Keplerian.sso(
     epoch, altitude=800 * lox.km, ltan=(10, 30), provider=provider
 )
 
-# Convert to Cartesian state and propagate with J2 perturbations
-state = sso.to_cartesian()
-j2 = lox.J2(state)
+# Propagate the mean elements with J2 perturbations
+j2 = lox.J2(sso)
 trajectory = j2.propagate(epoch, end=epoch + 100 * lox.minutes)
 ```
 
@@ -61,9 +60,8 @@ let sso = SsoBuilder::default()
     .build()
     .unwrap();
 
-// Convert to Cartesian state and propagate with J2 perturbations
-let state = sso.to_cartesian();
-let j2 = J2Propagator::try_new(state).unwrap();
+// Propagate the mean elements with J2 perturbations
+let j2 = J2Propagator::try_new(sso).unwrap();
 let end = epoch + TimeDelta::from_minutes(100);
 let trajectory = j2.propagate(Interval::new(epoch, end)).unwrap();
 ```

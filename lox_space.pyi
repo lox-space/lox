@@ -2267,13 +2267,13 @@ class J2:
     Works for all orbit types including circular (e = 0).
 
     Args:
-        initial_state: Initial orbital state (mean elements).
+        initial_state: Initial orbital state as mean Keplerian elements.
         osculating: Enable Kwok short-period corrections (default: False).
         step: Fixed time step for interval propagation (default: 60 seconds).
     """
     def __new__(
         cls,
-        initial_state: Cartesian,
+        initial_state: Keplerian,
         osculating: bool = False,
         step: TimeDelta | None = None,
     ) -> Self: ...
@@ -2320,13 +2320,13 @@ class J4:
     J2-only. Works for all orbit types including circular (e = 0).
 
     Args:
-        initial_state: Initial orbital state (mean elements).
+        initial_state: Initial orbital state as mean Keplerian elements.
         osculating: Enable Kwok short-period corrections (default: False).
         step: Fixed time step for interval propagation (default: 60 seconds).
     """
     def __new__(
         cls,
-        initial_state: Cartesian,
+        initial_state: Keplerian,
         osculating: bool = False,
         step: TimeDelta | None = None,
     ) -> Self: ...

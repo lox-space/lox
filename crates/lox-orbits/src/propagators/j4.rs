@@ -20,16 +20,14 @@ use lox_bodies::{
     CoordinateOrigin, Origin, TryJ2, TryJ4, TryPointMass, TrySpheroid, UndefinedOriginPropertyError,
 };
 use lox_core::anomalies::AnomalyError;
-use lox_core::elements::{Keplerian, KeplerianError, OrbitType};
+use lox_core::elements::{Keplerian, OrbitType};
 use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use thiserror::Error;
 
-use crate::orbits::{
-    CartesianOrbit, KeplerianOrbit, ToKeplerianError, Trajectory, TrajectoryError,
-};
+use crate::orbits::{CartesianOrbit, KeplerianOrbit, Trajectory, TrajectoryError};
 use crate::propagators::Propagator;
 
 use super::kozai::{self, BodyConstants, SecularRates};
@@ -48,27 +46,9 @@ pub enum J4Error {
     /// Anomaly conversion failed.
     #[error("anomaly conversion failed: {0}")]
     Anomaly(#[from] AnomalyError),
-    /// The state cannot be represented by Keplerian elements.
-    #[error(transparent)]
-    Keplerian(#[from] KeplerianError),
     /// Error constructing the output trajectory.
     #[error(transparent)]
     Trajectory(#[from] TrajectoryError),
-}
-
-impl From<ToKeplerianError> for J4Error {
-    fn from(err: ToKeplerianError) -> Self {
-        match err {
-            ToKeplerianError::UndefinedOriginProperty(err) => err.into(),
-            ToKeplerianError::Keplerian(err) => err.into(),
-        }
-    }
-}
-
-impl From<std::convert::Infallible> for J4Error {
-    fn from(x: std::convert::Infallible) -> Self {
-        unreachable!("{}", x)
-    }
 }
 
 /// Analytical J4 orbit propagator (Kozai secular with J2+J2²+J4,
@@ -102,10 +82,7 @@ where
     /// By default, produces secular-only output. Call
     /// [`with_osculating`](Self::with_osculating) to enable Kwok
     /// short-period corrections.
-    pub fn try_new(
-        orbit: impl TryInto<KeplerianOrbit<O, R>, Error: Into<J4Error>>,
-    ) -> Result<Self, J4Error> {
-        let orbit = orbit.try_into().map_err(Into::into)?;
+    pub fn try_new(orbit: KeplerianOrbit<O, R>) -> Result<Self, J4Error> {
         let body = BodyConstants {
             mu: orbit.origin().try_gravitational_parameter()?.as_f64(),
             j2: orbit.origin().try_j2()?,
