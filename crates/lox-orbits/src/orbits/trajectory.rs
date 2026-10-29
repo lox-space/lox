@@ -249,14 +249,21 @@ where
     }
 
     fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<O, R>, Self::Error> {
+        // Fail for intervals beyond the extrapolation limit, then clamp to the
+        // trajectory's states so that resampling cannot extend the trajectory.
+        self.state_at(interval.start())?;
+        self.state_at(interval.end())?;
+        let start = interval.start().max(self.start_time());
+        let end = interval.end().min(self.end_time());
+
         let mut states = Vec::new();
-        states.push(self.state_at(interval.start())?);
+        states.push(self.state_at(start)?);
         for s in self.states() {
-            if s.time() > interval.start() && s.time() < interval.end() {
+            if s.time() > start && s.time() < end {
                 states.push(s);
             }
         }
-        states.push(self.state_at(interval.end())?);
+        states.push(self.state_at(end)?);
         Ok(Trajectory::try_new(states)?.with_extrapolation_limit(self.extrapolation_limit()))
     }
 
@@ -540,6 +547,29 @@ mod tests {
             limit
         );
         assert_eq!(traj.into_dynamic().extrapolation_limit(), limit);
+    }
+
+    #[test]
+    fn test_trajectory_propagate_does_not_extend_trajectory() {
+        let traj = sample_trajectory();
+        let (start, end) = (traj.start_time(), traj.end_time());
+        let slack = TimeDelta::from_microseconds(500);
+
+        let resampled = traj
+            .propagate(TimeInterval::new(start - slack, end + slack))
+            .unwrap();
+        assert_eq!(resampled.start_time(), start);
+        assert_eq!(resampled.end_time(), end);
+        // The requested interval is still covered via extrapolation.
+        assert!(resampled.at(start - slack).is_some());
+        assert!(resampled.at(end + slack).is_some());
+
+        let beyond = end + TimeDelta::from_seconds(1);
+        assert_eq!(
+            traj.propagate(TimeInterval::new(start, beyond))
+                .unwrap_err(),
+            TrajectoryError::OutOfRange(beyond)
+        );
     }
 
     #[test]
