@@ -16,7 +16,8 @@
 //! | `L`     | ν + ω + I·Ω (true longitude) |
 //!
 //! The [`RetrogradeFactor`] I = ±1 avoids the singularity of tan(i/2) at i = π, see the
-//! [`equinoctial`](super::equinoctial) module.
+//! [`equinoctial`](super::equinoctial) module. For the retrograde set, the true longitude L
+//! therefore differs by 2Ω from [`Keplerian::true_longitude`].
 //!
 //! # References
 //!
@@ -33,9 +34,9 @@ use crate::elements::equinoctial::{
     node_components_from_angular_momentum,
 };
 use crate::elements::keplerian::{
-    Eccentricity, GravitationalParameter, Inclination, Keplerian, KeplerianError,
+    Eccentricity, EccentricityError, GravitationalParameter, Inclination, Keplerian, KeplerianError,
 };
-use crate::math::float::{atan2, cos, sin, sqrt};
+use crate::math::float::{atan2, cos, hypot, sin, sqrt};
 use crate::units::{Angle, AngleUnits, Distance};
 
 /// Modified Equinoctial Elements (MEE).
@@ -111,6 +112,9 @@ pub enum ModifiedEquinoctialError {
     /// An element is not finite.
     #[error("modified equinoctial elements must be finite")]
     NonFiniteElements,
+    /// The eccentricity √(f² + g²) is not finite.
+    #[error(transparent)]
+    InvalidEccentricity(#[from] EccentricityError),
     /// The true longitude lies on or beyond the asymptotes of an open orbit.
     #[error("true longitude {0} lies outside the asymptotes of the open orbit")]
     InvalidTrueLongitude(Angle),
@@ -131,8 +135,8 @@ impl ModifiedEquinoctial {
     /// # Errors
     ///
     /// Returns a [`ModifiedEquinoctialError`] if the semi-parameter is not finite and positive,
-    /// if any element is not finite, or if the true longitude lies outside the asymptotes of an
-    /// open orbit.
+    /// if any element or the eccentricity is not finite, or if the true longitude lies outside
+    /// the asymptotes of an open orbit.
     pub fn try_new(
         p: Distance,
         f: f64,
@@ -148,6 +152,7 @@ impl ModifiedEquinoctial {
         if ![f, g, h, k, l.as_f64()].iter().all(|x| x.is_finite()) {
             return Err(ModifiedEquinoctialError::NonFiniteElements);
         }
+        Eccentricity::try_new(hypot(f, g))?;
         let (sin_l, cos_l) = l.sin_cos();
         if 1.0 + f * cos_l + g * sin_l <= 0.0 {
             return Err(ModifiedEquinoctialError::InvalidTrueLongitude(l));
@@ -189,6 +194,8 @@ impl ModifiedEquinoctial {
     }
 
     /// Returns the true longitude L = ν + ω + I·Ω.
+    ///
+    /// For the retrograde set, this differs by 2Ω from [`Keplerian::true_longitude`].
     pub fn l(&self) -> Angle {
         self.l
     }
@@ -200,7 +207,7 @@ impl ModifiedEquinoctial {
 
     /// Returns the eccentricity e = √(f² + g²).
     pub fn eccentricity(&self) -> Eccentricity {
-        Eccentricity::try_new(sqrt(self.f * self.f + self.g * self.g))
+        Eccentricity::try_new(hypot(self.f, self.g))
             .expect("finite elements have a valid eccentricity")
     }
 
@@ -298,7 +305,12 @@ impl Keplerian {
     /// Converts the Keplerian elements to modified equinoctial elements.
     ///
     /// The [`RetrogradeFactor`] is chosen from the inclination.
-    pub fn to_modified_equinoctial(&self) -> ModifiedEquinoctial {
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ModifiedEquinoctialError`] if the true anomaly of an open orbit lies so close
+    /// to its asymptotes that the elements are rejected by [`ModifiedEquinoctial::try_new`].
+    pub fn to_modified_equinoctial(&self) -> Result<ModifiedEquinoctial, ModifiedEquinoctialError> {
         let e = self.eccentricity().as_f64();
         let retrograde_factor = RetrogradeFactor::from_inclination(self.inclination());
         let longitude_of_ascending_node = self.longitude_of_ascending_node().as_f64();
@@ -310,15 +322,15 @@ impl Keplerian {
             retrograde_factor,
         );
 
-        ModifiedEquinoctial {
-            p: self.semi_parameter(),
-            f: e * cos(longitude_of_periapsis),
-            g: e * sin(longitude_of_periapsis),
+        ModifiedEquinoctial::try_new(
+            self.semi_parameter(),
+            e * cos(longitude_of_periapsis),
+            e * sin(longitude_of_periapsis),
             h,
             k,
-            l: Angle::new(longitude_of_periapsis + self.true_anomaly().as_f64()),
+            Angle::new(longitude_of_periapsis + self.true_anomaly().as_f64()),
             retrograde_factor,
-        }
+        )
     }
 }
 
@@ -329,6 +341,7 @@ mod tests {
     use lox_approx::assert_approx_eq;
     use rstest::rstest;
 
+    use crate::math::float::acos;
     use crate::units::{DistanceUnits, VelocityUnits};
 
     use super::*;
@@ -369,7 +382,7 @@ mod tests {
         let kep = keplerian(e, i, node, periapsis, nu);
         let expected = kep.to_cartesian(mu());
 
-        let from_keplerian = kep.to_modified_equinoctial();
+        let from_keplerian = kep.to_modified_equinoctial().unwrap();
         let from_cartesian = expected.to_modified_equinoctial(mu()).unwrap();
         assert_eq!(
             from_keplerian.retrograde_factor(),
@@ -411,8 +424,12 @@ mod tests {
 
     #[test]
     fn test_retrograde_factor_follows_inclination() {
-        let prograde = keplerian(0.1, 1.0, 0.0, 0.0, 0.0).to_modified_equinoctial();
-        let retrograde = keplerian(0.1, 2.0, 0.0, 0.0, 0.0).to_modified_equinoctial();
+        let prograde = keplerian(0.1, 1.0, 0.0, 0.0, 0.0)
+            .to_modified_equinoctial()
+            .unwrap();
+        let retrograde = keplerian(0.1, 2.0, 0.0, 0.0, 0.0)
+            .to_modified_equinoctial()
+            .unwrap();
         assert_eq!(prograde.retrograde_factor(), RetrogradeFactor::Prograde);
         assert_eq!(retrograde.retrograde_factor(), RetrogradeFactor::Retrograde);
         // tanᴵ(i/2) stays bounded by one.
@@ -476,7 +493,9 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn test_deserialization_validates() {
-        let mee = keplerian(0.1, 0.5, 1.0, 2.0, 0.3).to_modified_equinoctial();
+        let mee = keplerian(0.1, 0.5, 1.0, 2.0, 0.3)
+            .to_modified_equinoctial()
+            .unwrap();
         let json = serde_json::to_value(mee).unwrap();
         let back: ModifiedEquinoctial = serde_json::from_value(json.clone()).unwrap();
         assert_eq!(back, mee);
@@ -487,5 +506,43 @@ mod tests {
         beyond_asymptotes["g"] = 0.0.into();
         beyond_asymptotes["l"] = serde_json::to_value(PI.rad()).unwrap();
         assert!(serde_json::from_value::<ModifiedEquinoctial>(beyond_asymptotes).is_err());
+    }
+
+    #[test]
+    fn test_large_components_do_not_panic() {
+        let p = 7000.0.km();
+        let prograde = RetrogradeFactor::Prograde;
+        let mee =
+            ModifiedEquinoctial::try_new(p, 1e200, 0.0, 0.0, 0.0, 0.0.rad(), prograde).unwrap();
+        assert_eq!(mee.eccentricity().as_f64(), 1e200);
+        assert!(matches!(
+            ModifiedEquinoctial::try_new(p, 1.5e308, 1.5e308, 0.0, 0.0, 0.0.rad(), prograde),
+            Err(ModifiedEquinoctialError::InvalidEccentricity(_))
+        ));
+    }
+
+    #[test]
+    fn test_keplerian_states_near_asymptotes_never_yield_invalid_elements() {
+        let e = 1.5;
+        let max_nu = acos(-1.0 / e);
+        for step in 0..200 {
+            let periapsis = f64::from(step) * 0.0314159;
+            let mut nu = max_nu;
+            for _ in 0..60 {
+                nu = nu.next_down();
+                let Ok(kep) = Keplerian::builder()
+                    .with_semi_parameter(12000.0.km(), e)
+                    .with_argument_of_periapsis(periapsis.rad())
+                    .with_true_anomaly(nu.rad())
+                    .build()
+                else {
+                    continue;
+                };
+                if let Ok(mee) = kep.to_modified_equinoctial() {
+                    let cart = mee.to_cartesian(mu());
+                    assert!(cart.position().is_finite(), "ω = {periapsis}, ν = {nu}");
+                }
+            }
+        }
     }
 }

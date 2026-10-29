@@ -351,9 +351,7 @@ impl PyCartesian {
     ///     ValueError: If conversion fails.
     fn to_ellipsoid_location(&self) -> PyResult<PyEllipsoidLocation> {
         Ok(PyEllipsoidLocation(
-            self.0
-                .try_to_ellipsoid_location()
-                .map_err(|err| PyValueError::new_err(err.to_string()))?,
+            self.0.try_to_ellipsoid_location().map_err(value_error)?,
         ))
     }
 
@@ -603,9 +601,7 @@ impl PyKeplerian {
             builder = builder.with_mean_anomaly(ma.0);
         }
 
-        let orbit = builder
-            .build()
-            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        let orbit = builder.build().map_err(value_error)?;
 
         Ok(PyKeplerian(orbit.into_dynamic()))
     }
@@ -686,9 +682,7 @@ impl PyKeplerian {
             builder = builder.with_true_anomaly(ta.0);
         }
 
-        let orbit = builder
-            .build()
-            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        let orbit = builder.build().map_err(value_error)?;
 
         Ok(PyKeplerian(orbit.into_dynamic()))
     }
@@ -897,10 +891,7 @@ impl PyKeplerian {
     /// Raises:
     ///     ValueError: If the true anomaly cannot be converted to a mean anomaly.
     fn mean_longitude(&self) -> PyResult<PyAngle> {
-        self.0
-            .mean_longitude()
-            .map(PyAngle)
-            .map_err(|err| PyValueError::new_err(err.to_string()))
+        self.0.mean_longitude().map(PyAngle).map_err(value_error)
     }
 
     /// Return the flight-path angle.
@@ -972,8 +963,13 @@ impl PyKeplerian {
     ///
     /// Returns:
     ///     Modified equinoctial elements representing this orbit.
-    fn to_modified_equinoctial(&self) -> PyModifiedEquinoctial {
-        PyModifiedEquinoctial(self.0.to_modified_equinoctial())
+    ///
+    /// Raises:
+    ///     ValueError: If the true anomaly of an open orbit lies too close to its asymptotes.
+    fn to_modified_equinoctial(&self) -> PyResult<PyModifiedEquinoctial> {
+        Ok(PyModifiedEquinoctial(
+            self.0.to_modified_equinoctial().map_err(value_error)?,
+        ))
     }
 
     /// Convert these Keplerian elements to equinoctial elements.
@@ -1191,6 +1187,9 @@ impl PyEquinoctial {
     ///
     /// Returns:
     ///     Cartesian state representing this orbit.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
     fn to_cartesian(&self) -> PyResult<PyCartesian> {
         Ok(PyCartesian(
             self.0
@@ -1366,6 +1365,9 @@ impl PyModifiedEquinoctial {
     ///
     /// Returns:
     ///     Cartesian state representing this orbit.
+    ///
+    /// Raises:
+    ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
     fn to_cartesian(&self) -> PyResult<PyCartesian> {
         Ok(PyCartesian(
             self.0
@@ -1477,8 +1479,7 @@ impl PyTrajectory {
         }
         let mut states: Vec<CartesianOrbit> = Vec::with_capacity(array.nrows());
         for row in array.rows() {
-            let delta = TimeDelta::try_from_seconds_f64(row[0])
-                .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            let delta = TimeDelta::try_from_seconds_f64(row[0]).map_err(value_error)?;
             let time = start_time.0 + delta;
             let position = DVec3::new(row[1], row[2], row[3]);
             let velocity = DVec3::new(row[4], row[5], row[6]);
@@ -1843,7 +1844,7 @@ impl PyJ2Propagator {
     ) -> PyResult<Self> {
         let initial_orbit = initial_state.get().0;
         let mut propagator = J2Propagator::try_new(initial_orbit)
-            .map_err(|e| PyValueError::new_err(e.to_string()))?
+            .map_err(value_error)?
             .with_osculating(osculating);
         if let Some(step) = step {
             propagator = propagator.with_step(step.0);
@@ -1867,16 +1868,8 @@ impl PyJ2Propagator {
             end,
             frame,
             provider,
-            |t| {
-                self.0
-                    .state_at(t)
-                    .map_err(|e| PyValueError::new_err(e.to_string()))
-            },
-            |i| {
-                self.0
-                    .propagate(i)
-                    .map_err(|e| PyValueError::new_err(e.to_string()))
-            },
+            |t| self.0.state_at(t).map_err(value_error),
+            |i| self.0.propagate(i).map_err(value_error),
         )
     }
 
@@ -1912,7 +1905,7 @@ impl PyJ4Propagator {
     ) -> PyResult<Self> {
         let initial_orbit = initial_state.get().0;
         let mut propagator = J4Propagator::try_new(initial_orbit)
-            .map_err(|e| PyValueError::new_err(e.to_string()))?
+            .map_err(value_error)?
             .with_osculating(osculating);
         if let Some(step) = step {
             propagator = propagator.with_step(step.0);
@@ -1936,16 +1929,8 @@ impl PyJ4Propagator {
             end,
             frame,
             provider,
-            |t| {
-                self.0
-                    .state_at(t)
-                    .map_err(|e| PyValueError::new_err(e.to_string()))
-            },
-            |i| {
-                self.0
-                    .propagate(i)
-                    .map_err(|e| PyValueError::new_err(e.to_string()))
-            },
+            |t| self.0.state_at(t).map_err(value_error),
+            |i| self.0.propagate(i).map_err(value_error),
         )
     }
 
@@ -1978,8 +1963,7 @@ impl PyEllipsoid {
     #[new]
     fn new(equatorial_radius: PyDistance, flattening: f64) -> PyResult<Self> {
         Ok(PyEllipsoid(
-            Ellipsoid::try_new(equatorial_radius.0, flattening)
-                .map_err(|e| PyValueError::new_err(e.to_string()))?,
+            Ellipsoid::try_new(equatorial_radius.0, flattening).map_err(value_error)?,
         ))
     }
 
@@ -2080,14 +2064,13 @@ impl PyEllipsoidLocation {
             .latitude(latitude.0)
             .altitude(altitude.0)
             .build()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            .map_err(value_error)?;
         let location = match ellipsoid {
             Some(ellipsoid) => {
                 EllipsoidLocation::try_with_ellipsoid(coordinates, ellipsoid.0, frame.0)
-                    .map_err(|e| PyValueError::new_err(e.to_string()))?
+                    .map_err(value_error)?
             }
-            None => EllipsoidLocation::try_new(coordinates, frame.0)
-                .map_err(|e| PyValueError::new_err(e.to_string()))?,
+            None => EllipsoidLocation::try_new(coordinates, frame.0).map_err(value_error)?,
         };
         Ok(PyEllipsoidLocation(location))
     }
@@ -2274,10 +2257,10 @@ impl PyTle {
                 lines[1].as_bytes(),
                 lines[2].as_bytes(),
             )
-            .map_err(|err| PyValueError::new_err(err.to_string()))?
+            .map_err(value_error)?
         } else if lines.len() == 2 {
             Elements::from_tle(None, lines[0].as_bytes(), lines[1].as_bytes())
-                .map_err(|err| PyValueError::new_err(err.to_string()))?
+                .map_err(value_error)?
         } else {
             return Err(PyValueError::new_err("invalid TLE"));
         };
@@ -2442,8 +2425,7 @@ impl PySgp4 {
         } else {
             PyTle::new(tle)?
         };
-        let sgp4 = Sgp4::new(tle.elements.clone())
-            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        let sgp4 = Sgp4::new(tle.elements.clone()).map_err(value_error)?;
         Ok(PySgp4 { inner: sgp4, tle })
     }
 

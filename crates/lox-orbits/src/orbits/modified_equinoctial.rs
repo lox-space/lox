@@ -152,12 +152,20 @@ where
     R: ReferenceFrame,
 {
     /// Converts this orbit to modified equinoctial elements.
-    pub fn to_modified_equinoctial(&self) -> ModifiedEquinoctialOrbit<O, R>
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ModifiedEquinoctialError`] if the true anomaly of an open orbit lies so close
+    /// to its asymptotes that the elements are rejected, see
+    /// [`Keplerian::to_modified_equinoctial`](lox_core::elements::Keplerian::to_modified_equinoctial).
+    pub fn to_modified_equinoctial(
+        &self,
+    ) -> Result<ModifiedEquinoctialOrbit<O, R>, ModifiedEquinoctialError>
     where
         O: Copy,
         R: Copy,
     {
-        self.with_state(self.state().to_modified_equinoctial())
+        Ok(self.with_state(self.state().to_modified_equinoctial()?))
     }
 }
 
@@ -214,7 +222,7 @@ mod tests {
 
         for mee in [
             expected.to_modified_equinoctial().unwrap(),
-            kep.to_modified_equinoctial(),
+            kep.to_modified_equinoctial().unwrap(),
         ] {
             assert_eq!(mee.time(), time);
             assert!(mee.to_equinoctial().is_err());
@@ -251,7 +259,7 @@ mod tests {
             .with_semi_major_axis(7000.0.km(), 0.01)
             .build()
             .unwrap();
-        let mee = kep.to_modified_equinoctial();
+        let mee = kep.to_modified_equinoctial().unwrap();
         let earth = Origin::from(Earth);
         assert!(ModifiedEquinoctialOrbit::try_new(mee, time, earth, Frame::Icrf).is_ok());
         assert!(ModifiedEquinoctialOrbit::try_new(mee, time, earth, Frame::Itrf).is_err());

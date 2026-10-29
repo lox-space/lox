@@ -6,14 +6,15 @@
 
 use lox_core::coords::Cartesian;
 use lox_core::coords::LonLatAlt;
+use lox_core::elements::{Equinoctial, Keplerian, ModifiedEquinoctial};
 use lox_core::glam::{DMat3, DVec3};
 use lox_space::analysis::events::ZeroCrossing;
 use lox_space::bodies::*;
 use lox_space::frames::Teme;
 use lox_space::frames::rotations::Rotation;
 use lox_space::frames::*;
-use lox_space::orbits::CartesianOrbit;
 use lox_space::orbits::ground::EllipsoidLocation;
+use lox_space::orbits::{CartesianOrbit, KeplerianOrbit};
 use lox_space::time::Time;
 use lox_space::time::intervals::TimeInterval;
 use lox_space::time::time_scales::Tai;
@@ -46,6 +47,62 @@ fn test_distance() {
 #[test]
 fn test_velocity() {
     round_trip(&Velocity::meters_per_second(7.8));
+}
+
+// -- equinoctial elements --
+
+/// A retrograde orbit, so that the retrograde factor is exercised as well.
+fn retrograde_keplerian_orbit() -> KeplerianOrbit<Earth, Icrf> {
+    let kep = Keplerian::builder()
+        .with_semi_major_axis(Distance::kilometers(7000.0), 0.01)
+        .with_inclination(Angle::degrees(120.0))
+        .with_longitude_of_ascending_node(Angle::degrees(30.0))
+        .with_argument_of_periapsis(Angle::degrees(60.0))
+        .with_true_anomaly(Angle::degrees(90.0))
+        .build()
+        .unwrap();
+    KeplerianOrbit::new(
+        kep,
+        Time::new(TimeScale::Tai, 0, Default::default()),
+        Earth,
+        Icrf,
+    )
+}
+
+#[test]
+fn test_equinoctial() {
+    let eq = retrograde_keplerian_orbit().to_equinoctial().unwrap();
+    round_trip(&eq);
+    round_trip(&eq.into_dynamic());
+
+    // The wire format names each element after its accessor.
+    let elements = eq.state();
+    let json = serde_json::to_value(elements).unwrap();
+    assert_eq!(json["h"], elements.h());
+    assert_eq!(json["k"], elements.k());
+    assert_eq!(json["p"], elements.p());
+    assert_eq!(json["q"], elements.q());
+    let back: Equinoctial = serde_json::from_value(json).unwrap();
+    assert_eq!(back, elements);
+}
+
+#[test]
+fn test_modified_equinoctial() {
+    let mee = retrograde_keplerian_orbit()
+        .to_modified_equinoctial()
+        .unwrap();
+    round_trip(&mee);
+    round_trip(&mee.into_dynamic());
+
+    // The wire format names each element after its accessor.
+    let elements = mee.state();
+    let json = serde_json::to_value(elements).unwrap();
+    assert_eq!(json["f"], elements.f());
+    assert_eq!(json["g"], elements.g());
+    assert_eq!(json["h"], elements.h());
+    assert_eq!(json["k"], elements.k());
+    let back: ModifiedEquinoctial = serde_json::from_value(json).unwrap();
+    assert_eq!(back, elements);
 }
 
 // -- lox-bodies types --

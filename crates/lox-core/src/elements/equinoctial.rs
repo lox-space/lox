@@ -18,6 +18,10 @@
 //! for the retrograde set, so conversions from Cartesian or Keplerian states choose the set whose
 //! singularity is further away. See [`RetrogradeFactor`].
 //!
+//! The longitudes of the retrograde set contain -Ω instead of +Ω, so they differ by 2Ω from
+//! [`Keplerian::mean_longitude`](super::Keplerian::mean_longitude) and
+//! [`Keplerian::true_longitude`](super::Keplerian::true_longitude), which always add Ω.
+//!
 //! Equinoctial elements are defined for closed orbits only. Use
 //! [`ModifiedEquinoctial`] elements for open orbits.
 //!
@@ -32,12 +36,14 @@ use glam::DVec3;
 use thiserror::Error;
 
 use crate::coords::Cartesian;
-use crate::elements::keplerian::{Eccentricity, GravitationalParameter, Inclination, Keplerian};
+use crate::elements::keplerian::{
+    Eccentricity, EccentricityError, GravitationalParameter, Inclination, Keplerian,
+};
 use crate::elements::longitudes::{
     eccentric_to_true_longitude, mean_to_eccentric_longitude, true_to_mean_longitude,
 };
 use crate::elements::modified_equinoctial::{ModifiedEquinoctial, ModifiedEquinoctialError};
-use crate::math::float::{atan, cos, sin, sqrt, tan};
+use crate::math::float::{abs, atan, cos, hypot, sin, tan};
 use crate::units::{Angle, Distance};
 
 /// The retrograde factor I of equinoctial elements.
@@ -82,9 +88,15 @@ pub(crate) fn equinoctial_basis(
     retrograde_factor: RetrogradeFactor,
 ) -> (DVec3, DVec3) {
     let sign = retrograde_factor.as_f64();
-    let s = 1.0 + p * p + q * q;
-    let f_hat = DVec3::new(1.0 - p * p + q * q, 2.0 * p * q, -2.0 * sign * p) / s;
-    let g_hat = DVec3::new(2.0 * sign * p * q, sign * (1.0 + p * p - q * q), 2.0 * q) / s;
+    // Divide the numerators and the denominator by m² so that p² + q² cannot overflow. For
+    // |p|, |q| <= 1, which covers every inclination of the matching set, m = 1 and the scaling
+    // is exact.
+    let m = abs(p).max(abs(q)).max(1.0);
+    let (p, q, u) = (p / m, q / m, 1.0 / m);
+    let u2 = u * u;
+    let s = u2 + p * p + q * q;
+    let f_hat = DVec3::new(u2 - p * p + q * q, 2.0 * p * q, -2.0 * sign * p * u) / s;
+    let g_hat = DVec3::new(2.0 * sign * p * q, sign * (u2 + p * p - q * q), 2.0 * q * u) / s;
     (f_hat, g_hat)
 }
 
@@ -120,7 +132,7 @@ pub(crate) fn inclination_from_node_components(
     q: f64,
     retrograde_factor: RetrogradeFactor,
 ) -> Inclination {
-    let half = 2.0 * atan(sqrt(p * p + q * q));
+    let half = 2.0 * atan(hypot(p, q));
     let i = match retrograde_factor {
         RetrogradeFactor::Prograde => half,
         RetrogradeFactor::Retrograde => PI - half,
@@ -199,9 +211,15 @@ pub enum EquinoctialError {
     /// The semi-major axis is not finite and positive.
     #[error("semi-major axis must be finite and positive but was {0}")]
     InvalidSemiMajorAxis(Distance),
+    /// The semi-parameter a·(1 - e²) is not positive.
+    #[error("semi-parameter must be positive but was {0}")]
+    InvalidSemiParameter(Distance),
     /// An element is not finite.
     #[error("equinoctial elements must be finite")]
     NonFiniteElements,
+    /// The eccentricity √(h² + k²) is not finite.
+    #[error(transparent)]
+    InvalidEccentricity(#[from] EccentricityError),
     /// The orbit is not closed.
     #[error(
         "equinoctial elements require a circular or elliptic orbit but the eccentricity was {0}"
@@ -221,7 +239,8 @@ impl Equinoctial {
     /// # Errors
     ///
     /// Returns an [`EquinoctialError`] if the semi-major axis is not finite and positive, if
-    /// any element is not finite, or if the eccentricity does not describe a closed orbit.
+    /// any element or the eccentricity is not finite, if the eccentricity does not describe a
+    /// closed orbit, or if the semi-parameter is not positive.
     pub fn try_new(
         a: Distance,
         h: f64,
@@ -237,6 +256,7 @@ impl Equinoctial {
         if ![h, k, p, q, lambda.as_f64()].iter().all(|x| x.is_finite()) {
             return Err(EquinoctialError::NonFiniteElements);
         }
+        check_closed(Eccentricity::try_new(hypot(h, k))?)?;
         let elements = Self {
             a,
             h,
@@ -246,7 +266,10 @@ impl Equinoctial {
             lambda,
             retrograde_factor,
         };
-        check_closed(elements.eccentricity())?;
+        let semi_parameter = elements.semi_parameter();
+        if semi_parameter.as_f64() <= 0.0 {
+            return Err(EquinoctialError::InvalidSemiParameter(semi_parameter));
+        }
         Ok(elements)
     }
 
@@ -276,6 +299,8 @@ impl Equinoctial {
     }
 
     /// Returns the mean longitude λ = M + ω + I·Ω.
+    ///
+    /// For the retrograde set, this differs by 2Ω from [`Keplerian::mean_longitude`].
     pub fn lambda(&self) -> Angle {
         self.lambda
     }
@@ -287,7 +312,7 @@ impl Equinoctial {
 
     /// Returns the eccentricity e = √(h² + k²).
     pub fn eccentricity(&self) -> Eccentricity {
-        Eccentricity::try_new(sqrt(self.h * self.h + self.k * self.k))
+        Eccentricity::try_new(hypot(self.h, self.k))
             .expect("finite elements have a valid eccentricity")
     }
 
@@ -298,10 +323,13 @@ impl Equinoctial {
 
     /// Returns the semi-parameter p = a·(1 - e²).
     pub fn semi_parameter(&self) -> Distance {
-        Distance::new(self.a.as_f64() * (1.0 - self.h * self.h - self.k * self.k))
+        let e = self.eccentricity().as_f64();
+        Distance::new(self.a.as_f64() * (1.0 - e) * (1.0 + e))
     }
 
     /// Returns the true longitude L = ν + ω + I·Ω, in the same revolution as λ.
+    ///
+    /// For the retrograde set, this differs by 2Ω from [`Keplerian::true_longitude`].
     pub fn true_longitude(&self) -> Angle {
         eccentric_to_true_longitude(self.eccentric_longitude(), self.h, self.k)
     }
@@ -351,21 +379,22 @@ impl ModifiedEquinoctial {
     ///
     /// # Errors
     ///
-    /// Returns [`EquinoctialError::NotElliptic`] if the orbit is not closed.
+    /// Returns an [`EquinoctialError`] if the orbit is not closed or its semi-major axis
+    /// overflows.
     pub fn to_equinoctial(&self) -> Result<Equinoctial, EquinoctialError> {
         let eccentricity = self.eccentricity();
         check_closed(eccentricity)?;
         let e = eccentricity.as_f64();
         let (h, k) = (self.g(), self.f());
-        Ok(Equinoctial {
-            a: Distance::new(self.p().as_f64() / (1.0 - e * e)),
+        Equinoctial::try_new(
+            Distance::new(self.p().as_f64() / ((1.0 - e) * (1.0 + e))),
             h,
             k,
-            p: self.k(),
-            q: self.h(),
-            lambda: true_to_mean_longitude(self.l(), h, k),
-            retrograde_factor: self.retrograde_factor(),
-        })
+            self.k(),
+            self.h(),
+            true_to_mean_longitude(self.l(), h, k),
+            self.retrograde_factor(),
+        )
     }
 }
 
@@ -376,9 +405,10 @@ impl Keplerian {
     ///
     /// # Errors
     ///
-    /// Returns [`EquinoctialError::NotElliptic`] if the orbit is not closed.
+    /// Returns an [`EquinoctialError`] if the orbit is not closed.
     pub fn to_equinoctial(&self) -> Result<Equinoctial, EquinoctialError> {
-        self.to_modified_equinoctial().to_equinoctial()
+        check_closed(self.eccentricity())?;
+        self.to_modified_equinoctial()?.to_equinoctial()
     }
 }
 
@@ -407,6 +437,7 @@ mod tests {
     use rstest::rstest;
 
     use crate::anomalies::TrueAnomaly;
+    use crate::math::float::acos;
     use crate::units::{AngleUnits, DistanceUnits};
 
     use super::*;
@@ -448,7 +479,11 @@ mod tests {
 
         let from_keplerian = kep.to_equinoctial().unwrap();
         let from_cartesian = expected.to_equinoctial(mu()).unwrap();
-        let from_mee = kep.to_modified_equinoctial().to_equinoctial().unwrap();
+        let from_mee = kep
+            .to_modified_equinoctial()
+            .unwrap()
+            .to_equinoctial()
+            .unwrap();
         assert_approx_eq!(from_keplerian.eccentricity().as_f64(), e, atol <= 1e-12);
         assert_approx_eq!(from_cartesian.inclination().as_f64(), i, atol <= 1e-12);
         assert_approx_eq!(
@@ -570,7 +605,10 @@ mod tests {
             Err(EquinoctialError::NotElliptic(_))
         ));
         assert!(matches!(
-            parabolic.to_modified_equinoctial().to_equinoctial(),
+            parabolic
+                .to_modified_equinoctial()
+                .unwrap()
+                .to_equinoctial(),
             Err(EquinoctialError::NotElliptic(_))
         ));
         assert!(matches!(
@@ -583,6 +621,49 @@ mod tests {
                 0.0.rad(),
                 RetrogradeFactor::Prograde
             ),
+            Err(EquinoctialError::NotElliptic(_))
+        ));
+    }
+
+    #[test]
+    fn test_open_orbits_near_asymptotes_are_rejected_as_open() {
+        // Some of these orbits have no valid modified equinoctial elements, but the conversion
+        // still reports the open orbit.
+        let e = 1.5;
+        let mut invalid_modified_equinoctial = 0;
+        for step in 0..200 {
+            let mut nu = acos(-1.0 / e);
+            for _ in 0..60 {
+                nu = nu.next_down();
+                let Ok(kep) = Keplerian::builder()
+                    .with_semi_parameter(12000.0.km(), e)
+                    .with_argument_of_periapsis((f64::from(step) * 0.0314159).rad())
+                    .with_true_anomaly(nu.rad())
+                    .build()
+                else {
+                    continue;
+                };
+                if kep.to_modified_equinoctial().is_err() {
+                    invalid_modified_equinoctial += 1;
+                }
+                assert!(matches!(
+                    kep.to_equinoctial(),
+                    Err(EquinoctialError::NotElliptic(_))
+                ));
+            }
+        }
+        assert!(invalid_modified_equinoctial > 0);
+    }
+
+    #[test]
+    fn test_near_parabolic_orbits_are_rejected() {
+        // Eccentricities within 1e-8 of one are parabolic.
+        let near_parabolic = Keplerian::builder()
+            .with_semi_parameter(10000.0.km(), 1.0 - 5e-9)
+            .build()
+            .unwrap();
+        assert!(matches!(
+            near_parabolic.to_equinoctial(),
             Err(EquinoctialError::NotElliptic(_))
         ));
     }
@@ -638,5 +719,73 @@ mod tests {
         hyperbolic["h"] = 0.8.into();
         hyperbolic["k"] = 0.8.into();
         assert!(serde_json::from_value::<Equinoctial>(hyperbolic).is_err());
+    }
+
+    #[test]
+    fn test_large_components_do_not_panic() {
+        let prograde = RetrogradeFactor::Prograde;
+        assert!(matches!(
+            Equinoctial::try_new(7000.0.km(), 1e200, 1e200, 0.0, 0.0, 0.0.rad(), prograde),
+            Err(EquinoctialError::NotElliptic(_))
+        ));
+        assert!(matches!(
+            Equinoctial::try_new(7000.0.km(), 1.5e308, 1.5e308, 0.0, 0.0, 0.0.rad(), prograde),
+            Err(EquinoctialError::InvalidEccentricity(_))
+        ));
+        let eq =
+            Equinoctial::try_new(7000.0.km(), 0.0, 0.0, 1e200, 1e200, 0.0.rad(), prograde).unwrap();
+        assert_approx_eq!(eq.inclination().as_f64(), PI, atol <= 1e-15);
+        // The node components describe an orbit with i = π and Ω = 45°, the equivalent retrograde
+        // elements therefore have a mean longitude shifted by -2Ω.
+        let mu = GravitationalParameter::km3_per_s2(398600.4418);
+        let retrograde = Equinoctial::try_new(
+            7000.0.km(),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            (-90.0).deg(),
+            RetrogradeFactor::Retrograde,
+        )
+        .unwrap();
+        let actual = eq.to_cartesian(mu);
+        let expected = retrograde.to_cartesian(mu);
+        assert_approx_eq!(actual.position(), expected.position(), atol <= 1e-6);
+        assert_approx_eq!(actual.velocity(), expected.velocity(), atol <= 1e-9);
+    }
+
+    #[test]
+    fn test_vanishing_semi_parameter_is_rejected() {
+        assert!(matches!(
+            Equinoctial::try_new(
+                Distance::new(5e-324),
+                0.9,
+                0.0,
+                0.0,
+                0.0,
+                0.0.rad(),
+                RetrogradeFactor::Prograde
+            ),
+            Err(EquinoctialError::InvalidSemiParameter(_))
+        ));
+    }
+
+    #[test]
+    fn test_overflowing_semi_major_axis_is_rejected() {
+        let e = 1.0 - 1e-7;
+        let mee = ModifiedEquinoctial::try_new(
+            Distance::new(f64::MAX / 2.0),
+            e,
+            0.0,
+            0.0,
+            0.0,
+            0.0.rad(),
+            RetrogradeFactor::Prograde,
+        )
+        .unwrap();
+        assert!(matches!(
+            mee.to_equinoctial(),
+            Err(EquinoctialError::InvalidSemiMajorAxis(_))
+        ));
     }
 }

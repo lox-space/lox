@@ -161,4 +161,28 @@ mod tests {
             assert_approx_eq!(mean_to_true_longitude(lambda, h, k), l, atol <= 1e-10);
         }
     }
+
+    #[test]
+    fn test_mean_to_eccentric_longitude_converges() {
+        for e in [0.0, 1e-12, 0.1, 0.5, 0.9, 0.99, 0.9999, 0.999999] {
+            for step in 0..360 {
+                let pomega = f64::from(step) * 0.0175 + 0.3;
+                let (h, k) = (e * sin(pomega), e * cos(pomega));
+                for revolution in [-2.0, 0.0, 3.0] {
+                    let lambda = f64::from(step) * 0.0175 + revolution * TAU;
+                    let f = mean_to_eccentric_longitude(Angle::new(lambda), h, k).as_f64();
+                    let residual = f - k * sin(f) + h * cos(f) - lambda;
+                    let scale = if lambda.abs() > 1.0 {
+                        lambda.abs()
+                    } else {
+                        1.0
+                    };
+                    assert!(
+                        residual.abs() <= 8.0 * f64::EPSILON * scale,
+                        "e = {e}, ϖ = {pomega}, λ = {lambda}: residual {residual}"
+                    );
+                }
+            }
+        }
+    }
 }

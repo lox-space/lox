@@ -234,7 +234,11 @@ mod tests {
 
             let from_cartesian = expected.to_equinoctial().unwrap();
             let from_keplerian = kep.to_equinoctial().unwrap();
-            let from_mee = kep.to_modified_equinoctial().to_equinoctial().unwrap();
+            let from_mee = kep
+                .to_modified_equinoctial()
+                .unwrap()
+                .to_equinoctial()
+                .unwrap();
             for eq in [from_cartesian, from_keplerian, from_mee] {
                 assert_eq!(eq.time(), time);
                 for actual in [

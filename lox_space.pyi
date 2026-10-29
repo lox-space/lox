@@ -1767,7 +1767,11 @@ class Keplerian:
         """Convert these Keplerian elements to a Cartesian state."""
         ...
     def to_modified_equinoctial(self) -> ModifiedEquinoctial:
-        """Convert these Keplerian elements to modified equinoctial elements."""
+        """Convert these Keplerian elements to modified equinoctial elements.
+
+        Raises:
+            ValueError: If the true anomaly of an open orbit lies too close to its asymptotes.
+        """
         ...
     def to_equinoctial(self) -> Equinoctial:
         """Convert these Keplerian elements to equinoctial elements.
@@ -1877,7 +1881,11 @@ class Equinoctial:
         """Return the orbital inclination."""
         ...
     def to_cartesian(self) -> Cartesian:
-        """Convert these equinoctial elements to a Cartesian state."""
+        """Convert these equinoctial elements to a Cartesian state.
+
+        Raises:
+            UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+        """
         ...
     def to_keplerian(self) -> Keplerian:
         """Convert these equinoctial elements to Keplerian orbital elements."""
@@ -1977,7 +1985,11 @@ class ModifiedEquinoctial:
         """Return the orbital inclination."""
         ...
     def to_cartesian(self) -> Cartesian:
-        """Convert these modified equinoctial elements to a Cartesian state."""
+        """Convert these modified equinoctial elements to a Cartesian state.
+
+        Raises:
+            UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+        """
         ...
     def to_keplerian(self) -> Keplerian:
         """Convert these modified equinoctial elements to Keplerian orbital elements.
