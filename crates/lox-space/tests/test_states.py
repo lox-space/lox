@@ -586,15 +586,48 @@ def test_modified_equinoctial_errors():
     ):
         cart.to_modified_equinoctial()
 
-    # A negative semi-parameter is invalid for Keplerian conversion
-    mee_invalid = lox.ModifiedEquinoctial(
-        time,
-        p=-7000.0 * lox.km,
-        f=0.5,
-        g=0.0,
-        h=0.0,
-        k=0.0,
-        l=0.0 * lox.deg,
-    )
+    # A negative semi-parameter is rejected on construction
     with pytest.raises(ValueError, match="semi-parameter must be finite and positive"):
-        mee_invalid.to_keplerian()
+        lox.ModifiedEquinoctial(
+            time,
+            p=-7000.0 * lox.km,
+            f=0.5,
+            g=0.0,
+            h=0.0,
+            k=0.0,
+            l=0.0 * lox.deg,
+        )
+
+
+def test_modified_equinoctial_retrograde():
+    """Retrograde orbits use the retrograde set of elements and survive a roundtrip."""
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    kep = lox.Keplerian(
+        time,
+        semi_major_axis=7000.0 * lox.km,
+        eccentricity=0.01,
+        inclination=180.0 * lox.deg,
+        longitude_of_ascending_node=0.0 * lox.deg,
+        argument_of_periapsis=30.0 * lox.deg,
+        true_anomaly=45.0 * lox.deg,
+    )
+    mee = kep.to_modified_equinoctial()
+    assert mee.retrograde()
+    assert mee.h() == pytest.approx(0.0, abs=1e-15)
+    assert mee.k() == pytest.approx(0.0, abs=1e-15)
+    assert mee.inclination().to_degrees() == pytest.approx(180.0)
+    assert "retrograde=True" in repr(mee)
+
+    rebuilt = lox.ModifiedEquinoctial(
+        time,
+        p=mee.p(),
+        f=mee.f(),
+        g=mee.g(),
+        h=mee.h(),
+        k=mee.k(),
+        l=mee.l(),
+        retrograde=True,
+    )
+    npt.assert_allclose(
+        rebuilt.to_cartesian().position(), kep.to_cartesian().position(), atol=1e-6
+    )

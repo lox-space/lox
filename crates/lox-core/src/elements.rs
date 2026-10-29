@@ -6,8 +6,11 @@
 
 pub mod equinoctial;
 pub mod keplerian;
+mod longitudes;
 pub mod mean;
 pub mod modified_equinoctial;
 
+pub use equinoctial::{Equinoctial, EquinoctialError, RetrogradeFactor};
 pub use keplerian::*;
 pub use mean::MeanElements;
+pub use modified_equinoctial::{ModifiedEquinoctial, ModifiedEquinoctialError};

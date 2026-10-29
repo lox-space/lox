@@ -3,462 +3,489 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Modified Equinoctial Elements (MEE), non-singular for circular,
-//! equatorial, and parabolic orbits.
+//! Modified Equinoctial Elements (MEE), non-singular for circular, equatorial, and parabolic
+//! orbits.
 //!
-//! Based on:
-//! Walker, M. J. H., Ireland, B., & Owens, J. (1985). *A set of modified equinoctial orbit elements*.
-//! Celestial Mechanics, 36, 409-419. <https://doi.org/10.1007/BF01227493>
+//! | Element | Definition |
+//! |---------|------------|
+//! | `p`     | semi-parameter |
+//! | `f`     | e·cos(ω + I·Ω) |
+//! | `g`     | e·sin(ω + I·Ω) |
+//! | `h`     | tanᴵ(i/2)·cos(Ω) |
+//! | `k`     | tanᴵ(i/2)·sin(Ω) |
+//! | `L`     | ν + ω + I·Ω (true longitude) |
 //!
-//! Erratum: <https://doi.org/10.1007/BF01238929>
+//! The [`RetrogradeFactor`] I = ±1 avoids the singularity of tan(i/2) at i = π, see the
+//! [`equinoctial`](super::equinoctial) module.
+//!
+//! # References
+//!
+//! - Walker, M. J. H., Ireland, B., & Owens, J. (1985). *A set of modified equinoctial orbit
+//!   elements*. Celestial Mechanics, 36, 409-419. <https://doi.org/10.1007/BF01227493>
+//!   Erratum: <https://doi.org/10.1007/BF01238929>
 
-use crate::anomalies::AnomalyError;
-use crate::coords::Cartesian;
-use crate::elements::keplerian::{GravitationalParameter, Keplerian, KeplerianError};
-use crate::math::float::{atan, atan2, cos, sin, sqrt, tan};
-use crate::units::{Angle, AngleUnits, Distance};
 use glam::DVec3;
 use thiserror::Error;
 
+use crate::coords::Cartesian;
+use crate::elements::equinoctial::{
+    RetrogradeFactor, equinoctial_basis, inclination_from_node_components, node_components,
+    node_components_from_angular_momentum,
+};
+use crate::elements::keplerian::{
+    Eccentricity, GravitationalParameter, Inclination, Keplerian, KeplerianError,
+};
+use crate::math::float::{atan2, cos, sin, sqrt};
+use crate::units::{Angle, AngleUnits, Distance};
+
 /// Modified Equinoctial Elements (MEE).
 ///
-/// Non-singular for circular (e = 0) and equatorial (i = 0) orbits.
-/// Also fully supports parabolic (e = 1) orbits, unlike Type I equinoctial elements
-/// which use the semi-major axis. Singular at i = π (retrograde) where tan(i/2) diverges.
-/// Formulas in parenthesis are from Keplerian notation
+/// Non-singular for circular (e = 0), equatorial (i = 0 or i = π), and parabolic (e = 1) orbits.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "ModifiedEquinoctialRepr", into = "ModifiedEquinoctialRepr")
+)]
 pub struct ModifiedEquinoctial {
-    /// Semi-latus rectum (semi-parameter) `p` \[m\].
     p: Distance,
-    /// Eccentricity vector, component 1 (`f` = e · cos(ω + Ω)).
     f: f64,
-    /// Eccentricity vector, component 2 (`g` = e · sin(ω + Ω)).
     g: f64,
-    /// Node vector, component 1 (`h` = tan(i/2) · cos(Ω)).
     h: f64,
-    /// Node vector, component 2 (`k` = tan(i/2) · sin(Ω)).
     k: f64,
-    /// True longitude `l` = Ω + ω + ν.
     l: Angle,
+    retrograde_factor: RetrogradeFactor,
 }
 
-/// Error returned when constructing or converting modified equinoctial elements.
+/// Serde wire format for [`ModifiedEquinoctial`]: forces deserialization through the validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Serialize, serde::Deserialize)]
+struct ModifiedEquinoctialRepr {
+    p: Distance,
+    f: f64,
+    g: f64,
+    h: f64,
+    k: f64,
+    l: Angle,
+    retrograde_factor: RetrogradeFactor,
+}
+
+#[cfg(feature = "serde")]
+impl From<ModifiedEquinoctial> for ModifiedEquinoctialRepr {
+    fn from(elements: ModifiedEquinoctial) -> Self {
+        Self {
+            p: elements.p,
+            f: elements.f,
+            g: elements.g,
+            h: elements.h,
+            k: elements.k,
+            l: elements.l,
+            retrograde_factor: elements.retrograde_factor,
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<ModifiedEquinoctialRepr> for ModifiedEquinoctial {
+    type Error = ModifiedEquinoctialError;
+
+    fn try_from(repr: ModifiedEquinoctialRepr) -> Result<Self, Self::Error> {
+        ModifiedEquinoctial::try_new(
+            repr.p,
+            repr.f,
+            repr.g,
+            repr.h,
+            repr.k,
+            repr.l,
+            repr.retrograde_factor,
+        )
+    }
+}
+
+/// Error returned when constructing or converting to modified equinoctial elements.
 #[derive(Debug, Clone, Error)]
 pub enum ModifiedEquinoctialError {
-    /// The anomaly conversion failed (e.g. attempting to convert or evaluate
-    /// anomalies beyond physically hyperbolic bounds limits).
-    #[error(transparent)]
-    Anomaly(#[from] AnomalyError),
-    /// The Keplerian conversion failed (e.g. during conversion back to Keplerian,
-    /// encountering inconsistencies in reconstructing the orbital shape mapping).
-    #[error(transparent)]
-    Keplerian(#[from] KeplerianError),
+    /// The semi-parameter is not finite and positive.
+    #[error("semi-parameter must be finite and positive but was {0}")]
+    InvalidSemiParameter(Distance),
+    /// An element is not finite.
+    #[error("modified equinoctial elements must be finite")]
+    NonFiniteElements,
+    /// The true longitude lies on or beyond the asymptotes of an open orbit.
+    #[error("true longitude {0} lies outside the asymptotes of the open orbit")]
+    InvalidTrueLongitude(Angle),
+    /// The Cartesian state is not finite.
+    #[error("Cartesian state must be finite")]
+    NonFiniteState,
+    /// The Cartesian state has zero angular momentum, e.g. a rectilinear orbit.
+    #[error("modified equinoctial elements are undefined for states with zero angular momentum")]
+    ZeroAngularMomentum,
 }
 
 impl ModifiedEquinoctial {
-    /// Creates modified equinoctial elements from raw component values.
+    /// Creates modified equinoctial elements from their components.
     ///
-    /// `p` is the semi-latus rectum in meters, `f` = e·cos(ω+Ω), `g` = e·sin(ω+Ω),
-    /// `h` = tan(i/2)·cos(Ω), `k` = tan(i/2)·sin(Ω), `l` = Ω + ω + ν.
-    pub fn new(p: Distance, f: f64, g: f64, h: f64, k: f64, l: Angle) -> Self {
-        Self { p, f, g, h, k, l }
-    }
-
-    /// Converts modified equinoctial elements to a Cartesian state.
-    pub fn to_cartesian(
-        &self,
-        mu: GravitationalParameter,
-    ) -> Result<Cartesian, ModifiedEquinoctialError> {
-        let p = self.p.as_f64();
-        let mu_f64 = mu.as_f64();
-
-        let s2 = 1.0 + self.h * self.h + self.k * self.k;
-        let f_hat = DVec3::new(
-            1.0 + self.h * self.h - self.k * self.k,
-            2.0 * self.h * self.k,
-            -2.0 * self.k,
-        ) / s2;
-        let g_hat = DVec3::new(
-            2.0 * self.h * self.k,
-            1.0 - self.h * self.h + self.k * self.k,
-            2.0 * self.h,
-        ) / s2;
-
-        let (sin_l, cos_l) = self.l.sin_cos();
-        let w = 1.0 + self.f * cos_l + self.g * sin_l;
-        let r_mag = p / w;
-
-        let r_orb = DVec3::new(r_mag * cos_l, r_mag * sin_l, 0.0);
-        let v_orb = DVec3::new(
-            -sqrt(mu_f64 / p) * (sin_l + self.g),
-            sqrt(mu_f64 / p) * (cos_l + self.f),
-            0.0,
-        );
-
-        let r_vec = r_orb.x * f_hat + r_orb.y * g_hat;
-        let v_vec = v_orb.x * f_hat + v_orb.y * g_hat;
-
-        Ok(Cartesian::from_vecs(r_vec, v_vec))
-    }
-
-    /// Converts modified equinoctial elements back to Keplerian.
-    pub fn to_keplerian(&self) -> Result<Keplerian, ModifiedEquinoctialError> {
-        let e = self.eccentricity();
-        let pomega = atan2(self.g, self.f); // ω + Ω
-        let half_i_tan = sqrt(self.h * self.h + self.k * self.k);
-        let i = 2.0 * atan(half_i_tan);
-        let big_omega = atan2(self.k, self.h);
-
-        let omega = pomega - big_omega;
-        let nu = self.l.as_f64() - pomega;
-
-        let kep = Keplerian::builder()
-            .with_semi_parameter(self.p, e)
-            .with_inclination(i.rad())
-            .with_longitude_of_ascending_node(big_omega.rad())
-            .with_argument_of_periapsis(omega.rad())
-            .with_true_anomaly(nu.rad())
-            .build()?;
-
-        Ok(kep)
-    }
-
-    /// Returns the semi-latus rectum (semi-parameter).
-    pub fn p(&self) -> Distance {
-        self.p
-    }
-
-    /// Returns f = e·cos(ω + Ω).
-    pub fn f(&self) -> f64 {
-        self.f
-    }
-
-    /// Returns g = e·sin(ω + Ω).
-    pub fn g(&self) -> f64 {
-        self.g
-    }
-
-    /// Returns h = tan(i/2)·cos(Ω).
-    pub fn h(&self) -> f64 {
-        self.h
-    }
-
-    /// Returns k = tan(i/2)·sin(Ω).
-    pub fn k(&self) -> f64 {
-        self.k
-    }
-
-    /// Returns the true longitude `L` = Ω + ω + ν.
-    pub fn l(&self) -> Angle {
-        self.l
-    }
-
-    /// Returns the eccentricity e = √(f² + g²).
-    pub fn eccentricity(&self) -> f64 {
-        sqrt(self.f * self.f + self.g * self.g)
-    }
-
-    /// Returns the inclination i = 2·atan(√(h² + k²)) in radians.
-    pub fn inclination(&self) -> f64 {
-        2.0 * atan(sqrt(self.h * self.h + self.k * self.k))
-    }
-}
-
-impl Cartesian {
-    /// Converts the Cartesian state to modified equinoctial elements.
-    pub fn to_modified_equinoctial(
-        &self,
-        mu: GravitationalParameter,
-    ) -> Result<ModifiedEquinoctial, ModifiedEquinoctialError> {
-        let r_vec = self.position();
-        let v_vec = self.velocity();
-        let r_mag = r_vec.length();
-        let mu_f64 = mu.as_f64();
-
-        // Angular momentum
-        let h_vec = r_vec.cross(v_vec);
-        let h_mag = h_vec.length();
-
-        // Semi-parameter p
-        let p = Distance::new((h_mag * h_mag) / mu_f64);
-
-        // Eccentricity vector
-        let e_vec = v_vec.cross(h_vec) / mu_f64 - r_vec / r_mag;
-
-        // Equinoctial parameters h, k
-        let h = -h_vec.y / (h_mag + h_vec.z);
-        let k = h_vec.x / (h_mag + h_vec.z);
-
-        // Equinoctial frame unit vectors
-        let s2 = 1.0 + h * h + k * k;
-        let f_hat = DVec3::new(1.0 + h * h - k * k, 2.0 * h * k, -2.0 * k) / s2;
-        let g_hat = DVec3::new(2.0 * h * k, 1.0 - h * h + k * k, 2.0 * h) / s2;
-
-        let f = e_vec.dot(f_hat);
-        let g = e_vec.dot(g_hat);
-
-        let x = r_vec.dot(f_hat);
-        let y = r_vec.dot(g_hat);
-        let l = Angle::from_atan2(y, x);
-
-        Ok(ModifiedEquinoctial { p, f, g, h, k, l })
-    }
-}
-
-impl Keplerian {
-    /// Converts Keplerian elements to modified equinoctial.
-    pub fn to_modified_equinoctial(&self) -> ModifiedEquinoctial {
-        let e = self.eccentricity().as_f64();
-        let i = self.inclination().as_f64();
-        let omega = self.argument_of_periapsis().as_f64();
-        let big_omega = self.longitude_of_ascending_node().as_f64();
-        let nu = self.true_anomaly().as_f64();
-
-        let p_val = self.semi_parameter();
-        let pomega = omega + big_omega; // longitude of periapsis
-
-        let f = e * cos(pomega);
-        let g = e * sin(pomega);
-        let half_i_tan = tan(i / 2.0);
-        let h = half_i_tan * cos(big_omega);
-        let k = half_i_tan * sin(big_omega);
-        let l = Angle::new(pomega + nu);
-
-        ModifiedEquinoctial {
-            p: p_val,
+    /// `p` is the semi-parameter, `f` = e·cos(ω + I·Ω), `g` = e·sin(ω + I·Ω),
+    /// `h` = tanᴵ(i/2)·cos(Ω), `k` = tanᴵ(i/2)·sin(Ω), and `l` = ν + ω + I·Ω.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ModifiedEquinoctialError`] if the semi-parameter is not finite and positive,
+    /// if any element is not finite, or if the true longitude lies outside the asymptotes of an
+    /// open orbit.
+    pub fn try_new(
+        p: Distance,
+        f: f64,
+        g: f64,
+        h: f64,
+        k: f64,
+        l: Angle,
+        retrograde_factor: RetrogradeFactor,
+    ) -> Result<Self, ModifiedEquinoctialError> {
+        if !p.as_f64().is_finite() || p.as_f64() <= 0.0 {
+            return Err(ModifiedEquinoctialError::InvalidSemiParameter(p));
+        }
+        if ![f, g, h, k, l.as_f64()].iter().all(|x| x.is_finite()) {
+            return Err(ModifiedEquinoctialError::NonFiniteElements);
+        }
+        let (sin_l, cos_l) = l.sin_cos();
+        if 1.0 + f * cos_l + g * sin_l <= 0.0 {
+            return Err(ModifiedEquinoctialError::InvalidTrueLongitude(l));
+        }
+        Ok(Self {
+            p,
             f,
             g,
             h,
             k,
             l,
+            retrograde_factor,
+        })
+    }
+
+    /// Returns the semi-parameter (semi-latus rectum).
+    pub fn p(&self) -> Distance {
+        self.p
+    }
+
+    /// Returns f = e·cos(ω + I·Ω).
+    pub fn f(&self) -> f64 {
+        self.f
+    }
+
+    /// Returns g = e·sin(ω + I·Ω).
+    pub fn g(&self) -> f64 {
+        self.g
+    }
+
+    /// Returns h = tanᴵ(i/2)·cos(Ω).
+    pub fn h(&self) -> f64 {
+        self.h
+    }
+
+    /// Returns k = tanᴵ(i/2)·sin(Ω).
+    pub fn k(&self) -> f64 {
+        self.k
+    }
+
+    /// Returns the true longitude L = ν + ω + I·Ω.
+    pub fn l(&self) -> Angle {
+        self.l
+    }
+
+    /// Returns the retrograde factor I.
+    pub fn retrograde_factor(&self) -> RetrogradeFactor {
+        self.retrograde_factor
+    }
+
+    /// Returns the eccentricity e = √(f² + g²).
+    pub fn eccentricity(&self) -> Eccentricity {
+        Eccentricity::try_new(sqrt(self.f * self.f + self.g * self.g))
+            .expect("finite elements have a valid eccentricity")
+    }
+
+    /// Returns the inclination.
+    pub fn inclination(&self) -> Inclination {
+        inclination_from_node_components(self.k, self.h, self.retrograde_factor)
+    }
+
+    /// Converts the elements to a Cartesian state.
+    pub fn to_cartesian(&self, grav_param: GravitationalParameter) -> Cartesian {
+        let p = self.p.as_f64();
+        let (f_hat, g_hat) = equinoctial_basis(self.k, self.h, self.retrograde_factor);
+        let (sin_l, cos_l) = self.l.sin_cos();
+        let r = p / (1.0 + self.f * cos_l + self.g * sin_l);
+        let sqrt_mu_p = sqrt(grav_param.as_f64() / p);
+
+        let pos = r * cos_l * f_hat + r * sin_l * g_hat;
+        let vel = sqrt_mu_p * (-(sin_l + self.g) * f_hat + (cos_l + self.f) * g_hat);
+        Cartesian::from_vecs(pos, vel)
+    }
+
+    /// Converts the elements to Keplerian elements.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`KeplerianError`] if the elements of an open orbit lie so close to its
+    /// asymptotes that they are rejected by the validation of [`Keplerian`].
+    pub fn to_keplerian(&self) -> Result<Keplerian, KeplerianError> {
+        let sign = self.retrograde_factor.as_f64();
+        let longitude_of_periapsis = atan2(self.g, self.f);
+        let longitude_of_ascending_node = atan2(self.k, self.h);
+
+        Keplerian::builder()
+            .with_semi_parameter(self.p, self.eccentricity().as_f64())
+            .with_inclination(self.inclination().as_angle())
+            .with_longitude_of_ascending_node(longitude_of_ascending_node.rad())
+            .with_argument_of_periapsis(
+                (longitude_of_periapsis - sign * longitude_of_ascending_node).rad(),
+            )
+            .with_true_anomaly((self.l.as_f64() - longitude_of_periapsis).rad())
+            .build()
+    }
+}
+
+impl Cartesian {
+    /// Converts the Cartesian state to modified equinoctial elements.
+    ///
+    /// The [`RetrogradeFactor`] is chosen from the inclination.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ModifiedEquinoctialError`] if the state is not finite, its angular momentum
+    /// is zero, or the resulting elements are invalid, e.g. for a non-positive gravitational
+    /// parameter.
+    pub fn to_modified_equinoctial(
+        &self,
+        grav_param: GravitationalParameter,
+    ) -> Result<ModifiedEquinoctial, ModifiedEquinoctialError> {
+        let r = self.position();
+        let v = self.velocity();
+        let mu = grav_param.as_f64();
+
+        if !r.is_finite() || !v.is_finite() {
+            return Err(ModifiedEquinoctialError::NonFiniteState);
+        }
+        let angular_momentum = r.cross(v);
+        let hm = angular_momentum.length();
+        if hm == 0.0 {
+            return Err(ModifiedEquinoctialError::ZeroAngularMomentum);
+        }
+
+        // Same inclination as `Cartesian::to_keplerian`, so that both paths agree on the
+        // retrograde factor.
+        let inclination = Inclination::try_new(angular_momentum.angle_between(DVec3::Z).rad())
+            .expect("the angle to the z-axis lies in [0, π]");
+        let retrograde_factor = RetrogradeFactor::from_inclination(inclination);
+        let (k, h) =
+            node_components_from_angular_momentum(angular_momentum / hm, retrograde_factor);
+        let (f_hat, g_hat) = equinoctial_basis(k, h, retrograde_factor);
+        let e: DVec3 = v.cross(angular_momentum) / mu - r / r.length();
+
+        ModifiedEquinoctial::try_new(
+            Distance::new(hm * hm / mu),
+            e.dot(f_hat),
+            e.dot(g_hat),
+            h,
+            k,
+            Angle::from_atan2(r.dot(g_hat), r.dot(f_hat)),
+            retrograde_factor,
+        )
+    }
+}
+
+impl Keplerian {
+    /// Converts the Keplerian elements to modified equinoctial elements.
+    ///
+    /// The [`RetrogradeFactor`] is chosen from the inclination.
+    pub fn to_modified_equinoctial(&self) -> ModifiedEquinoctial {
+        let e = self.eccentricity().as_f64();
+        let retrograde_factor = RetrogradeFactor::from_inclination(self.inclination());
+        let longitude_of_ascending_node = self.longitude_of_ascending_node().as_f64();
+        let longitude_of_periapsis = self.argument_of_periapsis().as_f64()
+            + retrograde_factor.as_f64() * longitude_of_ascending_node;
+        let (k, h) = node_components(
+            self.inclination(),
+            longitude_of_ascending_node,
+            retrograde_factor,
+        );
+
+        ModifiedEquinoctial {
+            p: self.semi_parameter(),
+            f: e * cos(longitude_of_periapsis),
+            g: e * sin(longitude_of_periapsis),
+            h,
+            k,
+            l: Angle::new(longitude_of_periapsis + self.true_anomaly().as_f64()),
+            retrograde_factor,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use alloc::string::ToString;
-    use lox_approx::assert_approx_eq;
+    use core::f64::consts::PI;
 
-    use crate::elements::keplerian::GravitationalParameter;
-    use crate::units::{AngleUnits, DistanceUnits, VelocityUnits};
+    use lox_approx::assert_approx_eq;
+    use rstest::rstest;
+
+    use crate::units::{DistanceUnits, VelocityUnits};
 
     use super::*;
 
-    fn general_orbit_keplerian() -> Keplerian {
+    fn mu() -> GravitationalParameter {
+        GravitationalParameter::km3_per_s2(398600.43550702266)
+    }
+
+    fn keplerian(e: f64, i: f64, node: f64, periapsis: f64, nu: f64) -> Keplerian {
         Keplerian::builder()
-            .with_semi_major_axis(24464.560.km(), 0.7311)
-            .with_inclination(0.122138.rad())
-            .with_longitude_of_ascending_node(1.00681.rad())
-            .with_argument_of_periapsis(3.10686.rad())
-            .with_true_anomaly(0.44369564302687126.rad())
+            .with_semi_parameter(12000.0.km(), e)
+            .with_inclination(i.rad())
+            .with_longitude_of_ascending_node(node.rad())
+            .with_argument_of_periapsis(periapsis.rad())
+            .with_true_anomaly(nu.rad())
             .build()
             .unwrap()
     }
 
-    fn general_orbit_mu() -> GravitationalParameter {
-        GravitationalParameter::km3_per_s2(398600.43550702266)
-    }
+    #[rstest]
+    #[case::general(0.7311, 0.122138, 1.00681, 3.10686, 0.4437)]
+    #[case::circular(0.0, 1.7, 1.2, 0.0, 0.8)]
+    #[case::equatorial(0.001, 0.0, 0.0, 0.8, 0.5)]
+    #[case::circular_equatorial(0.0, 0.0, 0.0, 0.0, PI / 2.0)]
+    #[case::polar(0.2, PI / 2.0, 4.0, 2.0, -1.0)]
+    #[case::retrograde(0.3, 2.9, 5.0, 1.0, 2.0)]
+    #[case::retrograde_equatorial(0.3, PI, 0.0, 1.0, 2.0)]
+    #[case::retrograde_circular_equatorial(0.0, PI, 0.0, 0.0, 2.0)]
+    #[case::parabolic(1.0, 0.5, 1.0, 2.0, 1.5)]
+    #[case::hyperbolic(2.5, 2.0, 3.0, 4.0, -1.0)]
+    fn test_conversions_preserve_state(
+        #[case] e: f64,
+        #[case] i: f64,
+        #[case] node: f64,
+        #[case] periapsis: f64,
+        #[case] nu: f64,
+    ) {
+        let kep = keplerian(e, i, node, periapsis, nu);
+        let expected = kep.to_cartesian(mu());
 
-    #[test]
-    fn test_keplerian_roundtrip() {
-        let kep = general_orbit_keplerian();
-        let eq = kep.to_modified_equinoctial();
-        let kep2 = eq.to_keplerian().unwrap();
-
-        assert_approx_eq!(
-            kep.semi_major_axis().unwrap().as_f64(),
-            kep2.semi_major_axis().unwrap().as_f64(),
-            rtol <= 1e-12
-        );
-        assert_approx_eq!(
-            kep.eccentricity().as_f64(),
-            kep2.eccentricity().as_f64(),
-            atol <= 1e-12
-        );
-        assert_approx_eq!(
-            kep.inclination().as_f64(),
-            kep2.inclination().as_f64(),
-            atol <= 1e-12
-        );
-
-        let mu = general_orbit_mu();
-        let c1 = kep.to_cartesian(mu);
-        let c2 = kep2.to_cartesian(mu);
-        assert_approx_eq!(c1.position(), c2.position(), rtol <= 1e-10);
-        assert_approx_eq!(c1.velocity(), c2.velocity(), rtol <= 1e-10);
-    }
-
-    #[test]
-    fn test_cartesian_roundtrip() {
-        let mu = general_orbit_mu();
-        let cart = Cartesian::builder()
-            .position(
-                -0.107622532467967e7.m(),
-                -0.676589636432773e7.m(),
-                -0.332308783350379e6.m(),
-            )
-            .velocity(
-                0.935685775154103e4.mps(),
-                -0.331234775037644e4.mps(),
-                -0.118801577532701e4.mps(),
-            )
-            .build();
-
-        let eq = cart.to_modified_equinoctial(mu).unwrap();
-        let cart2 = eq.to_cartesian(mu).unwrap();
-
-        assert_approx_eq!(cart.position(), cart2.position(), rtol <= 1e-10);
-        assert_approx_eq!(cart.velocity(), cart2.velocity(), rtol <= 1e-10);
-    }
-
-    #[test]
-    fn test_circular_orbit() {
-        // e = 0: f and g should be zero, l should be well-defined
-        let kep = Keplerian::builder()
-            .with_semi_major_axis(6878.137.km(), 0.0)
-            .with_inclination(97.42_f64.to_radians().rad())
-            .with_longitude_of_ascending_node(69.3_f64.to_radians().rad())
-            .with_argument_of_periapsis(0.0.rad())
-            .with_true_anomaly(45.0_f64.to_radians().rad())
-            .build()
-            .unwrap();
-
-        let eq = kep.to_modified_equinoctial();
-
-        assert_approx_eq!(eq.f(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(eq.g(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(eq.eccentricity(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(eq.inclination(), 97.42_f64.to_radians(), atol <= 1e-12);
-        assert!(eq.h().abs() > 0.1);
-        assert!(eq.k().abs() > 0.1);
-
-        let mu = GravitationalParameter::km3_per_s2(398600.4418);
-
-        let c1 = kep.to_cartesian(mu);
-
-        // Also test mapping directly from cartesian respects e=0
-        let eq_from_c = c1.to_modified_equinoctial(mu).unwrap();
-        assert_approx_eq!(eq_from_c.f(), 0.0, atol <= 1e-12);
-        assert_approx_eq!(eq_from_c.g(), 0.0, atol <= 1e-12);
-
-        let c2 = eq.to_cartesian(mu).unwrap();
-        assert_approx_eq!(c1.position(), c2.position(), rtol <= 1e-10);
-        assert_approx_eq!(c1.velocity(), c2.velocity(), rtol <= 1e-10);
-    }
-
-    #[test]
-    fn test_equatorial_orbit() {
-        // i = 0: h and k should be zero
-        let kep = Keplerian::builder()
-            .with_semi_major_axis(42164.0.km(), 0.001)
-            .with_inclination(0.0.rad())
-            .with_longitude_of_ascending_node(0.0.rad())
-            .with_argument_of_periapsis(45.0_f64.to_radians().rad())
-            .with_true_anomaly(30.0_f64.to_radians().rad())
-            .build()
-            .unwrap();
-
-        let eq = kep.to_modified_equinoctial();
-
-        assert_approx_eq!(eq.h(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(eq.k(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(eq.inclination(), 0.0, atol <= 1e-15);
-        assert!(eq.eccentricity() > 0.0);
-
-        let mu = GravitationalParameter::km3_per_s2(398600.4418);
-        let c1 = kep.to_cartesian(mu);
-
-        let eq_from_c = c1.to_modified_equinoctial(mu).unwrap();
-        assert_approx_eq!(eq_from_c.h(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(eq_from_c.k(), 0.0, atol <= 1e-15);
-
-        let c2 = eq.to_cartesian(mu).unwrap();
-        assert_approx_eq!(c1.position(), c2.position(), rtol <= 1e-10);
-        assert_approx_eq!(c1.velocity(), c2.velocity(), rtol <= 1e-10);
-    }
-
-    #[test]
-    fn test_circular_equatorial_orbit() {
-        // Both e = 0 and i = 0: f, g, h, k all zero
-        let kep = Keplerian::builder()
-            .with_semi_major_axis(42164.0.km(), 0.0)
-            .with_inclination(0.0.rad())
-            .with_longitude_of_ascending_node(0.0.rad())
-            .with_argument_of_periapsis(0.0.rad())
-            .with_true_anomaly(90.0_f64.to_radians().rad())
-            .build()
-            .unwrap();
-
-        let eq = kep.to_modified_equinoctial();
-
-        assert_approx_eq!(eq.f(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(eq.g(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(eq.h(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(eq.k(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(eq.eccentricity(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(eq.inclination(), 0.0, atol <= 1e-15);
-
-        // lambda should equal the true anomaly
-        assert_approx_eq!(eq.l().as_f64(), 90.0_f64.to_radians(), atol <= 1e-12);
-
-        let mu = GravitationalParameter::km3_per_s2(398600.4418);
-        let c1 = kep.to_cartesian(mu);
-        let c2 = eq.to_cartesian(mu).unwrap();
-        assert_approx_eq!(c1.position(), c2.position(), rtol <= 1e-10);
-        assert_approx_eq!(c1.velocity(), c2.velocity(), rtol <= 1e-10);
-    }
-
-    #[test]
-    fn test_parabolic_orbit_directly() {
-        let mu = general_orbit_mu();
-        let mu_f64 = mu.as_f64();
-        // Construct a parabolic state (e = 1.0)
-        // Set an arbitrary p
-        let p_vec = 10000.0 * 1000.0; // 10,000 km
-
-        // Let's create it on the x axis so r = p / 2, v = sqrt(2 mu / r)
-        let r_mag = p_vec / 2.0;
-        let v_mag = (2.0 * mu_f64 / r_mag).sqrt();
-
-        let cart = Cartesian::builder()
-            .position(r_mag.m(), 0.0.m(), 0.0.m())
-            .velocity(0.0.mps(), v_mag.mps(), 0.0.mps())
-            .build();
-
-        let eq = cart.to_modified_equinoctial(mu).unwrap();
-
-        // For this state, e must be exactly 1.0!
-        assert_approx_eq!(eq.eccentricity(), 1.0, atol <= 1e-12);
-
-        // Reconstruct and compare
-        let cart2 = eq.to_cartesian(mu).unwrap();
-        assert_approx_eq!(cart.position(), cart2.position(), rtol <= 1e-10);
-        assert_approx_eq!(cart.velocity(), cart2.velocity(), rtol <= 1e-10);
-    }
-
-    #[test]
-    fn test_error_and_new_constructor() {
-        let mee = ModifiedEquinoctial::new(100.0.m(), 0.1, 0.2, 0.3, 0.4, 0.5.rad());
-        assert_eq!(mee.p(), 100.0.m());
-        assert_eq!(mee.f(), 0.1);
-        assert_eq!(mee.g(), 0.2);
-        assert_eq!(mee.h(), 0.3);
-        assert_eq!(mee.k(), 0.4);
-        assert_eq!(mee.l(), 0.5.rad());
-
-        let err1: ModifiedEquinoctialError =
-            crate::elements::keplerian::KeplerianError::MissingShape.into();
+        let from_keplerian = kep.to_modified_equinoctial();
+        let from_cartesian = expected.to_modified_equinoctial(mu()).unwrap();
         assert_eq!(
-            err1.to_string(),
-            "no orbital shape parameters (semi-major axis or semi-parameter and eccentricity, radii, or altitudes) were provided"
+            from_keplerian.retrograde_factor(),
+            from_cartesian.retrograde_factor()
         );
+        assert_approx_eq!(from_keplerian.eccentricity().as_f64(), e, atol <= 1e-12);
+        assert_approx_eq!(from_cartesian.inclination().as_f64(), i, atol <= 1e-12);
 
-        let err2: ModifiedEquinoctialError = crate::anomalies::AnomalyError::InvalidTrueAnomaly {
-            nu: 1.0.rad(),
-            max_nu: 0.5.rad(),
+        for mee in [from_keplerian, from_cartesian] {
+            let actual = mee.to_cartesian(mu());
+            assert_approx_eq!(
+                actual.position(),
+                expected.position(),
+                atol <= 1e-6,
+                rtol <= 1e-10
+            );
+            assert_approx_eq!(
+                actual.velocity(),
+                expected.velocity(),
+                atol <= 1e-9,
+                rtol <= 1e-10
+            );
+
+            let actual = mee.to_keplerian().unwrap().to_cartesian(mu());
+            assert_approx_eq!(
+                actual.position(),
+                expected.position(),
+                atol <= 1e-6,
+                rtol <= 1e-10
+            );
+            assert_approx_eq!(
+                actual.velocity(),
+                expected.velocity(),
+                atol <= 1e-9,
+                rtol <= 1e-10
+            );
         }
-        .into();
-        assert!(err2.to_string().contains("outside valid range"));
+    }
+
+    #[test]
+    fn test_retrograde_factor_follows_inclination() {
+        let prograde = keplerian(0.1, 1.0, 0.0, 0.0, 0.0).to_modified_equinoctial();
+        let retrograde = keplerian(0.1, 2.0, 0.0, 0.0, 0.0).to_modified_equinoctial();
+        assert_eq!(prograde.retrograde_factor(), RetrogradeFactor::Prograde);
+        assert_eq!(retrograde.retrograde_factor(), RetrogradeFactor::Retrograde);
+        // tanᴵ(i/2) stays bounded by one.
+        assert!(retrograde.h().abs() <= 1.0);
+    }
+
+    #[test]
+    fn test_retrograde_equatorial_node_components_vanish() {
+        let cart = keplerian(0.1, PI, 0.0, 1.0, 0.5).to_cartesian(mu());
+        let mee = cart.to_modified_equinoctial(mu()).unwrap();
+        assert_approx_eq!(mee.h(), 0.0, atol <= 1e-15);
+        assert_approx_eq!(mee.k(), 0.0, atol <= 1e-15);
+    }
+
+    #[test]
+    fn test_try_new_validates() {
+        let p = 7000.0.km();
+        let prograde = RetrogradeFactor::Prograde;
+        assert!(ModifiedEquinoctial::try_new(p, 0.1, 0.2, 0.3, 0.4, 0.5.rad(), prograde).is_ok());
+        assert!(matches!(
+            ModifiedEquinoctial::try_new(-p, 0.0, 0.0, 0.0, 0.0, 0.0.rad(), prograde),
+            Err(ModifiedEquinoctialError::InvalidSemiParameter(_))
+        ));
+        assert!(matches!(
+            ModifiedEquinoctial::try_new(p, f64::NAN, 0.0, 0.0, 0.0, 0.0.rad(), prograde),
+            Err(ModifiedEquinoctialError::NonFiniteElements)
+        ));
+        // e = 2 at L = π lies beyond the asymptotes.
+        assert!(matches!(
+            ModifiedEquinoctial::try_new(p, 2.0, 0.0, 0.0, 0.0, PI.rad(), prograde),
+            Err(ModifiedEquinoctialError::InvalidTrueLongitude(_))
+        ));
+    }
+
+    #[test]
+    fn test_cartesian_errors() {
+        let rectilinear = Cartesian::builder()
+            .position(7000.0.km(), 0.0.km(), 0.0.km())
+            .velocity(1.0.kps(), 0.0.kps(), 0.0.kps())
+            .build();
+        assert!(matches!(
+            rectilinear.to_modified_equinoctial(mu()),
+            Err(ModifiedEquinoctialError::ZeroAngularMomentum)
+        ));
+        let non_finite = Cartesian::from_vecs(DVec3::NAN, DVec3::X);
+        assert!(matches!(
+            non_finite.to_modified_equinoctial(mu()),
+            Err(ModifiedEquinoctialError::NonFiniteState)
+        ));
+        let state = Cartesian::builder()
+            .position(7000.0.km(), 0.0.km(), 0.0.km())
+            .velocity(0.0.kps(), 7.5.kps(), 0.0.kps())
+            .build();
+        assert!(
+            state
+                .to_modified_equinoctial(GravitationalParameter::km3_per_s2(0.0))
+                .is_err()
+        );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_deserialization_validates() {
+        let mee = keplerian(0.1, 0.5, 1.0, 2.0, 0.3).to_modified_equinoctial();
+        let json = serde_json::to_value(mee).unwrap();
+        let back: ModifiedEquinoctial = serde_json::from_value(json.clone()).unwrap();
+        assert_eq!(back, mee);
+
+        // e = 2 at L = π lies beyond the asymptotes.
+        let mut beyond_asymptotes = json;
+        beyond_asymptotes["f"] = 2.0.into();
+        beyond_asymptotes["g"] = 0.0.into();
+        beyond_asymptotes["l"] = serde_json::to_value(PI.rad()).unwrap();
+        assert!(serde_json::from_value::<ModifiedEquinoctial>(beyond_asymptotes).is_err());
     }
 }

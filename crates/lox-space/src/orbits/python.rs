@@ -26,8 +26,9 @@ use crate::time::python::time::PyTime;
 use crate::time::time_scales::Tai;
 use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyVelocity};
 use lox_core::coords::{Cartesian, Ellipsoid, LonLatAlt};
+use lox_core::elements::{ModifiedEquinoctial, RetrogradeFactor};
 use lox_core::glam::DVec3;
-use lox_core::units::{Angle, Distance, Velocity};
+use lox_core::units::{Distance, Velocity};
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_time::intervals::Interval;
@@ -374,7 +375,11 @@ impl PyCartesian {
             .0
             .try_gravitational_parameter()
             .map_err(PyUndefinedOriginPropertyError)?;
-        let mee = self.0.state().to_modified_equinoctial(mu).unwrap();
+        let mee = self
+            .0
+            .state()
+            .to_modified_equinoctial(mu)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
         Ok(PyModifiedEquinoctial {
             state: mee,
             time: PyTime(self.0.time()),
@@ -1008,6 +1013,12 @@ impl PyKeplerian {
 ///     l: True longitude as Angle.
 ///     origin: Central body (default: Earth).
 ///     frame: Reference frame (default: ICRF).
+///     retrograde: Use the retrograde set of elements (retrograde factor I = -1), which is
+///         singular at i = 0 instead of i = π (default: False).
+///
+/// Raises:
+///     ValueError: If the semi-parameter is not positive, an element is not finite, or the
+///         true longitude lies outside the asymptotes of an open orbit.
 #[pyclass(
     name = "ModifiedEquinoctial",
     module = "lox_space",
@@ -1016,7 +1027,7 @@ impl PyKeplerian {
 )]
 #[derive(Debug, Clone)]
 pub struct PyModifiedEquinoctial {
-    pub(crate) state: lox_core::elements::modified_equinoctial::ModifiedEquinoctial,
+    pub(crate) state: ModifiedEquinoctial,
     pub(crate) time: PyTime,
     pub(crate) origin: PyOrigin,
     pub(crate) frame: PyFrame,
@@ -1035,6 +1046,7 @@ impl PyModifiedEquinoctial {
         l,
         origin=None,
         frame=None,
+        retrograde=false,
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -1047,6 +1059,7 @@ impl PyModifiedEquinoctial {
         l: PyAngle,
         origin: Option<&Bound<'_, PyAny>>,
         frame: Option<&Bound<'_, PyAny>>,
+        retrograde: bool,
     ) -> PyResult<Self> {
         let origin = origin
             .map(PyOrigin::try_from)
@@ -1057,9 +1070,13 @@ impl PyModifiedEquinoctial {
             .transpose()?
             .unwrap_or(PyFrame(Frame::Icrf));
 
-        let state = lox_core::elements::modified_equinoctial::ModifiedEquinoctial::new(
-            p.0, f, g, h, k, l.0,
-        );
+        let retrograde_factor = if retrograde {
+            RetrogradeFactor::Retrograde
+        } else {
+            RetrogradeFactor::Prograde
+        };
+        let state = ModifiedEquinoctial::try_new(p.0, f, g, h, k, l.0, retrograde_factor)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
 
         Ok(Self {
             state,
@@ -1079,39 +1096,44 @@ impl PyModifiedEquinoctial {
         PyDistance(self.state.p())
     }
 
-    /// Return `f` = e·cos(ω + Ω).
+    /// Return `f` = e·cos(ω + I·Ω).
     fn f(&self) -> f64 {
         self.state.f()
     }
 
-    /// Return `g` = e·sin(ω + Ω).
+    /// Return `g` = e·sin(ω + I·Ω).
     fn g(&self) -> f64 {
         self.state.g()
     }
 
-    /// Return `h` = tan(i/2)·cos(Ω).
+    /// Return `h` = tanᴵ(i/2)·cos(Ω).
     fn h(&self) -> f64 {
         self.state.h()
     }
 
-    /// Return `k` = tan(i/2)·sin(Ω).
+    /// Return `k` = tanᴵ(i/2)·sin(Ω).
     fn k(&self) -> f64 {
         self.state.k()
     }
 
-    /// Return the true longitude `l` = Ω + ω + ν.
+    /// Return the true longitude `l` = ν + ω + I·Ω.
     fn l(&self) -> PyAngle {
         PyAngle(self.state.l())
     }
 
+    /// Return whether the elements use the retrograde set (retrograde factor I = -1).
+    fn retrograde(&self) -> bool {
+        self.state.retrograde_factor() == RetrogradeFactor::Retrograde
+    }
+
     /// Return the orbital eccentricity.
     fn eccentricity(&self) -> f64 {
-        self.state.eccentricity()
+        self.state.eccentricity().as_f64()
     }
 
     /// Return the orbital inclination.
     fn inclination(&self) -> PyAngle {
-        PyAngle(Angle::radians(self.state.inclination()))
+        PyAngle(self.state.inclination().as_angle())
     }
 
     /// Return the central body (origin) of this orbit.
@@ -1134,7 +1156,7 @@ impl PyModifiedEquinoctial {
             .0
             .try_gravitational_parameter()
             .map_err(PyUndefinedOriginPropertyError)?;
-        let cart = self.state.to_cartesian(mu).unwrap();
+        let cart = self.state.to_cartesian(mu);
         Ok(PyCartesian(crate::orbits::CartesianOrbit::from_state(
             cart,
             self.time.0,
@@ -1148,11 +1170,10 @@ impl PyModifiedEquinoctial {
     /// Returns:
     ///     Keplerian elements representing this orbit.
     fn to_keplerian(&self) -> PyResult<PyKeplerian> {
-        let kep = self.state.to_keplerian().map_err(
-            |e: lox_core::elements::modified_equinoctial::ModifiedEquinoctialError| {
-                PyValueError::new_err(e.to_string())
-            },
-        )?;
+        let kep = self
+            .state
+            .to_keplerian()
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
         Ok(PyKeplerian(crate::orbits::KeplerianOrbit::from_state(
             kep,
             self.time.0,
@@ -1163,7 +1184,7 @@ impl PyModifiedEquinoctial {
 
     fn __repr__(&self) -> String {
         format!(
-            "ModifiedEquinoctial({}, {}, {}, {}, {}, {}, {}, origin={}, frame={})",
+            "ModifiedEquinoctial({}, {}, {}, {}, {}, {}, {}, origin={}, frame={}, retrograde={})",
             self.time().__repr__(),
             self.p().__repr__(),
             repr_f64(self.f()),
@@ -1173,6 +1194,7 @@ impl PyModifiedEquinoctial {
             self.l().__repr__(),
             self.origin().__repr__(),
             self.frame().__repr__(),
+            if self.retrograde() { "True" } else { "False" },
         )
     }
 
