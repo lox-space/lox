@@ -89,6 +89,7 @@ where
     ///
     /// Returns `None` if `time` lies beyond the
     /// [extrapolation limit](Self::extrapolation_limit).
+    #[inline]
     pub fn at(&self, time: Time) -> Option<CartesianOrbit<O, R>> {
         self.at_delta(time - self.epoch)
     }
@@ -97,6 +98,7 @@ where
     ///
     /// Returns `None` if `dt` lies beyond the
     /// [extrapolation limit](Self::extrapolation_limit).
+    #[inline]
     pub fn at_delta(&self, dt: TimeDelta) -> Option<CartesianOrbit<O, R>> {
         let t = dt.as_seconds_f64();
         let state = self.data.at(t)?;
@@ -238,8 +240,12 @@ where
     type Frame = R;
     type Error = TrajectoryError;
 
+    #[inline]
     fn state_at(&self, time: Time) -> Result<CartesianOrbit<O, R>, TrajectoryError> {
-        self.at(time).ok_or(TrajectoryError::OutOfRange(time))
+        match self.at(time) {
+            Some(state) => Ok(state),
+            None => Err(TrajectoryError::OutOfRange(time)),
+        }
     }
 
     fn propagate(&self, interval: TimeInterval) -> Result<Trajectory<O, R>, Self::Error> {
