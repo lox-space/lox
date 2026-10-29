@@ -1980,7 +1980,8 @@ class Interval:
         """Return a list of times spaced by the given step, followed by the end.
 
         Unlike `step_by`, the end is always included. If it does not fall on a
-        step, the last step is shorter.
+        step, the last step is shorter, but never shorter than 1 µs: an end
+        within 1 µs of a step other than the start replaces that step.
 
         Raises:
             ValueError: If step is zero.

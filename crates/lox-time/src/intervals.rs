@@ -147,7 +147,9 @@ where
     /// step size, followed by the end.
     ///
     /// Unlike [`step_by`](Self::step_by), the end is always included. If it does
-    /// not fall on a step, the last step is shorter than `step`.
+    /// not fall on a step, the last step is shorter than `step`. If the end lies
+    /// less than 1 µs beyond a step other than the start, it replaces that step
+    /// instead, so that the last step is never shorter than 1 µs.
     ///
     /// The step sign is automatically adjusted to match the interval direction:
     /// forward for a positive duration, backward for a negative one.
@@ -176,6 +178,7 @@ where
             step,
             forward,
             inclusive,
+            started: false,
             finished: false,
         }
     }
@@ -192,6 +195,9 @@ where
     }
 }
 
+/// The shortest last step that [`Interval::step_by_inclusive`] emits.
+const MIN_LAST_STEP: TimeDelta = TimeDelta::from_microseconds(1);
+
 /// Iterator that steps through an interval with a fixed time step.
 ///
 /// Created by [`Interval::step_by`] and [`Interval::step_by_inclusive`].
@@ -201,6 +207,7 @@ pub struct IntervalStepIter<T> {
     step: TimeDelta,
     forward: bool,
     inclusive: bool,
+    started: bool,
     finished: bool,
 }
 
@@ -215,10 +222,17 @@ where
             return None;
         }
         if self.inclusive {
+            // Steps after the start that lie within `MIN_LAST_STEP` of the end
+            // are replaced by it.
+            let margin = match (self.started, self.forward) {
+                (false, _) => TimeDelta::ZERO,
+                (true, true) => MIN_LAST_STEP,
+                (true, false) => -MIN_LAST_STEP,
+            };
             let reached_end = if self.forward {
-                self.current >= self.end
+                self.current + margin >= self.end
             } else {
-                self.current <= self.end
+                self.current + margin <= self.end
             };
             if reached_end {
                 self.finished = true;
@@ -237,6 +251,7 @@ where
         }
         let value = self.current;
         self.current = self.current + self.step;
+        self.started = true;
         Some(value)
     }
 }
@@ -497,6 +512,26 @@ mod tests {
             .map(|&m| t0 + TimeDelta::from_minutes(m))
             .collect();
         assert_eq!(times, exp);
+    }
+
+    #[rstest]
+    #[case::forward(1)]
+    #[case::backward(-1)]
+    fn test_step_by_inclusive_merges_tiny_last_step(#[case] sign: i64) {
+        let t0 = time!(Tai, 2025, 11, 6).unwrap();
+        let minutes = |m: i64| TimeDelta::from_minutes(sign * m);
+        let tiny = TimeDelta::from_nanoseconds(sign * 500);
+        let step = TimeDelta::from_minutes(20);
+
+        // The end lies within 1 µs of the 60-minute step and replaces it.
+        let end = t0 + minutes(60) + tiny;
+        let times: Vec<_> = TimeInterval::new(t0, end).step_by_inclusive(step).collect();
+        assert_eq!(times, [t0, t0 + minutes(20), t0 + minutes(40), end]);
+
+        // The start is never replaced, even if the end is within 1 µs of it.
+        let end = t0 + tiny;
+        let times: Vec<_> = TimeInterval::new(t0, end).step_by_inclusive(step).collect();
+        assert_eq!(times, [t0, end]);
     }
 
     #[test]
