@@ -1,0 +1,164 @@
+// SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+//
+// SPDX-License-Identifier: MPL-2.0
+
+//! Conversions between the true, eccentric, and mean longitude of elliptic orbits.
+//!
+//! The longitudes are the anomalies offset by the longitude of periapsis ϖ, and the eccentricity
+//! enters only through the components h = e·sin(ϖ) and k = e·cos(ϖ) of the eccentricity vector.
+//! Unlike the anomalies, the longitudes are therefore well-defined for circular orbits.
+//!
+//! As in the [`anomalies`](crate::anomalies) module, the conversions do not normalise: the
+//! result stays in the same revolution as the input.
+//!
+//! All functions require h² + k² < 1.
+
+use crate::math::float::{abs, atan, cos, sin, sqrt};
+use crate::units::Angle;
+
+const MAX_ITERATIONS: usize = 64;
+
+fn beta(h: f64, k: f64) -> f64 {
+    1.0 / (1.0 + sqrt(1.0 - h * h - k * k))
+}
+
+/// Converts the true longitude L to the eccentric longitude F.
+pub(crate) fn true_to_eccentric_longitude(true_longitude: Angle, h: f64, k: f64) -> Angle {
+    let b = beta(h, k);
+    let (sin_l, cos_l) = true_longitude.sin_cos();
+    let delta = 2.0 * atan(b * (k * sin_l - h * cos_l) / (1.0 + b * (k * cos_l + h * sin_l)));
+    Angle::new(true_longitude.as_f64() - delta)
+}
+
+/// Converts the eccentric longitude F to the true longitude L.
+pub(crate) fn eccentric_to_true_longitude(eccentric_longitude: Angle, h: f64, k: f64) -> Angle {
+    let b = beta(h, k);
+    let (sin_f, cos_f) = eccentric_longitude.sin_cos();
+    let delta = 2.0 * atan(b * (k * sin_f - h * cos_f) / (1.0 - b * (k * cos_f + h * sin_f)));
+    Angle::new(eccentric_longitude.as_f64() + delta)
+}
+
+/// Converts the eccentric longitude F to the mean longitude λ = F - k·sin(F) + h·cos(F).
+pub(crate) fn eccentric_to_mean_longitude(eccentric_longitude: Angle, h: f64, k: f64) -> Angle {
+    let (sin_f, cos_f) = eccentric_longitude.sin_cos();
+    Angle::new(eccentric_longitude.as_f64() - k * sin_f + h * cos_f)
+}
+
+/// Converts the mean longitude λ to the eccentric longitude F.
+pub(crate) fn mean_to_eccentric_longitude(mean_longitude: Angle, h: f64, k: f64) -> Angle {
+    // Solves the equinoctial form of Kepler's equation, λ = F - k·sin(F) + h·cos(F). The solution
+    // is bracketed by λ ± e and the residual is monotonic within the bracket, so the safeguarded
+    // Newton iteration always converges.
+    let lambda = mean_longitude.as_f64();
+    let e = sqrt(h * h + k * k);
+    let mut lower = lambda - e;
+    let mut upper = lambda + e;
+    let mut f = lambda;
+    for _ in 0..MAX_ITERATIONS {
+        let (sin_f, cos_f) = (sin(f), cos(f));
+        let residual = f - k * sin_f + h * cos_f - lambda;
+        if residual == 0.0 {
+            break;
+        }
+        if residual > 0.0 {
+            upper = f;
+        } else {
+            lower = f;
+        }
+        let mut next = f - residual / (1.0 - k * cos_f - h * sin_f);
+        if !(next > lower && next < upper) {
+            next = 0.5 * (lower + upper);
+        }
+        let scale = if abs(f) > 1.0 { abs(f) } else { 1.0 };
+        let converged = abs(next - f) <= 4.0 * f64::EPSILON * scale;
+        f = next;
+        if converged {
+            break;
+        }
+    }
+    Angle::new(f)
+}
+
+/// Converts the true longitude L to the mean longitude λ.
+pub(crate) fn true_to_mean_longitude(true_longitude: Angle, h: f64, k: f64) -> Angle {
+    eccentric_to_mean_longitude(true_to_eccentric_longitude(true_longitude, h, k), h, k)
+}
+
+#[cfg(test)]
+mod tests {
+    use core::f64::consts::{PI, TAU};
+
+    use lox_approx::assert_approx_eq;
+    use rstest::rstest;
+
+    use crate::anomalies::TrueAnomaly;
+    use crate::elements::Eccentricity;
+    use crate::units::AngleUnits;
+
+    use super::*;
+
+    fn mean_to_true_longitude(mean_longitude: Angle, h: f64, k: f64) -> Angle {
+        eccentric_to_true_longitude(mean_to_eccentric_longitude(mean_longitude, h, k), h, k)
+    }
+
+    #[rstest]
+    #[case(0.0, 0.0, 1.0)]
+    #[case(1e-6, 0.3, -2.5)]
+    #[case(0.1, 1.2, 0.4)]
+    #[case(0.5, 4.0, 3.0)]
+    #[case(0.9, 2.0, -1.0)]
+    #[case(0.999, 5.5, 0.01)]
+    fn test_longitudes_match_anomalies(#[case] e: f64, #[case] pomega: f64, #[case] nu: f64) {
+        let h = e * sin(pomega);
+        let k = e * cos(pomega);
+        let ecc = Eccentricity::try_new(e).unwrap();
+        let true_anomaly = TrueAnomaly::new(nu.rad());
+        let eccentric_anomaly = true_anomaly.to_eccentric(ecc).unwrap().as_f64();
+        let mean_anomaly = true_anomaly.to_mean(ecc).unwrap().as_f64();
+
+        let true_longitude = Angle::new(nu + pomega);
+        let eccentric_longitude = true_to_eccentric_longitude(true_longitude, h, k);
+        let mean_longitude = true_to_mean_longitude(true_longitude, h, k);
+
+        assert_approx_eq!(
+            Angle::new(eccentric_longitude.as_f64() - pomega - eccentric_anomaly)
+                .mod_two_pi_signed(),
+            Angle::ZERO,
+            atol <= 1e-12
+        );
+        assert_approx_eq!(
+            Angle::new(mean_longitude.as_f64() - pomega - mean_anomaly).mod_two_pi_signed(),
+            Angle::ZERO,
+            atol <= 1e-12
+        );
+        assert_approx_eq!(
+            eccentric_to_true_longitude(eccentric_longitude, h, k),
+            true_longitude,
+            atol <= 1e-12
+        );
+        assert_approx_eq!(
+            mean_to_true_longitude(mean_longitude, h, k),
+            true_longitude,
+            atol <= 1e-10
+        );
+    }
+
+    #[test]
+    fn test_circular_longitudes_coincide() {
+        let l = 2.0.rad();
+        assert_eq!(true_to_eccentric_longitude(l, 0.0, 0.0), l);
+        assert_eq!(true_to_mean_longitude(l, 0.0, 0.0), l);
+        assert_eq!(mean_to_true_longitude(l, 0.0, 0.0), l);
+    }
+
+    #[test]
+    fn test_longitudes_stay_in_revolution() {
+        let (h, k) = (0.3, -0.4);
+        for revolutions in [-3.0, 0.0, 5.0] {
+            let l = Angle::new(1.0 + revolutions * TAU);
+            let lambda = true_to_mean_longitude(l, h, k);
+            assert!(abs(lambda.as_f64() - l.as_f64()) < PI);
+            assert_approx_eq!(mean_to_true_longitude(lambda, h, k), l, atol <= 1e-10);
+        }
+    }
+}

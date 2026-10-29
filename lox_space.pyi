@@ -1775,6 +1775,12 @@ class ModifiedEquinoctial:
         l: True longitude as Angle.
         origin: Central body (default: Earth).
         frame: Reference frame (default: ICRF).
+        retrograde: Use the retrograde set of elements (retrograde factor I = -1), which is
+            singular at i = 0 instead of i = π (default: False).
+
+    Raises:
+        ValueError: If the semi-parameter is not positive, an element is not finite, or the
+            true longitude lies outside the asymptotes of an open orbit.
 
     Examples:
         >>> t = lox.Time("TAI", 2024, 1, 1)
@@ -1799,6 +1805,7 @@ class ModifiedEquinoctial:
         l: Angle,
         origin: str | int | Origin | None = None,
         frame: str | Frame | None = None,
+        retrograde: bool = False,
     ) -> Self: ...
     def time(self) -> Time:
         """Return the epoch of this orbit."""
@@ -1813,19 +1820,22 @@ class ModifiedEquinoctial:
         """Return the semi-latus rectum (semi-parameter) `p`."""
         ...
     def f(self) -> float:
-        """Return `f` = e·cos(ω + Ω)."""
+        """Return `f` = e·cos(ω + I·Ω)."""
         ...
     def g(self) -> float:
-        """Return `g` = e·sin(ω + Ω)."""
+        """Return `g` = e·sin(ω + I·Ω)."""
         ...
     def h(self) -> float:
-        """Return `h` = tan(i/2)·cos(Ω)."""
+        """Return `h` = tanᴵ(i/2)·cos(Ω)."""
         ...
     def k(self) -> float:
-        """Return `k` = tan(i/2)·sin(Ω)."""
+        """Return `k` = tanᴵ(i/2)·sin(Ω)."""
         ...
     def l(self) -> Angle:
-        """Return the true longitude `l` = Ω + ω + ν."""
+        """Return the true longitude `l` = ν + ω + I·Ω."""
+        ...
+    def retrograde(self) -> bool:
+        """Return whether the elements use the retrograde set (retrograde factor I = -1)."""
         ...
     def eccentricity(self) -> float:
         """Return the orbital eccentricity."""
