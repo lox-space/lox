@@ -766,3 +766,18 @@ def test_element_conversions_reject_rotating_frame(method):
     )
     with pytest.raises(ValueError, match="quasi-inertial"):
         getattr(cart, method)()
+
+
+def test_equinoctial_large_components_raise_value_error():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    with pytest.raises(ValueError, match="circular or elliptic"):
+        lox.Equinoctial(time, 7000.0 * lox.km, 1e200, 1e200, 0.0, 0.0, 0.0 * lox.deg)
+    with pytest.raises(ValueError, match="eccentricity"):
+        lox.Equinoctial(time, 7000.0 * lox.km, 1.5e308, 1.5e308, 0.0, 0.0, 0.0 * lox.deg)
+
+    mee = lox.ModifiedEquinoctial(time, 7000.0 * lox.km, 1e200, 0.0, 0.0, 0.0, 0.0 * lox.deg)
+    assert mee.eccentricity() == 1e200
+    with pytest.raises(ValueError, match="eccentricity"):
+        lox.ModifiedEquinoctial(
+            time, 7000.0 * lox.km, 1.5e308, 1.5e308, 0.0, 0.0, 0.0 * lox.deg
+        )
