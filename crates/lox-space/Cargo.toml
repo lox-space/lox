@@ -81,6 +81,10 @@ harness = false
 required-features = ["frames"]
 
 [[bench]]
+name = "kepler"
+harness = false
+
+[[bench]]
 name = "trajectory"
 harness = false
 required-features = ["analysis"]
