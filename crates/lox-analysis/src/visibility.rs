@@ -1196,12 +1196,12 @@ where
                 let gs = gs_map.get(gs_id)?;
                 let sc_traj = self.ensemble.get(sc_id)?;
                 let intervals = results.intervals_for(gs_id, sc_id)?;
+                // The trajectory may carry typed origin/frame; erase them for
+                // pass computation.
+                let dynamic_traj = sc_traj.clone().into_dynamic();
                 let passes: Result<Vec<Pass>, PassError> = intervals
                     .iter()
                     .filter_map(|interval| {
-                        // The trajectory may carry typed origin/frame; erase them
-                        // for pass computation.
-                        let dynamic_traj = sc_traj.clone().into_dynamic();
                         Pass::from_interval(*interval, self.step, gs, &dynamic_traj).transpose()
                     })
                     .collect();
