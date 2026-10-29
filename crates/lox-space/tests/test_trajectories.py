@@ -122,6 +122,24 @@ def test_extrapolation_limit(trajectory):
     assert float(trajectory.extrapolation_limit()) == pytest.approx(1e-3)
 
 
+@pytest.mark.parametrize("limit", [0.0, 10.0])
+def test_conversions_keep_extrapolation_limit(trajectory, ephemeris, limit):
+    trajectory = trajectory.with_extrapolation_limit(lox.TimeDelta(limit))
+    end = trajectory.states()[-1].time()
+    converted = [
+        trajectory.to_frame("ICRF"),
+        trajectory.to_frame("J2000"),
+        trajectory.to_origin("Moon", ephemeris),
+    ]
+    for c in converted:
+        assert float(c.extrapolation_limit()) == limit
+        if limit > 0.0:
+            c.at(end + lox.TimeDelta(1))
+        else:
+            with pytest.raises(ValueError, match="outside of the trajectory"):
+                c.at(end + lox.TimeDelta(0.5e-3))
+
+
 def test_keplerian_repr(orbit):
     r = repr(orbit)
     assert r.startswith("Keplerian(")

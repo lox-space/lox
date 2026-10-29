@@ -1370,7 +1370,9 @@ impl PyTrajectory {
             states.push(s.to_origin_inner(target.clone(), ephemeris)?.0);
         }
         Ok(Self(
-            Trajectory::try_new(states).map_err(PyTrajectoryError)?,
+            Trajectory::try_new(states)
+                .map_err(PyTrajectoryError)?
+                .with_extrapolation_limit(self.0.extrapolation_limit()),
         ))
     }
 
@@ -1396,7 +1398,9 @@ impl PyTrajectory {
             states.push(PyCartesian(s).to_frame_inner(frame.clone(), provider)?.0);
         }
         Ok(PyTrajectory(
-            Trajectory::try_new(states).map_err(PyTrajectoryError)?,
+            Trajectory::try_new(states)
+                .map_err(PyTrajectoryError)?
+                .with_extrapolation_limit(self.0.extrapolation_limit()),
         ))
     }
 }

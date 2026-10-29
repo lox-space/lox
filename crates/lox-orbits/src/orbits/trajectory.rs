@@ -259,6 +259,14 @@ where
         states.push(self.state_at(interval.end())?);
         Ok(Trajectory::try_new(states)?.with_extrapolation_limit(self.extrapolation_limit()))
     }
+
+    fn propagate_to(
+        &self,
+        times: impl IntoIterator<Item = Time>,
+    ) -> Result<Trajectory<O, R>, Self::Error> {
+        let states: Result<Vec<_>, _> = times.into_iter().map(|t| self.state_at(t)).collect();
+        Ok(Trajectory::try_new(states?)?.with_extrapolation_limit(self.extrapolation_limit()))
+    }
 }
 
 /// Errors that can occur when constructing or parsing a trajectory.
@@ -532,6 +540,23 @@ mod tests {
             limit
         );
         assert_eq!(traj.into_dynamic().extrapolation_limit(), limit);
+    }
+
+    #[test]
+    fn test_trajectory_propagate_to_keeps_extrapolation_limit() {
+        let traj = sample_trajectory().with_extrapolation_limit(TimeDelta::ZERO);
+        let (start, end) = (traj.start_time(), traj.end_time());
+
+        let resampled = traj
+            .propagate_to([start, start + TimeDelta::from_seconds(60), end])
+            .unwrap();
+        assert_eq!(resampled.extrapolation_limit(), TimeDelta::ZERO);
+        assert!(resampled.at(end).is_some());
+        assert!(
+            resampled
+                .at(end + TimeDelta::from_microseconds(500))
+                .is_none()
+        );
     }
 
     #[test]
