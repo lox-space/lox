@@ -199,7 +199,7 @@ def test_numerical_repr():
 
 def test_j2_single_time():
     state = iss_state()
-    j2 = lox.J2(state)
+    j2 = lox.J2(state.to_keplerian())
     t1 = state.time() + 90 * lox.minutes
     result = j2.propagate(t1)
     assert isinstance(result, lox.Cartesian)
@@ -207,7 +207,7 @@ def test_j2_single_time():
 
 def test_j2_time_interval():
     state = iss_state()
-    j2 = lox.J2(state)
+    j2 = lox.J2(state.to_keplerian())
     t0 = state.time()
     t1 = t0 + 1 * lox.hours
     trajectory = j2.propagate(t0, end=t1)
@@ -216,7 +216,7 @@ def test_j2_time_interval():
 
 def test_j2_multiple_times():
     state = iss_state()
-    j2 = lox.J2(state)
+    j2 = lox.J2(state.to_keplerian())
     t0 = state.time() + 1 * lox.minutes
     t1 = t0 + 9 * lox.minutes
     times = lox.Interval(t0, t1).step_by(1 * lox.minutes)
@@ -226,7 +226,7 @@ def test_j2_multiple_times():
 
 def test_j2_custom_step():
     state = iss_state()
-    j2 = lox.J2(state, step=30 * lox.seconds)
+    j2 = lox.J2(state.to_keplerian(), step=30 * lox.seconds)
     t0 = state.time()
     t1 = t0 + 10 * lox.minutes
     trajectory = j2.propagate(t0, end=t1)
@@ -235,7 +235,7 @@ def test_j2_custom_step():
 
 def test_j2_repr():
     state = iss_state()
-    j2 = lox.J2(state)
+    j2 = lox.J2(state.to_keplerian())
     assert "J2(" in repr(j2)
 
 
@@ -250,3 +250,29 @@ def test_ground(provider):
     expected_km = [-1765.9535510583582, 4524.585984442561, 4120.189198495323]
     actual_km = state.position() * 1e-3
     npt.assert_allclose(actual_km, expected_km)
+
+
+@pytest.mark.parametrize("propagator", [lox.J2, lox.J4])
+def test_kozai_accepts_mean_keplerian_elements(propagator):
+    time = lox.UTC(2024, 1, 1).to_scale("TAI")
+    kep = lox.Keplerian(
+        time,
+        semi_major_axis=7000.0 * lox.km,
+        eccentricity=0.001,
+        inclination=51.6 * lox.deg,
+        longitude_of_ascending_node=30.0 * lox.deg,
+        argument_of_periapsis=60.0 * lox.deg,
+        true_anomaly=90.0 * lox.deg,
+    )
+    from_keplerian = propagator(kep).propagate(time)
+    npt.assert_allclose(
+        from_keplerian.position(), kep.to_cartesian().position(), rtol=1e-10
+    )
+
+
+@pytest.mark.parametrize("propagator", [lox.J2, lox.J4])
+def test_kozai_rejects_cartesian_states(propagator):
+    time = lox.UTC(2024, 1, 1).to_scale("TAI")
+    cart = lox.Cartesian(time, position=[7000e3, 0.0, 0.0], velocity=[0.0, 7500.0, 0.0])
+    with pytest.raises(TypeError):
+        propagator(cart)

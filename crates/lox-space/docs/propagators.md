@@ -42,15 +42,16 @@ future = propagator.propagate(t + lox.TimeDelta.from_hours(1))
 times = [t + lox.TimeDelta(i * 60) for i in range(100)]
 trajectory = propagator.propagate(times)
 
-# J2 secular propagation (Kozai theory, works for all orbits)
-j2 = lox.J2(state)
+# J2 secular propagation (Kozai theory, works for all orbits) from mean
+# Keplerian elements
+j2 = lox.J2(state.to_keplerian())
 future = j2.propagate(t + lox.TimeDelta.from_hours(1))
 
 # J2 with Kwok short-period corrections (osculating output)
-j2_osc = lox.J2(state, osculating=True)
+j2_osc = lox.J2(state.to_keplerian(), osculating=True)
 
 # J4 propagation (includes J2², J4 zonal harmonic terms)
-j4 = lox.J4(state, osculating=True)
+j4 = lox.J4(state.to_keplerian(), osculating=True)
 
 # Numerical propagation (accounts for J2 oblateness)
 numerical = lox.Numerical(state)

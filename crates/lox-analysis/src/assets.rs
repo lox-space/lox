@@ -547,39 +547,41 @@ impl<O: CoordinateOrigin + Copy + Send + Sync, R: ReferenceFrame + Copy + Send +
             let keplerian_orbit =
                 KeplerianOrbit::try_from_keplerian(sat.elements, epoch, origin, frame)
                     .map_err(|e| ConstellationConvertError::KeplerianOrbit(e.to_string()))?;
-            let cartesian_orbit = keplerian_orbit
-                .try_to_cartesian()
-                .map_err(|e| ConstellationConvertError::CartesianConversion(e.to_string()))?;
+            let cartesian_orbit = || {
+                keplerian_orbit
+                    .try_to_cartesian()
+                    .map_err(|e| ConstellationConvertError::CartesianConversion(e.to_string()))
+            };
 
             let orbit_source = match propagator_kind {
                 ConstellationPropagator::Vallado => {
-                    let v = Vallado::try_new(cartesian_orbit)
+                    let v = Vallado::try_new(cartesian_orbit()?)
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
                     OrbitSource::Vallado(v)
                 }
                 ConstellationPropagator::Numerical => {
-                    let n = NumericalPropagator::try_new(cartesian_orbit)
+                    let n = NumericalPropagator::try_new(cartesian_orbit()?)
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
                     OrbitSource::Numerical(n)
                 }
                 ConstellationPropagator::J2 => {
-                    let p = J2Propagator::try_new(cartesian_orbit)
+                    let p = J2Propagator::try_new(keplerian_orbit)
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
                     OrbitSource::J2(p)
                 }
                 ConstellationPropagator::J2Osc => {
-                    let p = J2Propagator::try_new(cartesian_orbit)
+                    let p = J2Propagator::try_new(keplerian_orbit)
                         .map(|p| p.with_osculating(true))
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
                     OrbitSource::J2(p)
                 }
                 ConstellationPropagator::J4 => {
-                    let p = J4Propagator::try_new(cartesian_orbit)
+                    let p = J4Propagator::try_new(keplerian_orbit)
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
                     OrbitSource::J4(p)
                 }
                 ConstellationPropagator::J4Osc => {
-                    let p = J4Propagator::try_new(cartesian_orbit)
+                    let p = J4Propagator::try_new(keplerian_orbit)
                         .map(|p| p.with_osculating(true))
                         .map_err(|e| ConstellationConvertError::Propagator(e.to_string()))?;
                     OrbitSource::J4(p)
