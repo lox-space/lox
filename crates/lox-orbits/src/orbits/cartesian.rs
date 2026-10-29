@@ -15,14 +15,17 @@ use lox_frames::BodyFixed;
 use lox_frames::traits::ReferenceEllipsoid;
 use lox_frames::traits::TryReferenceEllipsoid;
 use lox_frames::traits::UndefinedReferenceEllipsoidError;
-use lox_frames::{Frame, Icrf, ReferenceFrame, rotations::TryRotation, traits::frame_key};
+use lox_frames::{
+    Frame, Icrf, NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial,
+    rotations::TryRotation, traits::frame_key,
+};
 use lox_time::offsets::DefaultOffsetProvider;
 use lox_time::time_scales::{Tdb, TimeScale};
 use thiserror::Error;
 
 use crate::ground::EllipsoidLocation;
 
-use super::{CartesianOrbit, KeplerianOrbit, Orbit};
+use super::{CartesianOrbit, KeplerianOrbit};
 
 impl<O, R> CartesianOrbit<O, R>
 where
@@ -53,33 +56,27 @@ where
     pub fn to_keplerian(&self) -> Result<KeplerianOrbit<O, R>, KeplerianError>
     where
         O: Copy + PointMass,
-        R: Copy,
+        R: Copy + QuasiInertial,
     {
-        Ok(Orbit::from_state(
-            self.state().to_keplerian(self.gravitational_parameter())?,
-            self.time(),
-            self.origin(),
-            self.reference_frame(),
-        ))
+        Ok(self.with_state(self.state().to_keplerian(self.gravitational_parameter())?))
     }
 
     /// Converts this Cartesian orbit to Keplerian elements.
     ///
     /// # Errors
     ///
-    /// Returns a [`ToKeplerianError`] if the gravitational parameter is undefined or the state
-    /// cannot be represented by Keplerian elements, see [`Cartesian::to_keplerian`].
+    /// Returns a [`ToKeplerianError`] if the frame is not quasi-inertial, the gravitational
+    /// parameter is undefined, or the state cannot be represented by Keplerian elements, see
+    /// [`Cartesian::to_keplerian`].
     pub fn try_to_keplerian(&self) -> Result<KeplerianOrbit<O, R>, ToKeplerianError>
     where
         O: Copy + TryPointMass,
-        R: Copy,
+        R: Copy + TryQuasiInertial,
     {
-        Ok(Orbit::from_state(
+        self.reference_frame().try_quasi_inertial()?;
+        Ok(self.with_state(
             self.state()
                 .to_keplerian(self.try_gravitational_parameter()?)?,
-            self.time(),
-            self.origin(),
-            self.reference_frame(),
         ))
     }
 
@@ -134,6 +131,9 @@ pub enum ToKeplerianError {
     /// The origin has no gravitational parameter.
     #[error(transparent)]
     UndefinedOriginProperty(#[from] UndefinedOriginPropertyError),
+    /// The reference frame is not quasi-inertial.
+    #[error(transparent)]
+    NonQuasiInertial(#[from] NonQuasiInertialFrameError),
     /// The state cannot be represented by Keplerian elements.
     #[error(transparent)]
     Keplerian(#[from] KeplerianError),
@@ -258,7 +258,7 @@ where
 impl<O, R> TryFrom<CartesianOrbit<O, R>> for KeplerianOrbit<O, R>
 where
     O: CoordinateOrigin + TryPointMass + Copy,
-    R: ReferenceFrame + Copy,
+    R: ReferenceFrame + TryQuasiInertial + Copy,
 {
     type Error = ToKeplerianError;
 
@@ -311,6 +311,22 @@ mod tests {
 
         assert_approx_eq!(s1.position(), r1, rtol <= 1e-8);
         assert_approx_eq!(s1.velocity(), v1, rtol <= 1e-8);
+    }
+
+    #[test]
+    fn test_try_to_keplerian_rejects_rotating_frame() {
+        let state =
+            Cartesian::from_vecs(DVec3::new(7000e3, 0.0, 0.0), DVec3::new(0.0, 7500.0, 0.0));
+        let orbit = CartesianOrbit::from_state(
+            state,
+            lox_time::Time::j2000(TimeScale::Tai),
+            Origin::from(Earth),
+            Frame::Itrf,
+        );
+        assert!(matches!(
+            orbit.try_to_keplerian(),
+            Err(ToKeplerianError::NonQuasiInertial(_))
+        ));
     }
 
     #[test]

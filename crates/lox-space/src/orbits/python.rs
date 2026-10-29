@@ -308,20 +308,16 @@ impl PyCartesian {
     ///     Keplerian elements representing this orbit.
     ///
     /// Raises:
-    ///     ValueError: If the state is not in an inertial frame or cannot be represented by
+    ///     ValueError: If the frame is not quasi-inertial or the state cannot be represented by
     ///         Keplerian elements, e.g. because its angular momentum is zero.
     ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
     fn to_keplerian(&self) -> PyResult<PyKeplerian> {
-        if self.0.reference_frame() != Frame::Icrf {
-            return Err(PyValueError::new_err(
-                "only inertial frames are supported for conversion to Keplerian elements",
-            ));
-        }
         let keplerian = self.0.try_to_keplerian().map_err(|err| match err {
             ToKeplerianError::UndefinedOriginProperty(err) => {
                 PyUndefinedOriginPropertyError(err).into()
             }
-            ToKeplerianError::Keplerian(err) => PyValueError::new_err(err.to_string()),
+            ToKeplerianError::NonQuasiInertial(err) => value_error(err),
+            ToKeplerianError::Keplerian(err) => value_error(err),
         })?;
         Ok(PyKeplerian(keplerian))
     }

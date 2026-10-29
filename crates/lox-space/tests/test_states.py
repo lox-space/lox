@@ -753,8 +753,10 @@ def test_modified_equinoctial_rejects_rotating_frame():
         )
 
 
-@pytest.mark.parametrize("method", ["to_equinoctial", "to_modified_equinoctial"])
-def test_equinoctial_conversions_reject_rotating_frame(method):
+@pytest.mark.parametrize(
+    "method", ["to_keplerian", "to_equinoctial", "to_modified_equinoctial"]
+)
+def test_element_conversions_reject_rotating_frame(method):
     time = lox.UTC(2024, 1, 1).to_scale("TDB")
     cart = lox.Cartesian(
         time,
