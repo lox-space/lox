@@ -816,6 +816,15 @@ pub enum CartesianTrajectoryError {
     /// The state at the given index contains a non-finite value.
     #[error("state {0} contains a non-finite value")]
     NonFinite(usize),
+    /// A state component does not have one value per time step.
+    #[error("a trajectory with {0} states has {1} values in a state component")]
+    LengthMismatch(usize, usize),
+    /// The first time step is not zero.
+    #[error("the first time step must be zero")]
+    NonZeroStart,
+    /// The extrapolation limit is negative or not finite.
+    #[error("the extrapolation limit must be finite and non-negative")]
+    InvalidExtrapolationLimit,
 }
 
 /// A Cartesian state paired with its time offset within a [`CartesianTrajectory`].
@@ -847,18 +856,56 @@ pub const DEFAULT_EXTRAPOLATION_LIMIT: TimeDelta = TimeDelta::from_milliseconds(
 /// the last state, which defaults to [`DEFAULT_EXTRAPOLATION_LIMIT`]. Queries
 /// beyond it return `None`.
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "CartesianTrajectoryRepr")
+)]
 pub struct CartesianTrajectory {
     time_steps: Arc<[f64]>,
     data: [Arc<[f64]>; 6],
+    #[cfg_attr(feature = "serde", serde(skip_serializing))]
     series: [Series; 3],
-    #[cfg_attr(feature = "serde", serde(default = "default_extrapolation_limit"))]
+    extrapolation_limit: f64,
+}
+
+/// Serde wire format for [`CartesianTrajectory`]: forces deserialization through
+/// validation and rebuilds the interpolation from the states.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct CartesianTrajectoryRepr {
+    time_steps: Arc<[f64]>,
+    data: [Arc<[f64]>; 6],
+    #[serde(default = "default_extrapolation_limit")]
     extrapolation_limit: f64,
 }
 
 #[cfg(feature = "serde")]
 fn default_extrapolation_limit() -> f64 {
     DEFAULT_EXTRAPOLATION_LIMIT.as_seconds_f64()
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<CartesianTrajectoryRepr> for CartesianTrajectory {
+    type Error = CartesianTrajectoryError;
+
+    fn try_from(repr: CartesianTrajectoryRepr) -> Result<Self, Self::Error> {
+        let CartesianTrajectoryRepr {
+            time_steps,
+            data,
+            extrapolation_limit,
+        } = repr;
+
+        CartesianTrajectory::validate(&time_steps, &data)?;
+        if !extrapolation_limit.is_finite() || extrapolation_limit < 0.0 {
+            return Err(CartesianTrajectoryError::InvalidExtrapolationLimit);
+        }
+
+        Ok(Self {
+            extrapolation_limit,
+            ..Self::from_validated(time_steps, data)
+        })
+    }
 }
 
 impl CartesianTrajectory {
@@ -890,16 +937,9 @@ impl CartesianTrajectory {
         let mut vy: Vec<f64> = Vec::with_capacity(n);
         let mut vz: Vec<f64> = Vec::with_capacity(n);
 
-        for (idx, TimeStampedCartesian { time, state }) in iter.enumerate() {
-            let t = (time - first).as_seconds_f64();
-            if time_steps.last().is_some_and(|&prev| t <= prev) {
-                return Err(CartesianTrajectoryError::NonMonotonic(idx));
-            }
+        for TimeStampedCartesian { time, state } in iter {
             let (pos, vel) = (state.position(), state.velocity());
-            if !pos.is_finite() || !vel.is_finite() {
-                return Err(CartesianTrajectoryError::NonFinite(idx));
-            }
-            time_steps.push(t);
+            time_steps.push((time - first).as_seconds_f64());
             x.push(pos.x);
             y.push(pos.y);
             z.push(pos.z);
@@ -908,24 +948,50 @@ impl CartesianTrajectory {
             vz.push(vel.z);
         }
 
-        if time_steps.len() < 2 {
-            return Err(CartesianTrajectoryError::InsufficientStates(
-                time_steps.len(),
-            ));
-        }
-
         let time_steps: Arc<[f64]> = Arc::from(time_steps);
         let data: [Arc<[f64]>; 6] = [x, y, z, vx, vy, vz].map(Arc::from);
-        let series = [0, 1, 2].map(|i| {
-            Series::hermite_cubic(time_steps.clone(), data[i].clone(), data[i + 3].clone())
-        });
+        Self::validate(&time_steps, &data)?;
+        Ok(Self::from_validated(time_steps, data))
+    }
 
-        Ok(Self {
+    /// Checks the invariants of the trajectory's states.
+    fn validate(
+        time_steps: &[f64],
+        data: &[Arc<[f64]>; 6],
+    ) -> Result<(), CartesianTrajectoryError> {
+        let n = time_steps.len();
+        if n < 2 {
+            return Err(CartesianTrajectoryError::InsufficientStates(n));
+        }
+        if let Some(column) = data.iter().find(|column| column.len() != n) {
+            return Err(CartesianTrajectoryError::LengthMismatch(n, column.len()));
+        }
+        if time_steps[0] != 0.0 {
+            return Err(CartesianTrajectoryError::NonZeroStart);
+        }
+        for idx in 0..n {
+            if idx > 0 && time_steps[idx] <= time_steps[idx - 1] {
+                return Err(CartesianTrajectoryError::NonMonotonic(idx));
+            }
+            if !time_steps[idx].is_finite() || data.iter().any(|column| !column[idx].is_finite()) {
+                return Err(CartesianTrajectoryError::NonFinite(idx));
+            }
+        }
+        Ok(())
+    }
+
+    /// Builds the interpolation for states that have already been validated.
+    fn from_validated(time_steps: Arc<[f64]>, data: [Arc<[f64]>; 6]) -> Self {
+        let series = [0, 1, 2].map(|i| {
+            Series::try_hermite_cubic(time_steps.clone(), data[i].clone(), data[i + 3].clone())
+                .unwrap_or_else(|err| unreachable!("trajectory states should be validated: {err}"))
+        });
+        Self {
             time_steps,
             data,
             series,
             extrapolation_limit: DEFAULT_EXTRAPOLATION_LIMIT.as_seconds_f64(),
-        })
+        }
     }
 
     /// Creates a trajectory from an iterator of timestamped Cartesian states.
@@ -1112,6 +1178,8 @@ mod tests {
     use lox_approx::assert_approx_eq;
     use rstest::rstest;
 
+    #[cfg(feature = "serde")]
+    use crate::math::series::InterpolationType;
     use crate::units::{AngleUnits, AngularRate, DistanceUnits, VelocityUnits};
 
     use super::*;
@@ -1757,6 +1825,87 @@ mod tests {
         let legacy: CartesianTrajectory = serde_json::from_value(json).unwrap();
         assert_eq!(legacy.extrapolation_limit(), DEFAULT_EXTRAPOLATION_LIMIT);
         assert_eq!(legacy.time_steps(), traj.time_steps());
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_cartesian_trajectory_serde_round_trip() {
+        let traj = linear_trajectory();
+        let json = serde_json::to_value(&traj).unwrap();
+        assert!(json.get("series").is_none());
+
+        let round_trip: CartesianTrajectory = serde_json::from_value(json).unwrap();
+        assert_eq!(round_trip.time_steps(), traj.time_steps());
+        for t in [-1e-3, 0.0, 30.0, 90.0, 120.0] {
+            assert_eq!(round_trip.at(t), traj.at(t));
+        }
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_cartesian_trajectory_deserialize_ignores_series() {
+        let traj = linear_trajectory();
+        let mut json = serde_json::to_value(&traj).unwrap();
+        // Data saved before the series were rebuilt on load carries them along,
+        // and they must not override the states.
+        let constant = Series::try_new(
+            alloc::vec![0.0, 1.0],
+            alloc::vec![5.0, 5.0],
+            InterpolationType::Linear,
+        )
+        .unwrap();
+        let bogus = serde_json::to_value([constant.clone(), constant.clone(), constant]).unwrap();
+        json.as_object_mut().unwrap().insert("series".into(), bogus);
+
+        let legacy: CartesianTrajectory = serde_json::from_value(json).unwrap();
+        assert_eq!(legacy.at(90.0), traj.at(90.0));
+    }
+
+    #[cfg(feature = "serde")]
+    #[rstest]
+    #[case::too_short(
+        |j: &mut serde_json::Value| j["time_steps"] = serde_json::json!([0.0]),
+        "a trajectory needs at least 2 states but got 1"
+    )]
+    #[case::length_mismatch(
+        |j: &mut serde_json::Value| j["data"][4] = serde_json::json!([1.0, 2.0]),
+        "a trajectory with 3 states has 2 values in a state component"
+    )]
+    #[case::non_monotonic(
+        |j: &mut serde_json::Value| j["time_steps"] = serde_json::json!([0.0, 60.0, 60.0]),
+        "time step of state 2 is not strictly greater than its predecessor"
+    )]
+    #[case::non_zero_start(
+        |j: &mut serde_json::Value| j["time_steps"] = serde_json::json!([1.0, 60.0, 120.0]),
+        "the first time step must be zero"
+    )]
+    #[case::negative_limit(
+        |j: &mut serde_json::Value| j["extrapolation_limit"] = serde_json::json!(-1.0),
+        "the extrapolation limit must be finite and non-negative"
+    )]
+    fn test_cartesian_trajectory_deserialize_invalid(
+        #[case] corrupt: fn(&mut serde_json::Value),
+        #[case] expected: &str,
+    ) {
+        let mut json = serde_json::to_value(linear_trajectory()).unwrap();
+        corrupt(&mut json);
+        let err = serde_json::from_value::<CartesianTrajectory>(json).unwrap_err();
+        assert_eq!(err.to_string(), expected);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_cartesian_trajectory_repr_non_finite() {
+        let traj = linear_trajectory();
+        let mut data = traj.data.clone();
+        data[2] = Arc::from([0.0, f64::NAN, 0.0]);
+        let repr = CartesianTrajectoryRepr {
+            time_steps: traj.time_steps.clone(),
+            data,
+            extrapolation_limit: traj.extrapolation_limit,
+        };
+        let err = CartesianTrajectory::try_from(repr).unwrap_err();
+        assert_eq!(err, CartesianTrajectoryError::NonFinite(1));
     }
 
     #[test]

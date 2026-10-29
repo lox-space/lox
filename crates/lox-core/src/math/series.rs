@@ -31,11 +31,20 @@ pub enum SeriesError {
     #[error("`x` and `y` must have the same length but were {0} and {1}")]
     DimensionMismatch(usize, usize),
     /// Fewer than 2 data points were provided.
-    #[error("length of `x` and `y` must at least 2 but was {0}")]
+    #[error("length of `x` and `y` must be at least 2 but was {0}")]
     InsufficientPoints(usize),
     /// The x-axis is not strictly monotonically increasing.
     #[error("x-axis must be strictly monotonic")]
     NonMonotonic,
+    /// The `x` and `dy` arrays have different lengths.
+    #[error("`x` and `dy` must have the same length but were {0} and {1}")]
+    DerivativeMismatch(usize, usize),
+    /// The number of interpolation coefficients does not match the number of intervals.
+    #[error("expected {0} sets of interpolation coefficients but got {1}")]
+    CoefficientMismatch(usize, usize),
+    /// The interpolation coefficients of the interval at the given index are not finite.
+    #[error("interpolation coefficients of interval {0} are not finite")]
+    NonFiniteCoefficients(usize),
 }
 
 /// The interpolation method and its precomputed coefficients.
@@ -56,20 +65,66 @@ enum Interpolation {
 }
 
 /// An interpolated 1-D data series.
+///
+/// A series always holds at least two points with a strictly increasing x-axis.
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "SeriesRepr")
+)]
 pub struct Series {
     x: Arc<[f64]>,
     y: Arc<[f64]>,
     interpolation: Interpolation,
 }
 
+/// Serde wire format for [`Series`]: forces deserialization through validation.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct SeriesRepr {
+    x: Arc<[f64]>,
+    y: Arc<[f64]>,
+    interpolation: Interpolation,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<SeriesRepr> for Series {
+    type Error = SeriesError;
+
+    fn try_from(repr: SeriesRepr) -> Result<Self, Self::Error> {
+        Series::check(&repr.x, &repr.y)?;
+        if let Interpolation::CubicSpline(coeffs) | Interpolation::HermiteCubic(coeffs) =
+            &repr.interpolation
+        {
+            let intervals = repr.x.len() - 1;
+            if coeffs.len() != intervals {
+                return Err(SeriesError::CoefficientMismatch(intervals, coeffs.len()));
+            }
+            if let Some(idx) = coeffs.iter().position(|c| c.iter().any(|c| !c.is_finite())) {
+                return Err(SeriesError::NonFiniteCoefficients(idx));
+            }
+        }
+        Ok(Self {
+            x: repr.x,
+            y: repr.y,
+            interpolation: repr.interpolation,
+        })
+    }
+}
+
 /// Selects the interpolation method for a [`Series`].
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(rename_all = "lowercase")
+)]
 pub enum InterpolationType {
     /// Linear interpolation.
     Linear,
     /// Natural cubic spline interpolation (falls back to linear if fewer than 4 points).
+    #[cfg_attr(feature = "serde", serde(rename = "cubic"))]
     CubicSpline,
 }
 
@@ -100,7 +155,12 @@ impl fmt::Display for InterpolationType {
 }
 
 impl Series {
-    /// Creates a new series, returning an error if the data is invalid.
+    /// Creates a new series.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`SeriesError`] if `x` is not strictly increasing, if `x` and `y` differ in
+    /// length, or if fewer than two points are given.
     pub fn try_new(
         x: impl Into<Arc<[f64]>>,
         y: impl Into<Arc<[f64]>>,
@@ -111,21 +171,7 @@ impl Series {
 
         Self::check(&x, &y)?;
 
-        Ok(Self::new(x, y, interpolation))
-    }
-
-    /// Creates a new series, panicking if the data is invalid.
-    pub fn new(
-        x: impl Into<Arc<[f64]>>,
-        y: impl Into<Arc<[f64]>>,
-        interpolation: InterpolationType,
-    ) -> Self {
-        let x: Arc<[f64]> = x.into();
-        let y: Arc<[f64]> = y.into();
-
-        Self::assert(&x, &y);
-
-        match interpolation {
+        Ok(match interpolation {
             InterpolationType::Linear => Self::linear(x, y),
             InterpolationType::CubicSpline => {
                 let n = x.len();
@@ -135,7 +181,7 @@ impl Series {
                     Self::cubic_spline(x, y)
                 }
             }
-        }
+        })
     }
 
     fn linear(x: Arc<[f64]>, y: Arc<[f64]>) -> Self {
@@ -152,17 +198,24 @@ impl Series {
     /// `p(dt) = c0 + c1·dt + c2·dt² + c3·dt³` is constructed so that:
     /// - `p(0)  = y_i`,  `p(h)  = y_{i+1}`
     /// - `p'(0) = dy_i`, `p'(h) = dy_{i+1}`
-    pub fn hermite_cubic(
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`SeriesError`] if `x` is not strictly increasing, if `x`, `y`, and `dy` differ
+    /// in length, or if fewer than two points are given.
+    pub fn try_hermite_cubic(
         x: impl Into<Arc<[f64]>>,
         y: impl Into<Arc<[f64]>>,
         dy: impl Into<Arc<[f64]>>,
-    ) -> Self {
+    ) -> Result<Self, SeriesError> {
         let x: Arc<[f64]> = x.into();
         let y: Arc<[f64]> = y.into();
         let dy: Arc<[f64]> = dy.into();
 
-        Self::assert(&x, &y);
-        assert!(dy.len() == x.len());
+        Self::check(&x, &y)?;
+        if dy.len() != x.len() {
+            return Err(SeriesError::DerivativeMismatch(x.len(), dy.len()));
+        }
 
         let n = x.len();
         let coeffs: Vec<[f64; 4]> = (0..n - 1)
@@ -179,11 +232,11 @@ impl Series {
             })
             .collect();
 
-        Self {
+        Ok(Self {
             x,
             y,
             interpolation: Interpolation::HermiteCubic(coeffs.into()),
-        }
+        })
     }
 
     fn cubic_spline(x: Arc<[f64]>, y: Arc<[f64]>) -> Self {
@@ -357,14 +410,6 @@ impl Series {
         }
         Ok(())
     }
-
-    fn assert(x: &[f64], y: &[f64]) {
-        assert!(x.is_strictly_increasing());
-
-        let n = x.len();
-        assert!(y.len() == n);
-        assert!(n >= MIN_POINTS_LINEAR);
-    }
 }
 
 #[cfg(test)]
@@ -480,6 +525,105 @@ mod tests {
         #[case] expected: Result<Series, SeriesError>,
     ) {
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_series_hermite_cubic() {
+        let x = vec![0.0, 1.0, 3.0];
+        let y = vec![1.0, 2.0, 0.0];
+        let dy = vec![0.5, -1.0, 2.0];
+
+        let s = Series::try_hermite_cubic(x.clone(), y.clone(), dy.clone()).unwrap();
+        for i in 0..x.len() {
+            let idx = s.find_index(x[i]);
+            assert_approx_eq!(s.interpolate_at_index(x[i], idx), y[i], rtol <= 1e-12);
+            assert_approx_eq!(s.derivative_at_index(x[i], idx), dy[i], rtol <= 1e-12);
+        }
+    }
+
+    #[rstest]
+    #[case(vec![1.0], vec![1.0], vec![1.0], SeriesError::InsufficientPoints(1))]
+    #[case(vec![1.0, 2.0], vec![1.0], vec![1.0, 1.0], SeriesError::DimensionMismatch(2, 1))]
+    #[case(vec![2.0, 1.0], vec![1.0, 1.0], vec![1.0, 1.0], SeriesError::NonMonotonic)]
+    #[case(vec![1.0, 2.0], vec![1.0, 1.0], vec![1.0], SeriesError::DerivativeMismatch(2, 1))]
+    fn test_series_hermite_cubic_errors(
+        #[case] x: Vec<f64>,
+        #[case] y: Vec<f64>,
+        #[case] dy: Vec<f64>,
+        #[case] expected: SeriesError,
+    ) {
+        assert_eq!(Series::try_hermite_cubic(x, y, dy), Err(expected));
+    }
+
+    #[cfg(feature = "serde")]
+    #[rstest]
+    #[case(Series::try_new(vec![1.0, 2.0, 3.0], vec![1.0, 4.0, 9.0], InterpolationType::Linear).unwrap())]
+    #[case(Series::try_new(vec![1.0, 2.0, 3.0, 4.0], vec![1.0, 4.0, 9.0, 16.0], InterpolationType::CubicSpline).unwrap())]
+    #[case(Series::try_hermite_cubic(vec![1.0, 2.0], vec![1.0, 4.0], vec![2.0, 4.0]).unwrap())]
+    fn test_series_serde_round_trip(#[case] series: Series) {
+        let json = serde_json::to_string(&series).unwrap();
+        let round_trip: Series = serde_json::from_str(&json).unwrap();
+        assert_eq!(round_trip.x(), series.x());
+        assert_eq!(round_trip.y(), series.y());
+        for xp in [1.0, 1.5, 2.25, 3.0, 3.5] {
+            assert_approx_eq!(
+                round_trip.interpolate(xp),
+                series.interpolate(xp),
+                rtol <= 1e-12
+            );
+        }
+    }
+
+    #[cfg(feature = "serde")]
+    #[rstest]
+    #[case(
+        r#"{"x":[],"y":[],"interpolation":"Linear"}"#,
+        "length of `x` and `y` must be at least 2 but was 0"
+    )]
+    #[case(
+        r#"{"x":[2.0,1.0],"y":[1.0,2.0],"interpolation":"Linear"}"#,
+        "x-axis must be strictly monotonic"
+    )]
+    #[case(
+        r#"{"x":[1.0,2.0],"y":[1.0],"interpolation":"Linear"}"#,
+        "`x` and `y` must have the same length but were 2 and 1"
+    )]
+    #[case(
+        r#"{"x":[1.0,2.0,3.0],"y":[1.0,2.0,3.0],"interpolation":{"HermiteCubic":[[1.0,1.0,0.0,0.0]]}}"#,
+        "expected 2 sets of interpolation coefficients but got 1"
+    )]
+    fn test_series_deserialize_invalid(#[case] json: &str, #[case] expected: &str) {
+        let err = serde_json::from_str::<Series>(json).unwrap_err();
+        assert_eq!(err.to_string(), expected);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_series_repr_non_finite_coefficients() {
+        let repr = SeriesRepr {
+            x: Arc::from([1.0, 2.0, 3.0]),
+            y: Arc::from([1.0, 2.0, 3.0]),
+            interpolation: Interpolation::HermiteCubic(Arc::from([
+                [1.0, 1.0, 0.0, 0.0],
+                [2.0, f64::NAN, 0.0, 0.0],
+            ])),
+        };
+        assert_eq!(
+            Series::try_from(repr),
+            Err(SeriesError::NonFiniteCoefficients(1))
+        );
+    }
+
+    #[cfg(feature = "serde")]
+    #[rstest]
+    #[case(InterpolationType::Linear, r#""linear""#)]
+    #[case(InterpolationType::CubicSpline, r#""cubic""#)]
+    fn test_interpolation_type_serde(#[case] input: InterpolationType, #[case] json: &str) {
+        assert_eq!(serde_json::to_string(&input).unwrap(), json);
+        assert_eq!(
+            serde_json::from_str::<InterpolationType>(json).unwrap(),
+            input
+        );
     }
 
     #[rstest]
