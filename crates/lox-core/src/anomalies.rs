@@ -193,9 +193,12 @@ impl EccentricAnomaly {
 }
 
 impl MeanAnomaly {
-    /// Converts mean anomaly to true anomaly
+    /// Converts mean anomaly to true anomaly.
     ///
-    /// Can fail due to convergence issues in iterative solvers
+    /// # Errors
+    ///
+    /// Returns an [`AnomalyError`] if Kepler's equation cannot be solved for the mean anomaly,
+    /// because it is not finite or the solver for hyperbolic orbits does not converge.
     pub fn to_true(self, ecc: Eccentricity) -> Result<TrueAnomaly> {
         let orbit = ecc.orbit_type();
         match orbit {
@@ -212,15 +215,18 @@ impl MeanAnomaly {
         }
     }
 
-    /// Converts mean anomaly to eccentric anomaly
+    /// Converts mean anomaly to eccentric anomaly.
     ///
-    /// Can fail due to convergence issues in iterative solvers
+    /// # Errors
+    ///
+    /// Returns an [`AnomalyError`] if Kepler's equation cannot be solved for the mean anomaly,
+    /// because it is not finite or the solver for hyperbolic orbits does not converge.
     pub fn to_eccentric(self, ecc: Eccentricity) -> Result<EccentricAnomaly> {
         let orbit = ecc.orbit_type();
         match orbit {
-            OrbitType::Circular | OrbitType::Elliptic => Ok(EccentricAnomaly::new(
-                mean_to_eccentric(self.0, ecc, None, None)?,
-            )),
+            OrbitType::Circular | OrbitType::Elliptic => {
+                Ok(EccentricAnomaly::new(mean_to_eccentric(self.0, ecc)?))
+            }
             OrbitType::Hyperbolic => Ok(EccentricAnomaly::new(mean_to_hyperbolic(
                 self.0, ecc, None, None,
             )?)),
@@ -253,6 +259,12 @@ pub enum AnomalyError {
         /// The maximum valid true anomaly magnitude.
         max_nu: Angle,
     },
+    /// The anomaly is not finite.
+    #[error("anomaly must be finite but was {0}")]
+    NonFiniteAnomaly(Angle),
+    /// The orbit is not circular or elliptic.
+    #[error("expected a circular or elliptic orbit but the eccentricity was {0}")]
+    NotElliptic(Eccentricity),
 }
 
 /// A type alias for `Result<T, AnomalyError>`.
@@ -318,65 +330,104 @@ pub fn eccentric_to_mean(ecc: Angle, e: Eccentricity) -> Angle {
 
 /// Convert mean anomaly to eccentric anomaly for elliptic orbits.
 ///
-/// Solves Kepler's equation: M = E - e*sin(E) iteratively using Newton-Raphson method.
-///
 /// # Arguments
 /// * `mean` - Mean anomaly
-/// * `e` - Eccentricity (should be elliptic: 0 < e < 1)
-/// * `tolerance` - Convergence tolerance (default: 1e-10)
-/// * `max_iter` - Maximum iterations (default: 50)
+/// * `e` - Eccentricity of a circular or elliptic orbit
 ///
 /// # Returns
 /// Eccentric anomaly, in the same revolution as `mean`
-pub fn mean_to_eccentric(
-    mean: Angle,
-    e: Eccentricity,
-    tolerance: Option<f64>,
-    max_iter: Option<usize>,
-) -> Result<Angle> {
-    let tol = tolerance.unwrap_or(1e-10);
-    let max_iterations = max_iter.unwrap_or(50);
-    let ecc = e.as_f64();
+///
+/// # Errors
+///
+/// Returns an [`AnomalyError`] if `mean` is not finite or the orbit is not circular or elliptic.
+pub fn mean_to_eccentric(mean: Angle, e: Eccentricity) -> Result<Angle> {
+    if !mean.as_f64().is_finite() {
+        return Err(AnomalyError::NonFiniteAnomaly(mean));
+    }
+    if !e.is_circular_or_elliptic() {
+        return Err(AnomalyError::NotElliptic(e));
+    }
+    Ok(Angle::new(solve_kepler(mean.as_f64(), 0.0, e.as_f64())))
+}
 
-    // Solve within a single revolution [-π, π) and add the whole revolutions back afterwards
-    let m = mean.normalize_two_pi(Angle::ZERO).as_f64();
-    let revolutions = mean.as_f64() - m;
+const HALLEY_MAX_ITERATIONS: usize = 16;
+const HALLEY_TOLERANCE: f64 = 1e-10;
 
-    // Initial guess (NASA approach)
-    let mut ecc_anomaly = if ecc < 0.8 {
-        m
-    } else if m >= 0.0 {
-        m + ecc / 2.0
+/// Solves the equinoctial form of Kepler's equation, λ = F - k·sin(F) + h·cos(F), for the
+/// eccentric longitude F of an elliptic orbit with eccentricity vector (k, h), so h² + k² < 1.
+///
+/// The classical form M = E - e·sin(E) is the special case h = 0, k = e. The result lies in the
+/// same revolution as λ.
+pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> f64 {
+    // Solve within a single revolution [-π, π) and add the whole revolutions back afterwards.
+    let lambda = Angle::new(mean_longitude)
+        .normalize_two_pi(Angle::ZERO)
+        .as_f64();
+    let revolutions = mean_longitude - lambda;
+    let e = sqrt(h * h + k * k);
+
+    // The solution lies within λ ± e, where the residual increases monotonically. Halley's
+    // method converges cubically, so once a step is below `HALLEY_TOLERANCE` the error is far
+    // below machine precision. Should a step leave the bracket or Halley's method fail to
+    // converge, bisection of the bracket, whose width is at most two, guarantees convergence.
+    let mut lower = lambda - e;
+    let mut upper = lambda + e;
+    let mut f = if e < 0.8 {
+        lambda
     } else {
-        m - ecc / 2.0
-    };
-
-    // Newton-Raphson iteration with second-order correction
-    for _iteration in 0..max_iterations {
-        let sin_e = sin(ecc_anomaly);
-        let cos_e = cos(ecc_anomaly);
-
-        // Function: f(E) = E - e*sin(E) - M
-        let f = ecc_anomaly - ecc * sin_e - m;
-
-        // First derivative: f'(E) = 1 - e*cos(E)
-        let df = 1.0 - ecc * cos_e;
-
-        // Second-order (Halley) correction: f'' = e*sin(E)
-        let d_prime = df - 0.5 * f * ecc * sin_e / df;
-
-        let delta = f / d_prime;
-        ecc_anomaly -= delta;
-
-        if abs(delta) < tol {
-            return Ok(Angle::new(ecc_anomaly + revolutions));
+        // The initial guess for highly eccentric orbits depends on the sign of e·sin(M). For
+        // h = 0, k·λ has the same sign as k·sin(λ) on [-π, π), which saves the trigonometry.
+        let e_sin_mean = if h == 0.0 {
+            k * lambda
+        } else {
+            k * sin(lambda) - h * cos(lambda)
+        };
+        if e_sin_mean >= 0.0 {
+            lambda + e / 2.0
+        } else {
+            lambda - e / 2.0
         }
+    };
+    for _ in 0..HALLEY_MAX_ITERATIONS {
+        let (sin_f, cos_f) = (sin(f), cos(f));
+        let r = f - k * sin_f + h * cos_f - lambda;
+        if r > 0.0 {
+            upper = f;
+        } else {
+            lower = f;
+        }
+        let derivative = 1.0 - k * cos_f - h * sin_f;
+        let second_derivative = k * sin_f - h * cos_f;
+        let step = r / (derivative - 0.5 * r * second_derivative / derivative);
+        let next = f - step;
+        if abs(step) <= HALLEY_TOLERANCE {
+            return next + revolutions;
+        }
+        if !(next > lower && next < upper) {
+            break;
+        }
+        f = next;
     }
 
-    Err(AnomalyError::ConvergenceFailure {
-        iterations: max_iterations,
-        residual: abs(ecc_anomaly - ecc * sin(ecc_anomaly) - m),
-    })
+    bisect_kepler(lambda, h, k, lower, upper) + revolutions
+}
+
+/// Solves the equinoctial form of Kepler's equation by bisection of a bracket of the solution.
+#[cold]
+fn bisect_kepler(lambda: f64, h: f64, k: f64, mut lower: f64, mut upper: f64) -> f64 {
+    while upper - lower > 4.0 * f64::EPSILON {
+        let middle = 0.5 * (lower + upper);
+        let residual = middle - k * sin(middle) + h * cos(middle) - lambda;
+        if residual == 0.0 {
+            return middle;
+        }
+        if residual > 0.0 {
+            upper = middle;
+        } else {
+            lower = middle;
+        }
+    }
+    0.5 * (lower + upper)
 }
 
 /// Convert true anomaly to mean anomaly for elliptic orbits.
@@ -390,9 +441,12 @@ pub fn true_to_mean(nu: Angle, e: Eccentricity) -> Angle {
 /// Convert mean anomaly to true anomaly for elliptic orbits.
 ///
 /// This is a convenience function that chains mean_to_eccentric and eccentric_to_true.
+///
+/// # Errors
+///
+/// Returns an [`AnomalyError`] if `mean` is not finite or the orbit is not circular or elliptic.
 pub fn mean_to_true(mean: Angle, e: Eccentricity) -> Result<Angle> {
-    let ecc = mean_to_eccentric(mean, e, None, None)?;
-    Ok(eccentric_to_true(ecc, e))
+    Ok(eccentric_to_true(mean_to_eccentric(mean, e)?, e))
 }
 
 /// Convert true anomaly to parabolic anomaly.
@@ -610,6 +664,8 @@ pub fn hyperbolic_asymptote_angle(e: Eccentricity) -> Angle {
 
 #[cfg(test)]
 mod tests {
+    use core::f64::consts::PI;
+
     use lox_approx::{assert_approx_eq, assert_approx_ne};
     use rstest::rstest;
 
@@ -662,7 +718,7 @@ mod tests {
         let ecc = Angle::new(1.5);
 
         let mean = eccentric_to_mean(ecc, e);
-        let ecc_back = mean_to_eccentric(mean, e, None, None).unwrap();
+        let ecc_back = mean_to_eccentric(mean, e).unwrap();
 
         assert!((ecc.as_f64() - ecc_back.as_f64()).abs() < EPSILON);
     }
@@ -676,7 +732,7 @@ mod tests {
     fn test_keplers_equation_high_eccentricity(#[case] mean: f64, #[case] e: f64) {
         let e = Eccentricity::try_new(e).unwrap();
 
-        let ecc = mean_to_eccentric(Angle::new(mean), e, None, None).unwrap();
+        let ecc = mean_to_eccentric(Angle::new(mean), e).unwrap();
 
         let residual = ecc.as_f64() - e.as_f64() * ecc.sin() - mean;
         assert!(residual.abs() < EPSILON, "residual: {residual}");
@@ -704,8 +760,57 @@ mod tests {
         assert!(close(true_to_eccentric(nu + rev, e), ecc + rev));
         assert!(close(eccentric_to_true(ecc - rev, e), nu - rev));
         assert!(close(eccentric_to_mean(ecc + rev, e), mean + rev));
-        let ecc_back = mean_to_eccentric(mean + rev, e, None, None).unwrap();
+        let ecc_back = mean_to_eccentric(mean + rev, e).unwrap();
         assert!(close(ecc_back, ecc + rev));
+    }
+
+    // Near-parabolic orbits close to periapsis, where Halley's method exhausts its iterations and
+    // the solver falls back to bisection.
+    #[rstest]
+    #[case(1e-15, 0.0, 1.0 - 1e-9)]
+    #[case(-1e-15, 0.0, 1.0 - 1e-9)]
+    #[case(1e-14, 0.0, 1.0 - 1e-10)]
+    #[case(1.0, 0.8414709847237494, 0.5403023058141095)]
+    #[case(-PI, 0.0, -(1.0 - 1e-10))]
+    fn test_solve_kepler_bisection_fallback(#[case] lambda: f64, #[case] h: f64, #[case] k: f64) {
+        let f = solve_kepler(lambda, h, k);
+        let residual = f - k * sin(f) + h * cos(f) - lambda;
+        assert!(
+            abs(residual) <= 8.0 * f64::EPSILON * abs(lambda).max(1.0),
+            "residual: {residual}"
+        );
+    }
+
+    #[rstest]
+    #[case(f64::NAN)]
+    #[case(f64::INFINITY)]
+    #[case(f64::NEG_INFINITY)]
+    fn test_mean_to_eccentric_rejects_non_finite_anomaly(#[case] mean: f64) {
+        let e = Eccentricity::try_new(0.3).unwrap();
+        assert!(matches!(
+            mean_to_eccentric(Angle::new(mean), e),
+            Err(AnomalyError::NonFiniteAnomaly(_))
+        ));
+        assert!(matches!(
+            mean_to_true(Angle::new(mean), e),
+            Err(AnomalyError::NonFiniteAnomaly(_))
+        ));
+    }
+
+    #[rstest]
+    #[case(1.0 - 5e-9)]
+    #[case(1.0)]
+    #[case(1.5)]
+    fn test_mean_to_eccentric_rejects_open_orbits(#[case] e: f64) {
+        let e = Eccentricity::try_new(e).unwrap();
+        assert!(matches!(
+            mean_to_eccentric(Angle::new(1.0), e),
+            Err(AnomalyError::NotElliptic(_))
+        ));
+        assert!(matches!(
+            mean_to_true(Angle::new(1.0), e),
+            Err(AnomalyError::NotElliptic(_))
+        ));
     }
 
     #[test]

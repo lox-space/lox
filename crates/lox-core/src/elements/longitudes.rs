@@ -13,10 +13,9 @@
 //!
 //! All functions require h² + k² < 1.
 
-use crate::math::float::{abs, atan, cos, sin, sqrt};
+use crate::anomalies::solve_kepler;
+use crate::math::float::{atan, sqrt};
 use crate::units::Angle;
-
-const MAX_ITERATIONS: usize = 64;
 
 fn beta(h: f64, k: f64) -> f64 {
     1.0 / (1.0 + sqrt(1.0 - h * h - k * k))
@@ -46,37 +45,7 @@ pub(crate) fn eccentric_to_mean_longitude(eccentric_longitude: Angle, h: f64, k:
 
 /// Converts the mean longitude λ to the eccentric longitude F.
 pub(crate) fn mean_to_eccentric_longitude(mean_longitude: Angle, h: f64, k: f64) -> Angle {
-    // Solves the equinoctial form of Kepler's equation, λ = F - k·sin(F) + h·cos(F). The solution
-    // is bracketed by λ ± e and the residual is monotonic within the bracket, so the safeguarded
-    // Newton iteration always converges.
-    let lambda = mean_longitude.as_f64();
-    let e = sqrt(h * h + k * k);
-    let mut lower = lambda - e;
-    let mut upper = lambda + e;
-    let mut f = lambda;
-    for _ in 0..MAX_ITERATIONS {
-        let (sin_f, cos_f) = (sin(f), cos(f));
-        let residual = f - k * sin_f + h * cos_f - lambda;
-        if residual == 0.0 {
-            break;
-        }
-        if residual > 0.0 {
-            upper = f;
-        } else {
-            lower = f;
-        }
-        let mut next = f - residual / (1.0 - k * cos_f - h * sin_f);
-        if !(next > lower && next < upper) {
-            next = 0.5 * (lower + upper);
-        }
-        let scale = if abs(f) > 1.0 { abs(f) } else { 1.0 };
-        let converged = abs(next - f) <= 4.0 * f64::EPSILON * scale;
-        f = next;
-        if converged {
-            break;
-        }
-    }
-    Angle::new(f)
+    Angle::new(solve_kepler(mean_longitude.as_f64(), h, k))
 }
 
 /// Converts the true longitude L to the mean longitude λ.
@@ -93,6 +62,7 @@ mod tests {
 
     use crate::anomalies::TrueAnomaly;
     use crate::elements::Eccentricity;
+    use crate::math::float::{abs, cos, sin};
     use crate::units::AngleUnits;
 
     use super::*;
