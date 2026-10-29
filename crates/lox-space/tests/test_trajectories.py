@@ -140,6 +140,17 @@ def test_conversions_keep_extrapolation_limit(trajectory, ephemeris, limit):
                 c.at(end + lox.TimeDelta(0.5e-3))
 
 
+def test_scenario_rejects_uncovered_trajectory(trajectory):
+    start = trajectory.states()[0].time()
+    end = trajectory.states()[-1].time()
+    sc = lox.Spacecraft("sc", trajectory)
+
+    lox.Scenario(start, end, spacecraft=[sc]).propagate()
+    scenario = lox.Scenario(start, end + lox.TimeDelta(60), spacecraft=[sc])
+    with pytest.raises(ValueError, match="does not cover"):
+        scenario.propagate()
+
+
 def test_keplerian_repr(orbit):
     r = repr(orbit)
     assert r.startswith("Keplerian(")

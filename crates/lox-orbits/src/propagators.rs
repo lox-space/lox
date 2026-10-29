@@ -100,11 +100,27 @@ pub enum PropagateError {
     /// J4 propagation error.
     #[error(transparent)]
     J4(#[from] J4Error),
+    /// A pre-computed trajectory does not cover the requested interval.
+    #[error("trajectory from {start} to {end} does not cover the interval {interval}")]
+    NotCovered {
+        /// The start time of the trajectory.
+        start: Time,
+        /// The end time of the trajectory.
+        end: Time,
+        /// The requested interval.
+        interval: TimeInterval,
+    },
 }
 
 impl OrbitSource {
     /// Propagate the orbit source over the given interval, returning a
     /// [`Trajectory`] in the source's native reference frame.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropagateError::NotCovered`] if a pre-computed trajectory
+    /// does not cover `interval`, allowing for its
+    /// [extrapolation limit](Trajectory::extrapolation_limit).
     pub fn propagate(&self, interval: TimeInterval) -> Result<Trajectory, PropagateError> {
         match self {
             Self::Sgp4(sgp4) => Ok(Propagator::propagate(sgp4, interval)?.into_dynamic()),
@@ -112,7 +128,18 @@ impl OrbitSource {
             Self::Numerical(n) => Ok(Propagator::propagate(n, interval)?),
             Self::J2(p) => Ok(Propagator::propagate(p, interval)?),
             Self::J4(p) => Ok(Propagator::propagate(p, interval)?),
-            Self::Trajectory(t) => Ok(t.clone()),
+            Self::Trajectory(t) => {
+                let scale = t.start_time().scale();
+                let covers = |time: Time| t.at(time.to_scale(scale)).is_some();
+                if !covers(interval.start()) || !covers(interval.end()) {
+                    return Err(PropagateError::NotCovered {
+                        start: t.start_time(),
+                        end: t.end_time(),
+                        interval,
+                    });
+                }
+                Ok(t.clone())
+            }
         }
     }
 }
@@ -122,6 +149,7 @@ mod tests {
     use super::*;
     use lox_bodies::Origin;
     use lox_frames::Frame;
+    use lox_time::deltas::TimeDelta;
     use lox_time::time_scales::TimeScale;
 
     fn make_trajectory() -> Trajectory {
@@ -143,5 +171,29 @@ mod tests {
         let source = OrbitSource::Trajectory(traj.clone());
         let result = source.propagate(interval).unwrap();
         assert_eq!(result.states().len(), traj.states().len());
+    }
+
+    #[test]
+    fn test_orbit_source_trajectory_propagate_not_covered() {
+        let traj = make_trajectory();
+        let start = traj.start_time().to_scale(TimeScale::Tai);
+        let end = traj.end_time().to_scale(TimeScale::Tai);
+        let source = OrbitSource::Trajectory(traj.clone());
+
+        // Within the extrapolation limit.
+        let slack = TimeDelta::from_microseconds(500);
+        assert!(
+            source
+                .propagate(TimeInterval::new(start - slack, end + slack))
+                .is_ok()
+        );
+
+        let interval = TimeInterval::new(start, end + TimeDelta::from_seconds(1));
+        let err = source.propagate(interval).unwrap_err();
+        assert!(matches!(
+            err,
+            PropagateError::NotCovered { interval: i, .. } if i == interval
+        ));
+        assert!(err.to_string().contains("does not cover"));
     }
 }
