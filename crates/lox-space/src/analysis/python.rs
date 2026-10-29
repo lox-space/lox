@@ -892,7 +892,10 @@ impl PyVisibilityResults {
     ///
     /// Returns:
     ///     Dictionary mapping (ground_id, space_id) to list of Pass objects.
-    fn all_passes(&self) -> HashMap<(String, String), Vec<PyPass>> {
+    ///
+    /// Raises:
+    ///     ValueError: If the observables of a pass cannot be computed.
+    fn all_passes(&self) -> PyResult<HashMap<(String, String), Vec<PyPass>>> {
         let gs_map: HashMap<&AssetId, &GroundStation> = self
             .scenario
             .ground_stations()
@@ -908,7 +911,7 @@ impl PyVisibilityResults {
                 let sc_traj = self.ensemble.get(sc_id)?;
                 let dynamic_traj = sc_traj.clone().into_dynamic();
                 let intervals = self.results.intervals_for(gs_id, sc_id)?;
-                let passes: Vec<PyPass> = intervals
+                let passes: PyResult<Vec<PyPass>> = intervals
                     .iter()
                     .filter_map(|interval| {
                         let dynamic_interval = TimeInterval::new(
@@ -916,13 +919,19 @@ impl PyVisibilityResults {
                             interval.end().into_dynamic(),
                         );
                         Pass::from_interval(dynamic_interval, self.step, gs, &dynamic_traj)
+                            .transpose()
                     })
-                    .map(PyPass)
+                    .map(|pass| {
+                        pass.map(PyPass)
+                            .map_err(|e| PyValueError::new_err(e.to_string()))
+                    })
                     .collect();
-                Some((
-                    (gs_id.as_str().to_string(), sc_id.as_str().to_string()),
-                    passes,
-                ))
+                Some(passes.map(|passes| {
+                    (
+                        (gs_id.as_str().to_string(), sc_id.as_str().to_string()),
+                        passes,
+                    )
+                }))
             })
             .collect()
     }
