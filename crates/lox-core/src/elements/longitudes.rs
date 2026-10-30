@@ -48,6 +48,11 @@ pub(crate) fn mean_to_eccentric_longitude(mean_longitude: Angle, h: f64, k: f64)
     Angle::new(solve_kepler(mean_longitude.as_f64(), h, k))
 }
 
+/// Converts the mean longitude λ to the true longitude L.
+pub(crate) fn mean_to_true_longitude(mean_longitude: Angle, h: f64, k: f64) -> Angle {
+    eccentric_to_true_longitude(mean_to_eccentric_longitude(mean_longitude, h, k), h, k)
+}
+
 /// Converts the true longitude L to the mean longitude λ.
 pub(crate) fn true_to_mean_longitude(true_longitude: Angle, h: f64, k: f64) -> Angle {
     eccentric_to_mean_longitude(true_to_eccentric_longitude(true_longitude, h, k), h, k)
@@ -67,10 +72,6 @@ mod tests {
     use crate::units::AngleUnits;
 
     use super::*;
-
-    fn mean_to_true_longitude(mean_longitude: Angle, h: f64, k: f64) -> Angle {
-        eccentric_to_true_longitude(mean_to_eccentric_longitude(mean_longitude, h, k), h, k)
-    }
 
     #[rstest]
     #[case(0.0, 0.0, 1.0)]
@@ -158,7 +159,8 @@ mod tests {
     }
 
     /// Eccentricities of elliptic orbits, with extra weight on the near-circular and
-    /// near-parabolic ends.
+    /// near-parabolic ends. Unlike the anomalies, which treat eccentricities within 1e-8 of 1 as
+    /// parabolic, the longitudes accept any eccentricity below 1, so the upper bound is closer.
     fn elliptic_eccentricity() -> impl Strategy<Value = f64> {
         prop_oneof![
             Just(0.0),
