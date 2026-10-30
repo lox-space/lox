@@ -47,7 +47,8 @@ pub(crate) fn eccentric_to_mean_longitude(eccentric_longitude: Angle, h: f64, k:
 ///
 /// # Errors
 ///
-/// Returns [`AnomalyError::ConvergenceFailure`] if Kepler's equation cannot be solved.
+/// Returns an [`AnomalyError`] if λ is not finite, the eccentricity vector is invalid, or
+/// Kepler's equation cannot be solved, see `solve_kepler`.
 pub(crate) fn mean_to_eccentric_longitude(
     mean_longitude: Angle,
     h: f64,
@@ -60,7 +61,8 @@ pub(crate) fn mean_to_eccentric_longitude(
 ///
 /// # Errors
 ///
-/// Returns [`AnomalyError::ConvergenceFailure`] if Kepler's equation cannot be solved.
+/// Returns an [`AnomalyError`] if λ is not finite, the eccentricity vector is invalid, or
+/// Kepler's equation cannot be solved, see `solve_kepler`.
 pub(crate) fn mean_to_true_longitude(
     mean_longitude: Angle,
     h: f64,

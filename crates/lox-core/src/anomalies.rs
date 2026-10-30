@@ -266,6 +266,15 @@ pub enum AnomalyError {
     /// The orbit is not circular or elliptic.
     #[error("expected a circular or elliptic orbit but the eccentricity was {0}")]
     NotElliptic(Eccentricity),
+    /// The eccentricity vector (k, h) of Kepler's equation is not finite or not inside the unit
+    /// circle.
+    #[error("eccentricity vector (k = {k}, h = {h}) must be finite with h² + k² < 1")]
+    InvalidEccentricityVector {
+        /// The component e·sin(ϖ).
+        h: f64,
+        /// The component e·cos(ϖ).
+        k: f64,
+    },
 }
 
 /// A type alias for `Result<T, AnomalyError>`.
@@ -342,9 +351,6 @@ pub fn eccentric_to_mean(ecc: Angle, e: Eccentricity) -> Angle {
 ///
 /// Returns an [`AnomalyError`] if `mean` is not finite or the orbit is not circular or elliptic.
 pub fn mean_to_eccentric(mean: Angle, e: Eccentricity) -> Result<Angle> {
-    if !mean.as_f64().is_finite() {
-        return Err(AnomalyError::NonFiniteAnomaly(mean));
-    }
     if !e.is_circular_or_elliptic() {
         return Err(AnomalyError::NotElliptic(e));
     }
@@ -359,12 +365,17 @@ pub fn mean_to_eccentric(mean: Angle, e: Eccentricity) -> Result<Angle> {
 ///
 /// # Errors
 ///
-/// Returns [`AnomalyError::NonFiniteAnomaly`] if λ is not finite, and
-/// [`AnomalyError::ConvergenceFailure`] if the solver fails otherwise, e.g. because it does not
-/// converge or the eccentricity vector is not finite.
+/// Returns [`AnomalyError::NonFiniteAnomaly`] if λ is not finite,
+/// [`AnomalyError::InvalidEccentricityVector`] if the eccentricity vector is not finite or not
+/// inside the unit circle, and [`AnomalyError::ConvergenceFailure`] if the solver does not
+/// converge.
 pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> Result<f64> {
     if !mean_longitude.is_finite() {
         return Err(AnomalyError::NonFiniteAnomaly(Angle::new(mean_longitude)));
+    }
+    let e_squared = h * h + k * k;
+    if !e_squared.is_finite() || e_squared >= 1.0 {
+        return Err(AnomalyError::InvalidEccentricityVector { h, k });
     }
 
     // Solve within a single revolution [-π, π) and add the whole revolutions back afterwards.
@@ -390,7 +401,7 @@ pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> Result<f64> {
     // For highly eccentric orbits, start half an eccentricity from λ towards the solution, on the
     // side given by the sign of e·sin(M) = k·sin(λ) - h·cos(λ). For h = 0, k·λ has the same sign
     // on [-π, π), which saves the trigonometry.
-    let e = sqrt(h * h + k * k);
+    let e = sqrt(e_squared);
     let initial_guess = if e < 0.8 {
         lambda
     } else {
@@ -418,8 +429,8 @@ pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> Result<f64> {
             initial_guess,
         )
         .map_err(|err| {
-            // With a finite λ and an elliptic eccentricity vector, as the callers ensure, only
-            // `NotConverged` can occur. Any other failure is reported the same way.
+            // The input is valid at this point, which leaves `NotConverged` as the only failure.
+            // Any other would be a failure of the solver as well, so it is reported the same way.
             let (iterations, residual) = match err {
                 RootFinderError::NotConverged {
                     iterations,
@@ -808,10 +819,20 @@ mod tests {
             solve_kepler(f64::NAN, 0.0, 0.5),
             Err(AnomalyError::NonFiniteAnomaly(_))
         ));
-        assert!(matches!(
-            solve_kepler(1.0, f64::NAN, 0.5),
-            Err(AnomalyError::ConvergenceFailure { .. })
-        ));
+        for (h, k) in [
+            (f64::NAN, 0.5),
+            (0.0, f64::INFINITY),
+            (0.6, 0.8),
+            (1e200, 0.0),
+        ] {
+            assert!(
+                matches!(
+                    solve_kepler(1.0, h, k),
+                    Err(AnomalyError::InvalidEccentricityVector { .. })
+                ),
+                "h = {h}, k = {k}"
+            );
+        }
     }
 
     // Near-parabolic orbits close to periapsis, where the derivative of the residual vanishes.
