@@ -4,7 +4,7 @@
 
 use std::{f64::consts::TAU, iter::zip};
 
-use super::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
+use super::{CartesianOrbit, CheckFrame, KeplerianOrbit, Orbit, Trajectory};
 use lox_bodies::{
     CoordinateOrigin, PointMass, TryMeanRadius, TryPointMass, UndefinedOriginPropertyError,
 };
@@ -70,7 +70,7 @@ where
         R: TryQuasiInertial,
         O: TryMeanRadius,
     {
-        frame.try_quasi_inertial()?;
+        Keplerian::check_frame(&frame)?;
         Self::validate_keplerian(&keplerian, &origin)?;
         Ok(Orbit::from_state(keplerian, time, origin, frame))
     }

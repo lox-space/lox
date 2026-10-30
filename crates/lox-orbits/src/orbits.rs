@@ -25,9 +25,7 @@ use lox_core::{
     coords::Cartesian,
     elements::{Equinoctial, GravitationalParameter, Keplerian, ModifiedEquinoctial},
 };
-use lox_frames::{Frame, ReferenceFrame};
-#[cfg(feature = "serde")]
-use lox_frames::{NonQuasiInertialFrameError, TryQuasiInertial};
+use lox_frames::{Frame, NonQuasiInertialFrameError, ReferenceFrame, TryQuasiInertial};
 use lox_time::Time;
 
 /// An orbital state parameterized by state representation, origin, and reference frame.
@@ -56,10 +54,10 @@ pub struct Orbit<S, O: CoordinateOrigin = Origin, R: ReferenceFrame = Frame> {
 
 /// Checks that a reference frame suits a type of orbital state.
 ///
-/// Deserializing an [`Orbit`] runs this check, so that it enforces the same invariant as the
-/// constructors: Cartesian states are valid in any frame, while orbital elements require a
-/// quasi-inertial frame.
-#[cfg(feature = "serde")]
+/// This is the single statement of the frame requirement of each state type: Cartesian states
+/// are valid in any frame, while orbital elements require a quasi-inertial frame. The fallible
+/// constructors, the conversions to orbital elements, and the deserialization of an [`Orbit`] all
+/// enforce it through this trait.
 pub trait CheckFrame<R> {
     /// Checks that `frame` suits this type of state.
     ///
@@ -70,14 +68,12 @@ pub trait CheckFrame<R> {
     fn check_frame(frame: &R) -> Result<(), NonQuasiInertialFrameError>;
 }
 
-#[cfg(feature = "serde")]
 impl<R> CheckFrame<R> for Cartesian {
     fn check_frame(_frame: &R) -> Result<(), NonQuasiInertialFrameError> {
         Ok(())
     }
 }
 
-#[cfg(feature = "serde")]
 macro_rules! quasi_inertial_state {
     ($($state:ty),*) => {
         $(
@@ -90,7 +86,6 @@ macro_rules! quasi_inertial_state {
     };
 }
 
-#[cfg(feature = "serde")]
 quasi_inertial_state!(Keplerian, Equinoctial, ModifiedEquinoctial);
 
 /// Deserialization shadow for [`Orbit`].
