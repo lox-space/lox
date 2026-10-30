@@ -231,7 +231,7 @@ pub enum EquinoctialError {
     ModifiedEquinoctial(#[from] ModifiedEquinoctialError),
     /// Kepler's equation could not be solved for the eccentric longitude.
     #[error("failed to solve Kepler's equation: {0}")]
-    KeplerEquation(#[from] AnomalyError),
+    KeplerEquation(AnomalyError),
 }
 
 impl Equinoctial {
@@ -339,7 +339,8 @@ impl Equinoctial {
     ///
     /// Returns [`EquinoctialError::KeplerEquation`] if Kepler's equation cannot be solved.
     pub fn true_longitude(&self) -> Result<Angle, EquinoctialError> {
-        Ok(mean_to_true_longitude(self.lambda, self.h, self.k)?)
+        mean_to_true_longitude(self.lambda, self.h, self.k)
+            .map_err(EquinoctialError::KeplerEquation)
     }
 
     /// Returns the eccentric longitude F = E + ω + I·Ω, in the same revolution as λ.
@@ -348,7 +349,8 @@ impl Equinoctial {
     ///
     /// Returns [`EquinoctialError::KeplerEquation`] if Kepler's equation cannot be solved.
     pub fn eccentric_longitude(&self) -> Result<Angle, EquinoctialError> {
-        Ok(mean_to_eccentric_longitude(self.lambda, self.h, self.k)?)
+        mean_to_eccentric_longitude(self.lambda, self.h, self.k)
+            .map_err(EquinoctialError::KeplerEquation)
     }
 
     /// Converts the elements to modified equinoctial elements.
