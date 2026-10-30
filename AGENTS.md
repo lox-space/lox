@@ -138,7 +138,7 @@ Always use **red-green TDD** when possible: write a failing test first, then imp
 
 When modifying the Python API (`#[pyclass]`/`#[pymethods]` in `lox-space`), **always** update all three of:
 
-1. **Type stubs** — `crates/lox-space/lox_space.pyi`
+1. **Type stubs** — `lox_space.pyi` (at the repository root)
 2. **Docs** — `crates/lox-space/docs/` (e.g. `states.md` for orbits, `analysis.md` for analysis classes)
 3. **Tests** — `crates/lox-space/tests/`
 
