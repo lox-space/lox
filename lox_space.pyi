@@ -1438,6 +1438,14 @@ class Cartesian:
     def velocity(self) -> np.ndarray:
         """Return the velocity vector as a numpy array in m/s, shape (3,)."""
         ...
+    def is_physical(self) -> bool:
+        """Return whether the state is physical.
+
+        A state is physical if its position lies within the observable universe and its speed is
+        below the speed of light. Non-finite states are not physical. The conversions to orbital
+        elements raise ``ValueError`` for unphysical states.
+        """
+        ...
     @property
     def x(self) -> Distance:
         """Return the x component of the position."""

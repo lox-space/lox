@@ -313,6 +313,29 @@ def test_keplerian_parabolic_has_no_semi_major_axis():
     assert "Keplerian(" in repr(k)
 
 
+@pytest.mark.parametrize(
+    ("position", "velocity", "expected"),
+    [
+        ([7000e3, 0.0, 0.0], [0.0, 7500.0, 0.0], True),
+        ([1e27, 0.0, 0.0], [0.0, 1.0, 0.0], False),
+        ([7000e3, 0.0, 0.0], [0.0, 3e8, 0.0], False),
+    ],
+)
+def test_cartesian_is_physical(position, velocity, expected):
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    state = lox.Cartesian(time, position=position, velocity=velocity)
+    assert state.is_physical() is expected
+
+
+def test_cartesian_to_keplerian_rejects_unphysical_state():
+    time = lox.UTC(2024, 1, 1).to_scale("TDB")
+    faster_than_light = lox.Cartesian(
+        time, position=[7000e3, 0.0, 0.0], velocity=[0.0, 3e8, 0.0]
+    )
+    with pytest.raises(ValueError, match="slower than light"):
+        faster_than_light.to_keplerian()
+
+
 def test_cartesian_to_keplerian_rejects_zero_angular_momentum():
     time = lox.UTC(2024, 1, 1).to_scale("TDB")
     radial = lox.Cartesian(
