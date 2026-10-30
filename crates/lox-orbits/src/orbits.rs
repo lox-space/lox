@@ -26,6 +26,8 @@ use lox_core::{
     elements::{Equinoctial, GravitationalParameter, Keplerian, ModifiedEquinoctial},
 };
 use lox_frames::{Frame, ReferenceFrame};
+#[cfg(feature = "serde")]
+use lox_frames::{NonQuasiInertialFrameError, TryQuasiInertial};
 use lox_time::Time;
 
 /// An orbital state parameterized by state representation, origin, and reference frame.
@@ -35,12 +37,89 @@ use lox_time::Time;
 /// runtime-determined [`Origin`] and [`Frame`] — name them explicitly,
 /// `Orbit<Cartesian, Earth, Icrf>`, to have the compiler track them.
 #[derive(Debug, Clone, Copy, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(
+        try_from = "OrbitDe<S, O, R>",
+        bound(deserialize = "S: serde::Deserialize<'de> + CheckFrame<R>, \
+                             O: serde::Deserialize<'de> + CoordinateOrigin, \
+                             R: serde::Deserialize<'de> + ReferenceFrame")
+    )
+)]
 pub struct Orbit<S, O: CoordinateOrigin = Origin, R: ReferenceFrame = Frame> {
     state: S,
     time: Time,
     origin: O,
     frame: R,
+}
+
+/// Checks that a reference frame suits a type of orbital state.
+///
+/// Deserializing an [`Orbit`] runs this check, so that it enforces the same invariant as the
+/// constructors: Cartesian states are valid in any frame, while orbital elements require a
+/// quasi-inertial frame.
+#[cfg(feature = "serde")]
+pub trait CheckFrame<R> {
+    /// Checks that `frame` suits this type of state.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`NonQuasiInertialFrameError`] if the state requires a quasi-inertial frame and
+    /// `frame` is not.
+    fn check_frame(frame: &R) -> Result<(), NonQuasiInertialFrameError>;
+}
+
+#[cfg(feature = "serde")]
+impl<R> CheckFrame<R> for Cartesian {
+    fn check_frame(_frame: &R) -> Result<(), NonQuasiInertialFrameError> {
+        Ok(())
+    }
+}
+
+#[cfg(feature = "serde")]
+macro_rules! quasi_inertial_state {
+    ($($state:ty),*) => {
+        $(
+            impl<R: TryQuasiInertial> CheckFrame<R> for $state {
+                fn check_frame(frame: &R) -> Result<(), NonQuasiInertialFrameError> {
+                    frame.try_quasi_inertial()
+                }
+            }
+        )*
+    };
+}
+
+#[cfg(feature = "serde")]
+quasi_inertial_state!(Keplerian, Equinoctial, ModifiedEquinoctial);
+
+/// Deserialization shadow for [`Orbit`].
+///
+/// Deserializing into the public type directly would bypass the frame check of
+/// [`CheckFrame`].
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+#[serde(rename = "Orbit")]
+struct OrbitDe<S, O, R> {
+    state: S,
+    time: Time,
+    origin: O,
+    frame: R,
+}
+
+#[cfg(feature = "serde")]
+impl<S, O, R> TryFrom<OrbitDe<S, O, R>> for Orbit<S, O, R>
+where
+    S: CheckFrame<R>,
+    O: CoordinateOrigin,
+    R: ReferenceFrame,
+{
+    type Error = NonQuasiInertialFrameError;
+
+    fn try_from(de: OrbitDe<S, O, R>) -> Result<Self, Self::Error> {
+        S::check_frame(&de.frame)?;
+        Ok(Orbit::from_state(de.state, de.time, de.origin, de.frame))
+    }
 }
 
 impl<S, O, R> Orbit<S, O, R>
