@@ -26,6 +26,9 @@ on:
       - 'crates/lox-*/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/python.yml'
   workflow_dispatch:
 
 concurrency:
