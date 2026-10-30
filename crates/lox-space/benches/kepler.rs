@@ -29,7 +29,7 @@ fn mean_to_eccentric_anomaly(bencher: divan::Bencher, e: f64) {
 }
 
 #[divan::bench(args = ECCENTRICITIES, sample_size = 1000, sample_count = 1000)]
-fn equinoctial_true_longitude(bencher: divan::Bencher, e: f64) {
+fn equinoctial_eccentric_longitude(bencher: divan::Bencher, e: f64) {
     let elements = Equinoctial::try_new(
         Distance::kilometers(7000.0),
         0.6 * e,
@@ -40,5 +40,5 @@ fn equinoctial_true_longitude(bencher: divan::Bencher, e: f64) {
         RetrogradeFactor::Prograde,
     )
     .unwrap();
-    bencher.bench(|| black_box(black_box(elements).true_longitude().unwrap()));
+    bencher.bench(|| black_box(black_box(elements).eccentric_longitude().unwrap()));
 }
