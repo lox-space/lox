@@ -349,7 +349,8 @@ pub fn eccentric_to_mean(ecc: Angle, e: Eccentricity) -> Angle {
 ///
 /// # Errors
 ///
-/// Returns an [`AnomalyError`] if `mean` is not finite or the orbit is not circular or elliptic.
+/// Returns an [`AnomalyError`] if the orbit is not circular or elliptic, `mean` is not finite, or
+/// Kepler's equation does not converge.
 pub fn mean_to_eccentric(mean: Angle, e: Eccentricity) -> Result<Angle> {
     if !e.is_circular_or_elliptic() {
         return Err(AnomalyError::NotElliptic(e));
@@ -430,7 +431,12 @@ pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> Result<f64> {
         )
         .map_err(|err| {
             // The input is valid at this point, which leaves `NotConverged` as the only failure.
-            // Any other would be a failure of the solver as well, so it is reported the same way.
+            // Any other would be a failure of the solver as well, so release builds report it
+            // the same way.
+            debug_assert!(
+                matches!(err, RootFinderError::NotConverged { .. }),
+                "unexpected failure of the Kepler solver: {err}"
+            );
             let (iterations, residual) = match err {
                 RootFinderError::NotConverged {
                     iterations,

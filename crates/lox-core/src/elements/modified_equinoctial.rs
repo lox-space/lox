@@ -303,7 +303,8 @@ impl Cartesian {
         // The magnitudes of a finite state can still overflow. An infinite angular momentum would
         // leave the inclination undefined, and an infinite |r| would silently turn the unit
         // vector r/|r| in the eccentricity vector into zero.
-        if !hm.is_finite() || !r.length().is_finite() {
+        let rm = r.length();
+        if !hm.is_finite() || !rm.is_finite() {
             return Err(ModifiedEquinoctialError::NonFiniteElements);
         }
 
@@ -315,7 +316,7 @@ impl Cartesian {
         let (k, h) =
             node_components_from_angular_momentum(angular_momentum / hm, retrograde_factor);
         let (f_hat, g_hat) = equinoctial_basis(k, h, retrograde_factor);
-        let e: DVec3 = v.cross(angular_momentum) / mu - r / r.length();
+        let e: DVec3 = v.cross(angular_momentum) / mu - r / rm;
 
         ModifiedEquinoctial::try_new(
             Distance::new(hm * hm / mu),
