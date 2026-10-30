@@ -451,8 +451,8 @@ impl Cartesian {
     ///
     /// # Errors
     ///
-    /// Returns an [`EquinoctialError`] if the state is not finite, its angular momentum is zero,
-    /// or the orbit is not closed.
+    /// Returns an [`EquinoctialError`] if the state is not physical, see
+    /// [`Cartesian::is_physical`], its angular momentum is zero, or the orbit is not closed.
     pub fn to_equinoctial(
         &self,
         grav_param: GravitationalParameter,

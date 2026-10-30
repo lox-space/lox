@@ -623,6 +623,10 @@ impl Cartesian {
     /// Returns whether the state is physical: its position lies within the observable universe
     /// and its speed is below the speed of light. Non-finite states are not physical.
     ///
+    /// The check is only meaningful in a quasi-inertial frame. In a rotating frame, distant
+    /// objects move faster than light, e.g. a probe near Saturn in a frame rotating with the
+    /// Earth.
+    ///
     /// The conversions to orbital elements require a physical state, which also keeps their
     /// intermediate results from overflowing. Construction does not check it, so that the
     /// constructors stay cheap on hot paths.

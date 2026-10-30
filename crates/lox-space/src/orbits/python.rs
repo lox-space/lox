@@ -234,6 +234,9 @@ impl PyCartesian {
     /// A state is physical if its position lies within the observable universe and its speed is
     /// below the speed of light. Non-finite states are not physical. The conversions to orbital
     /// elements raise ``ValueError`` for unphysical states.
+    ///
+    /// The check is only meaningful in a quasi-inertial frame. In a rotating frame, distant objects
+    /// move faster than light, e.g. a probe near Saturn in a frame rotating with the Earth.
     fn is_physical(&self) -> bool {
         self.0.state().is_physical()
     }
@@ -317,8 +320,9 @@ impl PyCartesian {
     ///     Keplerian elements representing this orbit.
     ///
     /// Raises:
-    ///     ValueError: If the frame is not quasi-inertial or the state cannot be represented by
-    ///         Keplerian elements, e.g. because its angular momentum is zero.
+    ///     ValueError: If the frame is not quasi-inertial, the state is not physical (see
+    ///         ``is_physical``), or it cannot be represented by Keplerian elements, e.g. because its
+    ///         angular momentum is zero.
     ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
     fn to_keplerian(&self) -> PyResult<PyKeplerian> {
         let keplerian = self.0.try_to_keplerian().map_err(|err| match err {
@@ -371,7 +375,8 @@ impl PyCartesian {
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
-    ///     ValueError: If the frame is not quasi-inertial or the state has zero angular momentum.
+    ///     ValueError: If the frame is not quasi-inertial, the state is not physical (see
+    ///         ``is_physical``), or it has zero angular momentum.
     fn to_modified_equinoctial(&self) -> PyResult<PyModifiedEquinoctial> {
         let mee = self
             .0
@@ -393,8 +398,8 @@ impl PyCartesian {
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
-    ///     ValueError: If the frame is not quasi-inertial, the orbit is not closed, or the state
-    ///         has zero angular momentum.
+    ///     ValueError: If the frame is not quasi-inertial, the state is not physical (see
+    ///         ``is_physical``), the orbit is not closed, or the state has zero angular momentum.
     fn to_equinoctial(&self) -> PyResult<PyEquinoctial> {
         let eq = self.0.try_to_equinoctial().map_err(|err| match err {
             ToEquinoctialError::UndefinedOriginProperty(err) => {

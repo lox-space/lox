@@ -109,8 +109,9 @@ where
     ///
     /// # Errors
     ///
-    /// Returns a [`ModifiedEquinoctialError`] if the state is not finite or its angular momentum
-    /// is zero.
+    /// Returns a [`ModifiedEquinoctialError`] if the state is not physical, see
+    /// [`Cartesian::is_physical`](lox_core::coords::Cartesian::is_physical), or its angular
+    /// momentum is zero.
     pub fn to_modified_equinoctial(
         &self,
     ) -> Result<ModifiedEquinoctialOrbit<O, R>, ModifiedEquinoctialError>
@@ -129,8 +130,9 @@ where
     /// # Errors
     ///
     /// Returns a [`ToModifiedEquinoctialError`] if the frame is not quasi-inertial, the
-    /// gravitational parameter is undefined, or the state is not finite or its angular momentum
-    /// is zero.
+    /// gravitational parameter is undefined, the state is not physical, see
+    /// [`Cartesian::is_physical`](lox_core::coords::Cartesian::is_physical), or its angular
+    /// momentum is zero.
     pub fn try_to_modified_equinoctial(
         &self,
     ) -> Result<ModifiedEquinoctialOrbit<O, R>, ToModifiedEquinoctialError>
