@@ -614,6 +614,11 @@ impl Cartesian {
         if hm == 0.0 {
             return Err(KeplerianError::ZeroAngularMomentum);
         }
+        // The magnitudes of a finite state can still overflow, which would silently turn the
+        // unit vector r/|r| in the eccentricity vector into zero.
+        if !rm.is_finite() || !hm.is_finite() {
+            return Err(KeplerianError::NonFiniteState);
+        }
         let node = DVec3::Z.cross(h);
         let e = self.eccentricity_vector(grav_param);
         let eccentricity = Eccentricity::try_new(e.length())?;
@@ -716,8 +721,8 @@ pub enum KeplerianError {
     /// The anomaly conversion failed or the true anomaly is outside the valid range.
     #[error(transparent)]
     Anomaly(#[from] AnomalyError),
-    /// The Cartesian state is not finite.
-    #[error("Cartesian state must be finite")]
+    /// The Cartesian state is not finite, or so large that its conversion overflows.
+    #[error("Cartesian state must be finite and small enough to convert without overflow")]
     NonFiniteState,
     /// The Cartesian state has zero angular momentum, e.g. a rectilinear orbit.
     #[error("Keplerian elements are undefined for states with zero angular momentum")]

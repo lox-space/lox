@@ -300,9 +300,10 @@ impl Cartesian {
         if hm == 0.0 {
             return Err(ModifiedEquinoctialError::ZeroAngularMomentum);
         }
-        // The angular momentum of a finite state can still overflow, which would leave the
-        // inclination undefined.
-        if !hm.is_finite() {
+        // The magnitudes of a finite state can still overflow. An infinite angular momentum would
+        // leave the inclination undefined, and an infinite |r| would silently turn the unit
+        // vector r/|r| in the eccentricity vector into zero.
+        if !hm.is_finite() || !r.length().is_finite() {
             return Err(ModifiedEquinoctialError::NonFiniteElements);
         }
 
@@ -528,6 +529,24 @@ mod tests {
         ));
         assert!(huge.to_equinoctial(mu()).is_err());
         assert!(huge.to_keplerian(mu()).is_err());
+    }
+
+    #[test]
+    fn test_cartesian_overflowing_position_magnitude() {
+        // |r|² overflows for this circular orbit, which would turn the unit vector r/|r| into
+        // zero and give an eccentricity of about 1 instead of 0.
+        let r = 1e160;
+        let v = (mu().as_f64() / r).sqrt();
+        let huge = Cartesian::from_vecs(DVec3::new(r, 0.0, 0.0), DVec3::new(0.0, v, 0.0));
+        assert!(matches!(
+            huge.to_modified_equinoctial(mu()),
+            Err(ModifiedEquinoctialError::NonFiniteElements)
+        ));
+        assert!(huge.to_equinoctial(mu()).is_err());
+        assert!(matches!(
+            huge.to_keplerian(mu()),
+            Err(KeplerianError::NonFiniteState)
+        ));
     }
 
     #[cfg(feature = "serde")]
