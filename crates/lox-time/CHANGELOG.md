@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.29](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.28...lox-time-v0.1.0-alpha.29) - 2026-10-30
+
+### Added
+
+- *(lox-core)* [**breaking**] limit trajectory extrapolation and sample interval ends
+
+### Fixed
+
+- *(lox-time)* merge sub-microsecond last steps in step_by_inclusive
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- remove unnecessary Seconds type
+- repair changelogs broken by SPDX headers
+
 ## [0.1.0-alpha.28](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.27...lox-time-v0.1.0-alpha.28) - 2026-10-14
 
 ### Fixed
