@@ -1866,10 +1866,18 @@ class Equinoctial:
         """Return the mean longitude λ = M + ω + I·Ω."""
         ...
     def true_longitude(self) -> Angle:
-        """Return the true longitude L = ν + ω + I·Ω, in the same revolution as the mean longitude."""
+        """Return the true longitude L = ν + ω + I·Ω, in the same revolution as the mean longitude.
+
+        Raises:
+            ValueError: If Kepler's equation cannot be solved.
+        """
         ...
     def eccentric_longitude(self) -> Angle:
-        """Return the eccentric longitude F = E + ω + I·Ω, in the same revolution as the mean longitude."""
+        """Return the eccentric longitude F = E + ω + I·Ω, in the same revolution as the mean longitude.
+
+        Raises:
+            ValueError: If Kepler's equation cannot be solved.
+        """
         ...
     def retrograde(self) -> bool:
         """Return whether the elements use the retrograde set (retrograde factor I = -1)."""
@@ -1885,13 +1893,22 @@ class Equinoctial:
 
         Raises:
             UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+            ValueError: If Kepler's equation cannot be solved.
         """
         ...
     def to_keplerian(self) -> Keplerian:
-        """Convert these equinoctial elements to Keplerian orbital elements."""
+        """Convert these equinoctial elements to Keplerian orbital elements.
+
+        Raises:
+            ValueError: If Kepler's equation cannot be solved.
+        """
         ...
     def to_modified_equinoctial(self) -> ModifiedEquinoctial:
-        """Convert these equinoctial elements to modified equinoctial elements."""
+        """Convert these equinoctial elements to modified equinoctial elements.
+
+        Raises:
+            ValueError: If Kepler's equation cannot be solved.
+        """
         ...
 
 @final

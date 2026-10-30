@@ -32,7 +32,7 @@ use thiserror::Error;
 use crate::math::float::{
     abs, atan, atanh, cbrt, cos, cosh, powi, round, sin, sinh, sqrt, tan, tanh,
 };
-use crate::math::roots::{BracketedHalley, FindBracketedRootWithSecondDerivative};
+use crate::math::roots::{BracketedHalley, FindBracketedRootWithSecondDerivative, RootFinderError};
 use crate::{
     elements::{Eccentricity, OrbitType},
     units::{Angle, AngleUnits},
@@ -348,15 +348,19 @@ pub fn mean_to_eccentric(mean: Angle, e: Eccentricity) -> Result<Angle> {
     if !e.is_circular_or_elliptic() {
         return Err(AnomalyError::NotElliptic(e));
     }
-    Ok(Angle::new(solve_kepler(mean.as_f64(), 0.0, e.as_f64())))
+    Ok(Angle::new(solve_kepler(mean.as_f64(), 0.0, e.as_f64())?))
 }
 
 /// Solves the equinoctial form of Kepler's equation, λ = F - k·sin(F) + h·cos(F), for the
 /// eccentric longitude F of an elliptic orbit with eccentricity vector (k, h), so h² + k² < 1.
 ///
 /// The classical form M = E - e·sin(E) is the special case h = 0, k = e. The result lies in the
-/// same revolution as λ.
-pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> f64 {
+/// same revolution as λ. The inputs must be finite.
+///
+/// # Errors
+///
+/// Returns [`AnomalyError::ConvergenceFailure`] if the solver does not converge.
+pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> Result<f64> {
     // Solve within a single revolution [-π, π) and add the whole revolutions back afterwards.
     let lambda = Angle::new(mean_longitude)
         .normalize_two_pi(Angle::ZERO)
@@ -396,11 +400,7 @@ pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> f64 {
         }
     };
 
-    // The safeguard keeps every iterate inside the bracket and falls back to bisection, but its
-    // worst case has no tight bound on the number of iterations. Kepler's equation converges in a
-    // handful of iterations, so twice the default cap is ample headroom, not a proven limit.
     let f = BracketedHalley::default()
-        .with_max_iter(200)
         .with_abs_tol(8.0 * f64::EPSILON)
         .with_rel_tol(0.0)
         .find_in_oriented_bracket_with_second_derivative_from(
@@ -408,8 +408,20 @@ pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> f64 {
             (lambda - PI, lambda + PI),
             initial_guess,
         )
-        .expect("the residual is finite, changes sign across the bracket and converges quickly");
-    f + revolutions
+        .map_err(|err| match err {
+            RootFinderError::NotConverged {
+                iterations,
+                residual,
+                ..
+            } => AnomalyError::ConvergenceFailure {
+                iterations: iterations as usize,
+                residual,
+            },
+            // The finite inputs keep the residual finite, the bracket is oriented as shown above,
+            // and the initial guess lies within it, which rules out every other failure.
+            err => unreachable!("Kepler's equation cannot fail with: {err}"),
+        })?;
+    Ok(f + revolutions)
 }
 
 /// Convert true anomaly to mean anomaly for elliptic orbits.
@@ -783,7 +795,7 @@ mod tests {
     #[case(1.0, 0.8414709847237494, 0.5403023058141095)]
     #[case(-PI, 0.0, -(1.0 - 1e-10))]
     fn test_solve_kepler_near_parabolic(#[case] lambda: f64, #[case] h: f64, #[case] k: f64) {
-        let f = solve_kepler(lambda, h, k);
+        let f = solve_kepler(lambda, h, k).unwrap();
         let residual = f - k * sin(f) + h * cos(f) - lambda;
         assert!(
             abs(residual) <= 8.0 * f64::EPSILON * abs(lambda).max(1.0),
