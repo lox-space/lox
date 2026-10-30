@@ -38,7 +38,7 @@ fn equinoctial_true_longitude(bencher: divan::Bencher, e: f64) {
         RetrogradeFactor::Prograde,
     )
     .unwrap();
-    // Unwrap to measure the conversion alone: returning the `Result` to the harness adds an
-    // overhead of several tens of nanoseconds that real callers do not pay.
+    // Unwrap to measure the conversion: returning the `Result` to the harness adds several tens of
+    // nanoseconds, whereas a caller propagating it with `?` pays only a few nanoseconds per call.
     bencher.bench(|| black_box(black_box(elements).true_longitude().unwrap()));
 }
