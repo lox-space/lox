@@ -56,8 +56,23 @@ pub trait FindBracketedRoot {
 
 /// Finds a root of `f` within a bracket `(a, b)`, using its derivative.
 pub trait FindBracketedRootWithDerivative {
-    /// Finds a root of `f` within `bracket`, reusing the function values at the
-    /// bracket endpoints instead of evaluating them again.
+    /// Finds a root of `f` within `bracket`, starting from `initial_guess` and
+    /// reusing the function values at the bracket endpoints instead of
+    /// evaluating them again.
+    ///
+    /// `values` must equal `(f(bracket.0), f(bracket.1))`, and `initial_guess`
+    /// must lie within `bracket`.
+    fn find_in_bracket_with_derivative_values_from(
+        &self,
+        f: impl CallbackWithDerivative,
+        bracket: (f64, f64),
+        values: (f64, f64),
+        initial_guess: f64,
+    ) -> Result<f64, RootFinderError>;
+
+    /// Finds a root of `f` within `bracket`, starting from its midpoint and
+    /// reusing the function values at the bracket endpoints instead of
+    /// evaluating them again.
     ///
     /// `values` must equal `(f(bracket.0), f(bracket.1))`.
     fn find_in_bracket_with_derivative_values(
@@ -65,25 +80,56 @@ pub trait FindBracketedRootWithDerivative {
         f: impl CallbackWithDerivative,
         bracket: (f64, f64),
         values: (f64, f64),
-    ) -> Result<f64, RootFinderError>;
+    ) -> Result<f64, RootFinderError> {
+        let midpoint = 0.5 * (bracket.0 + bracket.1);
+        self.find_in_bracket_with_derivative_values_from(f, bracket, values, midpoint)
+    }
 
-    /// Finds a root of `f` within the given `bracket`.
+    /// Finds a root of `f` within `bracket`, starting from `initial_guess`,
+    /// which must lie within `bracket`.
+    fn find_in_bracket_with_derivative_from(
+        &self,
+        f: impl CallbackWithDerivative,
+        bracket: (f64, f64),
+        initial_guess: f64,
+    ) -> Result<f64, RootFinderError> {
+        let (fa, _) = f.call(bracket.0)?;
+        let (fb, _) = f.call(bracket.1)?;
+        self.find_in_bracket_with_derivative_values_from(f, bracket, (fa, fb), initial_guess)
+    }
+
+    /// Finds a root of `f` within the given `bracket`, starting from its
+    /// midpoint.
     fn find_in_bracket_with_derivative(
         &self,
         f: impl CallbackWithDerivative,
         bracket: (f64, f64),
     ) -> Result<f64, RootFinderError> {
-        let (fa, _) = f.call(bracket.0)?;
-        let (fb, _) = f.call(bracket.1)?;
-        self.find_in_bracket_with_derivative_values(f, bracket, (fa, fb))
+        let midpoint = 0.5 * (bracket.0 + bracket.1);
+        self.find_in_bracket_with_derivative_from(f, bracket, midpoint)
     }
 }
 
 /// Finds a root of `f` within a bracket `(a, b)`, using its first and second
 /// derivatives.
 pub trait FindBracketedRootWithSecondDerivative {
-    /// Finds a root of `f` within `bracket`, reusing the function values at the
-    /// bracket endpoints instead of evaluating them again.
+    /// Finds a root of `f` within `bracket`, starting from `initial_guess` and
+    /// reusing the function values at the bracket endpoints instead of
+    /// evaluating them again.
+    ///
+    /// `values` must equal `(f(bracket.0), f(bracket.1))`, and `initial_guess`
+    /// must lie within `bracket`.
+    fn find_in_bracket_with_second_derivative_values_from(
+        &self,
+        f: impl CallbackWithSecondDerivative,
+        bracket: (f64, f64),
+        values: (f64, f64),
+        initial_guess: f64,
+    ) -> Result<f64, RootFinderError>;
+
+    /// Finds a root of `f` within `bracket`, starting from its midpoint and
+    /// reusing the function values at the bracket endpoints instead of
+    /// evaluating them again.
     ///
     /// `values` must equal `(f(bracket.0), f(bracket.1))`.
     fn find_in_bracket_with_second_derivative_values(
@@ -91,17 +137,33 @@ pub trait FindBracketedRootWithSecondDerivative {
         f: impl CallbackWithSecondDerivative,
         bracket: (f64, f64),
         values: (f64, f64),
-    ) -> Result<f64, RootFinderError>;
+    ) -> Result<f64, RootFinderError> {
+        let midpoint = 0.5 * (bracket.0 + bracket.1);
+        self.find_in_bracket_with_second_derivative_values_from(f, bracket, values, midpoint)
+    }
 
-    /// Finds a root of `f` within the given `bracket`.
+    /// Finds a root of `f` within `bracket`, starting from `initial_guess`,
+    /// which must lie within `bracket`.
+    fn find_in_bracket_with_second_derivative_from(
+        &self,
+        f: impl CallbackWithSecondDerivative,
+        bracket: (f64, f64),
+        initial_guess: f64,
+    ) -> Result<f64, RootFinderError> {
+        let (fa, _, _) = f.call(bracket.0)?;
+        let (fb, _, _) = f.call(bracket.1)?;
+        self.find_in_bracket_with_second_derivative_values_from(f, bracket, (fa, fb), initial_guess)
+    }
+
+    /// Finds a root of `f` within the given `bracket`, starting from its
+    /// midpoint.
     fn find_in_bracket_with_second_derivative(
         &self,
         f: impl CallbackWithSecondDerivative,
         bracket: (f64, f64),
     ) -> Result<f64, RootFinderError> {
-        let (fa, _, _) = f.call(bracket.0)?;
-        let (fb, _, _) = f.call(bracket.1)?;
-        self.find_in_bracket_with_second_derivative_values(f, bracket, (fa, fb))
+        let midpoint = 0.5 * (bracket.0 + bracket.1);
+        self.find_in_bracket_with_second_derivative_from(f, bracket, midpoint)
     }
 }
 
@@ -121,6 +183,12 @@ pub enum RootFinderError {
     /// The root is not within the given bracket.
     #[error("root not in bracket")]
     NotInBracket,
+    /// The initial guess is not within the given bracket.
+    #[error("initial guess {guess} is not in the bracket")]
+    InitialGuessNotInBracket {
+        /// The rejected initial guess.
+        guess: f64,
+    },
     /// The objective function returned a non-finite value.
     #[error("function returned a non-finite value ({value}) at x = {x}")]
     NonFinite {
@@ -585,14 +653,23 @@ impl BracketedNewton {
 }
 
 impl FindBracketedRootWithDerivative for BracketedNewton {
-    fn find_in_bracket_with_derivative_values(
+    fn find_in_bracket_with_derivative_values_from(
         &self,
         f: impl CallbackWithDerivative,
         bracket: (f64, f64),
         values: (f64, f64),
+        initial_guess: f64,
     ) -> Result<f64, RootFinderError> {
         let (x1, x2) = bracket;
         let (f1, f2) = values;
+
+        // Starting outside the bracket would break the bracket bookkeeping.
+        let (lower, upper) = if x1 < x2 { (x1, x2) } else { (x2, x1) };
+        if !(initial_guess >= lower && initial_guess <= upper) {
+            return Err(RootFinderError::InitialGuessNotInBracket {
+                guess: initial_guess,
+            });
+        }
 
         if !f1.is_finite() {
             return Err(RootFinderError::NonFinite { x: x1, value: f1 });
@@ -622,12 +699,13 @@ impl FindBracketedRootWithDerivative for BracketedNewton {
             (x2, x1)
         };
 
-        let mut rts = 0.5 * (x1 + x2);
+        let mut rts = initial_guess;
         let mut dx_old = abs(x2 - x1);
         let mut dx = dx_old;
         let (mut fx, mut dfx) = eval_finite_with_derivative(&f, rts)?;
-        // The midpoint may already be the root, in which case the derivative is
-        // never used (and could give a 0/0 step if it also vanishes there).
+        // The initial guess may already be the root, in which case the
+        // derivative is never used (and could give a 0/0 step if it also
+        // vanishes there).
         if fx == 0.0 {
             return Ok(rts);
         }
@@ -742,14 +820,23 @@ impl BracketedHalley {
 }
 
 impl FindBracketedRootWithSecondDerivative for BracketedHalley {
-    fn find_in_bracket_with_second_derivative_values(
+    fn find_in_bracket_with_second_derivative_values_from(
         &self,
         f: impl CallbackWithSecondDerivative,
         bracket: (f64, f64),
         values: (f64, f64),
+        initial_guess: f64,
     ) -> Result<f64, RootFinderError> {
         let (x1, x2) = bracket;
         let (f1, f2) = values;
+
+        // Starting outside the bracket would break the bracket bookkeeping.
+        let (lower, upper) = if x1 < x2 { (x1, x2) } else { (x2, x1) };
+        if !(initial_guess >= lower && initial_guess <= upper) {
+            return Err(RootFinderError::InitialGuessNotInBracket {
+                guess: initial_guess,
+            });
+        }
 
         if !f1.is_finite() {
             return Err(RootFinderError::NonFinite { x: x1, value: f1 });
@@ -779,12 +866,12 @@ impl FindBracketedRootWithSecondDerivative for BracketedHalley {
             (x2, x1)
         };
 
-        let mut rts = 0.5 * (x1 + x2);
+        let mut rts = initial_guess;
         let mut dx_old = abs(x2 - x1);
         let mut dx = dx_old;
         let (mut fx, mut dfx, mut d2fx) = eval_finite_with_second_derivative(&f, rts)?;
-        // The midpoint may already be the root, in which case the derivatives
-        // are never used.
+        // The initial guess may already be the root, in which case the
+        // derivatives are never used.
         if fx == 0.0 {
             return Ok(rts);
         }
@@ -1425,6 +1512,78 @@ mod tests {
     }
 
     #[test]
+    fn test_bracketed_newton_initial_guess_is_root() {
+        use core::cell::Cell;
+
+        // Starting at the root ends the solve after a single evaluation.
+        let calls = Cell::new(0);
+        let act = BracketedNewton::default()
+            .find_in_bracket_with_derivative_values_from(
+                |x: f64| {
+                    calls.set(calls.get() + 1);
+                    (x - 0.25, 1.0)
+                },
+                (0.0, 1.0),
+                (-0.25, 0.75),
+                0.25,
+            )
+            .expect("the initial guess is the root");
+        assert_eq!(act, 0.25);
+        assert_eq!(calls.get(), 1);
+    }
+
+    #[test]
+    fn test_bracketed_newton_initial_guess_saves_evaluations() {
+        use core::cell::Cell;
+
+        // Kepler's equation for a highly eccentric orbit near periapsis, where
+        // the root lies far from the bracket midpoint at the mean anomaly. A
+        // guess close to the root must take fewer evaluations.
+        let (mean, e) = (0.1, 0.95);
+        let bracket = (mean - PI, mean + PI);
+        let solve = |guess: Option<f64>| {
+            let calls = Cell::new(0);
+            let kepler = |x: f64| {
+                calls.set(calls.get() + 1);
+                (x - e * sin(x) - mean, 1.0 - e * cos(x))
+            };
+            let solver = BracketedNewton::default().with_abs_tol(1e-15);
+            let root = match guess {
+                Some(guess) => solver.find_in_bracket_with_derivative_from(kepler, bracket, guess),
+                None => solver.find_in_bracket_with_derivative(kepler, bracket),
+            }
+            .expect("should converge");
+            (root, calls.get())
+        };
+
+        let (from_midpoint, midpoint_calls) = solve(None);
+        let (from_guess, guess_calls) = solve(Some(from_midpoint + 1e-3));
+        assert_approx_eq!(from_guess, from_midpoint, atol <= 1e-14);
+        assert!(
+            guess_calls < midpoint_calls,
+            "with guess: {guess_calls}, from midpoint: {midpoint_calls}"
+        );
+    }
+
+    #[test]
+    fn test_bracketed_newton_rejects_initial_guess_outside_bracket() {
+        for guess in [-0.5, 1.5, f64::NAN] {
+            let err = BracketedNewton::default()
+                .find_in_bracket_with_derivative_values_from(
+                    |x: f64| (x - 0.25, 1.0),
+                    (0.0, 1.0),
+                    (-0.25, 0.75),
+                    guess,
+                )
+                .unwrap_err();
+            assert!(
+                matches!(err, RootFinderError::InitialGuessNotInBracket { .. }),
+                "guess {guess}: {err}"
+            );
+        }
+    }
+
+    #[test]
     fn test_bracketed_newton_reuses_endpoints() {
         use core::cell::Cell;
 
@@ -1656,6 +1815,80 @@ mod tests {
             .expect("should converge");
         assert_approx_eq!(act - e * sin(act), mean, atol <= 1e-15);
         assert!(calls.get() <= 7, "evaluations: {}", calls.get());
+    }
+
+    #[test]
+    fn test_bracketed_halley_initial_guess_is_root() {
+        use core::cell::Cell;
+
+        // Starting at the root ends the solve after a single evaluation.
+        let calls = Cell::new(0);
+        let act = BracketedHalley::default()
+            .find_in_bracket_with_second_derivative_values_from(
+                |x: f64| {
+                    calls.set(calls.get() + 1);
+                    (x - 0.25, 1.0, 0.0)
+                },
+                (0.0, 1.0),
+                (-0.25, 0.75),
+                0.25,
+            )
+            .expect("the initial guess is the root");
+        assert_eq!(act, 0.25);
+        assert_eq!(calls.get(), 1);
+    }
+
+    #[test]
+    fn test_bracketed_halley_initial_guess_saves_evaluations() {
+        use core::cell::Cell;
+
+        // Kepler's equation for a highly eccentric orbit near periapsis, where
+        // the root lies far from the bracket midpoint at the mean anomaly. A
+        // guess close to the root must take fewer evaluations.
+        let (mean, e) = (0.1, 0.95);
+        let bracket = (mean - PI, mean + PI);
+        let solve = |guess: Option<f64>| {
+            let calls = Cell::new(0);
+            let kepler = |x: f64| {
+                calls.set(calls.get() + 1);
+                (x - e * sin(x) - mean, 1.0 - e * cos(x), e * sin(x))
+            };
+            let solver = BracketedHalley::default().with_abs_tol(1e-15);
+            let root = match guess {
+                Some(guess) => {
+                    solver.find_in_bracket_with_second_derivative_from(kepler, bracket, guess)
+                }
+                None => solver.find_in_bracket_with_second_derivative(kepler, bracket),
+            }
+            .expect("should converge");
+            (root, calls.get())
+        };
+
+        let (from_midpoint, midpoint_calls) = solve(None);
+        let (from_guess, guess_calls) = solve(Some(from_midpoint + 1e-3));
+        assert_approx_eq!(from_guess, from_midpoint, atol <= 1e-14);
+        assert!(
+            guess_calls < midpoint_calls,
+            "with guess: {guess_calls}, from midpoint: {midpoint_calls}"
+        );
+    }
+
+    #[test]
+    fn test_bracketed_halley_rejects_initial_guess_outside_bracket() {
+        for guess in [-0.5, 1.5, f64::NAN] {
+            let err = BracketedHalley::default()
+                .find_in_bracket_with_second_derivative_values_from(
+                    |x: f64| (x - 0.25, 1.0, 0.0),
+                    (0.0, 1.0),
+                    (-0.25, 0.75),
+                    guess,
+                )
+                .unwrap_err();
+            assert!(
+                matches!(err, RootFinderError::InitialGuessNotInBracket { .. }),
+                "guess {guess}: {err}"
+            );
+        }
     }
 
     #[test]
