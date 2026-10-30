@@ -364,9 +364,10 @@ pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> f64 {
     let revolutions = mean_longitude - lambda;
 
     // The residual increases monotonically and the solution lies within λ ± e. The bracket
-    // λ ± π is wider so that rounding cannot flip the sign of the residual at its ends, which it
-    // could for a near-circular orbit. The tolerance exceeds the spacing of floats below 8, so the
-    // iteration cannot stall between two neighbouring floats.
+    // λ ± π is wider, so the residual is at most e - π < 0 at its lower end and at least
+    // π - e > 0 at its upper end, with a margin no rounding error can overcome. Knowing the signs,
+    // the solver need not evaluate the ends. The tolerance exceeds the spacing of floats below 8,
+    // so the iteration cannot stall between two neighbouring floats.
     let residual = |f: f64| {
         let (sin_f, cos_f) = (sin(f), cos(f));
         (
@@ -378,7 +379,11 @@ pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> f64 {
     let f = BracketedHalley::default()
         .with_abs_tol(8.0 * f64::EPSILON)
         .with_rel_tol(0.0)
-        .find_in_bracket_with_second_derivative(residual, (lambda - PI, lambda + PI))
+        .find_in_oriented_bracket_with_second_derivative_from(
+            residual,
+            (lambda - PI, lambda + PI),
+            lambda,
+        )
         .expect("the residual is finite and changes sign across the bracket");
     f + revolutions
 }
