@@ -56,6 +56,22 @@ pub trait FindBracketedRoot {
 
 /// Finds a root of `f` within a bracket `(a, b)`, using its derivative.
 pub trait FindBracketedRootWithDerivative {
+    /// Finds a root of `f` within `bracket`, starting from `initial_guess`,
+    /// where the caller guarantees that `f(bracket.0) < 0 < f(bracket.1)`.
+    ///
+    /// The ends of the bracket are never evaluated, which saves two function
+    /// evaluations when their signs are known in advance, e.g. for a monotonic
+    /// function. The bracket is ordered by sign rather than by position, so
+    /// `bracket.0 > bracket.1` for a decreasing function. `initial_guess` must
+    /// lie within `bracket`. The result is meaningless if the bracket is not
+    /// oriented as stated.
+    fn find_in_oriented_bracket_with_derivative_from(
+        &self,
+        f: impl CallbackWithDerivative,
+        bracket: (f64, f64),
+        initial_guess: f64,
+    ) -> Result<f64, RootFinderError>;
+
     /// Finds a root of `f` within `bracket`, starting from `initial_guess` and
     /// reusing the function values at the bracket endpoints instead of
     /// evaluating them again.
@@ -68,7 +84,14 @@ pub trait FindBracketedRootWithDerivative {
         bracket: (f64, f64),
         values: (f64, f64),
         initial_guess: f64,
-    ) -> Result<f64, RootFinderError>;
+    ) -> Result<f64, RootFinderError> {
+        match orient_bracket(bracket, values)? {
+            OrientedBracket::Root(root) => Ok(root),
+            OrientedBracket::Bracket(oriented) => {
+                self.find_in_oriented_bracket_with_derivative_from(f, oriented, initial_guess)
+            }
+        }
+    }
 
     /// Finds a root of `f` within `bracket`, starting from its midpoint and
     /// reusing the function values at the bracket endpoints instead of
@@ -113,6 +136,22 @@ pub trait FindBracketedRootWithDerivative {
 /// Finds a root of `f` within a bracket `(a, b)`, using its first and second
 /// derivatives.
 pub trait FindBracketedRootWithSecondDerivative {
+    /// Finds a root of `f` within `bracket`, starting from `initial_guess`,
+    /// where the caller guarantees that `f(bracket.0) < 0 < f(bracket.1)`.
+    ///
+    /// The ends of the bracket are never evaluated, which saves two function
+    /// evaluations when their signs are known in advance, e.g. for a monotonic
+    /// function. The bracket is ordered by sign rather than by position, so
+    /// `bracket.0 > bracket.1` for a decreasing function. `initial_guess` must
+    /// lie within `bracket`. The result is meaningless if the bracket is not
+    /// oriented as stated.
+    fn find_in_oriented_bracket_with_second_derivative_from(
+        &self,
+        f: impl CallbackWithSecondDerivative,
+        bracket: (f64, f64),
+        initial_guess: f64,
+    ) -> Result<f64, RootFinderError>;
+
     /// Finds a root of `f` within `bracket`, starting from `initial_guess` and
     /// reusing the function values at the bracket endpoints instead of
     /// evaluating them again.
@@ -125,7 +164,13 @@ pub trait FindBracketedRootWithSecondDerivative {
         bracket: (f64, f64),
         values: (f64, f64),
         initial_guess: f64,
-    ) -> Result<f64, RootFinderError>;
+    ) -> Result<f64, RootFinderError> {
+        match orient_bracket(bracket, values)? {
+            OrientedBracket::Root(root) => Ok(root),
+            OrientedBracket::Bracket(oriented) => self
+                .find_in_oriented_bracket_with_second_derivative_from(f, oriented, initial_guess),
+        }
+    }
 
     /// Finds a root of `f` within `bracket`, starting from its midpoint and
     /// reusing the function values at the bracket endpoints instead of
@@ -164,6 +209,50 @@ pub trait FindBracketedRootWithSecondDerivative {
     ) -> Result<f64, RootFinderError> {
         let midpoint = 0.5 * (bracket.0 + bracket.1);
         self.find_in_bracket_with_second_derivative_from(f, bracket, midpoint)
+    }
+}
+
+/// A bracket checked against the function values at its ends.
+enum OrientedBracket {
+    /// One end is exactly a root.
+    Root(f64),
+    /// The bracket ordered so that `f(bracket.0) < 0 < f(bracket.1)`.
+    Bracket((f64, f64)),
+}
+
+/// Checks the function values at the ends of `bracket` and orients it, or
+/// returns the end that is exactly a root.
+fn orient_bracket(
+    bracket: (f64, f64),
+    values: (f64, f64),
+) -> Result<OrientedBracket, RootFinderError> {
+    let (x1, x2) = bracket;
+    let (f1, f2) = values;
+
+    if !f1.is_finite() {
+        return Err(RootFinderError::NonFinite { x: x1, value: f1 });
+    }
+    if !f2.is_finite() {
+        return Err(RootFinderError::NonFinite { x: x2, value: f2 });
+    }
+
+    if f1 == 0.0 {
+        return Ok(OrientedBracket::Root(x1));
+    }
+    if f2 == 0.0 {
+        return Ok(OrientedBracket::Root(x2));
+    }
+
+    // The endpoints must straddle the root. Comparing sign bits avoids the
+    // underflow that loses the sign of very small opposite-sign residuals.
+    if f1.is_sign_negative() == f2.is_sign_negative() {
+        return Err(RootFinderError::NotInBracket);
+    }
+
+    if f1.is_sign_negative() {
+        Ok(OrientedBracket::Bracket((x1, x2)))
+    } else {
+        Ok(OrientedBracket::Bracket((x2, x1)))
     }
 }
 
@@ -653,54 +742,25 @@ impl BracketedNewton {
 }
 
 impl FindBracketedRootWithDerivative for BracketedNewton {
-    fn find_in_bracket_with_derivative_values_from(
+    fn find_in_oriented_bracket_with_derivative_from(
         &self,
         f: impl CallbackWithDerivative,
         bracket: (f64, f64),
-        values: (f64, f64),
         initial_guess: f64,
     ) -> Result<f64, RootFinderError> {
-        let (x1, x2) = bracket;
-        let (f1, f2) = values;
+        // `f(xl) < 0 < f(xh)`.
+        let (mut xl, mut xh) = bracket;
 
         // Starting outside the bracket would break the bracket bookkeeping.
-        let (lower, upper) = if x1 < x2 { (x1, x2) } else { (x2, x1) };
+        let (lower, upper) = if xl < xh { (xl, xh) } else { (xh, xl) };
         if !(initial_guess >= lower && initial_guess <= upper) {
             return Err(RootFinderError::InitialGuessNotInBracket {
                 guess: initial_guess,
             });
         }
 
-        if !f1.is_finite() {
-            return Err(RootFinderError::NonFinite { x: x1, value: f1 });
-        }
-        if !f2.is_finite() {
-            return Err(RootFinderError::NonFinite { x: x2, value: f2 });
-        }
-
-        // An endpoint that is exactly a root is returned directly.
-        if f1 == 0.0 {
-            return Ok(x1);
-        }
-        if f2 == 0.0 {
-            return Ok(x2);
-        }
-
-        // The endpoints must straddle the root. Comparing sign bits avoids the
-        // underflow that loses the sign of very small opposite-sign residuals.
-        if f1.is_sign_negative() == f2.is_sign_negative() {
-            return Err(RootFinderError::NotInBracket);
-        }
-
-        // Orient the bracket so that `f(xl) < 0 < f(xh)`.
-        let (mut xl, mut xh) = if f1.is_sign_negative() {
-            (x1, x2)
-        } else {
-            (x2, x1)
-        };
-
         let mut rts = initial_guess;
-        let mut dx_old = abs(x2 - x1);
+        let mut dx_old = abs(xh - xl);
         let mut dx = dx_old;
         let (mut fx, mut dfx) = eval_finite_with_derivative(&f, rts)?;
         // The initial guess may already be the root, in which case the
@@ -820,54 +880,25 @@ impl BracketedHalley {
 }
 
 impl FindBracketedRootWithSecondDerivative for BracketedHalley {
-    fn find_in_bracket_with_second_derivative_values_from(
+    fn find_in_oriented_bracket_with_second_derivative_from(
         &self,
         f: impl CallbackWithSecondDerivative,
         bracket: (f64, f64),
-        values: (f64, f64),
         initial_guess: f64,
     ) -> Result<f64, RootFinderError> {
-        let (x1, x2) = bracket;
-        let (f1, f2) = values;
+        // `f(xl) < 0 < f(xh)`.
+        let (mut xl, mut xh) = bracket;
 
         // Starting outside the bracket would break the bracket bookkeeping.
-        let (lower, upper) = if x1 < x2 { (x1, x2) } else { (x2, x1) };
+        let (lower, upper) = if xl < xh { (xl, xh) } else { (xh, xl) };
         if !(initial_guess >= lower && initial_guess <= upper) {
             return Err(RootFinderError::InitialGuessNotInBracket {
                 guess: initial_guess,
             });
         }
 
-        if !f1.is_finite() {
-            return Err(RootFinderError::NonFinite { x: x1, value: f1 });
-        }
-        if !f2.is_finite() {
-            return Err(RootFinderError::NonFinite { x: x2, value: f2 });
-        }
-
-        // An endpoint that is exactly a root is returned directly.
-        if f1 == 0.0 {
-            return Ok(x1);
-        }
-        if f2 == 0.0 {
-            return Ok(x2);
-        }
-
-        // The endpoints must straddle the root. Comparing sign bits avoids the
-        // underflow that loses the sign of very small opposite-sign residuals.
-        if f1.is_sign_negative() == f2.is_sign_negative() {
-            return Err(RootFinderError::NotInBracket);
-        }
-
-        // Orient the bracket so that `f(xl) < 0 < f(xh)`.
-        let (mut xl, mut xh) = if f1.is_sign_negative() {
-            (x1, x2)
-        } else {
-            (x2, x1)
-        };
-
         let mut rts = initial_guess;
-        let mut dx_old = abs(x2 - x1);
+        let mut dx_old = abs(xh - xl);
         let mut dx = dx_old;
         let (mut fx, mut dfx, mut d2fx) = eval_finite_with_second_derivative(&f, rts)?;
         // The initial guess may already be the root, in which case the
@@ -1584,6 +1615,79 @@ mod tests {
     }
 
     #[test]
+    fn test_bracketed_newton_oriented_bracket_skips_endpoints() {
+        use core::cell::Cell;
+
+        // Kepler's equation, whose residual is known to be negative at M - π
+        // and positive at M + π, so the ends need not be evaluated.
+        let (mean, e) = (2.0, 0.5);
+        let (lower, upper) = (mean - PI, mean + PI);
+        let endpoint_calls = Cell::new(0);
+        let kepler = |x: f64| {
+            if x == lower || x == upper {
+                endpoint_calls.set(endpoint_calls.get() + 1);
+            }
+            (x - e * sin(x) - mean, 1.0 - e * cos(x))
+        };
+        let oriented = BracketedNewton::default()
+            .with_abs_tol(1e-15)
+            .find_in_oriented_bracket_with_derivative_from(kepler, (lower, upper), mean)
+            .expect("should converge");
+        assert_eq!(endpoint_calls.get(), 0, "endpoints must not be evaluated");
+
+        let evaluated = BracketedNewton::default()
+            .with_abs_tol(1e-15)
+            .find_in_bracket_with_derivative(kepler, (lower, upper))
+            .expect("should converge");
+        assert_eq!(oriented, evaluated);
+    }
+
+    #[test]
+    fn test_bracketed_newton_oriented_bracket_decreasing() {
+        // The bracket is ordered by sign, not by position: for a decreasing
+        // function the negative end is the larger one.
+        let act = BracketedNewton::default()
+            .find_in_oriented_bracket_with_derivative_from(
+                |x: f64| (0.25 - x, -1.0),
+                (1.0, 0.0),
+                0.5,
+            )
+            .expect("should converge");
+        assert_approx_eq!(act, 0.25, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_bracketed_newton_oriented_bracket_rejects_initial_guess_outside() {
+        for guess in [-0.5, 1.5, f64::NAN] {
+            let err = BracketedNewton::default()
+                .find_in_oriented_bracket_with_derivative_from(
+                    |x: f64| (x - 0.25, 1.0),
+                    (0.0, 1.0),
+                    guess,
+                )
+                .unwrap_err();
+            assert!(
+                matches!(err, RootFinderError::InitialGuessNotInBracket { .. }),
+                "guess {guess}: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_bracketed_newton_endpoint_root_takes_precedence_over_guess() {
+        // A degenerate bracket at the largest float, whose midpoint overflows,
+        // must still report an endpoint that is exactly a root.
+        let act = BracketedNewton::default()
+            .find_in_bracket_with_derivative_values(
+                |x: f64| (x - 0.25, 1.0),
+                (f64::MAX, f64::MAX),
+                (0.0, 0.0),
+            )
+            .expect("the endpoint is a root");
+        assert_eq!(act, f64::MAX);
+    }
+
+    #[test]
     fn test_bracketed_newton_reuses_endpoints() {
         use core::cell::Cell;
 
@@ -1889,6 +1993,79 @@ mod tests {
                 "guess {guess}: {err}"
             );
         }
+    }
+
+    #[test]
+    fn test_bracketed_halley_oriented_bracket_skips_endpoints() {
+        use core::cell::Cell;
+
+        // Kepler's equation, whose residual is known to be negative at M - π
+        // and positive at M + π, so the ends need not be evaluated.
+        let (mean, e) = (2.0, 0.5);
+        let (lower, upper) = (mean - PI, mean + PI);
+        let endpoint_calls = Cell::new(0);
+        let kepler = |x: f64| {
+            if x == lower || x == upper {
+                endpoint_calls.set(endpoint_calls.get() + 1);
+            }
+            (x - e * sin(x) - mean, 1.0 - e * cos(x), e * sin(x))
+        };
+        let oriented = BracketedHalley::default()
+            .with_abs_tol(1e-15)
+            .find_in_oriented_bracket_with_second_derivative_from(kepler, (lower, upper), mean)
+            .expect("should converge");
+        assert_eq!(endpoint_calls.get(), 0, "endpoints must not be evaluated");
+
+        let evaluated = BracketedHalley::default()
+            .with_abs_tol(1e-15)
+            .find_in_bracket_with_second_derivative(kepler, (lower, upper))
+            .expect("should converge");
+        assert_eq!(oriented, evaluated);
+    }
+
+    #[test]
+    fn test_bracketed_halley_oriented_bracket_decreasing() {
+        // The bracket is ordered by sign, not by position: for a decreasing
+        // function the negative end is the larger one.
+        let act = BracketedHalley::default()
+            .find_in_oriented_bracket_with_second_derivative_from(
+                |x: f64| (0.25 - x, -1.0, 0.0),
+                (1.0, 0.0),
+                0.5,
+            )
+            .expect("should converge");
+        assert_approx_eq!(act, 0.25, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_bracketed_halley_oriented_bracket_rejects_initial_guess_outside() {
+        for guess in [-0.5, 1.5, f64::NAN] {
+            let err = BracketedHalley::default()
+                .find_in_oriented_bracket_with_second_derivative_from(
+                    |x: f64| (x - 0.25, 1.0, 0.0),
+                    (0.0, 1.0),
+                    guess,
+                )
+                .unwrap_err();
+            assert!(
+                matches!(err, RootFinderError::InitialGuessNotInBracket { .. }),
+                "guess {guess}: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_bracketed_halley_endpoint_root_takes_precedence_over_guess() {
+        // A degenerate bracket at the largest float, whose midpoint overflows,
+        // must still report an endpoint that is exactly a root.
+        let act = BracketedHalley::default()
+            .find_in_bracket_with_second_derivative_values(
+                |x: f64| (x - 0.25, 1.0, 0.0),
+                (f64::MAX, f64::MAX),
+                (0.0, 0.0),
+            )
+            .expect("the endpoint is a root");
+        assert_eq!(act, f64::MAX);
     }
 
     #[test]
