@@ -55,3 +55,22 @@ where
         Ok(self(v))
     }
 }
+
+/// A callable scalar function that evaluates its value and first two
+/// derivatives together.
+///
+/// Like [`CallbackWithDerivative`], for algorithms that need all three at the
+/// same point and make a single call per point.
+pub trait CallbackWithSecondDerivative {
+    /// Evaluates the function and its first and second derivatives at `v`.
+    fn call(&self, v: f64) -> Result<(f64, f64, f64), LoxError>;
+}
+
+impl<F> CallbackWithSecondDerivative for F
+where
+    F: Fn(f64) -> (f64, f64, f64),
+{
+    fn call(&self, v: f64) -> Result<(f64, f64, f64), LoxError> {
+        Ok(self(v))
+    }
+}

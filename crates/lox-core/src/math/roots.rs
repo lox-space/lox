@@ -2,14 +2,14 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Root-finding algorithms: Steffensen, Newton, safeguarded Newton, and Brent
-//! methods.
+//! Root-finding algorithms: Steffensen, Newton, safeguarded Newton, safeguarded
+//! Halley, and Brent methods.
 
 use lox_approx::approx_eq;
 use thiserror::Error;
 
 use crate::error::LoxError;
-use crate::math::callback::{Callback, CallbackWithDerivative};
+use crate::math::callback::{Callback, CallbackWithDerivative, CallbackWithSecondDerivative};
 use crate::math::float::{abs, powi, sqrt};
 
 /// Finds a root of `f` starting from an initial guess.
@@ -76,6 +76,32 @@ pub trait FindBracketedRootWithDerivative {
         let (fa, _) = f.call(bracket.0)?;
         let (fb, _) = f.call(bracket.1)?;
         self.find_in_bracket_with_derivative_values(f, bracket, (fa, fb))
+    }
+}
+
+/// Finds a root of `f` within a bracket `(a, b)`, using its first and second
+/// derivatives.
+pub trait FindBracketedRootWithSecondDerivative {
+    /// Finds a root of `f` within `bracket`, reusing the function values at the
+    /// bracket endpoints instead of evaluating them again.
+    ///
+    /// `values` must equal `(f(bracket.0), f(bracket.1))`.
+    fn find_in_bracket_with_second_derivative_values(
+        &self,
+        f: impl CallbackWithSecondDerivative,
+        bracket: (f64, f64),
+        values: (f64, f64),
+    ) -> Result<f64, RootFinderError>;
+
+    /// Finds a root of `f` within the given `bracket`.
+    fn find_in_bracket_with_second_derivative(
+        &self,
+        f: impl CallbackWithSecondDerivative,
+        bracket: (f64, f64),
+    ) -> Result<f64, RootFinderError> {
+        let (fa, _, _) = f.call(bracket.0)?;
+        let (fb, _, _) = f.call(bracket.1)?;
+        self.find_in_bracket_with_second_derivative_values(f, bracket, (fa, fb))
     }
 }
 
@@ -147,6 +173,23 @@ fn eval_finite_with_derivative<F: CallbackWithDerivative>(
         return Err(RootFinderError::NonFinite { x, value });
     }
     Ok((value, derivative))
+}
+
+/// Evaluates `f` and its first two derivatives at `x`, mapping a callback
+/// failure or a non-finite function value to the corresponding
+/// [`RootFinderError`].
+///
+/// Non-finite derivatives are not an error here, as for
+/// [`eval_finite_with_derivative`].
+fn eval_finite_with_second_derivative<F: CallbackWithSecondDerivative>(
+    f: &F,
+    x: f64,
+) -> Result<(f64, f64, f64), RootFinderError> {
+    let (value, derivative, second_derivative) = f.call(x)?;
+    if !value.is_finite() {
+        return Err(RootFinderError::NonFinite { x, value });
+    }
+    Ok((value, derivative, second_derivative))
 }
 
 /// Steffensen's method for root-finding (derivative-free).
@@ -622,6 +665,166 @@ impl FindBracketedRootWithDerivative for BracketedNewton {
             }
 
             (fx, dfx) = eval_finite_with_derivative(&f, rts)?;
+            if fx == 0.0 {
+                return Ok(rts);
+            }
+            // Maintain the sign-oriented bracket around the new iterate.
+            if fx.is_sign_negative() {
+                xl = rts;
+            } else {
+                xh = rts;
+            }
+        }
+
+        Err(RootFinderError::NotConverged {
+            iterations: self.max_iter,
+            x: rts,
+            residual: fx,
+        })
+    }
+}
+
+/// Safeguarded Halley method for bracketed root-finding.
+///
+/// Works like [`BracketedNewton`], but takes Halley steps, which use the second
+/// derivative to converge cubically rather than quadratically. That pays off
+/// when the second derivative comes almost for free with the first, as for
+/// Kepler's equation. A step that leaves the current bracket, does not shrink
+/// the interval quickly enough, or is not finite because a derivative is
+/// unusable becomes a bisection step, so the method never fails as long as a
+/// valid bracket is maintained.
+///
+/// The tolerances bound the root location `x`, not the residual `f(x)`: the
+/// returned root is accurate to within `abs_tol + rel_tol * |x|`, independent of
+/// how the objective is scaled.
+///
+/// # References
+///
+/// - Press et al., *Numerical Recipes*, 3rd ed., §9.4 (`rtsafe`) and §9.4.1
+///   (Halley's method).
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct BracketedHalley {
+    max_iter: u32,
+    /// Absolute tolerance on the root location.
+    abs_tol: f64,
+    /// Relative tolerance on the root location.
+    rel_tol: f64,
+}
+
+impl Default for BracketedHalley {
+    fn default() -> Self {
+        Self {
+            max_iter: 100,
+            abs_tol: 1e-6,
+            rel_tol: sqrt(f64::EPSILON),
+        }
+    }
+}
+
+impl BracketedHalley {
+    /// Sets the maximum number of iterations.
+    pub fn with_max_iter(mut self, max_iter: u32) -> Self {
+        self.max_iter = max_iter;
+        self
+    }
+
+    /// Sets the absolute tolerance on the root location.
+    pub fn with_abs_tol(mut self, abs_tol: f64) -> Self {
+        self.abs_tol = abs_tol;
+        self
+    }
+
+    /// Sets the relative tolerance on the root location.
+    pub fn with_rel_tol(mut self, rel_tol: f64) -> Self {
+        self.rel_tol = rel_tol;
+        self
+    }
+}
+
+impl FindBracketedRootWithSecondDerivative for BracketedHalley {
+    fn find_in_bracket_with_second_derivative_values(
+        &self,
+        f: impl CallbackWithSecondDerivative,
+        bracket: (f64, f64),
+        values: (f64, f64),
+    ) -> Result<f64, RootFinderError> {
+        let (x1, x2) = bracket;
+        let (f1, f2) = values;
+
+        if !f1.is_finite() {
+            return Err(RootFinderError::NonFinite { x: x1, value: f1 });
+        }
+        if !f2.is_finite() {
+            return Err(RootFinderError::NonFinite { x: x2, value: f2 });
+        }
+
+        // An endpoint that is exactly a root is returned directly.
+        if f1 == 0.0 {
+            return Ok(x1);
+        }
+        if f2 == 0.0 {
+            return Ok(x2);
+        }
+
+        // The endpoints must straddle the root. Comparing sign bits avoids the
+        // underflow that loses the sign of very small opposite-sign residuals.
+        if f1.is_sign_negative() == f2.is_sign_negative() {
+            return Err(RootFinderError::NotInBracket);
+        }
+
+        // Orient the bracket so that `f(xl) < 0 < f(xh)`.
+        let (mut xl, mut xh) = if f1.is_sign_negative() {
+            (x1, x2)
+        } else {
+            (x2, x1)
+        };
+
+        let mut rts = 0.5 * (x1 + x2);
+        let mut dx_old = abs(x2 - x1);
+        let mut dx = dx_old;
+        let (mut fx, mut dfx, mut d2fx) = eval_finite_with_second_derivative(&f, rts)?;
+        // The midpoint may already be the root, in which case the derivatives
+        // are never used.
+        if fx == 0.0 {
+            return Ok(rts);
+        }
+
+        for _ in 0..self.max_iter {
+            let delta = self.abs_tol + self.rel_tol * abs(rts);
+
+            // Bisect when the Halley iterate is not finite, would leave the
+            // bracket, or is not shrinking the interval fast enough; otherwise
+            // take the Halley step.
+            let step = fx / (dfx - 0.5 * fx * d2fx / dfx);
+            let next = rts - step;
+            // The Halley step is below the representable resolution. This must
+            // be checked before the bracket test, as the iterate is usually an
+            // end of the bracket.
+            if next == rts {
+                return Ok(rts);
+            }
+            let (lower, upper) = if xl < xh { (xl, xh) } else { (xh, xl) };
+            let bisect = !(next > lower && next < upper) || abs(2.0 * step) > abs(dx_old);
+
+            if bisect {
+                dx_old = dx;
+                dx = 0.5 * (xh - xl);
+                rts = xl + dx;
+                // The bisection step is below the representable resolution.
+                if xl == rts {
+                    return Ok(rts);
+                }
+            } else {
+                dx_old = dx;
+                dx = step;
+                rts = next;
+            }
+
+            if abs(dx) < delta {
+                return Ok(rts);
+            }
+
+            (fx, dfx, d2fx) = eval_finite_with_second_derivative(&f, rts)?;
             if fx == 0.0 {
                 return Ok(rts);
             }
@@ -1350,6 +1553,234 @@ mod tests {
         let solver = BracketedNewton::default();
         let err = solver
             .find_in_bracket_with_derivative_values(FailsInterior, (-1.0, 2.0), (-1.0, 2.0))
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::Callback(_)));
+    }
+
+    // -----------------------------------------------------------------------
+    // BracketedHalley (safeguarded Halley)
+    // -----------------------------------------------------------------------
+
+    fn cubic(x: f64) -> (f64, f64, f64) {
+        (
+            powi(x, 3) + 4.0 * powi(x, 2) - 10.0,
+            3.0 * powi(x, 2) + 8.0 * x,
+            6.0 * x + 8.0,
+        )
+    }
+
+    #[test]
+    fn test_bracketed_halley_cubic() {
+        let act = BracketedHalley::default()
+            .find_in_bracket_with_second_derivative(cubic, (1.0, 1.5))
+            .expect("should converge");
+        assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-8);
+    }
+
+    #[test]
+    fn test_bracketed_halley_matches_brent() {
+        let bracket = (1.0, 2.0);
+        let halley = BracketedHalley::default()
+            .find_in_bracket_with_second_derivative(cubic, bracket)
+            .expect("should converge");
+        let brent = Brent::default()
+            .find_in_bracket(|x: f64| cubic(x).0, bracket)
+            .expect("should converge");
+        assert_approx_eq!(halley, brent, rtol <= 1e-9);
+    }
+
+    #[test]
+    fn test_bracketed_halley_fewer_evaluations_than_newton() {
+        use core::cell::Cell;
+
+        // Kepler's equation for a highly eccentric orbit, solved to machine
+        // precision.
+        let (mean, e) = (0.5, 0.9);
+        let kepler = |x: f64| (x - e * sin(x) - mean, 1.0 - e * cos(x), e * sin(x));
+        let bracket = (mean - 1.0, mean + 1.0);
+
+        let halley_calls = Cell::new(0);
+        let halley = BracketedHalley::default()
+            .with_abs_tol(1e-15)
+            .find_in_bracket_with_second_derivative(
+                |x: f64| {
+                    halley_calls.set(halley_calls.get() + 1);
+                    kepler(x)
+                },
+                bracket,
+            )
+            .expect("should converge");
+
+        let newton_calls = Cell::new(0);
+        let newton = BracketedNewton::default()
+            .with_abs_tol(1e-15)
+            .find_in_bracket_with_derivative(
+                |x: f64| {
+                    newton_calls.set(newton_calls.get() + 1);
+                    let (f, df, _) = kepler(x);
+                    (f, df)
+                },
+                bracket,
+            )
+            .expect("should converge");
+
+        assert_approx_eq!(halley, newton, atol <= 1e-14);
+        assert!(
+            halley_calls.get() < newton_calls.get(),
+            "Halley: {}, Newton: {}",
+            halley_calls.get(),
+            newton_calls.get()
+        );
+    }
+
+    #[test]
+    fn test_bracketed_halley_stops_at_resolution() {
+        use core::cell::Cell;
+
+        // With zero tolerances the iteration only stops once a step no longer
+        // changes the iterate, which by then is an end of the bracket. That
+        // must end the solve rather than trigger bisection of the wide
+        // remaining bracket.
+        let (mean, e) = (2.0, 0.5);
+        let calls = Cell::new(0);
+        let act = BracketedHalley::default()
+            .with_abs_tol(0.0)
+            .with_rel_tol(0.0)
+            .find_in_bracket_with_second_derivative(
+                |x: f64| {
+                    calls.set(calls.get() + 1);
+                    (x - e * sin(x) - mean, 1.0 - e * cos(x), e * sin(x))
+                },
+                (mean - PI, mean + PI),
+            )
+            .expect("should converge");
+        assert_approx_eq!(act - e * sin(act), mean, atol <= 1e-15);
+        assert!(calls.get() <= 7, "evaluations: {}", calls.get());
+    }
+
+    #[test]
+    fn test_bracketed_halley_reuses_endpoints() {
+        use core::cell::Cell;
+
+        let (a, b) = (1.0, 1.5);
+        let count = Cell::new(0usize);
+        BracketedHalley::default()
+            .find_in_bracket_with_second_derivative_values(
+                |x: f64| {
+                    if x == a || x == b {
+                        count.set(count.get() + 1);
+                    }
+                    cubic(x)
+                },
+                (a, b),
+                (cubic(a).0, cubic(b).0),
+            )
+            .expect("should converge");
+        assert_eq!(count.get(), 0, "endpoints must not be re-evaluated");
+    }
+
+    #[test]
+    fn test_bracketed_halley_endpoint_is_root() {
+        let lo = BracketedHalley::default()
+            .find_in_bracket_with_second_derivative_values(
+                |x: f64| (x, 1.0, 0.0),
+                (0.0, 1.0),
+                (0.0, 1.0),
+            )
+            .expect("lower endpoint is the root");
+        assert_eq!(lo, 0.0);
+    }
+
+    #[test]
+    fn test_bracketed_halley_rejects_non_bracket() {
+        let err = BracketedHalley::default()
+            .find_in_bracket_with_second_derivative_values(
+                |x: f64| (x * x + 1.0, 2.0 * x, 2.0),
+                (1.0, 2.0),
+                (2.0, 5.0),
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NotInBracket));
+    }
+
+    #[test]
+    fn test_bracketed_halley_zero_derivative_bisects() {
+        // f(x) = x^3 has f'(0) = 0 exactly at the bracket midpoint (-1, 1),
+        // which gives a non-finite Halley step.
+        let act = BracketedHalley::default()
+            .find_in_bracket_with_second_derivative(
+                |x: f64| (powi(x, 3), 3.0 * powi(x, 2), 6.0 * x),
+                (-1.0, 1.0),
+            )
+            .expect("should converge via bisection fallback");
+        assert_approx_eq!(act, 0.0, atol <= 1e-6);
+    }
+
+    #[test]
+    fn test_bracketed_halley_non_finite_derivative_bisects() {
+        let act = BracketedHalley::default()
+            .find_in_bracket_with_second_derivative(
+                |x: f64| (x - 0.5, f64::INFINITY, f64::NAN),
+                (0.0, 1.0),
+            )
+            .expect("should converge despite non-finite derivatives");
+        assert_approx_eq!(act, 0.5, atol <= 1e-6);
+    }
+
+    #[test]
+    fn test_bracketed_halley_scale_independent() {
+        let act = BracketedHalley::default()
+            .find_in_bracket_with_second_derivative(
+                |x: f64| (1e-12 * (x - 1e6), 1e-12, 0.0),
+                (0.0, 2e6),
+            )
+            .expect("should converge");
+        assert_approx_eq!(act, 1e6, rtol <= 1e-5);
+    }
+
+    #[test]
+    fn test_bracketed_halley_rejects_non_finite_endpoint() {
+        let err = BracketedHalley::default()
+            .find_in_bracket_with_second_derivative_values(
+                |_x: f64| (1.0, 1.0, 0.0),
+                (0.0, 1.0),
+                (f64::NAN, 1.0),
+            )
+            .unwrap_err();
+        assert!(matches!(err, RootFinderError::NonFinite { .. }));
+    }
+
+    #[test]
+    fn test_bracketed_halley_not_converged() {
+        let err = BracketedHalley::default()
+            .with_max_iter(1)
+            .find_in_bracket_with_second_derivative(
+                |x: f64| (powi(x, 3) - 0.5, 3.0 * powi(x, 2), 6.0 * x),
+                (-1e6, 1e6),
+            )
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            RootFinderError::NotConverged { iterations: 1, .. }
+        ));
+    }
+
+    #[test]
+    fn test_bracketed_halley_in_loop_callback_error() {
+        struct FailsInterior;
+
+        impl CallbackWithSecondDerivative for FailsInterior {
+            fn call(&self, x: f64) -> core::result::Result<(f64, f64, f64), LoxError> {
+                if x == -1.0 || x == 2.0 {
+                    Ok((x * x - 2.0, 2.0 * x, 2.0))
+                } else {
+                    Err("interior failure".into())
+                }
+            }
+        }
+
+        let err = BracketedHalley::default()
+            .find_in_bracket_with_second_derivative_values(FailsInterior, (-1.0, 2.0), (-1.0, 2.0))
             .unwrap_err();
         assert!(matches!(err, RootFinderError::Callback(_)));
     }
