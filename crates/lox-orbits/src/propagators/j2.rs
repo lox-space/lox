@@ -25,6 +25,8 @@ use lox_bodies::{
 };
 use lox_core::anomalies::AnomalyError;
 use lox_core::elements::{Keplerian, OrbitType};
+#[cfg(feature = "serde")]
+use lox_frames::TryQuasiInertial;
 use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
@@ -65,7 +67,13 @@ pub enum J2Error {
 /// The input orbit is treated as **mean** elements. No osculating-to-mean
 /// conversion is performed.
 #[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(bound(
+        deserialize = "O: serde::Deserialize<'de>, R: serde::Deserialize<'de> + TryQuasiInertial"
+    ))
+)]
 pub struct J2Propagator<O: TryJ2 + TryPointMass + TrySpheroid = Origin, R: ReferenceFrame = Frame> {
     initial_orbit: KeplerianOrbit<O, R>,
     kep: Keplerian,

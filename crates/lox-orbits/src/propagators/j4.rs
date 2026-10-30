@@ -21,6 +21,8 @@ use lox_bodies::{
 };
 use lox_core::anomalies::AnomalyError;
 use lox_core::elements::{Keplerian, OrbitType};
+#[cfg(feature = "serde")]
+use lox_frames::TryQuasiInertial;
 use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
@@ -58,7 +60,13 @@ pub enum J4Error {
 /// secular rates. Short-period corrections (when enabled) are J2-only
 /// per the standard reference.
 #[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(bound(
+        deserialize = "O: serde::Deserialize<'de>, R: serde::Deserialize<'de> + TryQuasiInertial"
+    ))
+)]
 pub struct J4Propagator<
     O: TryJ2 + TryJ4 + TryPointMass + TrySpheroid = Origin,
     R: ReferenceFrame = Frame,

@@ -14,7 +14,9 @@ use lox_space::frames::Teme;
 use lox_space::frames::rotations::Rotation;
 use lox_space::frames::*;
 use lox_space::orbits::ground::EllipsoidLocation;
-use lox_space::orbits::{CartesianOrbit, KeplerianOrbit};
+use lox_space::orbits::{
+    CartesianOrbit, EquinoctialOrbit, KeplerianOrbit, ModifiedEquinoctialOrbit,
+};
 use lox_space::time::Time;
 use lox_space::time::intervals::TimeInterval;
 use lox_space::time::time_scales::Tai;
@@ -426,6 +428,43 @@ fn test_state() {
         Icrf,
     );
     round_trip(&state);
+}
+
+/// Re-serializes `orbit` with its frame replaced by ITRF.
+fn with_itrf_frame<T: serde::Serialize>(orbit: &T) -> serde_json::Value {
+    let mut value = serde_json::to_value(orbit).expect("serialize");
+    value["frame"] = serde_json::to_value(Frame::Itrf).expect("serialize frame");
+    value
+}
+
+#[test]
+fn test_element_orbits_deserialize_rejects_rotating_frame() {
+    // The element conversions rely on a quasi-inertial frame, so deserialization must enforce
+    // the same invariant as the constructors.
+    let kep = retrograde_keplerian_orbit().into_dynamic();
+    let errors = [
+        serde_json::from_value::<KeplerianOrbit>(with_itrf_frame(&kep)).map(|_| ()),
+        serde_json::from_value::<EquinoctialOrbit>(with_itrf_frame(&kep.to_equinoctial().unwrap()))
+            .map(|_| ()),
+        serde_json::from_value::<ModifiedEquinoctialOrbit>(with_itrf_frame(
+            &kep.to_modified_equinoctial().unwrap(),
+        ))
+        .map(|_| ()),
+    ];
+    for result in errors {
+        let err = result
+            .expect_err("ITRF must not deserialize into an element orbit")
+            .to_string();
+        assert!(err.contains("quasi-inertial"), "unexpected error: {err}");
+    }
+}
+
+#[test]
+fn test_cartesian_orbit_deserializes_in_rotating_frame() {
+    let cart = retrograde_keplerian_orbit().to_cartesian().into_dynamic();
+    let orbit: CartesianOrbit =
+        serde_json::from_value(with_itrf_frame(&cart)).expect("deserialize");
+    assert_eq!(orbit.reference_frame(), Frame::Itrf);
 }
 
 #[test]
