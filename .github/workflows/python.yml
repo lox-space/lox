@@ -29,6 +29,7 @@ on:
       - 'pyproject.toml'
       - 'uv.lock'
       - '.github/workflows/python.yml'
+      - '.github/actions/itur-bundle/**'
   workflow_dispatch:
 
 concurrency:
@@ -78,17 +79,14 @@ jobs:
         with:
           name: wheels-linux-${{ matrix.platform.target }}
           path: dist
+      - name: Restore or pack the lox-itur data bundle
+        if: ${{ startsWith(matrix.platform.target, 'x86_64') }}
+        uses: ./.github/actions/itur-bundle
       - name: pytest
         if: ${{ startsWith(matrix.platform.target, 'x86_64') }}
         shell: bash
         run: |
           set -e
-          # maturin-action exports RUSTC_WRAPPER=sccache and installs sccache
-          # inside the manylinux build container; this step runs on the host,
-          # where sccache is absent, so unset the wrapper for the bundle build.
-          unset RUSTC_WRAPPER
-          python -m pip download --no-deps itur==0.4.0 -d itur-wheel
-          cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
           uv sync --locked --no-install-project
           uv pip install lox-space --offline --no-deps --find-links dist --force-reinstall
           source .venv/bin/activate
@@ -123,17 +121,14 @@ jobs:
         with:
           name: wheels-windows-${{ matrix.platform.target }}
           path: dist
+      - name: Restore or pack the lox-itur data bundle
+        if: ${{ startsWith(matrix.platform.target, 'x64') }}
+        uses: ./.github/actions/itur-bundle
       - name: pytest
         if: ${{ startsWith(matrix.platform.target, 'x64') }}
         shell: bash
         run: |
           set -e
-          # maturin-action exports RUSTC_WRAPPER=sccache and installs sccache
-          # inside the manylinux build container; this step runs on the host,
-          # where sccache is absent, so unset the wrapper for the bundle build.
-          unset RUSTC_WRAPPER
-          python -m pip download --no-deps itur==0.4.0 -d itur-wheel
-          cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
           uv sync --locked --no-install-project
           uv pip install lox-space --offline --no-deps --find-links dist --force-reinstall
           source .venv/Scripts/activate
@@ -167,15 +162,11 @@ jobs:
         with:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
+      - name: Restore or pack the lox-itur data bundle
+        uses: ./.github/actions/itur-bundle
       - name: pytest
         run: |
           set -e
-          # maturin-action exports RUSTC_WRAPPER=sccache and installs sccache
-          # inside the manylinux build container; this step runs on the host,
-          # where sccache is absent, so unset the wrapper for the bundle build.
-          unset RUSTC_WRAPPER
-          python -m pip download --no-deps itur==0.4.0 -d itur-wheel
-          cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
           uv sync --locked --no-install-project
           uv pip install lox-space --offline --no-deps --find-links dist --force-reinstall
           source .venv/bin/activate
@@ -211,12 +202,10 @@ jobs:
         with:
           name: wheels-pyodide
           path: dist-pyodide
+      - name: Restore or pack the lox-itur data bundle
+        uses: ./.github/actions/itur-bundle
       - name: pytest
-        run: |
-          set -e
-          python -m pip download --no-deps itur==0.4.0 -d itur-wheel
-          cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
-          just pytest-pyodide
+        run: just pytest-pyodide
 
   sdist:
     runs-on: ubuntu-latest

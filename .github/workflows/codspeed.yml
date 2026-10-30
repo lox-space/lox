@@ -62,7 +62,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Install cargo-codspeed
-        run: cargo install cargo-codspeed
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-codspeed
       - name: Build benchmarks
         run: cargo codspeed build -p lox-space
       - uses: CodSpeedHQ/action@v5.6.0

@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+name: lox-itur data bundle
+description: >
+  Restore target/lox-itur-data.npz from the cache and pack it from the upstream
+  itur wheel on a miss.
+
+runs:
+  using: composite
+  steps:
+    # The upstream data is frozen at itur 0.4.0, so the bundle only changes
+    # when the packer or the manifest format does. One key for every OS keeps
+    # a single ~490 MB entry in the cache.
+    - name: Cache the lox-itur data bundle
+      id: cache
+      uses: actions/cache@v6
+      with:
+        path: target/lox-itur-data.npz
+        key: lox-itur-data-0.4.0-${{ hashFiles('crates/lox-itur/src/bin/pack.rs', 'crates/lox-itur/src/manifest.rs') }}
+        enableCrossOsArchive: true
+    - name: Pack the lox-itur data bundle
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -e
+        # maturin-action exports RUSTC_WRAPPER=sccache and installs sccache
+        # inside the manylinux build container; this step runs on the host,
+        # where sccache may be absent.
+        unset RUSTC_WRAPPER
+        python=$(command -v python3 || command -v python)
+        "$python" -m pip download --no-deps itur==0.4.0 -d target/itur-wheel
+        cargo run --release -p lox-itur --bin pack -- target/itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
