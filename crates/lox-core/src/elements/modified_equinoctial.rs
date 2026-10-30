@@ -168,6 +168,28 @@ impl ModifiedEquinoctial {
         })
     }
 
+    /// Creates modified equinoctial elements from components the caller has already validated,
+    /// skipping the checks of [`ModifiedEquinoctial::try_new`].
+    pub(crate) const fn from_valid_parts(
+        p: Distance,
+        f: f64,
+        g: f64,
+        h: f64,
+        k: f64,
+        l: Angle,
+        retrograde_factor: RetrogradeFactor,
+    ) -> Self {
+        Self {
+            p,
+            f,
+            g,
+            h,
+            k,
+            l,
+            retrograde_factor,
+        }
+    }
+
     /// Returns the semi-parameter (semi-latus rectum).
     pub fn p(&self) -> Distance {
         self.p
