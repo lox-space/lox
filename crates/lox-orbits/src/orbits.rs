@@ -56,8 +56,9 @@ pub struct Orbit<S, O: CoordinateOrigin = Origin, R: ReferenceFrame = Frame> {
 ///
 /// This is the single statement of the frame requirement of each state type: Cartesian states
 /// are valid in any frame, while orbital elements require a quasi-inertial frame. The fallible
-/// constructors, the conversions to orbital elements, and the deserialization of an [`Orbit`] all
-/// enforce it through this trait.
+/// constructors, the conversions to orbital elements, and the deserialization of an [`Orbit`]
+/// enforce it through this trait. [`Orbit::from_state`] does not check it, so callers using it
+/// are responsible for a suitable frame.
 pub trait CheckFrame<R> {
     /// Checks that `frame` suits this type of state.
     ///
