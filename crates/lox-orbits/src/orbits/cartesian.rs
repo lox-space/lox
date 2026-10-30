@@ -8,7 +8,7 @@ use lox_bodies::{CoordinateOrigin, Origin, PointMass, TryPointMass, UndefinedOri
 use lox_core::coords::Cartesian;
 use lox_core::coords::FromBodyFixedError;
 use lox_core::coords::LonLatAlt;
-use lox_core::elements::KeplerianError;
+use lox_core::elements::{Keplerian, KeplerianError};
 use lox_core::glam::{DMat3, DVec3};
 use lox_ephem::Ephemeris;
 use lox_frames::BodyFixed;
@@ -25,7 +25,7 @@ use thiserror::Error;
 
 use crate::ground::EllipsoidLocation;
 
-use super::{CartesianOrbit, KeplerianOrbit};
+use super::{CartesianOrbit, CheckFrame, KeplerianOrbit};
 
 impl<O, R> CartesianOrbit<O, R>
 where
@@ -73,7 +73,7 @@ where
         O: Copy + TryPointMass,
         R: Copy + TryQuasiInertial,
     {
-        self.reference_frame().try_quasi_inertial()?;
+        Keplerian::check_frame(&self.reference_frame())?;
         Ok(self.with_state(
             self.state()
                 .to_keplerian(self.try_gravitational_parameter()?)?,

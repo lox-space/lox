@@ -7,7 +7,7 @@ use lox_core::elements::{KeplerianError, ModifiedEquinoctial, ModifiedEquinoctia
 use lox_frames::{NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial};
 use thiserror::Error;
 
-use super::{CartesianOrbit, KeplerianOrbit, ModifiedEquinoctialOrbit, Orbit};
+use super::{CartesianOrbit, CheckFrame, KeplerianOrbit, ModifiedEquinoctialOrbit, Orbit};
 
 /// Errors that can occur when converting an orbit to modified equinoctial elements.
 #[derive(Debug, Error)]
@@ -55,7 +55,7 @@ where
     where
         R: TryQuasiInertial,
     {
-        frame.try_quasi_inertial()?;
+        ModifiedEquinoctial::check_frame(&frame)?;
         Ok(Orbit::from_state(modified_equinoctial, time, origin, frame))
     }
 
@@ -138,7 +138,7 @@ where
         O: Copy + TryPointMass,
         R: Copy + TryQuasiInertial,
     {
-        self.reference_frame().try_quasi_inertial()?;
+        ModifiedEquinoctial::check_frame(&self.reference_frame())?;
         Ok(self.with_state(
             self.state()
                 .to_modified_equinoctial(self.try_gravitational_parameter()?)?,
