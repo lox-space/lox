@@ -376,13 +376,33 @@ pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> f64 {
             k * sin_f - h * cos_f,
         )
     };
+
+    // For highly eccentric orbits, start half an eccentricity from λ towards the solution, on the
+    // side given by the sign of e·sin(M) = k·sin(λ) - h·cos(λ). For h = 0, k·λ has the same sign
+    // on [-π, π), which saves the trigonometry.
+    let e = sqrt(h * h + k * k);
+    let initial_guess = if e < 0.8 {
+        lambda
+    } else {
+        let e_sin_mean = if h == 0.0 {
+            k * lambda
+        } else {
+            k * sin(lambda) - h * cos(lambda)
+        };
+        if e_sin_mean >= 0.0 {
+            lambda + e / 2.0
+        } else {
+            lambda - e / 2.0
+        }
+    };
+
     let f = BracketedHalley::default()
         .with_abs_tol(8.0 * f64::EPSILON)
         .with_rel_tol(0.0)
         .find_in_oriented_bracket_with_second_derivative_from(
             residual,
             (lambda - PI, lambda + PI),
-            lambda,
+            initial_guess,
         )
         .expect("the residual is finite and changes sign across the bracket");
     f + revolutions
