@@ -118,9 +118,9 @@ pub enum ModifiedEquinoctialError {
     /// The true longitude lies on or beyond the asymptotes of an open orbit.
     #[error("true longitude {0} lies outside the asymptotes of the open orbit")]
     InvalidTrueLongitude(Angle),
-    /// The Cartesian state is not finite.
-    #[error("Cartesian state must be finite")]
-    NonFiniteState,
+    /// The Cartesian state is not physical, see [`Cartesian::is_physical`].
+    #[error("Cartesian state must lie within the observable universe and move slower than light")]
+    UnphysicalState,
     /// The Cartesian state has zero angular momentum, e.g. a rectilinear orbit.
     #[error("modified equinoctial elements are undefined for states with zero angular momentum")]
     ZeroAngularMomentum,
@@ -281,9 +281,9 @@ impl Cartesian {
     ///
     /// # Errors
     ///
-    /// Returns a [`ModifiedEquinoctialError`] if the state is not finite, its angular momentum
-    /// is zero, or the resulting elements are invalid, e.g. for a non-positive gravitational
-    /// parameter.
+    /// Returns a [`ModifiedEquinoctialError`] if the state is not physical, see
+    /// [`Cartesian::is_physical`], its angular momentum is zero, or the resulting elements are
+    /// invalid, e.g. for a non-positive gravitational parameter.
     pub fn to_modified_equinoctial(
         &self,
         grav_param: GravitationalParameter,
@@ -292,31 +292,25 @@ impl Cartesian {
         let v = self.velocity();
         let mu = grav_param.as_f64();
 
-        if !r.is_finite() || !v.is_finite() {
-            return Err(ModifiedEquinoctialError::NonFiniteState);
+        // A physical state keeps every intermediate result below from overflowing.
+        if !self.is_physical() {
+            return Err(ModifiedEquinoctialError::UnphysicalState);
         }
         let angular_momentum = r.cross(v);
         let hm = angular_momentum.length();
         if hm == 0.0 {
             return Err(ModifiedEquinoctialError::ZeroAngularMomentum);
         }
-        // The magnitudes of a finite state can still overflow. An infinite angular momentum would
-        // leave the inclination undefined, and an infinite |r| would silently turn the unit
-        // vector r/|r| in the eccentricity vector into zero.
-        let rm = r.length();
-        if !hm.is_finite() || !rm.is_finite() {
-            return Err(ModifiedEquinoctialError::NonFiniteElements);
-        }
 
         // Same inclination as `Cartesian::to_keplerian`, so that both paths agree on the
         // retrograde factor.
         let inclination = Inclination::try_new(angular_momentum.angle_between(DVec3::Z).rad())
-            .expect("the angle to the z-axis lies in [0, π]");
+            .expect("the angle of a finite, nonzero vector to the z-axis lies in [0, π]");
         let retrograde_factor = RetrogradeFactor::from_inclination(inclination);
         let (k, h) =
             node_components_from_angular_momentum(angular_momentum / hm, retrograde_factor);
         let (f_hat, g_hat) = equinoctial_basis(k, h, retrograde_factor);
-        let e: DVec3 = v.cross(angular_momentum) / mu - r / rm;
+        let e: DVec3 = v.cross(angular_momentum) / mu - r / r.length();
 
         ModifiedEquinoctial::try_new(
             Distance::new(hm * hm / mu),
@@ -503,11 +497,6 @@ mod tests {
             rectilinear.to_modified_equinoctial(mu()),
             Err(ModifiedEquinoctialError::ZeroAngularMomentum)
         ));
-        let non_finite = Cartesian::from_vecs(DVec3::NAN, DVec3::X);
-        assert!(matches!(
-            non_finite.to_modified_equinoctial(mu()),
-            Err(ModifiedEquinoctialError::NonFiniteState)
-        ));
         let state = Cartesian::builder()
             .position(7000.0.km(), 0.0.km(), 0.0.km())
             .velocity(0.0.kps(), 7.5.kps(), 0.0.kps())
@@ -520,34 +509,50 @@ mod tests {
     }
 
     #[test]
-    fn test_cartesian_overflowing_angular_momentum() {
-        // A finite state whose angular momentum overflows must be rejected by every conversion
-        // rather than panic.
-        let huge = Cartesian::from_vecs(DVec3::new(1e200, 0.0, 0.0), DVec3::new(0.0, 1e200, 0.0));
-        assert!(matches!(
-            huge.to_modified_equinoctial(mu()),
-            Err(ModifiedEquinoctialError::NonFiniteElements)
-        ));
-        assert!(huge.to_equinoctial(mu()).is_err());
-        assert!(huge.to_keplerian(mu()).is_err());
-    }
-
-    #[test]
-    fn test_cartesian_overflowing_position_magnitude() {
-        // |r|² overflows for this circular orbit, which would turn the unit vector r/|r| into
-        // zero and give an eccentricity of about 1 instead of 0.
-        let r = 1e160;
-        let v = (mu().as_f64() / r).sqrt();
-        let huge = Cartesian::from_vecs(DVec3::new(r, 0.0, 0.0), DVec3::new(0.0, v, 0.0));
-        assert!(matches!(
-            huge.to_modified_equinoctial(mu()),
-            Err(ModifiedEquinoctialError::NonFiniteElements)
-        ));
-        assert!(huge.to_equinoctial(mu()).is_err());
-        assert!(matches!(
-            huge.to_keplerian(mu()),
-            Err(KeplerianError::NonFiniteState)
-        ));
+    fn test_cartesian_unphysical_states() {
+        // Every conversion rejects an unphysical state with the same error, including finite
+        // states whose magnitudes would overflow inside the conversions.
+        let circular = |r: f64| {
+            let v = (mu().as_f64() / r).sqrt();
+            Cartesian::from_vecs(DVec3::new(r, 0.0, 0.0), DVec3::new(0.0, v, 0.0))
+        };
+        for (name, state) in [
+            ("not finite", Cartesian::from_vecs(DVec3::NAN, DVec3::X)),
+            (
+                "overflowing angular momentum",
+                Cartesian::from_vecs(DVec3::new(1e200, 0.0, 0.0), DVec3::new(0.0, 1e200, 0.0)),
+            ),
+            ("overflowing position magnitude", circular(1e160)),
+            ("beyond the observable universe", circular(1e27)),
+            (
+                "faster than light",
+                Cartesian::from_vecs(DVec3::new(7e6, 0.0, 0.0), DVec3::new(0.0, 3e8, 0.0)),
+            ),
+        ] {
+            assert!(
+                matches!(
+                    state.to_modified_equinoctial(mu()),
+                    Err(ModifiedEquinoctialError::UnphysicalState)
+                ),
+                "{name}"
+            );
+            assert!(
+                matches!(
+                    state.to_equinoctial(mu()),
+                    Err(crate::elements::EquinoctialError::ModifiedEquinoctial(
+                        ModifiedEquinoctialError::UnphysicalState
+                    ))
+                ),
+                "{name}"
+            );
+            assert!(
+                matches!(
+                    state.to_keplerian(mu()),
+                    Err(KeplerianError::UnphysicalState)
+                ),
+                "{name}"
+            );
+        }
     }
 
     #[cfg(feature = "serde")]

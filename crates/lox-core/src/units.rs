@@ -712,6 +712,9 @@ impl VelocityUnits for i64 {
 /// The speed of light in vacuum in m/s.
 pub const SPEED_OF_LIGHT: f64 = 299792458.0;
 
+/// The comoving radius of the observable universe, about 46.5 billion light-years, in m.
+pub const OBSERVABLE_UNIVERSE_RADIUS: f64 = 4.4e26;
+
 type Hertz = f64;
 
 /// Frequency in Hertz
