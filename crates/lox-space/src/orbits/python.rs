@@ -229,6 +229,15 @@ impl PyCartesian {
         PyArray1::from_slice(py, &[vel.x, vel.y, vel.z])
     }
 
+    /// Return whether the state is physical.
+    ///
+    /// A state is physical if its position lies within the observable universe and its speed is
+    /// below the speed of light. Non-finite states are not physical. The conversions to orbital
+    /// elements raise ``ValueError`` for unphysical states.
+    fn is_physical(&self) -> bool {
+        self.0.state().is_physical()
+    }
+
     /// Return the x component of the position.
     #[getter]
     fn x(&self) -> PyDistance {
