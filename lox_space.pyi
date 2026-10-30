@@ -1444,6 +1444,9 @@ class Cartesian:
         A state is physical if its position lies within the observable universe and its speed is
         below the speed of light. Non-finite states are not physical. The conversions to orbital
         elements raise ``ValueError`` for unphysical states.
+
+        The check is only meaningful in a quasi-inertial frame. In a rotating frame, distant objects
+        move faster than light, e.g. a probe near Saturn in a frame rotating with the Earth.
         """
         ...
     @property
@@ -1480,8 +1483,9 @@ class Cartesian:
         """Convert this Cartesian state to Keplerian orbital elements.
 
         Raises:
-            ValueError: If the frame is not quasi-inertial or the state cannot be represented by
-                Keplerian elements, e.g. because its angular momentum is zero.
+            ValueError: If the frame is not quasi-inertial, the state is not physical (see
+                ``is_physical``), or it cannot be represented by Keplerian elements, e.g. because its
+                angular momentum is zero.
             UndefinedOriginPropertyError: If the origin has no gravitational parameter.
         """
         ...
@@ -1490,7 +1494,8 @@ class Cartesian:
 
         Raises:
             UndefinedOriginPropertyError: If the origin has no gravitational parameter.
-            ValueError: If the frame is not quasi-inertial or the state has zero angular momentum.
+            ValueError: If the frame is not quasi-inertial, the state is not physical (see
+                ``is_physical``), or it has zero angular momentum.
         """
         ...
     def to_equinoctial(self) -> Equinoctial:
@@ -1498,8 +1503,8 @@ class Cartesian:
 
         Raises:
             UndefinedOriginPropertyError: If the origin has no gravitational parameter.
-            ValueError: If the frame is not quasi-inertial, the orbit is not closed, or the state
-                has zero angular momentum.
+            ValueError: If the frame is not quasi-inertial, the state is not physical (see
+                ``is_physical``), the orbit is not closed, or the state has zero angular momentum.
         """
         ...
     def rotation_lvlh(self) -> np.ndarray:

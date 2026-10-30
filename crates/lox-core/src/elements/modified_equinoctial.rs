@@ -292,7 +292,8 @@ impl Cartesian {
         let v = self.velocity();
         let mu = grav_param.as_f64();
 
-        // A physical state keeps every intermediate result below from overflowing.
+        // A physical state, with a physical gravitational parameter, keeps every intermediate
+        // result below from overflowing.
         if !self.is_physical() {
             return Err(ModifiedEquinoctialError::UnphysicalState);
         }
