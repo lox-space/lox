@@ -13,9 +13,9 @@ This benchmark tests visibility analysis performance with a realistic large-scal
 This represents a realistic worst-case scenario for satellite visibility analysis.
 """
 
-import time
-import pytest
 import numpy as np
+import pytest
+
 import lox_space as lox
 
 
@@ -89,10 +89,8 @@ def is_point_in_europe(lon, lat):
         return False
     if lon > 30.0 and lat < 45.0:  # Turkey/Middle East area
         return False
-    if lon > 35.0 and lat > 60.0:  # Far eastern Russia
-        return False
-
-    return True
+    # Far eastern Russia
+    return not (lon > 35.0 and lat > 60.0)
 
 
 @pytest.fixture(scope="session")

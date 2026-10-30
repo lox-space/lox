@@ -2,9 +2,10 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-import lox_space as lox
 import numpy.testing as npt
 import pytest
+
+import lox_space as lox
 
 ISS_TLE = """ISS (ZARYA)
 1 25544U 98067A   24170.37528350  .00016566  00000+0  30244-3 0  9996
@@ -96,9 +97,7 @@ def test_sgp4_from_tle_object():
     t1 = sgp4.time() + lox.TimeDelta.from_minutes(92.821)
     s1 = sgp4.propagate(t1).to_frame(lox.Frame("ICRF"))
     k1 = s1.to_keplerian()
-    assert k1.orbital_period().to_seconds() == pytest.approx(
-        92.821 * 60, rel=1e-4
-    )
+    assert k1.orbital_period().to_seconds() == pytest.approx(92.821 * 60, rel=1e-4)
 
 
 @pytest.mark.parametrize("offsets", [[0, 0], [60, 0], [0]])
@@ -133,9 +132,7 @@ def test_sgp4():
     # SGP4 now returns TEME states; convert to ICRF for Keplerian conversion
     s1 = sgp4.propagate(t1).to_frame(lox.Frame("ICRF"))
     k1 = s1.to_keplerian()
-    assert k1.orbital_period().to_seconds() == pytest.approx(
-        92.821 * 60, rel=1e-4
-    )
+    assert k1.orbital_period().to_seconds() == pytest.approx(92.821 * 60, rel=1e-4)
 
 
 def iss_state():

@@ -67,15 +67,21 @@ def scenario_single(s1a, six_hour_window):
 
 class TestSarPayload:
     def test_with_look_angles(self):
-        p = lox.SarPayload.with_look_angles(20.0 * lox.deg, 45.0 * lox.deg, lox.LookSide.Either)
+        p = lox.SarPayload.with_look_angles(
+            20.0 * lox.deg, 45.0 * lox.deg, lox.LookSide.Either
+        )
         assert p.side() == lox.LookSide.Either
 
     def test_with_incidence_angles(self):
-        p = lox.SarPayload.with_incidence_angles(22.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right)
+        p = lox.SarPayload.with_incidence_angles(
+            22.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right
+        )
         assert p.side() == lox.LookSide.Right
 
     def test_repr(self):
-        p = lox.SarPayload.with_incidence_angles(29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right)
+        p = lox.SarPayload.with_incidence_angles(
+            29.0 * lox.deg, 46.0 * lox.deg, lox.LookSide.Right
+        )
         assert repr(p) == "SarPayload(...)"
 
     def test_side_accessor_roundtrip(self):
@@ -105,11 +111,15 @@ class TestSarPayload:
 
     def test_rejects_invalid_range(self):
         with pytest.raises(ValueError):
-            lox.SarPayload.with_look_angles(45.0 * lox.deg, 20.0 * lox.deg, lox.LookSide.Right)
+            lox.SarPayload.with_look_angles(
+                45.0 * lox.deg, 20.0 * lox.deg, lox.LookSide.Right
+            )
 
     def test_rejects_out_of_range_angle(self):
         with pytest.raises(ValueError):
-            lox.SarPayload.with_incidence_angles(20.0 * lox.deg, 90.0 * lox.deg, lox.LookSide.Right)
+            lox.SarPayload.with_incidence_angles(
+                20.0 * lox.deg, 90.0 * lox.deg, lox.LookSide.Right
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +154,9 @@ class TestSarAccessAnalysis:
         )
         results = analysis.compute()
         windows = results.windows("s1a", "europe")
-        assert len(windows) > 0, "Sentinel-1A should image Western Europe within 6 hours"
+        assert len(windows) > 0, (
+            "Sentinel-1A should image Western Europe within 6 hours"
+        )
 
     def test_interval_durations(self, scenario_single):
         analysis = lox.SarAccessAnalysis(
@@ -206,7 +218,10 @@ class TestSarAccessAnalysis:
         # side must not overlap any window on the other. Robust to TLE refreshes
         # (unlike a sum-of-durations check, which can coincidentally match).
         def overlaps(a, b):
-            return a.interval().start() < b.interval().end() and b.interval().start() < a.interval().end()
+            return (
+                a.interval().start() < b.interval().end()
+                and b.interval().start() < a.interval().end()
+            )
 
         left_has_unique = any(
             not any(overlaps(l, r) for r in windows_r) for l in windows_l
@@ -241,7 +256,9 @@ class TestSarAccessAnalysis:
         )
         results = analysis.compute()
         all_ivs = results.all_windows()
-        assert len(all_ivs) == 2, "Both spacecraft-AOI pairs should be present in results"
+        assert len(all_ivs) == 2, (
+            "Both spacecraft-AOI pairs should be present in results"
+        )
 
     def test_pass_direction_populated(self, scenario_single):
         analysis = lox.SarAccessAnalysis(

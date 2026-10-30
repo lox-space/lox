@@ -24,9 +24,7 @@
 //! provider = lox.EOPProvider("finals2000A.all.csv")
 //!
 //! # Design a sun-synchronous orbit at 800 km altitude with a 10:30 LTAN
-//! sso = lox.Keplerian.sso(
-//!     epoch, altitude=800 * lox.km, ltan=(10, 30), provider=provider
-//! )
+//! sso = lox.Keplerian.sso(epoch, altitude=800 * lox.km, ltan=(10, 30), provider=provider)
 //!
 //! # Propagate the mean elements with J2 perturbations
 //! j2 = lox.J2(sso)

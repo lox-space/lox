@@ -32,6 +32,7 @@ def test_stubtest():
         ],
         cwd=ROOT,
         env={**os.environ, "MYPYPATH": str(ROOT)},
+        check=False,
         capture_output=True,
         text=True,
     )

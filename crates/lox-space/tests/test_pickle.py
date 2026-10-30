@@ -5,8 +5,9 @@
 import math
 import pickle
 
-import lox_space as lox
 import pytest
+
+import lox_space as lox
 
 
 @pytest.mark.parametrize(

@@ -25,13 +25,17 @@ state = lox.Cartesian(
 # Elementwise pattern — unitful keyword arguments
 state = lox.Cartesian(
     time=t,
-    x=6678.0 * lox.km, y=0.0 * lox.km, z=0.0 * lox.km,
-    vx=0.0 * lox.km_per_s, vy=7.73 * lox.km_per_s, vz=0.0 * lox.km_per_s,
+    x=6678.0 * lox.km,
+    y=0.0 * lox.km,
+    z=0.0 * lox.km,
+    vx=0.0 * lox.km_per_s,
+    vy=7.73 * lox.km_per_s,
+    vz=0.0 * lox.km_per_s,
 )
 
 # Access as numpy arrays (meters, m/s)
-pos = state.position()   # shape (3,)
-vel = state.velocity()   # shape (3,)
+pos = state.position()  # shape (3,)
+vel = state.velocity()  # shape (3,)
 
 # Access as unitful scalars
 print(f"x = {state.x.to_kilometers():.1f} km")

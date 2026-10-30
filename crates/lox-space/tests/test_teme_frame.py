@@ -9,10 +9,10 @@ Reference data from GitHub issue #197:
 https://github.com/lox-space/lox/issues/197
 """
 
-import lox_space as lox
 import numpy as np
 import numpy.testing as npt
 
+import lox_space as lox
 
 # INTELSAT 36 TLE data from issue #197
 INTELSAT_36_TLE = """INTELSAT 36
@@ -97,7 +97,7 @@ def test_sgp4_icrf_against_skyfield():
     Validates against Skyfield GCRS output for INTELSAT 36 TLE,
     propagated to 2025-01-27T00:00:00 UTC.
     """
-    from skyfield.api import load, EarthSatellite
+    from skyfield.api import EarthSatellite, load
 
     tle_lines = INTELSAT_36_TLE.strip().splitlines()
 

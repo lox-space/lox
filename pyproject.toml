@@ -29,8 +29,8 @@ Repository = "https://github.com/lox-space/lox"
 
 [dependency-groups]
 dev = [
+  {include-group = "lint"},
   "astropy>=6.0",
-  "black",
   "ipython",
   "maturin",
   "mypy>=2.4.0",
@@ -41,6 +41,7 @@ dev = [
   "spacelink",
   "spiceypy>=6.0.0",
 ]
+lint = ["ruff==0.17.3"]
 docs = ["zensical", "mkdocstrings[python]>=0.18"]
 
 [build-system]
@@ -57,6 +58,16 @@ markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
   "benchmark: marks tests as benchmark tests",
 ]
+
+[tool.ruff]
+# The stub uses `type` aliases, which only need to parse for type checkers.
+per-file-target-version = { "*.pyi" = "py312" }
+
+[tool.ruff.lint.per-file-ignores]
+# Stub bodies are a docstring followed by `...`.
+"*.pyi" = ["PIE790", "PYI048"]
+# The comparison tests call `__eq__` directly, including on the same object.
+"crates/lox-space/tests/*" = ["PLR0124", "SIM201"]
 
 [tool.uv]
 # Rebuild package when any rust files change

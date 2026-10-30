@@ -82,18 +82,18 @@ power = 10 * lox.W
 temperature = 290 * lox.K
 
 # Convert to specific units
-angle_deg = angle.to_degrees()       # 45.0
+angle_deg = angle.to_degrees()  # 45.0
 distance_km = distance.to_kilometers()  # 100.0
 freq_ghz = frequency.to_gigahertz()  # 2.4
 
 # Convert to float (returns internal SI value)
-angle_rad = float(angle)    # radians
+angle_rad = float(angle)  # radians
 distance_m = float(distance)  # meters
 
 # Arithmetic
-total = 100 * lox.km + 500 * lox.m   # Distance
+total = 100 * lox.km + 500 * lox.m  # Distance
 delta = 45 * lox.deg - 10 * lox.deg  # Angle
-scaled = 2.0 * distance              # Distance
+scaled = 2.0 * distance  # Distance
 ```
 
 ---

@@ -30,7 +30,9 @@ rome = lox.Aoi([(12.2, 41.7), (12.7, 41.7), (12.7, 42.1), (12.2, 42.1), (12.2, 4
 You can also load an AOI from a GeoJSON string:
 
 ```python
-sicily = lox.Aoi.from_geojson('{"type":"Polygon","coordinates":[[[13,37],[16,37],[16,39],[13,39],[13,37]]]}')
+sicily = lox.Aoi.from_geojson(
+    '{"type":"Polygon","coordinates":[[[13,37],[16,37],[16,39],[13,39],[13,37]]]}'
+)
 ```
 
 Spacecraft without a payload of the appropriate type are silently skipped

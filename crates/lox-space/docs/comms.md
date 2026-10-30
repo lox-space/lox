@@ -352,8 +352,8 @@ gain = 30.0 * lox.dB
 gain_linear = lox.Decibel.from_linear(1000.0)
 
 # Arithmetic
-total = gain + 3.0 * lox.dB   # 33.0 dB
-diff = gain - 10.0 * lox.dB   # 20.0 dB
+total = gain + 3.0 * lox.dB  # 33.0 dB
+diff = gain - 10.0 * lox.dB  # 20.0 dB
 
 # Convert back
 print(f"{float(gain)} dB = {gain.to_linear():.0f} linear")

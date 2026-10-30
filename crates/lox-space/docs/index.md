@@ -34,8 +34,12 @@ t = lox.Time("TAI", 2024, 1, 1, 12, 0, 0.0)
 # Define an orbital state (LEO)
 state = lox.Cartesian(
     time=t,
-    x=6678.0 * lox.km, y=0.0 * lox.km, z=0.0 * lox.km,
-    vx=0.0 * lox.km_per_s, vy=7.73 * lox.km_per_s, vz=0.0 * lox.km_per_s,
+    x=6678.0 * lox.km,
+    y=0.0 * lox.km,
+    z=0.0 * lox.km,
+    vx=0.0 * lox.km_per_s,
+    vy=7.73 * lox.km_per_s,
+    vz=0.0 * lox.km_per_s,
 )
 
 # Convert to Keplerian elements

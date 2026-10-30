@@ -52,7 +52,8 @@ just rstest         # Rust tests via cargo nextest
 just doctest        # Rust doc tests
 just pytest         # Build maturin + run Python tests
 just build-pyo3     # Build Python extension module
-just lint           # clippy + rustfmt + REUSE compliance + README check
+just lint           # clippy + rustfmt + ruff + REUSE compliance + README check
+just fmt-py         # ruff check --fix + ruff format (Python, stub, Markdown snippets)
 just readme         # Regenerate README.md from the lox-space crate docs
 just coverage       # Generate code coverage report
 ```
@@ -110,6 +111,9 @@ Key details:
 - **Provider injection**: EOP and SPK providers are passed explicitly — no global state.
 - **Feature flags**: Crate functionality is feature-gated in `lox-space` for minimal dependency footprint.
 - **Clippy**: Runs with `-D warnings` (warnings are errors in CI).
+- **Ruff**: Lints and formats the Python tests, `lox_space.pyi`, `tools/` and the Python snippets in
+  Markdown (including the generated READMEs — format the snippet in `lib.rs` instead). The version is
+  pinned in the `lint` dependency group in `pyproject.toml`; the rule set is ruff's default.
 
 ### Architecture Patterns
 
