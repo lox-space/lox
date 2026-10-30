@@ -4,7 +4,11 @@
 
 name: Rust
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -25,17 +29,8 @@ jobs:
           shared-key: all-features
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
-      - name: Cache itur wheel
-        uses: actions/cache@v6
-        with:
-          path: itur-0.4.0-py2.py3-none-any.whl
-          key: itur-wheel-0.4.0
-      - name: Download itur wheel (if not cached)
-        run: |
-          test -f itur-0.4.0-py2.py3-none-any.whl \
-            || python3 -m pip download --no-deps itur==0.4.0
-      - name: Build lox-itur data bundle
-        run: cargo run -p lox-itur --bin pack -- itur-0.4.0-py2.py3-none-any.whl target/lox-itur-data.npz
+      - name: Restore or pack the lox-itur data bundle
+        uses: ./.github/actions/itur-bundle
       - name: Run tests
         run: cargo nextest run --all-features --lib --bins --tests --examples
       - name: Run doctests
@@ -149,17 +144,8 @@ jobs:
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
-      - name: Cache itur wheel
-        uses: actions/cache@v6
-        with:
-          path: itur-0.4.0-py2.py3-none-any.whl
-          key: itur-wheel-0.4.0
-      - name: Download itur wheel (if not cached)
-        run: |
-          test -f itur-0.4.0-py2.py3-none-any.whl \
-            || python3 -m pip download --no-deps itur==0.4.0
-      - name: Build lox-itur data bundle
-        run: cargo run -p lox-itur --bin pack -- itur-0.4.0-py2.py3-none-any.whl target/lox-itur-data.npz
+      - name: Restore or pack the lox-itur data bundle
+        uses: ./.github/actions/itur-bundle
       - name: Generate code coverage
         run: uv run --no-project tools/coverage.py --codecov --output-path codecov.json
       - name: Upload coverage to Codecov
