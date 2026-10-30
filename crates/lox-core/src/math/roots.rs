@@ -104,7 +104,7 @@ pub trait FindBracketedRootWithDerivative {
         bracket: (f64, f64),
         values: (f64, f64),
     ) -> Result<f64, RootFinderError> {
-        let midpoint = 0.5 * (bracket.0 + bracket.1);
+        let midpoint = 0.5 * bracket.0 + 0.5 * bracket.1;
         self.find_in_bracket_with_derivative_values_from(f, bracket, values, midpoint)
     }
 
@@ -128,7 +128,7 @@ pub trait FindBracketedRootWithDerivative {
         f: impl CallbackWithDerivative,
         bracket: (f64, f64),
     ) -> Result<f64, RootFinderError> {
-        let midpoint = 0.5 * (bracket.0 + bracket.1);
+        let midpoint = 0.5 * bracket.0 + 0.5 * bracket.1;
         self.find_in_bracket_with_derivative_from(f, bracket, midpoint)
     }
 }
@@ -183,7 +183,7 @@ pub trait FindBracketedRootWithSecondDerivative {
         bracket: (f64, f64),
         values: (f64, f64),
     ) -> Result<f64, RootFinderError> {
-        let midpoint = 0.5 * (bracket.0 + bracket.1);
+        let midpoint = 0.5 * bracket.0 + 0.5 * bracket.1;
         self.find_in_bracket_with_second_derivative_values_from(f, bracket, values, midpoint)
     }
 
@@ -207,7 +207,7 @@ pub trait FindBracketedRootWithSecondDerivative {
         f: impl CallbackWithSecondDerivative,
         bracket: (f64, f64),
     ) -> Result<f64, RootFinderError> {
-        let midpoint = 0.5 * (bracket.0 + bracket.1);
+        let midpoint = 0.5 * bracket.0 + 0.5 * bracket.1;
         self.find_in_bracket_with_second_derivative_from(f, bracket, midpoint)
     }
 }
@@ -748,77 +748,18 @@ impl FindBracketedRootWithDerivative for BracketedNewton {
         bracket: (f64, f64),
         initial_guess: f64,
     ) -> Result<f64, RootFinderError> {
-        // `f(xl) < 0 < f(xh)`.
-        let (mut xl, mut xh) = bracket;
-
-        // Starting outside the bracket would break the bracket bookkeeping.
-        let (lower, upper) = if xl < xh { (xl, xh) } else { (xh, xl) };
-        if !(initial_guess >= lower && initial_guess <= upper) {
-            return Err(RootFinderError::InitialGuessNotInBracket {
-                guess: initial_guess,
-            });
-        }
-
-        let mut rts = initial_guess;
-        let mut dx_old = abs(xh - xl);
-        let mut dx = dx_old;
-        let (mut fx, mut dfx) = eval_finite_with_derivative(&f, rts)?;
-        // The initial guess may already be the root, in which case the
-        // derivative is never used (and could give a 0/0 step if it also
-        // vanishes there).
-        if fx == 0.0 {
-            return Ok(rts);
-        }
-
-        for _ in 0..self.max_iter {
-            let delta = self.abs_tol + self.rel_tol * abs(rts);
-
-            // Bisect when the derivative is unusable, when the Newton iterate
-            // would leave the bracket, or when it is not shrinking the interval
-            // fast enough; otherwise take the Newton step.
-            let bisect = !dfx.is_finite()
-                || ((rts - xh) * dfx - fx) * ((rts - xl) * dfx - fx) > 0.0
-                || abs(2.0 * fx) > abs(dx_old * dfx);
-
-            if bisect {
-                dx_old = dx;
-                dx = 0.5 * (xh - xl);
-                rts = xl + dx;
-                // The bisection step is below the representable resolution.
-                if xl == rts {
-                    return Ok(rts);
-                }
-            } else {
-                dx_old = dx;
-                dx = fx / dfx;
-                let prev = rts;
-                rts -= dx;
-                if prev == rts {
-                    return Ok(rts);
-                }
-            }
-
-            if abs(dx) < delta {
-                return Ok(rts);
-            }
-
-            (fx, dfx) = eval_finite_with_derivative(&f, rts)?;
-            if fx == 0.0 {
-                return Ok(rts);
-            }
-            // Maintain the sign-oriented bracket around the new iterate.
-            if fx.is_sign_negative() {
-                xl = rts;
-            } else {
-                xh = rts;
-            }
-        }
-
-        Err(RootFinderError::NotConverged {
-            iterations: self.max_iter,
-            x: rts,
-            residual: fx,
-        })
+        let newton_step = |x| {
+            let (value, derivative) = eval_finite_with_derivative(&f, x)?;
+            Ok((value, value / derivative))
+        };
+        safeguarded(
+            newton_step,
+            bracket,
+            initial_guess,
+            self.max_iter,
+            self.abs_tol,
+            self.rel_tol,
+        )
     }
 }
 
@@ -886,80 +827,122 @@ impl FindBracketedRootWithSecondDerivative for BracketedHalley {
         bracket: (f64, f64),
         initial_guess: f64,
     ) -> Result<f64, RootFinderError> {
-        // `f(xl) < 0 < f(xh)`.
-        let (mut xl, mut xh) = bracket;
+        let halley_step = |x| {
+            let (value, derivative, second_derivative) = eval_finite_with_second_derivative(&f, x)?;
+            // Halley's step is Newton's step divided by 1 - t, with
+            // t = f·f''/(2f'²). Near the root t vanishes and the step converges
+            // cubically. Far from it, where |t| > 1/2, the correction is
+            // unreliable and near a stationary point it shrinks the step towards
+            // zero although f does not vanish there, so take Newton's step. Both
+            // forms below need a single division.
+            let curvature = value * second_derivative;
+            let derivative_squared = derivative * derivative;
+            let step = if abs(curvature) <= derivative_squared {
+                2.0 * value * derivative / (2.0 * derivative_squared - curvature)
+            } else {
+                value / derivative
+            };
+            Ok((value, step))
+        };
+        safeguarded(
+            halley_step,
+            bracket,
+            initial_guess,
+            self.max_iter,
+            self.abs_tol,
+            self.rel_tol,
+        )
+    }
+}
 
-        // Starting outside the bracket would break the bracket bookkeeping.
-        let (lower, upper) = if xl < xh { (xl, xh) } else { (xh, xl) };
-        if !(initial_guess >= lower && initial_guess <= upper) {
-            return Err(RootFinderError::InitialGuessNotInBracket {
-                guess: initial_guess,
-            });
-        }
+/// The safeguarded iteration shared by [`BracketedNewton`] and
+/// [`BracketedHalley`].
+///
+/// `step` evaluates the function at `x` and returns its value together with
+/// the step the method proposes from there, so that `x - step` is the next
+/// iterate. The step is taken if it lands strictly inside the current bracket
+/// and is at most half the step before last; otherwise the bracket is bisected.
+/// The bracket must be oriented so that `f(bracket.0) < 0 < f(bracket.1)`.
+fn safeguarded(
+    step: impl Fn(f64) -> Result<(f64, f64), RootFinderError>,
+    bracket: (f64, f64),
+    initial_guess: f64,
+    max_iter: u32,
+    abs_tol: f64,
+    rel_tol: f64,
+) -> Result<f64, RootFinderError> {
+    // `f(xl) < 0 < f(xh)`.
+    let (mut xl, mut xh) = bracket;
 
-        let mut rts = initial_guess;
-        let mut dx_old = abs(xh - xl);
-        let mut dx = dx_old;
-        let (mut fx, mut dfx, mut d2fx) = eval_finite_with_second_derivative(&f, rts)?;
-        // The initial guess may already be the root, in which case the
-        // derivatives are never used.
+    // Starting outside the bracket would break the bracket bookkeeping.
+    let (lower, upper) = if xl < xh { (xl, xh) } else { (xh, xl) };
+    if !(initial_guess >= lower && initial_guess <= upper) {
+        return Err(RootFinderError::InitialGuessNotInBracket {
+            guess: initial_guess,
+        });
+    }
+
+    let mut rts = initial_guess;
+    let mut dx_old = abs(xh - xl);
+    let mut dx = dx_old;
+    let (mut fx, mut proposed) = step(rts)?;
+
+    for _ in 0..max_iter {
+        // The iterate may be the root, in which case the proposed step is
+        // never used (and could be 0/0 if the derivative also vanishes there).
         if fx == 0.0 {
             return Ok(rts);
         }
-
-        for _ in 0..self.max_iter {
-            let delta = self.abs_tol + self.rel_tol * abs(rts);
-
-            // Bisect when the Halley iterate is not finite, would leave the
-            // bracket, or is not shrinking the interval fast enough; otherwise
-            // take the Halley step.
-            let step = fx / (dfx - 0.5 * fx * d2fx / dfx);
-            let next = rts - step;
-            // The Halley step is below the representable resolution. This must
-            // be checked before the bracket test, as the iterate is usually an
-            // end of the bracket.
-            if next == rts {
-                return Ok(rts);
-            }
-            let (lower, upper) = if xl < xh { (xl, xh) } else { (xh, xl) };
-            let bisect = !(next > lower && next < upper) || abs(2.0 * step) > abs(dx_old);
-
-            if bisect {
-                dx_old = dx;
-                dx = 0.5 * (xh - xl);
-                rts = xl + dx;
-                // The bisection step is below the representable resolution.
-                if xl == rts {
-                    return Ok(rts);
-                }
-            } else {
-                dx_old = dx;
-                dx = step;
-                rts = next;
-            }
-
-            if abs(dx) < delta {
-                return Ok(rts);
-            }
-
-            (fx, dfx, d2fx) = eval_finite_with_second_derivative(&f, rts)?;
-            if fx == 0.0 {
-                return Ok(rts);
-            }
-            // Maintain the sign-oriented bracket around the new iterate.
-            if fx.is_sign_negative() {
-                xl = rts;
-            } else {
-                xh = rts;
-            }
+        // Narrow the bracket to the iterate, which keeps the orientation.
+        if fx.is_sign_negative() {
+            xl = rts;
+        } else {
+            xh = rts;
         }
 
-        Err(RootFinderError::NotConverged {
-            iterations: self.max_iter,
-            x: rts,
-            residual: fx,
-        })
+        let next = rts - proposed;
+        // The step is below the representable resolution. This must be checked
+        // before the bracket test, as the iterate is now an end of the bracket.
+        // A zero step comes from an infinite derivative and is no evidence of
+        // convergence.
+        if proposed != 0.0 && next == rts {
+            return Ok(rts);
+        }
+
+        // Bisect when the proposed iterate is not finite, would not lie
+        // strictly inside the bracket, or the step is not shrinking fast
+        // enough; otherwise take the step.
+        let (lower, upper) = if xl < xh { (xl, xh) } else { (xh, xl) };
+        let bisect = !(next > lower && next < upper) || abs(2.0 * proposed) > abs(dx_old);
+
+        dx_old = dx;
+        if bisect {
+            dx = 0.5 * (xh - xl);
+            rts = xl + dx;
+            // The bisection step is below the representable resolution.
+            if xl == rts {
+                return Ok(rts);
+            }
+        } else {
+            dx = proposed;
+            rts = next;
+        }
+
+        if abs(dx) < abs_tol + rel_tol * abs(rts) {
+            return Ok(rts);
+        }
+
+        (fx, proposed) = step(rts)?;
     }
+
+    if fx == 0.0 {
+        return Ok(rts);
+    }
+    Err(RootFinderError::NotConverged {
+        iterations: max_iter,
+        x: rts,
+        residual: fx,
+    })
 }
 
 #[cfg(test)]
@@ -1688,6 +1671,36 @@ mod tests {
     }
 
     #[test]
+    fn test_bracketed_newton_initial_guess_narrows_bracket() {
+        use core::cell::RefCell;
+
+        // f'(0) = 0 rejects the first step from the guess at 0. The sign of
+        // f(0) < 0 must narrow the bracket to (0, 1), so the bisection goes to
+        // 0.5 rather than back to the midpoint 0 of the original bracket.
+        let points = RefCell::new(alloc::vec::Vec::new());
+        BracketedNewton::default()
+            .find_in_oriented_bracket_with_derivative_from(
+                |x: f64| {
+                    points.borrow_mut().push(x);
+                    (powi(x, 3) - 0.5, 3.0 * powi(x, 2))
+                },
+                (-1.0, 1.0),
+                0.0,
+            )
+            .expect("should converge");
+        assert_eq!(points.borrow()[..2], [0.0, 0.5]);
+    }
+
+    #[test]
+    fn test_bracketed_newton_huge_bracket_midpoint() {
+        // The sum of the ends overflows, but the midpoint does not.
+        let act = BracketedNewton::default()
+            .find_in_bracket_with_derivative(|x: f64| (x - 1.5e308, 1.0), (1e308, 1.7e308))
+            .expect("should converge");
+        assert_approx_eq!(act, 1.5e308, rtol <= 1e-12);
+    }
+
+    #[test]
     fn test_bracketed_newton_reuses_endpoints() {
         use core::cell::Cell;
 
@@ -2066,6 +2079,52 @@ mod tests {
             )
             .expect("the endpoint is a root");
         assert_eq!(act, f64::MAX);
+    }
+
+    #[test]
+    fn test_bracketed_halley_stationary_point_is_not_a_root() {
+        // f' vanishes at x = 0, where f = -10. Halley's step tends to zero
+        // near such a point although f does not, which must not be mistaken
+        // for convergence, neither at the point itself nor just beside it.
+        for guess in [0.0, 1e-9] {
+            let act = BracketedHalley::default()
+                .find_in_bracket_with_second_derivative_from(cubic, (-1.0, 2.0), guess)
+                .expect("should converge");
+            assert_approx_eq!(act, 1.3652300134140969, rtol <= 1e-8);
+        }
+    }
+
+    #[test]
+    fn test_bracketed_halley_initial_guess_narrows_bracket() {
+        use core::cell::RefCell;
+
+        // f'(0) = 0 rejects the first step from the guess at 0. The sign of
+        // f(0) < 0 must narrow the bracket to (0, 1), so the bisection goes to
+        // 0.5 rather than back to the midpoint 0 of the original bracket.
+        let points = RefCell::new(alloc::vec::Vec::new());
+        BracketedHalley::default()
+            .find_in_oriented_bracket_with_second_derivative_from(
+                |x: f64| {
+                    points.borrow_mut().push(x);
+                    (powi(x, 3) - 0.5, 3.0 * powi(x, 2), 6.0 * x)
+                },
+                (-1.0, 1.0),
+                0.0,
+            )
+            .expect("should converge");
+        assert_eq!(points.borrow()[..2], [0.0, 0.5]);
+    }
+
+    #[test]
+    fn test_bracketed_halley_huge_bracket_midpoint() {
+        // The sum of the ends overflows, but the midpoint does not.
+        let act = BracketedHalley::default()
+            .find_in_bracket_with_second_derivative(
+                |x: f64| (x - 1.5e308, 1.0, 0.0),
+                (1e308, 1.7e308),
+            )
+            .expect("should converge");
+        assert_approx_eq!(act, 1.5e308, rtol <= 1e-12);
     }
 
     #[test]
