@@ -104,7 +104,7 @@ pub trait FindBracketedRootWithDerivative {
         bracket: (f64, f64),
         values: (f64, f64),
     ) -> Result<f64, RootFinderError> {
-        let midpoint = 0.5 * bracket.0 + 0.5 * bracket.1;
+        let midpoint = bracket.0.midpoint(bracket.1);
         self.find_in_bracket_with_derivative_values_from(f, bracket, values, midpoint)
     }
 
@@ -128,7 +128,7 @@ pub trait FindBracketedRootWithDerivative {
         f: impl CallbackWithDerivative,
         bracket: (f64, f64),
     ) -> Result<f64, RootFinderError> {
-        let midpoint = 0.5 * bracket.0 + 0.5 * bracket.1;
+        let midpoint = bracket.0.midpoint(bracket.1);
         self.find_in_bracket_with_derivative_from(f, bracket, midpoint)
     }
 }
@@ -183,7 +183,7 @@ pub trait FindBracketedRootWithSecondDerivative {
         bracket: (f64, f64),
         values: (f64, f64),
     ) -> Result<f64, RootFinderError> {
-        let midpoint = 0.5 * bracket.0 + 0.5 * bracket.1;
+        let midpoint = bracket.0.midpoint(bracket.1);
         self.find_in_bracket_with_second_derivative_values_from(f, bracket, values, midpoint)
     }
 
@@ -207,7 +207,7 @@ pub trait FindBracketedRootWithSecondDerivative {
         f: impl CallbackWithSecondDerivative,
         bracket: (f64, f64),
     ) -> Result<f64, RootFinderError> {
-        let midpoint = 0.5 * bracket.0 + 0.5 * bracket.1;
+        let midpoint = bracket.0.midpoint(bracket.1);
         self.find_in_bracket_with_second_derivative_from(f, bracket, midpoint)
     }
 }
@@ -833,9 +833,10 @@ impl FindBracketedRootWithSecondDerivative for BracketedHalley {
             // Near the root c vanishes and the step converges cubically. Far
             // from it, where |c| > |f'|/2, the correction is unreliable and near
             // a stationary point it shrinks the step towards zero although f
-            // does not vanish there, so take Newton's step. Squaring f' instead
-            // would save a division but overflow for large derivatives.
-            let correction = 0.5 * value * second_derivative / derivative;
+            // does not vanish there, so take Newton's step. Dividing f'' by f'
+            // first keeps f·f'' from overflowing, and squaring f' instead would
+            // save a division but overflow for large derivatives.
+            let correction = 0.5 * value * (second_derivative / derivative);
             let step = if abs(correction) <= 0.5 * abs(derivative) {
                 value / (derivative - correction)
             } else {
@@ -918,13 +919,15 @@ fn safeguarded(
 
         dx_old = dx;
         if bisect {
-            // Halving the ends separately keeps the width from overflowing.
-            dx = 0.5 * xh - 0.5 * xl;
-            rts = xl + dx;
-            // The bisection step is below the representable resolution.
-            if xl == rts {
-                return Ok(rts);
+            // `midpoint` neither overflows nor loses subnormals.
+            let midpoint = xl.midpoint(xh);
+            // The bracket is below the representable resolution, so the midpoint rounds to one
+            // of its ends.
+            if midpoint == xl || midpoint == xh {
+                return Ok(midpoint);
             }
+            dx = midpoint - xl;
+            rts = midpoint;
         } else {
             dx = proposed;
             rts = next;
@@ -1727,6 +1730,23 @@ mod tests {
     }
 
     #[test]
+    fn test_bracketed_newton_subnormal_bracket() {
+        // The bracket spans two neighbouring subnormals, so it cannot be bisected further and
+        // either end is the root to within the resolution.
+        let (lower, upper) = (5e-324, 1e-323);
+        let act = BracketedNewton::default()
+            .with_abs_tol(0.0)
+            .with_rel_tol(0.0)
+            .find_in_oriented_bracket_with_derivative_from(
+                |x: f64| (if x < 7.5e-324 { -1.0 } else { 1.0 }, f64::NAN),
+                (lower, upper),
+                lower,
+            )
+            .expect("should converge");
+        assert!(act == lower || act == upper, "root {act:e}");
+    }
+
+    #[test]
     fn test_bracketed_newton_reuses_endpoints() {
         use core::cell::Cell;
 
@@ -2178,6 +2198,52 @@ mod tests {
             )
             .expect("should converge");
         assert_approx_eq!(act, 1e300, rtol <= 1e-6);
+    }
+
+    #[test]
+    fn test_bracketed_halley_scaled_curvature() {
+        use core::cell::Cell;
+
+        // Scaling Kepler's equation by 1e200 overflows f·f'' but not the correction
+        // f·f''/(2f'), so Halley's step must stay available and take as many evaluations as
+        // without the scaling.
+        let (mean, e) = (0.5, 0.9);
+        let evaluations = |scale: f64| {
+            let calls = Cell::new(0);
+            BracketedHalley::default()
+                .with_abs_tol(1e-15)
+                .find_in_bracket_with_second_derivative(
+                    |x: f64| {
+                        calls.set(calls.get() + 1);
+                        (
+                            scale * (x - e * sin(x) - mean),
+                            scale * (1.0 - e * cos(x)),
+                            scale * e * sin(x),
+                        )
+                    },
+                    (mean - 1.0, mean + 1.0),
+                )
+                .expect("should converge");
+            calls.get()
+        };
+        assert_eq!(evaluations(1e200), evaluations(1.0));
+    }
+
+    #[test]
+    fn test_bracketed_halley_subnormal_bracket() {
+        // The bracket spans two neighbouring subnormals, so it cannot be bisected further and
+        // either end is the root to within the resolution.
+        let (lower, upper) = (5e-324, 1e-323);
+        let act = BracketedHalley::default()
+            .with_abs_tol(0.0)
+            .with_rel_tol(0.0)
+            .find_in_oriented_bracket_with_second_derivative_from(
+                |x: f64| (if x < 7.5e-324 { -1.0 } else { 1.0 }, f64::NAN, f64::NAN),
+                (lower, upper),
+                lower,
+            )
+            .expect("should converge");
+        assert!(act == lower || act == upper, "root {act:e}");
     }
 
     #[test]
