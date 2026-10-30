@@ -829,16 +829,15 @@ impl FindBracketedRootWithSecondDerivative for BracketedHalley {
     ) -> Result<f64, RootFinderError> {
         let halley_step = |x| {
             let (value, derivative, second_derivative) = eval_finite_with_second_derivative(&f, x)?;
-            // Halley's step is Newton's step divided by 1 - t, with
-            // t = f·f''/(2f'²). Near the root t vanishes and the step converges
-            // cubically. Far from it, where |t| > 1/2, the correction is
-            // unreliable and near a stationary point it shrinks the step towards
-            // zero although f does not vanish there, so take Newton's step. Both
-            // forms below need a single division.
-            let curvature = value * second_derivative;
-            let derivative_squared = derivative * derivative;
-            let step = if abs(curvature) <= derivative_squared {
-                2.0 * value * derivative / (2.0 * derivative_squared - curvature)
+            // Halley's step is f/(f' - c) with the correction c = f·f''/(2f').
+            // Near the root c vanishes and the step converges cubically. Far
+            // from it, where |c| > |f'|/2, the correction is unreliable and near
+            // a stationary point it shrinks the step towards zero although f
+            // does not vanish there, so take Newton's step. Squaring f' instead
+            // would save a division but overflow for large derivatives.
+            let correction = 0.5 * value * second_derivative / derivative;
+            let step = if abs(correction) <= 0.5 * abs(derivative) {
+                value / (derivative - correction)
             } else {
                 value / derivative
             };
@@ -883,6 +882,8 @@ fn safeguarded(
     }
 
     let mut rts = initial_guess;
+    // The width may overflow for a bracket near the largest floats, which only
+    // lifts the limit on the size of the first step.
     let mut dx_old = abs(xh - xl);
     let mut dx = dx_old;
     let (mut fx, mut proposed) = step(rts)?;
@@ -917,7 +918,8 @@ fn safeguarded(
 
         dx_old = dx;
         if bisect {
-            dx = 0.5 * (xh - xl);
+            // Halving the ends separately keeps the width from overflowing.
+            dx = 0.5 * xh - 0.5 * xl;
             rts = xl + dx;
             // The bisection step is below the representable resolution.
             if xl == rts {
@@ -1701,6 +1703,30 @@ mod tests {
     }
 
     #[test]
+    fn test_bracketed_newton_huge_derivative() {
+        // f'² overflows here, which must not break the step.
+        let act = BracketedNewton::default()
+            .with_max_iter(10)
+            .find_in_bracket_with_derivative(|x: f64| (1e200 * (x - 0.3), 1e200), (0.0, 1.0))
+            .expect("should converge");
+        assert_approx_eq!(act, 0.3, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_bracketed_newton_bisects_bracket_of_largest_floats() {
+        // The width of the bracket overflows, its half does not. Starting from an end with an
+        // unusable derivative, the first step bisects the whole bracket.
+        let act = BracketedNewton::default()
+            .find_in_bracket_with_derivative_from(
+                |x: f64| (0.5 * x - 0.5e300, f64::NAN),
+                (-f64::MAX, f64::MAX),
+                -f64::MAX,
+            )
+            .expect("should converge");
+        assert_approx_eq!(act, 1e300, rtol <= 1e-6);
+    }
+
+    #[test]
     fn test_bracketed_newton_reuses_endpoints() {
         use core::cell::Cell;
 
@@ -2125,6 +2151,33 @@ mod tests {
             )
             .expect("should converge");
         assert_approx_eq!(act, 1.5e308, rtol <= 1e-12);
+    }
+
+    #[test]
+    fn test_bracketed_halley_huge_derivative() {
+        // f'² overflows here, which must not break the step.
+        let act = BracketedHalley::default()
+            .with_max_iter(10)
+            .find_in_bracket_with_second_derivative(
+                |x: f64| (1e200 * (x - 0.3), 1e200, 0.0),
+                (0.0, 1.0),
+            )
+            .expect("should converge");
+        assert_approx_eq!(act, 0.3, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_bracketed_halley_bisects_bracket_of_largest_floats() {
+        // The width of the bracket overflows, its half does not. Starting from an end with an
+        // unusable derivative, the first step bisects the whole bracket.
+        let act = BracketedHalley::default()
+            .find_in_bracket_with_second_derivative_from(
+                |x: f64| (0.5 * x - 0.5e300, f64::NAN, f64::NAN),
+                (-f64::MAX, f64::MAX),
+                -f64::MAX,
+            )
+            .expect("should converge");
+        assert_approx_eq!(act, 1e300, rtol <= 1e-6);
     }
 
     #[test]
