@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.27](https://github.com/lox-space/lox/compare/lox-ephem-v0.1.0-alpha.26...lox-ephem-v0.1.0-alpha.27) - 2026-10-30
+
+### Fixed
+
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- remove unnecessary Seconds type
+
 ## [0.1.0-alpha.26](https://github.com/lox-space/lox/compare/lox-ephem-v0.1.0-alpha.25...lox-ephem-v0.1.0-alpha.26) - 2026-10-14
 
 ### Other

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.23](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.22...lox-frames-v0.1.0-alpha.23) - 2026-10-30
+
+### Fixed
+
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- repair changelogs broken by SPDX headers
+
 ## [0.1.0-alpha.22](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.21...lox-frames-v0.1.0-alpha.22) - 2026-10-14
 
 ### Other

@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.32](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.31...lox-earth-v0.1.0-alpha.32) - 2026-10-30
+
+### Fixed
+
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- remove unnecessary Seconds type
+
 ## [0.1.0-alpha.31](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.30...lox-earth-v0.1.0-alpha.31) - 2026-10-14
 
 ### Other

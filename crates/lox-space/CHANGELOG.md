@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.52](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.51...lox-space-v0.1.0-alpha.52) - 2026-10-30
+
+### Added
+
+- *(lox-space)* expose Cartesian.is_physical in Python
+- *(lox-orbits)* [**breaking**] add equinoctial orbit types and Python bindings
+- *(lox-core)* [**breaking**] rework equinoctial elements and their conversion graph
+- *(lox-core)* [**breaking**] limit trajectory extrapolation and sample interval ends
+- *(lox-space)* accept semi_parameter in the Keplerian constructor
+- *(lox-core)* [**breaking**] validate every Keplerian element set
+- *(lox-core)* [**breaking**] return Option from Keplerian::semi_major_axis
+- *(lox-space)* expose Keplerian derived quantities
+- *(lox-core)* [**breaking**] store the semi-parameter in Keplerian
+- *(lox-core)* add as_angle to element angle types
+- *(lox-space)* export UndefinedOriginPropertyError and FrameTransformationError
+
+### Fixed
+
+- *(lox-orbits)* [**breaking**] validate the frame when deserializing element orbits
+- *(lox-core)* [**breaking**] report Kepler's equation failures instead of panicking
+- *(lox-core)* [**breaking**] validate every equinoctial conversion
+- *(lox-orbits)* [**breaking**] reject rotating frames in Cartesian to Keplerian conversions
+- *(lox-orbits)* [**breaking**] reject precomputed trajectories that do not cover the interval
+- *(lox-time)* merge sub-microsecond last steps in step_by_inclusive
+- *(lox-analysis)* [**breaking**] return errors instead of panicking when building passes
+- *(lox-orbits)* preserve extrapolation limit in propagate_to and Python conversions
+- *(lox-orbits)* [**breaking**] return validation errors from trajectory importers and drop Trajectory::new
+- *(lox-core)* [**breaking**] validate trajectory states and drop panicking FromIterator impls
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- lint and format the Python code with ruff
+- *(lox-space)* solve the same Kepler equation in both benchmarks
+- *(lox-space)* check that every Cartesian conversion rejects unphysical states in Python
+- document the physical-state requirement of the Cartesian conversions
+- *(lox-space)* benchmark the equinoctial Kepler solve rather than the true longitude
+- *(lox-space)* measure both Kepler benchmarks the same way
+- *(lox-space)* describe the measured cost of returning the Result in the Kepler benchmark
+- *(lox-space)* measure the equinoctial conversion alone in the Kepler benchmark
+- *(lox-space)* add equinoctial Kepler equation benchmark
+- *(lox-orbits)* [**breaking**] take KeplerianOrbit in J2/J4 propagator constructors
+- *(lox-space)* add Kepler equation benchmarks
+- explain the mean motion discontinuity at the parabolic threshold
+- [**breaking**] rename perigee to periapsis
+- *(lox-space)* [**breaking**] rename seconds accessors
+- remove unnecessary Seconds type
+- *(lox-space)* check the Python stub with mypy.stubtest
+- *(lox-space)* add trajectory interpolation benchmarks
+- repair changelogs broken by SPDX headers
+
 ## [0.1.0-alpha.51](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.50...lox-space-v0.1.0-alpha.51) - 2026-10-14
 
 ### Added

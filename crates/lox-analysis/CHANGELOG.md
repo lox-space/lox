@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.17](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.16...lox-analysis-v0.1.0-alpha.17) - 2026-10-30
+
+### Added
+
+- *(lox-core)* [**breaking**] limit trajectory extrapolation and sample interval ends
+
+### Fixed
+
+- *(lox-analysis)* [**breaking**] return errors instead of panicking when building passes
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- *(lox-orbits)* [**breaking**] take KeplerianOrbit in J2/J4 propagator constructors
+- *(lox-analysis)* convert trajectory once per pair in to_passes
+- remove unnecessary Seconds type
+- repair changelogs broken by SPDX headers
+
 ## [0.1.0-alpha.16](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.15...lox-analysis-v0.1.0-alpha.16) - 2026-10-14
 
 ### Added
