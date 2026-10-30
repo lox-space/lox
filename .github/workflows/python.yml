@@ -7,8 +7,10 @@
 #
 #    maturin generate-ci github -m crates/lox-space/Cargo.toml -o .github/workflows/python.yml --pytest
 #
-# NOTE: Path filters, the concurrency group and the `pyodide` job were added
-# manually. Re-running `maturin generate-ci` will overwrite these changes.
+# NOTE: Path filters, the concurrency group, the `pyodide` job, the pinned
+# Python version, the release-only targets and the single-interpreter PR builds
+# were added manually. Re-running `maturin generate-ci` will overwrite these
+# changes.
 name: Python
 
 on:
@@ -33,6 +35,16 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # The interpreter used for the test venv and, on pull requests, the only one
+  # wheels are built for. Pinned because `3.x` resolves to releases that dev
+  # dependencies have no wheels for yet, which makes uv build them from source.
+  PYTHON_VERSION: "3.14"
+  UV_PYTHON: "3.14"
+  # Pull requests build a wheel for one interpreter only; main and tags build
+  # every interpreter that gets released.
+  INTERPRETER_ARGS: ${{ github.event_name == 'pull_request' && '--interpreter python3.14' || '--find-interpreter' }}
+
 jobs:
   linux:
     runs-on: ${{ matrix.platform.runner }}
@@ -41,23 +53,21 @@ jobs:
         platform:
           - runner: ubuntu-22.04
             target: x86_64
-          - runner: ubuntu-22.04
-            target: x86
-          - runner: ubuntu-latest
-            target: aarch64
+        # Release-only targets, skipped on pull requests
+        include: ${{ fromJSON(github.event_name == 'pull_request' && '[]' || '[{"platform":{"runner":"ubuntu-22.04","target":"x86"}},{"platform":{"runner":"ubuntu-latest","target":"aarch64"}}]') }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: actions/setup-python@v7
         with:
-          python-version: 3.x
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Install uv
         uses: astral-sh/setup-uv@v7
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter
+          args: --release --out dist ${{ env.INTERPRETER_ARGS }}
           sccache: 'true'
           manylinux: auto
       - name: Upload wheels
@@ -76,8 +86,7 @@ jobs:
           unset RUSTC_WRAPPER
           python -m pip download --no-deps itur==0.4.0 -d itur-wheel
           cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
-          uv venv
-          uv pip install --group dev
+          uv sync --locked --no-install-project
           uv pip install lox-space --offline --find-links dist --force-reinstall
           source .venv/bin/activate
           pytest
@@ -89,8 +98,8 @@ jobs:
         platform:
           - runner: windows-latest
             target: x64
-          - runner: windows-latest
-            target: x86
+        # Release-only targets, skipped on pull requests
+        include: ${{ fromJSON(github.event_name == 'pull_request' && '[]' || '[{"platform":{"runner":"windows-latest","target":"x86"}}]') }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -98,13 +107,13 @@ jobs:
         uses: astral-sh/setup-uv@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: 3.x
+          python-version: ${{ env.PYTHON_VERSION }}
           architecture: ${{ matrix.platform.target }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter
+          args: --release --out dist ${{ env.INTERPRETER_ARGS }}
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v7
@@ -122,8 +131,7 @@ jobs:
           unset RUSTC_WRAPPER
           python -m pip download --no-deps itur==0.4.0 -d itur-wheel
           cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
-          uv venv
-          uv pip install --group dev
+          uv sync --locked --no-install-project
           uv pip install lox-space --offline --find-links dist --force-reinstall
           source .venv/Scripts/activate
           pytest
@@ -133,10 +141,10 @@ jobs:
     strategy:
       matrix:
         platform:
-          - runner: macos-15-intel
-            target: x86_64
           - runner: macos-15
             target: aarch64
+        # Release-only targets, skipped on pull requests
+        include: ${{ fromJSON(github.event_name == 'pull_request' && '[]' || '[{"platform":{"runner":"macos-15-intel","target":"x86_64"}}]') }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -144,12 +152,12 @@ jobs:
         uses: astral-sh/setup-uv@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: 3.x
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter
+          args: --release --out dist ${{ env.INTERPRETER_ARGS }}
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v7
@@ -165,8 +173,7 @@ jobs:
           unset RUSTC_WRAPPER
           python -m pip download --no-deps itur==0.4.0 -d itur-wheel
           cargo run -p lox-itur --bin pack -- itur-wheel/itur-0.4.0*.whl target/lox-itur-data.npz
-          uv venv
-          uv pip install --group dev
+          uv sync --locked --no-install-project
           uv pip install lox-space --offline --find-links dist --force-reinstall
           source .venv/bin/activate
           pytest
@@ -181,7 +188,7 @@ jobs:
       - uses: taiki-e/install-action@just
       - uses: actions/setup-python@v7
         with:
-          python-version: 3.x
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Install uv
         uses: astral-sh/setup-uv@v7
       - name: Resolve the pinned Pyodide version
