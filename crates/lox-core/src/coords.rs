@@ -19,7 +19,7 @@ use thiserror::Error;
 use crate::{
     math::series::Series,
     time::deltas::TimeDelta,
-    units::{Angle, AngularRate, Distance, Velocity},
+    units::{Angle, AngularRate, Distance, OBSERVABLE_UNIVERSE_RADIUS, SPEED_OF_LIGHT, Velocity},
 };
 /// Reference ellipsoid (rotational, oblate) defined by its equatorial
 /// radius and flattening. Construction validates that `equatorial_radius
@@ -620,6 +620,19 @@ impl Cartesian {
         self.vel
     }
 
+    /// Returns whether the state is physical: its position lies within the observable universe
+    /// and its speed is below the speed of light. Non-finite states are not physical.
+    ///
+    /// The conversions to orbital elements require a physical state, which also keeps their
+    /// intermediate results from overflowing. Construction does not check it, so that the
+    /// constructors stay cheap on hot paths.
+    pub fn is_physical(&self) -> bool {
+        // Comparing squares avoids the square roots, and the comparisons are false for non-finite
+        // states, whose squares are infinite or NaN.
+        self.pos.length_squared() < OBSERVABLE_UNIVERSE_RADIUS * OBSERVABLE_UNIVERSE_RADIUS
+            && self.vel.length_squared() < SPEED_OF_LIGHT * SPEED_OF_LIGHT
+    }
+
     /// Sets the velocity vector in m/s.
     pub fn set_velocity(&mut self, velocity: DVec3) {
         self.vel = velocity
@@ -1183,6 +1196,19 @@ mod tests {
     use crate::units::{AngleUnits, AngularRate, DistanceUnits, VelocityUnits};
 
     use super::*;
+
+    #[rstest]
+    #[case::leo(DVec3::new(7e6, 0.0, 0.0), DVec3::new(0.0, 7.5e3, 0.0), true)]
+    #[case::edge_of_universe(DVec3::new(4.3e26, 0.0, 0.0), DVec3::ZERO, true)]
+    #[case::beyond_universe(DVec3::new(4.5e26, 0.0, 0.0), DVec3::ZERO, false)]
+    #[case::nearly_light_speed(DVec3::X, DVec3::new(0.0, 2.99e8, 0.0), true)]
+    #[case::light_speed(DVec3::X, DVec3::new(0.0, 299792458.0, 0.0), false)]
+    #[case::overflowing_magnitude(DVec3::new(1e160, 0.0, 0.0), DVec3::ZERO, false)]
+    #[case::not_finite(DVec3::NAN, DVec3::ZERO, false)]
+    #[case::infinite_velocity(DVec3::X, DVec3::INFINITY, false)]
+    fn test_cartesian_is_physical(#[case] pos: DVec3, #[case] vel: DVec3, #[case] expected: bool) {
+        assert_eq!(Cartesian::from_vecs(pos, vel).is_physical(), expected);
+    }
 
     #[test]
     fn test_lla_api() {

@@ -577,6 +577,9 @@ fn normalize_true_anomaly(true_anomaly: TrueAnomaly, eccentricity: Eccentricity)
 
 impl Cartesian {
     /// Computes the eccentricity vector from the Cartesian state.
+    ///
+    /// The result is only meaningful for a physical state, see [`Cartesian::is_physical`]. Beyond
+    /// that, intermediate results can overflow and silently drop terms.
     pub fn eccentricity_vector(&self, grav_param: GravitationalParameter) -> DVec3 {
         let mu = grav_param.as_f64();
         let r = self.position();
@@ -593,9 +596,9 @@ impl Cartesian {
     ///
     /// # Errors
     ///
-    /// Returns a [`KeplerianError`] if the state is not finite, if its angular momentum is zero,
-    /// i.e. the orbit is rectilinear, or if the resulting elements are invalid. The latter can
-    /// happen for nearly rectilinear orbits.
+    /// Returns a [`KeplerianError`] if the state is not physical, see [`Cartesian::is_physical`],
+    /// if its angular momentum is zero, i.e. the orbit is rectilinear, or if the resulting
+    /// elements are invalid. The latter can happen for nearly rectilinear orbits.
     pub fn to_keplerian(
         &self,
         grav_param: GravitationalParameter,
@@ -604,8 +607,9 @@ impl Cartesian {
         let v = self.velocity();
         let mu = grav_param.as_f64();
 
-        if !r.is_finite() || !v.is_finite() {
-            return Err(KeplerianError::NonFiniteState);
+        // A physical state keeps every intermediate result below from overflowing.
+        if !self.is_physical() {
+            return Err(KeplerianError::UnphysicalState);
         }
 
         let rm = r.length();
@@ -613,11 +617,6 @@ impl Cartesian {
         let hm = h.length();
         if hm == 0.0 {
             return Err(KeplerianError::ZeroAngularMomentum);
-        }
-        // The magnitudes of a finite state can still overflow, which would silently turn the
-        // unit vector r/|r| in the eccentricity vector into zero.
-        if !rm.is_finite() || !hm.is_finite() {
-            return Err(KeplerianError::NonFiniteState);
         }
         let node = DVec3::Z.cross(h);
         let e = self.eccentricity_vector(grav_param);
@@ -721,9 +720,9 @@ pub enum KeplerianError {
     /// The anomaly conversion failed or the true anomaly is outside the valid range.
     #[error(transparent)]
     Anomaly(#[from] AnomalyError),
-    /// The Cartesian state is not finite, or so large that its conversion overflows.
-    #[error("Cartesian state must be finite and small enough to convert without overflow")]
-    NonFiniteState,
+    /// The Cartesian state is not physical, see [`Cartesian::is_physical`].
+    #[error("Cartesian state must lie within the observable universe and move slower than light")]
+    UnphysicalState,
     /// The Cartesian state has zero angular momentum, e.g. a rectilinear orbit.
     #[error("Keplerian elements are undefined for states with zero angular momentum")]
     ZeroAngularMomentum,
@@ -1084,7 +1083,7 @@ mod tests {
         ] {
             let result = state.to_keplerian(MU_EARTH);
             assert!(
-                matches!(result, Err(KeplerianError::NonFiniteState)),
+                matches!(result, Err(KeplerianError::UnphysicalState)),
                 "{result:?}"
             );
         }
