@@ -58,6 +58,7 @@ mod tests {
     use core::f64::consts::{PI, TAU};
 
     use lox_approx::assert_approx_eq;
+    use proptest::prelude::*;
     use rstest::rstest;
 
     use crate::anomalies::TrueAnomaly;
@@ -153,6 +154,51 @@ mod tests {
                     );
                 }
             }
+        }
+    }
+
+    /// Eccentricities of elliptic orbits, with extra weight on the near-circular and
+    /// near-parabolic ends.
+    fn elliptic_eccentricity() -> impl Strategy<Value = f64> {
+        prop_oneof![
+            Just(0.0),
+            0.0..1e-8,
+            1e-8..0.9,
+            0.9..0.9999,
+            0.9999..1.0 - 1e-12,
+        ]
+    }
+
+    proptest! {
+        #[test]
+        fn prop_mean_to_eccentric_longitude_solves_keplers_equation(
+            e in elliptic_eccentricity(),
+            pomega in 0.0..TAU,
+            lambda in -50.0..50.0f64,
+        ) {
+            let (h, k) = (e * sin(pomega), e * cos(pomega));
+            let f = mean_to_eccentric_longitude(Angle::new(lambda), h, k).as_f64();
+            let tolerance = 8.0 * f64::EPSILON * abs(lambda).max(1.0);
+            // The solution stays within e of the mean longitude, so in the same revolution.
+            prop_assert!(abs(f - lambda) <= e + tolerance);
+            let residual = eccentric_to_mean_longitude(Angle::new(f), h, k).as_f64() - lambda;
+            prop_assert!(abs(residual) <= tolerance, "residual: {residual}");
+        }
+
+        // The true longitude changes slowly with the mean longitude near apoapsis, which amplifies
+        // rounding errors in the true longitude by up to (1 + e)² / (1 - e²)^(3/2) on the way back,
+        // so the round trip is limited to moderately eccentric orbits.
+        #[test]
+        fn prop_mean_to_true_longitude_round_trip(
+            e in 0.0..0.99,
+            pomega in 0.0..TAU,
+            lambda in -50.0..50.0f64,
+        ) {
+            let (h, k) = (e * sin(pomega), e * cos(pomega));
+            let true_longitude = mean_to_true_longitude(Angle::new(lambda), h, k);
+            prop_assert!(abs(true_longitude.as_f64() - lambda) < PI);
+            let mean_longitude = true_to_mean_longitude(true_longitude, h, k).as_f64();
+            prop_assert!(abs(mean_longitude - lambda) <= 1e-10, "error: {}", mean_longitude - lambda);
         }
     }
 }
