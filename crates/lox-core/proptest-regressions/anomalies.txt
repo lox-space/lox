@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc 7d36a15926ff1a2d69013943902c136bc1ce34a27c6da2e188c6fac959e0d1e0 # shrinks to e = 0.7802339602120594, mean = -0.8501892746756416
+cc 283eac918b5468a7cd5562ceedde0bfe58e2467c6ad460faf627f8635522ef62 # shrinks to e = 0.9999012081298795, mean = -1.1472770490341937

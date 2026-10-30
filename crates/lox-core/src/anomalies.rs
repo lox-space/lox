@@ -32,13 +32,14 @@ use thiserror::Error;
 use crate::math::float::{
     abs, atan, atanh, cbrt, cos, cosh, powi, round, sin, sinh, sqrt, tan, tanh,
 };
+use crate::math::roots::{BracketedHalley, FindBracketedRootWithSecondDerivative};
 use crate::{
     elements::{Eccentricity, OrbitType},
     units::{Angle, AngleUnits},
 };
 
 use core::{
-    f64::consts::TAU,
+    f64::consts::{PI, TAU},
     fmt::Display,
     ops::{Add, Neg, Sub},
 };
@@ -350,9 +351,6 @@ pub fn mean_to_eccentric(mean: Angle, e: Eccentricity) -> Result<Angle> {
     Ok(Angle::new(solve_kepler(mean.as_f64(), 0.0, e.as_f64())))
 }
 
-const HALLEY_MAX_ITERATIONS: usize = 16;
-const HALLEY_TOLERANCE: f64 = 1e-10;
-
 /// Solves the equinoctial form of Kepler's equation, λ = F - k·sin(F) + h·cos(F), for the
 /// eccentric longitude F of an elliptic orbit with eccentricity vector (k, h), so h² + k² < 1.
 ///
@@ -364,70 +362,25 @@ pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> f64 {
         .normalize_two_pi(Angle::ZERO)
         .as_f64();
     let revolutions = mean_longitude - lambda;
-    let e = sqrt(h * h + k * k);
 
-    // The solution lies within λ ± e, where the residual increases monotonically. Halley's
-    // method converges cubically, so once a step is below `HALLEY_TOLERANCE` the error is far
-    // below machine precision. Should a step leave the bracket or Halley's method fail to
-    // converge, bisection of the bracket, whose width is at most two, guarantees convergence.
-    let mut lower = lambda - e;
-    let mut upper = lambda + e;
-    let mut f = if e < 0.8 {
-        lambda
-    } else {
-        // The initial guess for highly eccentric orbits depends on the sign of e·sin(M). For
-        // h = 0, k·λ has the same sign as k·sin(λ) on [-π, π), which saves the trigonometry.
-        let e_sin_mean = if h == 0.0 {
-            k * lambda
-        } else {
-            k * sin(lambda) - h * cos(lambda)
-        };
-        if e_sin_mean >= 0.0 {
-            lambda + e / 2.0
-        } else {
-            lambda - e / 2.0
-        }
-    };
-    for _ in 0..HALLEY_MAX_ITERATIONS {
+    // The residual increases monotonically and the solution lies within λ ± e. The bracket
+    // λ ± π is wider so that rounding cannot flip the sign of the residual at its ends, which it
+    // could for a near-circular orbit. The tolerance exceeds the spacing of floats below 8, so the
+    // iteration cannot stall between two neighbouring floats.
+    let residual = |f: f64| {
         let (sin_f, cos_f) = (sin(f), cos(f));
-        let r = f - k * sin_f + h * cos_f - lambda;
-        if r > 0.0 {
-            upper = f;
-        } else {
-            lower = f;
-        }
-        let derivative = 1.0 - k * cos_f - h * sin_f;
-        let second_derivative = k * sin_f - h * cos_f;
-        let step = r / (derivative - 0.5 * r * second_derivative / derivative);
-        let next = f - step;
-        if abs(step) <= HALLEY_TOLERANCE {
-            return next + revolutions;
-        }
-        if !(next > lower && next < upper) {
-            break;
-        }
-        f = next;
-    }
-
-    bisect_kepler(lambda, h, k, lower, upper) + revolutions
-}
-
-/// Solves the equinoctial form of Kepler's equation by bisection of a bracket of the solution.
-#[cold]
-fn bisect_kepler(lambda: f64, h: f64, k: f64, mut lower: f64, mut upper: f64) -> f64 {
-    while upper - lower > 4.0 * f64::EPSILON {
-        let middle = 0.5 * (lower + upper);
-        let residual = middle - k * sin(middle) + h * cos(middle) - lambda;
-        if residual == 0.0 {
-            return middle;
-        }
-        if residual > 0.0 {
-            upper = middle;
-        } else {
-            lower = middle;
-        }
-    }
-    0.5 * (lower + upper)
+        (
+            f - k * sin_f + h * cos_f - lambda,
+            1.0 - k * cos_f - h * sin_f,
+            k * sin_f - h * cos_f,
+        )
+    };
+    let f = BracketedHalley::default()
+        .with_abs_tol(8.0 * f64::EPSILON)
+        .with_rel_tol(0.0)
+        .find_in_bracket_with_second_derivative(residual, (lambda - PI, lambda + PI))
+        .expect("the residual is finite and changes sign across the bracket");
+    f + revolutions
 }
 
 /// Convert true anomaly to mean anomaly for elliptic orbits.
@@ -792,15 +745,14 @@ mod tests {
         assert!(close(ecc_back, ecc + rev));
     }
 
-    // Near-parabolic orbits close to periapsis, where Halley's method exhausts its iterations and
-    // the solver falls back to bisection.
+    // Near-parabolic orbits close to periapsis, where the derivative of the residual vanishes.
     #[rstest]
     #[case(1e-15, 0.0, 1.0 - 1e-9)]
     #[case(-1e-15, 0.0, 1.0 - 1e-9)]
     #[case(1e-14, 0.0, 1.0 - 1e-10)]
     #[case(1.0, 0.8414709847237494, 0.5403023058141095)]
     #[case(-PI, 0.0, -(1.0 - 1e-10))]
-    fn test_solve_kepler_bisection_fallback(#[case] lambda: f64, #[case] h: f64, #[case] k: f64) {
+    fn test_solve_kepler_near_parabolic(#[case] lambda: f64, #[case] h: f64, #[case] k: f64) {
         let f = solve_kepler(lambda, h, k);
         let residual = f - k * sin(f) + h * cos(f) - lambda;
         assert!(
