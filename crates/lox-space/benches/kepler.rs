@@ -30,13 +30,16 @@ fn mean_to_eccentric_anomaly(bencher: divan::Bencher, e: f64) {
 
 #[divan::bench(args = ECCENTRICITIES, sample_size = 1000, sample_count = 1000)]
 fn equinoctial_eccentric_longitude(bencher: divan::Bencher, e: f64) {
+    let (h, k) = (0.6 * e, 0.8 * e);
+    // λ = M + ϖ with ϖ = atan2(h, k), so that the mean anomaly matches the anomaly benchmark.
+    let mean_longitude = 2.0 + h.atan2(k);
     let elements = Equinoctial::try_new(
         Distance::kilometers(7000.0),
-        0.6 * e,
-        0.8 * e,
+        h,
+        k,
         0.1,
         0.2,
-        Angle::radians(2.0),
+        Angle::radians(mean_longitude),
         RetrogradeFactor::Prograde,
     )
     .unwrap();
