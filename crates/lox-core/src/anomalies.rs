@@ -667,11 +667,39 @@ mod tests {
     use core::f64::consts::PI;
 
     use lox_approx::{assert_approx_eq, assert_approx_ne};
+    use proptest::prelude::*;
     use rstest::rstest;
 
     use super::*;
 
     const EPSILON: f64 = 1e-9;
+
+    /// Eccentricities that `Eccentricity::orbit_type` classifies as circular or elliptic, with
+    /// extra weight on the near-circular and near-parabolic ends.
+    fn elliptic_eccentricity() -> impl Strategy<Value = f64> {
+        prop_oneof![
+            Just(0.0),
+            0.0..1e-8,
+            1e-8..0.9,
+            0.9..0.9999,
+            0.9999..1.0 - 2e-8,
+        ]
+    }
+
+    proptest! {
+        #[test]
+        fn prop_mean_to_eccentric_round_trip(e in elliptic_eccentricity(), mean in -50.0..50.0f64) {
+            let ecc = Eccentricity::try_new(e).unwrap();
+            let eccentric = mean_to_eccentric(Angle::new(mean), ecc).unwrap().as_f64();
+            // The solution stays within e of the mean anomaly, so in the same revolution.
+            prop_assert!(abs(eccentric - mean) <= e + 8.0 * f64::EPSILON * abs(mean).max(1.0));
+            let residual = eccentric_to_mean(Angle::new(eccentric), ecc).as_f64() - mean;
+            prop_assert!(
+                abs(residual) <= 8.0 * f64::EPSILON * abs(mean).max(1.0),
+                "residual: {residual}"
+            );
+        }
+    }
 
     #[test]
     fn test_true_anomaly_approx_eq_wraps_around() {
