@@ -66,8 +66,9 @@ where
 {
     /// Try to create a new Vallado propagator, returning an error if the origin or frame is invalid.
     pub fn try_new(initial_state: CartesianOrbit<O, R>) -> Result<Self, ValladoError> {
-        initial_state.origin().try_gravitational_parameter()?;
+        // Check the frame first, in the same order as the orbit conversions.
         initial_state.reference_frame().try_quasi_inertial()?;
+        initial_state.origin().try_gravitational_parameter()?;
         Ok(Self {
             initial_state,
             max_iter: 300,
