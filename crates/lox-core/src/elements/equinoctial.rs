@@ -357,7 +357,10 @@ impl Equinoctial {
     ///
     /// Returns [`EquinoctialError::KeplerEquation`] if Kepler's equation cannot be solved.
     pub fn to_modified_equinoctial(&self) -> Result<ModifiedEquinoctial, EquinoctialError> {
-        Ok(ModifiedEquinoctial::try_new(
+        // Valid equinoctial elements describe a closed orbit with finite elements and a positive
+        // semi-parameter, for which every true longitude is valid, so the modified equinoctial
+        // elements need not be validated again.
+        Ok(ModifiedEquinoctial::from_valid_parts(
             self.semi_parameter(),
             self.k,
             self.h,
@@ -365,8 +368,7 @@ impl Equinoctial {
             self.p,
             self.true_longitude()?,
             self.retrograde_factor,
-        )
-        .expect("closed orbits have valid modified equinoctial elements"))
+        ))
     }
 
     /// Converts the elements to a Cartesian state.
@@ -462,6 +464,7 @@ mod tests {
     use core::f64::consts::TAU;
 
     use lox_approx::assert_approx_eq;
+    use proptest::prelude::*;
     use rstest::rstest;
 
     use crate::anomalies::TrueAnomaly;
@@ -472,6 +475,51 @@ mod tests {
 
     fn mu() -> GravitationalParameter {
         GravitationalParameter::km3_per_s2(398600.43550702266)
+    }
+
+    proptest! {
+        // `to_modified_equinoctial` skips the validation of the modified equinoctial elements,
+        // which must therefore always pass.
+        #[test]
+        fn prop_modified_equinoctial_elements_are_valid(
+            a in 1e3..1e9f64,
+            e in prop_oneof![Just(0.0), 0.0..0.9, 0.9..1.0 - 1e-12],
+            pomega in 0.0..TAU,
+            p in -10.0..10.0f64,
+            q in -10.0..10.0f64,
+            lambda in -50.0..50.0f64,
+            retrograde in any::<bool>(),
+        ) {
+            let retrograde_factor = if retrograde {
+                RetrogradeFactor::Retrograde
+            } else {
+                RetrogradeFactor::Prograde
+            };
+            let Ok(eq) = Equinoctial::try_new(
+                Distance::new(a),
+                e * sin(pomega),
+                e * cos(pomega),
+                p,
+                q,
+                Angle::new(lambda),
+                retrograde_factor,
+            ) else {
+                return Ok(());
+            };
+            let mee = eq.to_modified_equinoctial().unwrap();
+            prop_assert!(
+                ModifiedEquinoctial::try_new(
+                    mee.p(),
+                    mee.f(),
+                    mee.g(),
+                    mee.h(),
+                    mee.k(),
+                    mee.l(),
+                    mee.retrograde_factor(),
+                )
+                .is_ok()
+            );
+        }
     }
 
     fn keplerian(e: f64, i: f64, node: f64, periapsis: f64, nu: f64) -> Keplerian {
