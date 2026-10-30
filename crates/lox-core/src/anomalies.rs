@@ -657,7 +657,8 @@ mod tests {
     const EPSILON: f64 = 1e-9;
 
     /// Eccentricities that `Eccentricity::orbit_type` classifies as circular or elliptic, with
-    /// extra weight on the near-circular and near-parabolic ends.
+    /// extra weight on the near-circular and near-parabolic ends. Eccentricities within 1e-8 of 1
+    /// count as parabolic, so the upper bound stays below the bound for the longitudes.
     fn elliptic_eccentricity() -> impl Strategy<Value = f64> {
         prop_oneof![
             Just(0.0),

@@ -40,7 +40,7 @@ use crate::elements::keplerian::{
     Eccentricity, EccentricityError, GravitationalParameter, Inclination, Keplerian,
 };
 use crate::elements::longitudes::{
-    eccentric_to_true_longitude, mean_to_eccentric_longitude, true_to_mean_longitude,
+    mean_to_eccentric_longitude, mean_to_true_longitude, true_to_mean_longitude,
 };
 use crate::elements::modified_equinoctial::{ModifiedEquinoctial, ModifiedEquinoctialError};
 use crate::math::float::{abs, atan, cos, hypot, sin, tan};
@@ -331,7 +331,7 @@ impl Equinoctial {
     ///
     /// For the retrograde set, this differs by 2Ω from [`Keplerian::true_longitude`].
     pub fn true_longitude(&self) -> Angle {
-        eccentric_to_true_longitude(self.eccentric_longitude(), self.h, self.k)
+        mean_to_true_longitude(self.lambda, self.h, self.k)
     }
 
     /// Returns the eccentric longitude F = E + ω + I·Ω, in the same revolution as λ.
