@@ -485,7 +485,8 @@ mod tests {
         #[test]
         fn prop_modified_equinoctial_elements_are_valid(
             a in 1e3..1e9f64,
-            e in prop_oneof![Just(0.0), 0.0..0.9, 0.9..1.0 - 1e-12],
+            // Eccentricities within 1e-8 of 1 count as parabolic and are rejected.
+            e in prop_oneof![Just(0.0), 0.0..0.9, 0.9..1.0 - 2e-8],
             pomega in 0.0..TAU,
             p in -10.0..10.0f64,
             q in -10.0..10.0f64,
@@ -497,7 +498,7 @@ mod tests {
             } else {
                 RetrogradeFactor::Prograde
             };
-            let Ok(eq) = Equinoctial::try_new(
+            let eq = Equinoctial::try_new(
                 Distance::new(a),
                 e * sin(pomega),
                 e * cos(pomega),
@@ -505,9 +506,8 @@ mod tests {
                 q,
                 Angle::new(lambda),
                 retrograde_factor,
-            ) else {
-                return Ok(());
-            };
+            )
+            .unwrap();
             let mee = eq.to_modified_equinoctial().unwrap();
             prop_assert!(
                 ModifiedEquinoctial::try_new(
