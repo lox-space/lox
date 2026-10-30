@@ -396,7 +396,11 @@ pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> f64 {
         }
     };
 
+    // The safeguard keeps every iterate inside the bracket and falls back to bisection, but its
+    // worst case has no tight bound on the number of iterations. Kepler's equation converges in a
+    // handful of iterations, so twice the default cap is ample headroom, not a proven limit.
     let f = BracketedHalley::default()
+        .with_max_iter(200)
         .with_abs_tol(8.0 * f64::EPSILON)
         .with_rel_tol(0.0)
         .find_in_oriented_bracket_with_second_derivative_from(
@@ -404,7 +408,7 @@ pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> f64 {
             (lambda - PI, lambda + PI),
             initial_guess,
         )
-        .expect("the residual is finite and changes sign across the bracket");
+        .expect("the residual is finite, changes sign across the bracket and converges quickly");
     f + revolutions
 }
 
