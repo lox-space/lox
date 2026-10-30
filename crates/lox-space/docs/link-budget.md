@@ -77,7 +77,9 @@ sat = lox.Spacecraft(
 )
 station = lox.GroundStation(
     "Kiruna",
-    lox.EllipsoidLocation("IAU_EARTH", 20.96688 * lox.deg, 67.858428 * lox.deg, 0 * lox.km),
+    lox.EllipsoidLocation(
+        "IAU_EARTH", 20.96688 * lox.deg, 67.858428 * lox.deg, 0 * lox.km
+    ),
     min_elevation=5 * lox.deg,
     rx_terminals={"main": lox.GtModel("X", 16.0 * lox.dB)},
 )

@@ -2,9 +2,10 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-import lox_space as lox
 import numpy as np
 import pytest
+
+import lox_space as lox
 
 
 def test_observables():
@@ -106,9 +107,7 @@ def test_ground_location_body_fixed_position():
     pos = location.body_fixed_position()
     assert pos.shape == (3,)
     # On the equator at the prime meridian, the position is along +x.
-    assert pos[0] == pytest.approx(
-        location.ellipsoid().equatorial_radius().to_meters()
-    )
+    assert pos[0] == pytest.approx(location.ellipsoid().equatorial_radius().to_meters())
     assert pos[1] == pytest.approx(0.0)
     assert pos[2] == pytest.approx(0.0)
 
@@ -136,7 +135,5 @@ def test_ellipsoid_rejects_invalid_flattening():
 
 
 def test_horizon_mask():
-    mask = lox.HorizonMask(
-        np.array([-np.pi, 0.0, np.pi]), np.array([0.0, 5.0, 0.0])
-    )
+    mask = lox.HorizonMask(np.array([-np.pi, 0.0, np.pi]), np.array([0.0, 5.0, 0.0]))
     assert float(mask.elevation_at(lox.Angle(np.pi / 2))) == pytest.approx(2.5)

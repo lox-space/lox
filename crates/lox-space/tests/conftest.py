@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: MPL-2.0
 
 import pathlib
-from pathlib import Path
 
 import pytest
+
 import lox_space as lox
 
 DATA_DIR = pathlib.Path(__file__).parents[3].joinpath("data")

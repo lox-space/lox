@@ -2,11 +2,12 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-import lox_space as lox
 import numpy as np
 import numpy.testing as npt
 import pytest
 import spiceypy as spice
+
+import lox_space as lox
 
 
 @pytest.fixture(scope="session")

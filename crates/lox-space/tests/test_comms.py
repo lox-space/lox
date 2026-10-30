@@ -6,8 +6,8 @@ import math
 import pickle
 
 import pytest
-import lox_space as lox
 
+import lox_space as lox
 
 KA_BAND = lox.FrequencyRange(27.0 * lox.GHz, 31.0 * lox.GHz)
 
@@ -408,13 +408,9 @@ def test_antenna_frame_angles_for():
 
 def test_antenna_frame_rejects_invalid_inputs():
     with pytest.raises(ValueError, match="invalid boresight"):
-        lox.AntennaFrame.from_boresight_and_reference(
-            [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]
-        )
+        lox.AntennaFrame.from_boresight_and_reference([0.0, 0.0, 0.0], [1.0, 0.0, 0.0])
     with pytest.raises(ValueError, match="invalid reference"):
-        lox.AntennaFrame.from_boresight_and_reference(
-            [0.0, 0.0, 1.0], [0.0, 0.0, 1.0]
-        )
+        lox.AntennaFrame.from_boresight_and_reference([0.0, 0.0, 1.0], [0.0, 0.0, 1.0])
     with pytest.raises(ValueError, match="invalid direction"):
         lox.AntennaFrame.identity().angles_for([0.0, 0.0, 0.0])
 
@@ -557,11 +553,11 @@ def test_complex_receiver_chain_noise_temperature():
 
 
 def test_complex_receiver_eq():
-    kwargs = dict(
-        stages=[
+    kwargs = {
+        "stages": [
             lox.NoiseStage(gain=20.0 * lox.dB, noise_temperature=50.0 * lox.K),
         ],
-    )
+    }
     a = lox.CascadeReceiver(**kwargs)
     b = lox.CascadeReceiver(**kwargs)
     c = lox.CascadeReceiver(
@@ -656,9 +652,7 @@ def test_channel_repr():
 
 
 def test_modcod_from_required_eb_n0():
-    mc = lox.ModCod(
-        "my downlink", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB
-    )
+    mc = lox.ModCod("my downlink", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
     assert mc.name == "my downlink"
     assert mc.info_bits_per_symbol == pytest.approx(1.0, abs=1e-12)
     assert float(mc.required_eb_n0) == pytest.approx(10.0, abs=1e-12)
@@ -701,7 +695,9 @@ def test_modcod_evaluate():
     stats = link_budget(make_tx(), make_rx(), losses=losses)
     m = stats.modulate(ch, mc, design_margin=3.0 * lox.dB)
     # Es/N0 = C/N0 - 10*log10(5e6); Eb/N0 = Es/N0 (1 info bit/symbol)
-    assert float(m.es_n0) == pytest.approx(float(stats.c_n0) - 10 * math.log10(5e6), abs=1e-9)
+    assert float(m.es_n0) == pytest.approx(
+        float(stats.c_n0) - 10 * math.log10(5e6), abs=1e-9
+    )
     assert float(m.eb_n0) == pytest.approx(float(m.es_n0), abs=1e-9)
     assert float(m.margin) == pytest.approx(float(m.eb_n0) - 10.0 - 3.0, abs=1e-9)
     assert m.information_rate().to_hertz() == pytest.approx(5e6, rel=1e-10)
@@ -826,7 +822,9 @@ def test_link_stats_end_to_end():
 
 def test_link_stats_downlink_degrades_gt():
     losses = lox.PropagationLosses(
-        rain=2.0 * lox.dB, gaseous=0.5 * lox.dB, cloud=0.2 * lox.dB,
+        rain=2.0 * lox.dB,
+        gaseous=0.5 * lox.dB,
+        cloud=0.2 * lox.dB,
         scintillation=0.3 * lox.dB,
     )
     clear = link_budget(make_tx(), make_rx(), losses=losses)
@@ -860,7 +858,9 @@ def test_link_stats_with_losses():
     ch = lox.Channel(symbol_rate=5 * lox.MHz)
     mc = lox.ModCod("QPSK 1/2 test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
 
-    losses = lox.PropagationLosses(rain=2.0 * lox.dB, other=[("Atmospheric", 1.0 * lox.dB, True)])
+    losses = lox.PropagationLosses(
+        rain=2.0 * lox.dB, other=[("Atmospheric", 1.0 * lox.dB, True)]
+    )
 
     stats_no_loss = link_budget(make_tx(), make_rx())
     stats_loss = link_budget(make_tx(), make_rx(), losses=losses)
@@ -985,12 +985,16 @@ def test_link_stats_carrier_power():
 
 def test_tx_chain_invalid_antenna():
     tx = lox.AmplifierTransmitter(power=10.0 * lox.W)
-    with pytest.raises(ValueError, match="expected a ConstantAntenna or PatternedAntenna"):
+    with pytest.raises(
+        ValueError, match="expected a ConstantAntenna or PatternedAntenna"
+    ):
         lox.TxChain("not an antenna", tx, KA_BAND)
 
 
 def test_rx_chain_invalid_receiver():
-    with pytest.raises(ValueError, match="expected NoiseTempReceiver or CascadeReceiver"):
+    with pytest.raises(
+        ValueError, match="expected NoiseTempReceiver or CascadeReceiver"
+    ):
         lox.RxChain(
             lox.ConstantAntenna(gain=30.0 * lox.dB),
             "not a receiver",
@@ -1087,7 +1091,11 @@ def test_link_stats_all_getters():
     assert math.isfinite(float(stats.gt))
     # C/N0 consistency through the views.
     bw = ch.bandwidth()
-    c_n0 = float(stats.carrier_rx_power) - float(stats.noise_power(bw)) + 10 * math.log10(float(bw))
+    c_n0 = (
+        float(stats.carrier_rx_power)
+        - float(stats.noise_power(bw))
+        + 10 * math.log10(float(bw))
+    )
     assert float(stats.c_n0) == pytest.approx(c_n0, abs=1e-9)
 
 
@@ -1235,8 +1243,12 @@ def test_simple_receiver_repr():
 def test_channel_dsss_pickle():
     ch = lox.Channel(symbol_rate=10 * lox.kHz, chip_rate=4 * lox.MHz)
     restored = pickle.loads(pickle.dumps(ch))
-    assert restored.spreading_factor() == pytest.approx(ch.spreading_factor(), rel=1e-10)
-    assert float(restored.processing_gain()) == pytest.approx(float(ch.processing_gain()), abs=1e-10)
+    assert restored.spreading_factor() == pytest.approx(
+        ch.spreading_factor(), rel=1e-10
+    )
+    assert float(restored.processing_gain()) == pytest.approx(
+        float(ch.processing_gain()), abs=1e-10
+    )
 
 
 # --- LinkBudget pattern-angle getters and pointing arguments ---
@@ -1447,7 +1459,9 @@ def test_rx_chain_accessors_gt_and_noise():
         expected_t_sys, rel=1e-12
     )
     gt = rx.gt_at(29.0 * lox.GHz)
-    assert float(gt) == pytest.approx(46.0 - 10.0 * math.log10(expected_t_sys), abs=1e-9)
+    assert float(gt) == pytest.approx(
+        46.0 - 10.0 * math.log10(expected_t_sys), abs=1e-9
+    )
 
 
 def test_shared_antenna_transceiver():
@@ -1590,8 +1604,7 @@ def test_antenna_patterns_reject_non_physical_parameters():
 
 
 def test_amplifier_transmitter_accessors_repr_pickle():
-    tx = lox.AmplifierTransmitter( power=10.0 * lox.W, output_back_off=0.5 * lox.dB
-    )
+    tx = lox.AmplifierTransmitter(power=10.0 * lox.W, output_back_off=0.5 * lox.dB)
     assert float(tx.power) == pytest.approx(10.0)
     assert float(tx.output_back_off) == pytest.approx(0.5)
     assert "AmplifierTransmitter" in repr(tx)
@@ -1613,8 +1626,7 @@ def test_cascade_receiver_accessors_and_validation():
     restored = pickle.loads(pickle.dumps(rx))
     assert restored == rx
     with pytest.raises(ValueError, match="demodulator loss"):
-        lox.CascadeReceiver( stages=[], demodulator_loss=-0.5 * lox.dB
-        )
+        lox.CascadeReceiver(stages=[], demodulator_loss=-0.5 * lox.dB)
     with pytest.raises(ValueError, match="stage count"):
         lox.CascadeReceiver(stages=[])
     with pytest.raises(ValueError, match="stage noise temperature"):
@@ -1649,19 +1661,25 @@ def test_for_link_error_paths():
     # Wrong terminal types
     with pytest.raises(ValueError, match="expected a TxChain or EirpModel"):
         lox.LinkBudget(
-            rx, rx,
-            carrier=29.0 * lox.GHz, range=1000.0 * lox.km,
+            rx,
+            rx,
+            carrier=29.0 * lox.GHz,
+            range=1000.0 * lox.km,
         )
     with pytest.raises(ValueError, match="expected an RxChain or GtModel"):
         lox.LinkBudget(
-            tx, tx,
-            carrier=29.0 * lox.GHz, range=1000.0 * lox.km,
+            tx,
+            tx,
+            carrier=29.0 * lox.GHz,
+            range=1000.0 * lox.km,
         )
     # Non-physical link inputs
     with pytest.raises(ValueError, match="non-physical"):
         lox.LinkBudget(
-            tx, rx,
-            carrier=29.0 * lox.GHz, range=0.0 * lox.km,
+            tx,
+            rx,
+            carrier=29.0 * lox.GHz,
+            range=0.0 * lox.km,
         )
 
 
@@ -1752,9 +1770,9 @@ def test_model_direction_pointing_is_ignored():
         eirp.eirp_at(29.0 * lox.GHz, direction=[0.0, 0.0, 1.0])
     ) == pytest.approx(55.0)
     gt = lox.GtModel(KA_BAND, 3.0 * lox.dB)
-    assert float(
-        gt.gt_at(29.0 * lox.GHz, direction=[0.0, 0.0, 1.0])
-    ) == pytest.approx(3.0)
+    assert float(gt.gt_at(29.0 * lox.GHz, direction=[0.0, 0.0, 1.0])) == pytest.approx(
+        3.0
+    )
     with pytest.raises(ValueError, match="angle or direction"):
         eirp.eirp_at(29.0 * lox.GHz, angle=1.0 * lox.deg, direction=[1.0, 0.0, 0.0])
 

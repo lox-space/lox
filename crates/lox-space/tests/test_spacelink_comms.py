@@ -35,18 +35,17 @@ import lox_space as lox
 
 spacelink = pytest.importorskip("spacelink")
 
-from spacelink.core.path import free_space_path_loss as sl_fspl
-from spacelink.core.path import spreading_loss as sl_spreading_loss
-from spacelink.core.path import aperture_loss as sl_aperture_loss
+import astropy.units as u
 from spacelink.core.antenna import dish_gain as sl_dish_gain
 from spacelink.core.antenna import gain_from_g_over_t as sl_gain_from_gt
+from spacelink.core.noise import cn0_to_ebn0 as sl_cn0_to_ebn0
 from spacelink.core.noise import noise_factor_to_temperature as sl_nf_to_temp
+from spacelink.core.noise import noise_power as sl_noise_power
 from spacelink.core.noise import noise_power_density as sl_npd
 from spacelink.core.noise import temperature_to_noise_figure as sl_temp_to_nf
-from spacelink.core.noise import cn0_to_ebn0 as sl_cn0_to_ebn0
-from spacelink.core.noise import noise_power as sl_noise_power
-import astropy.units as u
-
+from spacelink.core.path import aperture_loss as sl_aperture_loss
+from spacelink.core.path import free_space_path_loss as sl_fspl
+from spacelink.core.path import spreading_loss as sl_spreading_loss
 
 BOLTZMANN_CONSTANT = 1.380649e-23
 WIDE_BAND = lox.FrequencyRange(1.0 * lox.GHz, 31.0 * lox.GHz)
@@ -211,7 +210,9 @@ def test_chain_noise_temperature_degenerate(noise_figure_db):
         stages=[
             lox.NoiseStage(
                 gain=0.0 * lox.dB,
-                noise_temperature=lox.Temperature(290.0 * (10 ** (noise_figure_db / 10) - 1)),
+                noise_temperature=lox.Temperature(
+                    290.0 * (10 ** (noise_figure_db / 10) - 1)
+                ),
             ),
         ],
     )
@@ -354,9 +355,7 @@ def test_gt_decomposition(gain_db, t_sys_k):
     stats = noise_temp_link_budget(t_sys_k, rx_gain_db=gain_db)
     lox_gt = float(stats.gt)
     # Use spacelink to recover gain from G/T and T_sys
-    recovered_gain = float(
-        sl_gain_from_gt(lox_gt * u.dB(1 / u.K), t_sys_k * u.K).value
-    )
+    recovered_gain = float(sl_gain_from_gt(lox_gt * u.dB(1 / u.K), t_sys_k * u.K).value)
     assert recovered_gain == pytest.approx(gain_db, abs=1e-3)
 
 
@@ -538,9 +537,7 @@ def test_tdrs_ka_band_return_link():
 
     # Verify G/T via spacelink gain recovery
     recovered_gain = float(
-        sl_gain_from_gt(
-            float(stats.gt) * u.dB(1 / u.K), lox_t_sys * u.K
-        ).value
+        sl_gain_from_gt(float(stats.gt) * u.dB(1 / u.K), lox_t_sys * u.K).value
     )
     # G/T uses antenna gain only (no chain gain), so recovered gain
     # should equal the RX antenna peak gain

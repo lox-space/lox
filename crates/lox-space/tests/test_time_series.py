@@ -2,8 +2,9 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-import lox_space as lox
 import pytest
+
+import lox_space as lox
 
 
 def test_time_series_basic():

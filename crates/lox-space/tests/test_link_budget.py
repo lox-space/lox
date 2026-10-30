@@ -261,9 +261,9 @@ class TestLinkBudgetResults:
     ):
         for tx, rx in results.link_ids():
             windows = results.windows(tx, rx)
-            intervals = visibility.intervals(tx.asset, rx.asset) or visibility.intervals(
-                rx.asset, tx.asset
-            )
+            intervals = visibility.intervals(
+                tx.asset, rx.asset
+            ) or visibility.intervals(rx.asset, tx.asset)
             assert intervals, "every link must come from a visible pair"
             for window in windows:
                 assert any(

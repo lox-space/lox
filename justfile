@@ -92,6 +92,16 @@ lint-clippy-embedded *ARGS:
 lint-features *ARGS:
     cargo hack check -p lox-space --each-feature --all-targets {{ARGS}}
 
+# Lint and check the formatting of the Python code, stub and Markdown snippets
+lint-ruff:
+    uv run --only-group lint ruff check
+    uv run --only-group lint ruff format --check
+
+# Fix lint findings and format the Python code, stub and Markdown snippets
+fmt-py:
+    uv run --only-group lint ruff check --fix
+    uv run --only-group lint ruff format
+
 lint-rustfmt *ARGS:
     cargo fmt --check {{ARGS}}
 
@@ -100,7 +110,7 @@ lint-readme *ARGS:
     cargo rdme --check {{ARGS}}
     cargo rdme --check --readme-path README.md {{ARGS}}
 
-lint: lint-reuse lint-clippy lint-rustfmt lint-readme
+lint: lint-reuse lint-clippy lint-rustfmt lint-ruff lint-readme
 
 # Regenerate both READMEs from the lox-space crate documentation
 readme *ARGS:

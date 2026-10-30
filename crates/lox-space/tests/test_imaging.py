@@ -217,7 +217,8 @@ class TestOpticalAccessAnalysis:
             float(iv.interval().duration()) for iv in res_n.windows("nadir", "europe")
         )
         dur_off_nadir = sum(
-            float(iv.interval().duration()) for iv in res_a.windows("off_nadir", "europe")
+            float(iv.interval().duration())
+            for iv in res_a.windows("off_nadir", "europe")
         )
         assert dur_off_nadir >= dur_nadir - 1.0, (
             f"off-nadir ({dur_off_nadir:.0f}s) should have >= nadir ({dur_nadir:.0f}s) coverage"
@@ -237,7 +238,9 @@ class TestOpticalAccessAnalysis:
             )
 
     def test_repr(self, scenario_single):
-        analysis = lox.OpticalAccessAnalysis(scenario_single, aois=[("europe", EUROPE_AOI)])
+        analysis = lox.OpticalAccessAnalysis(
+            scenario_single, aois=[("europe", EUROPE_AOI)]
+        )
         assert "1 spacecraft" in repr(analysis)
         assert "1 AOI)" in repr(analysis)
 

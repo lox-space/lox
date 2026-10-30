@@ -37,8 +37,8 @@ losses = provider.propagation_losses(
     lon=-3.7 * lox.deg,
     frequency=14.25 * lox.GHz,
     elevation=30.0 * lox.deg,
-    probability=0.01,       # exceeded 0.01% of the year
-    diameter=1.2 * lox.m,   # antenna diameter
+    probability=0.01,  # exceeded 0.01% of the year
+    diameter=1.2 * lox.m,  # antenna diameter
 )
 
 for label, value, absorptive in losses.lines:
@@ -86,7 +86,7 @@ a_oxygen, a_water = lox.gaseous_attenuation_slant_path(
     frequency=14.25 * lox.GHz,
     elevation=30.0 * lox.deg,
     pressure=1013.25 * lox.hPa,
-    rho=7.5,                      # water vapour density (g/m³)
+    rho=7.5,  # water vapour density (g/m³)
     temperature=288.15 * lox.K,
 )
 ```
@@ -120,7 +120,7 @@ a_scint = provider.scintillation_attenuation(
 
 ```python
 gamma_r = lox.rain_specific_attenuation(
-    rain_rate=25.0,               # mm/h
+    rain_rate=25.0,  # mm/h
     frequency=14.25 * lox.GHz,
     elevation=30.0 * lox.deg,
 )

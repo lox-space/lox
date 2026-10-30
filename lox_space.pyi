@@ -2,17 +2,24 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
+import os
 from collections.abc import Callable
 from typing import Literal, Self, final, overload
+
 import numpy as np
 from numpy.typing import ArrayLike
-import os
 
 # Overloaded methods keep an implementation signature after their overloads,
 # marked `# type: ignore[misc]`: mypy rejects implementations in stubs, but
 # griffe (mkdocstrings) drops overload-only methods from the API docs.
 
 __all__ = [
+    "J2",
+    "J4",
+    "SGP4",
+    "SPK",
+    "TLE",
+    "UTC",
     "AccessResults",
     "AccessWindow",
     "AmplifierTransmitter",
@@ -20,70 +27,48 @@ __all__ = [
     "AngularRate",
     "AntennaFrame",
     "Aoi",
-    "au",
     "CarrierPlan",
     "Cartesian",
     "CascadeReceiver",
     "Channel",
-    "combine_carrier_to_noise",
-    "complement_intervals",
     "ConstantAntenna",
     "Constellation",
     "ConstellationSatellite",
-    "days",
-    "dB",
     "Decibel",
-    "deg",
-    "deg_per_s",
     "DipolePattern",
     "Distance",
+    "EOPProvider",
     "EirpModel",
     "Ellipsoid",
     "EllipsoidLocation",
     "Ensemble",
     "EopParserError",
-    "EOPProvider",
     "EopProviderError",
     "Equinoctial",
     "Event",
     "Frame",
     "FrameTransformationError",
-    "freq_overlap",
     "Frequency",
     "FrequencyRange",
-    "fspl",
-    "gaseous_attenuation_slant_path",
-    "GaussianPattern",
     "GHz",
+    "GaussianPattern",
     "GravitationalParameter",
     "GroundPropagator",
     "GroundStation",
     "GtModel",
     "HorizonMask",
-    "hours",
-    "hPa",
     "Hz",
     "InterferenceStats",
-    "intersect_intervals",
     "Interval",
     "ItuProvider",
-    "J2",
-    "J4",
     "K",
     "Keplerian",
-    "kHz",
-    "km",
-    "km_per_s",
-    "kW",
     "LinkBudget",
     "LinkBudgetAnalysis",
     "LinkBudgetResults",
     "LinkWindow",
     "LookSide",
-    "m",
-    "m_per_s",
     "MHz",
-    "minutes",
     "ModCod",
     "ModifiedEquinoctial",
     "ModulatedLinkBudget",
@@ -102,42 +87,58 @@ __all__ = [
     "PatternedAntenna",
     "PfdMask",
     "Power",
-    "power_flux_density",
     "PowerBudgetAnalysis",
     "PowerBudgetResults",
     "Pressure",
     "PropagationLosses",
-    "rad",
-    "rad_per_s",
-    "rain_specific_attenuation",
     "RxChain",
     "SarAccessAnalysis",
     "SarPayload",
     "Scenario",
-    "seconds",
     "Series",
-    "SGP4",
-    "slant_range",
     "Spacecraft",
-    "SPK",
+    "THz",
     "Temperature",
     "TerminalId",
-    "THz",
     "Time",
     "TimeDelta",
     "TimeScale",
     "TimeSeries",
-    "TLE",
     "Trajectory",
     "TxChain",
     "UndefinedOriginPropertyError",
-    "union_intervals",
-    "UTC",
     "Vallado",
     "Velocity",
     "VisibilityAnalysis",
     "VisibilityResults",
     "W",
+    "au",
+    "combine_carrier_to_noise",
+    "complement_intervals",
+    "dB",
+    "days",
+    "deg",
+    "deg_per_s",
+    "freq_overlap",
+    "fspl",
+    "gaseous_attenuation_slant_path",
+    "hPa",
+    "hours",
+    "intersect_intervals",
+    "kHz",
+    "kW",
+    "km",
+    "km_per_s",
+    "m",
+    "m_per_s",
+    "minutes",
+    "power_flux_density",
+    "rad",
+    "rad_per_s",
+    "rain_specific_attenuation",
+    "seconds",
+    "slant_range",
+    "union_intervals",
 ]
 
 type Scale = Literal["TAI", "TCB", "TCG", "TDB", "TT", "UT1"]
@@ -172,8 +173,6 @@ class Angle:
     def __mul__(self, other: float, /) -> Angle: ...
     def __rmul__(self, other: float, /) -> Angle: ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
     def __float__(self) -> float: ...
     def __int__(self) -> int: ...
@@ -201,8 +200,6 @@ class AngularRate:
     def __mul__(self, other: float, /) -> AngularRate: ...
     def __rmul__(self, other: float, /) -> AngularRate: ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
     def __float__(self) -> float: ...
     def __int__(self) -> int: ...
@@ -227,8 +224,6 @@ class Distance:
     def __mul__(self, other: float, /) -> Distance: ...
     def __rmul__(self, other: float, /) -> Distance: ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
     def __float__(self) -> float: ...
     def __int__(self) -> int: ...
@@ -256,8 +251,6 @@ class Frequency:
     def __mul__(self, other: float, /) -> Frequency: ...
     def __rmul__(self, other: float, /) -> Frequency: ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
     def __float__(self) -> float: ...
     def __int__(self) -> int: ...
@@ -297,8 +290,6 @@ class GravitationalParameter:
         ...
     def __float__(self) -> float: ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
 
 @final
 class Power:
@@ -314,8 +305,6 @@ class Power:
     def __mul__(self, other: float, /) -> Power: ...
     def __rmul__(self, other: float, /) -> Power: ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
     def __float__(self) -> float: ...
     def __int__(self) -> int: ...
@@ -343,8 +332,6 @@ class Temperature:
     def __mul__(self, other: float, /) -> Temperature: ...
     def __rmul__(self, other: float, /) -> Temperature: ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
     def __float__(self) -> float: ...
     def __int__(self) -> int: ...
@@ -366,8 +353,6 @@ class Pressure:
     def __mul__(self, other: float, /) -> Pressure: ...
     def __rmul__(self, other: float, /) -> Pressure: ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
     def __float__(self) -> float: ...
     def __int__(self) -> int: ...
@@ -392,8 +377,6 @@ class Velocity:
     def __mul__(self, other: float, /) -> Velocity: ...
     def __rmul__(self, other: float, /) -> Velocity: ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
     def __complex__(self) -> complex: ...
     def __float__(self) -> float: ...
     def __int__(self) -> int: ...
@@ -537,8 +520,8 @@ class Spacecraft:
         orbit: SGP4 | Vallado | J2 | J4 | Numerical | Trajectory,
         max_slew_rate: AngularRate | None = None,
         constellation_id: str | None = None,
-        optical_payload: "OpticalPayload | None" = None,
-        sar_payload: "SarPayload | None" = None,
+        optical_payload: OpticalPayload | None = None,
+        sar_payload: SarPayload | None = None,
         tx_terminals: dict[str, TxTerminal] | None = None,
         rx_terminals: dict[str, RxTerminal] | None = None,
     ) -> Self: ...
@@ -551,10 +534,10 @@ class Spacecraft:
     def max_slew_rate(self) -> AngularRate | None:
         """Return the maximum slew rate, if set."""
         ...
-    def optical_payload(self) -> "OpticalPayload | None":
+    def optical_payload(self) -> OpticalPayload | None:
         """Return the optical payload, if set."""
         ...
-    def sar_payload(self) -> "SarPayload | None":
+    def sar_payload(self) -> SarPayload | None:
         """Return the SAR payload, if set."""
         ...
     def tx_terminals(self) -> dict[str, TxTerminal]:
@@ -584,14 +567,14 @@ class Scenario:
         spacecraft: list[Spacecraft] | None = None,
         ground_stations: list[GroundStation] | None = None,
     ) -> Self: ...
-    def propagate(self) -> "Ensemble":
+    def propagate(self) -> Ensemble:
         """Propagate all spacecraft, returning an Ensemble.
 
         Trajectories are transformed to ICRF using the default rotation
         provider.
         """
         ...
-    def with_constellation(self, constellation: "Constellation") -> "Scenario":
+    def with_constellation(self, constellation: Constellation) -> Scenario:
         """Add a constellation to the scenario.
 
         Converts each satellite into a Spacecraft using the constellation's
@@ -617,7 +600,6 @@ class Ensemble:
         """Return the trajectory for a given spacecraft id."""
         ...
     def __len__(self) -> int: ...
-    def __repr__(self) -> str: ...
 
 @final
 class ConstellationSatellite:
@@ -630,7 +612,6 @@ class ConstellationSatellite:
     def index_in_plane(self) -> int:
         """Return the index within the plane (0-based)."""
         ...
-    def __repr__(self) -> str: ...
 
 @final
 class Constellation:
@@ -654,7 +635,7 @@ class Constellation:
         argument_of_periapsis: Angle | None = None,
         longitude_of_ascending_node: Angle | None = None,
         propagator: str = "vallado",
-    ) -> "Constellation":
+    ) -> Constellation:
         """Create a Walker Delta constellation (RAAN spread = 360 deg)."""
         ...
     @classmethod
@@ -673,7 +654,7 @@ class Constellation:
         argument_of_periapsis: Angle | None = None,
         longitude_of_ascending_node: Angle | None = None,
         propagator: str = "vallado",
-    ) -> "Constellation":
+    ) -> Constellation:
         """Create a Walker Star constellation (RAAN spread = 180 deg)."""
         ...
     @classmethod
@@ -692,7 +673,7 @@ class Constellation:
         argument_of_periapsis: Angle | None = None,
         longitude_of_ascending_node: Angle | None = None,
         propagator: str = "vallado",
-    ) -> "Constellation":
+    ) -> Constellation:
         """Create a Street-of-Coverage constellation."""
         ...
     @classmethod
@@ -714,7 +695,7 @@ class Constellation:
         argument_of_periapsis: Angle | None = None,
         longitude_of_ascending_node: Angle | None = None,
         propagator: str = "vallado",
-    ) -> "Constellation":
+    ) -> Constellation:
         """Create a Flower constellation (repeating ground tracks)."""
         ...
     @property
@@ -726,7 +707,6 @@ class Constellation:
         """Return the list of satellites."""
         ...
     def __len__(self) -> int: ...
-    def __repr__(self) -> str: ...
 
 @final
 class PowerBudgetAnalysis:
@@ -755,7 +735,7 @@ class PowerBudgetAnalysis:
         spacecraft_ids: list[str] | None = None,
         constellation_id: str | None = None,
     ) -> Self: ...
-    def compute(self, ephemeris: SPK | None = None) -> "PowerBudgetResults":
+    def compute(self, ephemeris: SPK | None = None) -> PowerBudgetResults:
         """Compute the power budget analysis.
 
         Args:
@@ -1006,8 +986,6 @@ class TerminalId:
         ...
     def __eq__(self, other: object, /) -> bool: ...
     def __hash__(self) -> int: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
 
 @final
 class CarrierPlan:
@@ -1060,7 +1038,6 @@ class CarrierPlan:
     def modcods(self) -> list[ModCod]:
         """Candidate MODCODs for adaptive coding and modulation."""
         ...
-    def __repr__(self) -> str: ...
 
 @final
 class LinkWindow:
@@ -1100,7 +1077,6 @@ class LinkWindow:
         """Data volume deliverable over the window in bits, integrating the
         adaptively selected information rate."""
         ...
-    def __repr__(self) -> str: ...
 
 @final
 class LinkBudgetAnalysis:
@@ -1127,7 +1103,7 @@ class LinkBudgetAnalysis:
         step: TimeDelta | None = None,
         overrides: list[tuple[TerminalId, TerminalId, CarrierPlan]] | None = None,
     ) -> Self: ...
-    def compute(self) -> "LinkBudgetResults":
+    def compute(self) -> LinkBudgetResults:
         """Compute the intervals in which each compatible link closes.
 
         Returns:
@@ -1139,7 +1115,6 @@ class LinkBudgetAnalysis:
                 share an id.
         """
         ...
-    def __repr__(self) -> str: ...
 
 @final
 class LinkBudgetResults:
@@ -1181,7 +1156,6 @@ class LinkBudgetResults:
     def is_empty(self) -> bool:
         """True when no link closed anywhere."""
         ...
-    def __repr__(self) -> str: ...
 
 @final
 class HorizonMask:
@@ -1280,8 +1254,6 @@ class Origin:
         >>> mars = lox.Origin(499)  # NAIF ID
     """
     def __new__(cls, origin: str | int) -> Self: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
     def id(self) -> int:
         """Return the NAIF ID of this body."""
         ...
@@ -2123,8 +2095,6 @@ class Event:
     or "down" (positive to negative).
     """
     def __new__(cls, time: Time, crossing: Literal["up", "down"]) -> Self: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
     def time(self) -> Time:
         """Return the time of this event."""
         ...
@@ -2140,7 +2110,6 @@ class Interval:
     such as visibility intervals between a ground station and spacecraft.
     """
     def __new__(cls, start: Time, end: Time) -> Self: ...
-    def __repr__(self) -> str: ...
     def start(self) -> Time:
         """Return the start time of this interval."""
         ...
@@ -2603,8 +2572,6 @@ class TLE:
     def ephemeris_type(self) -> int:
         """Ephemeris type (always 0 in distributed data)."""
         ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
     def __getnewargs__(self) -> tuple[str]: ...
 
 @final
@@ -2713,7 +2680,6 @@ class Pass:
     def interpolate(self, time: Time) -> Observables | None:
         """Interpolate observables at a specific time within the pass."""
         ...
-    def __repr__(self) -> str: ...
 
 @final
 class TimeScale:
@@ -2814,8 +2780,6 @@ class Time:
     def subsecond(self) -> float:
         """Return the fractional part of the second."""
         ...
-    def __str__(self) -> str: ...
-    def __repr__(self) -> str: ...
     def __add__(self, other: TimeDelta, /) -> Self: ...
     @overload
     def __sub__(self, other: TimeDelta, /) -> Self: ...
@@ -2826,9 +2790,7 @@ class Time:
     def __le__(self, other: object, /) -> bool: ...
     def __gt__(self, other: object, /) -> bool: ...
     def __ge__(self, other: object, /) -> bool: ...
-    def isclose(
-        self, rhs: Time, rel_tol: float = 1e-8, abs_tol: float = 1e-14
-    ) -> bool:
+    def isclose(self, rhs: Time, rel_tol: float = 1e-8, abs_tol: float = 1e-14) -> bool:
         """Check if two times are approximately equal."""
         ...
     def julian_date(
@@ -2907,8 +2869,6 @@ class TimeDelta:
         >>> t2 = t1 + dt
     """
     def __new__(cls, seconds: float) -> Self: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
     def __float__(self) -> float: ...
     def __neg__(self) -> Self: ...
     def __add__(self, other: Self, /) -> Self: ...
@@ -3009,8 +2969,6 @@ class UTC:
     def from_iso(cls, iso: str) -> Self:
         """Parse from an ISO 8601 string."""
         ...
-    def __str__(self) -> str: ...
-    def __repr__(self) -> str: ...
     def __eq__(self, other: object, /) -> bool: ...
     def isclose(
         self, other: UTC, rel_tol: float = 1e-8, abs_tol: float = 1e-14
@@ -3181,8 +3139,6 @@ class Decibel:
     def __rmul__(self, other: float, /) -> Decibel: ...
     def __neg__(self) -> Decibel: ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
 
 @final
 class Modulation:
@@ -3196,7 +3152,6 @@ class Modulation:
         """Returns the number of bits per symbol."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class ParabolicPattern:
@@ -3232,7 +3187,6 @@ class ParabolicPattern:
         """Returns the peak gain in dBi."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class GaussianPattern:
@@ -3255,7 +3209,6 @@ class GaussianPattern:
         """Returns the peak gain in dBi."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class DipolePattern:
@@ -3274,7 +3227,6 @@ class DipolePattern:
         """Returns the peak gain in dBi."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class ConstantAntenna:
@@ -3285,7 +3237,6 @@ class ConstantAntenna:
     """
     def __new__(cls, gain: Decibel) -> Self: ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class AntennaFrame:
@@ -3320,7 +3271,6 @@ class AntennaFrame:
         """Returns the pattern angles for a parent-frame direction vector."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class PatternedAntenna:
@@ -3350,7 +3300,6 @@ class PatternedAntenna:
         """Returns the half-power beamwidth, or ``None`` when the underlying
         pattern does not define one."""
         ...
-    def __repr__(self) -> str: ...
 
 @final
 class AmplifierTransmitter:
@@ -3374,7 +3323,6 @@ class AmplifierTransmitter:
         """Output back-off."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class NoiseTempReceiver:
@@ -3395,7 +3343,6 @@ class NoiseTempReceiver:
         """Equivalent noise temperature referred to the receiver's input connector."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class NoiseStage:
@@ -3406,7 +3353,6 @@ class NoiseStage:
         noise_temperature: Stage equivalent noise temperature.
     """
     def __new__(cls, gain: Decibel, noise_temperature: Temperature) -> Self: ...
-    def __repr__(self) -> str: ...
 
 @final
 class CascadeReceiver:
@@ -3440,7 +3386,6 @@ class CascadeReceiver:
         """Returns the total RF chain gain in dB."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class Channel:
@@ -3485,7 +3430,6 @@ class Channel:
         """Returns the DSSS processing gain in dB, or None for narrowband."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class ModCod:
@@ -3562,7 +3506,6 @@ class ModCod:
         """Returns the information bit rate at the given symbol rate."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class PropagationLosses:
@@ -3602,7 +3545,6 @@ class PropagationLosses:
         """The loss lines as (label, value, absorptive) tuples, in insertion order."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class FrequencyRange:
@@ -3629,13 +3571,11 @@ class FrequencyRange:
         """Returns whether the frequency lies within the range (bounds inclusive)."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
 
-TxTerminal = TxChain | EirpModel
+type TxTerminal = TxChain | EirpModel
 """A transmit terminal: a component-tier chain or a lumped EIRP figure."""
 
-RxTerminal = RxChain | GtModel
+type RxTerminal = RxChain | GtModel
 """A receive terminal: a component-tier chain or a lumped G/T figure."""
 
 @final
@@ -3686,7 +3626,6 @@ class TxChain:
         """
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class RxChain:
@@ -3747,7 +3686,6 @@ class RxChain:
         """
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class EirpModel:
@@ -3779,7 +3717,6 @@ class EirpModel:
         """
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class GtModel:
@@ -3815,7 +3752,6 @@ class GtModel:
         """
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
 @final
 class LinkBudget:
@@ -3854,7 +3790,6 @@ class LinkBudget:
         """Returns the budget as ordered (label, value, kind) report lines,
         where kind is "gain", "loss", "subtotal", or "total"."""
         ...
-    def __str__(self) -> str: ...
     def modulate_best(
         self,
         channel: Channel,
@@ -3925,7 +3860,6 @@ class LinkBudget:
     def frequency(self) -> Frequency:
         """Link frequency."""
         ...
-    def __repr__(self) -> str: ...
 
 @final
 class InterferenceStats:
@@ -3946,7 +3880,6 @@ class InterferenceStats:
     def margin_with_interference(self) -> Decibel:
         """Link margin with interference in dB."""
         ...
-    def __repr__(self) -> str: ...
 
 @final
 class ModulatedLinkBudget:
@@ -3981,7 +3914,6 @@ class ModulatedLinkBudget:
         """Returns the budget as ordered (label, value, kind) report lines,
         extended with C/N, Es/N0, Eb/N0, threshold, and margins."""
         ...
-    def __str__(self) -> str: ...
     @property
     def es_n0(self) -> Decibel:
         """Es/N0 (energy per symbol to noise spectral density) in dB."""
@@ -4001,7 +3933,6 @@ class ModulatedLinkBudget:
     def with_interference(self, interference_power: Power) -> InterferenceStats:
         """Computes interference statistics for a given interferer power."""
         ...
-    def __repr__(self) -> str: ...
 
 def combine_carrier_to_noise(contributions: list[Decibel]) -> Decibel:
     """Combines carrier-to-noise contributions in the linear domain:
@@ -4078,9 +4009,10 @@ class PfdMask:
         """Returns the mask breakpoints as (elevation, value) tuples."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
-    def __repr__(self) -> str: ...
 
-def slant_range(elevation: Angle, earth_radius: Distance, altitude: Distance) -> Distance:
+def slant_range(
+    elevation: Angle, earth_radius: Distance, altitude: Distance
+) -> Distance:
     """Computes the slant range from a ground station to a satellite.
 
     Args:
@@ -4180,7 +4112,7 @@ class OpticalAccessAnalysis:
         step: TimeDelta | None = None,
         body_fixed_frame: Frame | None = None,
     ) -> Self: ...
-    def compute(self) -> "AccessResults":
+    def compute(self) -> AccessResults:
         """Compute access intervals for all (spacecraft, AOI) pairs.
 
         If no ensemble was provided, the scenario is propagated automatically.
@@ -4209,7 +4141,6 @@ class AccessResults:
         """Return all access windows for all (spacecraft, AOI) pairs."""
         ...
 
-
 @final
 class PassDirection:
     """Direction of orbital motion at the time of an access window: moving
@@ -4217,9 +4148,8 @@ class PassDirection:
     window midpoint.
     """
 
-    Ascending: "PassDirection"
-    Descending: "PassDirection"
-
+    Ascending: PassDirection
+    Descending: PassDirection
 
 @final
 class AccessWindow:
@@ -4238,8 +4168,6 @@ class AccessWindow:
     def direction(self) -> PassDirection:
         """Return the spacecraft pass direction at the interval midpoint."""
         ...
-    def __repr__(self) -> str: ...
-
 
 @final
 class LookSide:
@@ -4249,10 +4177,9 @@ class LookSide:
     Earth-fixed velocity at the sub-satellite point.
     """
 
-    Left: "LookSide"
-    Right: "LookSide"
-    Either: "LookSide"
-
+    Left: LookSide
+    Right: LookSide
+    Either: LookSide
 
 @final
 class SarPayload:
@@ -4270,11 +4197,12 @@ class SarPayload:
     """
 
     @classmethod
-    def with_look_angles(cls, min: "Angle", max: "Angle", side: LookSide) -> "SarPayload": ...
+    def with_look_angles(cls, min: Angle, max: Angle, side: LookSide) -> SarPayload: ...
     @classmethod
-    def with_incidence_angles(cls, min: "Angle", max: "Angle", side: LookSide) -> "SarPayload": ...
+    def with_incidence_angles(
+        cls, min: Angle, max: Angle, side: LookSide
+    ) -> SarPayload: ...
     def side(self) -> LookSide: ...
-
 
 @final
 class SarAccessAnalysis:
@@ -4307,7 +4235,7 @@ class SarAccessAnalysis:
         step: TimeDelta | None = None,
         body_fixed_frame: Frame | None = None,
     ) -> Self: ...
-    def compute(self) -> "AccessResults":
+    def compute(self) -> AccessResults:
         """Compute access intervals for all (spacecraft, AOI) pairs.
 
         If no ensemble was provided, the scenario is propagated automatically.

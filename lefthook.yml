@@ -15,6 +15,12 @@ pre-commit:
       run: |
         cargo fmt -- {staged_files}
         git add {staged_files}
+    ruff:
+      glob: "*.{py,pyi,md}"
+      run: |
+        uv run --only-group lint ruff check --fix {staged_files}
+        uv run --only-group lint ruff format {staged_files}
+        git add {staged_files}
 
 pre-push:
   parallel: true
@@ -25,3 +31,5 @@ pre-push:
       run: just lint-clippy
     rustfmt:
       run: just lint-rustfmt
+    ruff:
+      run: just lint-ruff
