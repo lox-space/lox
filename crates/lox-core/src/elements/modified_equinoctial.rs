@@ -300,6 +300,11 @@ impl Cartesian {
         if hm == 0.0 {
             return Err(ModifiedEquinoctialError::ZeroAngularMomentum);
         }
+        // The angular momentum of a finite state can still overflow, which would leave the
+        // inclination undefined.
+        if !hm.is_finite() {
+            return Err(ModifiedEquinoctialError::NonFiniteElements);
+        }
 
         // Same inclination as `Cartesian::to_keplerian`, so that both paths agree on the
         // retrograde factor.
@@ -510,6 +515,19 @@ mod tests {
                 .to_modified_equinoctial(GravitationalParameter::km3_per_s2(0.0))
                 .is_err()
         );
+    }
+
+    #[test]
+    fn test_cartesian_overflowing_angular_momentum() {
+        // A finite state whose angular momentum overflows must be rejected by every conversion
+        // rather than panic.
+        let huge = Cartesian::from_vecs(DVec3::new(1e200, 0.0, 0.0), DVec3::new(0.0, 1e200, 0.0));
+        assert!(matches!(
+            huge.to_modified_equinoctial(mu()),
+            Err(ModifiedEquinoctialError::NonFiniteElements)
+        ));
+        assert!(huge.to_equinoctial(mu()).is_err());
+        assert!(huge.to_keplerian(mu()).is_err());
     }
 
     #[cfg(feature = "serde")]
