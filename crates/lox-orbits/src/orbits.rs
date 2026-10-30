@@ -16,7 +16,7 @@ mod trajectory;
 
 pub use cartesian::{StateToGroundError, ToKeplerianError};
 pub use ensemble::Ensemble;
-pub use equinoctial::ToEquinoctialError;
+pub use equinoctial::{FromEquinoctialError, ToEquinoctialError};
 pub use modified_equinoctial::ToModifiedEquinoctialError;
 pub use trajectory::{Trajectory, TrajectoryError, TrajectoryTransformationError};
 

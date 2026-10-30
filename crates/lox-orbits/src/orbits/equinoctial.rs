@@ -23,6 +23,17 @@ pub enum ToEquinoctialError {
     Equinoctial(#[from] EquinoctialError),
 }
 
+/// Errors that can occur when converting an equinoctial orbit to Cartesian position and velocity.
+#[derive(Debug, Error)]
+pub enum FromEquinoctialError {
+    /// The origin has no gravitational parameter.
+    #[error(transparent)]
+    UndefinedOriginProperty(#[from] UndefinedOriginPropertyError),
+    /// The elements could not be converted.
+    #[error(transparent)]
+    Equinoctial(#[from] EquinoctialError),
+}
+
 impl<O, R> EquinoctialOrbit<O, R>
 where
     O: CoordinateOrigin,
@@ -55,46 +66,64 @@ where
     }
 
     /// Converts this orbit to Cartesian position and velocity.
-    pub fn to_cartesian(&self) -> CartesianOrbit<O, R>
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`EquinoctialError`] if Kepler's equation cannot be solved, see
+    /// [`Equinoctial::to_cartesian`].
+    pub fn to_cartesian(&self) -> Result<CartesianOrbit<O, R>, EquinoctialError>
     where
         O: Copy + PointMass,
         R: Copy,
     {
-        self.with_state(self.state().to_cartesian(self.gravitational_parameter()))
+        Ok(self.with_state(self.state().to_cartesian(self.gravitational_parameter())?))
     }
 
     /// Converts this orbit to Cartesian position and velocity.
     ///
     /// # Errors
     ///
-    /// Returns an [`UndefinedOriginPropertyError`] if the gravitational parameter is undefined.
-    pub fn try_to_cartesian(&self) -> Result<CartesianOrbit<O, R>, UndefinedOriginPropertyError>
+    /// Returns a [`FromEquinoctialError`] if the gravitational parameter is undefined or
+    /// Kepler's equation cannot be solved, see [`Equinoctial::to_cartesian`].
+    pub fn try_to_cartesian(&self) -> Result<CartesianOrbit<O, R>, FromEquinoctialError>
     where
         O: Copy + TryPointMass,
         R: Copy,
     {
         Ok(self.with_state(
             self.state()
-                .to_cartesian(self.try_gravitational_parameter()?),
+                .to_cartesian(self.try_gravitational_parameter()?)?,
         ))
     }
 
     /// Converts this orbit to Keplerian elements.
-    pub fn to_keplerian(&self) -> KeplerianOrbit<O, R>
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`EquinoctialError`] if Kepler's equation cannot be solved, see
+    /// [`Equinoctial::to_keplerian`].
+    pub fn to_keplerian(&self) -> Result<KeplerianOrbit<O, R>, EquinoctialError>
     where
         O: Copy,
         R: Copy,
     {
-        self.with_state(self.state().to_keplerian())
+        Ok(self.with_state(self.state().to_keplerian()?))
     }
 
     /// Converts this orbit to modified equinoctial elements.
-    pub fn to_modified_equinoctial(&self) -> ModifiedEquinoctialOrbit<O, R>
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`EquinoctialError`] if Kepler's equation cannot be solved, see
+    /// [`Equinoctial::to_modified_equinoctial`].
+    pub fn to_modified_equinoctial(
+        &self,
+    ) -> Result<ModifiedEquinoctialOrbit<O, R>, EquinoctialError>
     where
         O: Copy,
         R: Copy,
     {
-        self.with_state(self.state().to_modified_equinoctial())
+        Ok(self.with_state(self.state().to_modified_equinoctial()?))
     }
 }
 
@@ -183,7 +212,7 @@ where
     O: CoordinateOrigin + TryPointMass + Copy,
     R: ReferenceFrame + Copy,
 {
-    type Error = UndefinedOriginPropertyError;
+    type Error = FromEquinoctialError;
 
     fn try_from(orbit: EquinoctialOrbit<O, R>) -> Result<Self, Self::Error> {
         orbit.try_to_cartesian()
@@ -242,9 +271,9 @@ mod tests {
             for eq in [from_cartesian, from_keplerian, from_mee] {
                 assert_eq!(eq.time(), time);
                 for actual in [
-                    eq.to_cartesian(),
-                    eq.to_keplerian().to_cartesian(),
-                    eq.to_modified_equinoctial().to_cartesian(),
+                    eq.to_cartesian().unwrap(),
+                    eq.to_keplerian().unwrap().to_cartesian(),
+                    eq.to_modified_equinoctial().unwrap().to_cartesian(),
                 ] {
                     assert_approx_eq!(
                         actual.position(),

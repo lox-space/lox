@@ -35,6 +35,7 @@ use core::f64::consts::PI;
 use glam::DVec3;
 use thiserror::Error;
 
+use crate::anomalies::AnomalyError;
 use crate::coords::Cartesian;
 use crate::elements::keplerian::{
     Eccentricity, EccentricityError, GravitationalParameter, Inclination, Keplerian,
@@ -228,6 +229,9 @@ pub enum EquinoctialError {
     /// The Cartesian state could not be converted.
     #[error(transparent)]
     ModifiedEquinoctial(#[from] ModifiedEquinoctialError),
+    /// Kepler's equation could not be solved for the eccentric longitude.
+    #[error("failed to solve Kepler's equation: {0}")]
+    KeplerEquation(#[from] AnomalyError),
 }
 
 impl Equinoctial {
@@ -330,39 +334,63 @@ impl Equinoctial {
     /// Returns the true longitude L = ν + ω + I·Ω, in the same revolution as λ.
     ///
     /// For the retrograde set, this differs by 2Ω from [`Keplerian::true_longitude`].
-    pub fn true_longitude(&self) -> Angle {
-        mean_to_true_longitude(self.lambda, self.h, self.k)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EquinoctialError::KeplerEquation`] if Kepler's equation cannot be solved.
+    pub fn true_longitude(&self) -> Result<Angle, EquinoctialError> {
+        Ok(mean_to_true_longitude(self.lambda, self.h, self.k)?)
     }
 
     /// Returns the eccentric longitude F = E + ω + I·Ω, in the same revolution as λ.
-    pub fn eccentric_longitude(&self) -> Angle {
-        mean_to_eccentric_longitude(self.lambda, self.h, self.k)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EquinoctialError::KeplerEquation`] if Kepler's equation cannot be solved.
+    pub fn eccentric_longitude(&self) -> Result<Angle, EquinoctialError> {
+        Ok(mean_to_eccentric_longitude(self.lambda, self.h, self.k)?)
     }
 
     /// Converts the elements to modified equinoctial elements.
-    pub fn to_modified_equinoctial(&self) -> ModifiedEquinoctial {
-        ModifiedEquinoctial::try_new(
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EquinoctialError::KeplerEquation`] if Kepler's equation cannot be solved.
+    pub fn to_modified_equinoctial(&self) -> Result<ModifiedEquinoctial, EquinoctialError> {
+        Ok(ModifiedEquinoctial::try_new(
             self.semi_parameter(),
             self.k,
             self.h,
             self.q,
             self.p,
-            self.true_longitude(),
+            self.true_longitude()?,
             self.retrograde_factor,
         )
-        .expect("closed orbits have valid modified equinoctial elements")
+        .expect("closed orbits have valid modified equinoctial elements"))
     }
 
     /// Converts the elements to a Cartesian state.
-    pub fn to_cartesian(&self, grav_param: GravitationalParameter) -> Cartesian {
-        self.to_modified_equinoctial().to_cartesian(grav_param)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EquinoctialError::KeplerEquation`] if Kepler's equation cannot be solved.
+    pub fn to_cartesian(
+        &self,
+        grav_param: GravitationalParameter,
+    ) -> Result<Cartesian, EquinoctialError> {
+        Ok(self.to_modified_equinoctial()?.to_cartesian(grav_param))
     }
 
     /// Converts the elements to Keplerian elements.
-    pub fn to_keplerian(&self) -> Keplerian {
-        self.to_modified_equinoctial()
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EquinoctialError::KeplerEquation`] if Kepler's equation cannot be solved.
+    pub fn to_keplerian(&self) -> Result<Keplerian, EquinoctialError> {
+        Ok(self
+            .to_modified_equinoctial()?
             .to_keplerian()
-            .expect("closed orbits have valid Keplerian elements")
+            .expect("closed orbits have valid Keplerian elements"))
     }
 }
 
@@ -498,9 +526,9 @@ mod tests {
                 RetrogradeFactor::from_inclination(kep.inclination())
             );
             for actual in [
-                eq.to_cartesian(mu()),
-                eq.to_keplerian().to_cartesian(mu()),
-                eq.to_modified_equinoctial().to_cartesian(mu()),
+                eq.to_cartesian(mu()).unwrap(),
+                eq.to_keplerian().unwrap().to_cartesian(mu()),
+                eq.to_modified_equinoctial().unwrap().to_cartesian(mu()),
             ] {
                 assert_approx_eq!(
                     actual.position(),
@@ -538,7 +566,7 @@ mod tests {
             atol <= 1e-12
         );
         assert_approx_eq!(
-            eq.true_longitude().as_f64(),
+            eq.true_longitude().unwrap().as_f64(),
             nu + periapsis + node,
             atol <= 1e-12
         );
@@ -582,10 +610,11 @@ mod tests {
             RetrogradeFactor::Prograde,
         )
         .unwrap();
-        assert!((eq.true_longitude() - lambda).as_f64().abs() < PI);
-        assert!((eq.eccentric_longitude() - lambda).as_f64().abs() < PI);
+        assert!((eq.true_longitude().unwrap() - lambda).as_f64().abs() < PI);
+        assert!((eq.eccentric_longitude().unwrap() - lambda).as_f64().abs() < PI);
         assert_approx_eq!(
             eq.to_modified_equinoctial()
+                .unwrap()
                 .to_equinoctial()
                 .unwrap()
                 .lambda(),
@@ -686,7 +715,7 @@ mod tests {
         let eq = keplerian(0.99, 1.0, 2.0, 3.0, 3.0)
             .to_equinoctial()
             .unwrap();
-        let f = eq.eccentric_longitude().as_f64();
+        let f = eq.eccentric_longitude().unwrap().as_f64();
         let residual = f - eq.k() * sin(f) + eq.h() * cos(f) - eq.lambda().as_f64();
         assert!(residual.abs() <= 4.0 * f64::EPSILON, "residual {residual}");
     }
@@ -748,8 +777,8 @@ mod tests {
             RetrogradeFactor::Retrograde,
         )
         .unwrap();
-        let actual = eq.to_cartesian(mu);
-        let expected = retrograde.to_cartesian(mu);
+        let actual = eq.to_cartesian(mu).unwrap();
+        let expected = retrograde.to_cartesian(mu).unwrap();
         assert_approx_eq!(actual.position(), expected.position(), atol <= 1e-6);
         assert_approx_eq!(actual.velocity(), expected.velocity(), atol <= 1e-9);
     }

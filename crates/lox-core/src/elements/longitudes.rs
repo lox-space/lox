@@ -13,7 +13,7 @@
 //!
 //! All functions require h² + k² < 1.
 
-use crate::anomalies::solve_kepler;
+use crate::anomalies::{AnomalyError, solve_kepler};
 use crate::math::float::{atan, sqrt};
 use crate::units::Angle;
 
@@ -44,13 +44,33 @@ pub(crate) fn eccentric_to_mean_longitude(eccentric_longitude: Angle, h: f64, k:
 }
 
 /// Converts the mean longitude λ to the eccentric longitude F.
-pub(crate) fn mean_to_eccentric_longitude(mean_longitude: Angle, h: f64, k: f64) -> Angle {
-    Angle::new(solve_kepler(mean_longitude.as_f64(), h, k))
+///
+/// # Errors
+///
+/// Returns [`AnomalyError::ConvergenceFailure`] if Kepler's equation cannot be solved.
+pub(crate) fn mean_to_eccentric_longitude(
+    mean_longitude: Angle,
+    h: f64,
+    k: f64,
+) -> Result<Angle, AnomalyError> {
+    Ok(Angle::new(solve_kepler(mean_longitude.as_f64(), h, k)?))
 }
 
 /// Converts the mean longitude λ to the true longitude L.
-pub(crate) fn mean_to_true_longitude(mean_longitude: Angle, h: f64, k: f64) -> Angle {
-    eccentric_to_true_longitude(mean_to_eccentric_longitude(mean_longitude, h, k), h, k)
+///
+/// # Errors
+///
+/// Returns [`AnomalyError::ConvergenceFailure`] if Kepler's equation cannot be solved.
+pub(crate) fn mean_to_true_longitude(
+    mean_longitude: Angle,
+    h: f64,
+    k: f64,
+) -> Result<Angle, AnomalyError> {
+    Ok(eccentric_to_true_longitude(
+        mean_to_eccentric_longitude(mean_longitude, h, k)?,
+        h,
+        k,
+    ))
 }
 
 /// Converts the true longitude L to the mean longitude λ.
@@ -109,7 +129,7 @@ mod tests {
             atol <= 1e-12
         );
         assert_approx_eq!(
-            mean_to_true_longitude(mean_longitude, h, k),
+            mean_to_true_longitude(mean_longitude, h, k).unwrap(),
             true_longitude,
             atol <= 1e-10
         );
@@ -120,7 +140,7 @@ mod tests {
         let l = 2.0.rad();
         assert_eq!(true_to_eccentric_longitude(l, 0.0, 0.0), l);
         assert_eq!(true_to_mean_longitude(l, 0.0, 0.0), l);
-        assert_eq!(mean_to_true_longitude(l, 0.0, 0.0), l);
+        assert_eq!(mean_to_true_longitude(l, 0.0, 0.0).unwrap(), l);
     }
 
     #[test]
@@ -130,7 +150,11 @@ mod tests {
             let l = Angle::new(1.0 + revolutions * TAU);
             let lambda = true_to_mean_longitude(l, h, k);
             assert!(abs(lambda.as_f64() - l.as_f64()) < PI);
-            assert_approx_eq!(mean_to_true_longitude(lambda, h, k), l, atol <= 1e-10);
+            assert_approx_eq!(
+                mean_to_true_longitude(lambda, h, k).unwrap(),
+                l,
+                atol <= 1e-10
+            );
         }
     }
 
@@ -142,7 +166,9 @@ mod tests {
                 let (h, k) = (e * sin(pomega), e * cos(pomega));
                 for revolution in [-2.0, 0.0, 3.0] {
                     let lambda = f64::from(step) * 0.0175 + revolution * TAU;
-                    let f = mean_to_eccentric_longitude(Angle::new(lambda), h, k).as_f64();
+                    let f = mean_to_eccentric_longitude(Angle::new(lambda), h, k)
+                        .unwrap()
+                        .as_f64();
                     let residual = f - k * sin(f) + h * cos(f) - lambda;
                     let scale = if lambda.abs() > 1.0 {
                         lambda.abs()
@@ -179,7 +205,9 @@ mod tests {
             lambda in -50.0..50.0f64,
         ) {
             let (h, k) = (e * sin(pomega), e * cos(pomega));
-            let f = mean_to_eccentric_longitude(Angle::new(lambda), h, k).as_f64();
+            let f = mean_to_eccentric_longitude(Angle::new(lambda), h, k)
+                .unwrap()
+                .as_f64();
             let tolerance = 8.0 * f64::EPSILON * abs(lambda).max(1.0);
             // The solution stays within e of the mean longitude, so in the same revolution.
             prop_assert!(abs(f - lambda) <= e + tolerance);
@@ -197,7 +225,7 @@ mod tests {
             lambda in -50.0..50.0f64,
         ) {
             let (h, k) = (e * sin(pomega), e * cos(pomega));
-            let true_longitude = mean_to_true_longitude(Angle::new(lambda), h, k);
+            let true_longitude = mean_to_true_longitude(Angle::new(lambda), h, k).unwrap();
             prop_assert!(abs(true_longitude.as_f64() - lambda) < PI);
             let mean_longitude = true_to_mean_longitude(true_longitude, h, k).as_f64();
             prop_assert!(abs(mean_longitude - lambda) <= 1e-10, "error: {}", mean_longitude - lambda);

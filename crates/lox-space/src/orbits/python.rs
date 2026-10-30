@@ -17,8 +17,8 @@ use crate::orbits::propagators::numerical::{NumericalError, NumericalPropagator}
 use crate::orbits::propagators::semi_analytical::{Vallado, ValladoError};
 use crate::orbits::propagators::sgp4::{Sgp4, Sgp4Error};
 use crate::orbits::{
-    CartesianOrbit, EquinoctialOrbit, ModifiedEquinoctialOrbit, ToEquinoctialError,
-    ToKeplerianError, ToModifiedEquinoctialError, Trajectory, TrajectoryError,
+    CartesianOrbit, EquinoctialOrbit, FromEquinoctialError, ModifiedEquinoctialOrbit,
+    ToEquinoctialError, ToKeplerianError, ToModifiedEquinoctialError, Trajectory, TrajectoryError,
     TrajectoryTransformationError,
 };
 use crate::time::Time;
@@ -1158,14 +1158,24 @@ impl PyEquinoctial {
     }
 
     /// Return the true longitude L = ν + ω + I·Ω, in the same revolution as the mean longitude.
-    fn true_longitude(&self) -> PyAngle {
-        PyAngle(self.0.state().true_longitude())
+    ///
+    /// Raises:
+    ///     ValueError: If Kepler's equation cannot be solved.
+    fn true_longitude(&self) -> PyResult<PyAngle> {
+        Ok(PyAngle(
+            self.0.state().true_longitude().map_err(value_error)?,
+        ))
     }
 
     /// Return the eccentric longitude F = E + ω + I·Ω, in the same revolution as the mean
     /// longitude.
-    fn eccentric_longitude(&self) -> PyAngle {
-        PyAngle(self.0.state().eccentric_longitude())
+    ///
+    /// Raises:
+    ///     ValueError: If Kepler's equation cannot be solved.
+    fn eccentric_longitude(&self) -> PyResult<PyAngle> {
+        Ok(PyAngle(
+            self.0.state().eccentric_longitude().map_err(value_error)?,
+        ))
     }
 
     /// Return whether the elements use the retrograde set (retrograde factor I = -1).
@@ -1190,28 +1200,39 @@ impl PyEquinoctial {
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
+    ///     ValueError: If Kepler's equation cannot be solved.
     fn to_cartesian(&self) -> PyResult<PyCartesian> {
-        Ok(PyCartesian(
-            self.0
-                .try_to_cartesian()
-                .map_err(PyUndefinedOriginPropertyError)?,
-        ))
+        let cartesian = self.0.try_to_cartesian().map_err(|err| match err {
+            FromEquinoctialError::UndefinedOriginProperty(err) => {
+                PyUndefinedOriginPropertyError(err).into()
+            }
+            FromEquinoctialError::Equinoctial(err) => value_error(err),
+        })?;
+        Ok(PyCartesian(cartesian))
     }
 
     /// Convert these equinoctial elements to Keplerian orbital elements.
     ///
     /// Returns:
     ///     Keplerian elements representing this orbit.
-    fn to_keplerian(&self) -> PyKeplerian {
-        PyKeplerian(self.0.to_keplerian())
+    ///
+    /// Raises:
+    ///     ValueError: If Kepler's equation cannot be solved.
+    fn to_keplerian(&self) -> PyResult<PyKeplerian> {
+        Ok(PyKeplerian(self.0.to_keplerian().map_err(value_error)?))
     }
 
     /// Convert these equinoctial elements to modified equinoctial elements.
     ///
     /// Returns:
     ///     Modified equinoctial elements representing this orbit.
-    fn to_modified_equinoctial(&self) -> PyModifiedEquinoctial {
-        PyModifiedEquinoctial(self.0.to_modified_equinoctial())
+    ///
+    /// Raises:
+    ///     ValueError: If Kepler's equation cannot be solved.
+    fn to_modified_equinoctial(&self) -> PyResult<PyModifiedEquinoctial> {
+        Ok(PyModifiedEquinoctial(
+            self.0.to_modified_equinoctial().map_err(value_error)?,
+        ))
     }
 
     fn __repr__(&self) -> String {
