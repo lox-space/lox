@@ -21,7 +21,6 @@ use core::fmt::Display;
 use core::str::FromStr;
 
 use crate::units::Angle;
-use crate::units::Sign;
 use nom::{Parser, combinator::all_consuming};
 use thiserror::Error;
 
@@ -334,10 +333,14 @@ impl TimeOfDay {
     ///
     /// - ERFA [`tf2d`](https://github.com/liberfa/erfa/blob/master/src/tf2d.c)
     pub fn to_day_fraction(&self) -> f64 {
-        let total_seconds = self.hour as f64 * SECONDS_PER_HOUR as f64
+        self.seconds_of_day_f64() / SECONDS_PER_DAY as f64
+    }
+
+    /// Returns the seconds since the start of the day, including the subsecond.
+    fn seconds_of_day_f64(&self) -> f64 {
+        self.hour as f64 * SECONDS_PER_HOUR as f64
             + self.minute as f64 * SECONDS_PER_MINUTE as f64
-            + self.second_f64();
-        total_seconds / SECONDS_PER_DAY as f64
+            + self.second_f64()
     }
 
     /// Returns the number of integral seconds since the start of the day.
@@ -349,13 +352,7 @@ impl TimeOfDay {
 
     /// Converts the time of day to an [`Angle`] (hour angle representation).
     pub fn to_angle(&self) -> Angle {
-        // `TimeOfDay` hours are always non-negative.
-        Angle::from_hms(
-            Sign::Positive,
-            self.hour as u32,
-            self.minute,
-            self.second_f64(),
-        )
+        Angle::seconds_of_time(self.seconds_of_day_f64())
     }
 }
 

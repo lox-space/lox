@@ -239,7 +239,7 @@ where
                 .to_mean(self.eccentricity())
                 .ok()?
                 .as_angle()
-                .mod_two_pi(),
+                .wrap_unsigned(),
         );
 
         let time_of_flight = |ecc: f64| {

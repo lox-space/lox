@@ -5,6 +5,10 @@
 
 //! Newtype wrappers for unitful [`f64`] double precision values
 
+mod sexagesimal;
+
+pub use sexagesimal::{Dms, Hms, SexagesimalError};
+
 use core::{
     cmp::Ordering,
     f64::consts::{FRAC_PI_2, FRAC_PI_4, PI, TAU},
@@ -18,8 +22,8 @@ use lox_approx::ApproxEq;
 
 use crate::f64::consts::SECONDS_PER_DAY;
 use crate::math::float::{
-    abs, acos, acosh, asin, asinh, atan, atan2, atanh, cos, cosh, log10, powf, round, sin, sin_cos,
-    sinh, tan, tanh, to_degrees, to_radians,
+    abs, acos, acosh, asin, asinh, atan, atan2, atanh, cos, cosh, log10, powf, sin, sin_cos, sinh,
+    tan, tanh, to_degrees, to_radians,
 };
 
 /// Degrees in full circle
@@ -31,10 +35,8 @@ pub const ARCSECONDS_IN_CIRCLE: f64 = DEGREES_IN_CIRCLE * 60.0 * 60.0;
 /// Radians per arcsecond
 pub const RADIANS_IN_ARCSECOND: f64 = TAU / ARCSECONDS_IN_CIRCLE;
 
-/// Rounding granularity (arcseconds) used by the HMS/DMS decomposition
-/// methods to suppress floating-point undershoot at integer boundaries.
-/// See [`Angle::to_dms`] / [`Angle::to_hms`].
-const HMS_DMS_ROUNDING_ARCSEC: f64 = 1e-9;
+/// Radians per second of time
+const RADIANS_IN_SECOND_OF_TIME: f64 = TAU / SECONDS_PER_DAY;
 
 /// Sign of a signed component. Used for HMS/DMS decomposition.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -102,25 +104,6 @@ macro_rules! impl_sign_from_signed_int {
 }
 impl_sign_from_signed_int!(i8, i16, i32, i64, isize);
 
-/// Decomposes a signed arcsecond total into `(Sign, hours-or-degrees,
-/// minutes, seconds)`. Used by [`Angle::to_dms`] and [`Angle::to_hms`].
-///
-/// `unit_arcsec` is the number of arcseconds per major unit
-/// (3600.0 for degrees, 3600.0 × 15.0 = 54000.0 for hours).
-fn decompose_signed_arcseconds(total_arcsec: f64, unit_arcsec: f64) -> (Sign, u32, u8, f64) {
-    let sign = Sign::from(total_arcsec);
-    let abs_arcsec = abs(total_arcsec);
-    // Round to the nearest HMS_DMS_ROUNDING_ARCSEC to suppress floating-point
-    // undershoot at integer boundaries (e.g. 1799.999…98 → 1800.0).
-    let abs_arcsec = round(abs_arcsec / HMS_DMS_ROUNDING_ARCSEC) * HMS_DMS_ROUNDING_ARCSEC;
-    let major = (abs_arcsec / unit_arcsec) as u32;
-    let rem = abs_arcsec - (major as f64) * unit_arcsec;
-    // 60 arcseconds in an arcminute, 60 seconds in a minute.
-    let minutes = (rem / 60.0) as u8;
-    let seconds = rem - (minutes as f64) * 60.0;
-    (sign, major, minutes, seconds)
-}
-
 /// Angle in radians.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -142,18 +125,6 @@ impl Angle {
         Self(rad)
     }
 
-    /// Creates a new angle from an `f64` value in radians and normalize the angle
-    /// to the interval [0.0, 2π).
-    pub const fn radians_normalized(rad: f64) -> Self {
-        Self(rad).mod_two_pi()
-    }
-
-    /// Creates a new angle from an `f64` value in radians and normalize the angle
-    /// to the interval (-2π, 2π).
-    pub const fn radians_normalized_signed(rad: f64) -> Self {
-        Self(rad).mod_two_pi_signed()
-    }
-
     /// Creates a new angle from an `f64` value in microradians.
     pub const fn microradians(urad: f64) -> Self {
         Self(urad / 1e6)
@@ -162,47 +133,6 @@ impl Angle {
     /// Creates a new angle from an `f64` value in degrees.
     pub const fn degrees(deg: f64) -> Self {
         Self(to_radians(deg))
-    }
-
-    /// Creates a new angle from sign, hours, minutes, and seconds (HMS notation).
-    ///
-    /// All magnitude components are non-negative; the sign is carried by the
-    /// `Sign` argument. This shape lets the function represent angles in
-    /// `(−1h, 0h)` (e.g. `−0h 30m 0s`) that an `i64 hours` argument cannot.
-    ///
-    /// Inverse of [`Angle::to_hms`]; round-trip is perfect.
-    ///
-    /// # References
-    ///
-    /// - ERFA [`tf2a`](https://github.com/liberfa/erfa/blob/master/src/tf2a.c)
-    pub const fn from_hms(sign: Sign, hours: u32, minutes: u8, seconds: f64) -> Self {
-        let mag = 15.0 * (hours as f64 + minutes as f64 / 60.0 + seconds / 3600.0);
-        Self::degrees(sign.as_f64() * mag)
-    }
-
-    /// Creates a new angle from sign, degrees, arcminutes, and arcseconds.
-    ///
-    /// All magnitude components are non-negative; the sign is carried by the
-    /// `Sign` argument. Inverse of [`Angle::to_dms`].
-    ///
-    /// # References
-    ///
-    /// - ERFA [`af2a`](https://github.com/liberfa/erfa/blob/master/src/af2a.c)
-    pub const fn from_dms(sign: Sign, degrees: u32, minutes: u8, seconds: f64) -> Self {
-        let mag = degrees as f64 + minutes as f64 / 60.0 + seconds / 3600.0;
-        Self::degrees(sign.as_f64() * mag)
-    }
-
-    /// Creates a new angle from an `f64` value in degrees and normalize the angle
-    /// to the interval [0.0, 2π).
-    pub const fn degrees_normalized(deg: f64) -> Self {
-        Self(to_radians(deg % DEGREES_IN_CIRCLE)).mod_two_pi()
-    }
-
-    /// Creates a new angle from an `f64` value in degrees and normalize the angle
-    /// to the interval (-2π, 2π).
-    pub const fn degrees_normalized_signed(deg: f64) -> Self {
-        Self(to_radians(deg % DEGREES_IN_CIRCLE))
     }
 
     /// Creates a new angle from an `f64` value in arcseconds.
@@ -220,16 +150,19 @@ impl Angle {
         Self::arcseconds(uas / 1e6)
     }
 
-    /// Creates a new angle from an `f64` value in arcseconds and normalize the angle
-    /// to the interval [0.0, 2π).
-    pub const fn arcseconds_normalized(asec: f64) -> Self {
-        Self((asec % ARCSECONDS_IN_CIRCLE) * RADIANS_IN_ARCSECOND).mod_two_pi()
+    /// Creates a new angle from an `f64` value in arcseconds, reduced to the remainder of a full
+    /// circle with the sign of `asec`, in the interval (-2π, 2π).
+    ///
+    /// Equivalent to `Angle::arcseconds(asec).rem_two_pi()`, but without the loss of precision
+    /// for large values.
+    pub const fn arcseconds_rem(asec: f64) -> Self {
+        Self::arcseconds(asec % ARCSECONDS_IN_CIRCLE)
     }
 
-    /// Creates a new angle from an `f64` value in arcseconds and normalize the angle
-    /// to the interval (-2π, 2π).
-    pub const fn arcseconds_normalized_signed(asec: f64) -> Self {
-        Self((asec % ARCSECONDS_IN_CIRCLE) * RADIANS_IN_ARCSECOND)
+    /// Creates a new angle from an `f64` value in seconds of time, with 86400 seconds to the full
+    /// circle.
+    pub const fn seconds_of_time(s: f64) -> Self {
+        Self(s * RADIANS_IN_SECOND_OF_TIME)
     }
 
     /// Returns `true` if the angle is exactly zero.
@@ -307,28 +240,53 @@ impl Angle {
         tanh(self.0)
     }
 
-    /// Returns a new angle that is normalized to the interval [0.0, 2π).
-    pub const fn mod_two_pi(self) -> Self {
+    /// Returns the angle wrapped to the interval [0, 2π).
+    pub const fn wrap_unsigned(self) -> Self {
         let mut a = self.0 % TAU;
         if a < 0.0 {
-            a += TAU
+            a += TAU;
+            // A tiny negative remainder rounds up to 2π, whose closest representative is 0.
+            if a == TAU {
+                a = 0.0;
+            }
+        }
+        // Adding zero turns -0.0 into 0.0.
+        Self(a + 0.0)
+    }
+
+    /// Returns the angle wrapped to the interval [-π, π).
+    pub const fn wrap_signed(self) -> Self {
+        self.wrap_around(Self::ZERO)
+    }
+
+    /// Returns the angle wrapped to the interval [center - π, center + π).
+    ///
+    /// The result is accurate for centers well below 10¹⁶ rad in magnitude; beyond that, `center`
+    /// and `center ± π` are no longer distinct in floating point.
+    pub const fn wrap_around(self, center: Self) -> Self {
+        // The remainder is exact, and so is the shift by 2π, which leaves `w` in [-π, π).
+        let mut w = (self.0 - center.0) % TAU;
+        if w >= PI {
+            w -= TAU;
+        } else if w < -PI {
+            w += TAU;
+        }
+        let mut a = w + center.0;
+        // Adding a non-zero center can round onto the open upper bound. The same value one turn
+        // down then lies on the closed lower bound, but can round to just below it.
+        if a >= center.0 + PI {
+            a -= TAU;
+            if a < center.0 - PI {
+                a = center.0 - PI;
+            }
         }
         Self(a)
     }
 
-    /// Returns a new angle that is normalized to the interval (-2π, 2π).
-    pub const fn mod_two_pi_signed(self) -> Self {
+    /// Returns the remainder of the angle divided by 2π, with the sign of the angle, in the
+    /// interval (-2π, 2π).
+    pub const fn rem_two_pi(self) -> Self {
         Self(self.0 % TAU)
-    }
-
-    /// Returns a new angle that is normalized to the `[center - π, center + π)` interval.
-    pub const fn normalize_two_pi(self, center: Self) -> Self {
-        // Inline const-compatible floor (f64::floor isn't const in no_std).
-        // The quotient is bounded by the angle range so the `as i64` cast is safe.
-        let q = (self.0 + PI - center.0) / TAU;
-        let i = q as i64 as f64;
-        let floor_q = if q < i { i - 1.0 } else { i };
-        Self(self.0 - TAU * floor_q)
     }
 
     /// Returns the value of the angle in radians.
@@ -349,6 +307,11 @@ impl Angle {
     /// Returns the value of the angle in arcseconds.
     pub const fn to_arcseconds(self) -> f64 {
         self.0 / RADIANS_IN_ARCSECOND
+    }
+
+    /// Returns the value of the angle in seconds of time, with 86400 seconds to the full circle.
+    pub const fn to_seconds_of_time(self) -> f64 {
+        self.0 / RADIANS_IN_SECOND_OF_TIME
     }
 
     /// Returns the value of the angle in milliarcseconds.
@@ -374,39 +337,6 @@ impl Angle {
     /// Returns the 3×3 rotation matrix for a rotation about the Z axis.
     pub fn rotation_z(self) -> DMat3 {
         DMat3::from_rotation_z(-self.to_radians())
-    }
-
-    /// Decomposes the angle into (sign, hours, minutes, seconds).
-    ///
-    /// Treats the angle as a clock-time hour angle (15° per hour). The
-    /// returned `hours` and `minutes` are non-negative; `seconds` is in
-    /// `[0.0, 60.0)`.
-    ///
-    /// Inverse of [`Angle::from_hms`]; round-trip is perfect.
-    ///
-    /// # References
-    ///
-    /// - ERFA [`a2tf`](https://github.com/liberfa/erfa/blob/master/src/a2tf.c)
-    pub fn to_hms(self) -> (Sign, u32, u8, f64) {
-        // 1 hour-of-angle = 15° = 15 × 3600 arcseconds.
-        // Divide arcseconds by 15 so `decompose_signed_arcseconds` treats
-        // 3600 units-per-major as 3600 time-seconds-per-hour.
-        decompose_signed_arcseconds(self.to_arcseconds() / 15.0, 3600.0)
-    }
-
-    /// Decomposes the angle into (sign, degrees, arcminutes, arcseconds).
-    ///
-    /// The returned `degrees` and `arcminutes` are non-negative; `arcseconds`
-    /// is in `[0.0, 60.0)`. Arcseconds are rounded to the nearest 1e-9
-    /// arcsecond to suppress floating-point undershoot at integer boundaries.
-    ///
-    /// Inverse of [`Angle::from_dms`]; round-trip is perfect.
-    ///
-    /// # References
-    ///
-    /// - ERFA [`a2af`](https://github.com/liberfa/erfa/blob/master/src/a2af.c)
-    pub fn to_dms(self) -> (Sign, u32, u8, f64) {
-        decompose_signed_arcseconds(self.to_arcseconds(), 3600.0)
     }
 }
 
@@ -1555,13 +1485,13 @@ mod tests {
     #[case(Angle::TAU, -Angle::PI, -TAU)]
     #[case(Angle::FRAC_PI_2, -Angle::PI, -3.0 * PI / 2.0)]
     #[case(-Angle::FRAC_PI_2, -Angle::PI, -FRAC_PI_2)]
-    fn test_angle_normalize_two_pi(#[case] angle: Angle, #[case] center: Angle, #[case] exp: f64) {
+    fn test_angle_wrap_around(#[case] angle: Angle, #[case] center: Angle, #[case] exp: f64) {
         // atol is preferred to rtol for floating-point comparisons with 0.0. See
         // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/#inferna
         if exp == 0.0 {
-            assert_approx_eq!(angle.normalize_two_pi(center).0, exp, atol <= TOLERANCE);
+            assert_approx_eq!(angle.wrap_around(center).0, exp, atol <= TOLERANCE);
         } else {
-            assert_approx_eq!(angle.normalize_two_pi(center).0, exp, rtol <= TOLERANCE);
+            assert_approx_eq!(angle.wrap_around(center).0, exp, rtol <= TOLERANCE);
         }
     }
 
@@ -1963,21 +1893,6 @@ mod tests {
     }
 
     #[test]
-    fn test_angle_from_hms_erfa_tf2a() {
-        // ERFA t_erfa_c.c::t_tf2a: tf2a('+', 4, 58, 20.2) = 1.301739278189537429 rad
-        let a = Angle::from_hms(Sign::Positive, 4, 58, 20.2);
-        assert_approx_eq!(a.to_radians(), 1.301_739_278_189_537_4, atol <= 1e-12);
-    }
-
-    #[test]
-    fn test_angle_from_hms_negative_within_one_hour() {
-        // -0h 30m 0s must be representable as a negative angle.
-        let a = Angle::from_hms(Sign::Negative, 0, 30, 0.0);
-        assert!(a < Angle::ZERO);
-        assert_approx_eq!(a.to_degrees(), -7.5, atol <= 1e-12);
-    }
-
-    #[test]
     fn test_angle_arcseconds_roundtrip() {
         let a = Angle::arcseconds(3600.0); // = 1 degree
         assert_approx_eq!(a.to_degrees(), 1.0, rtol <= 1e-10);
@@ -1985,44 +1900,35 @@ mod tests {
     }
 
     #[test]
-    fn test_angle_arcseconds_normalized() {
-        // ARCSECONDS_IN_CIRCLE + 3600 should normalize to 3600 arcsec = 1 deg
-        let a = Angle::arcseconds_normalized(ARCSECONDS_IN_CIRCLE + 3600.0);
-        assert_approx_eq!(a.to_arcseconds(), 3600.0, rtol <= 1e-10);
+    fn test_angle_arcseconds_rem() {
+        let a = Angle::arcseconds_rem(ARCSECONDS_IN_CIRCLE + 3600.0);
+        assert_approx_eq!(a.to_degrees(), 1.0, rtol <= 1e-12);
+        let a = Angle::arcseconds_rem(-ARCSECONDS_IN_CIRCLE - 3600.0);
+        assert_approx_eq!(a.to_degrees(), -1.0, rtol <= 1e-12);
     }
 
     #[test]
-    fn test_angle_arcseconds_normalized_signed() {
-        let a = Angle::arcseconds_normalized_signed(-ARCSECONDS_IN_CIRCLE - 3600.0);
-        // Signed normalisation: just removes full circles, sign preserved
-        let deg = a.to_degrees();
-        assert!(deg < 0.0);
+    fn test_angle_arcseconds_rem_keeps_precision_for_large_values() {
+        // Mean anomaly of the Moon (IERS 2003) at t = 0.8 Julian centuries; the expected value is
+        // the ERFA t_erfa_c.c::t_fal03 test vector.
+        let t = 0.8;
+        let asec = 485_868.249_036
+            + t * (1_717_915_923.217_8 + t * (31.8792 + t * (0.051_635 + t * -0.000_244_70)));
+        assert_approx_eq!(
+            Angle::arcseconds_rem(asec).to_radians(),
+            5.132_369_751_108_684,
+            atol <= 1e-12
+        );
     }
 
     #[test]
-    fn test_angle_degrees_normalized() {
-        let a = Angle::degrees_normalized(370.0); // 370 mod 360 = 10, then to [0, 2π)
-        assert_approx_eq!(a.to_degrees(), 10.0, rtol <= 1e-10);
-    }
-
-    #[test]
-    fn test_angle_degrees_normalized_signed() {
-        let a = Angle::degrees_normalized_signed(-10.0);
-        assert_approx_eq!(a.to_degrees(), -10.0, rtol <= 1e-10);
-    }
-
-    #[test]
-    fn test_angle_radians_normalized() {
-        use core::f64::consts::TAU;
-        let a = Angle::radians_normalized(TAU + 0.5);
-        assert_approx_eq!(a.to_radians(), 0.5, rtol <= 1e-10);
-    }
-
-    #[test]
-    fn test_angle_radians_normalized_signed() {
-        use core::f64::consts::TAU;
-        let a = Angle::radians_normalized_signed(-TAU - 0.5);
-        assert!(a < Angle::ZERO);
+    fn test_angle_seconds_of_time() {
+        assert_eq!(Angle::seconds_of_time(43200.0), Angle::PI);
+        assert_approx_eq!(
+            Angle::degrees(15.0).to_seconds_of_time(),
+            3600.0,
+            rtol <= 1e-15
+        );
     }
 
     #[test]
@@ -2104,17 +2010,119 @@ mod tests {
     }
 
     #[test]
-    fn test_angle_mod_two_pi() {
-        use core::f64::consts::TAU;
-        let a = Angle::radians(TAU + 1.0).mod_two_pi();
+    fn test_angle_wrap_unsigned() {
+        let a = Angle::radians(TAU + 1.0).wrap_unsigned();
         assert_approx_eq!(a.to_radians(), 1.0, rtol <= 1e-10);
+        let a = Angle::radians(-1.0).wrap_unsigned();
+        assert_approx_eq!(a.to_radians(), TAU - 1.0, rtol <= 1e-15);
     }
 
     #[test]
-    fn test_angle_mod_two_pi_signed() {
-        use core::f64::consts::TAU;
-        let a = Angle::radians(TAU + 1.0).mod_two_pi_signed();
+    fn test_angle_wrap_unsigned_tiny_negative_stays_below_two_pi() {
+        // -1e-17 + 2π rounds to 2π itself, which is outside [0, 2π).
+        assert_eq!(Angle::radians(-1e-17).wrap_unsigned(), Angle::ZERO);
+    }
+
+    #[test]
+    fn test_angle_wrap_unsigned_negative_zero_is_positive() {
+        let a = Angle::radians(-0.0).wrap_unsigned().to_radians();
+        assert!(a == 0.0 && a.is_sign_positive());
+        let a = Angle::radians(-TAU).wrap_unsigned().to_radians();
+        assert!(a == 0.0 && a.is_sign_positive());
+    }
+
+    #[test]
+    fn test_angle_wrap_signed() {
+        assert_eq!(Angle::PI.wrap_signed(), -Angle::PI);
+        assert_approx_eq!(
+            Angle::radians(TAU - 1.0).wrap_signed().to_radians(),
+            -1.0,
+            rtol <= 1e-12
+        );
+    }
+
+    #[test]
+    fn test_angle_wrap_signed_rounding_stays_in_range() {
+        // Rounding used to give a value below -π here.
+        let a = Angle::radians(-12569.512207012762).wrap_signed();
+        assert!(a.to_radians() >= -PI && a.to_radians() < PI);
+    }
+
+    #[test]
+    fn test_angle_wrap_stays_in_range_for_large_values() {
+        assert!(
+            Angle::radians(3.611500533622795e19)
+                .wrap_signed()
+                .to_radians()
+                < PI
+        );
+        // Deterministic pseudo-random magnitudes between 1e3 and 1e20, both signs.
+        let mut state: u64 = 0x9e37_79b9_7f4a_7c15;
+        for _ in 0..10_000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let mantissa = 1.0 + (state >> 11) as f64 / (1u64 << 53) as f64;
+            let exponent = 3 + (state % 18) as i32;
+            let sign = if state & 1 == 0 { 1.0 } else { -1.0 };
+            let mut x = sign * mantissa;
+            for _ in 0..exponent {
+                x *= 10.0;
+            }
+            let a = Angle::radians(x);
+            let signed = a.wrap_signed().to_radians();
+            assert!((-PI..PI).contains(&signed), "{x}: {signed}");
+            let unsigned = a.wrap_unsigned().to_radians();
+            assert!((0.0..TAU).contains(&unsigned), "{x}: {unsigned}");
+            let around = a.wrap_around(Angle::radians(1.0)).to_radians();
+            assert!((1.0 - PI..1.0 + PI).contains(&around), "{x}: {around}");
+        }
+    }
+
+    #[test]
+    fn test_angle_wrap_around_boundaries_with_arbitrary_centers() {
+        let center = Angle::radians(-44.88935050308772);
+        let a = Angle::radians(-48.030943156677516).wrap_around(center);
+        assert!(a >= center - Angle::PI && a < center + Angle::PI);
+        // Deterministic pseudo-random centers, with inputs within 1e-13 of the boundaries.
+        let mut state: u64 = 0x2545_f491_4f6c_dd1d;
+        let mut uniform = || {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            (state >> 11) as f64 / (1u64 << 53) as f64
+        };
+        for _ in 0..100_000 {
+            let c = (uniform() - 0.5) * 200.0;
+            let turns = ((uniform() - 0.5) * 20.0).round();
+            let x = c + PI + turns * TAU + (uniform() - 0.5) * 1e-13;
+            let a = Angle::radians(x)
+                .wrap_around(Angle::radians(c))
+                .to_radians();
+            assert!(a >= c - PI && a < c + PI, "{x} around {c}: {a}");
+        }
+    }
+
+    #[test]
+    fn test_angle_wrap_around_large_value() {
+        // Larger than i64::MAX radians; must not saturate.
+        let a = Angle::radians(1e20).wrap_around(Angle::ZERO);
+        assert!(a.to_radians() >= -PI && a.to_radians() < PI);
+    }
+
+    #[test]
+    fn test_angle_wrap_non_finite_is_nan() {
+        assert!(Angle::radians(f64::NAN).wrap_signed().is_nan());
+        assert!(Angle::radians(f64::INFINITY).wrap_signed().is_nan());
+        assert!(Angle::radians(f64::INFINITY).wrap_unsigned().is_nan());
+    }
+
+    #[test]
+    fn test_angle_rem_two_pi() {
+        let a = Angle::radians(TAU + 1.0).rem_two_pi();
         assert_approx_eq!(a.to_radians(), 1.0, rtol <= 1e-10);
+        let a = Angle::radians(-TAU - 1.0).rem_two_pi();
+        assert_approx_eq!(a.to_radians(), -1.0, rtol <= 1e-10);
     }
 
     #[test]
@@ -2485,100 +2493,6 @@ mod tests {
     fn test_sign_display() {
         assert_eq!(format!("{}", Sign::Positive), "+");
         assert_eq!(format!("{}", Sign::Negative), "-");
-    }
-
-    #[test]
-    fn test_angle_from_dms_erfa_af2a() {
-        // ERFA t_erfa_c.c::t_af2a: af2a('-', 45, 13, 27.2) = -0.7893115794313644842 rad
-        let a = Angle::from_dms(Sign::Negative, 45, 13, 27.2);
-        assert_approx_eq!(a.to_radians(), -0.789_311_579_431_364_4, atol <= 1e-12);
-    }
-
-    #[test]
-    fn test_angle_from_dms_negative_within_one_degree() {
-        // -0° 30' 0" must be representable.
-        let a = Angle::from_dms(Sign::Negative, 0, 30, 0.0);
-        assert!(a < Angle::ZERO);
-        assert_approx_eq!(a.to_degrees(), -0.5, atol <= 1e-12);
-    }
-
-    #[test]
-    fn test_angle_to_hms_erfa_a2tf() {
-        // ERFA t_erfa_c.c::t_a2tf: a2tf(4, -3.01234) -> -11h 30m 22.6484s
-        let (sign, hours, min, sec) = Angle::radians(-3.01234).to_hms();
-        assert_eq!(sign, Sign::Negative);
-        assert_eq!(hours, 11);
-        assert_eq!(min, 30);
-        assert_approx_eq!(sec, 22.6484, atol <= 1e-4);
-    }
-
-    #[test]
-    fn test_angle_to_hms_negative_within_one_hour() {
-        // -7.5° = -0h 30m 0s. Tests that the `-0h` case is representable.
-        let (sign, hours, min, sec) = Angle::degrees(-7.5).to_hms();
-        assert_eq!(sign, Sign::Negative);
-        assert_eq!(hours, 0);
-        assert_eq!(min, 30);
-        assert_approx_eq!(sec, 0.0, atol <= 1e-10);
-    }
-
-    #[test]
-    fn test_angle_to_dms_erfa_a2af() {
-        // ERFA t_erfa_c.c::t_a2af: a2af(4, 2.345) -> +134° 21' 30.9706"
-        let (sign, deg, min, sec) = Angle::radians(2.345).to_dms();
-        assert_eq!(sign, Sign::Positive);
-        assert_eq!(deg, 134);
-        assert_eq!(min, 21);
-        assert_approx_eq!(sec, 30.9706, atol <= 1e-4);
-    }
-
-    #[test]
-    fn test_angle_to_dms_negative() {
-        // -0.5° should round-trip via to_dms exactly.
-        let (sign, deg, min, sec) = Angle::degrees(-0.5).to_dms();
-        assert_eq!(sign, Sign::Negative);
-        assert_eq!(deg, 0);
-        assert_eq!(min, 30);
-        assert_approx_eq!(sec, 0.0, atol <= 1e-10);
-    }
-
-    #[test]
-    fn test_angle_to_dms_zero() {
-        let (sign, deg, min, sec) = Angle::ZERO.to_dms();
-        assert_eq!(sign, Sign::Positive);
-        assert_eq!(deg, 0);
-        assert_eq!(min, 0);
-        assert_eq!(sec, 0.0);
-    }
-
-    #[rstest]
-    #[case(0.0)]
-    #[case(0.5)]
-    #[case(-0.5)]
-    #[case(2.345)]
-    #[case(-3.01234)]
-    #[case(core::f64::consts::PI)]
-    #[case(-core::f64::consts::PI)]
-    fn test_angle_dms_roundtrip(#[case] radians: f64) {
-        let a = Angle::radians(radians);
-        let (sign, deg, min, sec) = a.to_dms();
-        let b = Angle::from_dms(sign, deg, min, sec);
-        assert_approx_eq!(a.to_radians(), b.to_radians(), atol <= 1e-12);
-    }
-
-    #[rstest]
-    #[case(0.0)]
-    #[case(0.5)]
-    #[case(-0.5)]
-    #[case(2.345)]
-    #[case(-3.01234)]
-    #[case(core::f64::consts::PI)]
-    #[case(-core::f64::consts::PI)]
-    fn test_angle_hms_roundtrip(#[case] radians: f64) {
-        let a = Angle::radians(radians);
-        let (sign, hours, min, sec) = a.to_hms();
-        let b = Angle::from_hms(sign, hours, min, sec);
-        assert_approx_eq!(a.to_radians(), b.to_radians(), atol <= 1e-12);
     }
 
     #[test]

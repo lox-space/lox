@@ -115,10 +115,11 @@ impl FlowerBuilder {
         let mut satellites = Vec::with_capacity(self.nsats);
 
         for i_sat in 0..self.nsats {
-            let raan = Angle::radians_normalized(
+            let raan = Angle::radians(
                 self.longitude_of_ascending_node.to_radians() + i_sat as f64 * delta_raan,
-            );
-            let mean_anomaly = Angle::radians_normalized(i_sat as f64 * delta_anom);
+            )
+            .wrap_unsigned();
+            let mean_anomaly = Angle::radians(i_sat as f64 * delta_anom).wrap_unsigned();
 
             let elements = KeplerianBuilder::new()
                 .with_semi_major_axis(sma, ecc)

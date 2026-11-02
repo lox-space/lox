@@ -47,8 +47,8 @@ proptest! {
         let back = true_anom.to_eccentric(ecc).expect("conversion should succeed");
 
         // Normalize both angles to [0, 2π) for comparison
-        let original = eccentric.as_angle().mod_two_pi();
-        let roundtrip = back.as_angle().mod_two_pi();
+        let original = eccentric.as_angle().wrap_unsigned();
+        let roundtrip = back.as_angle().wrap_unsigned();
 
         prop_assert!(
             approx_eq!(original.to_radians(), roundtrip.to_radians(), rtol <= 1e-12),
@@ -67,8 +67,8 @@ proptest! {
         let back = true_anom.to_eccentric(ecc).expect("conversion should succeed");
 
         // Normalize both angles to [0, 2π) for comparison
-        let original = eccentric.as_angle().mod_two_pi();
-        let roundtrip = back.as_angle().mod_two_pi();
+        let original = eccentric.as_angle().wrap_unsigned();
+        let roundtrip = back.as_angle().wrap_unsigned();
 
         prop_assert!(
             approx_eq!(original.to_radians(), roundtrip.to_radians(), rtol <= 1e-9),
@@ -89,8 +89,8 @@ proptest! {
         let back = eccentric.to_true(ecc);
 
         // Normalize both angles to [0, 2π) for comparison
-        let original = true_anom.as_angle().mod_two_pi();
-        let roundtrip = back.as_angle().mod_two_pi();
+        let original = true_anom.as_angle().wrap_unsigned();
+        let roundtrip = back.as_angle().wrap_unsigned();
 
         prop_assert!(
             approx_eq!(original.to_radians(), roundtrip.to_radians(), rtol <= 1e-12),
@@ -108,8 +108,8 @@ proptest! {
         let back = mean_anom.to_true(ecc).expect("solver should converge");
 
         // Normalize both angles to [0, 2π) for comparison
-        let original = true_anom.as_angle().mod_two_pi();
-        let roundtrip = back.as_angle().mod_two_pi();
+        let original = true_anom.as_angle().wrap_unsigned();
+        let roundtrip = back.as_angle().wrap_unsigned();
 
         prop_assert!(
             approx_eq!(original.to_radians(), roundtrip.to_radians(), rtol <= 1e-9),
@@ -127,8 +127,8 @@ proptest! {
         let back = true_anom.to_mean(ecc).expect("conversion should succeed");
 
         // Normalize both angles to [0, 2π) for comparison
-        let original = mean_anom.as_angle().mod_two_pi();
-        let roundtrip = back.as_angle().mod_two_pi();
+        let original = mean_anom.as_angle().wrap_unsigned();
+        let roundtrip = back.as_angle().wrap_unsigned();
 
         prop_assert!(
             approx_eq!(original.to_radians(), roundtrip.to_radians(), rtol <= 1e-9),
@@ -227,9 +227,9 @@ proptest! {
         let eccentric = true_anom.to_eccentric(ecc).expect("conversion should succeed");
         let mean_anom = true_anom.to_mean(ecc).expect("conversion should succeed");
 
-        let true_val = true_anom.as_angle().mod_two_pi().to_radians();
-        let ecc_val = eccentric.as_angle().mod_two_pi().to_radians();
-        let mean_val = mean_anom.as_angle().mod_two_pi().to_radians();
+        let true_val = true_anom.as_angle().wrap_unsigned().to_radians();
+        let ecc_val = eccentric.as_angle().wrap_unsigned().to_radians();
+        let mean_val = mean_anom.as_angle().wrap_unsigned().to_radians();
 
         prop_assert!(
             approx_eq!(true_val, ecc_val, atol <= 1e-8),

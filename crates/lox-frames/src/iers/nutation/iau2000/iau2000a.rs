@@ -101,7 +101,7 @@ fn planetary_nutation(
                 + coeff.uranus * uranus_l_iers03(centuries_since_j2000_tdb)
                 + coeff.neptune * neptune_l_mhb2000(centuries_since_j2000_tdb)
                 + coeff.pa * pa_iers03(centuries_since_j2000_tdb))
-            .mod_two_pi_signed();
+            .rem_two_pi();
 
             // Accumulate current term.
             let sin_arg = arg.sin();

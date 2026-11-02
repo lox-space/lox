@@ -38,10 +38,10 @@ pub fn pa_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// The mean elongation D in radians, normalized to [-π, π]
+/// The mean elongation D in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn d_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(poly_array(
+    Angle::arcseconds_rem(poly_array(
         centuries_since_j2000_tdb,
         &[
             1072260.703692,
@@ -61,10 +61,10 @@ pub fn d_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// The Sun's mean anomaly l' in radians, normalized to [-π, π]
+/// The Sun's mean anomaly l' in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn lp_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(poly_array(
+    Angle::arcseconds_rem(poly_array(
         centuries_since_j2000_tdb,
         &[
             1287104.793048,
@@ -84,10 +84,10 @@ pub fn lp_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// The Moon's mean anomaly l in radians, normalized to [-π, π]
+/// The Moon's mean anomaly l in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(poly_array(
+    Angle::arcseconds_rem(poly_array(
         centuries_since_j2000_tdb,
         &[
             485868.249036,
@@ -110,10 +110,10 @@ pub fn l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// The Moon's mean argument of latitude F in radians, normalized to [-π, π]
+/// The Moon's mean argument of latitude F in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn f_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(poly_array(
+    Angle::arcseconds_rem(poly_array(
         centuries_since_j2000_tdb,
         &[
             335779.526232,
@@ -133,10 +133,10 @@ pub fn f_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// The mean longitude of the Moon's ascending node Ω in radians, normalized to [-π, π]
+/// The mean longitude of the Moon's ascending node Ω in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn omega_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(poly_array(
+    Angle::arcseconds_rem(poly_array(
         centuries_since_j2000_tdb,
         &[450160.398036, -6962890.5431, 7.4722, 0.007702, -0.00005939],
     ))
@@ -150,12 +150,12 @@ pub fn omega_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// Mercury's mean longitude in radians, normalized to [-π, π]
+/// Mercury's mean longitude in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn mercury_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     (4.402608842 + 2608.7903141574 * centuries_since_j2000_tdb)
         .rad()
-        .mod_two_pi_signed()
+        .rem_two_pi()
 }
 
 /// Venus's mean longitude (L_V).
@@ -166,12 +166,12 @@ pub fn mercury_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// Venus's mean longitude in radians, normalized to [-π, π]
+/// Venus's mean longitude in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn venus_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     (3.176146697 + 1021.3285546211 * centuries_since_j2000_tdb)
         .rad()
-        .mod_two_pi_signed()
+        .rem_two_pi()
 }
 
 /// Earth's mean longitude (L_E).
@@ -182,12 +182,12 @@ pub fn venus_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// Earth's mean longitude in radians, normalized to [-π, π]
+/// Earth's mean longitude in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn earth_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     (1.753470314 + 628.3075849991 * centuries_since_j2000_tdb)
         .rad()
-        .mod_two_pi_signed()
+        .rem_two_pi()
 }
 
 /// Mars's mean longitude (L_Ma).
@@ -198,12 +198,12 @@ pub fn earth_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// Mars's mean longitude in radians, normalized to [-π, π]
+/// Mars's mean longitude in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn mars_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     (6.203480913 + 334.0612426700 * centuries_since_j2000_tdb)
         .rad()
-        .mod_two_pi_signed()
+        .rem_two_pi()
 }
 
 /// Jupiter's mean longitude (L_J).
@@ -214,12 +214,12 @@ pub fn mars_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// Jupiter's mean longitude in radians, normalized to [-π, π]
+/// Jupiter's mean longitude in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn jupiter_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     (0.599546497 + 52.9690962641 * centuries_since_j2000_tdb)
         .rad()
-        .mod_two_pi_signed()
+        .rem_two_pi()
 }
 
 /// Saturn's mean longitude (L_S).
@@ -230,12 +230,12 @@ pub fn jupiter_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// Saturn's mean longitude in radians, normalized to [-π, π]
+/// Saturn's mean longitude in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn saturn_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     (0.874016757 + 21.3299104960 * centuries_since_j2000_tdb)
         .rad()
-        .mod_two_pi_signed()
+        .rem_two_pi()
 }
 
 /// Uranus's mean longitude (L_U).
@@ -246,12 +246,12 @@ pub fn saturn_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// Uranus's mean longitude in radians, normalized to [-π, π]
+/// Uranus's mean longitude in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn uranus_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     (5.481293872 + 7.4781598567 * centuries_since_j2000_tdb)
         .rad()
-        .mod_two_pi_signed()
+        .rem_two_pi()
 }
 
 /// Neptune's mean longitude (L_N).
@@ -262,12 +262,12 @@ pub fn uranus_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// Neptune's mean longitude in radians, normalized to [-π, π]
+/// Neptune's mean longitude in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn neptune_l_iers03(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     (5.311886287 + 3.8133035638 * centuries_since_j2000_tdb)
         .rad()
-        .mod_two_pi_signed()
+        .rem_two_pi()
 }
 
 #[cfg(test)]
