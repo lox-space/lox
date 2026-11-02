@@ -9,8 +9,8 @@ use core::fmt::{Display, Formatter, LowerExp, Result, UpperExp};
 use core::str::FromStr;
 
 use super::{
-    Angle, AngularRate, Area, AreaToMass, Decibel, DecibelWatts, Distance, Frequency, Mass, Power,
-    Pressure, Temperature, Velocity,
+    Angle, AngularRate, Area, AreaToMass, DataRate, DataVolume, Decibel, DecibelWatts, Distance,
+    Frequency, Mass, Power, Pressure, Temperature, Velocity,
 };
 
 /// Error returned when parsing a unit or a `"<value> <unit>"` string fails.
@@ -216,6 +216,28 @@ runtime_units! {
         SquareMetersPerKilogram, "m²/kg" | "m2/kg" | "m^2/kg", square_meters_per_kilogram,
             to_square_meters_per_kilogram;
     }
+    DataRate, DataRateUnit, si = BitsPerSecond {
+        BitsPerSecond, "bit/s" | "bps", bits_per_second, to_bits_per_second;
+        KilobitsPerSecond, "kbit/s" | "kbps", kilobits_per_second, to_kilobits_per_second;
+        MegabitsPerSecond, "Mbit/s" | "Mbps", megabits_per_second, to_megabits_per_second;
+        GigabitsPerSecond, "Gbit/s" | "Gbps", gigabits_per_second, to_gigabits_per_second;
+    }
+    DataVolume, DataVolumeUnit, si = Bits {
+        Bits, "bit", bits, to_bits;
+        Kilobits, "kbit", kilobits, to_kilobits;
+        Megabits, "Mbit", megabits, to_megabits;
+        Gigabits, "Gbit", gigabits, to_gigabits;
+        Terabits, "Tbit", terabits, to_terabits;
+        Bytes, "B" | "byte", bytes, to_bytes;
+        Kilobytes, "kB", kilobytes, to_kilobytes;
+        Megabytes, "MB", megabytes, to_megabytes;
+        Gigabytes, "GB", gigabytes, to_gigabytes;
+        Terabytes, "TB", terabytes, to_terabytes;
+        Kibibytes, "KiB", kibibytes, to_kibibytes;
+        Mebibytes, "MiB", mebibytes, to_mebibytes;
+        Gibibytes, "GiB", gibibytes, to_gibibytes;
+        Tebibytes, "TiB", tebibytes, to_tebibytes;
+    }
     Decibel, DecibelUnit, si = Decibels {
         Decibels, "dB", decibels, to_decibels;
     }
@@ -284,6 +306,13 @@ mod tests {
         assert_eq!(Angle::radians(0.5).to_string(), "0.5 rad");
         assert_eq!(Frequency::gigahertz(8.4).to_string(), "8400000000 Hz");
         assert_eq!(Decibel::decibels(3.0).to_string(), "3 dB");
+        assert_eq!(
+            DataRate::megabits_per_second(2.0).to_string(),
+            "2000000 bit/s"
+        );
+        assert_eq!(DataVolume::kilobytes(1.0).to_string(), "8000 bit");
+        assert_eq!("1.5 GiB".parse(), Ok(DataVolume::gibibytes(1.5)));
+        assert_eq!("150Mbps".parse(), Ok(DataRate::megabits_per_second(150.0)));
         assert_eq!(DecibelWatts::decibel_milliwatts(0.0).to_string(), "-30 dBW");
         assert_eq!("10 dBm".parse(), Ok(DecibelWatts::decibel_watts(-20.0)));
     }
