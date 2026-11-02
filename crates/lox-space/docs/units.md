@@ -68,6 +68,12 @@ Physical quantity types for type-safe unit handling.
 |----------|-------|
 | `dB` | 1 dB |
 
+## String Representation
+
+`str()` shows the value in SI units with its unit symbol, e.g. `str(100 * lox.km)` is
+`"100000 m"` and `str(90 * lox.deg)` is `"1.5707963267948966 rad"`. Use the `to_*` methods to
+get the value in another unit.
+
 ## Quick Example
 
 ```python

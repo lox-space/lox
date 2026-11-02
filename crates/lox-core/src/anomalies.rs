@@ -36,7 +36,7 @@ use crate::math::float::{
 use crate::math::roots::{BracketedHalley, FindBracketedRootWithSecondDerivative, RootFinderError};
 use crate::{
     elements::{Eccentricity, OrbitType},
-    units::{Angle, AngleUnits},
+    units::{Angle, AngleUnit, AngleUnits},
 };
 
 use core::{
@@ -104,7 +104,7 @@ macro_rules! anomaly_impls {
 
             impl Display for $anomaly {
                 fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                    self.0.fmt(f)
+                    self.0.display_in(AngleUnit::Degrees).fmt(f)
                 }
             }
 
@@ -269,7 +269,12 @@ pub enum AnomalyError {
         residual: f64,
     },
     /// The true anomaly is outside the valid range for the given eccentricity.
-    #[error("True anomaly {nu} rad outside valid range [-{max_nu} rad, {max_nu} rad]")]
+    #[error(
+        "True anomaly {} outside valid range [-{}, {}]",
+        .nu.display_in(AngleUnit::Degrees),
+        .max_nu.display_in(AngleUnit::Degrees),
+        .max_nu.display_in(AngleUnit::Degrees)
+    )]
     InvalidTrueAnomaly {
         /// The invalid true anomaly.
         nu: Angle,
@@ -277,7 +282,7 @@ pub enum AnomalyError {
         max_nu: Angle,
     },
     /// The anomaly is not finite.
-    #[error("anomaly must be finite but was {0}")]
+    #[error("anomaly must be finite but was {}", .0.display_in(AngleUnit::Degrees))]
     NonFiniteAnomaly(Angle),
     /// The orbit is not circular or elliptic.
     #[error("expected a circular or elliptic orbit but the eccentricity was {0}")]
@@ -708,6 +713,7 @@ pub fn hyperbolic_asymptote_angle(e: Eccentricity) -> Angle {
 
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
     use core::f64::consts::PI;
 
     use lox_approx::{assert_approx_eq, assert_approx_ne};
@@ -717,6 +723,18 @@ mod tests {
     use super::*;
 
     const EPSILON: f64 = 1e-9;
+
+    #[test]
+    fn test_invalid_true_anomaly_message_uses_degrees() {
+        let err = AnomalyError::InvalidTrueAnomaly {
+            nu: Angle::PI,
+            max_nu: Angle::FRAC_PI_2,
+        };
+        assert_eq!(
+            err.to_string(),
+            "True anomaly 180 deg outside valid range [-90 deg, 90 deg]"
+        );
+    }
 
     /// Eccentricities that `Eccentricity::orbit_type` classifies as circular or elliptic, with
     /// extra weight on the near-circular and near-parabolic ends. Eccentricities within 1e-8 of 1
@@ -1264,8 +1282,8 @@ mod tests {
                     }
 
                     #[test]
-                    fn test_display_matches_angle() {
-                        assert_eq!($anomaly::new(1.5.rad()).to_string(), 1.5.rad().to_string());
+                    fn test_display_in_degrees() {
+                        assert_eq!($anomaly::new(Angle::FRAC_PI_2).to_string(), "90 deg");
                     }
 
                     #[test]

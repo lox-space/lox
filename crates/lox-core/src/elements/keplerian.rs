@@ -24,7 +24,7 @@ use crate::utils::Linspace;
 use crate::{
     coords::Cartesian,
     glam::Azimuth,
-    units::{Angle, AngleUnits, AngularRate, Distance, DistanceUnits},
+    units::{Angle, AngleUnit, AngleUnits, AngularRate, Distance, DistanceUnit, DistanceUnits},
 };
 
 /// The standard gravitational parameter of a celestial body µ = GM.
@@ -52,7 +52,7 @@ impl GravitationalParameter {
 
 impl Display for GravitationalParameter {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        (self.0 * 1e-9).fmt(f)?;
+        (self.0 / 1e9).fmt(f)?;
         write!(f, " km³/s²")
     }
 }
@@ -155,7 +155,10 @@ impl Display for Eccentricity {
 
 /// Error returned when an [`Inclination`] is outside the valid range [0°, 180°].
 #[derive(Debug, Clone, Error)]
-#[error("inclination must be between 0 and 180 deg but was {0}")]
+#[error(
+    "inclination must be between 0 and 180 deg but was {}",
+    .0.display_in(AngleUnit::Degrees)
+)]
 pub struct InclinationError(Angle);
 
 /// Orbital inclination.
@@ -187,13 +190,16 @@ impl Inclination {
 
 impl Display for Inclination {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        self.0.fmt(f)
+        self.0.display_in(AngleUnit::Degrees).fmt(f)
     }
 }
 
 /// Error returned when a [`LongitudeOfAscendingNode`] is outside the valid range [0°, 360°].
 #[derive(Debug, Clone, Error)]
-#[error("longitude of ascending node must be between 0 and 360 deg but was {0}")]
+#[error(
+    "longitude of ascending node must be between 0 and 360 deg but was {}",
+    .0.display_in(AngleUnit::Degrees)
+)]
 pub struct LongitudeOfAscendingNodeError(Angle);
 
 /// Longitude of ascending node.
@@ -240,13 +246,16 @@ impl LongitudeOfAscendingNode {
 
 impl Display for LongitudeOfAscendingNode {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        self.0.fmt(f)
+        self.0.display_in(AngleUnit::Degrees).fmt(f)
     }
 }
 
 /// Error returned when an [`ArgumentOfPeriapsis`] is outside the valid range [0°, 360°].
 #[derive(Debug, Clone, Error)]
-#[error("argument of periapsis must be between 0 and 360 deg but was {0}")]
+#[error(
+    "argument of periapsis must be between 0 and 360 deg but was {}",
+    .0.display_in(AngleUnit::Degrees)
+)]
 pub struct ArgumentOfPeriapsisError(Angle);
 
 /// Argument of periapsis.
@@ -293,7 +302,7 @@ impl ArgumentOfPeriapsis {
 
 impl Display for ArgumentOfPeriapsis {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        self.0.fmt(f)
+        self.0.display_in(AngleUnit::Degrees).fmt(f)
     }
 }
 
@@ -722,7 +731,7 @@ pub enum KeplerianError {
         eccentricity: Eccentricity,
     },
     /// The semi-parameter is not finite and positive.
-    #[error("semi-parameter must be finite and positive but was {0}")]
+    #[error("semi-parameter must be finite and positive but was {}", .0.display_in(DistanceUnit::Kilometers))]
     InvalidSemiParameter(Distance),
     /// No shape parameters were provided.
     #[error(
@@ -742,7 +751,7 @@ pub enum KeplerianError {
     #[error("only one of true, eccentric, or mean anomaly may be specified")]
     AmbiguousAnomaly,
     /// The anomaly is not finite.
-    #[error("anomaly must be finite but was {0}")]
+    #[error("anomaly must be finite but was {}", .0.display_in(AngleUnit::Degrees))]
     NonFiniteAnomaly(Angle),
     /// The anomaly conversion failed or the true anomaly is outside the valid range.
     #[error(transparent)]
@@ -971,6 +980,30 @@ mod tests {
     use crate::units::VelocityUnits;
 
     use super::*;
+
+    #[test]
+    fn test_display_uses_human_readable_units() {
+        assert_eq!(
+            Inclination::try_new(Angle::FRAC_PI_2).unwrap().to_string(),
+            "90 deg"
+        );
+        assert_eq!(
+            KeplerianError::InvalidSemiParameter(Distance::kilometers(-7000.0)).to_string(),
+            "semi-parameter must be finite and positive but was -7000 km"
+        );
+    }
+
+    #[test]
+    fn test_angle_error_messages_use_degrees() {
+        assert_eq!(
+            InclinationError(Angle::degrees(200.0)).to_string(),
+            "inclination must be between 0 and 180 deg but was 200 deg"
+        );
+        assert_eq!(
+            LongitudeOfAscendingNodeError(Angle::degrees(-10.0)).to_string(),
+            "longitude of ascending node must be between 0 and 360 deg but was -10 deg"
+        );
+    }
 
     #[test]
     fn test_eccentricity_rejects_infinity() {

@@ -5,10 +5,11 @@
 //! Sexagesimal representations of angles: degrees-arcminutes-arcseconds and
 //! hours-minutes-seconds.
 
-use core::fmt::{Alignment, Display, Formatter, Result, Write};
+use core::fmt::{Display, Formatter, Result, Write};
 
 use crate::math::float::{abs, round};
 
+use super::runtime::write_padded;
 use super::{Angle, Sign};
 
 /// Steps per second (or arcsecond) to which decomposed seconds are rounded, which suppresses
@@ -182,24 +183,11 @@ impl Parts {
             Some(precision) => precision + 3,
             None => probe.chars + usize::from(self.seconds < 10.0),
         };
-        let padding = width.saturating_sub(text.chars(seconds_chars));
+        let chars = text.chars(seconds_chars);
         if f.sign_aware_zero_pad() {
-            return text.write(f, padding);
+            return text.write(f, width.saturating_sub(chars));
         }
-        let (before, after) = match f.align() {
-            Some(Alignment::Left) => (0, padding),
-            Some(Alignment::Center) => (padding / 2, padding - padding / 2),
-            Some(Alignment::Right) | None => (padding, 0),
-        };
-        let fill = f.fill();
-        for _ in 0..before {
-            f.write_char(fill)?;
-        }
-        text.write(f, 0)?;
-        for _ in 0..after {
-            f.write_char(fill)?;
-        }
-        Ok(())
+        write_padded(f, chars, |f| text.write(f, 0))
     }
 }
 

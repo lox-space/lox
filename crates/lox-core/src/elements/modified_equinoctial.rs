@@ -37,7 +37,7 @@ use crate::elements::keplerian::{
     Eccentricity, EccentricityError, GravitationalParameter, Inclination, Keplerian, KeplerianError,
 };
 use crate::math::float::{atan2, cos, hypot, sin, sqrt};
-use crate::units::{Angle, AngleUnits, Distance};
+use crate::units::{Angle, AngleUnit, AngleUnits, Distance, DistanceUnit};
 
 /// Modified Equinoctial Elements (MEE).
 ///
@@ -107,7 +107,7 @@ impl TryFrom<ModifiedEquinoctialRepr> for ModifiedEquinoctial {
 #[derive(Debug, Clone, Error)]
 pub enum ModifiedEquinoctialError {
     /// The semi-parameter is not finite and positive.
-    #[error("semi-parameter must be finite and positive but was {0}")]
+    #[error("semi-parameter must be finite and positive but was {}", .0.display_in(DistanceUnit::Kilometers))]
     InvalidSemiParameter(Distance),
     /// An element is not finite.
     #[error("modified equinoctial elements must be finite")]
@@ -116,7 +116,10 @@ pub enum ModifiedEquinoctialError {
     #[error(transparent)]
     InvalidEccentricity(#[from] EccentricityError),
     /// The true longitude lies on or beyond the asymptotes of an open orbit.
-    #[error("true longitude {0} lies outside the asymptotes of the open orbit")]
+    #[error(
+        "true longitude {} lies outside the asymptotes of the open orbit",
+        .0.display_in(AngleUnit::Degrees)
+    )]
     InvalidTrueLongitude(Angle),
     /// The Cartesian state is not physical, see [`Cartesian::is_physical`].
     #[error("Cartesian state must lie within the observable universe and move slower than light")]
