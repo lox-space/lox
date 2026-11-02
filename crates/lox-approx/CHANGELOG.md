@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/lox-space/lox/compare/lox-approx-v0.1.2...lox-approx-v0.2.0) - 2026-11-02
+
+### Added
+
+- *(lox-derive)* add periodic field attribute to the ApproxEq derive
+- *(lox-approx)* compare periodic element angles modulo 2π
+
+### Fixed
+
+- *(lox-approx)* make periodic comparisons robust to overflow and rounding
+
+### Other
+
+- *(lox-core)* [**breaking**] give all unit types a uniform named-unit API
+
 ## [0.1.2](https://github.com/lox-space/lox/compare/lox-approx-v0.1.1...lox-approx-v0.1.2) - 2026-10-14
 
 ### Other
