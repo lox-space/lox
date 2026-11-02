@@ -18,9 +18,9 @@ mod runtime;
 mod sexagesimal;
 
 pub use runtime::{
-    AngleUnit, AngularRateUnit, AreaToMassUnit, AreaUnit, DecibelUnit, DisplayIn, DistanceUnit,
-    FrequencyUnit, MassUnit, ParseUnitError, PowerUnit, PressureUnit, TemperatureUnit,
-    VelocityUnit,
+    AngleUnit, AngularRateUnit, AreaToMassUnit, AreaUnit, DecibelUnit, DecibelWattsUnit, DisplayIn,
+    DistanceUnit, FrequencyUnit, MassUnit, ParseUnitError, PowerUnit, PressureUnit,
+    TemperatureUnit, VelocityUnit,
 };
 pub use sexagesimal::{Dms, Hms, SexagesimalError};
 
@@ -1065,9 +1065,9 @@ impl Power {
         self.0 / 1e3
     }
 
-    /// Returns the value in dBW.
-    pub fn to_dbw(self) -> f64 {
-        10.0 * log10(self.0)
+    /// Returns the power level in dBW.
+    pub fn to_decibel_watts(self) -> DecibelWatts {
+        DecibelWatts(10.0 * log10(self.0))
     }
 }
 
@@ -1190,6 +1190,174 @@ impl DecibelUnits for f64 {
 impl DecibelUnits for i64 {
     fn db(&self) -> Decibel {
         Decibel::decibels(*self as f64)
+    }
+}
+
+/// An absolute power level in decibels relative to one watt (dBW).
+///
+/// Adding or subtracting a [`Decibel`] ratio gives another power level, and the difference of
+/// two power levels is a [`Decibel`] ratio. Power levels cannot be added to each other.
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct DecibelWatts(f64);
+
+impl DecibelWatts {
+    /// Creates a new power level from an `f64` value in dBW.
+    // Named after the unit, like all unit constructors; that it matches the type is incidental.
+    #[allow(clippy::self_named_constructors)]
+    pub const fn decibel_watts(dbw: f64) -> Self {
+        Self(dbw)
+    }
+
+    /// Creates a new power level from an `f64` value in dBm.
+    pub const fn decibel_milliwatts(dbm: f64) -> Self {
+        Self(dbm - 30.0)
+    }
+
+    /// Returns the value in dBW.
+    pub const fn to_decibel_watts(self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in dBm.
+    pub const fn to_decibel_milliwatts(self) -> f64 {
+        self.0 + 30.0
+    }
+
+    /// Returns the linear power.
+    pub fn to_power(self) -> Power {
+        Power(powf(10.0_f64, self.0 / 10.0))
+    }
+
+    /// Returns the minimum of the two values, ignoring NaN.
+    pub fn min(self, other: Self) -> Self {
+        Self(self.0.min(other.0))
+    }
+
+    /// Returns the maximum of the two values, ignoring NaN.
+    pub fn max(self, other: Self) -> Self {
+        Self(self.0.max(other.0))
+    }
+
+    /// Restricts the value to the interval `[min, max]`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `min > max`, `min` is NaN, or `max` is NaN.
+    pub fn clamp(self, min: Self, max: Self) -> Self {
+        Self(self.0.clamp(min.0, max.0))
+    }
+
+    /// Returns the ordering between `self` and `other` according to the IEEE 754 `totalOrder`
+    /// predicate.
+    pub fn total_cmp(&self, other: &Self) -> Ordering {
+        self.0.total_cmp(&other.0)
+    }
+
+    /// Returns `true` if the value is neither infinite nor NaN.
+    pub const fn is_finite(self) -> bool {
+        self.0.is_finite()
+    }
+
+    /// Returns `true` if the value is NaN.
+    pub const fn is_nan(self) -> bool {
+        self.0.is_nan()
+    }
+}
+
+impl From<Power> for DecibelWatts {
+    fn from(power: Power) -> Self {
+        power.to_decibel_watts()
+    }
+}
+
+impl From<DecibelWatts> for Power {
+    fn from(level: DecibelWatts) -> Self {
+        level.to_power()
+    }
+}
+
+impl Add<Decibel> for DecibelWatts {
+    type Output = Self;
+
+    fn add(self, rhs: Decibel) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+
+impl Add<DecibelWatts> for Decibel {
+    type Output = DecibelWatts;
+
+    fn add(self, rhs: DecibelWatts) -> Self::Output {
+        DecibelWatts(self.0 + rhs.0)
+    }
+}
+
+impl AddAssign<Decibel> for DecibelWatts {
+    fn add_assign(&mut self, rhs: Decibel) {
+        self.0 += rhs.0;
+    }
+}
+
+impl Sub<Decibel> for DecibelWatts {
+    type Output = Self;
+
+    fn sub(self, rhs: Decibel) -> Self::Output {
+        Self(self.0 - rhs.0)
+    }
+}
+
+impl SubAssign<Decibel> for DecibelWatts {
+    fn sub_assign(&mut self, rhs: Decibel) {
+        self.0 -= rhs.0;
+    }
+}
+
+impl Sub for DecibelWatts {
+    type Output = Decibel;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Decibel(self.0 - rhs.0)
+    }
+}
+
+/// A trait for creating [`DecibelWatts`] instances from primitives.
+///
+/// By default it is implemented for [`f64`] and [`i64`].
+///
+/// # Examples
+///
+/// ```
+/// use lox_core::units::DecibelWattsUnits;
+///
+/// let p = 30.dbm();
+/// assert_eq!(p.to_decibel_watts(), 0.0);
+/// ```
+pub trait DecibelWattsUnits {
+    /// Creates a power level from a value in dBW.
+    fn dbw(&self) -> DecibelWatts;
+    /// Creates a power level from a value in dBm.
+    fn dbm(&self) -> DecibelWatts;
+}
+
+impl DecibelWattsUnits for f64 {
+    fn dbw(&self) -> DecibelWatts {
+        DecibelWatts::decibel_watts(*self)
+    }
+
+    fn dbm(&self) -> DecibelWatts {
+        DecibelWatts::decibel_milliwatts(*self)
+    }
+}
+
+impl DecibelWattsUnits for i64 {
+    fn dbw(&self) -> DecibelWatts {
+        DecibelWatts::decibel_watts(*self as f64)
+    }
+
+    fn dbm(&self) -> DecibelWatts {
+        DecibelWatts::decibel_milliwatts(*self as f64)
     }
 }
 
@@ -1559,7 +1727,7 @@ mod tests {
         assert_eq!(2.w().to_watts(), 2.0);
         assert_eq!(1.5.kw().to_watts(), 1500.0);
         assert_eq!(2.kw().to_kilowatts(), 2.0);
-        assert_eq!(10.0.w().to_dbw(), 10.0);
+        assert_eq!(10.0.w().to_decibel_watts().to_decibel_watts(), 10.0);
     }
 
     #[test]
@@ -1673,7 +1841,7 @@ mod tests {
     #[test]
     fn test_power_dbw() {
         let p = Power::watts(100.0);
-        assert_approx_eq!(p.to_dbw(), 20.0, rtol <= 1e-10);
+        assert_approx_eq!(p.to_decibel_watts().to_decibel_watts(), 20.0, rtol <= 1e-10);
     }
 
     #[test]
@@ -2554,6 +2722,49 @@ mod tests {
         assert_eq!(p.to_pascals(), 101325.0);
         assert_eq!(p.to_hectopascals(), 1013.25);
         assert_eq!(Pressure::pascals(100.0).to_hectopascals(), 1.0);
+    }
+
+    #[test]
+    fn test_decibel_watts_units() {
+        let p = DecibelWatts::decibel_milliwatts(30.0);
+        assert_eq!(p.to_decibel_watts(), 0.0);
+        assert_eq!(p.to_decibel_milliwatts(), 30.0);
+        assert_eq!(10.dbw(), DecibelWatts::decibel_watts(10.0));
+        assert_eq!(0.0.dbm(), DecibelWatts::decibel_watts(-30.0));
+    }
+
+    #[test]
+    fn test_decibel_watts_algebra() {
+        let eirp = DecibelWatts::decibel_watts(55.0);
+        let loss = Decibel::decibels(181.7);
+        let received = eirp - loss + Decibel::decibels(30.0);
+        assert_approx_eq!(received.to_decibel_watts(), -96.7, atol <= 1e-12);
+        assert_approx_eq!(
+            (Decibel::decibels(3.0) + eirp).to_decibel_watts(),
+            58.0,
+            atol <= 1e-12
+        );
+        let margin: Decibel = received - DecibelWatts::decibel_watts(-100.0);
+        assert_approx_eq!(margin.to_decibels(), 3.3, atol <= 1e-12);
+        let mut level = eirp;
+        level -= Decibel::decibels(5.0);
+        level += Decibel::decibels(1.0);
+        assert_eq!(level, DecibelWatts::decibel_watts(51.0));
+    }
+
+    #[test]
+    fn test_decibel_watts_power_conversion() {
+        let p = Power::watts(100.0);
+        assert_approx_eq!(
+            DecibelWatts::from(p).to_decibel_watts(),
+            20.0,
+            atol <= 1e-12
+        );
+        assert_approx_eq!(
+            DecibelWatts::decibel_watts(20.0).to_power().to_watts(),
+            100.0,
+            rtol <= 1e-12
+        );
     }
 
     #[test]
