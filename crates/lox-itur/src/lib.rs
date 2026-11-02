@@ -116,7 +116,7 @@ impl ItuProvider {
         let hs_km = self.topographic_altitude(lat, lon)?.to_kilometers();
 
         // Gaseous attenuation (P.676 approximate method)
-        let p_hpa = p835::standard_pressure(Distance::kilometers(hs_km)).to_hpa();
+        let p_hpa = p835::standard_pressure(Distance::kilometers(hs_km)).to_hectopascals();
         let t_k = self.surface_mean_temperature(lat, lon)?.to_kelvin();
         let rho = self.surface_water_vapour_density(lat, lon, p.max(0.1))?;
         let (a_o, a_w) = p676::gaseous_attenuation_slant_path_raw(f_ghz, el_deg, p_hpa, rho, t_k);
@@ -133,7 +133,7 @@ impl ItuProvider {
                 polarisation_tilt,
                 Some(Distance::kilometers(hs_km)),
             )?
-            .as_f64();
+            .to_decibels();
 
         // Cloud attenuation (P.840)
         let a_cloud = self.cloud_attenuation(lat, lon, elevation, frequency, p.max(0.1))?;
@@ -150,7 +150,7 @@ impl ItuProvider {
                 lat,
                 lon,
             )?
-            .as_f64();
+            .to_decibels();
 
         // ITU-R combined total: A_T = A_g + √((A_r + A_c)² + A_s²). The
         // combination residual is booked on the scintillation line (clamped
@@ -159,10 +159,10 @@ impl ItuProvider {
         let a_scint_eff = (a_total - a_gas - a_rain - a_cloud).max(0.0);
 
         Ok(PropagationLosses::builder()
-            .rain(Decibel::new(a_rain))
-            .gaseous(Decibel::new(a_gas))
-            .cloud(Decibel::new(a_cloud))
-            .scintillation(Decibel::new(a_scint_eff))
+            .rain(Decibel::decibels(a_rain))
+            .gaseous(Decibel::decibels(a_gas))
+            .cloud(Decibel::decibels(a_cloud))
+            .scintillation(Decibel::decibels(a_scint_eff))
             .build()?)
     }
 }
@@ -197,7 +197,7 @@ mod tests {
 
         // Recompute the raw sub-model outputs independently.
         let hs = p.topographic_altitude(lat, lon).unwrap();
-        let p_hpa = p835::standard_pressure(hs).to_hpa();
+        let p_hpa = p835::standard_pressure(hs).to_hectopascals();
         let t_k = p.surface_mean_temperature(lat, lon).unwrap().to_kelvin();
         let rho = p
             .surface_water_vapour_density(lat, lon, exceedance)
@@ -213,7 +213,7 @@ mod tests {
         let a_rain = p
             .rain_attenuation(lat, lon, frequency, elevation, exceedance, tilt, Some(hs))
             .unwrap()
-            .as_f64();
+            .to_decibels();
         let a_cloud = p
             .cloud_attenuation(lat, lon, elevation, frequency, exceedance)
             .unwrap();
@@ -222,7 +222,7 @@ mod tests {
                 frequency, elevation, exceedance, diameter, 0.5, None, lat, lon,
             )
             .unwrap()
-            .as_f64();
+            .to_decibels();
         let a_total = a_gas + ((a_rain + a_cloud).powi(2) + a_scint.powi(2)).sqrt();
 
         // Sanity: the fixture exercises every term.
@@ -231,22 +231,22 @@ mod tests {
         let lines = losses.lines();
         assert_eq!(lines.len(), 4);
         assert_eq!(*lines[0].kind(), LossKind::Rain);
-        assert_approx_eq!(lines[0].value().as_f64(), a_rain, rtol <= 1e-12);
+        assert_approx_eq!(lines[0].value().to_decibels(), a_rain, rtol <= 1e-12);
         assert_eq!(*lines[1].kind(), LossKind::Gaseous);
-        assert_approx_eq!(lines[1].value().as_f64(), a_gas, rtol <= 1e-12);
+        assert_approx_eq!(lines[1].value().to_decibels(), a_gas, rtol <= 1e-12);
         assert_eq!(*lines[2].kind(), LossKind::Cloud);
-        assert_approx_eq!(lines[2].value().as_f64(), a_cloud, rtol <= 1e-12);
+        assert_approx_eq!(lines[2].value().to_decibels(), a_cloud, rtol <= 1e-12);
         // The scintillation line carries the combination residual, which the
         // RSS combination keeps at or below the raw scintillation fade.
         assert_eq!(*lines[3].kind(), LossKind::Scintillation);
-        assert!(lines[3].value().as_f64() >= 0.0);
-        assert!(lines[3].value().as_f64() <= a_scint);
+        assert!(lines[3].value() >= Decibel::ZERO);
+        assert!(lines[3].value().to_decibels() <= a_scint);
 
         // total() is the ITU-exact combined attenuation — counted once.
-        assert_approx_eq!(losses.total().as_f64(), a_total, rtol <= 1e-12);
+        assert_approx_eq!(losses.total().to_decibels(), a_total, rtol <= 1e-12);
         // absorptive() excludes scintillation per P.618 §8.2.
         assert_approx_eq!(
-            losses.absorptive().as_f64(),
+            losses.absorptive().to_decibels(),
             a_rain + a_gas + a_cloud,
             rtol <= 1e-12
         );

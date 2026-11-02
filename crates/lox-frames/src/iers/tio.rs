@@ -53,7 +53,7 @@ mod tests {
     #[test]
     fn test_tio_locator_iau2000() {
         let time = Time::from_two_part_julian_date(Tt, 2400000.5, 52541.0);
-        let exp = TioLocator(Angle::new(-6.216_698_469_981_019e-12));
+        let exp = TioLocator(Angle::radians(-6.216_698_469_981_019e-12));
         let act = TioLocator::iau2000(time);
         assert_approx_eq!(act, exp, atol <= 1e-12);
     }

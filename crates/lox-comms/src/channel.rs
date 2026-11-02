@@ -335,7 +335,7 @@ impl ChannelBuilder {
             NonPhysicalError::check_positive("chip rate [Hz]", chip_rate.to_hertz())?;
             NonPhysicalError::check_non_negative(
                 "chip rate minus symbol rate [Hz]",
-                chip_rate.to_hertz() - self.symbol_rate.to_hertz(),
+                (chip_rate - self.symbol_rate).to_hertz(),
             )?;
         }
         Ok(Channel {
@@ -416,7 +416,7 @@ mod tests {
         // Es/N0 = 80 - 10*log10(5e6) = 80 - 66.99 = 13.01 dB
         let ch = narrowband_channel();
         let es_n0 = ch.es_n0(80.0.db());
-        assert_approx_eq!(es_n0.as_f64(), 13.0103, atol <= 0.001);
+        assert_approx_eq!(es_n0.to_decibels(), 13.0103, atol <= 0.001);
     }
 
     #[test]
@@ -425,7 +425,7 @@ mod tests {
         let ch = narrowband_channel();
         let c_n = ch.c_n(80.0.db());
         let expected = 80.0 - 10.0 * 6.75e6_f64.log10();
-        assert_approx_eq!(c_n.as_f64(), expected, atol <= 0.001);
+        assert_approx_eq!(c_n.to_decibels(), expected, atol <= 0.001);
     }
 
     #[test]
@@ -436,7 +436,7 @@ mod tests {
         assert_approx_eq!(ch.spreading_factor().unwrap(), 400.0, rtol <= 1e-10);
         // PG = 10*log10(400) = 26.02 dB
         assert_approx_eq!(
-            ch.processing_gain().unwrap().as_f64(),
+            ch.processing_gain().unwrap().to_decibels(),
             26.0206,
             atol <= 0.001
         );
@@ -450,8 +450,8 @@ mod tests {
         let c_n0 = 60.0.db();
         let diff = ch.es_n0(c_n0) - ch.es_n0_spread(c_n0).unwrap();
         assert_approx_eq!(
-            diff.as_f64(),
-            ch.processing_gain().unwrap().as_f64(),
+            diff.to_decibels(),
+            ch.processing_gain().unwrap().to_decibels(),
             atol <= 1e-10
         );
     }

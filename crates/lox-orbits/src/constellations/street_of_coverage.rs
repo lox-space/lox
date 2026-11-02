@@ -112,7 +112,7 @@ impl StreetOfCoverageBuilder {
         let j = self.coverage_fold;
         let p = self.nplanes;
         let s = sats_per_plane;
-        let inc = self.inclination.as_f64();
+        let inc = self.inclination.to_radians();
 
         // Eq. 11: constraint check
         if j * p * (p - 1) > self.nsats {
@@ -153,7 +153,7 @@ impl StreetOfCoverageBuilder {
 
         for plane in 0..p {
             let raan = Angle::radians_normalized(
-                self.longitude_of_ascending_node.as_f64() + plane as f64 * delta_raan,
+                self.longitude_of_ascending_node.to_radians() + plane as f64 * delta_raan,
             );
 
             for sat in 0..s {

@@ -112,7 +112,7 @@ const WATER_VAPOUR_LINES: &[(f64, f64, f64, f64, f64, f64, f64)] = &[
 pub fn gamma0(frequency: Frequency, pressure: Pressure, rho: f64, temperature: Temperature) -> f64 {
     gamma0_raw(
         frequency.to_gigahertz(),
-        pressure.to_hpa(),
+        pressure.to_hectopascals(),
         rho,
         temperature.to_kelvin(),
     )
@@ -167,7 +167,7 @@ pub(crate) fn gamma0_raw(f_ghz: f64, p_hpa: f64, rho: f64, t_k: f64) -> f64 {
 pub fn gammaw(frequency: Frequency, pressure: Pressure, rho: f64, temperature: Temperature) -> f64 {
     gammaw_raw(
         frequency.to_gigahertz(),
-        pressure.to_hpa(),
+        pressure.to_hectopascals(),
         rho,
         temperature.to_kelvin(),
     )
@@ -216,7 +216,7 @@ pub fn equivalent_heights(
 ) -> (Distance, Distance) {
     let (h0, hw) = equivalent_heights_raw(
         frequency.to_gigahertz(),
-        pressure.to_hpa(),
+        pressure.to_hectopascals(),
         rho,
         temperature.to_kelvin(),
     );
@@ -311,11 +311,11 @@ pub fn gaseous_attenuation_slant_path(
     let (a_o, a_w) = gaseous_attenuation_slant_path_raw(
         frequency.to_gigahertz(),
         elevation.to_degrees().max(5.0),
-        pressure.to_hpa(),
+        pressure.to_hectopascals(),
         rho,
         temperature.to_kelvin(),
     );
-    (Decibel::new(a_o), Decibel::new(a_w))
+    (Decibel::decibels(a_o), Decibel::decibels(a_w))
 }
 
 pub(crate) fn gaseous_attenuation_slant_path_raw(
@@ -420,7 +420,7 @@ mod tests {
     fn test_unitful_gamma0() {
         let g = gamma0(
             Frequency::gigahertz(60.0),
-            Pressure::hpa(1013.25),
+            Pressure::hectopascals(1013.25),
             7.5,
             Temperature::kelvin(288.15),
         );
@@ -431,7 +431,7 @@ mod tests {
     fn test_unitful_gammaw() {
         let g = gammaw(
             Frequency::gigahertz(22.235),
-            Pressure::hpa(1013.25),
+            Pressure::hectopascals(1013.25),
             7.5,
             Temperature::kelvin(288.15),
         );
@@ -442,7 +442,7 @@ mod tests {
     fn test_unitful_equivalent_heights() {
         let (h0, hw) = equivalent_heights(
             Frequency::gigahertz(14.25),
-            Pressure::hpa(1013.25),
+            Pressure::hectopascals(1013.25),
             7.5,
             Temperature::kelvin(288.15),
         );
@@ -455,11 +455,11 @@ mod tests {
         let (a_o, a_w) = gaseous_attenuation_slant_path(
             Frequency::gigahertz(14.25),
             Angle::degrees(30.0),
-            Pressure::hpa(1013.25),
+            Pressure::hectopascals(1013.25),
             7.5,
             Temperature::kelvin(288.15),
         );
-        assert!(a_o.as_f64() + a_w.as_f64() > 0.0);
+        assert!(a_o + a_w > Decibel::ZERO);
     }
 
     #[test]

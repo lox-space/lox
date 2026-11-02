@@ -55,7 +55,7 @@ impl PyDecibel {
     #[new]
     /// Constructs a Decibel value from a raw dB number.
     pub fn new(value: f64) -> Self {
-        Self(Decibel::new(value))
+        Self(Decibel::decibels(value))
     }
 
     /// Creates a Decibel value from a linear power ratio.
@@ -71,7 +71,7 @@ impl PyDecibel {
     }
 
     fn __float__(&self) -> f64 {
-        self.0.as_f64()
+        self.0.to_decibels()
     }
 
     fn __add__(&self, other: &PyDecibel) -> Self {
@@ -83,11 +83,11 @@ impl PyDecibel {
     }
 
     fn __mul__(&self, other: f64) -> Self {
-        Self(Decibel::new(other * self.0.as_f64()))
+        Self(Decibel::decibels(other * self.0.to_decibels()))
     }
 
     fn __rmul__(&self, other: f64) -> Self {
-        Self(Decibel::new(other * self.0.as_f64()))
+        Self(Decibel::decibels(other * self.0.to_decibels()))
     }
 
     fn __neg__(&self) -> Self {
@@ -95,16 +95,16 @@ impl PyDecibel {
     }
 
     fn __eq__(&self, other: &PyDecibel) -> bool {
-        self.0.as_f64() == other.0.as_f64()
+        self.0 == other.0
     }
 
     fn __getnewargs__(&self) -> (f64,) {
-        (self.0.as_f64(),)
+        (self.0.to_decibels(),)
     }
 
     /// Returns the developer-readable representation.
     pub fn __repr__(&self) -> String {
-        format!("Decibel({})", repr_f64(self.0.as_f64()))
+        format!("Decibel({})", repr_f64(self.0.to_decibels()))
     }
 
     fn __str__(&self) -> String {
@@ -214,8 +214,7 @@ impl PyParabolicPattern {
     }
 
     fn __eq__(&self, other: &PyParabolicPattern) -> bool {
-        self.0.diameter().to_meters() == other.0.diameter().to_meters()
-            && self.0.efficiency() == other.0.efficiency()
+        self.0.diameter() == other.0.diameter() && self.0.efficiency() == other.0.efficiency()
     }
 
     fn __getnewargs__(&self) -> (PyDistance, f64) {
@@ -269,8 +268,7 @@ impl PyGaussianPattern {
     }
 
     fn __eq__(&self, other: &PyGaussianPattern) -> bool {
-        self.0.diameter().to_meters() == other.0.diameter().to_meters()
-            && self.0.efficiency() == other.0.efficiency()
+        self.0.diameter() == other.0.diameter() && self.0.efficiency() == other.0.efficiency()
     }
 
     fn __getnewargs__(&self) -> (PyDistance, f64) {
@@ -318,7 +316,7 @@ impl PyDipolePattern {
     }
 
     fn __eq__(&self, other: &PyDipolePattern) -> bool {
-        self.0.length().to_meters() == other.0.length().to_meters()
+        self.0.length() == other.0.length()
     }
 
     fn __getnewargs__(&self) -> (PyDistance,) {
@@ -357,7 +355,7 @@ impl PyConstantAntenna {
     }
 
     fn __eq__(&self, other: &PyConstantAntenna) -> bool {
-        self.inner.peak_gain().as_f64() == other.inner.peak_gain().as_f64()
+        self.inner.peak_gain() == other.inner.peak_gain()
     }
 
     fn __getnewargs__(&self) -> (PyDecibel,) {
@@ -617,9 +615,12 @@ impl PyAmplifierTransmitter {
     #[new]
     #[pyo3(signature = (power, output_back_off=None))]
     fn new(power: PyPower, output_back_off: Option<PyDecibel>) -> PyResult<Self> {
-        AmplifierTransmitter::new(power.0, output_back_off.map_or(Decibel::new(0.0), |d| d.0))
-            .map(Self)
-            .map_err(|err| PyValueError::new_err(err.to_string()))
+        AmplifierTransmitter::new(
+            power.0,
+            output_back_off.map_or(Decibel::decibels(0.0), |d| d.0),
+        )
+        .map(Self)
+        .map_err(|err| PyValueError::new_err(err.to_string()))
     }
 
     /// Transmit power.
@@ -635,8 +636,7 @@ impl PyAmplifierTransmitter {
     }
 
     fn __eq__(&self, other: &PyAmplifierTransmitter) -> bool {
-        self.0.power().to_watts() == other.0.power().to_watts()
-            && self.0.output_back_off().as_f64() == other.0.output_back_off().as_f64()
+        self.0.power() == other.0.power() && self.0.output_back_off() == other.0.output_back_off()
     }
 
     fn __getnewargs__(&self) -> (PyPower, Option<PyDecibel>) {
@@ -686,7 +686,7 @@ impl PyNoiseTempReceiver {
     }
 
     fn __eq__(&self, other: &PyNoiseTempReceiver) -> bool {
-        self.0.noise_temperature().to_kelvin() == other.0.noise_temperature().to_kelvin()
+        self.0.noise_temperature() == other.0.noise_temperature()
     }
 
     fn __getnewargs__(&self) -> (PyTemperature,) {
@@ -760,8 +760,8 @@ impl PyCascadeReceiver {
     ) -> PyResult<Self> {
         CascadeReceiver::new(
             stages.into_iter().map(|s| s.0).collect(),
-            demodulator_loss.map_or(Decibel::new(0.0), |d| d.0),
-            implementation_loss.map_or(Decibel::new(0.0), |d| d.0),
+            demodulator_loss.map_or(Decibel::decibels(0.0), |d| d.0),
+            implementation_loss.map_or(Decibel::decibels(0.0), |d| d.0),
         )
         .map(Self)
         .map_err(|err| PyValueError::new_err(err.to_string()))
@@ -781,8 +781,8 @@ impl PyCascadeReceiver {
             lna_gain.0,
             lna_noise_temperature.0,
             receiver_noise_figure.0,
-            demodulator_loss.map_or(Decibel::new(0.0), |d| d.0),
-            implementation_loss.map_or(Decibel::new(0.0), |d| d.0),
+            demodulator_loss.map_or(Decibel::decibels(0.0), |d| d.0),
+            implementation_loss.map_or(Decibel::decibels(0.0), |d| d.0),
         )
         .map(Self)
         .map_err(|err| PyValueError::new_err(err.to_string()))
@@ -807,11 +807,10 @@ impl PyCascadeReceiver {
                 .iter()
                 .zip(other.0.stages().iter())
                 .all(|(a, b)| {
-                    a.gain().as_f64() == b.gain().as_f64()
-                        && a.noise_temperature() == b.noise_temperature()
+                    a.gain() == b.gain() && a.noise_temperature() == b.noise_temperature()
                 })
-            && self.0.demodulator_loss().as_f64() == other.0.demodulator_loss().as_f64()
-            && self.0.implementation_loss().as_f64() == other.0.implementation_loss().as_f64()
+            && self.0.demodulator_loss() == other.0.demodulator_loss()
+            && self.0.implementation_loss() == other.0.implementation_loss()
     }
 
     fn __getnewargs__(&self) -> (Vec<PyNoiseStage>, Option<PyDecibel>, Option<PyDecibel>) {
@@ -1103,7 +1102,7 @@ impl PyModCod {
         format!(
             "ModCod('{}', required_eb_n0={:.2} dB, info_bits_per_symbol={:.3})",
             self.0.mode().name(),
-            self.0.required_eb_n0().as_f64(),
+            self.0.required_eb_n0().to_decibels(),
             self.0.mode().info_bits_per_symbol(),
         )
     }
@@ -1360,7 +1359,7 @@ impl PyLinkBudget {
         table: Vec<PyModCod>,
         design_margin: Option<PyDecibel>,
     ) -> Option<PyModulatedLinkBudget> {
-        let margin = design_margin.map(|m| m.0).unwrap_or(Decibel::new(0.0));
+        let margin = design_margin.map(|m| m.0).unwrap_or(Decibel::decibels(0.0));
         let table: Vec<ModCod> = table.into_iter().map(|mc| mc.0).collect();
         self.0
             .modulate_best(&channel.0, &table, margin)
@@ -1382,7 +1381,7 @@ impl PyLinkBudget {
         modcod: &PyModCod,
         design_margin: Option<PyDecibel>,
     ) -> PyModulatedLinkBudget {
-        let margin = design_margin.map(|m| m.0).unwrap_or(Decibel::new(0.0));
+        let margin = design_margin.map(|m| m.0).unwrap_or(Decibel::decibels(0.0));
         PyModulatedLinkBudget(self.0.modulate(&channel.0, &modcod.0, margin))
     }
 
@@ -1474,9 +1473,9 @@ impl PyLinkBudget {
     fn __repr__(&self) -> String {
         format!(
             "LinkBudget(c_n0={:.2} dB·Hz, eirp={:.2} dBW, gt={:.2} dB/K)",
-            self.0.c_n0.as_f64(),
-            self.0.eirp.as_f64(),
-            self.0.gt.as_f64(),
+            self.0.c_n0.to_decibels(),
+            self.0.eirp.to_decibels(),
+            self.0.gt.to_decibels(),
         )
     }
 }
@@ -1523,9 +1522,9 @@ impl PyInterferenceStats {
         format!(
             "InterferenceStats(interference_power={} W, c_n0i0={:.2} dB·Hz, eb_n0i0={:.2} dB, margin_with_interference={:.2} dB)",
             repr_f64(self.0.interference_power.to_watts()),
-            self.0.c_n0i0.as_f64(),
-            self.0.eb_n0i0.as_f64(),
-            self.0.margin_with_interference.as_f64(),
+            self.0.c_n0i0.to_decibels(),
+            self.0.eb_n0i0.to_decibels(),
+            self.0.margin_with_interference.to_decibels(),
         )
     }
 }
@@ -1630,8 +1629,8 @@ impl PyModulatedLinkBudget {
     fn __repr__(&self) -> String {
         format!(
             "ModulatedLinkBudget(eb_n0={:.2} dB, margin={:.2} dB)",
-            self.0.eb_n0.as_f64(),
-            self.0.margin.as_f64(),
+            self.0.eb_n0.to_decibels(),
+            self.0.margin.to_decibels(),
         )
     }
 }
@@ -1772,7 +1771,7 @@ impl PyPfdMask {
                 format!(
                     "(Angle({}), Decibel({}))",
                     repr_f64(elevation.to_radians()),
-                    repr_f64(value.as_f64())
+                    repr_f64(value.to_decibels())
                 )
             })
             .collect::<Vec<_>>()
@@ -1996,7 +1995,7 @@ impl PyTxChain {
         TxChain::new(
             build_antenna(antenna)?,
             transmitter.0.clone(),
-            feed_loss.map_or(Decibel::new(0.0), |d| d.0),
+            feed_loss.map_or(Decibel::decibels(0.0), |d| d.0),
             build_band(band)?,
         )
         .map(Self)
@@ -2110,7 +2109,7 @@ impl PyRxChain {
         RxChain::new(
             build_antenna(antenna)?,
             build_receiver(receiver)?,
-            feed_loss.map_or(Decibel::new(0.0), |d| d.0),
+            feed_loss.map_or(Decibel::decibels(0.0), |d| d.0),
             antenna_noise_temperature.0,
             build_band(band)?,
         )
@@ -2257,8 +2256,7 @@ impl PyEirpModel {
     }
 
     fn __eq__(&self, other: &PyEirpModel) -> bool {
-        Eirp::band(&self.0) == Eirp::band(&other.0)
-            && self.0.eirp().as_f64() == other.0.eirp().as_f64()
+        Eirp::band(&self.0) == Eirp::band(&other.0) && self.0.eirp() == other.0.eirp()
     }
 
     fn __getnewargs__(&self) -> (PyFrequencyRange, PyDecibel) {
@@ -2330,8 +2328,7 @@ impl PyGtModel {
     }
 
     fn __eq__(&self, other: &PyGtModel) -> bool {
-        GOverT::band(&self.0) == GOverT::band(&other.0)
-            && self.0.gt().as_f64() == other.0.gt().as_f64()
+        GOverT::band(&self.0) == GOverT::band(&other.0) && self.0.gt() == other.0.gt()
     }
 
     fn __getnewargs__(&self) -> (PyFrequencyRange, PyDecibel) {

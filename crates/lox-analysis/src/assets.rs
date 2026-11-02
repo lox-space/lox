@@ -767,7 +767,7 @@ mod tests {
         let RxTerminal::Lumped(model) = gs.rx_terminal("main").unwrap() else {
             panic!("expected lumped terminal");
         };
-        assert_eq!(model.gt().as_f64(), 25.0);
+        assert_eq!(model.gt().to_decibels(), 25.0);
     }
 
     #[cfg(feature = "comms")]

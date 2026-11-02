@@ -20,9 +20,9 @@ use lox_core::units::{Pressure, Temperature};
 /// * `temperature` — Temperature
 /// * `pressure` — Total atmospheric pressure
 pub fn saturation_vapour_pressure(temperature: Temperature, pressure: Pressure) -> Pressure {
-    Pressure::hpa(saturation_vapour_pressure_raw(
+    Pressure::hectopascals(saturation_vapour_pressure_raw(
         temperature.to_kelvin() - 273.15,
-        pressure.to_hpa(),
+        pressure.to_hectopascals(),
     ))
 }
 
@@ -39,9 +39,9 @@ pub(crate) fn saturation_vapour_pressure_raw(t_celsius: f64, p_hpa: f64) -> f64 
 /// * `temperature` — Temperature
 /// * `pressure` — Total atmospheric pressure
 pub fn saturation_vapour_pressure_ice(temperature: Temperature, pressure: Pressure) -> Pressure {
-    Pressure::hpa(saturation_vapour_pressure_ice_raw(
+    Pressure::hectopascals(saturation_vapour_pressure_ice_raw(
         temperature.to_kelvin() - 273.15,
-        pressure.to_hpa(),
+        pressure.to_hectopascals(),
     ))
 }
 
@@ -63,9 +63,9 @@ pub fn water_vapour_pressure(
     pressure: Pressure,
     humidity_pct: f64,
 ) -> Pressure {
-    Pressure::hpa(water_vapour_pressure_raw(
+    Pressure::hectopascals(water_vapour_pressure_raw(
         temperature.to_kelvin() - 273.15,
-        pressure.to_hpa(),
+        pressure.to_hectopascals(),
         humidity_pct,
     ))
 }
@@ -81,7 +81,7 @@ pub(crate) fn water_vapour_pressure_raw(t_celsius: f64, p_hpa: f64, humidity_pct
 /// * `e` — Water vapour pressure
 /// * `temperature` — Temperature
 pub fn wet_term_radio_refractivity(e: Pressure, temperature: Temperature) -> f64 {
-    wet_term_radio_refractivity_raw(e.to_hpa(), temperature.to_kelvin())
+    wet_term_radio_refractivity_raw(e.to_hectopascals(), temperature.to_kelvin())
 }
 
 pub(crate) fn wet_term_radio_refractivity_raw(e_hpa: f64, t_k: f64) -> f64 {
@@ -95,7 +95,7 @@ pub(crate) fn wet_term_radio_refractivity_raw(e_hpa: f64, t_k: f64) -> f64 {
 /// * `pd` — Dry air pressure (total pressure minus water vapour pressure)
 /// * `temperature` — Temperature
 pub fn dry_term_radio_refractivity(pd: Pressure, temperature: Temperature) -> f64 {
-    dry_term_radio_refractivity_raw(pd.to_hpa(), temperature.to_kelvin())
+    dry_term_radio_refractivity_raw(pd.to_hectopascals(), temperature.to_kelvin())
 }
 
 pub(crate) fn dry_term_radio_refractivity_raw(pd_hpa: f64, t_k: f64) -> f64 {
@@ -110,7 +110,11 @@ pub(crate) fn dry_term_radio_refractivity_raw(pd_hpa: f64, t_k: f64) -> f64 {
 /// * `e` — Water vapour pressure
 /// * `temperature` — Temperature
 pub fn radio_refractive_index(pressure: Pressure, e: Pressure, temperature: Temperature) -> f64 {
-    radio_refractive_index_raw(pressure.to_hpa(), e.to_hpa(), temperature.to_kelvin())
+    radio_refractive_index_raw(
+        pressure.to_hectopascals(),
+        e.to_hectopascals(),
+        temperature.to_kelvin(),
+    )
 }
 
 pub(crate) fn radio_refractive_index_raw(p_hpa: f64, e_hpa: f64, t_k: f64) -> f64 {
@@ -206,35 +210,46 @@ mod tests {
     #[test]
     fn test_unitful_api_consistency() {
         let e_raw = saturation_vapour_pressure_raw(20.0, 1013.25);
-        let e_unit =
-            saturation_vapour_pressure(Temperature::kelvin(293.15), Pressure::hpa(1013.25));
-        assert_approx_eq!(e_unit.to_hpa(), e_raw, rtol <= 1e-10);
+        let e_unit = saturation_vapour_pressure(
+            Temperature::kelvin(293.15),
+            Pressure::hectopascals(1013.25),
+        );
+        assert_approx_eq!(e_unit.to_hectopascals(), e_raw, rtol <= 1e-10);
     }
 
     #[test]
     fn test_unitful_saturation_vapour_pressure_ice() {
-        let es =
-            saturation_vapour_pressure_ice(Temperature::kelvin(263.15), Pressure::hpa(1013.25));
-        assert!(es.to_hpa() > 0.0);
+        let es = saturation_vapour_pressure_ice(
+            Temperature::kelvin(263.15),
+            Pressure::hectopascals(1013.25),
+        );
+        assert!(es > Pressure::ZERO);
     }
 
     #[test]
     fn test_unitful_water_vapour_pressure() {
-        let e = water_vapour_pressure(Temperature::kelvin(293.15), Pressure::hpa(1013.25), 50.0);
-        assert!(e.to_hpa() > 0.0);
+        let e = water_vapour_pressure(
+            Temperature::kelvin(293.15),
+            Pressure::hectopascals(1013.25),
+            50.0,
+        );
+        assert!(e > Pressure::ZERO);
     }
 
     #[test]
     fn test_unitful_dry_term() {
-        let nd = dry_term_radio_refractivity(Pressure::hpa(1013.25), Temperature::kelvin(288.0));
+        let nd = dry_term_radio_refractivity(
+            Pressure::hectopascals(1013.25),
+            Temperature::kelvin(288.0),
+        );
         assert_approx_eq!(nd, 272.0, atol <= 2.0);
     }
 
     #[test]
     fn test_unitful_radio_refractive_index() {
         let n = radio_refractive_index(
-            Pressure::hpa(1013.25),
-            Pressure::hpa(10.0),
+            Pressure::hectopascals(1013.25),
+            Pressure::hectopascals(10.0),
             Temperature::kelvin(288.0),
         );
         assert!(n > 1.0 && n < 1.001);

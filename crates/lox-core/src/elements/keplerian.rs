@@ -10,8 +10,8 @@ use core::f64::consts::TAU;
 use core::fmt::Display;
 
 use glam::DVec3;
-use lox_approx::ApproxEq;
 use lox_approx::approx_eq;
+use lox_approx::{ApproxEq, ApproxEqResult, ApproxEqResults};
 use thiserror::Error;
 
 use crate::math::float::{abs, powf, powi, signum, sqrt};
@@ -167,7 +167,7 @@ pub struct Inclination(Angle);
 impl Inclination {
     /// Tries to create a new [`Inclination`] from an angle. Must be between 0 and π.
     pub const fn try_new(inclination: Angle) -> Result<Inclination, InclinationError> {
-        let inc = inclination.as_f64();
+        let inc = inclination.to_radians();
         if !(inc >= 0.0 && inc <= PI) {
             return Err(InclinationError(inclination));
         }
@@ -176,7 +176,7 @@ impl Inclination {
 
     /// Returns the inclination in radians as an `f64`.
     pub const fn as_f64(&self) -> f64 {
-        self.0.as_f64()
+        self.0.to_radians()
     }
 
     /// Returns the inclination as an [`Angle`].
@@ -197,17 +197,30 @@ impl Display for Inclination {
 pub struct LongitudeOfAscendingNodeError(Angle);
 
 /// Longitude of ascending node.
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct LongitudeOfAscendingNode(#[approx(periodic = TAU)] Angle);
+pub struct LongitudeOfAscendingNode(Angle);
+
+impl ApproxEq for LongitudeOfAscendingNode {
+    /// Compares the longitude of ascending node modulo 2π.
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        ApproxEqResults::single(ApproxEqResult::periodic(
+            self.0.to_radians(),
+            rhs.0.to_radians(),
+            TAU,
+            atol,
+            rtol,
+        ))
+    }
+}
 
 impl LongitudeOfAscendingNode {
     /// Tries to create a new [`LongitudeOfAscendingNode`]. Must be between 0 and 2π.
     pub const fn try_new(
         longitude_of_ascending_node: Angle,
     ) -> Result<LongitudeOfAscendingNode, LongitudeOfAscendingNodeError> {
-        let node = longitude_of_ascending_node.as_f64();
+        let node = longitude_of_ascending_node.to_radians();
         if !(node >= 0.0 && node <= TAU) {
             return Err(LongitudeOfAscendingNodeError(longitude_of_ascending_node));
         }
@@ -216,7 +229,7 @@ impl LongitudeOfAscendingNode {
 
     /// Returns the longitude of ascending node in radians as an `f64`.
     pub const fn as_f64(&self) -> f64 {
-        self.0.as_f64()
+        self.0.to_radians()
     }
 
     /// Returns the longitude of ascending node as an [`Angle`].
@@ -237,17 +250,30 @@ impl Display for LongitudeOfAscendingNode {
 pub struct ArgumentOfPeriapsisError(Angle);
 
 /// Argument of periapsis.
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct ArgumentOfPeriapsis(#[approx(periodic = TAU)] Angle);
+pub struct ArgumentOfPeriapsis(Angle);
+
+impl ApproxEq for ArgumentOfPeriapsis {
+    /// Compares the argument of periapsis modulo 2π.
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        ApproxEqResults::single(ApproxEqResult::periodic(
+            self.0.to_radians(),
+            rhs.0.to_radians(),
+            TAU,
+            atol,
+            rtol,
+        ))
+    }
+}
 
 impl ArgumentOfPeriapsis {
     /// Tries to create a new [`ArgumentOfPeriapsis`]. Must be between 0 and 2π.
     pub const fn try_new(
         argument_of_periapsis: Angle,
     ) -> Result<ArgumentOfPeriapsis, ArgumentOfPeriapsisError> {
-        let arg = argument_of_periapsis.as_f64();
+        let arg = argument_of_periapsis.to_radians();
         if !(arg >= 0.0 && arg <= TAU) {
             return Err(ArgumentOfPeriapsisError(argument_of_periapsis));
         }
@@ -256,7 +282,7 @@ impl ArgumentOfPeriapsis {
 
     /// Returns the argument of periapsis in radians as an `f64`.
     pub const fn as_f64(&self) -> f64 {
-        self.0.as_f64()
+        self.0.to_radians()
     }
 
     /// Returns the argument of periapsis as an [`Angle`].
@@ -302,7 +328,7 @@ impl Keplerian {
         argument_of_periapsis: Angle,
         true_anomaly: TrueAnomaly,
     ) -> Result<Self, KeplerianError> {
-        let p = semi_parameter.as_f64();
+        let p = semi_parameter.to_meters();
         if !p.is_finite() || p <= 0.0 {
             return Err(KeplerianError::InvalidSemiParameter(semi_parameter));
         }
@@ -340,8 +366,8 @@ impl Keplerian {
         if self.eccentricity.is_circular() {
             return Some(self.semi_parameter);
         }
-        Some(Distance::new(
-            self.semi_parameter.as_f64() / (1.0 - powi(self.eccentricity.0, 2)),
+        Some(Distance::meters(
+            self.semi_parameter.to_meters() / (1.0 - powi(self.eccentricity.0, 2)),
         ))
     }
 
@@ -377,7 +403,7 @@ impl Keplerian {
 
     /// Returns the periapsis radius.
     pub fn periapsis_radius(&self) -> Distance {
-        Distance::new(self.semi_parameter.as_f64() / (1.0 + self.eccentricity.0))
+        self.semi_parameter / (1.0 + self.eccentricity.0)
     }
 
     /// Returns the apoapsis radius, or `None` for open orbits.
@@ -385,8 +411,8 @@ impl Keplerian {
         if !self.eccentricity.is_circular_or_elliptic() {
             return None;
         }
-        Some(Distance::new(
-            self.semi_parameter.as_f64() / (1.0 - self.eccentricity.0),
+        Some(Distance::meters(
+            self.semi_parameter.to_meters() / (1.0 - self.eccentricity.0),
         ))
     }
 
@@ -455,10 +481,10 @@ impl Keplerian {
     pub fn mean_motion(&self, grav_param: GravitationalParameter) -> AngularRate {
         let mu = grav_param.as_f64();
         match self.semi_major_axis() {
-            Some(a) => AngularRate::new(sqrt(mu / powi(abs(a.as_f64()), 3))),
+            Some(a) => AngularRate::radians_per_second(sqrt(mu / powi(abs(a.to_meters()), 3))),
             None => {
-                let p = self.semi_parameter.as_f64();
-                AngularRate::new(2.0 * sqrt(mu / powi(p, 3)))
+                let p = self.semi_parameter.to_meters();
+                AngularRate::radians_per_second(2.0 * sqrt(mu / powi(p, 3)))
             }
         }
     }
@@ -472,20 +498,20 @@ impl Keplerian {
     /// hyperbolic orbits.
     pub fn specific_orbital_energy(&self, grav_param: GravitationalParameter) -> f64 {
         let mu = grav_param.as_f64();
-        let p = self.semi_parameter.as_f64();
+        let p = self.semi_parameter.to_meters();
         -mu * (1.0 - powi(self.eccentricity.0, 2)) / (2.0 * p)
     }
 
     /// Returns the magnitude of the specific angular momentum in m²/s.
     pub fn specific_angular_momentum(&self, grav_param: GravitationalParameter) -> f64 {
-        sqrt(grav_param.as_f64() * self.semi_parameter.as_f64())
+        sqrt(grav_param.as_f64() * self.semi_parameter.to_meters())
     }
 
     /// Converts the orbital elements to position and velocity in the perifocal frame.
     pub fn to_perifocal(&self, grav_param: GravitationalParameter) -> (DVec3, DVec3) {
         let ecc = self.eccentricity.as_f64();
         let mu = grav_param.as_f64();
-        let semiparameter = self.semi_parameter.as_f64();
+        let semiparameter = self.semi_parameter.to_meters();
         let (sin_nu, cos_nu) = self.true_anomaly.as_angle().sin_cos();
         let sqrt_mu_p = sqrt(mu / semiparameter);
 
@@ -510,7 +536,7 @@ impl Keplerian {
             return None;
         }
         let mu = grav_param.as_f64();
-        let a = self.semi_major_axis()?.as_f64();
+        let a = self.semi_major_axis()?.to_meters();
         Some(TimeDelta::from_seconds_f64(TAU * sqrt(powf(a, 3.0) / mu)))
     }
 
@@ -549,14 +575,14 @@ fn check_true_anomaly(
 ) -> Result<TrueAnomaly, AnomalyError> {
     let max_nu = match eccentricity.orbit_type() {
         OrbitType::Circular | OrbitType::Elliptic => return Ok(true_anomaly),
-        OrbitType::Parabolic => Angle::new(PI),
+        OrbitType::Parabolic => Angle::radians(PI),
         OrbitType::Hyperbolic => hyperbolic_asymptote_angle(eccentricity),
     };
     let nu = true_anomaly.as_angle().normalize_two_pi(Angle::ZERO);
     // Close to the asymptotes, 1 + e·cos(ν) can round to zero even though ν lies inside them,
     // which would make the radius infinite.
     let (_, cos_nu) = nu.sin_cos();
-    if abs(nu.as_f64()) >= max_nu.as_f64() || 1.0 + eccentricity.as_f64() * cos_nu <= 0.0 {
+    if abs(nu.to_radians()) >= max_nu.to_radians() || 1.0 + eccentricity.as_f64() * cos_nu <= 0.0 {
         return Err(AnomalyError::InvalidTrueAnomaly {
             nu: true_anomaly.as_angle(),
             max_nu,
@@ -625,7 +651,7 @@ impl Cartesian {
         let inclination = h.angle_between(DVec3::Z).rad();
 
         let equatorial = approx_eq!(inclination, Angle::ZERO, atol <= 1e-8)
-            || approx_eq!(inclination, Angle::new(PI), atol <= 1e-8);
+            || approx_eq!(inclination, Angle::radians(PI), atol <= 1e-8);
         let circular = eccentricity.is_circular();
         // In-plane angles of retrograde equatorial orbits are measured clockwise from the x-axis.
         let direction = signum(h.z);
@@ -791,9 +817,9 @@ impl KeplerianBuilder {
 
     /// Sets the orbit shape from periapsis and apoapsis radii.
     pub fn with_radii(self, periapsis_radius: Distance, apoapsis_radius: Distance) -> Self {
-        let rp = periapsis_radius.as_f64();
-        let ra = apoapsis_radius.as_f64();
-        self.with_semi_major_axis(Distance::new((rp + ra) / 2.0), (ra - rp) / (ra + rp))
+        let rp = periapsis_radius.to_meters();
+        let ra = apoapsis_radius.to_meters();
+        self.with_semi_major_axis(Distance::meters((rp + ra) / 2.0), (ra - rp) / (ra + rp))
     }
 
     /// Sets the orbit shape from periapsis and apoapsis altitudes above a mean radius.
@@ -879,7 +905,7 @@ impl KeplerianBuilder {
 
         if let Some(Anomaly::True(anomaly) | Anomaly::Eccentric(anomaly) | Anomaly::Mean(anomaly)) =
             self.anomaly
-            && !anomaly.as_f64().is_finite()
+            && !anomaly.is_finite()
         {
             return Err(KeplerianError::NonFiniteAnomaly(anomaly));
         }
@@ -908,7 +934,7 @@ impl KeplerianBuilder {
         let semi_parameter = match shape {
             Shape::SemiMajorAxis(semi_major_axis) => {
                 let ecc = eccentricity.as_f64();
-                let sma = semi_major_axis.as_f64();
+                let sma = semi_major_axis.to_meters();
                 let valid = sma.is_finite()
                     && match eccentricity.orbit_type() {
                         OrbitType::Circular | OrbitType::Elliptic => sma > 0.0,
@@ -924,7 +950,7 @@ impl KeplerianBuilder {
                 if eccentricity.is_circular() {
                     semi_major_axis
                 } else {
-                    Distance::new(sma * (1.0 - powi(ecc, 2)))
+                    Distance::meters(sma * (1.0 - powi(ecc, 2)))
                 }
             }
             Shape::SemiParameter(semi_parameter) => semi_parameter,
@@ -1190,7 +1216,7 @@ mod tests {
         for (sma, ecc, requirement) in [
             (0.0.km(), 0.5, "must be finite and positive"),
             (
-                Distance::new(f64::INFINITY),
+                Distance::meters(f64::INFINITY),
                 0.0,
                 "must be finite and positive",
             ),
@@ -1297,7 +1323,7 @@ mod tests {
     fn test_builder_rejects_non_finite_angles() {
         let result = Keplerian::builder()
             .with_semi_major_axis(7000.0.km(), 0.1)
-            .with_longitude_of_ascending_node(Angle::new(f64::INFINITY))
+            .with_longitude_of_ascending_node(Angle::radians(f64::INFINITY))
             .build();
         assert!(matches!(
             result,
@@ -1305,16 +1331,16 @@ mod tests {
         ));
         let result = Keplerian::builder()
             .with_semi_major_axis(7000.0.km(), 0.1)
-            .with_argument_of_periapsis(Angle::new(f64::NAN))
+            .with_argument_of_periapsis(Angle::radians(f64::NAN))
             .build();
         assert!(matches!(
             result,
             Err(KeplerianError::InvalidArgumentOfPeriapsis(_))
         ));
         for builder in [
-            Keplerian::builder().with_true_anomaly(Angle::new(f64::NAN)),
-            Keplerian::builder().with_eccentric_anomaly(Angle::new(f64::INFINITY)),
-            Keplerian::builder().with_mean_anomaly(Angle::new(f64::NEG_INFINITY)),
+            Keplerian::builder().with_true_anomaly(Angle::radians(f64::NAN)),
+            Keplerian::builder().with_eccentric_anomaly(Angle::radians(f64::INFINITY)),
+            Keplerian::builder().with_mean_anomaly(Angle::radians(f64::NEG_INFINITY)),
         ] {
             let result = builder.with_semi_major_axis(7000.0.km(), 0.1).build();
             assert!(matches!(result, Err(KeplerianError::NonFiniteAnomaly(_))));
@@ -1331,20 +1357,24 @@ mod tests {
         let r = state.position();
         let v = state.velocity();
 
-        assert_approx_eq!(k.semi_major_axis().unwrap().as_f64(), a, rtol <= 1e-14);
-        assert_approx_eq!(k.periapsis_radius().as_f64(), a * (1.0 - e), rtol <= 1e-14);
+        assert_approx_eq!(k.semi_major_axis().unwrap().to_meters(), a, rtol <= 1e-14);
         assert_approx_eq!(
-            k.apoapsis_radius().unwrap().as_f64(),
+            k.periapsis_radius().to_meters(),
+            a * (1.0 - e),
+            rtol <= 1e-14
+        );
+        assert_approx_eq!(
+            k.apoapsis_radius().unwrap().to_meters(),
             a * (1.0 + e),
             rtol <= 1e-14
         );
         assert_approx_eq!(
-            k.periapsis_altitude(6371.0.km()).as_f64(),
+            k.periapsis_altitude(6371.0.km()).to_meters(),
             a * (1.0 - e) - 6371e3,
             rtol <= 1e-14
         );
         assert_approx_eq!(
-            k.mean_motion(MU_EARTH).as_f64(),
+            k.mean_motion(MU_EARTH).to_radians_per_second(),
             sqrt(mu / powi(a, 3)),
             rtol <= 1e-14
         );
@@ -1359,23 +1389,23 @@ mod tests {
             rtol <= 1e-10
         );
         assert_approx_eq!(
-            k.flight_path_angle().as_f64(),
+            k.flight_path_angle().to_radians(),
             asin(r.dot(v) / (r.length() * v.length())),
             rtol <= 1e-10
         );
         assert_approx_eq!(
-            k.argument_of_latitude().as_f64(),
+            k.argument_of_latitude().to_radians(),
             (3.10686 + 0.44369564302687126) % TAU,
             rtol <= 1e-14
         );
         assert_approx_eq!(
-            k.true_longitude().as_f64(),
+            k.true_longitude().to_radians(),
             (1.00681 + 3.10686 + 0.44369564302687126) % TAU,
             rtol <= 1e-14
         );
         let mean_anomaly = k.true_anomaly().to_mean(k.eccentricity()).unwrap();
         assert_approx_eq!(
-            k.mean_longitude().unwrap().as_f64(),
+            k.mean_longitude().unwrap().to_radians(),
             (1.00681 + 3.10686 + mean_anomaly.as_f64()) % TAU,
             rtol <= 1e-14
         );
@@ -1416,7 +1446,7 @@ mod tests {
         let max_nu = match eccentricity.orbit_type() {
             OrbitType::Circular | OrbitType::Elliptic => PI,
             OrbitType::Parabolic => 0.95 * PI,
-            OrbitType::Hyperbolic => 0.95 * hyperbolic_asymptote_angle(eccentricity).as_f64(),
+            OrbitType::Hyperbolic => 0.95 * hyperbolic_asymptote_angle(eccentricity).to_radians(),
         };
         Keplerian::builder()
             .with_semi_parameter(p.m(), ecc)
@@ -1546,7 +1576,7 @@ mod tests {
                 (k.argument_of_latitude(), k1.argument_of_latitude())
             };
             prop_assert!(
-                ApproxEqResult::periodic(expected.into(), actual.into(), TAU, 1e-7, 0.0).is_pass(),
+                ApproxEqResult::periodic(expected.to_radians(), actual.to_radians(), TAU, 1e-7, 0.0).is_pass(),
                 "{expected} vs {actual}"
             );
             for angle in [

@@ -146,10 +146,10 @@ impl ModifiedEquinoctial {
         l: Angle,
         retrograde_factor: RetrogradeFactor,
     ) -> Result<Self, ModifiedEquinoctialError> {
-        if !p.as_f64().is_finite() || p.as_f64() <= 0.0 {
+        if !p.is_finite() || p <= Distance::ZERO {
             return Err(ModifiedEquinoctialError::InvalidSemiParameter(p));
         }
-        if ![f, g, h, k, l.as_f64()].iter().all(|x| x.is_finite()) {
+        if ![f, g, h, k, l.to_radians()].iter().all(|x| x.is_finite()) {
             return Err(ModifiedEquinoctialError::NonFiniteElements);
         }
         Eccentricity::try_new(hypot(f, g))?;
@@ -240,7 +240,7 @@ impl ModifiedEquinoctial {
 
     /// Converts the elements to a Cartesian state.
     pub fn to_cartesian(&self, grav_param: GravitationalParameter) -> Cartesian {
-        let p = self.p.as_f64();
+        let p = self.p.to_meters();
         let (f_hat, g_hat) = equinoctial_basis(self.k, self.h, self.retrograde_factor);
         let (sin_l, cos_l) = self.l.sin_cos();
         let r = p / (1.0 + self.f * cos_l + self.g * sin_l);
@@ -269,7 +269,7 @@ impl ModifiedEquinoctial {
             .with_argument_of_periapsis(
                 (longitude_of_periapsis - sign * longitude_of_ascending_node).rad(),
             )
-            .with_true_anomaly((self.l.as_f64() - longitude_of_periapsis).rad())
+            .with_true_anomaly((self.l.to_radians() - longitude_of_periapsis).rad())
             .build()
     }
 }
@@ -314,7 +314,7 @@ impl Cartesian {
         let e: DVec3 = v.cross(angular_momentum) / mu - r / r.length();
 
         ModifiedEquinoctial::try_new(
-            Distance::new(hm * hm / mu),
+            Distance::meters(hm * hm / mu),
             e.dot(f_hat),
             e.dot(g_hat),
             h,
@@ -352,7 +352,7 @@ impl Keplerian {
             e * sin(longitude_of_periapsis),
             h,
             k,
-            Angle::new(longitude_of_periapsis + self.true_anomaly().as_f64()),
+            Angle::radians(longitude_of_periapsis + self.true_anomaly().as_f64()),
             retrograde_factor,
         )
     }

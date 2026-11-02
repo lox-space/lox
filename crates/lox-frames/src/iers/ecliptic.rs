@@ -63,7 +63,7 @@ mod tests {
     #[test]
     fn test_mean_obliquity_iers1996() {
         let time = Time::from_two_part_julian_date(Tt, 2400000.5, 54388.0);
-        let exp = MeanObliquity(Angle::new(0.409_075_134_764_381_6));
+        let exp = MeanObliquity(Angle::radians(0.409_075_134_764_381_6));
         let act = ReferenceSystem::Iers1996.mean_obliquity(time);
         assert_approx_eq!(act, exp, rtol <= 1e-14);
     }
@@ -71,7 +71,7 @@ mod tests {
     #[test]
     fn test_mean_obliquity_iers2010() {
         let time = Time::from_two_part_julian_date(Tt, 2400000.5, 54388.0);
-        let exp = MeanObliquity(Angle::new(0.409_074_922_938_725_8));
+        let exp = MeanObliquity(Angle::radians(0.409_074_922_938_725_8));
         let act = ReferenceSystem::Iers2010.mean_obliquity(time);
         assert_approx_eq!(act, exp, rtol <= 1e-14);
     }

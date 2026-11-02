@@ -266,9 +266,9 @@ impl ReferenceSystem {
             ReferenceSystem::Iers2003(_) | ReferenceSystem::Iers2010 => {
                 let Corrections(dx, dy) = corr;
                 let rbpn = nut.nutation_matrix(epsa) * rpb;
-                let v1 = DVec3::new(dx.as_f64(), dy.as_f64(), 0.0);
+                let v1 = DVec3::new(dx.to_radians(), dy.to_radians(), 0.0);
                 let v2 = rbpn * v1;
-                Corrections(Angle::new(v2.x / epsa.0.sin()), Angle::new(v2.y))
+                Corrections(Angle::radians(v2.x / epsa.0.sin()), Angle::radians(v2.y))
             }
         }
     }

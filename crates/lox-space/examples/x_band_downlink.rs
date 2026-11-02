@@ -89,11 +89,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("TX band:             {}", tx.band());
     println!(
         "EIRP toward station: {:.1} dBW",
-        tx.eirp_at(carrier, tx_pointing)?.as_f64()
+        tx.eirp_at(carrier, tx_pointing)?.to_decibels()
     );
     println!(
         "Station G/T:         {:.1} dB/K",
-        rx.gt_at(carrier, rx_pointing)?.as_f64()
+        rx.gt_at(carrier, rx_pointing)?.to_decibels()
     );
     println!(
         "Station T_sys:       {:.0} K (flange-referred)",
@@ -166,11 +166,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let limit = mask.value_at(elevation);
     println!(
         "\nPFD at ground:   {:>8.2} dBW/m²/4kHz (limit {:.1})",
-        pfd.as_f64(),
-        limit.as_f64()
+        pfd.to_decibels(),
+        limit.to_decibels()
     );
     assert!(
-        pfd.as_f64() <= limit.as_f64(),
+        pfd <= limit,
         "the downlink should comply with RR Art. 21.16"
     );
     println!("RR Art. 21.16:   compliant");

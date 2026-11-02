@@ -330,7 +330,7 @@ impl<O: CoordinateOrigin> CircularBuilder<O> {
                     .origin
                     .try_mean_radius()
                     .map_err(|_| OrbitBuilderError::MissingMeanRadius)?;
-                Distance::new(alt.as_f64() + mean_radius.as_f64())
+                alt + mean_radius
             }
         };
 
@@ -398,7 +398,7 @@ mod tests {
         assert_approx_eq!(orbit.eccentricity().as_f64(), 0.001, atol <= 1e-15);
         assert_approx_eq!(
             orbit.inclination().as_f64(),
-            97.0.deg().as_f64(),
+            97.0.deg().to_radians(),
             rtol <= 1e-10
         );
     }
@@ -431,9 +431,9 @@ mod tests {
             .build()
             .unwrap();
 
-        let rp = alt_p.as_f64() + mean_radius.as_f64();
-        let ra = alt_a.as_f64() + mean_radius.as_f64();
-        let exp_sma = Distance::new((rp + ra) / 2.0);
+        let rp = (alt_p + mean_radius).to_meters();
+        let ra = (alt_a + mean_radius).to_meters();
+        let exp_sma = Distance::meters((rp + ra) / 2.0);
         let exp_ecc = (ra - rp) / (ra + rp);
 
         assert_approx_eq!(orbit.semi_major_axis().unwrap(), exp_sma, rtol <= 1e-10);
@@ -475,7 +475,7 @@ mod tests {
         assert_approx_eq!(orbit.eccentricity().as_f64(), 0.0, atol <= 1e-15);
         assert_approx_eq!(
             orbit.inclination().as_f64(),
-            97.0.deg().as_f64(),
+            97.0.deg().to_radians(),
             rtol <= 1e-10
         );
     }
@@ -490,7 +490,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let exp_sma = Distance::new(altitude.as_f64() + mean_radius.as_f64());
+        let exp_sma = altitude + mean_radius;
         assert_approx_eq!(orbit.semi_major_axis().unwrap(), exp_sma, rtol <= 1e-10);
         assert_approx_eq!(orbit.eccentricity().as_f64(), 0.0, atol <= 1e-15);
     }

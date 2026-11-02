@@ -138,7 +138,7 @@ impl CarrierPlan {
             carrier,
             channel,
             modcods,
-            design_margin: Decibel::new(0.0),
+            design_margin: Decibel::decibels(0.0),
             losses: PropagationLosses::none(),
             detection_modcod,
         })
@@ -228,8 +228,8 @@ fn index_by_id<'a, A>(
 fn most_robust(table: &[ModCod]) -> Option<&ModCod> {
     table.iter().min_by(|a, b| {
         a.required_es_n0()
-            .as_f64()
-            .total_cmp(&b.required_es_n0().as_f64())
+            .to_decibels()
+            .total_cmp(&b.required_es_n0().to_decibels())
     })
 }
 
@@ -324,7 +324,7 @@ where
                 self.plan.design_margin,
             )
             .margin
-            .as_f64())
+            .to_decibels())
     }
 }
 
@@ -770,7 +770,7 @@ where
         let margin = budget
             .modulate(&plan.channel, &plan.detection_modcod, plan.design_margin)
             .margin
-            .as_f64();
+            .to_decibels();
         if !margin.is_finite() {
             return Err(LinkEvalError::NonFiniteMargin { time });
         }
@@ -801,8 +801,8 @@ where
     Ok(LinkWindow {
         interval,
         direction: link.direction,
-        peak_margin: Decibel::new(peak_margin),
-        min_margin: Decibel::new(min_margin),
+        peak_margin: Decibel::decibels(peak_margin),
+        min_margin: Decibel::decibels(min_margin),
         peak_modcod,
         symbol_rate: plan.channel.symbol_rate(),
         data_volume,
@@ -959,8 +959,12 @@ mod tests {
     fn lumped(eirp_dbw: f64, gt_db_k: f64) -> (TxTerminal, RxTerminal) {
         let band = FrequencyBand::X;
         (
-            EirpModel::new(band, Decibel::new(eirp_dbw)).unwrap().into(),
-            GtModel::new(band, Decibel::new(gt_db_k)).unwrap().into(),
+            EirpModel::new(band, Decibel::decibels(eirp_dbw))
+                .unwrap()
+                .into(),
+            GtModel::new(band, Decibel::decibels(gt_db_k))
+                .unwrap()
+                .into(),
         )
     }
 
@@ -1014,10 +1018,10 @@ mod tests {
         let plan = plan();
         let weakest = dvb_s2()
             .iter()
-            .map(|mc| mc.required_es_n0().as_f64())
+            .map(|mc| mc.required_es_n0().to_decibels())
             .fold(f64::INFINITY, f64::min);
         assert_approx_eq!(
-            plan.detection_modcod().required_es_n0().as_f64(),
+            plan.detection_modcod().required_es_n0().to_decibels(),
             weakest,
             atol <= 1e-12
         );
@@ -1055,7 +1059,11 @@ mod tests {
 
     #[test]
     fn test_design_margin_can_close_nothing() {
-        let results = run(200.0, 40.0, plan().with_design_margin(Decibel::new(1000.0)));
+        let results = run(
+            200.0,
+            40.0,
+            plan().with_design_margin(Decibel::decibels(1000.0)),
+        );
         assert!(results.is_empty());
     }
 
@@ -1148,7 +1156,11 @@ mod tests {
 
     #[test]
     fn test_empty_results_report_no_volume() {
-        let results = run(200.0, 40.0, plan().with_design_margin(Decibel::new(1000.0)));
+        let results = run(
+            200.0,
+            40.0,
+            plan().with_design_margin(Decibel::decibels(1000.0)),
+        );
         let (tx, rx) = downlink_ids();
         assert_eq!(results.data_volume_for(&tx, &rx), 0.0);
         assert_eq!(results.total_windows(), 0);
@@ -1160,10 +1172,14 @@ mod tests {
     fn test_uplink_and_downlink_are_distinct_links() {
         let f = fixture();
         let band = FrequencyBand::X;
-        let sc_tx: TxTerminal = EirpModel::new(band, Decibel::new(200.0)).unwrap().into();
-        let sc_rx: RxTerminal = GtModel::new(band, Decibel::new(40.0)).unwrap().into();
-        let gs_tx: TxTerminal = EirpModel::new(band, Decibel::new(200.0)).unwrap().into();
-        let gs_rx: RxTerminal = GtModel::new(band, Decibel::new(40.0)).unwrap().into();
+        let sc_tx: TxTerminal = EirpModel::new(band, Decibel::decibels(200.0))
+            .unwrap()
+            .into();
+        let sc_rx: RxTerminal = GtModel::new(band, Decibel::decibels(40.0)).unwrap().into();
+        let gs_tx: TxTerminal = EirpModel::new(band, Decibel::decibels(200.0))
+            .unwrap()
+            .into();
+        let gs_rx: RxTerminal = GtModel::new(band, Decibel::decibels(40.0)).unwrap().into();
 
         let gs = GroundStation::new(GS, f.location.clone())
             .with_rx_terminal("main", gs_rx)
@@ -1211,7 +1227,7 @@ mod tests {
             .with_override(
                 tx_id.clone(),
                 rx_id.clone(),
-                plan().with_design_margin(Decibel::new(1000.0)),
+                plan().with_design_margin(Decibel::decibels(1000.0)),
             )
             .compute()
             .unwrap();
@@ -1230,23 +1246,23 @@ mod tests {
             FrequencyRange::new(Frequency::gigahertz(8.025), Frequency::gigahertz(8.4)).unwrap();
         let tx: TxTerminal = TxChain::new(
             Antenna::parabolic(Distance::meters(0.25), 0.6).unwrap(),
-            AmplifierTransmitter::new(Power::watts(2.0), Decibel::new(0.5)).unwrap(),
-            Decibel::new(0.8),
+            AmplifierTransmitter::new(Power::watts(2.0), Decibel::decibels(0.5)).unwrap(),
+            Decibel::decibels(0.8),
             eess,
         )
         .unwrap()
         .into();
         let front_end = CascadeReceiver::builder()
-            .stage(Decibel::new(35.0), Temperature::kelvin(50.0))
-            .stage(Decibel::new(0.0), Temperature::kelvin(1540.0))
-            .demodulator_loss(Decibel::new(0.5))
-            .implementation_loss(Decibel::new(0.5))
+            .stage(Decibel::decibels(35.0), Temperature::kelvin(50.0))
+            .stage(Decibel::decibels(0.0), Temperature::kelvin(1540.0))
+            .demodulator_loss(Decibel::decibels(0.5))
+            .implementation_loss(Decibel::decibels(0.5))
             .build()
             .unwrap();
         let rx: RxTerminal = RxChain::new(
             Antenna::parabolic(Distance::meters(3.7), 0.6).unwrap(),
             front_end,
-            Decibel::new(0.3),
+            Decibel::decibels(0.3),
             Temperature::kelvin(60.0),
             eess,
         )
@@ -1254,8 +1270,8 @@ mod tests {
         .into();
 
         let losses = PropagationLosses::builder()
-            .rain(Decibel::new(1.2))
-            .gaseous(Decibel::new(0.4))
+            .rain(Decibel::decibels(1.2))
+            .gaseous(Decibel::decibels(0.4))
             .build()
             .unwrap();
         let channel = Channel::builder(Frequency::megahertz(1.0)).build().unwrap();
@@ -1283,7 +1299,11 @@ mod tests {
             .build()
             .unwrap();
         let expected = LinkBudget::new(&tx, &rx, &downlink).unwrap();
-        assert_approx_eq!(actual.c_n0.as_f64(), expected.c_n0.as_f64(), atol <= 1e-12);
+        assert_approx_eq!(
+            actual.c_n0.to_decibels(),
+            expected.c_n0.to_decibels(),
+            atol <= 1e-12
+        );
         assert!(
             actual.gt_degraded.is_some(),
             "a downlink onto a component receive chain degrades G/T"
@@ -1296,7 +1316,7 @@ mod tests {
             .build()
             .unwrap();
         let clear_sky = LinkBudget::new(&tx, &rx, &untagged).unwrap();
-        assert!(clear_sky.c_n0.as_f64() > expected.c_n0.as_f64() + 1.0);
+        assert!(clear_sky.c_n0 > expected.c_n0 + Decibel::decibels(1.0));
     }
 
     #[test]

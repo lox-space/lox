@@ -138,7 +138,8 @@ pub(crate) fn inclination_from_node_components(
         RetrogradeFactor::Prograde => half,
         RetrogradeFactor::Retrograde => PI - half,
     };
-    Inclination::try_new(Angle::new(i)).expect("finite node components have a valid inclination")
+    Inclination::try_new(Angle::radians(i))
+        .expect("finite node components have a valid inclination")
 }
 
 /// Equinoctial orbital elements.
@@ -254,10 +255,13 @@ impl Equinoctial {
         lambda: Angle,
         retrograde_factor: RetrogradeFactor,
     ) -> Result<Self, EquinoctialError> {
-        if !a.as_f64().is_finite() || a.as_f64() <= 0.0 {
+        if !a.is_finite() || a <= Distance::ZERO {
             return Err(EquinoctialError::InvalidSemiMajorAxis(a));
         }
-        if ![h, k, p, q, lambda.as_f64()].iter().all(|x| x.is_finite()) {
+        if ![h, k, p, q, lambda.to_radians()]
+            .iter()
+            .all(|x| x.is_finite())
+        {
             return Err(EquinoctialError::NonFiniteElements);
         }
         check_closed(Eccentricity::try_new(hypot(h, k))?)?;
@@ -271,7 +275,7 @@ impl Equinoctial {
             retrograde_factor,
         };
         let semi_parameter = elements.semi_parameter();
-        if semi_parameter.as_f64() <= 0.0 {
+        if semi_parameter <= Distance::ZERO {
             return Err(EquinoctialError::InvalidSemiParameter(semi_parameter));
         }
         Ok(elements)
@@ -328,7 +332,7 @@ impl Equinoctial {
     /// Returns the semi-parameter p = a·(1 - e²).
     pub fn semi_parameter(&self) -> Distance {
         let e = self.eccentricity().as_f64();
-        Distance::new(self.a.as_f64() * (1.0 - e) * (1.0 + e))
+        self.a * ((1.0 - e) * (1.0 + e))
     }
 
     /// Returns the true longitude L = ν + ω + I·Ω, in the same revolution as λ.
@@ -419,7 +423,7 @@ impl ModifiedEquinoctial {
         let e = eccentricity.as_f64();
         let (h, k) = (self.g(), self.f());
         Equinoctial::try_new(
-            Distance::new(self.p().as_f64() / ((1.0 - e) * (1.0 + e))),
+            self.p() / ((1.0 - e) * (1.0 + e)),
             h,
             k,
             self.k(),
@@ -499,12 +503,12 @@ mod tests {
                 RetrogradeFactor::Prograde
             };
             let eq = Equinoctial::try_new(
-                Distance::new(a),
+                Distance::meters(a),
                 e * sin(pomega),
                 e * cos(pomega),
                 p,
                 q,
-                Angle::new(lambda),
+                Angle::radians(lambda),
                 retrograde_factor,
             )
             .unwrap();
@@ -565,8 +569,8 @@ mod tests {
         assert_approx_eq!(from_keplerian.eccentricity().as_f64(), e, atol <= 1e-12);
         assert_approx_eq!(from_cartesian.inclination().as_f64(), i, atol <= 1e-12);
         assert_approx_eq!(
-            from_keplerian.a().as_f64(),
-            kep.semi_major_axis().unwrap().as_f64(),
+            from_keplerian.a().to_meters(),
+            kep.semi_major_axis().unwrap().to_meters(),
             rtol <= 1e-12
         );
 
@@ -612,11 +616,11 @@ mod tests {
         assert_approx_eq!(eq.q(), tan(i / 2.0) * cos(node), atol <= 1e-15);
         assert_approx_eq!(
             eq.lambda().mod_two_pi(),
-            Angle::new(mean_anomaly + periapsis + node).mod_two_pi(),
+            Angle::radians(mean_anomaly + periapsis + node).mod_two_pi(),
             atol <= 1e-12
         );
         assert_approx_eq!(
-            eq.true_longitude().unwrap().as_f64(),
+            eq.true_longitude().unwrap().to_radians(),
             nu + periapsis + node,
             atol <= 1e-12
         );
@@ -644,12 +648,12 @@ mod tests {
         assert_eq!(eq.k(), 0.0);
         assert_eq!(eq.p(), 0.0);
         assert_eq!(eq.q(), 0.0);
-        assert_approx_eq!(eq.lambda().as_f64(), PI / 2.0, atol <= 1e-12);
+        assert_approx_eq!(eq.lambda().to_radians(), PI / 2.0, atol <= 1e-12);
     }
 
     #[test]
     fn test_longitudes_stay_in_revolution() {
-        let lambda = Angle::new(1.0 + 3.0 * TAU);
+        let lambda = Angle::radians(1.0 + 3.0 * TAU);
         let eq = Equinoctial::try_new(
             7000.0.km(),
             0.1,
@@ -660,8 +664,13 @@ mod tests {
             RetrogradeFactor::Prograde,
         )
         .unwrap();
-        assert!((eq.true_longitude().unwrap() - lambda).as_f64().abs() < PI);
-        assert!((eq.eccentric_longitude().unwrap() - lambda).as_f64().abs() < PI);
+        assert!((eq.true_longitude().unwrap() - lambda).to_radians().abs() < PI);
+        assert!(
+            (eq.eccentric_longitude().unwrap() - lambda)
+                .to_radians()
+                .abs()
+                < PI
+        );
         assert_approx_eq!(
             eq.to_modified_equinoctial()
                 .unwrap()
@@ -765,8 +774,8 @@ mod tests {
         let eq = keplerian(0.99, 1.0, 2.0, 3.0, 3.0)
             .to_equinoctial()
             .unwrap();
-        let f = eq.eccentric_longitude().unwrap().as_f64();
-        let residual = f - eq.k() * sin(f) + eq.h() * cos(f) - eq.lambda().as_f64();
+        let f = eq.eccentric_longitude().unwrap().to_radians();
+        let residual = f - eq.k() * sin(f) + eq.h() * cos(f) - eq.lambda().to_radians();
         assert!(residual.abs() <= 4.0 * f64::EPSILON, "residual {residual}");
     }
 
@@ -837,7 +846,7 @@ mod tests {
     fn test_vanishing_semi_parameter_is_rejected() {
         assert!(matches!(
             Equinoctial::try_new(
-                Distance::new(5e-324),
+                Distance::meters(5e-324),
                 0.9,
                 0.0,
                 0.0,
@@ -853,7 +862,7 @@ mod tests {
     fn test_overflowing_semi_major_axis_is_rejected() {
         let e = 1.0 - 1e-7;
         let mee = ModifiedEquinoctial::try_new(
-            Distance::new(f64::MAX / 2.0),
+            Distance::meters(f64::MAX / 2.0),
             e,
             0.0,
             0.0,

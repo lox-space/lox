@@ -76,7 +76,7 @@ impl TxChain {
         feed_loss: Decibel,
         band: impl Into<FrequencyRange>,
     ) -> Result<Self, NonPhysicalError> {
-        NonPhysicalError::check_non_negative("feed loss [dB]", feed_loss.as_f64())?;
+        NonPhysicalError::check_non_negative("feed loss [dB]", feed_loss.to_decibels())?;
         Ok(Self {
             antenna: antenna.into(),
             transmitter,
@@ -184,7 +184,7 @@ impl RxChain {
         antenna_noise_temperature: Temperature,
         band: impl Into<FrequencyRange>,
     ) -> Result<Self, NonPhysicalError> {
-        NonPhysicalError::check_non_negative("feed loss [dB]", feed_loss.as_f64())?;
+        NonPhysicalError::check_non_negative("feed loss [dB]", feed_loss.to_decibels())?;
         NonPhysicalError::check_non_negative(
             "antenna noise temperature [K]",
             antenna_noise_temperature.to_kelvin(),
@@ -368,7 +368,7 @@ impl EirpModel {
     ///
     /// Rejects a non-finite EIRP figure (negative dBW values are valid).
     pub fn new(band: impl Into<FrequencyRange>, eirp: Decibel) -> Result<Self, NonPhysicalError> {
-        NonPhysicalError::check_finite("EIRP [dBW]", eirp.as_f64())?;
+        NonPhysicalError::check_finite("EIRP [dBW]", eirp.to_decibels())?;
         Ok(Self {
             band: band.into(),
             eirp,
@@ -433,7 +433,7 @@ impl GtModel {
     ///
     /// Rejects a non-finite G/T figure (negative dB/K values are valid).
     pub fn new(band: impl Into<FrequencyRange>, gt: Decibel) -> Result<Self, NonPhysicalError> {
-        NonPhysicalError::check_finite("G/T [dB/K]", gt.as_f64())?;
+        NonPhysicalError::check_finite("G/T [dB/K]", gt.to_decibels())?;
         Ok(Self {
             band: band.into(),
             gt,
@@ -622,7 +622,7 @@ mod tests {
     fn test_tx_chain_eirp_with_feed_loss() {
         // EIRP = 46 + 10·log10(10) − 0 (OBO) − 1 (feed) = 55 dBW
         let eirp = tx_chain().eirp_at(29.0.ghz(), Pointing::Boresight).unwrap();
-        assert_approx_eq!(eirp.as_f64(), 55.0, atol <= 1e-10);
+        assert_approx_eq!(eirp.to_decibels(), 55.0, atol <= 1e-10);
     }
 
     #[test]
@@ -630,7 +630,7 @@ mod tests {
         let rx = rx_chain();
         // G/T = 30 − 10·log10(500) = 3.0103 dB/K
         let gt = rx.gt_at(29.0.ghz(), Pointing::Boresight).unwrap();
-        assert_approx_eq!(gt.as_f64(), 3.0103, atol <= 1e-3);
+        assert_approx_eq!(gt.to_decibels(), 3.0103, atol <= 1e-3);
         assert_approx_eq!(
             rx.system_noise_temperature().to_kelvin(),
             500.0,
@@ -663,9 +663,13 @@ mod tests {
             .rx_terms(29.0.ghz(), Pointing::Boresight)
             .unwrap()
             .unwrap();
-        assert_approx_eq!(terms.gain().as_f64(), 30.0, atol <= 1e-12);
+        assert_approx_eq!(terms.gain().to_decibels(), 30.0, atol <= 1e-12);
         let gt = rx.gt_at(29.0.ghz(), Pointing::Boresight).unwrap();
-        assert_approx_eq!(gt.as_f64(), 30.0 - 10.0 * expected.log10(), atol <= 1e-12);
+        assert_approx_eq!(
+            gt.to_decibels(),
+            30.0 - 10.0 * expected.log10(),
+            atol <= 1e-12
+        );
     }
 
     #[test]
@@ -701,7 +705,7 @@ mod tests {
             .rx_terms_degraded(29.0.ghz(), Pointing::Boresight, 3.0.db())
             .unwrap()
             .unwrap();
-        assert_approx_eq!(degraded.gain().as_f64(), 30.0, atol <= 1e-12);
+        assert_approx_eq!(degraded.gain().to_decibels(), 30.0, atol <= 1e-12);
         assert_approx_eq!(
             degraded.system_noise_temperature().to_kelvin(),
             expected,
@@ -730,7 +734,7 @@ mod tests {
             .unwrap()
             .unwrap();
         // Gain = 30 − 0.5 (demod) − 0.25 (impl) = 29.25 dB
-        assert_approx_eq!(terms.gain().as_f64(), 29.25, atol <= 1e-12);
+        assert_approx_eq!(terms.gain().to_decibels(), 29.25, atol <= 1e-12);
         // T_sys = 100 + 50 = 150 K
         assert_approx_eq!(
             terms.system_noise_temperature().to_kelvin(),
@@ -745,7 +749,7 @@ mod tests {
         assert_approx_eq!(
             eirp.eirp_at(29.0.ghz(), Pointing::Boresight)
                 .unwrap()
-                .as_f64(),
+                .to_decibels(),
             55.0,
             atol <= 1e-15
         );
@@ -753,7 +757,7 @@ mod tests {
         assert_approx_eq!(
             gt.gt_at(29.0.ghz(), Pointing::off_boresight(Angle::degrees(2.0)))
                 .unwrap()
-                .as_f64(),
+                .to_decibels(),
             3.0,
             atol <= 1e-15
         );
@@ -829,8 +833,8 @@ mod tests {
             )
             .is_err()
         );
-        assert!(EirpModel::new(ka_band(), Decibel::new(f64::NAN)).is_err());
-        assert!(GtModel::new(ka_band(), Decibel::new(f64::INFINITY)).is_err());
+        assert!(EirpModel::new(ka_band(), Decibel::decibels(f64::NAN)).is_err());
+        assert!(GtModel::new(ka_band(), Decibel::decibels(f64::INFINITY)).is_err());
     }
 
     #[test]
@@ -856,12 +860,12 @@ mod tests {
         let tx = tx_chain();
         assert!(matches!(tx.antenna(), Antenna::Constant(_)));
         assert_approx_eq!(tx.transmitter().power().to_watts(), 10.0, atol <= 1e-15);
-        assert_approx_eq!(tx.feed_loss().as_f64(), 1.0, atol <= 1e-15);
+        assert_approx_eq!(tx.feed_loss().to_decibels(), 1.0, atol <= 1e-15);
 
         let rx = rx_chain();
         assert!(matches!(rx.antenna(), Antenna::Constant(_)));
         assert!(matches!(rx.receiver(), Receiver::NoiseTemperature(_)));
-        assert_approx_eq!(rx.feed_loss().as_f64(), 0.0, atol <= 1e-15);
+        assert_approx_eq!(rx.feed_loss().to_decibels(), 0.0, atol <= 1e-15);
         assert_approx_eq!(
             rx.antenna_noise_temperature().to_kelvin(),
             0.0,
@@ -901,7 +905,7 @@ mod tests {
         let off = tx
             .eirp_at(29.0.ghz(), Pointing::Direction(DVec3::Z))
             .unwrap();
-        assert!(off.as_f64() < on.as_f64());
+        assert!(off < on);
         // Invalid directions are rejected.
         assert!(matches!(
             tx.eirp_at(29.0.ghz(), Pointing::Direction(DVec3::ZERO)),
@@ -932,8 +936,10 @@ mod tests {
             round_trip
                 .gt_at(29.0.ghz(), Pointing::Boresight)
                 .unwrap()
-                .as_f64(),
-            rx.gt_at(29.0.ghz(), Pointing::Boresight).unwrap().as_f64(),
+                .to_decibels(),
+            rx.gt_at(29.0.ghz(), Pointing::Boresight)
+                .unwrap()
+                .to_decibels(),
             atol <= 1e-12
         );
 
@@ -955,7 +961,7 @@ mod tests {
         assert_approx_eq!(
             tx.eirp_at(29.0.ghz(), Pointing::Boresight)
                 .unwrap()
-                .as_f64(),
+                .to_decibels(),
             55.0,
             atol <= 1e-10
         );
@@ -979,7 +985,9 @@ mod tests {
         );
         // Component G/T delegates through the enum.
         assert_approx_eq!(
-            rx.gt_at(29.0.ghz(), Pointing::Boresight).unwrap().as_f64(),
+            rx.gt_at(29.0.ghz(), Pointing::Boresight)
+                .unwrap()
+                .to_decibels(),
             3.0103,
             atol <= 1e-3
         );
@@ -991,7 +999,9 @@ mod tests {
                 .is_none()
         );
         assert_approx_eq!(
-            rx.gt_at(29.0.ghz(), Pointing::Boresight).unwrap().as_f64(),
+            rx.gt_at(29.0.ghz(), Pointing::Boresight)
+                .unwrap()
+                .to_decibels(),
             3.0,
             atol <= 1e-15
         );

@@ -51,7 +51,7 @@ proptest! {
         let roundtrip = back.as_angle().mod_two_pi();
 
         prop_assert!(
-            approx_eq!(original.as_f64(), roundtrip.as_f64(), rtol <= 1e-12),
+            approx_eq!(original.to_radians(), roundtrip.to_radians(), rtol <= 1e-12),
             "Original: {}, Roundtrip: {}", original, roundtrip
         );
     }
@@ -71,7 +71,7 @@ proptest! {
         let roundtrip = back.as_angle().mod_two_pi();
 
         prop_assert!(
-            approx_eq!(original.as_f64(), roundtrip.as_f64(), rtol <= 1e-9),
+            approx_eq!(original.to_radians(), roundtrip.to_radians(), rtol <= 1e-9),
             "Original: {}, Roundtrip: {}", original, roundtrip
         );
     }
@@ -93,7 +93,7 @@ proptest! {
         let roundtrip = back.as_angle().mod_two_pi();
 
         prop_assert!(
-            approx_eq!(original.as_f64(), roundtrip.as_f64(), rtol <= 1e-12),
+            approx_eq!(original.to_radians(), roundtrip.to_radians(), rtol <= 1e-12),
             "Original: {}, Roundtrip: {}", original, roundtrip
         );
     }
@@ -112,7 +112,7 @@ proptest! {
         let roundtrip = back.as_angle().mod_two_pi();
 
         prop_assert!(
-            approx_eq!(original.as_f64(), roundtrip.as_f64(), rtol <= 1e-9),
+            approx_eq!(original.to_radians(), roundtrip.to_radians(), rtol <= 1e-9),
             "Original: {}, Roundtrip: {}", original, roundtrip
         );
     }
@@ -131,7 +131,7 @@ proptest! {
         let roundtrip = back.as_angle().mod_two_pi();
 
         prop_assert!(
-            approx_eq!(original.as_f64(), roundtrip.as_f64(), rtol <= 1e-9),
+            approx_eq!(original.to_radians(), roundtrip.to_radians(), rtol <= 1e-9),
             "Original: {}, Roundtrip: {}", original, roundtrip
         );
     }
@@ -227,9 +227,9 @@ proptest! {
         let eccentric = true_anom.to_eccentric(ecc).expect("conversion should succeed");
         let mean_anom = true_anom.to_mean(ecc).expect("conversion should succeed");
 
-        let true_val = true_anom.as_angle().mod_two_pi().as_f64();
-        let ecc_val = eccentric.as_angle().mod_two_pi().as_f64();
-        let mean_val = mean_anom.as_angle().mod_two_pi().as_f64();
+        let true_val = true_anom.as_angle().mod_two_pi().to_radians();
+        let ecc_val = eccentric.as_angle().mod_two_pi().to_radians();
+        let mean_val = mean_anom.as_angle().mod_two_pi().to_radians();
 
         prop_assert!(
             approx_eq!(true_val, ecc_val, atol <= 1e-8),
@@ -253,8 +253,8 @@ proptest! {
         let back = eccentric.to_true(ecc);
 
         // For hyperbolic anomalies, we compare the raw values since they don't wrap
-        let original = true_anom.as_angle().as_f64();
-        let roundtrip = back.as_angle().as_f64();
+        let original = true_anom.as_angle().to_radians();
+        let roundtrip = back.as_angle().to_radians();
 
         prop_assert!(
             approx_eq!(original, roundtrip, rtol <= 1e-12),
@@ -274,8 +274,8 @@ proptest! {
         // Convert back via true anomaly - may fail for some inputs due to solver convergence
         if let Ok(true_back) = mean_anom.to_true(ecc)
             && let Ok(ecc_back) = true_back.to_eccentric(ecc) {
-                let original = eccentric.as_angle().as_f64();
-                let roundtrip = ecc_back.as_angle().as_f64();
+                let original = eccentric.as_angle().to_radians();
+                let roundtrip = ecc_back.as_angle().to_radians();
 
                 prop_assert!(
                     approx_eq!(original, roundtrip, rtol <= 1e-9),
@@ -293,8 +293,8 @@ proptest! {
 
         // Conversion back may fail for some inputs due to solver convergence
         if let Ok(back) = mean_anom.to_true(ecc) {
-            let original = true_anom.as_angle().as_f64();
-            let roundtrip = back.as_angle().as_f64();
+            let original = true_anom.as_angle().to_radians();
+            let roundtrip = back.as_angle().to_radians();
 
             prop_assert!(
                 approx_eq!(original, roundtrip, rtol <= 1e-9),
@@ -316,8 +316,8 @@ proptest! {
 
         // For parabolic orbits, conversion back may fail if true anomaly is too large
         if let Ok(back) = true_anom.to_eccentric(ecc) {
-            let original = eccentric.as_angle().as_f64();
-            let roundtrip = back.as_angle().as_f64();
+            let original = eccentric.as_angle().to_radians();
+            let roundtrip = back.as_angle().to_radians();
 
             prop_assert!(
                 approx_eq!(original, roundtrip, rtol <= 1e-10),
@@ -338,8 +338,8 @@ proptest! {
         // Convert back via true anomaly
         if let Ok(true_anom) = mean_anom.to_true(ecc)
             && let Ok(back) = true_anom.to_eccentric(ecc) {
-                let original = eccentric.as_angle().as_f64();
-                let roundtrip = back.as_angle().as_f64();
+                let original = eccentric.as_angle().to_radians();
+                let roundtrip = back.as_angle().to_radians();
 
                 prop_assert!(
                     approx_eq!(original, roundtrip, rtol <= 1e-9),

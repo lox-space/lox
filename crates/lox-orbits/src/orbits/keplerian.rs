@@ -232,7 +232,7 @@ where
         let grav_param = self.try_gravitational_parameter().ok()?;
         let state = self.state();
         let state_iter = state.iter_trace(grav_param, n)?;
-        let mean_motion = state.mean_motion(grav_param).as_f64();
+        let mean_motion = state.mean_motion(grav_param).to_radians_per_second();
         // The samples span one revolution in [0, 2π], so the epoch must fall in the same range.
         let mean_anomaly_at_epoch = MeanAnomaly::new(
             self.true_anomaly()
@@ -334,7 +334,7 @@ mod tests {
 
         let time = Time::j2000(TimeScale::Tai);
         let kep = Keplerian::builder()
-            .with_semi_major_axis(Distance::new(7_000_000.0), 0.001)
+            .with_semi_major_axis(Distance::meters(7_000_000.0), 0.001)
             .with_inclination(51.6_f64.to_radians().rad())
             .with_longitude_of_ascending_node(0.0.rad())
             .with_argument_of_periapsis(0.0.rad())
@@ -343,7 +343,7 @@ mod tests {
             .unwrap();
         let kep_orbit = KeplerianOrbit::new(kep, time, Earth, Icrf);
         let cart: CartesianOrbit<_, _> = kep_orbit.try_into().unwrap();
-        assert!(cart.position().length() > 6_000.0.km().as_f64());
+        assert!(cart.position().length() > 6_000.0.km().to_meters());
     }
 
     #[rstest]

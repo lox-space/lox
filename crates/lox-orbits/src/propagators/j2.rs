@@ -98,7 +98,7 @@ where
         let body = BodyConstants {
             mu: orbit.origin().try_gravitational_parameter()?.as_f64(),
             j2: orbit.origin().try_j2()?,
-            r_eq: orbit.origin().try_equatorial_radius()?.as_f64(),
+            r_eq: orbit.origin().try_equatorial_radius()?.to_meters(),
         };
 
         let kep = orbit.state();
@@ -110,7 +110,7 @@ where
         let a = kep
             .semi_major_axis()
             .expect("closed orbits have a semi-major axis")
-            .as_f64();
+            .to_meters();
         let e = ecc.as_f64();
         let i = kep.inclination().as_f64();
         let m0 = kep.true_anomaly().to_mean(ecc)?.as_f64();
@@ -209,7 +209,7 @@ mod tests {
     fn sso_orbit() -> KeplerianOrbit<Earth, Icrf> {
         let time = time!(Tdb, 2025, 6, 1).unwrap();
         let kep = Keplerian::builder()
-            .with_semi_major_axis(Distance::new(6_878_137.0), 0.001)
+            .with_semi_major_axis(Distance::meters(6_878_137.0), 0.001)
             .with_inclination(97.42_f64.to_radians().rad())
             .with_longitude_of_ascending_node(69.3_f64.to_radians().rad())
             .with_argument_of_periapsis(0.0.rad())
@@ -232,7 +232,7 @@ mod tests {
         // makes Brouwer-Lyddane diverge (~70°–110°, ~250°–290°).
         for ta_deg in (0..360).step_by(5) {
             let kep = Keplerian::builder()
-                .with_semi_major_axis(Distance::new(6_878_137.0), 0.0)
+                .with_semi_major_axis(Distance::meters(6_878_137.0), 0.0)
                 .with_inclination(97.42_f64.to_radians().rad())
                 .with_longitude_of_ascending_node(69.3_f64.to_radians().rad())
                 .with_argument_of_periapsis(0.0.rad())
@@ -280,7 +280,7 @@ mod tests {
     fn test_j2_rejects_hyperbolic_orbit() {
         let time = time!(Tdb, 2025, 6, 1).unwrap();
         let kep = Keplerian::builder()
-            .with_semi_major_axis(Distance::new(-7_000_000.0), 1.5)
+            .with_semi_major_axis(Distance::meters(-7_000_000.0), 1.5)
             .with_inclination(0.5.rad())
             .with_longitude_of_ascending_node(0.0.rad())
             .with_argument_of_periapsis(0.0.rad())

@@ -61,7 +61,7 @@ fn aberration(pnat: DVec3, v: DVec3, s: Distance, bm1: f64) -> DVec3 {
     let mut p: [f64; 3] = [0.0; 3];
     let pdv = pnat.dot(v);
     let w1 = 1.0 + pdv / (1.0 + bm1);
-    let w2 = SRS.as_f64() / s.as_f64();
+    let w2 = SRS.to_meters() / s.to_meters();
     let r2 = zip(pnat.to_array(), v.to_array())
         .enumerate()
         .fold(0.0, |r2, (idx, (pnat, v))| {
@@ -80,8 +80,8 @@ pub fn apparent_sun_position(time: Time<Tdb>) -> DVec3 {
     let vb = s.barycentric.velocity() / SPEED_OF_LIGHT;
     let dsun = pe.length().m();
     let lorentz_inv = (1.0 - vb.powf(2.0).element_sum()).powf(0.5);
-    let proper = aberration(pe / dsun.as_f64(), -vb, dsun, lorentz_inv);
-    -dsun.as_f64() * proper
+    let proper = aberration(pe / dsun.to_meters(), -vb, dsun, lorentz_inv);
+    -dsun.to_meters() * proper
 }
 
 struct Coeffs {

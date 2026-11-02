@@ -40,7 +40,7 @@ impl Ellipsoid {
     /// not satisfy the invariants.
     pub const fn new(equatorial_radius: Distance, flattening: f64) -> Self {
         assert!(
-            equatorial_radius.to_meters().is_finite() && equatorial_radius.to_meters() > 0.0,
+            equatorial_radius.is_finite() && equatorial_radius.to_meters() > 0.0,
             "equatorial radius must be finite and > 0"
         );
         assert!(
@@ -317,7 +317,7 @@ impl LonLatAltBuilder {
 
     /// Sets the altitude. Must be a finite value.
     pub fn altitude(&mut self, altitude: Distance) -> &mut Self {
-        self.altitude = if !altitude.to_meters().is_finite() {
+        self.altitude = if !altitude.is_finite() {
             Err(LonLatAltError::InvalidAltitude(altitude))
         } else {
             Ok(altitude)
@@ -1283,9 +1283,10 @@ mod tests {
         let ellipsoid = Ellipsoid::new(Distance::meters(EARTH_R_EQ), EARTH_F);
         let body_fixed = coords.to_body_fixed(&ellipsoid);
         let roundtrip = LonLatAlt::from_body_fixed(body_fixed, &ellipsoid).unwrap();
-        assert!((roundtrip.lon().to_degrees() - coords.lon().to_degrees()).abs() < 1e-6);
-        assert!((roundtrip.lat().to_degrees() - coords.lat().to_degrees()).abs() < 1e-6);
-        assert!((roundtrip.alt().to_meters() - coords.alt().to_meters()).abs() < 1e-3);
+        let atol = Angle::degrees(1e-6).to_radians();
+        assert_approx_eq!(roundtrip.lon(), coords.lon(), atol <= atol);
+        assert_approx_eq!(roundtrip.lat(), coords.lat(), atol <= atol);
+        assert_approx_eq!(roundtrip.alt(), coords.alt(), atol <= 1e-3);
     }
 
     #[test]

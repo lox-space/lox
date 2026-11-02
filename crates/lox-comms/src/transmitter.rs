@@ -50,7 +50,10 @@ impl AmplifierTransmitter {
     /// positive, output back-off finite and non-negative.
     pub fn new(power: Power, output_back_off: Decibel) -> Result<Self, NonPhysicalError> {
         NonPhysicalError::check_positive("transmit power [W]", power.to_watts())?;
-        NonPhysicalError::check_non_negative("output back-off [dB]", output_back_off.as_f64())?;
+        NonPhysicalError::check_non_negative(
+            "output back-off [dB]",
+            output_back_off.to_decibels(),
+        )?;
         Ok(Self {
             power,
             output_back_off,
@@ -79,7 +82,7 @@ mod tests {
     fn test_amplifier_transmitter() {
         let tx = AmplifierTransmitter::new(Power::watts(10.0), 3.0.db()).unwrap();
         assert_approx_eq!(tx.power().to_watts(), 10.0, atol <= 1e-15);
-        assert_approx_eq!(tx.output_back_off().as_f64(), 3.0, atol <= 1e-15);
+        assert_approx_eq!(tx.output_back_off().to_decibels(), 3.0, atol <= 1e-15);
     }
 
     #[test]

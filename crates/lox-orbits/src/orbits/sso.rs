@@ -91,22 +91,22 @@ pub fn inclination_sso(
     semi_major_axis: Distance,
     eccentricity: Eccentricity,
 ) -> Result<Inclination, SsoError> {
-    let r_eq = Earth.equatorial_radius().as_f64();
+    let r_eq = Earth.equatorial_radius().to_meters();
     let mu = Earth.gravitational_parameter().as_f64();
-    let num = -semi_major_axis.as_f64().powf(7.0 / 2.0)
+    let num = -semi_major_axis.to_meters().powf(7.0 / 2.0)
         * 2.0
         * OMEGA_SUN_SYNC
         * (1.0 - eccentricity.as_f64().powi(2)).powi(2);
     let den = 3.0 * r_eq.powi(2) * J2_EARTH * mu.sqrt();
     let inc = Angle::from_acos(num / den);
-    if !inc.as_f64().is_finite() {
+    if !inc.is_finite() {
         return Err(SsoError::SemiMajorAxisOutOfRange(semi_major_axis));
     }
     Ok(Inclination::try_new(Angle::from_acos(num / den))?)
 }
 
 fn semi_major_axis_sso(inclination: Inclination, eccentricity: Eccentricity) -> Distance {
-    let r_eq = Earth.equatorial_radius().as_f64();
+    let r_eq = Earth.equatorial_radius().to_meters();
     let mu = Earth.gravitational_parameter().as_f64();
     let num = -3.0 * r_eq.powi(2) * J2_EARTH * mu.sqrt();
     let den = 2.0 * OMEGA_SUN_SYNC * (1.0 - eccentricity.as_f64().powi(2)).powi(2);
@@ -146,12 +146,12 @@ where
     let l_sun = mul_add_relaxed(t_ut1, 36000.77, 280.460).deg();
     // λ: Longitude of the ecliptic
     let l_ecliptic_part2 =
-        (1.914666471 * m_sun.sin() + 0.019994643 * (2.0 * m_sun.as_f64()).sin()).deg();
+        (1.914666471 * m_sun.sin() + 0.019994643 * (2.0 * m_sun.to_radians()).sin()).deg();
     let l_ecliptic = l_sun + l_ecliptic_part2;
 
     // Equation of time
-    let eq_time = (-l_ecliptic_part2.to_degrees() + 2.466 * (2.0 * l_ecliptic.as_f64()).sin()
-        - 0.0053 * (4.0 * l_ecliptic.as_f64()).sin())
+    let eq_time = (-l_ecliptic_part2.to_degrees() + 2.466 * (2.0 * l_ecliptic.to_radians()).sin()
+        - 0.0053 * (4.0 * l_ecliptic.to_radians()).sin())
     .deg();
 
     // Mean solar local time

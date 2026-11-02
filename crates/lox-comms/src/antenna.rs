@@ -236,7 +236,7 @@ impl ConstantAntenna {
     ///
     /// Rejects a non-finite gain.
     pub fn new(gain: Decibel) -> Result<Self, crate::error::NonPhysicalError> {
-        crate::error::NonPhysicalError::check_finite("antenna gain [dBi]", gain.as_f64())?;
+        crate::error::NonPhysicalError::check_finite("antenna gain [dBi]", gain.to_decibels())?;
         Ok(Self { gain })
     }
 
@@ -442,12 +442,12 @@ mod tests {
 
     #[test]
     fn test_antenna_gain_toward_constant_validates_direction() {
-        let antenna = Antenna::constant(Decibel::new(30.0)).unwrap();
+        let antenna = Antenna::constant(Decibel::decibels(30.0)).unwrap();
         // Constant gain is direction-independent...
         let gain = antenna
             .gain_toward(Frequency::hertz(29e9), DVec3::new(0.0, 1.0, 0.0))
             .unwrap();
-        assert_approx_eq!(gain.as_f64(), 30.0, atol <= 1e-12);
+        assert_approx_eq!(gain.to_decibels(), 30.0, atol <= 1e-12);
         // ...but the direction is still validated.
         assert!(
             antenna
@@ -668,7 +668,7 @@ mod tests {
         assert!(matches!(constant, Antenna::Constant(_)));
         // gain_toward ignores the direction for constant antennas...
         let gain = constant.gain_toward(29.0.ghz(), DVec3::Y).unwrap();
-        assert_approx_eq!(gain.as_f64(), 20.0, atol <= 1e-12);
+        assert_approx_eq!(gain.to_decibels(), 20.0, atol <= 1e-12);
         // ...but still validates it.
         assert!(constant.gain_toward(29.0.ghz(), DVec3::ZERO).is_err());
         assert!(constant.pattern_angles(DVec3::ZERO).is_err());
@@ -683,8 +683,8 @@ mod tests {
         // Smart constructors evaluate to working gain models.
         let gaussian = Antenna::gaussian(Distance::meters(0.98), 0.45).unwrap();
         let on_axis = gaussian.gain_toward(29.0.ghz(), DVec3::Z).unwrap();
-        assert!(on_axis.as_f64() > 40.0);
-        assert!(Antenna::constant(Decibel::new(f64::NAN)).is_err());
+        assert!(on_axis.to_decibels() > 40.0);
+        assert!(Antenna::constant(Decibel::decibels(f64::NAN)).is_err());
         assert!(Antenna::gaussian(Distance::meters(0.98), 1.5).is_err());
         assert!(Antenna::dipole(Distance::meters(-1.0)).is_err());
     }
@@ -693,7 +693,7 @@ mod tests {
     fn test_constant_antenna_gain_dispatch() {
         let a = ConstantAntenna::new(10.0.db()).unwrap();
         let g = a.gain(29.0.ghz(), Angle::ZERO, Angle::ZERO);
-        assert_approx_eq!(g.as_f64(), 10.0, atol <= 1e-10);
+        assert_approx_eq!(g.to_decibels(), 10.0, atol <= 1e-10);
     }
 
     #[test]
@@ -703,7 +703,7 @@ mod tests {
         let peak = a.peak_gain(f);
         let on_axis = a.gain(f, Angle::ZERO, Angle::ZERO);
         // On-axis gain equals peak gain
-        assert_approx_eq!(on_axis.as_f64(), peak.as_f64(), atol <= 1e-10);
+        assert_approx_eq!(on_axis.to_decibels(), peak.to_decibels(), atol <= 1e-10);
     }
 
     #[test]
@@ -719,15 +719,19 @@ mod tests {
         let on_axis = a.gain_toward(f, DVec3::X).unwrap();
         let off_axis = a.gain_toward(f, DVec3::Y).unwrap();
 
-        assert_approx_eq!(on_axis.as_f64(), a.peak_gain(f).as_f64(), atol <= 1e-10);
-        assert!(off_axis.as_f64() < on_axis.as_f64());
+        assert_approx_eq!(
+            on_axis.to_decibels(),
+            a.peak_gain(f).to_decibels(),
+            atol <= 1e-10
+        );
+        assert!(off_axis < on_axis);
     }
 
     #[test]
     fn test_antenna_enum_constant_dispatch() {
-        let a = Antenna::Constant(ConstantAntenna::new(Decibel::new(20.0)).unwrap());
+        let a = Antenna::Constant(ConstantAntenna::new(Decibel::decibels(20.0)).unwrap());
         let g = a.gain(29.0.ghz(), Angle::ZERO, Angle::ZERO);
-        assert_approx_eq!(g.as_f64(), 20.0, atol <= 1e-10);
+        assert_approx_eq!(g.to_decibels(), 20.0, atol <= 1e-10);
     }
 
     #[test]
@@ -735,14 +739,14 @@ mod tests {
         let a = Antenna::Patterned(parabolic());
         let f = 29.0.ghz();
         let on_axis = a.gain(f, Angle::ZERO, Angle::ZERO);
-        assert!(on_axis.as_f64() > 40.0);
+        assert!(on_axis.to_decibels() > 40.0);
     }
 
     #[test]
     fn test_antenna_enum_gain_toward_constant_ignores_direction() {
         let a = Antenna::Constant(ConstantAntenna::new(20.0.db()).unwrap());
         let g = a.gain_toward(29.0.ghz(), DVec3::Y).unwrap();
-        assert_approx_eq!(g.as_f64(), 20.0, atol <= 1e-10);
+        assert_approx_eq!(g.to_decibels(), 20.0, atol <= 1e-10);
     }
 
     #[test]
@@ -751,7 +755,7 @@ mod tests {
         let f = 29.0.ghz();
         let on_axis = a.gain_toward(f, DVec3::Z).unwrap();
         let off_axis = a.gain_toward(f, DVec3::X).unwrap();
-        assert!(off_axis.as_f64() < on_axis.as_f64());
+        assert!(off_axis < on_axis);
 
         let err = a.gain_toward(f, DVec3::ZERO).unwrap_err();
         assert!(matches!(err, AntennaFrameError::InvalidDirection(_)));

@@ -267,7 +267,7 @@ mod tests {
 
     fn half_wave_dipole() -> DipolePattern {
         let wavelength = test_frequency().wavelength();
-        DipolePattern::new(Distance::meters(wavelength.to_meters() / 2.0)).unwrap()
+        DipolePattern::new(wavelength / 2.0).unwrap()
     }
 
     #[test]
@@ -364,7 +364,7 @@ mod tests {
         // Gain along axis of dipole (θ=0) should be very low
         let d = half_wave_dipole();
         let gain = d.gain(test_frequency(), Angle::ZERO, Angle::ZERO);
-        assert!(gain.as_f64() < -50.0);
+        assert!(gain.to_decibels() < -50.0);
     }
 
     #[test]
@@ -372,7 +372,7 @@ mod tests {
         // Half-wave dipole peak gain ≈ 2.15 dBi at θ=π/2
         let d = half_wave_dipole();
         let gain = d.gain(test_frequency(), Angle::radians(PI / 2.0), Angle::ZERO);
-        assert_approx_eq!(gain.as_f64(), 2.15, atol <= 0.01);
+        assert_approx_eq!(gain.to_decibels(), 2.15, atol <= 0.01);
     }
 
     #[test]
@@ -381,7 +381,7 @@ mod tests {
         let wavelength = test_frequency().wavelength().to_meters();
         let d = DipolePattern::new(Distance::meters(wavelength / 100.0)).unwrap();
         let peak = d.peak_gain(test_frequency());
-        assert_approx_eq!(peak.as_f64(), 1.76, atol <= 0.1);
+        assert_approx_eq!(peak.to_decibels(), 1.76, atol <= 0.1);
     }
 
     #[test]
@@ -390,7 +390,7 @@ mod tests {
         let wavelength = test_frequency().wavelength().to_meters();
         let d = DipolePattern::new(Distance::meters(1.25 * wavelength)).unwrap();
         let peak = d.peak_gain(test_frequency());
-        assert_approx_eq!(peak.as_f64(), 5.2, atol <= 0.1);
+        assert_approx_eq!(peak.to_decibels(), 5.2, atol <= 0.1);
     }
 
     #[test]
@@ -399,7 +399,7 @@ mod tests {
         let wavelength = test_frequency().wavelength().to_meters();
         let d = DipolePattern::new(Distance::meters(1.5 * wavelength)).unwrap();
         let gain = d.gain(test_frequency(), Angle::degrees(45.0), Angle::ZERO);
-        assert_approx_eq!(gain.as_f64(), 3.5, atol <= 0.1);
+        assert_approx_eq!(gain.to_decibels(), 3.5, atol <= 0.1);
     }
 
     #[test]

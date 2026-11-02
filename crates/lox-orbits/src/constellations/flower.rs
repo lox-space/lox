@@ -116,7 +116,7 @@ impl FlowerBuilder {
 
         for i_sat in 0..self.nsats {
             let raan = Angle::radians_normalized(
-                self.longitude_of_ascending_node.as_f64() + i_sat as f64 * delta_raan,
+                self.longitude_of_ascending_node.to_radians() + i_sat as f64 * delta_raan,
             );
             let mean_anomaly = Angle::radians_normalized(i_sat as f64 * delta_anom);
 
@@ -168,8 +168,8 @@ impl FlowerBuilder {
                 let period = (TAU / rotation_rate) * self.n_days as f64 / self.n_petals as f64;
                 // Kepler's 3rd law: a = (mu * T^2 / (4*pi^2))^(1/3)
                 let sma_m = (mu * period.powi(2) / (4.0 * PI * PI)).cbrt();
-                let sma = Distance::new(sma_m);
-                let ecc = 1.0 - (mean_radius.as_f64() + altitude.as_f64()) / sma_m;
+                let sma = Distance::meters(sma_m);
+                let ecc = 1.0 - (mean_radius + *altitude).to_meters() / sma_m;
                 (sma, ecc)
             }
             Some(FlowerShape::SemiMajorAxis { sma, eccentricity }) => (*sma, *eccentricity),
@@ -217,7 +217,7 @@ mod tests {
 
         let period = (TAU / omega) * 1.0 / 14.0;
         let expected_sma = (earth_mu.as_f64() * period.powi(2) / (4.0 * PI * PI)).cbrt();
-        let expected_ecc = 1.0 - (earth_r.as_f64() + 780.0e3) / expected_sma;
+        let expected_ecc = 1.0 - (earth_r.to_meters() + 780.0e3) / expected_sma;
 
         let epoch = Time::j2000(TimeScale::Tai);
         let c = FlowerBuilder::new(14, 1, 2, 1, 28)
@@ -231,7 +231,7 @@ mod tests {
                 .elements
                 .semi_major_axis()
                 .unwrap()
-                .as_f64(),
+                .to_meters(),
             expected_sma,
             rtol <= 1e-10
         );

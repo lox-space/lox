@@ -6,9 +6,11 @@
 //! Newtype wrappers for unitful [`f64`] double precision values
 
 use core::{
+    cmp::Ordering,
     f64::consts::{FRAC_PI_2, FRAC_PI_4, PI, TAU},
     fmt::{Display, Formatter, Result},
-    ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign},
+    iter::Sum,
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 use glam::DMat3;
@@ -48,7 +50,7 @@ impl Sign {
     /// Returns +1.0 for `Positive` and -1.0 for `Negative`.
     ///
     /// `const` so it can be called from `const fn` composition methods.
-    pub const fn as_f64(&self) -> f64 {
+    pub const fn as_f64(self) -> f64 {
         match self {
             Sign::Positive => 1.0,
             Sign::Negative => -1.0,
@@ -100,8 +102,6 @@ macro_rules! impl_sign_from_signed_int {
 }
 impl_sign_from_signed_int!(i8, i16, i32, i64, isize);
 
-type Radians = f64;
-
 /// Decomposes a signed arcsecond total into `(Sign, hours-or-degrees,
 /// minutes, seconds)`. Used by [`Angle::to_dms`] and [`Angle::to_hms`].
 ///
@@ -125,11 +125,9 @@ fn decompose_signed_arcseconds(total_arcsec: f64, unit_arcsec: f64) -> (Sign, u3
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct Angle(Radians);
+pub struct Angle(f64);
 
 impl Angle {
-    /// An angle equal to zero.
-    pub const ZERO: Self = Self(0.0);
     /// An angle equal to π.
     pub const PI: Self = Self(PI);
     /// An angle equal to τ = 2π.
@@ -138,11 +136,6 @@ impl Angle {
     pub const FRAC_PI_2: Self = Self(FRAC_PI_2);
     /// An angle equal to π/4.
     pub const FRAC_PI_4: Self = Self(FRAC_PI_4);
-
-    /// Creates a new angle from an `f64` value in radians.
-    pub const fn new(rad: f64) -> Self {
-        Self(rad)
-    }
 
     /// Creates a new angle from an `f64` value in radians.
     pub const fn radians(rad: f64) -> Self {
@@ -159,6 +152,11 @@ impl Angle {
     /// to the interval (-2π, 2π).
     pub const fn radians_normalized_signed(rad: f64) -> Self {
         Self(rad).mod_two_pi_signed()
+    }
+
+    /// Creates a new angle from an `f64` value in microradians.
+    pub const fn microradians(urad: f64) -> Self {
+        Self(urad / 1e6)
     }
 
     /// Creates a new angle from an `f64` value in degrees.
@@ -212,6 +210,16 @@ impl Angle {
         Self(asec * RADIANS_IN_ARCSECOND)
     }
 
+    /// Creates a new angle from an `f64` value in milliarcseconds.
+    pub const fn milliarcseconds(mas: f64) -> Self {
+        Self::arcseconds(mas / 1e3)
+    }
+
+    /// Creates a new angle from an `f64` value in microarcseconds.
+    pub const fn microarcseconds(uas: f64) -> Self {
+        Self::arcseconds(uas / 1e6)
+    }
+
     /// Creates a new angle from an `f64` value in arcseconds and normalize the angle
     /// to the interval [0.0, 2π).
     pub const fn arcseconds_normalized(asec: f64) -> Self {
@@ -225,13 +233,8 @@ impl Angle {
     }
 
     /// Returns `true` if the angle is exactly zero.
-    pub fn is_zero(&self) -> bool {
+    pub fn is_zero(self) -> bool {
         self.0 == 0.0
-    }
-
-    /// Returns the absolute value of the angle.
-    pub fn abs(&self) -> Self {
-        Self(abs(self.0))
     }
 
     /// Creates an angle from the arcsine of a value.
@@ -270,42 +273,42 @@ impl Angle {
     }
 
     /// Returns the cosine of the angle.
-    pub fn cos(&self) -> f64 {
+    pub fn cos(self) -> f64 {
         cos(self.0)
     }
 
     /// Returns the hyperbolic cosine of the angle.
-    pub fn cosh(&self) -> f64 {
+    pub fn cosh(self) -> f64 {
         cosh(self.0)
     }
 
     /// Returns the sine of the angle.
-    pub fn sin(&self) -> f64 {
+    pub fn sin(self) -> f64 {
         sin(self.0)
     }
 
     /// Returns the hyperbolic sine of the angle.
-    pub fn sinh(&self) -> f64 {
+    pub fn sinh(self) -> f64 {
         sinh(self.0)
     }
 
     /// Returns sine and cosine of the angle.
-    pub fn sin_cos(&self) -> (f64, f64) {
+    pub fn sin_cos(self) -> (f64, f64) {
         sin_cos(self.0)
     }
 
     /// Returns the tangent of the angle.
-    pub fn tan(&self) -> f64 {
+    pub fn tan(self) -> f64 {
         tan(self.0)
     }
 
     /// Returns the hyperbolic tangent of the angle.
-    pub fn tanh(&self) -> f64 {
+    pub fn tanh(self) -> f64 {
         tanh(self.0)
     }
 
     /// Returns a new angle that is normalized to the interval [0.0, 2π).
-    pub const fn mod_two_pi(&self) -> Self {
+    pub const fn mod_two_pi(self) -> Self {
         let mut a = self.0 % TAU;
         if a < 0.0 {
             a += TAU
@@ -314,12 +317,12 @@ impl Angle {
     }
 
     /// Returns a new angle that is normalized to the interval (-2π, 2π).
-    pub const fn mod_two_pi_signed(&self) -> Self {
+    pub const fn mod_two_pi_signed(self) -> Self {
         Self(self.0 % TAU)
     }
 
     /// Returns a new angle that is normalized to the `[center - π, center + π)` interval.
-    pub const fn normalize_two_pi(&self, center: Self) -> Self {
+    pub const fn normalize_two_pi(self, center: Self) -> Self {
         // Inline const-compatible floor (f64::floor isn't const in no_std).
         // The quotient is bounded by the angle range so the `as i64` cast is safe.
         let q = (self.0 + PI - center.0) / TAU;
@@ -329,37 +332,47 @@ impl Angle {
     }
 
     /// Returns the value of the angle in radians.
-    pub const fn as_f64(&self) -> f64 {
+    pub const fn to_radians(self) -> f64 {
         self.0
     }
 
-    /// Returns the value of the angle in radians.
-    pub const fn to_radians(&self) -> f64 {
-        self.0
+    /// Returns the value of the angle in microradians.
+    pub const fn to_microradians(self) -> f64 {
+        self.0 * 1e6
     }
 
     /// Returns the value of the angle in degrees.
-    pub const fn to_degrees(&self) -> f64 {
+    pub const fn to_degrees(self) -> f64 {
         to_degrees(self.0)
     }
 
     /// Returns the value of the angle in arcseconds.
-    pub const fn to_arcseconds(&self) -> f64 {
+    pub const fn to_arcseconds(self) -> f64 {
         self.0 / RADIANS_IN_ARCSECOND
     }
 
+    /// Returns the value of the angle in milliarcseconds.
+    pub const fn to_milliarcseconds(self) -> f64 {
+        self.to_arcseconds() * 1e3
+    }
+
+    /// Returns the value of the angle in microarcseconds.
+    pub const fn to_microarcseconds(self) -> f64 {
+        self.to_arcseconds() * 1e6
+    }
+
     /// Returns the 3×3 rotation matrix for a rotation about the X axis.
-    pub fn rotation_x(&self) -> DMat3 {
+    pub fn rotation_x(self) -> DMat3 {
         DMat3::from_rotation_x(-self.to_radians())
     }
 
     /// Returns the 3×3 rotation matrix for a rotation about the Y axis.
-    pub fn rotation_y(&self) -> DMat3 {
+    pub fn rotation_y(self) -> DMat3 {
         DMat3::from_rotation_y(-self.to_radians())
     }
 
     /// Returns the 3×3 rotation matrix for a rotation about the Z axis.
-    pub fn rotation_z(&self) -> DMat3 {
+    pub fn rotation_z(self) -> DMat3 {
         DMat3::from_rotation_z(-self.to_radians())
     }
 
@@ -374,7 +387,7 @@ impl Angle {
     /// # References
     ///
     /// - ERFA [`a2tf`](https://github.com/liberfa/erfa/blob/master/src/a2tf.c)
-    pub fn to_hms(&self) -> (Sign, u32, u8, f64) {
+    pub fn to_hms(self) -> (Sign, u32, u8, f64) {
         // 1 hour-of-angle = 15° = 15 × 3600 arcseconds.
         // Divide arcseconds by 15 so `decompose_signed_arcseconds` treats
         // 3600 units-per-major as 3600 time-seconds-per-hour.
@@ -392,7 +405,7 @@ impl Angle {
     /// # References
     ///
     /// - ERFA [`a2af`](https://github.com/liberfa/erfa/blob/master/src/a2af.c)
-    pub fn to_dms(&self) -> (Sign, u32, u8, f64) {
+    pub fn to_dms(self) -> (Sign, u32, u8, f64) {
         decompose_signed_arcseconds(self.to_arcseconds(), 3600.0)
     }
 }
@@ -443,11 +456,11 @@ impl AngleUnits for f64 {
     }
 
     fn mas(&self) -> Angle {
-        Angle::arcseconds(self * 1e-3)
+        Angle::milliarcseconds(*self)
     }
 
     fn uas(&self) -> Angle {
-        Angle::arcseconds(self * 1e-6)
+        Angle::microarcseconds(*self)
     }
 }
 
@@ -465,39 +478,32 @@ impl AngleUnits for i64 {
     }
 
     fn mas(&self) -> Angle {
-        Angle::arcseconds(*self as f64 * 1e-3)
+        Angle::milliarcseconds(*self as f64)
     }
 
     fn uas(&self) -> Angle {
-        Angle::arcseconds(*self as f64 * 1e-6)
+        Angle::microarcseconds(*self as f64)
     }
 }
 
 /// The astronomical unit in meters.
 pub const ASTRONOMICAL_UNIT: f64 = 1.495978707e11;
 
-type Meters = f64;
-
 /// Distance in meters.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct Distance(Meters);
+pub struct Distance(f64);
 
 impl Distance {
-    /// Create a new distance from an `f64` value in meters.
-    pub const fn new(m: f64) -> Self {
-        Self(m)
-    }
-
     /// Create a new distance from an `f64` value in meters.
     pub const fn meters(m: f64) -> Self {
         Self(m)
     }
 
     /// Create a new distance from an `f64` value in kilometers.
-    pub const fn kilometers(m: f64) -> Self {
-        Self(m * 1e3)
+    pub const fn kilometers(km: f64) -> Self {
+        Self(km * 1e3)
     }
 
     /// Create a new distance from an `f64` value in astronomical units.
@@ -505,23 +511,18 @@ impl Distance {
         Self(au * ASTRONOMICAL_UNIT)
     }
 
-    /// Returns the value of the distance in meters as an `f64`.
-    pub const fn as_f64(&self) -> f64 {
-        self.0
-    }
-
     /// Returns the value of the distance in meters.
-    pub const fn to_meters(&self) -> f64 {
+    pub const fn to_meters(self) -> f64 {
         self.0
     }
 
     /// Returns the value of the distance in kilometers.
-    pub const fn to_kilometers(&self) -> f64 {
-        self.0 * 1e-3
+    pub const fn to_kilometers(self) -> f64 {
+        self.0 / 1e3
     }
 
     /// Returns the value of the distance in astronomical units.
-    pub const fn to_astronomical_units(&self) -> f64 {
+    pub const fn to_astronomical_units(self) -> f64 {
         self.0 / ASTRONOMICAL_UNIT
     }
 }
@@ -582,28 +583,21 @@ impl DistanceUnits for i64 {
     }
 }
 
-type MetersPerSecond = f64;
-
 /// Velocity in meters per second.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct Velocity(MetersPerSecond);
+pub struct Velocity(f64);
 
 impl Velocity {
-    /// Creates a new velocity from an `f64` value in m/s.
-    pub const fn new(mps: f64) -> Self {
-        Self(mps)
-    }
-
     /// Creates a new velocity from an `f64` value in m/s.
     pub const fn meters_per_second(mps: f64) -> Self {
         Self(mps)
     }
 
     /// Creates a new velocity from an `f64` value in km/s.
-    pub const fn kilometers_per_second(mps: f64) -> Self {
-        Self(mps * 1e3)
+    pub const fn kilometers_per_second(kps: f64) -> Self {
+        Self(kps * 1e3)
     }
 
     /// Creates a new velocity from an `f64` value in au/d.
@@ -616,28 +610,23 @@ impl Velocity {
         Self(c * SPEED_OF_LIGHT)
     }
 
-    /// Returns the value of the velocity in m/s as an `f64`.
-    pub const fn as_f64(&self) -> f64 {
-        self.0
-    }
-
     /// Returns the value of the velocity in m/s.
-    pub const fn to_meters_per_second(&self) -> f64 {
+    pub const fn to_meters_per_second(self) -> f64 {
         self.0
     }
 
     /// Returns the value of the velocity in km/s.
-    pub const fn to_kilometers_per_second(&self) -> f64 {
-        self.0 * 1e-3
+    pub const fn to_kilometers_per_second(self) -> f64 {
+        self.0 / 1e3
     }
 
     /// Returns the value of the velocity in au/d.
-    pub const fn to_astronomical_units_per_day(&self) -> f64 {
+    pub const fn to_astronomical_units_per_day(self) -> f64 {
         self.0 * SECONDS_PER_DAY / ASTRONOMICAL_UNIT
     }
 
     /// Returns the value of the velocity in 1/c.
-    pub const fn to_fraction_of_speed_of_light(&self) -> f64 {
+    pub const fn to_fraction_of_speed_of_light(self) -> f64 {
         self.0 / SPEED_OF_LIGHT
     }
 }
@@ -714,72 +703,65 @@ pub const SPEED_OF_LIGHT: f64 = 299792458.0;
 /// The comoving radius of the observable universe, about 46.5 billion light-years, in m.
 pub const OBSERVABLE_UNIVERSE_RADIUS: f64 = 4.4e26;
 
-type Hertz = f64;
-
 /// Frequency in Hertz
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct Frequency(Hertz);
+pub struct Frequency(f64);
 
 impl Frequency {
     /// Creates a new frequency from an `f64` value in Hz.
-    pub const fn new(hz: Hertz) -> Self {
-        Self(hz)
-    }
-
-    /// Creates a new frequency from an `f64` value in Hz.
-    pub const fn hertz(hz: Hertz) -> Self {
+    pub const fn hertz(hz: f64) -> Self {
         Self(hz)
     }
 
     /// Creates a new frequency from an `f64` value in KHz.
-    pub const fn kilohertz(hz: Hertz) -> Self {
-        Self(hz * 1e3)
+    pub const fn kilohertz(khz: f64) -> Self {
+        Self(khz * 1e3)
     }
 
     /// Creates a new frequency from an `f64` value in MHz.
-    pub const fn megahertz(hz: Hertz) -> Self {
-        Self(hz * 1e6)
+    pub const fn megahertz(mhz: f64) -> Self {
+        Self(mhz * 1e6)
     }
 
     /// Creates a new frequency from an `f64` value in GHz.
-    pub const fn gigahertz(hz: Hertz) -> Self {
-        Self(hz * 1e9)
+    pub const fn gigahertz(ghz: f64) -> Self {
+        Self(ghz * 1e9)
     }
 
     /// Creates a new frequency from an `f64` value in THz.
-    pub const fn terahertz(hz: Hertz) -> Self {
-        Self(hz * 1e12)
+    pub const fn terahertz(thz: f64) -> Self {
+        Self(thz * 1e12)
     }
 
     /// Returns the value of the frequency in Hz.
-    pub const fn to_hertz(&self) -> f64 {
+    pub const fn to_hertz(self) -> f64 {
         self.0
     }
 
     /// Returns the value of the frequency in KHz.
-    pub const fn to_kilohertz(&self) -> f64 {
-        self.0 * 1e-3
+    pub const fn to_kilohertz(self) -> f64 {
+        self.0 / 1e3
     }
 
     /// Returns the value of the frequency in MHz.
-    pub const fn to_megahertz(&self) -> f64 {
-        self.0 * 1e-6
+    pub const fn to_megahertz(self) -> f64 {
+        self.0 / 1e6
     }
 
     /// Returns the value of the frequency in GHz.
-    pub const fn to_gigahertz(&self) -> f64 {
-        self.0 * 1e-9
+    pub const fn to_gigahertz(self) -> f64 {
+        self.0 / 1e9
     }
 
     /// Returns the value of the frequency in THz.
-    pub const fn to_terahertz(&self) -> f64 {
-        self.0 * 1e-12
+    pub const fn to_terahertz(self) -> f64 {
+        self.0 / 1e12
     }
 
     /// Returns the wavelength.
-    pub fn wavelength(&self) -> Distance {
+    pub fn wavelength(self) -> Distance {
         Distance(SPEED_OF_LIGHT / self.0)
     }
 }
@@ -860,20 +842,13 @@ impl FrequencyUnits for i64 {
     }
 }
 
-type Kilograms = f64;
-
 /// Mass in kilograms.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct Mass(Kilograms);
+pub struct Mass(f64);
 
 impl Mass {
-    /// Creates a new mass from an `f64` value in kilograms.
-    pub const fn new(kg: f64) -> Self {
-        Self(kg)
-    }
-
     /// Creates a new mass from an `f64` value in kilograms.
     pub const fn kilograms(kg: f64) -> Self {
         Self(kg)
@@ -881,7 +856,7 @@ impl Mass {
 
     /// Creates a new mass from an `f64` value in grams.
     pub const fn grams(g: f64) -> Self {
-        Self(g * 1e-3)
+        Self(g / 1e3)
     }
 
     /// Creates a new mass from an `f64` value in metric tons (1000 kg).
@@ -889,24 +864,19 @@ impl Mass {
         Self(t * 1e3)
     }
 
-    /// Returns the value of the mass in kilograms as an `f64`.
-    pub const fn as_f64(&self) -> f64 {
-        self.0
-    }
-
     /// Returns the value of the mass in kilograms.
-    pub const fn to_kilograms(&self) -> f64 {
+    pub const fn to_kilograms(self) -> f64 {
         self.0
     }
 
     /// Returns the value of the mass in grams.
-    pub const fn to_grams(&self) -> f64 {
+    pub const fn to_grams(self) -> f64 {
         self.0 * 1e3
     }
 
     /// Returns the value of the mass in metric tons.
-    pub const fn to_metric_tons(&self) -> f64 {
-        self.0 * 1e-3
+    pub const fn to_metric_tons(self) -> f64 {
+        self.0 / 1e3
     }
 }
 
@@ -966,20 +936,13 @@ impl MassUnits for i64 {
     }
 }
 
-type SquareMeters = f64;
-
 /// Area in square meters.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct Area(SquareMeters);
+pub struct Area(f64);
 
 impl Area {
-    /// Creates a new area from an `f64` value in square meters.
-    pub const fn new(m2: f64) -> Self {
-        Self(m2)
-    }
-
     /// Creates a new area from an `f64` value in square meters.
     pub const fn square_meters(m2: f64) -> Self {
         Self(m2)
@@ -990,19 +953,14 @@ impl Area {
         Self(km2 * 1e6)
     }
 
-    /// Returns the value of the area in square meters as an `f64`.
-    pub const fn as_f64(&self) -> f64 {
-        self.0
-    }
-
     /// Returns the value of the area in square meters.
-    pub const fn to_square_meters(&self) -> f64 {
+    pub const fn to_square_meters(self) -> f64 {
         self.0
     }
 
     /// Returns the value of the area in square kilometers.
-    pub const fn to_square_kilometers(&self) -> f64 {
-        self.0 * 1e-6
+    pub const fn to_square_kilometers(self) -> f64 {
+        self.0 / 1e6
     }
 }
 
@@ -1052,8 +1010,6 @@ impl AreaUnits for i64 {
     }
 }
 
-type SquareMetersPerKilogram = f64;
-
 /// Area-to-mass ratio in m²/kg.
 ///
 /// Used for ballistic and radiation-pressure coefficients (e.g. the OMM
@@ -1061,26 +1017,16 @@ type SquareMetersPerKilogram = f64;
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct AreaToMass(SquareMetersPerKilogram);
+pub struct AreaToMass(f64);
 
 impl AreaToMass {
-    /// Creates a new area-to-mass ratio from an `f64` value in m²/kg.
-    pub const fn new(m2_per_kg: f64) -> Self {
-        Self(m2_per_kg)
-    }
-
     /// Creates a new area-to-mass ratio from an `f64` value in m²/kg.
     pub const fn square_meters_per_kilogram(m2_per_kg: f64) -> Self {
         Self(m2_per_kg)
     }
 
-    /// Returns the value in m²/kg as an `f64`.
-    pub const fn as_f64(&self) -> f64 {
-        self.0
-    }
-
     /// Returns the value in m²/kg.
-    pub const fn to_square_meters_per_kilogram(&self) -> f64 {
+    pub const fn to_square_meters_per_kilogram(self) -> f64 {
         self.0
     }
 }
@@ -1121,35 +1067,20 @@ impl AreaToMassUnits for i64 {
     }
 }
 
-/// Temperature in Kelvin (deprecated type alias, use [`Temperature`] instead).
-pub type Kelvin = f64;
-
-type KelvinValue = f64;
-
 /// Temperature in Kelvin.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct Temperature(KelvinValue);
+pub struct Temperature(f64);
 
 impl Temperature {
-    /// Creates a new temperature from an `f64` value in Kelvin.
-    pub const fn new(k: f64) -> Self {
-        Self(k)
-    }
-
     /// Creates a new temperature from an `f64` value in Kelvin.
     pub const fn kelvin(k: f64) -> Self {
         Self(k)
     }
 
-    /// Returns the value in Kelvin as an `f64`.
-    pub const fn as_f64(&self) -> f64 {
-        self.0
-    }
-
     /// Returns the value in Kelvin.
-    pub const fn to_kelvin(&self) -> f64 {
+    pub const fn to_kelvin(self) -> f64 {
         self.0
     }
 }
@@ -1188,43 +1119,31 @@ impl TemperatureUnits for i64 {
     }
 }
 
-type Pascals = f64;
-
 /// Pressure in pascals.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct Pressure(Pascals);
+pub struct Pressure(f64);
 
 impl Pressure {
     /// Creates a new pressure from an `f64` value in pascals.
-    pub const fn new(pa: f64) -> Self {
-        Self(pa)
-    }
-
-    /// Creates a new pressure from an `f64` value in pascals.
-    pub const fn pa(pa: f64) -> Self {
+    pub const fn pascals(pa: f64) -> Self {
         Self(pa)
     }
 
     /// Creates a new pressure from an `f64` value in hectopascals.
-    pub const fn hpa(hpa: f64) -> Self {
+    pub const fn hectopascals(hpa: f64) -> Self {
         Self(hpa * 100.0)
     }
 
-    /// Returns the value in pascals as an `f64`.
-    pub const fn as_f64(&self) -> f64 {
-        self.0
-    }
-
     /// Returns the value in pascals.
-    pub const fn to_pa(&self) -> f64 {
+    pub const fn to_pascals(self) -> f64 {
         self.0
     }
 
     /// Returns the value in hectopascals.
-    pub const fn to_hpa(&self) -> f64 {
-        self.0 * 0.01
+    pub const fn to_hectopascals(self) -> f64 {
+        self.0 / 100.0
     }
 }
 
@@ -1235,20 +1154,13 @@ impl Display for Pressure {
     }
 }
 
-type Watts = f64;
-
 /// Power in Watts.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct Power(Watts);
+pub struct Power(f64);
 
 impl Power {
-    /// Creates a new power from an `f64` value in Watts.
-    pub const fn new(w: f64) -> Self {
-        Self(w)
-    }
-
     /// Creates a new power from an `f64` value in Watts.
     pub const fn watts(w: f64) -> Self {
         Self(w)
@@ -1259,23 +1171,18 @@ impl Power {
         Self(kw * 1e3)
     }
 
-    /// Returns the value in Watts as an `f64`.
-    pub const fn as_f64(&self) -> f64 {
-        self.0
-    }
-
     /// Returns the value in Watts.
-    pub const fn to_watts(&self) -> f64 {
+    pub const fn to_watts(self) -> f64 {
         self.0
     }
 
     /// Returns the value in kilowatts.
-    pub const fn to_kilowatts(&self) -> f64 {
-        self.0 * 1e-3
+    pub const fn to_kilowatts(self) -> f64 {
+        self.0 / 1e3
     }
 
     /// Returns the value in dBW.
-    pub fn to_dbw(&self) -> f64 {
+    pub fn to_dbw(self) -> f64 {
         10.0 * log10(self.0)
     }
 }
@@ -1324,20 +1231,13 @@ impl PowerUnits for i64 {
     }
 }
 
-type RadiansPerSecond = f64;
-
 /// Angular rate in radians per second.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct AngularRate(RadiansPerSecond);
+pub struct AngularRate(f64);
 
 impl AngularRate {
-    /// Creates a new angular rate from an `f64` value in rad/s.
-    pub const fn new(rps: f64) -> Self {
-        Self(rps)
-    }
-
     /// Creates a new angular rate from an `f64` value in rad/s.
     pub const fn radians_per_second(rps: f64) -> Self {
         Self(rps)
@@ -1348,18 +1248,13 @@ impl AngularRate {
         Self(to_radians(dps))
     }
 
-    /// Returns the value in rad/s as an `f64`.
-    pub const fn as_f64(&self) -> f64 {
-        self.0
-    }
-
     /// Returns the value in rad/s.
-    pub const fn to_radians_per_second(&self) -> f64 {
+    pub const fn to_radians_per_second(self) -> f64 {
         self.0
     }
 
     /// Returns the value in deg/s.
-    pub const fn to_degrees_per_second(&self) -> f64 {
+    pub const fn to_degrees_per_second(self) -> f64 {
         to_degrees(self.0)
     }
 }
@@ -1371,18 +1266,21 @@ impl Display for AngularRate {
     }
 }
 
-type DecibelValue = f64;
-
 /// A value in decibels.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct Decibel(DecibelValue);
+pub struct Decibel(f64);
 
 impl Decibel {
-    /// Creates a new `Decibel` from a value already in dB.
-    pub const fn new(db: f64) -> Self {
+    /// Creates a new decibel value from an `f64` value in dB.
+    pub const fn decibels(db: f64) -> Self {
         Self(db)
+    }
+
+    /// Returns the value in dB.
+    pub const fn to_decibels(self) -> f64 {
+        self.0
     }
 
     /// Converts a linear power-ratio value to decibels.
@@ -1393,11 +1291,6 @@ impl Decibel {
     /// Converts this decibel value to a linear power-ratio.
     pub fn to_linear(self) -> f64 {
         powf(10.0_f64, self.0 / 10.0)
-    }
-
-    /// Returns the raw `f64` value in dB.
-    pub const fn as_f64(self) -> f64 {
-        self.0
     }
 }
 
@@ -1418,7 +1311,7 @@ impl Display for Decibel {
 /// use lox_core::units::DecibelUnits;
 ///
 /// let d = 3.0.db();
-/// assert_eq!(d.as_f64(), 3.0);
+/// assert_eq!(d.to_decibels(), 3.0);
 /// ```
 pub trait DecibelUnits {
     /// Creates a decibel value.
@@ -1427,19 +1320,65 @@ pub trait DecibelUnits {
 
 impl DecibelUnits for f64 {
     fn db(&self) -> Decibel {
-        Decibel::new(*self)
+        Decibel::decibels(*self)
     }
 }
 
 impl DecibelUnits for i64 {
     fn db(&self) -> Decibel {
-        Decibel::new(*self as f64)
+        Decibel::decibels(*self as f64)
     }
 }
 
-macro_rules! trait_impls {
+/// Implements the arithmetic and comparison API shared by all unit types.
+macro_rules! quantity_impls {
     ($($unit:ident),*) => {
         $(
+            impl $unit {
+                /// The zero value.
+                pub const ZERO: Self = Self(0.0);
+
+                /// Returns the absolute value.
+                pub fn abs(self) -> Self {
+                    Self(abs(self.0))
+                }
+
+                /// Returns the minimum of the two values, ignoring NaN.
+                pub fn min(self, other: Self) -> Self {
+                    Self(self.0.min(other.0))
+                }
+
+                /// Returns the maximum of the two values, ignoring NaN.
+                pub fn max(self, other: Self) -> Self {
+                    Self(self.0.max(other.0))
+                }
+
+                /// Restricts the value to the interval `[min, max]`.
+                ///
+                /// # Panics
+                ///
+                /// Panics if `min > max`, `min` is NaN, or `max` is NaN.
+                pub fn clamp(self, min: Self, max: Self) -> Self {
+                    Self(self.0.clamp(min.0, max.0))
+                }
+
+                /// Returns the ordering between `self` and `other` according to the IEEE 754
+                /// `totalOrder` predicate.
+                pub fn total_cmp(&self, other: &Self) -> Ordering {
+                    self.0.total_cmp(&other.0)
+                }
+
+                /// Returns `true` if the value is neither infinite nor NaN.
+                pub const fn is_finite(self) -> bool {
+                    self.0.is_finite()
+                }
+
+                /// Returns `true` if the value is NaN.
+                pub const fn is_nan(self) -> bool {
+                    self.0.is_nan()
+                }
+            }
+
             impl Neg for $unit {
                 type Output = Self;
 
@@ -1458,7 +1397,7 @@ macro_rules! trait_impls {
 
             impl AddAssign for $unit {
                 fn add_assign(&mut self, rhs: Self) {
-                    self.0 = self.0 + rhs.0;
+                    self.0 += rhs.0;
                 }
             }
 
@@ -1472,7 +1411,15 @@ macro_rules! trait_impls {
 
             impl SubAssign for $unit {
                 fn sub_assign(&mut self, rhs: Self) {
-                    self.0 = self.0 - rhs.0
+                    self.0 -= rhs.0;
+                }
+            }
+
+            impl Mul<f64> for $unit {
+                type Output = Self;
+
+                fn mul(self, rhs: f64) -> Self::Output {
+                    Self(self.0 * rhs)
                 }
             }
 
@@ -1484,16 +1431,50 @@ macro_rules! trait_impls {
                 }
             }
 
-            impl From<$unit> for f64 {
-                fn from(val: $unit) -> Self {
-                    val.0
+            impl MulAssign<f64> for $unit {
+                fn mul_assign(&mut self, rhs: f64) {
+                    self.0 *= rhs;
+                }
+            }
+
+            impl Div<f64> for $unit {
+                type Output = Self;
+
+                fn div(self, rhs: f64) -> Self::Output {
+                    Self(self.0 / rhs)
+                }
+            }
+
+            impl DivAssign<f64> for $unit {
+                fn div_assign(&mut self, rhs: f64) {
+                    self.0 /= rhs;
+                }
+            }
+
+            impl Div for $unit {
+                type Output = f64;
+
+                fn div(self, rhs: Self) -> Self::Output {
+                    self.0 / rhs.0
+                }
+            }
+
+            impl Sum for $unit {
+                fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+                    Self(iter.map(|q| q.0).sum())
+                }
+            }
+
+            impl<'a> Sum<&'a $unit> for $unit {
+                fn sum<I: Iterator<Item = &'a Self>>(iter: I) -> Self {
+                    Self(iter.map(|q| q.0).sum())
                 }
             }
         )*
     };
 }
 
-trait_impls!(
+quantity_impls!(
     Angle,
     AngularRate,
     Area,
@@ -1691,7 +1672,7 @@ mod tests {
     fn test_temperature_units_trait() {
         assert_eq!(290.0.k().to_kelvin(), 290.0);
         assert_eq!(290.k().to_kelvin(), 290.0);
-        assert_eq!(290.0.k().as_f64(), 290.0);
+        assert_eq!(290.0.k().to_kelvin(), 290.0);
     }
 
     #[test]
@@ -1726,7 +1707,7 @@ mod tests {
     #[test]
     fn test_decibel_db() {
         let d = 3.0.db();
-        assert_eq!(d.as_f64(), 3.0);
+        assert_eq!(d.to_decibels(), 3.0);
     }
 
     #[test]
@@ -1737,14 +1718,14 @@ mod tests {
 
     #[test]
     fn test_decibel_to_linear() {
-        let d = Decibel::new(20.0);
+        let d = Decibel::decibels(20.0);
         assert_approx_eq!(d.to_linear(), 100.0, rtol <= 1e-10);
     }
 
     #[test]
     fn test_decibel_roundtrip() {
         let val = 42.5;
-        let d = Decibel::new(val);
+        let d = Decibel::decibels(val);
         let roundtripped = Decibel::from_linear(d.to_linear());
         assert_approx_eq!(roundtripped.0, val, rtol <= 1e-10);
     }
@@ -1763,21 +1744,13 @@ mod tests {
 
     #[test]
     fn test_decibel_neg() {
-        assert_eq!(-3.0.db(), Decibel::new(-3.0));
+        assert_eq!(-3.0.db(), Decibel::decibels(-3.0));
     }
 
     #[test]
     fn test_decibel_display() {
         let d = 3.0.db();
         assert_eq!(format!("{:.1}", d), "3.0 dB");
-    }
-
-    // --- Temperature ---
-
-    #[test]
-    fn test_temperature_new() {
-        let t = Temperature::new(290.0);
-        assert_eq!(t.as_f64(), 290.0);
     }
 
     #[test]
@@ -1788,21 +1761,19 @@ mod tests {
 
     #[test]
     fn test_temperature_display() {
-        let t = Temperature::new(290.0);
+        let t = Temperature::kelvin(290.0);
         assert_eq!(format!("{}", t), "290 K");
     }
 
     #[test]
     fn test_temperature_arithmetic() {
-        let a = Temperature::new(100.0);
-        let b = Temperature::new(200.0);
-        assert_eq!((a + b).as_f64(), 300.0);
-        assert_eq!((b - a).as_f64(), 100.0);
-        assert_eq!((-a).as_f64(), -100.0);
-        assert_eq!((2.0 * a).as_f64(), 200.0);
+        let a = Temperature::kelvin(100.0);
+        let b = Temperature::kelvin(200.0);
+        assert_eq!((a + b).to_kelvin(), 300.0);
+        assert_eq!((b - a).to_kelvin(), 100.0);
+        assert_eq!((-a).to_kelvin(), -100.0);
+        assert_eq!((2.0 * a).to_kelvin(), 200.0);
     }
-
-    // --- Power ---
 
     #[test]
     fn test_power_watts() {
@@ -1833,12 +1804,10 @@ mod tests {
     fn test_power_arithmetic() {
         let a = Power::watts(50.0);
         let b = Power::watts(150.0);
-        assert_eq!((a + b).as_f64(), 200.0);
-        assert_eq!((b - a).as_f64(), 100.0);
-        assert_eq!((-a).as_f64(), -50.0);
+        assert_eq!((a + b).to_watts(), 200.0);
+        assert_eq!((b - a).to_watts(), 100.0);
+        assert_eq!((-a).to_watts(), -50.0);
     }
-
-    // --- AngularRate ---
 
     #[test]
     fn test_angular_rate_rps() {
@@ -1866,32 +1835,30 @@ mod tests {
 
     #[test]
     fn test_angular_rate_arithmetic() {
-        let a = AngularRate::new(1.0);
-        let b = AngularRate::new(2.0);
-        assert_eq!((a + b).as_f64(), 3.0);
-        assert_eq!((b - a).as_f64(), 1.0);
-        assert_eq!((-a).as_f64(), -1.0);
-        assert_eq!((3.0 * a).as_f64(), 3.0);
+        let a = AngularRate::radians_per_second(1.0);
+        let b = AngularRate::radians_per_second(2.0);
+        assert_eq!((a + b).to_radians_per_second(), 3.0);
+        assert_eq!((b - a).to_radians_per_second(), 1.0);
+        assert_eq!((-a).to_radians_per_second(), -1.0);
+        assert_eq!((3.0 * a).to_radians_per_second(), 3.0);
     }
-
-    // --- Pressure ---
 
     #[test]
     fn test_pressure_hpa() {
-        let p = Pressure::hpa(1013.25);
-        assert_eq!(p.to_hpa(), 1013.25);
-        assert_approx_eq!(p.to_pa(), 101325.0, rtol <= 1e-10);
+        let p = Pressure::hectopascals(1013.25);
+        assert_eq!(p.to_hectopascals(), 1013.25);
+        assert_approx_eq!(p.to_pascals(), 101325.0, rtol <= 1e-10);
     }
 
     #[test]
     fn test_pressure_pa() {
-        let p = Pressure::pa(101325.0);
-        assert_approx_eq!(p.to_hpa(), 1013.25, rtol <= 1e-10);
+        let p = Pressure::pascals(101325.0);
+        assert_approx_eq!(p.to_hectopascals(), 1013.25, rtol <= 1e-10);
     }
 
     #[test]
     fn test_pressure_display() {
-        let p = Pressure::pa(101325.0);
+        let p = Pressure::pascals(101325.0);
         let s = format!("{}", p);
         assert!(s.contains("Pa"));
     }
@@ -1995,10 +1962,6 @@ mod tests {
         assert_eq!(AreaToMass(-1.0), -1.0.m2_per_kg())
     }
 
-    // -----------------------------------------------------------------------
-    // Angle — additional constructors, accessors, and trig functions
-    // -----------------------------------------------------------------------
-
     #[test]
     fn test_angle_from_hms_erfa_tf2a() {
         // ERFA t_erfa_c.c::t_tf2a: tf2a('+', 4, 58, 20.2) = 1.301739278189537429 rad
@@ -2010,7 +1973,7 @@ mod tests {
     fn test_angle_from_hms_negative_within_one_hour() {
         // -0h 30m 0s must be representable as a negative angle.
         let a = Angle::from_hms(Sign::Negative, 0, 30, 0.0);
-        assert!(a.to_radians() < 0.0);
+        assert!(a < Angle::ZERO);
         assert_approx_eq!(a.to_degrees(), -7.5, atol <= 1e-12);
     }
 
@@ -2052,14 +2015,14 @@ mod tests {
     fn test_angle_radians_normalized() {
         use core::f64::consts::TAU;
         let a = Angle::radians_normalized(TAU + 0.5);
-        assert_approx_eq!(a.as_f64(), 0.5, rtol <= 1e-10);
+        assert_approx_eq!(a.to_radians(), 0.5, rtol <= 1e-10);
     }
 
     #[test]
     fn test_angle_radians_normalized_signed() {
         use core::f64::consts::TAU;
         let a = Angle::radians_normalized_signed(-TAU - 0.5);
-        assert!(a.as_f64() < 0.0);
+        assert!(a < Angle::ZERO);
     }
 
     #[test]
@@ -2071,7 +2034,7 @@ mod tests {
     #[test]
     fn test_angle_abs() {
         let a = Angle::radians(-1.5);
-        assert_approx_eq!(a.abs().as_f64(), 1.5, rtol <= 1e-10);
+        assert_approx_eq!(a.abs().to_radians(), 1.5, rtol <= 1e-10);
     }
 
     #[test]
@@ -2101,19 +2064,19 @@ mod tests {
     #[test]
     fn test_angle_from_asinh() {
         let a = Angle::from_asinh(0.0);
-        assert_approx_eq!(a.as_f64(), 0.0, atol <= 1e-10);
+        assert_approx_eq!(a.to_radians(), 0.0, atol <= 1e-10);
     }
 
     #[test]
     fn test_angle_from_acosh() {
         let a = Angle::from_acosh(1.0);
-        assert_approx_eq!(a.as_f64(), 0.0, atol <= 1e-10);
+        assert_approx_eq!(a.to_radians(), 0.0, atol <= 1e-10);
     }
 
     #[test]
     fn test_angle_from_atanh() {
         let a = Angle::from_atanh(0.0);
-        assert_approx_eq!(a.as_f64(), 0.0, atol <= 1e-10);
+        assert_approx_eq!(a.to_radians(), 0.0, atol <= 1e-10);
     }
 
     #[test]
@@ -2144,14 +2107,14 @@ mod tests {
     fn test_angle_mod_two_pi() {
         use core::f64::consts::TAU;
         let a = Angle::radians(TAU + 1.0).mod_two_pi();
-        assert_approx_eq!(a.as_f64(), 1.0, rtol <= 1e-10);
+        assert_approx_eq!(a.to_radians(), 1.0, rtol <= 1e-10);
     }
 
     #[test]
     fn test_angle_mod_two_pi_signed() {
         use core::f64::consts::TAU;
         let a = Angle::radians(TAU + 1.0).mod_two_pi_signed();
-        assert_approx_eq!(a.as_f64(), 1.0, rtol <= 1e-10);
+        assert_approx_eq!(a.to_radians(), 1.0, rtol <= 1e-10);
     }
 
     #[test]
@@ -2185,8 +2148,6 @@ mod tests {
         assert_approx_eq!(d.to_degrees(), 30.0, rtol <= 1e-10);
         let scaled = 2.0 * a;
         assert_approx_eq!(scaled.to_degrees(), 60.0, rtol <= 1e-10);
-        let f: f64 = a.into();
-        assert_approx_eq!(f, a.as_f64(), rtol <= 1e-10);
     }
 
     #[test]
@@ -2194,7 +2155,7 @@ mod tests {
         let a = 90_i64.deg();
         assert_approx_eq!(a.to_degrees(), 90.0, rtol <= 1e-10);
         let b = 1_i64.rad();
-        assert_approx_eq!(b.as_f64(), 1.0, rtol <= 1e-10);
+        assert_approx_eq!(b.to_radians(), 1.0, rtol <= 1e-10);
         let c = 3600_i64.arcsec();
         assert_approx_eq!(c.to_degrees(), 1.0, rtol <= 1e-10);
         let d = 1000_i64.mas();
@@ -2211,10 +2172,6 @@ mod tests {
         assert_approx_eq!(b.to_degrees(), 1.0 / 3600.0, rtol <= 1e-8);
     }
 
-    // -----------------------------------------------------------------------
-    // Distance — additional accessors and units
-    // -----------------------------------------------------------------------
-
     #[test]
     fn test_distance_to_astronomical_units() {
         let d = Distance::astronomical_units(1.0);
@@ -2222,14 +2179,8 @@ mod tests {
     }
 
     #[test]
-    fn test_distance_as_f64() {
-        let d = Distance::meters(5000.0);
-        assert_eq!(d.as_f64(), 5000.0);
-    }
-
-    #[test]
-    fn test_distance_new() {
-        let d = Distance::new(1234.0);
+    fn test_distance_meters() {
+        let d = Distance::meters(1234.0);
         assert_eq!(d.to_meters(), 1234.0);
     }
 
@@ -2263,13 +2214,7 @@ mod tests {
         assert_eq!(d.to_meters(), 50.0);
         let scaled = 2.0 * a;
         assert_eq!(scaled.to_meters(), 200.0);
-        let f: f64 = a.into();
-        assert_eq!(f, 100.0);
     }
-
-    // -----------------------------------------------------------------------
-    // Velocity — additional constructors/accessors
-    // -----------------------------------------------------------------------
 
     #[test]
     fn test_velocity_astronomical_units_per_day() {
@@ -2287,9 +2232,9 @@ mod tests {
     }
 
     #[test]
-    fn test_velocity_new() {
-        let v = Velocity::new(300.0);
-        assert_eq!(v.as_f64(), 300.0);
+    fn test_velocity_meters_per_second() {
+        let v = Velocity::meters_per_second(300.0);
+        assert_eq!(v.to_meters_per_second(), 300.0);
     }
 
     #[test]
@@ -2322,18 +2267,6 @@ mod tests {
         assert_eq!((a - b).to_meters_per_second(), 250.0);
         let scaled = 3.0 * b;
         assert_eq!(scaled.to_meters_per_second(), 750.0);
-        let f: f64 = a.into();
-        assert_eq!(f, 500.0);
-    }
-
-    // -----------------------------------------------------------------------
-    // Mass — additional constructors and i64 metric_tons
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_mass_new() {
-        let m = Mass::new(1.5);
-        assert_eq!(m.as_f64(), 1.5);
     }
 
     #[test]
@@ -2365,18 +2298,6 @@ mod tests {
         assert_eq!(c.to_kilograms(), 150.0);
         let scaled = 2.0 * b;
         assert_eq!(scaled.to_kilograms(), 100.0);
-        let f: f64 = a.into();
-        assert_eq!(f, 100.0);
-    }
-
-    // -----------------------------------------------------------------------
-    // Area — new/as_f64
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_area_new() {
-        let a = Area::new(5.0);
-        assert_eq!(a.as_f64(), 5.0);
     }
 
     #[test]
@@ -2401,18 +2322,6 @@ mod tests {
         assert_eq!((a - b).to_square_meters(), 2.0);
         let scaled = 3.0 * b;
         assert_eq!(scaled.to_square_meters(), 6.0);
-        let f: f64 = a.into();
-        assert_eq!(f, 4.0);
-    }
-
-    // -----------------------------------------------------------------------
-    // AreaToMass — new/as_f64/i64 units/arithmetic
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_area_to_mass_new() {
-        let r = AreaToMass::new(0.1);
-        assert_eq!(r.as_f64(), 0.1);
     }
 
     #[test]
@@ -2425,21 +2334,15 @@ mod tests {
     fn test_area_to_mass_arithmetic() {
         let a = AreaToMass::square_meters_per_kilogram(0.1);
         let b = AreaToMass::square_meters_per_kilogram(0.05);
-        assert_approx_eq!((a + b).as_f64(), 0.15, rtol <= 1e-10);
-        assert_approx_eq!((a - b).as_f64(), 0.05, rtol <= 1e-10);
+        assert_approx_eq!((a + b).to_square_meters_per_kilogram(), 0.15, rtol <= 1e-10);
+        assert_approx_eq!((a - b).to_square_meters_per_kilogram(), 0.05, rtol <= 1e-10);
         let scaled = 2.0 * b;
-        assert_approx_eq!(scaled.as_f64(), 0.1, rtol <= 1e-10);
-        let f: f64 = a.into();
-        assert_approx_eq!(f, 0.1, rtol <= 1e-10);
+        assert_approx_eq!(scaled.to_square_meters_per_kilogram(), 0.1, rtol <= 1e-10);
     }
 
-    // -----------------------------------------------------------------------
-    // Frequency — additional
-    // -----------------------------------------------------------------------
-
     #[test]
-    fn test_frequency_new() {
-        let f = Frequency::new(1e9);
+    fn test_frequency_hertz() {
+        let f = Frequency::hertz(1e9);
         assert_eq!(f.to_hertz(), 1e9);
     }
 
@@ -2463,60 +2366,38 @@ mod tests {
         assert_approx_eq!((a - b).to_gigahertz(), 0.5, rtol <= 1e-10);
         let scaled = 2.0 * b;
         assert_approx_eq!(scaled.to_gigahertz(), 1.0, rtol <= 1e-10);
-        let f: f64 = a.into();
-        assert_approx_eq!(f, 1e9, rtol <= 1e-10);
     }
-
-    // -----------------------------------------------------------------------
-    // Temperature — arithmetic
-    // -----------------------------------------------------------------------
 
     #[test]
     fn test_temperature_neg() {
         let t = Temperature::kelvin(100.0);
-        assert_eq!((-t).as_f64(), -100.0);
+        assert_eq!((-t).to_kelvin(), -100.0);
     }
 
     #[test]
     fn test_temperature_add_assign_sub_assign() {
         let mut a = Temperature::kelvin(200.0);
         a += Temperature::kelvin(50.0);
-        assert_eq!(a.as_f64(), 250.0);
+        assert_eq!(a.to_kelvin(), 250.0);
         a -= Temperature::kelvin(100.0);
-        assert_eq!(a.as_f64(), 150.0);
+        assert_eq!(a.to_kelvin(), 150.0);
     }
 
-    // -----------------------------------------------------------------------
-    // Pressure — new/arithmetic
-    // -----------------------------------------------------------------------
-
     #[test]
-    fn test_pressure_new() {
-        let p = Pressure::new(101325.0);
-        assert_eq!(p.as_f64(), 101325.0);
+    fn test_pressure_pascals() {
+        let p = Pressure::pascals(101325.0);
+        assert_eq!(p.to_pascals(), 101325.0);
     }
 
     #[test]
     fn test_pressure_arithmetic() {
-        let a = Pressure::pa(1000.0);
-        let b = Pressure::pa(500.0);
-        assert_eq!((a + b).to_pa(), 1500.0);
-        assert_eq!((a - b).to_pa(), 500.0);
-        assert_eq!((-b).to_pa(), -500.0);
+        let a = Pressure::pascals(1000.0);
+        let b = Pressure::pascals(500.0);
+        assert_eq!((a + b).to_pascals(), 1500.0);
+        assert_eq!((a - b).to_pascals(), 500.0);
+        assert_eq!((-b).to_pascals(), -500.0);
         let scaled = 2.0 * b;
-        assert_eq!(scaled.to_pa(), 1000.0);
-        let f: f64 = a.into();
-        assert_eq!(f, 1000.0);
-    }
-
-    // -----------------------------------------------------------------------
-    // Power — new/add_assign/sub_assign
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_power_new() {
-        let p = Power::new(500.0);
-        assert_eq!(p.as_f64(), 500.0);
+        assert_eq!(scaled.to_pascals(), 1000.0);
     }
 
     #[test]
@@ -2528,58 +2409,42 @@ mod tests {
         assert_eq!(p.to_watts(), 250.0);
     }
 
-    // -----------------------------------------------------------------------
-    // AngularRate — new/as_f64/arithmetic
-    // -----------------------------------------------------------------------
-
     #[test]
-    fn test_angular_rate_new() {
-        let ar = AngularRate::new(2.0);
-        assert_eq!(ar.as_f64(), 2.0);
+    fn test_angular_rate_radians_per_second() {
+        let ar = AngularRate::radians_per_second(2.0);
+        assert_eq!(ar.to_radians_per_second(), 2.0);
     }
 
     #[test]
     fn test_angular_rate_add_assign_sub_assign() {
         let mut ar = AngularRate::radians_per_second(1.0);
         ar += AngularRate::radians_per_second(0.5);
-        assert_approx_eq!(ar.as_f64(), 1.5, rtol <= 1e-10);
+        assert_approx_eq!(ar.to_radians_per_second(), 1.5, rtol <= 1e-10);
         ar -= AngularRate::radians_per_second(0.5);
-        assert_approx_eq!(ar.as_f64(), 1.0, rtol <= 1e-10);
-        let f: f64 = ar.into();
-        assert_approx_eq!(f, 1.0, rtol <= 1e-10);
+        assert_approx_eq!(ar.to_radians_per_second(), 1.0, rtol <= 1e-10);
     }
-
-    // -----------------------------------------------------------------------
-    // Decibel — add_assign/sub_assign/neg/i64
-    // -----------------------------------------------------------------------
 
     #[test]
     fn test_decibel_add_assign_sub_assign() {
-        let mut d = Decibel::new(10.0);
-        d += Decibel::new(3.0);
-        assert_approx_eq!(d.as_f64(), 13.0, rtol <= 1e-10);
-        d -= Decibel::new(3.0);
-        assert_approx_eq!(d.as_f64(), 10.0, rtol <= 1e-10);
+        let mut d = Decibel::decibels(10.0);
+        d += Decibel::decibels(3.0);
+        assert_approx_eq!(d.to_decibels(), 13.0, rtol <= 1e-10);
+        d -= Decibel::decibels(3.0);
+        assert_approx_eq!(d.to_decibels(), 10.0, rtol <= 1e-10);
     }
 
     #[test]
     fn test_decibel_i64_units() {
         let d = 10_i64.db();
-        assert_eq!(d.as_f64(), 10.0);
+        assert_eq!(d.to_decibels(), 10.0);
     }
 
     #[test]
-    fn test_decibel_mul_and_into() {
-        let d = Decibel::new(5.0);
+    fn test_decibel_scaling() {
+        let d = Decibel::decibels(5.0);
         let scaled = 2.0 * d;
-        assert_approx_eq!(scaled.as_f64(), 10.0, rtol <= 1e-10);
-        let f: f64 = d.into();
-        assert_eq!(f, 5.0);
+        assert_approx_eq!(scaled.to_decibels(), 10.0, rtol <= 1e-10);
     }
-
-    // -----------------------------------------------------------------------
-    // Sign
-    // -----------------------------------------------------------------------
 
     #[rstest]
     #[case(1.0_f64, Sign::Positive)]
@@ -2622,10 +2487,6 @@ mod tests {
         assert_eq!(format!("{}", Sign::Negative), "-");
     }
 
-    // -----------------------------------------------------------------------
-    // Angle::from_dms (ERFA af2a)
-    // -----------------------------------------------------------------------
-
     #[test]
     fn test_angle_from_dms_erfa_af2a() {
         // ERFA t_erfa_c.c::t_af2a: af2a('-', 45, 13, 27.2) = -0.7893115794313644842 rad
@@ -2637,13 +2498,9 @@ mod tests {
     fn test_angle_from_dms_negative_within_one_degree() {
         // -0° 30' 0" must be representable.
         let a = Angle::from_dms(Sign::Negative, 0, 30, 0.0);
-        assert!(a.to_radians() < 0.0);
+        assert!(a < Angle::ZERO);
         assert_approx_eq!(a.to_degrees(), -0.5, atol <= 1e-12);
     }
-
-    // -----------------------------------------------------------------------
-    // Angle::to_hms (ERFA a2tf)
-    // -----------------------------------------------------------------------
 
     #[test]
     fn test_angle_to_hms_erfa_a2tf() {
@@ -2664,10 +2521,6 @@ mod tests {
         assert_eq!(min, 30);
         assert_approx_eq!(sec, 0.0, atol <= 1e-10);
     }
-
-    // -----------------------------------------------------------------------
-    // Angle::to_dms (ERFA a2af)
-    // -----------------------------------------------------------------------
 
     #[test]
     fn test_angle_to_dms_erfa_a2af() {
@@ -2726,5 +2579,117 @@ mod tests {
         let (sign, hours, min, sec) = a.to_hms();
         let b = Angle::from_hms(sign, hours, min, sec);
         assert_approx_eq!(a.to_radians(), b.to_radians(), atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_quantity_scaling() {
+        let d = Distance::meters(10.0);
+        assert_eq!((d * 3.0).to_meters(), 30.0);
+        assert_eq!((3.0 * d).to_meters(), 30.0);
+        assert_eq!((d / 4.0).to_meters(), 2.5);
+        let mut e = d;
+        e *= 2.0;
+        assert_eq!(e.to_meters(), 20.0);
+        e /= 8.0;
+        assert_eq!(e.to_meters(), 2.5);
+    }
+
+    #[test]
+    fn test_quantity_ratio_is_dimensionless() {
+        let ratio: f64 = Distance::kilometers(3.0) / Distance::meters(1500.0);
+        assert_eq!(ratio, 2.0);
+    }
+
+    #[test]
+    fn test_quantity_sum() {
+        let losses = [Decibel::decibels(1.5), Decibel::decibels(2.0)];
+        assert_eq!(losses.iter().sum::<Decibel>().to_decibels(), 3.5);
+        assert_eq!(losses.into_iter().sum::<Decibel>().to_decibels(), 3.5);
+        assert_eq!(
+            core::iter::empty::<Mass>().sum::<Mass>().to_kilograms(),
+            0.0
+        );
+    }
+
+    #[test]
+    fn test_quantity_comparisons() {
+        let a = Velocity::meters_per_second(-2.0);
+        let b = Velocity::meters_per_second(5.0);
+        assert_eq!(a.abs().to_meters_per_second(), 2.0);
+        assert_eq!(a.min(b), a);
+        assert_eq!(a.max(b), b);
+        assert_eq!(
+            Velocity::meters_per_second(9.0)
+                .clamp(a, b)
+                .to_meters_per_second(),
+            5.0
+        );
+        assert_eq!(a.total_cmp(&b), core::cmp::Ordering::Less);
+        assert_eq!(
+            Angle::radians(-0.0).total_cmp(&Angle::radians(0.0)),
+            core::cmp::Ordering::Less
+        );
+    }
+
+    #[test]
+    fn test_quantity_zero() {
+        assert_eq!(Distance::ZERO.to_meters(), 0.0);
+        assert_eq!(Decibel::ZERO.to_decibels(), 0.0);
+        assert!(Velocity::meters_per_second(-1.0) < Velocity::ZERO);
+    }
+
+    #[test]
+    fn test_quantity_non_finite() {
+        assert!(Distance::meters(1.0).is_finite());
+        assert!(!Distance::meters(f64::INFINITY).is_finite());
+        assert!(Distance::meters(f64::NAN).is_nan());
+        assert!(!Distance::meters(f64::NAN).is_finite());
+    }
+
+    #[test]
+    fn test_scale_down_is_correctly_rounded() {
+        // Multiplying by the inexact reciprocals 1e-3 and 1e-9 does not round-trip these values.
+        assert_eq!(Distance::kilometers(6000.007).to_kilometers(), 6000.007);
+        assert_eq!(
+            Frequency::gigahertz(0.0009000000000000001).to_gigahertz(),
+            0.0009000000000000001
+        );
+    }
+
+    #[test]
+    fn test_angle_small_units() {
+        assert_approx_eq!(
+            Angle::milliarcseconds(1500.0).to_arcseconds(),
+            1.5,
+            rtol <= 1e-15
+        );
+        assert_approx_eq!(
+            Angle::microarcseconds(2.0).to_milliarcseconds(),
+            2e-3,
+            rtol <= 1e-15
+        );
+        assert_approx_eq!(
+            Angle::arcseconds(3.0).to_microarcseconds(),
+            3e6,
+            rtol <= 1e-15
+        );
+        assert_eq!(Angle::microradians(5.0).to_radians(), 5e-6);
+        assert_approx_eq!(Angle::radians(5e-6).to_microradians(), 5.0, rtol <= 1e-15);
+        assert_eq!(1.5.mas(), Angle::milliarcseconds(1.5));
+        assert_eq!(2.uas(), Angle::microarcseconds(2.0));
+    }
+
+    #[test]
+    fn test_pressure_units() {
+        let p = Pressure::hectopascals(1013.25);
+        assert_eq!(p.to_pascals(), 101325.0);
+        assert_eq!(p.to_hectopascals(), 1013.25);
+        assert_eq!(Pressure::pascals(100.0).to_hectopascals(), 1.0);
+    }
+
+    #[test]
+    fn test_decibel_units() {
+        assert_eq!(Decibel::decibels(3.0).to_decibels(), 3.0);
+        assert_eq!(3.db(), Decibel::decibels(3.0));
     }
 }

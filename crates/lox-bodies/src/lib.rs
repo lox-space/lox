@@ -79,8 +79,8 @@ impl<T: TriaxialEllipsoid> TryTriaxialEllipsoid for T {
 }
 
 fn flattening(equatorial_radius: Distance, polar_radius: Distance) -> f64 {
-    let r_eq = equatorial_radius.as_f64();
-    let r_p = polar_radius.as_f64();
+    let r_eq = equatorial_radius.to_meters();
+    let r_p = polar_radius.to_meters();
     (r_eq - r_p) / r_eq
 }
 

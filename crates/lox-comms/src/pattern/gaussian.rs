@@ -122,7 +122,7 @@ mod tests {
         let p = test_pattern();
         let peak = p.peak_gain(test_frequency());
         // Same parameters as parabolic test: D=0.98m, η=0.45, f=29GHz
-        assert_approx_eq!(peak.as_f64(), 46.01119000490658, rtol <= 1e-6);
+        assert_approx_eq!(peak.to_decibels(), 46.01119000490658, rtol <= 1e-6);
     }
 
     #[test]
@@ -130,7 +130,7 @@ mod tests {
         let p = test_pattern();
         let gain = p.gain(test_frequency(), Angle::ZERO, Angle::ZERO);
         let peak = p.peak_gain(test_frequency());
-        assert_approx_eq!(gain.as_f64(), peak.as_f64(), atol <= 1e-10);
+        assert_approx_eq!(gain.to_decibels(), peak.to_decibels(), atol <= 1e-10);
     }
 
     #[test]
@@ -138,10 +138,10 @@ mod tests {
         // HPBW is the full width; the -3dB point is at θ = HPBW/2
         let p = test_pattern();
         let f = test_frequency();
-        let half_bw = Angle::radians(p.beamwidth(f).to_radians() / 2.0);
+        let half_bw = p.beamwidth(f) / 2.0;
         let peak = p.peak_gain(f);
         let gain_at_half_bw = p.gain(f, half_bw, Angle::ZERO);
-        let diff = peak.as_f64() - gain_at_half_bw.as_f64();
+        let diff = (peak - gain_at_half_bw).to_decibels();
         assert_approx_eq!(diff, 3.0103, atol <= 0.01);
     }
 
@@ -152,7 +152,11 @@ mod tests {
         let angle = Angle::degrees(1.0);
         let gain_pos = p.gain(f, angle, Angle::ZERO);
         let gain_neg = p.gain(f, Angle::degrees(-1.0), Angle::ZERO);
-        assert_approx_eq!(gain_pos.as_f64(), gain_neg.as_f64(), atol <= 1e-10);
+        assert_approx_eq!(
+            gain_pos.to_decibels(),
+            gain_neg.to_decibels(),
+            atol <= 1e-10
+        );
     }
 
     #[test]
@@ -162,9 +166,9 @@ mod tests {
         let p = test_pattern();
         let f = test_frequency();
         let gain = p.gain(f, Angle::degrees(45.0), Angle::ZERO);
-        let floor = p.peak_gain(f).as_f64() - 120.0;
-        assert!(gain.as_f64().is_finite());
-        assert_approx_eq!(gain.as_f64(), floor, atol <= 1e-9);
+        let floor = p.peak_gain(f).to_decibels() - 120.0;
+        assert!(gain.is_finite());
+        assert_approx_eq!(gain.to_decibels(), floor, atol <= 1e-9);
     }
 
     #[test]
@@ -172,9 +176,9 @@ mod tests {
         let p = test_pattern();
         let f = test_frequency();
         let gain = p.gain(f, Angle::degrees(135.0), Angle::ZERO);
-        let floor = p.peak_gain(f).as_f64() - 120.0;
-        assert!(gain.as_f64().is_finite());
-        assert_approx_eq!(gain.as_f64(), floor, atol <= 1e-9);
+        let floor = p.peak_gain(f).to_decibels() - 120.0;
+        assert!(gain.is_finite());
+        assert_approx_eq!(gain.to_decibels(), floor, atol <= 1e-9);
     }
 
     #[test]
@@ -185,8 +189,8 @@ mod tests {
         let g1 = p.gain(f, Angle::degrees(0.5), Angle::ZERO);
         let g2 = p.gain(f, Angle::degrees(1.0), Angle::ZERO);
         let g3 = p.gain(f, Angle::degrees(2.0), Angle::ZERO);
-        assert!(g0.as_f64() > g1.as_f64());
-        assert!(g1.as_f64() > g2.as_f64());
-        assert!(g2.as_f64() > g3.as_f64());
+        assert!(g0 > g1);
+        assert!(g1 > g2);
+        assert!(g2 > g3);
     }
 }

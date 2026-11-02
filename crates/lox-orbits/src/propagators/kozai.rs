@@ -159,7 +159,7 @@ pub fn propagate_mean(kep: &Keplerian, m0: f64, rates: &SecularRates, dt: f64) -
         a: kep
             .semi_major_axis()
             .expect("mean elements require a semi-major axis")
-            .as_f64(),
+            .to_meters(),
         e: kep.eccentricity().as_f64(),
         i: kep.inclination().as_f64(),
         raan: (kep.longitude_of_ascending_node().as_f64() + rates.raan_dot * dt).rem_euclid(TAU),
@@ -176,7 +176,7 @@ pub fn mean_to_cartesian(el: &MeanElements, mu: f64) -> Result<Cartesian, Anomal
     let ecc = Eccentricity::try_new(el.e).expect("eccentricity should be non-negative");
     let f = MeanAnomaly::new(el.m.rad()).to_true(ecc)?;
     let kep = Keplerian::builder()
-        .with_semi_major_axis(Distance::new(el.a), el.e)
+        .with_semi_major_axis(Distance::meters(el.a), el.e)
         .with_inclination(el.i.rad().mod_two_pi())
         .with_longitude_of_ascending_node(el.raan.rad().mod_two_pi())
         .with_argument_of_periapsis(el.aop.rad().mod_two_pi())
@@ -276,7 +276,7 @@ pub fn kwok_osculating_cartesian(
     let ecc_osc = Eccentricity::try_new(e_osc).expect("osculating eccentricity should be valid");
     let ta = TrueAnomaly::new(f_osc.rad());
     let kep = Keplerian::builder()
-        .with_semi_major_axis(Distance::new(a_osc), ecc_osc.as_f64())
+        .with_semi_major_axis(Distance::meters(a_osc), ecc_osc.as_f64())
         .with_inclination(i_osc.rad().mod_two_pi())
         .with_longitude_of_ascending_node(raan_osc.rad().mod_two_pi())
         .with_argument_of_periapsis(aop_osc.rad().mod_two_pi())

@@ -102,7 +102,7 @@ impl LossLine {
     ///
     /// Rejects non-finite and negative values — a gain is not a loss.
     pub fn new(kind: LossKind, value: Decibel) -> core::result::Result<Self, PropagationLossError> {
-        let db = value.as_f64();
+        let db = value.to_decibels();
         if !db.is_finite() || db < 0.0 {
             return Err(PropagationLossError::InvalidValue {
                 label: String::from(kind.label()),
@@ -156,17 +156,17 @@ impl PropagationLosses {
 
     /// Returns the total excess loss in dB.
     pub fn total(&self) -> Decibel {
-        Decibel::new(self.lines.iter().map(|line| line.value.as_f64()).sum())
+        Decibel::decibels(self.lines.iter().map(|line| line.value.to_decibels()).sum())
     }
 
     /// Returns the absorptive part of the loss in dB — the attenuation that
     /// also raises the receive antenna noise temperature.
     pub fn absorptive(&self) -> Decibel {
-        Decibel::new(
+        Decibel::decibels(
             self.lines
                 .iter()
                 .filter(|line| line.kind.is_absorptive())
-                .map(|line| line.value.as_f64())
+                .map(|line| line.value.to_decibels())
                 .sum(),
         )
     }
@@ -274,17 +274,17 @@ mod tests {
     #[test]
     fn test_propagation_losses_none_is_zero() {
         let losses = PropagationLosses::none();
-        assert_approx_eq!(losses.total().as_f64(), 0.0, atol <= 1e-15);
-        assert_approx_eq!(losses.absorptive().as_f64(), 0.0, atol <= 1e-15);
+        assert_approx_eq!(losses.total().to_decibels(), 0.0, atol <= 1e-15);
+        assert_approx_eq!(losses.absorptive().to_decibels(), 0.0, atol <= 1e-15);
         assert!(losses.lines().is_empty());
     }
 
     #[test]
     fn test_propagation_losses_total_and_absorptive() {
         let losses = p618_losses();
-        assert_approx_eq!(losses.total().as_f64(), 3.0, atol <= 1e-12);
+        assert_approx_eq!(losses.total().to_decibels(), 3.0, atol <= 1e-12);
         // Scintillation is non-absorptive.
-        assert_approx_eq!(losses.absorptive().as_f64(), 2.7, atol <= 1e-12);
+        assert_approx_eq!(losses.absorptive().to_decibels(), 2.7, atol <= 1e-12);
     }
 
     #[test]
@@ -294,8 +294,8 @@ mod tests {
             .other("Pointing margin", 0.4.db(), false)
             .build()
             .unwrap();
-        assert_approx_eq!(losses.total().as_f64(), 0.9, atol <= 1e-12);
-        assert_approx_eq!(losses.absorptive().as_f64(), 0.5, atol <= 1e-12);
+        assert_approx_eq!(losses.total().to_decibels(), 0.9, atol <= 1e-12);
+        assert_approx_eq!(losses.absorptive().to_decibels(), 0.5, atol <= 1e-12);
         assert_eq!(losses.lines()[0].kind().label(), "Radome wetting");
     }
 
@@ -306,7 +306,7 @@ mod tests {
             .rain(0.5.db())
             .build()
             .unwrap();
-        assert_approx_eq!(losses.total().as_f64(), 1.5, atol <= 1e-12);
+        assert_approx_eq!(losses.total().to_decibels(), 1.5, atol <= 1e-12);
         assert_eq!(losses.lines().len(), 2);
     }
 
@@ -328,23 +328,23 @@ mod tests {
     #[test]
     fn test_loss_line_rejects_negative_and_non_finite() {
         for value in [-0.1, f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
-            assert!(LossLine::new(LossKind::Rain, Decibel::new(value)).is_err());
+            assert!(LossLine::new(LossKind::Rain, Decibel::decibels(value)).is_err());
             assert!(
                 PropagationLosses::builder()
-                    .rain(Decibel::new(value))
+                    .rain(Decibel::decibels(value))
                     .build()
                     .is_err()
             );
         }
         // Zero is a valid loss.
-        assert!(LossLine::new(LossKind::Rain, Decibel::new(0.0)).is_ok());
+        assert!(LossLine::new(LossKind::Rain, Decibel::decibels(0.0)).is_ok());
     }
 
     #[test]
     fn test_loss_kind_labels() {
         assert_eq!(LossKind::Rain.to_string(), "Rain attenuation");
         assert_eq!(LossKind::Gaseous.label(), "Gaseous absorption");
-        let err = LossLine::new(LossKind::Cloud, Decibel::new(-1.0)).unwrap_err();
+        let err = LossLine::new(LossKind::Cloud, Decibel::decibels(-1.0)).unwrap_err();
         assert!(err.to_string().contains("Cloud attenuation"));
     }
 

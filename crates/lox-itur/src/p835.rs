@@ -54,7 +54,7 @@ pub(crate) fn standard_temperature_raw(h_km: f64) -> f64 {
 
 /// Standard atmosphere pressure at geopotential height h.
 pub fn standard_pressure(h: Distance) -> Pressure {
-    Pressure::hpa(standard_pressure_raw(h.to_kilometers()))
+    Pressure::hectopascals(standard_pressure_raw(h.to_kilometers()))
 }
 
 pub(crate) fn standard_pressure_raw(h_km: f64) -> f64 {
@@ -97,7 +97,7 @@ pub fn standard_water_vapour_pressure(h: Distance, h_0: f64, rho_0: f64) -> Pres
     let h_km = h.to_kilometers();
     let rho_h = standard_water_vapour_density_raw(h_km, h_0, rho_0);
     let t_h = standard_temperature_raw(h_km);
-    Pressure::hpa(rho_h * t_h / 216.7)
+    Pressure::hectopascals(rho_h * t_h / 216.7)
 }
 
 // ── Low-latitude atmosphere (Section 2, |lat| < 22°) ────────────────────────
@@ -315,7 +315,7 @@ fn temperature_raw(lat_deg: f64, h_km: f64, season: Season) -> f64 {
 
 /// Pressure at a given height, latitude, and season.
 pub fn pressure(lat: Angle, h: Distance, season: Season) -> Pressure {
-    Pressure::hpa(pressure_raw(lat.to_degrees(), h.to_kilometers(), season))
+    Pressure::hectopascals(pressure_raw(lat.to_degrees(), h.to_kilometers(), season))
 }
 
 fn pressure_raw(lat_deg: f64, h_km: f64, season: Season) -> f64 {
@@ -378,7 +378,7 @@ mod tests {
     #[test]
     fn test_standard_pressure_sea_level() {
         let p = standard_pressure(Distance::kilometers(0.0));
-        assert_approx_eq!(p.to_hpa(), 1013.25, atol <= 1e-6);
+        assert_approx_eq!(p.to_hectopascals(), 1013.25, atol <= 1e-6);
     }
 
     #[test]
@@ -550,7 +550,7 @@ mod tests {
     #[test]
     fn test_standard_water_vapour_pressure() {
         let e = standard_water_vapour_pressure(Distance::kilometers(0.0), 2.0, 7.5);
-        assert!(e.to_hpa() > 0.0);
+        assert!(e > Pressure::ZERO);
     }
 
     // ── Latitude dispatchers ────────────────────────────────────────
@@ -648,11 +648,11 @@ mod tests {
             Distance::kilometers(0.0),
             Season::Winter,
         );
-        assert!(p_low.to_hpa() > 900.0);
-        assert!(p_mid_s.to_hpa() > 900.0);
-        assert!(p_mid_w.to_hpa() > 900.0);
-        assert!(p_high_s.to_hpa() > 900.0);
-        assert!(p_high_w.to_hpa() > 900.0);
+        assert!(p_low.to_hectopascals() > 900.0);
+        assert!(p_mid_s.to_hectopascals() > 900.0);
+        assert!(p_mid_w.to_hectopascals() > 900.0);
+        assert!(p_high_s.to_hectopascals() > 900.0);
+        assert!(p_high_w.to_hectopascals() > 900.0);
     }
 
     #[test]

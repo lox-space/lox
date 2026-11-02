@@ -194,7 +194,7 @@ fn bessel_j1(x: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use lox_approx::assert_approx_eq;
-    use lox_core::units::FrequencyUnits;
+    use lox_core::units::{DecibelUnits, FrequencyUnits};
 
     use super::*;
 
@@ -252,8 +252,8 @@ mod tests {
         let p = test_pattern();
         let gain = p.gain(test_frequency(), Angle::ZERO, Angle::ZERO);
         let peak = p.peak_gain(test_frequency());
-        assert_approx_eq!(gain.as_f64(), 46.01119000490658, rtol <= 1e-6);
-        assert_approx_eq!(peak.as_f64(), 46.01119000490658, rtol <= 1e-6);
+        assert_approx_eq!(gain.to_decibels(), 46.01119000490658, rtol <= 1e-6);
+        assert_approx_eq!(peak.to_decibels(), 46.01119000490658, rtol <= 1e-6);
     }
 
     #[test]
@@ -265,11 +265,11 @@ mod tests {
         let wavelength = f.wavelength().to_meters();
         let sin_theta = BESSEL_J1_FIRST_ZERO * wavelength / (PI * p.diameter.to_meters());
         let gain = p.gain(f, Angle::radians(sin_theta.asin()), Angle::ZERO);
-        let floor = p.peak_gain(f).as_f64() - 120.0;
-        assert!(gain.as_f64().is_finite());
-        assert!(gain.as_f64() >= floor - 1e-9);
+        let floor = p.peak_gain(f).to_decibels() - 120.0;
+        assert!(gain.is_finite());
+        assert!(gain.to_decibels() >= floor - 1e-9);
         // Deep in the null: far below the first sidelobe (−17.6 dB)
-        assert!(gain.as_f64() < p.peak_gain(f).as_f64() - 60.0);
+        assert!(gain < p.peak_gain(f) - 60.0.db());
     }
 
     #[test]
@@ -280,7 +280,7 @@ mod tests {
             Angle::radians(std::f64::consts::PI),
             Angle::ZERO,
         );
-        assert!(gain.as_f64() < -50.0);
+        assert!(gain.to_decibels() < -50.0);
     }
 
     #[test]
@@ -288,10 +288,10 @@ mod tests {
         // The −3 dB point is at half the full HPBW.
         let p = test_pattern();
         let f = test_frequency();
-        let half_bw = Angle::radians(p.beamwidth(f).unwrap().to_radians() / 2.0);
+        let half_bw = p.beamwidth(f).unwrap() / 2.0;
         let peak = p.peak_gain(f);
         let gain_at_half_bw = p.gain(f, half_bw, Angle::ZERO);
-        let diff = (peak - gain_at_half_bw).as_f64();
+        let diff = (peak - gain_at_half_bw).to_decibels();
         assert_approx_eq!(diff, 3.0103, atol <= 0.5);
     }
 

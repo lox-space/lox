@@ -19,7 +19,7 @@ use crate::error::NonPhysicalError;
 ///
 /// T = T_room · (10^(NF/10) − 1)
 pub fn noise_figure_to_temperature(nf: Decibel) -> Temperature {
-    Temperature::kelvin(ROOM_TEMPERATURE.to_kelvin() * (nf.to_linear() - 1.0))
+    ROOM_TEMPERATURE * (nf.to_linear() - 1.0)
 }
 
 /// A receiver characterised by a single equivalent noise temperature.
@@ -112,7 +112,7 @@ impl NoiseStage {
     /// Rejects a non-finite gain and a non-finite or negative noise
     /// temperature.
     pub fn new(gain: Decibel, noise_temperature: Temperature) -> Result<Self, NonPhysicalError> {
-        NonPhysicalError::check_finite("stage gain [dB]", gain.as_f64())?;
+        NonPhysicalError::check_finite("stage gain [dB]", gain.to_decibels())?;
         NonPhysicalError::check_non_negative(
             "stage noise temperature [K]",
             noise_temperature.to_kelvin(),
@@ -221,8 +221,8 @@ impl CascadeReceiver {
     pub fn builder() -> CascadeReceiverBuilder {
         CascadeReceiverBuilder {
             stages: Vec::new(),
-            demodulator_loss: Decibel::new(0.0),
-            implementation_loss: Decibel::new(0.0),
+            demodulator_loss: Decibel::decibels(0.0),
+            implementation_loss: Decibel::decibels(0.0),
         }
     }
 
@@ -236,10 +236,13 @@ impl CascadeReceiver {
         demodulator_loss: Decibel,
         implementation_loss: Decibel,
     ) -> Result<Self, NonPhysicalError> {
-        NonPhysicalError::check_non_negative("demodulator loss [dB]", demodulator_loss.as_f64())?;
+        NonPhysicalError::check_non_negative(
+            "demodulator loss [dB]",
+            demodulator_loss.to_decibels(),
+        )?;
         NonPhysicalError::check_non_negative(
             "implementation loss [dB]",
-            implementation_loss.as_f64(),
+            implementation_loss.to_decibels(),
         )?;
         NonPhysicalError::check_positive("cascade receiver stage count", stages.len() as f64)?;
         Ok(Self {
@@ -259,7 +262,7 @@ impl CascadeReceiver {
     ) -> Result<Self, NonPhysicalError> {
         let lna_stage = NoiseStage::new(lna_gain, lna_noise_temperature)?;
         let rx_stage = NoiseStage::new(
-            Decibel::new(0.0),
+            Decibel::decibels(0.0),
             noise_figure_to_temperature(receiver_noise_figure),
         )?;
         Self::new(
@@ -302,7 +305,7 @@ impl CascadeReceiver {
     pub fn chain_gain(&self) -> Decibel {
         self.stages
             .iter()
-            .fold(Decibel::new(0.0), |acc, s| acc + s.gain)
+            .fold(Decibel::decibels(0.0), |acc, s| acc + s.gain)
     }
 }
 
@@ -403,7 +406,7 @@ mod tests {
         )
         .unwrap();
         // chain_gain = 20 + (-3) + 30 = 47 dB
-        assert_approx_eq!(rx.chain_gain().as_f64(), 47.0, atol <= 1e-10);
+        assert_approx_eq!(rx.chain_gain().to_decibels(), 47.0, atol <= 1e-10);
     }
 
     #[test]
@@ -411,7 +414,7 @@ mod tests {
         for temperature in [0.0, -10.0, f64::NAN] {
             assert!(NoiseTempReceiver::new(Temperature::kelvin(temperature)).is_err());
         }
-        assert!(NoiseStage::new(Decibel::new(f64::NAN), Temperature::kelvin(50.0)).is_err());
+        assert!(NoiseStage::new(Decibel::decibels(f64::NAN), Temperature::kelvin(50.0)).is_err());
         assert!(NoiseStage::new(20.0.db(), Temperature::kelvin(-1.0)).is_err());
         assert!(CascadeReceiver::new(vec![], (-1.0).db(), 0.0.db()).is_err());
     }
@@ -419,13 +422,17 @@ mod tests {
     #[test]
     fn test_accessors_and_conversions() {
         let stage = NoiseStage::new(20.0.db(), Temperature::kelvin(50.0)).unwrap();
-        assert_approx_eq!(stage.gain().as_f64(), 20.0, atol <= 1e-15);
+        assert_approx_eq!(stage.gain().to_decibels(), 20.0, atol <= 1e-15);
         assert_approx_eq!(stage.noise_temperature().to_kelvin(), 50.0, atol <= 1e-15);
 
         let cascade = CascadeReceiver::new(vec![stage], 0.5.db(), 0.25.db()).unwrap();
         assert_eq!(cascade.stages().len(), 1);
-        assert_approx_eq!(cascade.demodulator_loss().as_f64(), 0.5, atol <= 1e-15);
-        assert_approx_eq!(cascade.implementation_loss().as_f64(), 0.25, atol <= 1e-15);
+        assert_approx_eq!(cascade.demodulator_loss().to_decibels(), 0.5, atol <= 1e-15);
+        assert_approx_eq!(
+            cascade.implementation_loss().to_decibels(),
+            0.25,
+            atol <= 1e-15
+        );
 
         let noise_temp = NoiseTempReceiver::new(Temperature::kelvin(500.0)).unwrap();
         assert_approx_eq!(

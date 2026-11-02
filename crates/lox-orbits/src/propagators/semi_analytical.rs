@@ -264,8 +264,8 @@ mod tests {
 
         let k1 = s1.to_keplerian().unwrap();
         assert_approx_eq!(
-            k1.semi_major_axis().unwrap().as_f64(),
-            semi_major.km().as_f64(),
+            k1.semi_major_axis().unwrap().to_meters(),
+            semi_major.km().to_meters(),
             rtol <= 1e-8
         );
         assert_approx_eq!(k1.eccentricity().as_f64(), eccentricity, rtol <= 1e-8);
@@ -314,8 +314,8 @@ mod tests {
         let k1 = s1.to_keplerian().unwrap();
 
         assert_approx_eq!(
-            k1.semi_major_axis().unwrap().as_f64(),
-            semi_major.km().as_f64(),
+            k1.semi_major_axis().unwrap().to_meters(),
+            semi_major.km().to_meters(),
             rtol <= 1e-8
         );
         assert_approx_eq!(k1.eccentricity().as_f64(), eccentricity, rtol <= 1e-8);

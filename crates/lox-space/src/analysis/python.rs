@@ -2089,7 +2089,7 @@ impl PyCarrierPlan {
             "CarrierPlan({:.3} GHz, {} modcods, design_margin={:.1} dB)",
             self.0.carrier().to_gigahertz(),
             self.0.modcods().len(),
-            self.0.design_margin().as_f64()
+            self.0.design_margin().to_decibels()
         )
     }
 }
@@ -2153,7 +2153,7 @@ impl PyLinkWindow {
         format!(
             "LinkWindow({}, peak_margin={:.2} dB, {:.3} Gbit)",
             self.0.direction(),
-            self.0.peak_margin().as_f64(),
+            self.0.peak_margin().to_decibels(),
             self.0.data_volume() / 1e9
         )
     }
