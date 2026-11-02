@@ -11,7 +11,8 @@
 //! - All angles use the [`Angle`] type
 //! - Conversions do not normalize: the result stays in the same revolution as the input, so
 //!   each conversion is continuous and monotonic across revolutions. Use
-//!   [`Angle::wrap_around`] to reduce an anomaly to a single revolution
+//!   [`Angle::wrap_signed`] or [`Angle::wrap_unsigned`] to reduce an anomaly to a single
+//!   revolution
 //! - Eccentricity uses the [`Eccentricity`] type which validates e >= 0
 //! - Orbit types: circular (e≈0), elliptic (0<e<1), parabolic (e≈1), hyperbolic (e>1)
 //! - True anomaly (ν): angle from periapsis to the position vector
