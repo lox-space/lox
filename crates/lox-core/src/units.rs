@@ -39,14 +39,14 @@ pub use runtime::{
     DecibelUnit, DecibelWattsUnit, DisplayIn, DistanceUnit, FrequencyUnit, MassUnit,
     ParseUnitError, PowerUnit, PressureUnit, TemperatureUnit, VelocityUnit,
 };
+pub(crate) use runtime::{parse_value_and_unit, runtime_units};
 pub use sexagesimal::{Dms, Hms, SexagesimalError};
 
 use core::{
     cmp::Ordering,
     f64::consts::{FRAC_PI_2, FRAC_PI_4, PI, TAU},
     fmt::{Display, Formatter, Result},
-    iter::Sum,
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    ops::{Add, AddAssign, Sub, SubAssign},
 };
 
 use glam::DMat3;
@@ -54,8 +54,8 @@ use lox_approx::ApproxEq;
 
 use crate::f64::consts::SECONDS_PER_DAY;
 use crate::math::float::{
-    abs, acos, acosh, asin, asinh, atan, atan2, atanh, cos, cosh, log10, powf, sin, sin_cos, sinh,
-    tan, tanh, to_degrees, to_radians,
+    acos, acosh, asin, asinh, atan, atan2, atanh, cos, cosh, log10, powf, sin, sin_cos, sinh, tan,
+    tanh, to_degrees, to_radians,
 };
 
 /// Degrees in full circle
@@ -1697,7 +1697,7 @@ macro_rules! quantity_impls {
 
                 /// Returns the absolute value.
                 pub fn abs(self) -> Self {
-                    Self(abs(self.0))
+                    Self($crate::math::float::abs(self.0))
                 }
 
                 /// Returns the minimum of the two values, ignoring NaN.
@@ -1721,7 +1721,7 @@ macro_rules! quantity_impls {
 
                 /// Returns the ordering between `self` and `other` according to the IEEE 754
                 /// `totalOrder` predicate.
-                pub fn total_cmp(&self, other: &Self) -> Ordering {
+                pub fn total_cmp(&self, other: &Self) -> ::core::cmp::Ordering {
                     self.0.total_cmp(&other.0)
                 }
 
@@ -1736,7 +1736,7 @@ macro_rules! quantity_impls {
                 }
             }
 
-            impl Neg for $unit {
+            impl ::core::ops::Neg for $unit {
                 type Output = Self;
 
                 fn neg(self) -> Self::Output {
@@ -1744,7 +1744,7 @@ macro_rules! quantity_impls {
                 }
             }
 
-            impl Add for $unit {
+            impl ::core::ops::Add for $unit {
                 type Output = Self;
 
                 fn add(self, rhs: Self) -> Self::Output {
@@ -1752,13 +1752,13 @@ macro_rules! quantity_impls {
                 }
             }
 
-            impl AddAssign for $unit {
+            impl ::core::ops::AddAssign for $unit {
                 fn add_assign(&mut self, rhs: Self) {
                     self.0 += rhs.0;
                 }
             }
 
-            impl Sub for $unit {
+            impl ::core::ops::Sub for $unit {
                 type Output = Self;
 
                 fn sub(self, rhs: Self) -> Self::Output {
@@ -1766,13 +1766,13 @@ macro_rules! quantity_impls {
                 }
             }
 
-            impl SubAssign for $unit {
+            impl ::core::ops::SubAssign for $unit {
                 fn sub_assign(&mut self, rhs: Self) {
                     self.0 -= rhs.0;
                 }
             }
 
-            impl Mul<f64> for $unit {
+            impl ::core::ops::Mul<f64> for $unit {
                 type Output = Self;
 
                 fn mul(self, rhs: f64) -> Self::Output {
@@ -1780,7 +1780,7 @@ macro_rules! quantity_impls {
                 }
             }
 
-            impl Mul<$unit> for f64 {
+            impl ::core::ops::Mul<$unit> for f64 {
                 type Output = $unit;
 
                 fn mul(self, rhs: $unit) -> Self::Output {
@@ -1788,13 +1788,13 @@ macro_rules! quantity_impls {
                 }
             }
 
-            impl MulAssign<f64> for $unit {
+            impl ::core::ops::MulAssign<f64> for $unit {
                 fn mul_assign(&mut self, rhs: f64) {
                     self.0 *= rhs;
                 }
             }
 
-            impl Div<f64> for $unit {
+            impl ::core::ops::Div<f64> for $unit {
                 type Output = Self;
 
                 fn div(self, rhs: f64) -> Self::Output {
@@ -1802,13 +1802,13 @@ macro_rules! quantity_impls {
                 }
             }
 
-            impl DivAssign<f64> for $unit {
+            impl ::core::ops::DivAssign<f64> for $unit {
                 fn div_assign(&mut self, rhs: f64) {
                     self.0 /= rhs;
                 }
             }
 
-            impl Div for $unit {
+            impl ::core::ops::Div for $unit {
                 type Output = f64;
 
                 fn div(self, rhs: Self) -> Self::Output {
@@ -1816,13 +1816,13 @@ macro_rules! quantity_impls {
                 }
             }
 
-            impl Sum for $unit {
+            impl ::core::iter::Sum for $unit {
                 fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
                     Self(iter.map(|q| q.0).sum())
                 }
             }
 
-            impl<'a> Sum<&'a $unit> for $unit {
+            impl<'a> ::core::iter::Sum<&'a $unit> for $unit {
                 fn sum<I: Iterator<Item = &'a Self>>(iter: I) -> Self {
                     Self(iter.map(|q| q.0).sum())
                 }
@@ -1830,6 +1830,8 @@ macro_rules! quantity_impls {
         )*
     };
 }
+
+pub(crate) use quantity_impls;
 
 quantity_impls!(
     Angle,

@@ -946,7 +946,7 @@ impl PyKeplerian {
             .0
             .specific_orbital_energy()
             .map_err(PyUndefinedOriginPropertyError)?;
-        Ok(energy * 1e-6)
+        Ok(energy.to_square_kilometers_per_second_squared())
     }
 
     /// Return the magnitude of the specific angular momentum in km²/s.
@@ -958,7 +958,7 @@ impl PyKeplerian {
             .0
             .specific_angular_momentum()
             .map_err(PyUndefinedOriginPropertyError)?;
-        Ok(angular_momentum * 1e-6)
+        Ok(angular_momentum.to_square_kilometers_per_second())
     }
 
     /// Convert these Keplerian elements to a Cartesian state.

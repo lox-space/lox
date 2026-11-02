@@ -14,6 +14,7 @@ use lox_core::{
     coords::{CartesianTrajectory, TimeStampedCartesian},
     elements::{
         ArgumentOfPeriapsis, Eccentricity, Inclination, Keplerian, LongitudeOfAscendingNode,
+        SpecificAngularMomentum, SpecificEnergy,
     },
     utils::Linspace,
 };
@@ -170,8 +171,8 @@ where
             .mean_motion(self.try_gravitational_parameter()?))
     }
 
-    /// Returns the specific orbital energy in J/kg (m²/s²).
-    pub fn specific_orbital_energy(&self) -> Result<f64, UndefinedOriginPropertyError>
+    /// Returns the specific orbital energy.
+    pub fn specific_orbital_energy(&self) -> Result<SpecificEnergy, UndefinedOriginPropertyError>
     where
         O: TryPointMass,
     {
@@ -180,8 +181,10 @@ where
             .specific_orbital_energy(self.try_gravitational_parameter()?))
     }
 
-    /// Returns the magnitude of the specific angular momentum in m²/s.
-    pub fn specific_angular_momentum(&self) -> Result<f64, UndefinedOriginPropertyError>
+    /// Returns the magnitude of the specific angular momentum.
+    pub fn specific_angular_momentum(
+        &self,
+    ) -> Result<SpecificAngularMomentum, UndefinedOriginPropertyError>
     where
         O: TryPointMass,
     {

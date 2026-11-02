@@ -19,6 +19,7 @@ use crate::math::float::{abs, powf, powi, signum, sqrt};
 use crate::anomalies::MeanAnomaly;
 use crate::anomalies::{AnomalyError, hyperbolic_asymptote_angle};
 use crate::anomalies::{EccentricAnomaly, TrueAnomaly};
+use crate::elements::quantities::{SpecificAngularMomentum, SpecificEnergy};
 use crate::time::deltas::TimeDelta;
 use crate::utils::Linspace;
 use crate::{
@@ -498,22 +499,26 @@ impl Keplerian {
         }
     }
 
-    // TODO: Return unitful types from `specific_orbital_energy` and `specific_angular_momentum`
-    // once `lox_core::units` has types for specific energy and specific angular momentum.
-
-    /// Returns the specific orbital energy in J/kg (m²/s²).
+    /// Returns the specific orbital energy.
     ///
     /// The energy is negative for closed orbits, zero for parabolic orbits, and positive for
     /// hyperbolic orbits.
-    pub fn specific_orbital_energy(&self, grav_param: GravitationalParameter) -> f64 {
+    pub fn specific_orbital_energy(&self, grav_param: GravitationalParameter) -> SpecificEnergy {
         let mu = grav_param.as_f64();
         let p = self.semi_parameter.to_meters();
-        -mu * (1.0 - powi(self.eccentricity.0, 2)) / (2.0 * p)
+        SpecificEnergy::square_meters_per_second_squared(
+            -mu * (1.0 - powi(self.eccentricity.0, 2)) / (2.0 * p),
+        )
     }
 
-    /// Returns the magnitude of the specific angular momentum in m²/s.
-    pub fn specific_angular_momentum(&self, grav_param: GravitationalParameter) -> f64 {
-        sqrt(grav_param.as_f64() * self.semi_parameter.to_meters())
+    /// Returns the magnitude of the specific angular momentum.
+    pub fn specific_angular_momentum(
+        &self,
+        grav_param: GravitationalParameter,
+    ) -> SpecificAngularMomentum {
+        SpecificAngularMomentum::square_meters_per_second(sqrt(
+            grav_param.as_f64() * self.semi_parameter.to_meters(),
+        ))
     }
 
     /// Converts the orbital elements to position and velocity in the perifocal frame.
@@ -1213,7 +1218,11 @@ mod tests {
         assert!(k.semi_major_axis().is_none());
         assert_eq!(k.periapsis_radius(), 5000.0.km());
         assert!(k.apoapsis_radius().is_none());
-        assert_approx_eq!(k.specific_orbital_energy(MU_EARTH), 0.0, atol <= 1e-12);
+        assert_approx_eq!(
+            k.specific_orbital_energy(MU_EARTH),
+            SpecificEnergy::ZERO,
+            atol <= 1e-12
+        );
 
         let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH).unwrap();
         assert_approx_eq!(k, k1, rtol <= 1e-10);
@@ -1230,7 +1239,7 @@ mod tests {
             .build()
             .unwrap();
         assert_approx_eq!(k.semi_major_axis().unwrap(), -20000.0.km(), rtol <= 1e-14);
-        assert!(k.specific_orbital_energy(MU_EARTH) > 0.0);
+        assert!(k.specific_orbital_energy(MU_EARTH) > SpecificEnergy::ZERO);
 
         let k1 = k.to_cartesian(MU_EARTH).to_keplerian(MU_EARTH).unwrap();
         assert_approx_eq!(k, k1, rtol <= 1e-10);
@@ -1413,12 +1422,14 @@ mod tests {
         );
         assert_approx_eq!(
             k.specific_orbital_energy(MU_EARTH),
-            v.length_squared() / 2.0 - mu / r.length(),
+            SpecificEnergy::square_meters_per_second_squared(
+                v.length_squared() / 2.0 - mu / r.length()
+            ),
             rtol <= 1e-10
         );
         assert_approx_eq!(
             k.specific_angular_momentum(MU_EARTH),
-            r.cross(v).length(),
+            SpecificAngularMomentum::square_meters_per_second(r.cross(v).length()),
             rtol <= 1e-10
         );
         assert_approx_eq!(
