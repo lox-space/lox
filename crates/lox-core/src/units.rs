@@ -18,9 +18,9 @@ mod runtime;
 mod sexagesimal;
 
 pub use runtime::{
-    AngleUnit, AngularRateUnit, AreaToMassUnit, AreaUnit, DecibelUnit, DecibelWattsUnit, DisplayIn,
-    DistanceUnit, FrequencyUnit, MassUnit, ParseUnitError, PowerUnit, PressureUnit,
-    TemperatureUnit, VelocityUnit,
+    AngleUnit, AngularRateUnit, AreaToMassUnit, AreaUnit, DataRateUnit, DataVolumeUnit,
+    DecibelUnit, DecibelWattsUnit, DisplayIn, DistanceUnit, FrequencyUnit, MassUnit,
+    ParseUnitError, PowerUnit, PressureUnit, TemperatureUnit, VelocityUnit,
 };
 pub use sexagesimal::{Dms, Hms, SexagesimalError};
 
@@ -1193,6 +1193,315 @@ impl DecibelUnits for i64 {
     }
 }
 
+/// Bits in a kibibyte (2¹⁰ bytes).
+const BITS_PER_KIBIBYTE: f64 = 8.0 * 1024.0;
+/// Bits in a mebibyte (2²⁰ bytes).
+const BITS_PER_MEBIBYTE: f64 = BITS_PER_KIBIBYTE * 1024.0;
+/// Bits in a gibibyte (2³⁰ bytes).
+const BITS_PER_GIBIBYTE: f64 = BITS_PER_MEBIBYTE * 1024.0;
+/// Bits in a tebibyte (2⁴⁰ bytes).
+const BITS_PER_TEBIBYTE: f64 = BITS_PER_GIBIBYTE * 1024.0;
+
+/// Data rate in bits per second.
+///
+/// Symbol and chip rates are [`Frequency`] values; converting between them and a data rate
+/// requires the bits per symbol of the modulation.
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct DataRate(f64);
+
+impl DataRate {
+    /// Creates a new data rate from an `f64` value in bit/s.
+    pub const fn bits_per_second(bps: f64) -> Self {
+        Self(bps)
+    }
+
+    /// Creates a new data rate from an `f64` value in kbit/s.
+    pub const fn kilobits_per_second(kbps: f64) -> Self {
+        Self(kbps * 1e3)
+    }
+
+    /// Creates a new data rate from an `f64` value in Mbit/s.
+    pub const fn megabits_per_second(mbps: f64) -> Self {
+        Self(mbps * 1e6)
+    }
+
+    /// Creates a new data rate from an `f64` value in Gbit/s.
+    pub const fn gigabits_per_second(gbps: f64) -> Self {
+        Self(gbps * 1e9)
+    }
+
+    /// Returns the value in bit/s.
+    pub const fn to_bits_per_second(self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in kbit/s.
+    pub const fn to_kilobits_per_second(self) -> f64 {
+        self.0 / 1e3
+    }
+
+    /// Returns the value in Mbit/s.
+    pub const fn to_megabits_per_second(self) -> f64 {
+        self.0 / 1e6
+    }
+
+    /// Returns the value in Gbit/s.
+    pub const fn to_gigabits_per_second(self) -> f64 {
+        self.0 / 1e9
+    }
+}
+
+/// A trait for creating [`DataRate`] instances from primitives.
+///
+/// By default it is implemented for [`f64`] and [`i64`].
+///
+/// # Examples
+///
+/// ```
+/// use lox_core::units::DataRateUnits;
+///
+/// let r = 150.mbps();
+/// assert_eq!(r.to_bits_per_second(), 150e6);
+/// ```
+pub trait DataRateUnits {
+    /// Creates a data rate from a value in bit/s.
+    fn bps(&self) -> DataRate;
+    /// Creates a data rate from a value in kbit/s.
+    fn kbps(&self) -> DataRate;
+    /// Creates a data rate from a value in Mbit/s.
+    fn mbps(&self) -> DataRate;
+    /// Creates a data rate from a value in Gbit/s.
+    fn gbps(&self) -> DataRate;
+}
+
+impl DataRateUnits for f64 {
+    fn bps(&self) -> DataRate {
+        DataRate::bits_per_second(*self)
+    }
+
+    fn kbps(&self) -> DataRate {
+        DataRate::kilobits_per_second(*self)
+    }
+
+    fn mbps(&self) -> DataRate {
+        DataRate::megabits_per_second(*self)
+    }
+
+    fn gbps(&self) -> DataRate {
+        DataRate::gigabits_per_second(*self)
+    }
+}
+
+impl DataRateUnits for i64 {
+    fn bps(&self) -> DataRate {
+        DataRate::bits_per_second(*self as f64)
+    }
+
+    fn kbps(&self) -> DataRate {
+        DataRate::kilobits_per_second(*self as f64)
+    }
+
+    fn mbps(&self) -> DataRate {
+        DataRate::megabits_per_second(*self as f64)
+    }
+
+    fn gbps(&self) -> DataRate {
+        DataRate::gigabits_per_second(*self as f64)
+    }
+}
+
+/// Data volume in bits.
+///
+/// Byte units come in decimal (`kilobytes`, 10³ bytes) and binary (`kibibytes`, 2¹⁰ bytes)
+/// variants.
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct DataVolume(f64);
+
+impl DataVolume {
+    /// Creates a new data volume from an `f64` value in bits.
+    pub const fn bits(bits: f64) -> Self {
+        Self(bits)
+    }
+
+    /// Creates a new data volume from an `f64` value in kilobits (10³ bits).
+    pub const fn kilobits(kbit: f64) -> Self {
+        Self(kbit * 1e3)
+    }
+
+    /// Creates a new data volume from an `f64` value in megabits (10⁶ bits).
+    pub const fn megabits(mbit: f64) -> Self {
+        Self(mbit * 1e6)
+    }
+
+    /// Creates a new data volume from an `f64` value in gigabits (10⁹ bits).
+    pub const fn gigabits(gbit: f64) -> Self {
+        Self(gbit * 1e9)
+    }
+
+    /// Creates a new data volume from an `f64` value in terabits (10¹² bits).
+    pub const fn terabits(tbit: f64) -> Self {
+        Self(tbit * 1e12)
+    }
+
+    /// Creates a new data volume from an `f64` value in bytes (8 bits).
+    pub const fn bytes(bytes: f64) -> Self {
+        Self(bytes * 8.0)
+    }
+
+    /// Creates a new data volume from an `f64` value in kilobytes (10³ bytes).
+    pub const fn kilobytes(kb: f64) -> Self {
+        Self(kb * 8e3)
+    }
+
+    /// Creates a new data volume from an `f64` value in megabytes (10⁶ bytes).
+    pub const fn megabytes(mb: f64) -> Self {
+        Self(mb * 8e6)
+    }
+
+    /// Creates a new data volume from an `f64` value in gigabytes (10⁹ bytes).
+    pub const fn gigabytes(gb: f64) -> Self {
+        Self(gb * 8e9)
+    }
+
+    /// Creates a new data volume from an `f64` value in terabytes (10¹² bytes).
+    pub const fn terabytes(tb: f64) -> Self {
+        Self(tb * 8e12)
+    }
+
+    /// Creates a new data volume from an `f64` value in kibibytes (2¹⁰ bytes).
+    pub const fn kibibytes(kib: f64) -> Self {
+        Self(kib * BITS_PER_KIBIBYTE)
+    }
+
+    /// Creates a new data volume from an `f64` value in mebibytes (2²⁰ bytes).
+    pub const fn mebibytes(mib: f64) -> Self {
+        Self(mib * BITS_PER_MEBIBYTE)
+    }
+
+    /// Creates a new data volume from an `f64` value in gibibytes (2³⁰ bytes).
+    pub const fn gibibytes(gib: f64) -> Self {
+        Self(gib * BITS_PER_GIBIBYTE)
+    }
+
+    /// Creates a new data volume from an `f64` value in tebibytes (2⁴⁰ bytes).
+    pub const fn tebibytes(tib: f64) -> Self {
+        Self(tib * BITS_PER_TEBIBYTE)
+    }
+
+    /// Returns the value in bits.
+    pub const fn to_bits(self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in kilobits (10³ bits).
+    pub const fn to_kilobits(self) -> f64 {
+        self.0 / 1e3
+    }
+
+    /// Returns the value in megabits (10⁶ bits).
+    pub const fn to_megabits(self) -> f64 {
+        self.0 / 1e6
+    }
+
+    /// Returns the value in gigabits (10⁹ bits).
+    pub const fn to_gigabits(self) -> f64 {
+        self.0 / 1e9
+    }
+
+    /// Returns the value in terabits (10¹² bits).
+    pub const fn to_terabits(self) -> f64 {
+        self.0 / 1e12
+    }
+
+    /// Returns the value in bytes (8 bits).
+    pub const fn to_bytes(self) -> f64 {
+        self.0 / 8.0
+    }
+
+    /// Returns the value in kilobytes (10³ bytes).
+    pub const fn to_kilobytes(self) -> f64 {
+        self.0 / 8e3
+    }
+
+    /// Returns the value in megabytes (10⁶ bytes).
+    pub const fn to_megabytes(self) -> f64 {
+        self.0 / 8e6
+    }
+
+    /// Returns the value in gigabytes (10⁹ bytes).
+    pub const fn to_gigabytes(self) -> f64 {
+        self.0 / 8e9
+    }
+
+    /// Returns the value in terabytes (10¹² bytes).
+    pub const fn to_terabytes(self) -> f64 {
+        self.0 / 8e12
+    }
+
+    /// Returns the value in kibibytes (2¹⁰ bytes).
+    pub const fn to_kibibytes(self) -> f64 {
+        self.0 / BITS_PER_KIBIBYTE
+    }
+
+    /// Returns the value in mebibytes (2²⁰ bytes).
+    pub const fn to_mebibytes(self) -> f64 {
+        self.0 / BITS_PER_MEBIBYTE
+    }
+
+    /// Returns the value in gibibytes (2³⁰ bytes).
+    pub const fn to_gibibytes(self) -> f64 {
+        self.0 / BITS_PER_GIBIBYTE
+    }
+
+    /// Returns the value in tebibytes (2⁴⁰ bytes).
+    pub const fn to_tebibytes(self) -> f64 {
+        self.0 / BITS_PER_TEBIBYTE
+    }
+}
+
+/// A trait for creating [`DataVolume`] instances from primitives.
+///
+/// By default it is implemented for [`f64`] and [`i64`].
+///
+/// # Examples
+///
+/// ```
+/// use lox_core::units::DataVolumeUnits;
+///
+/// let v = 2.bytes();
+/// assert_eq!(v.to_bits(), 16.0);
+/// ```
+pub trait DataVolumeUnits {
+    /// Creates a data volume from a value in bits.
+    fn bits(&self) -> DataVolume;
+    /// Creates a data volume from a value in bytes.
+    fn bytes(&self) -> DataVolume;
+}
+
+impl DataVolumeUnits for f64 {
+    fn bits(&self) -> DataVolume {
+        DataVolume::bits(*self)
+    }
+
+    fn bytes(&self) -> DataVolume {
+        DataVolume::bytes(*self)
+    }
+}
+
+impl DataVolumeUnits for i64 {
+    fn bits(&self) -> DataVolume {
+        DataVolume::bits(*self as f64)
+    }
+
+    fn bytes(&self) -> DataVolume {
+        DataVolume::bytes(*self as f64)
+    }
+}
+
 /// An absolute power level in decibels relative to one watt (dBW).
 ///
 /// Adding or subtracting a [`Decibel`] ratio gives another power level, and the difference of
@@ -1510,6 +1819,8 @@ quantity_impls!(
     AngularRate,
     Area,
     AreaToMass,
+    DataRate,
+    DataVolume,
     Decibel,
     Distance,
     Frequency,
@@ -2722,6 +3033,29 @@ mod tests {
         assert_eq!(p.to_pascals(), 101325.0);
         assert_eq!(p.to_hectopascals(), 1013.25);
         assert_eq!(Pressure::pascals(100.0).to_hectopascals(), 1.0);
+    }
+
+    #[test]
+    fn test_data_rate_units() {
+        let r = DataRate::megabits_per_second(150.0);
+        assert_eq!(r.to_bits_per_second(), 150e6);
+        assert_eq!(r.to_kilobits_per_second(), 150e3);
+        assert_eq!(r.to_gigabits_per_second(), 0.15);
+        assert_eq!(1.5.gbps(), DataRate::gigabits_per_second(1.5));
+        assert_eq!(64.kbps(), DataRate::bits_per_second(64e3));
+        assert_eq!(9600.bps().to_bits_per_second(), 9600.0);
+    }
+
+    #[test]
+    fn test_data_volume_units() {
+        assert_eq!(DataVolume::bytes(1.0).to_bits(), 8.0);
+        assert_eq!(DataVolume::megabytes(1.0).to_bits(), 8e6);
+        assert_eq!(DataVolume::mebibytes(1.0).to_bits(), 8.0 * 1_048_576.0);
+        assert_eq!(DataVolume::tebibytes(1.0).to_bytes(), 1_099_511_627_776.0);
+        assert_eq!(DataVolume::gigabytes(2.5).to_megabytes(), 2500.0);
+        assert_eq!(DataVolume::terabits(1.0).to_gigabits(), 1000.0);
+        assert_eq!(DataVolume::kibibytes(1.0).to_kilobytes(), 1.024);
+        assert_eq!(16.bits(), 2.bytes());
     }
 
     #[test]
