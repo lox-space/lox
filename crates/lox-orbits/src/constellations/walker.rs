@@ -88,7 +88,7 @@ fn walker_build(
 
     for plane in 0..params.nplanes {
         let raan = Angle::radians_normalized(
-            params.longitude_of_ascending_node.as_f64() + plane as f64 * raan_spacing,
+            params.longitude_of_ascending_node.to_radians() + plane as f64 * raan_spacing,
         );
 
         for sat in 0..sats_per_plane {

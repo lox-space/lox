@@ -858,11 +858,7 @@ where
     ) -> Result<Vec<TimeInterval>, VisibilityError> {
         // Resolve per-pair slew rate limit: min of both assets' limits.
         let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
-            (Some(a), Some(b)) => Some(if a.to_radians_per_second() < b.to_radians_per_second() {
-                a
-            } else {
-                b
-            }),
+            (Some(a), Some(b)) => Some(a.min(b)),
             (Some(a), None) => Some(a),
             (None, Some(b)) => Some(b),
             (None, None) => None,
@@ -1416,13 +1412,7 @@ where
                 .expect("trajectory not found in ensemble");
 
             let effective_slew_rate = match (sc1.max_slew_rate(), sc2.max_slew_rate()) {
-                (Some(a), Some(b)) => {
-                    Some(if a.to_radians_per_second() < b.to_radians_per_second() {
-                        a
-                    } else {
-                        b
-                    })
-                }
+                (Some(a), Some(b)) => Some(a.min(b)),
                 (Some(a), None) => Some(a),
                 (None, Some(b)) => Some(b),
                 (None, None) => None,

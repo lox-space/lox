@@ -25,7 +25,7 @@ fn repr_f64(v: f64) -> String {
 }
 
 macro_rules! py_unit {
-    ($(($unit:ident, $name:literal, $pyunit:ident $(, { $($extra:tt)* })?)),*) => {
+    ($(($unit:ident, $name:literal, $pyunit:ident, $si:ident, $to_si:ident $(, { $($extra:tt)* })?)),*) => {
         $(
             #[pyclass(name = $name, module = "lox_space", frozen, from_py_object)]
             #[derive(Clone, Copy)]
@@ -37,7 +37,7 @@ macro_rules! py_unit {
                 #[new]
                 /// Constructs the unit quantity from a raw numeric value.
                 pub fn new(value: f64) -> Self {
-                    Self($unit::new(value))
+                    Self($unit::$si(value))
                 }
 
                 /// Adds two unit quantities.
@@ -67,17 +67,17 @@ macro_rules! py_unit {
 
                 /// Returns true if both quantities are numerically equal.
                 pub fn __eq__(&self, other: &$pyunit) -> bool {
-                    f64::from(self.0) == f64::from(other.0)
+                    self.0.$to_si() == other.0.$to_si()
                 }
 
                 /// Returns the constructor arguments for pickling.
                 pub fn __getnewargs__(&self) -> (f64,) {
-                    (f64::from(self.0),)
+                    (self.0.$to_si(),)
                 }
 
                 /// Returns the developer-readable representation.
                 pub fn __repr__(&self) -> String {
-                    format!("{}({})", $name, repr_f64(f64::from(self.0)))
+                    format!("{}({})", $name, repr_f64(self.0.$to_si()))
                 }
 
                 /// Returns the human-readable string representation.
@@ -87,17 +87,17 @@ macro_rules! py_unit {
 
                 /// Returns the value as a Python complex number.
                 pub fn __complex__<'py>(&self, py: Python<'py>) -> Bound<'py, PyComplex> {
-                    PyComplex::from_doubles(py, self.0.into(), 0.0)
+                    PyComplex::from_doubles(py, self.0.$to_si(), 0.0)
                 }
 
                 /// Returns the raw numeric value as a Python float.
                 pub fn __float__(&self) -> f64 {
-                    self.0.into()
+                    self.0.$to_si()
                 }
 
                 /// Returns the value rounded to the nearest integer.
                 pub fn __int__(&self) -> i64 {
-                   let val: f64 = self.0.into();
+                    let val = self.0.$to_si();
                     val.round_ties_even() as i64
                 }
 
@@ -108,7 +108,7 @@ macro_rules! py_unit {
 }
 
 py_unit!(
-    (Angle, "Angle", PyAngle, {
+    (Angle, "Angle", PyAngle, radians, to_radians, {
         /// Returns the value in radians.
         fn to_radians(&self) -> f64 {
             self.0.to_radians()
@@ -124,18 +124,25 @@ py_unit!(
             self.0.to_arcseconds()
         }
     }),
-    (AngularRate, "AngularRate", PyAngularRate, {
-        /// Returns the value in radians per second.
-        fn to_radians_per_second(&self) -> f64 {
-            self.0.to_radians_per_second()
-        }
+    (
+        AngularRate,
+        "AngularRate",
+        PyAngularRate,
+        radians_per_second,
+        to_radians_per_second,
+        {
+            /// Returns the value in radians per second.
+            fn to_radians_per_second(&self) -> f64 {
+                self.0.to_radians_per_second()
+            }
 
-        /// Returns the value in degrees per second.
-        fn to_degrees_per_second(&self) -> f64 {
-            self.0.to_degrees_per_second()
+            /// Returns the value in degrees per second.
+            fn to_degrees_per_second(&self) -> f64 {
+                self.0.to_degrees_per_second()
+            }
         }
-    }),
-    (Distance, "Distance", PyDistance, {
+    ),
+    (Distance, "Distance", PyDistance, meters, to_meters, {
         /// Returns the value in meters.
         fn to_meters(&self) -> f64 {
             self.0.to_meters()
@@ -151,7 +158,7 @@ py_unit!(
             self.0.to_astronomical_units()
         }
     }),
-    (Frequency, "Frequency", PyFrequency, {
+    (Frequency, "Frequency", PyFrequency, hertz, to_hertz, {
         /// Returns the value in hertz.
         fn to_hertz(&self) -> f64 {
             self.0.to_hertz()
@@ -177,7 +184,7 @@ py_unit!(
             self.0.to_terahertz()
         }
     }),
-    (Power, "Power", PyPower, {
+    (Power, "Power", PyPower, watts, to_watts, {
         /// Returns the value in Watts.
         fn to_watts(&self) -> f64 {
             self.0.to_watts()
@@ -193,34 +200,48 @@ py_unit!(
             self.0.to_dbw()
         }
     }),
-    (Pressure, "Pressure", PyPressure, {
+    (Pressure, "Pressure", PyPressure, pascals, to_pascals, {
         /// Returns the value in hectopascals.
         fn to_hpa(&self) -> f64 {
-            self.0.to_hpa()
+            self.0.to_hectopascals()
         }
 
         /// Returns the value in pascals.
         fn to_pa(&self) -> f64 {
-            self.0.to_pa()
+            self.0.to_pascals()
         }
     }),
-    (Temperature, "Temperature", PyTemperature, {
-        /// Returns the value in Kelvin.
-        fn to_kelvin(&self) -> f64 {
-            self.0.to_kelvin()
+    (
+        Temperature,
+        "Temperature",
+        PyTemperature,
+        kelvin,
+        to_kelvin,
+        {
+            /// Returns the value in Kelvin.
+            fn to_kelvin(&self) -> f64 {
+                self.0.to_kelvin()
+            }
         }
-    }),
-    (Velocity, "Velocity", PyVelocity, {
-        /// Returns the value in meters per second.
-        fn to_meters_per_second(&self) -> f64 {
-            self.0.to_meters_per_second()
-        }
+    ),
+    (
+        Velocity,
+        "Velocity",
+        PyVelocity,
+        meters_per_second,
+        to_meters_per_second,
+        {
+            /// Returns the value in meters per second.
+            fn to_meters_per_second(&self) -> f64 {
+                self.0.to_meters_per_second()
+            }
 
-        /// Returns the value in kilometers per second.
-        fn to_kilometers_per_second(&self) -> f64 {
-            self.0.to_kilometers_per_second()
+            /// Returns the value in kilometers per second.
+            fn to_kilometers_per_second(&self) -> f64 {
+                self.0.to_kilometers_per_second()
+            }
         }
-    })
+    )
 );
 
 // --- GravitationalParameter (manual impl since it's in elements.rs) ---

@@ -149,7 +149,7 @@ impl LinkMode {
 
     /// Returns the symbol rate required for the given information bit rate.
     pub fn symbol_rate_for(&self, information_rate: Frequency) -> Frequency {
-        Frequency::hertz(information_rate.to_hertz() / self.info_bits_per_symbol())
+        information_rate / self.info_bits_per_symbol()
     }
 }
 
@@ -230,7 +230,7 @@ impl ModePerformance {
         reference: impl Into<String>,
     ) -> Result<Self, NonPhysicalError> {
         NonPhysicalError::check_unit_interval("error rate", error_rate)?;
-        NonPhysicalError::check_finite("Eb/N0 threshold [dB]", eb_n0.as_f64())?;
+        NonPhysicalError::check_finite("Eb/N0 threshold [dB]", eb_n0.to_decibels())?;
         Ok(Self {
             metric,
             error_rate,
@@ -325,7 +325,7 @@ impl ModCod {
     pub fn select(es_n0: Decibel, margin: Decibel, table: &[ModCod]) -> Option<&ModCod> {
         table
             .iter()
-            .filter(|mc| mc.required_es_n0().as_f64() + margin.as_f64() <= es_n0.as_f64())
+            .filter(|mc| mc.required_es_n0() + margin <= es_n0)
             .max_by(|a, b| {
                 a.mode
                     .info_bits_per_symbol()
@@ -376,7 +376,7 @@ fn dvb_s2_modcod(
         codes,
         DVB_S2_REF,
     );
-    let eb_n0 = Decibel::new(es_n0_db) - Decibel::from_linear(mode.info_bits_per_symbol());
+    let eb_n0 = Decibel::decibels(es_n0_db) - Decibel::from_linear(mode.info_bits_per_symbol());
     let performance = ModePerformance::new(ErrorMetric::Per, 1e-7, eb_n0, DVB_S2_REF).unwrap();
     ModCod::new(mode, performance)
 }
@@ -505,7 +505,7 @@ mod tests {
             ("32APSK 9/10", 16.05),
         ] {
             let mc = dvb_s2().iter().find(|mc| mc.mode().name() == name).unwrap();
-            assert_approx_eq!(mc.required_es_n0().as_f64(), es_n0, atol <= 1e-10);
+            assert_approx_eq!(mc.required_es_n0().to_decibels(), es_n0, atol <= 1e-10);
         }
         // Cross-check against spacelink's independently derived Eb/N0 for
         // 16APSK 2/3 (8.97 − 10·log10(2.637201) = 4.76 dB).
@@ -513,7 +513,7 @@ mod tests {
             .iter()
             .find(|mc| mc.mode().name() == "16APSK 2/3")
             .unwrap();
-        assert_approx_eq!(mc.required_eb_n0().as_f64(), 4.76, atol <= 5e-3);
+        assert_approx_eq!(mc.required_eb_n0().to_decibels(), 4.76, atol <= 5e-3);
     }
 
     #[test]
@@ -523,7 +523,7 @@ mod tests {
         let table = dvb_s2();
         for pair in table.windows(2) {
             if pair[0].mode().modulation() == pair[1].mode().modulation() {
-                assert!(pair[0].required_es_n0().as_f64() < pair[1].required_es_n0().as_f64());
+                assert!(pair[0].required_es_n0() < pair[1].required_es_n0());
                 assert!(
                     pair[0].mode().info_bits_per_symbol() < pair[1].mode().info_bits_per_symbol()
                 );
@@ -561,9 +561,9 @@ mod tests {
         )
         .unwrap();
         assert_approx_eq!(mc.mode().info_bits_per_symbol(), 1.0, atol <= 1e-15);
-        assert_approx_eq!(mc.required_eb_n0().as_f64(), 10.0, atol <= 1e-15);
+        assert_approx_eq!(mc.required_eb_n0().to_decibels(), 10.0, atol <= 1e-15);
         // Es/N0 = Eb/N0 + 10·log10(1.0) = Eb/N0.
-        assert_approx_eq!(mc.required_es_n0().as_f64(), 10.0, atol <= 1e-12);
+        assert_approx_eq!(mc.required_es_n0().to_decibels(), 10.0, atol <= 1e-12);
         assert!(
             ModCod::from_required_eb_n0(
                 "bad",
@@ -592,7 +592,7 @@ mod tests {
         let perf = ModePerformance::new(ErrorMetric::Wer, 1e-5, 4.0.db(), "b ref").unwrap();
         assert_eq!(perf.metric(), ErrorMetric::Wer);
         assert_approx_eq!(perf.error_rate(), 1e-5, atol <= 1e-20);
-        assert_approx_eq!(perf.eb_n0().as_f64(), 4.0, atol <= 1e-15);
+        assert_approx_eq!(perf.eb_n0().to_decibels(), 4.0, atol <= 1e-15);
         assert_eq!(perf.reference(), "b ref");
 
         let mc = ModCod::new(mode.clone(), perf.clone());

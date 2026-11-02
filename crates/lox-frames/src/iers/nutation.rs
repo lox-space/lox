@@ -112,7 +112,7 @@ mod tests {
             dpsi: -9.630_909_107_115_582e-6.rad(),
             deps: 4.063_239_174_001_679e-5.rad(),
         };
-        let obl = MeanObliquity(Angle::new(0.409_078_976_335_651));
+        let obl = MeanObliquity(Angle::radians(0.409_078_976_335_651));
         let exp = DMat3::from_cols_array(&[
             0.999_999_999_953_622_8,
             8.836_239_320_236_25e-6,

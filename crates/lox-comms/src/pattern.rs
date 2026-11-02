@@ -125,7 +125,7 @@ mod tests {
         let f = test_frequency();
         let gain = p.gain(f, Angle::ZERO, Angle::ZERO);
         let peak = p.peak_gain(f);
-        assert_approx_eq!(gain.as_f64(), peak.as_f64(), atol <= 1e-10);
+        assert_approx_eq!(gain.to_decibels(), peak.to_decibels(), atol <= 1e-10);
     }
 
     #[test]
@@ -135,7 +135,7 @@ mod tests {
         let f = test_frequency();
         let gain = p.gain(f, Angle::ZERO, Angle::ZERO);
         let peak = p.peak_gain(f);
-        assert_approx_eq!(gain.as_f64(), peak.as_f64(), atol <= 1e-10);
+        assert_approx_eq!(gain.to_decibels(), peak.to_decibels(), atol <= 1e-10);
     }
 
     #[test]
@@ -150,9 +150,9 @@ mod tests {
             lox_core::units::Angle::radians(std::f64::consts::PI / 2.0),
             Angle::ZERO,
         );
-        assert_approx_eq!(gain.as_f64(), 2.15, atol <= 0.01);
+        assert_approx_eq!(gain.to_decibels(), 2.15, atol <= 0.01);
         let peak = p.peak_gain(f);
         // Peak gain is at broadside for a half-wave
-        assert!(peak.as_f64() > 2.0);
+        assert!(peak.to_decibels() > 2.0);
     }
 }

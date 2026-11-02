@@ -88,7 +88,7 @@ impl FrequencyBand {
     pub fn from_frequency(frequency: Frequency) -> Option<Self> {
         Self::ALL.into_iter().find(|band| {
             let (min, max) = band.bounds();
-            min.to_hertz() <= frequency.to_hertz() && frequency.to_hertz() < max.to_hertz()
+            min <= frequency && frequency < max
         })
     }
 
@@ -236,23 +236,12 @@ impl FrequencyRange {
 
     /// Returns whether the frequency lies within the range (bounds inclusive).
     pub fn contains(&self, frequency: Frequency) -> bool {
-        let f = frequency.to_hertz();
-        self.min.to_hertz() <= f && f <= self.max.to_hertz()
+        self.min <= frequency && frequency <= self.max
     }
 
     /// Returns the overlap of two ranges, or `None` when they are disjoint.
     pub fn intersect(&self, other: &Self) -> Option<Self> {
-        let min = if self.min.to_hertz() >= other.min.to_hertz() {
-            self.min
-        } else {
-            other.min
-        };
-        let max = if self.max.to_hertz() <= other.max.to_hertz() {
-            self.max
-        } else {
-            other.max
-        };
-        Self::new(min, max).ok()
+        Self::new(self.min.max(other.min), self.max.min(other.max)).ok()
     }
 }
 
@@ -438,9 +427,8 @@ mod tests {
         // classifies back to the same band.
         for band in FrequencyBand::ALL {
             let range = FrequencyRange::from(band);
-            assert!(range.min().to_hertz() < range.max().to_hertz());
-            let midpoint =
-                Frequency::hertz((range.min().to_hertz() + range.max().to_hertz()) / 2.0);
+            assert!(range.min() < range.max());
+            let midpoint = (range.min() + range.max()) / 2.0;
             assert!(range.contains(midpoint));
             assert_eq!(FrequencyBand::from_frequency(midpoint), Some(band));
         }

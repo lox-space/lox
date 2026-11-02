@@ -185,7 +185,7 @@ where
             .origin()
             .try_equatorial_radius()
             .expect("equatorial radius should be available")
-            .as_f64()
+            .to_meters()
     }
 
     fn solver(

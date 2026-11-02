@@ -227,7 +227,7 @@ impl EquationOfTheEquinoxes {
     pub(crate) fn iau1994_from_dpsi(time: Time<Tdb>, dpsi: Angle) -> Self {
         let t = time.centuries_since_j2000();
         let om = (Angle::arcseconds(poly_array(t, &[450160.280, -482890.539, 7.455, 0.008]))
-            + Angle::new((-5.0 * t).rem_euclid(1.0) * TAU))
+            + Angle::radians((-5.0 * t).rem_euclid(1.0) * TAU))
         .mod_two_pi();
         let eps0 = MeanObliquity::iau1980(time.with_scale(Tt));
         Self(
@@ -268,14 +268,14 @@ impl EquationOfTheEquinoxes {
         let t = time.centuries_since_j2000();
 
         let fa = [
-            l_iers03(t).as_f64(),
-            lp_iers03(t).as_f64(),
-            f_iers03(t).as_f64(),
-            d_iers03(t).as_f64(),
-            omega_iers03(t).as_f64(),
-            venus_l_iers03(t).as_f64(),
-            earth_l_iers03(t).as_f64(),
-            pa_iers03(t).as_f64(),
+            l_iers03(t).to_radians(),
+            lp_iers03(t).to_radians(),
+            f_iers03(t).to_radians(),
+            d_iers03(t).to_radians(),
+            omega_iers03(t).to_radians(),
+            venus_l_iers03(t).to_radians(),
+            earth_l_iers03(t).to_radians(),
+            pa_iers03(t).to_radians(),
         ];
 
         let s0 = complementary_terms::E0.iter().rev().fold(0.0, |s0, term| {
@@ -303,7 +303,7 @@ mod tests {
     #[test]
     fn test_earth_rotation_angle_iau2000() {
         let time = Time::from_two_part_julian_date(Ut1, 2400000.5, 54388.0);
-        let exp = EarthRotationAngle(Angle::new(0.402_283_724_002_815_8));
+        let exp = EarthRotationAngle(Angle::radians(0.402_283_724_002_815_8));
         let act = EarthRotationAngle::iau2000(time);
         assert_approx_eq!(act, exp, rtol <= 1e-12);
     }
@@ -311,7 +311,7 @@ mod tests {
     #[test]
     fn test_greenwich_apparent_sidereal_time_iau1994() {
         let ut1 = Time::from_two_part_julian_date(Ut1, 2400000.5, 53736.0);
-        let exp = GreenwichApparentSiderealTime(Angle::new(1.754_166_136_020_645_3));
+        let exp = GreenwichApparentSiderealTime(Angle::radians(1.754_166_136_020_645_3));
         let act = Gast::iau1994(ut1);
         assert_approx_eq!(act, exp, rtol <= 1e-12);
     }
@@ -320,7 +320,7 @@ mod tests {
     fn test_greenwich_apparent_sidereal_time_iau2000a() {
         let tt = Time::from_two_part_julian_date(Tt, 2400000.5, 53736.0);
         let ut1 = Time::from_two_part_julian_date(Ut1, 2400000.5, 53736.0);
-        let exp = GreenwichApparentSiderealTime(Angle::new(1.754_166_138_018_281_4));
+        let exp = GreenwichApparentSiderealTime(Angle::radians(1.754_166_138_018_281_4));
         let act = Gast::iau2000a(tt, ut1);
         assert_approx_eq!(act, exp, rtol <= 1e-12);
     }
@@ -329,7 +329,7 @@ mod tests {
     fn test_greenwich_apparent_sidereal_time_iau2000b() {
         let tt = Time::from_two_part_julian_date(Tt, 2400000.5, 53736.0);
         let ut1 = Time::from_two_part_julian_date(Ut1, 2400000.5, 53736.0);
-        let exp = GreenwichApparentSiderealTime(Angle::new(1.754_166_136_510_680_7));
+        let exp = GreenwichApparentSiderealTime(Angle::radians(1.754_166_136_510_680_7));
         let act = Gast::iau2000b(tt, ut1);
         assert_approx_eq!(act, exp, rtol <= 1e-12);
     }
@@ -337,7 +337,7 @@ mod tests {
     #[test]
     fn test_greenwich_mean_sidereal_time_iau1982() {
         let ut1 = Time::from_two_part_julian_date(Ut1, 2400000.5, 53736.0);
-        let exp = GreenwichMeanSiderealTime(Angle::new(1.754_174_981_860_675));
+        let exp = GreenwichMeanSiderealTime(Angle::radians(1.754_174_981_860_675));
         let act = Gmst::iau1982(ut1);
         assert_approx_eq!(act, exp, rtol <= 1e-12);
     }
@@ -346,7 +346,7 @@ mod tests {
     fn test_greenwich_mean_sidereal_time_iau2000() {
         let tt = Time::from_two_part_julian_date(Tt, 2400000.5, 53736.0);
         let ut1 = Time::from_two_part_julian_date(Ut1, 2400000.5, 53736.0);
-        let exp = GreenwichMeanSiderealTime(Angle::new(1.754_174_972_210_740_7));
+        let exp = GreenwichMeanSiderealTime(Angle::radians(1.754_174_972_210_740_7));
         let act = Gmst::iau2000(tt, ut1);
         assert_approx_eq!(act, exp, rtol <= 1e-12);
     }
@@ -355,7 +355,7 @@ mod tests {
     fn test_greenwich_mean_sidereal_time_iau2006() {
         let tt = Time::from_two_part_julian_date(Tt, 2400000.5, 53736.0);
         let ut1 = Time::from_two_part_julian_date(Ut1, 2400000.5, 53736.0);
-        let exp = GreenwichMeanSiderealTime(Angle::new(1.754_174_971_870_091_2));
+        let exp = GreenwichMeanSiderealTime(Angle::radians(1.754_174_971_870_091_2));
         let act = Gmst::iau2006(tt, ut1);
         assert_approx_eq!(act, exp, rtol <= 1e-12);
     }
@@ -363,7 +363,7 @@ mod tests {
     #[test]
     fn test_equation_of_the_equinoxes_iau1994() {
         let time = Time::from_two_part_julian_date(Tdb, 2400000.5, 41234.0);
-        let exp = EquationOfTheEquinoxes(Angle::new(5.357_758_254_609_257e-5));
+        let exp = EquationOfTheEquinoxes(Angle::radians(5.357_758_254_609_257e-5));
         let act = EquationOfTheEquinoxes::iau1994(time);
         assert_approx_eq!(act, exp, atol <= 1e-17);
     }
@@ -371,7 +371,7 @@ mod tests {
     #[test]
     fn test_equation_of_the_equinoxes_iau2000a() {
         let time = Time::from_two_part_julian_date(Tt, 2400000.5, 53736.0);
-        let exp = EquationOfTheEquinoxes(Angle::new(-8.834_192_459_222_587e-6));
+        let exp = EquationOfTheEquinoxes(Angle::radians(-8.834_192_459_222_587e-6));
         let act = EquationOfTheEquinoxes::iau2000a(time);
         assert_approx_eq!(act, exp, atol <= 1e-18);
     }
@@ -379,17 +379,17 @@ mod tests {
     #[test]
     fn test_equation_of_the_equinoxes_iau2000b() {
         let time = Time::from_two_part_julian_date(Tt, 2400000.5, 53736.0);
-        let exp = EquationOfTheEquinoxes(Angle::new(-8.835_700_060_003_032e-6));
+        let exp = EquationOfTheEquinoxes(Angle::radians(-8.835_700_060_003_032e-6));
         let act = EquationOfTheEquinoxes::iau2000b(time);
         assert_approx_eq!(act, exp, atol <= 1e-18);
     }
 
     #[test]
     fn test_equation_of_the_equinoxes_iau2000() {
-        let epsa = Angle::new(0.409_078_976_335_651);
-        let dpsi = Angle::new(-9.630_909_107_115_582e-6);
+        let epsa = Angle::radians(0.409_078_976_335_651);
+        let dpsi = Angle::radians(-9.630_909_107_115_582e-6);
         let time = Time::from_two_part_julian_date(Tt, 2400000.5, 53736.0);
-        let exp = EquationOfTheEquinoxes(Angle::new(-8.834_193_235_367_966e-6));
+        let exp = EquationOfTheEquinoxes(Angle::radians(-8.834_193_235_367_966e-6));
         let act = EquationOfTheEquinoxes::iau2000(time, epsa, dpsi);
         assert_approx_eq!(act, exp, atol <= 1e-20);
     }
@@ -397,7 +397,7 @@ mod tests {
     #[test]
     fn test_equation_of_the_equinoxes_complimentary_terms() {
         let time = Time::from_two_part_julian_date(Tt, 2400000.5, 53736.0);
-        let exp = Angle::new(2.046_085_004_885_125e-9);
+        let exp = Angle::radians(2.046_085_004_885_125e-9);
         let act = EquationOfTheEquinoxes::complimentary_terms_iau2000(time);
         assert_approx_eq!(act, exp, atol <= 1e-20);
     }
@@ -406,7 +406,7 @@ mod tests {
     fn test_greenwich_apparent_sidereal_time_iau2006a() {
         let tt = Time::from_two_part_julian_date(Tt, 2400000.5, 53736.0);
         let ut1 = Time::from_two_part_julian_date(Ut1, 2400000.5, 53736.0);
-        let exp = GreenwichApparentSiderealTime(Angle::new(1.754_166_137_675_019_2));
+        let exp = GreenwichApparentSiderealTime(Angle::radians(1.754_166_137_675_019_2));
         let act = Gast::iau2006a(tt, ut1);
         assert_approx_eq!(act, exp, rtol <= 1e-12);
     }
@@ -418,7 +418,7 @@ mod tests {
         // direct epsa.cos() * dpsi + complementary_terms. The ~8e-13 rad difference
         // (~0.2 μas) is expected.
         let time = Time::from_two_part_julian_date(Tt, 2400000.5, 53736.0);
-        let exp = EquationOfTheEquinoxes(Angle::new(-8.834_195_072_043_79e-6));
+        let exp = EquationOfTheEquinoxes(Angle::radians(-8.834_195_072_043_79e-6));
         let act = EquationOfTheEquinoxes::iau2006a(time);
         assert_approx_eq!(act, exp, atol <= 1e-12);
     }

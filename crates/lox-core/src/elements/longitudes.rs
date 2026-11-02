@@ -26,7 +26,7 @@ pub(crate) fn true_to_eccentric_longitude(true_longitude: Angle, h: f64, k: f64)
     let b = beta(h, k);
     let (sin_l, cos_l) = true_longitude.sin_cos();
     let delta = 2.0 * atan(b * (k * sin_l - h * cos_l) / (1.0 + b * (k * cos_l + h * sin_l)));
-    Angle::new(true_longitude.as_f64() - delta)
+    Angle::radians(true_longitude.to_radians() - delta)
 }
 
 /// Converts the eccentric longitude F to the true longitude L.
@@ -34,13 +34,13 @@ pub(crate) fn eccentric_to_true_longitude(eccentric_longitude: Angle, h: f64, k:
     let b = beta(h, k);
     let (sin_f, cos_f) = eccentric_longitude.sin_cos();
     let delta = 2.0 * atan(b * (k * sin_f - h * cos_f) / (1.0 - b * (k * cos_f + h * sin_f)));
-    Angle::new(eccentric_longitude.as_f64() + delta)
+    Angle::radians(eccentric_longitude.to_radians() + delta)
 }
 
 /// Converts the eccentric longitude F to the mean longitude λ = F - k·sin(F) + h·cos(F).
 pub(crate) fn eccentric_to_mean_longitude(eccentric_longitude: Angle, h: f64, k: f64) -> Angle {
     let (sin_f, cos_f) = eccentric_longitude.sin_cos();
-    Angle::new(eccentric_longitude.as_f64() - k * sin_f + h * cos_f)
+    Angle::radians(eccentric_longitude.to_radians() - k * sin_f + h * cos_f)
 }
 
 /// Converts the mean longitude λ to the eccentric longitude F.
@@ -54,7 +54,11 @@ pub(crate) fn mean_to_eccentric_longitude(
     h: f64,
     k: f64,
 ) -> Result<Angle, AnomalyError> {
-    Ok(Angle::new(solve_kepler(mean_longitude.as_f64(), h, k)?))
+    Ok(Angle::radians(solve_kepler(
+        mean_longitude.to_radians(),
+        h,
+        k,
+    )?))
 }
 
 /// Converts the mean longitude λ to the true longitude L.
@@ -110,18 +114,18 @@ mod tests {
         let eccentric_anomaly = true_anomaly.to_eccentric(ecc).unwrap().as_f64();
         let mean_anomaly = true_anomaly.to_mean(ecc).unwrap().as_f64();
 
-        let true_longitude = Angle::new(nu + pomega);
+        let true_longitude = Angle::radians(nu + pomega);
         let eccentric_longitude = true_to_eccentric_longitude(true_longitude, h, k);
         let mean_longitude = true_to_mean_longitude(true_longitude, h, k);
 
         assert_approx_eq!(
-            Angle::new(eccentric_longitude.as_f64() - pomega - eccentric_anomaly)
+            Angle::radians(eccentric_longitude.to_radians() - pomega - eccentric_anomaly)
                 .mod_two_pi_signed(),
             Angle::ZERO,
             atol <= 1e-12
         );
         assert_approx_eq!(
-            Angle::new(mean_longitude.as_f64() - pomega - mean_anomaly).mod_two_pi_signed(),
+            Angle::radians(mean_longitude.to_radians() - pomega - mean_anomaly).mod_two_pi_signed(),
             Angle::ZERO,
             atol <= 1e-12
         );
@@ -149,9 +153,9 @@ mod tests {
     fn test_longitudes_stay_in_revolution() {
         let (h, k) = (0.3, -0.4);
         for revolutions in [-3.0, 0.0, 5.0] {
-            let l = Angle::new(1.0 + revolutions * TAU);
+            let l = Angle::radians(1.0 + revolutions * TAU);
             let lambda = true_to_mean_longitude(l, h, k);
-            assert!(abs(lambda.as_f64() - l.as_f64()) < PI);
+            assert!((lambda - l).abs() < Angle::PI);
             assert_approx_eq!(
                 mean_to_true_longitude(lambda, h, k).unwrap(),
                 l,
@@ -168,9 +172,9 @@ mod tests {
                 let (h, k) = (e * sin(pomega), e * cos(pomega));
                 for revolution in [-2.0, 0.0, 3.0] {
                     let lambda = f64::from(step) * 0.0175 + revolution * TAU;
-                    let f = mean_to_eccentric_longitude(Angle::new(lambda), h, k)
+                    let f = mean_to_eccentric_longitude(Angle::radians(lambda), h, k)
                         .unwrap()
-                        .as_f64();
+                        .to_radians();
                     let residual = f - k * sin(f) + h * cos(f) - lambda;
                     let scale = if lambda.abs() > 1.0 {
                         lambda.abs()
@@ -207,13 +211,13 @@ mod tests {
             lambda in -50.0..50.0f64,
         ) {
             let (h, k) = (e * sin(pomega), e * cos(pomega));
-            let f = mean_to_eccentric_longitude(Angle::new(lambda), h, k)
+            let f = mean_to_eccentric_longitude(Angle::radians(lambda), h, k)
                 .unwrap()
-                .as_f64();
+                .to_radians();
             let tolerance = 8.0 * f64::EPSILON * abs(lambda).max(1.0);
             // The solution stays within e of the mean longitude, so in the same revolution.
             prop_assert!(abs(f - lambda) <= e + tolerance);
-            let residual = eccentric_to_mean_longitude(Angle::new(f), h, k).as_f64() - lambda;
+            let residual = eccentric_to_mean_longitude(Angle::radians(f), h, k).to_radians() - lambda;
             prop_assert!(abs(residual) <= tolerance, "residual: {residual}");
         }
 
@@ -227,9 +231,9 @@ mod tests {
             lambda in -50.0..50.0f64,
         ) {
             let (h, k) = (e * sin(pomega), e * cos(pomega));
-            let true_longitude = mean_to_true_longitude(Angle::new(lambda), h, k).unwrap();
-            prop_assert!(abs(true_longitude.as_f64() - lambda) < PI);
-            let mean_longitude = true_to_mean_longitude(true_longitude, h, k).as_f64();
+            let true_longitude = mean_to_true_longitude(Angle::radians(lambda), h, k).unwrap();
+            prop_assert!(abs(true_longitude.to_radians() - lambda) < PI);
+            let mean_longitude = true_to_mean_longitude(true_longitude, h, k).to_radians();
             prop_assert!(abs(mean_longitude - lambda) <= 1e-10, "error: {}", mean_longitude - lambda);
         }
     }

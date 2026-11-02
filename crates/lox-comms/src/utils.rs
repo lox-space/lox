@@ -52,7 +52,7 @@ mod tests {
         // Cross-check: FSPL = 20*log10(d_m) + 20*log10(f_hz) + 20*log10(4*pi/c)
         //            = 20*log10(1e6) + 20*log10(29e9) + 20*log10(4*pi/299792458)
         //            = 120 + 209.248 + (-147.552) = 181.696 dB
-        assert_approx_eq!(fspl.as_f64(), 181.696, atol <= 0.01);
+        assert_approx_eq!(fspl.to_decibels(), 181.696, atol <= 0.01);
     }
 
     #[test]
@@ -62,7 +62,7 @@ mod tests {
         let wavelength = frequency.wavelength();
         let fspl = free_space_path_loss(wavelength, frequency);
         let expected = Decibel::from_linear((4.0 * PI) * (4.0 * PI));
-        assert_approx_eq!(fspl.as_f64(), expected.as_f64(), rtol <= 1e-10);
+        assert_approx_eq!(fspl.to_decibels(), expected.to_decibels(), rtol <= 1e-10);
     }
 
     #[test]
@@ -72,7 +72,7 @@ mod tests {
         let fspl_1 = free_space_path_loss(100.0.km(), frequency);
         let fspl_2 = free_space_path_loss(200.0.km(), frequency);
         let diff = fspl_2 - fspl_1;
-        assert_approx_eq!(diff.as_f64(), 6.0206, atol <= 0.001);
+        assert_approx_eq!(diff.to_decibels(), 6.0206, atol <= 0.001);
     }
 
     #[test]
@@ -99,6 +99,6 @@ mod tests {
         let h = Distance::kilometers(525.0);
         let range_low = slant_range(Angle::degrees(10.0), re, h);
         let range_high = slant_range(Angle::degrees(45.0), re, h);
-        assert!(range_low.to_meters() > range_high.to_meters());
+        assert!(range_low > range_high);
     }
 }

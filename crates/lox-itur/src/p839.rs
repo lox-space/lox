@@ -11,8 +11,10 @@
 
 #[cfg(test)]
 mod tests {
+    use lox_approx::assert_approx_eq;
+    use lox_core::units::{Angle, DistanceUnits};
+
     use crate::provider::test_fixture::provider;
-    use lox_core::units::Angle;
 
     #[test]
     fn test_isotherm_0c_height() {
@@ -32,6 +34,6 @@ mod tests {
         let h0 = p
             .isotherm_0c_height(Angle::degrees(40.4), Angle::degrees(-3.7))
             .unwrap();
-        assert!((h.to_kilometers() - h0.to_kilometers() - 0.36).abs() < 1e-10);
+        assert_approx_eq!(h - h0, 0.36.km(), atol <= 1e-7);
     }
 }

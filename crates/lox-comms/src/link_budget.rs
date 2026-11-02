@@ -23,7 +23,7 @@ use crate::{BOLTZMANN_CONSTANT, LinkBudgetError};
 pub use crate::losses::PropagationLosses;
 
 /// Boltzmann constant in dB(W/Hz/K).
-const BOLTZMANN_CONSTANT_DB: Decibel = Decibel::new(-228.599_167_173_217_67);
+const BOLTZMANN_CONSTANT_DB: Decibel = Decibel::decibels(-228.599_167_173_217_67);
 
 /// Effective mean radiating temperature of the absorbing atmosphere
 /// (ITU-R P.618 §8.2).
@@ -49,7 +49,7 @@ pub fn degraded_sky_temperature(
     t_m: Temperature,
 ) -> Temperature {
     let l = absorptive.to_linear();
-    Temperature::kelvin(t_clear.to_kelvin() / l + t_m.to_kelvin() * (1.0 - 1.0 / l))
+    t_clear / l + t_m * (1.0 - 1.0 / l)
 }
 
 /// The transmit end of a radio link.
@@ -109,7 +109,7 @@ impl RxTerms {
         gain: Decibel,
         system_noise_temperature: Temperature,
     ) -> Result<Self, NonPhysicalError> {
-        NonPhysicalError::check_finite("receive system gain [dB]", gain.as_f64())?;
+        NonPhysicalError::check_finite("receive system gain [dB]", gain.to_decibels())?;
         NonPhysicalError::check_positive(
             "system noise temperature [K]",
             system_noise_temperature.to_kelvin(),
@@ -247,7 +247,7 @@ fn render_budget(f: &mut core::fmt::Formatter<'_>, lines: &[BudgetLine]) -> core
             f,
             "{sign} {:width$}  {:>10.2} dB",
             line.label,
-            line.value.as_f64(),
+            line.value.to_decibels(),
         )?;
     }
     Ok(())
@@ -662,7 +662,7 @@ pub struct ModulatedLinkBudget {
 impl ModulatedLinkBudget {
     /// Returns whether the link closes: margin ≥ 0.
     pub fn closes(&self) -> bool {
-        self.margin.as_f64() >= 0.0
+        self.margin >= Decibel::ZERO
     }
 
     /// Returns the symbol rate of the underlying channel.
@@ -754,7 +754,7 @@ impl core::fmt::Display for ModulatedLinkBudget {
 /// contribution degrades the link.
 pub fn combine_c_n(contributions: &[Decibel]) -> Decibel {
     if contributions.is_empty() {
-        return Decibel::new(f64::INFINITY);
+        return Decibel::decibels(f64::INFINITY);
     }
     Decibel::from_linear(
         1.0 / contributions
@@ -899,7 +899,7 @@ mod tests {
         assert!(rx.band().contains(29.0.ghz()));
 
         let stats = LinkBudget::new(&FixedTx, &FixedRx, &link_conditions()).unwrap();
-        assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
+        assert_approx_eq!(stats.c_n0.to_decibels(), 104.913, atol <= 0.01);
         // The default rx_terms is None: no absolute powers.
         assert!(stats.carrier_rx_power.is_none());
         assert!(stats.rx_terms.is_none());
@@ -913,7 +913,7 @@ mod tests {
     fn test_rx_terms_are_valid_by_construction() {
         let terms = RxTerms::new(30.0.db(), Temperature::kelvin(500.0)).unwrap();
         assert_approx_eq!(
-            terms.gt().as_f64(),
+            terms.gt().to_decibels(),
             30.0 - 10.0 * 500.0_f64.log10(),
             atol <= 1e-12
         );
@@ -922,23 +922,25 @@ mod tests {
         assert!(RxTerms::new(30.0.db(), Temperature::kelvin(0.0)).is_err());
         assert!(RxTerms::new(30.0.db(), Temperature::kelvin(-10.0)).is_err());
         assert!(RxTerms::new(30.0.db(), Temperature::kelvin(f64::NAN)).is_err());
-        assert!(RxTerms::new(Decibel::new(f64::INFINITY), Temperature::kelvin(500.0)).is_err());
+        assert!(
+            RxTerms::new(Decibel::decibels(f64::INFINITY), Temperature::kelvin(500.0)).is_err()
+        );
     }
 
     #[test]
     fn test_for_link_component_budget() {
         let stats = component_stats();
         // EIRP = 46 + 10·log10(10) − 1 = 55 dBW
-        assert_approx_eq!(stats.eirp.as_f64(), 55.0, atol <= 1e-10);
+        assert_approx_eq!(stats.eirp.to_decibels(), 55.0, atol <= 1e-10);
         // G/T = 30 − 10·log10(500) = 3.0103 dB/K
-        assert_approx_eq!(stats.gt.as_f64(), 3.0103, atol <= 1e-3);
+        assert_approx_eq!(stats.gt.to_decibels(), 3.0103, atol <= 1e-3);
         // FSPL at 1000 km, 29 GHz ≈ 181.696 dB
-        assert_approx_eq!(stats.fspl.as_f64(), 181.696, atol <= 0.01);
+        assert_approx_eq!(stats.fspl.to_decibels(), 181.696, atol <= 0.01);
         // C/N0 = 55 + 3.01 − 181.696 + 228.599 ≈ 104.913 dB·Hz
-        assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
+        assert_approx_eq!(stats.c_n0.to_decibels(), 104.913, atol <= 0.01);
         // P_rx = 55 − 181.696 + 30 = −96.696 dBW
         assert_approx_eq!(
-            stats.carrier_rx_power.unwrap().as_f64(),
+            stats.carrier_rx_power.unwrap().to_decibels(),
             -96.696,
             atol <= 0.01
         );
@@ -954,13 +956,17 @@ mod tests {
         let c_n0_from_power = stats.carrier_rx_power.unwrap()
             - stats.noise_power(bandwidth).unwrap()
             + Decibel::from_linear(bandwidth.to_hertz());
-        assert_approx_eq!(stats.c_n0.as_f64(), c_n0_from_power.as_f64(), atol <= 1e-10);
+        assert_approx_eq!(
+            stats.c_n0.to_decibels(),
+            c_n0_from_power.to_decibels(),
+            atol <= 1e-10
+        );
     }
 
     #[test]
     fn test_for_link_lumped_budget() {
         let stats = lumped_stats();
-        assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
+        assert_approx_eq!(stats.c_n0.to_decibels(), 104.913, atol <= 0.01);
         assert!(stats.carrier_rx_power.is_none());
         assert!(stats.rx_terms.is_none());
         assert!(matches!(
@@ -1017,7 +1023,7 @@ mod tests {
     #[test]
     fn test_link_parameters_defaults() {
         let params = link_conditions();
-        assert_approx_eq!(params.losses().total().as_f64(), 0.0, atol <= 1e-15);
+        assert_approx_eq!(params.losses().total().to_decibels(), 0.0, atol <= 1e-15);
         assert_eq!(params.tx_pointing(), Pointing::Boresight);
         assert_eq!(params.rx_pointing(), Pointing::Boresight);
         assert_approx_eq!(params.carrier().to_gigahertz(), 29.0, rtol <= 1e-12);
@@ -1077,15 +1083,19 @@ mod tests {
         let t_sys_degraded = 500.0 + 275.0 * (1.0 - 1.0 / l_abs);
         let gt_degraded_exp = 30.0 - 10.0 * t_sys_degraded.log10();
 
-        assert_approx_eq!(faded.gt.as_f64(), clear.gt.as_f64(), atol <= 1e-12);
+        assert_approx_eq!(
+            faded.gt.to_decibels(),
+            clear.gt.to_decibels(),
+            atol <= 1e-12
+        );
         let gt_degraded = faded.gt_degraded.unwrap();
-        assert_approx_eq!(gt_degraded.as_f64(), gt_degraded_exp, atol <= 1e-10);
-        assert!(gt_degraded.as_f64() < faded.gt.as_f64());
+        assert_approx_eq!(gt_degraded.to_decibels(), gt_degraded_exp, atol <= 1e-10);
+        assert!(gt_degraded < faded.gt);
 
         // The budget uses the degraded G/T.
         assert_approx_eq!(
-            clear.c_n0.as_f64() - faded.c_n0.as_f64(),
-            clear.gt.as_f64() - gt_degraded.as_f64(),
+            clear.c_n0 - faded.c_n0,
+            clear.gt - gt_degraded,
             atol <= 1e-10
         );
 
@@ -1094,7 +1104,11 @@ mod tests {
         let c_n0_from_power = faded.carrier_rx_power.unwrap()
             - faded.noise_power(bandwidth).unwrap()
             + Decibel::from_linear(bandwidth.to_hertz());
-        assert_approx_eq!(faded.c_n0.as_f64(), c_n0_from_power.as_f64(), atol <= 1e-10);
+        assert_approx_eq!(
+            faded.c_n0.to_decibels(),
+            c_n0_from_power.to_decibels(),
+            atol <= 1e-10
+        );
     }
 
     #[test]
@@ -1105,7 +1119,11 @@ mod tests {
                 LinkBudget::new(&tx_chain(), &rx_chain(), &faded_params(Some(direction))).unwrap();
             assert!(stats.gt_degraded.is_none());
             assert_eq!(stats.direction, Some(direction));
-            assert_approx_eq!(stats.c_n0.as_f64(), clear.c_n0.as_f64(), atol <= 1e-12);
+            assert_approx_eq!(
+                stats.c_n0.to_decibels(),
+                clear.c_n0.to_decibels(),
+                atol <= 1e-12
+            );
         }
     }
 
@@ -1118,7 +1136,11 @@ mod tests {
         let faded =
             LinkBudget::new(&tx, &rx, &faded_params(Some(LinkDirection::Downlink))).unwrap();
         assert!(faded.gt_degraded.is_none());
-        assert_approx_eq!(faded.c_n0.as_f64(), clear.c_n0.as_f64(), atol <= 1e-12);
+        assert_approx_eq!(
+            faded.c_n0.to_decibels(),
+            clear.c_n0.to_decibels(),
+            atol <= 1e-12
+        );
     }
 
     #[test]
@@ -1130,11 +1152,11 @@ mod tests {
         let stats = LinkBudget::new(&tx_chain(), &rx_chain(), &params).unwrap();
         // L_abs = 1: degraded equals clear-sky.
         assert_approx_eq!(
-            stats.gt_degraded.unwrap().as_f64(),
-            stats.gt.as_f64(),
+            stats.gt_degraded.unwrap().to_decibels(),
+            stats.gt.to_decibels(),
             atol <= 1e-12
         );
-        assert_approx_eq!(stats.c_n0.as_f64(), 104.913, atol <= 0.01);
+        assert_approx_eq!(stats.c_n0.to_decibels(), 104.913, atol <= 0.01);
     }
 
     #[cfg(feature = "serde")]
@@ -1160,7 +1182,7 @@ mod tests {
         // Optional fields default: no losses, boresight, no direction.
         let minimal: LinkConditions =
             serde_json::from_str(r#"{"carrier":29.0e9,"range":1.0e6}"#).unwrap();
-        assert_approx_eq!(minimal.losses().total().as_f64(), 0.0, atol <= 1e-15);
+        assert_approx_eq!(minimal.losses().total().to_decibels(), 0.0, atol <= 1e-15);
         assert_eq!(minimal.tx_pointing(), Pointing::Boresight);
         assert_eq!(minimal.rx_pointing(), Pointing::Boresight);
         assert_eq!(minimal.direction(), None);
@@ -1195,11 +1217,7 @@ mod tests {
             &params,
         )
         .unwrap();
-        assert_approx_eq!(
-            clear.c_n0.as_f64() - faded.c_n0.as_f64(),
-            3.1,
-            atol <= 1e-10
-        );
+        assert_approx_eq!((clear.c_n0 - faded.c_n0).to_decibels(), 3.1, atol <= 1e-10);
     }
 
     #[test]
@@ -1207,16 +1225,16 @@ mod tests {
         let stats = component_stats();
         let m = stats.modulate(&channel(), &modcod(), 3.0.db());
         // Eb/N0 ≈ 37.91 (QPSK 1/2 → 1 info bit/symbol, C/N0 ≈ 104.91 dB·Hz)
-        assert_approx_eq!(m.eb_n0.as_f64(), 37.91, atol <= 0.02);
+        assert_approx_eq!(m.eb_n0.to_decibels(), 37.91, atol <= 0.02);
         // required_eb_n0 = 10, design margin = 3 → margin ≈ 24.91
-        assert_approx_eq!(m.margin.as_f64(), 24.91, atol <= 0.02);
+        assert_approx_eq!(m.margin.to_decibels(), 24.91, atol <= 0.02);
         // Information rate: 5 Msps × 1 info bit/symbol.
         assert_approx_eq!(m.information_rate().to_hertz(), 5e6, rtol <= 1e-12);
         assert_approx_eq!(m.symbol_rate().to_hertz(), 5e6, rtol <= 1e-12);
         // C/N derives from the channel's occupied bandwidth.
         assert_approx_eq!(
-            m.c_n.as_f64(),
-            m.budget.c_n(channel().bandwidth()).unwrap().as_f64(),
+            m.c_n.to_decibels(),
+            m.budget.c_n(channel().bandwidth()).unwrap().to_decibels(),
             atol <= 1e-12
         );
         // The link closes comfortably.
@@ -1256,11 +1274,11 @@ mod tests {
         let expected = ModCod::select(es_n0, 3.0.db(), dvb_s2()).unwrap();
         assert_eq!(&m.modcod, expected);
         assert_approx_eq!(
-            m.margin.as_f64(),
+            m.margin.to_decibels(),
             budget
                 .modulate(&channel(), expected, 3.0.db())
                 .margin
-                .as_f64(),
+                .to_decibels(),
             atol <= 1e-12
         );
         // Some always closes — that is the invariant.
@@ -1296,7 +1314,7 @@ mod tests {
             "too hungry",
             Modulation::Qpsk,
             0.5,
-            m.eb_n0 + Decibel::new(0.1),
+            m.eb_n0 + Decibel::decibels(0.1),
             ErrorMetric::Ber,
             1e-6,
         )
@@ -1308,8 +1326,8 @@ mod tests {
     fn test_modulated_with_interference_reduces_margin() {
         let m = component_stats().modulate(&channel(), &modcod(), 3.0.db());
         let interference = m.with_interference(Power::watts(1e-12)).unwrap();
-        assert!(interference.margin_with_interference.as_f64() <= m.margin.as_f64());
-        assert!(interference.eb_n0i0.as_f64() <= m.eb_n0.as_f64());
+        assert!(interference.margin_with_interference <= m.margin);
+        assert!(interference.eb_n0i0 <= m.eb_n0);
     }
 
     #[test]
@@ -1322,8 +1340,8 @@ mod tests {
         // Zero interference is valid and must not change the margin.
         let interference = m.with_interference(Power::watts(0.0)).unwrap();
         assert_approx_eq!(
-            interference.margin_with_interference.as_f64(),
-            m.margin.as_f64(),
+            interference.margin_with_interference.to_decibels(),
+            m.margin.to_decibels(),
             atol <= 1e-10
         );
     }
@@ -1350,15 +1368,15 @@ mod tests {
         let sum: f64 = lines
             .iter()
             .map(|l| match l.kind {
-                LineKind::Gain => l.value.as_f64(),
-                LineKind::Loss => -l.value.as_f64(),
+                LineKind::Gain => l.value.to_decibels(),
+                LineKind::Loss => -l.value.to_decibels(),
                 LineKind::Subtotal | LineKind::Total => 0.0,
             })
             .sum();
         let total = lines.last().unwrap();
         assert_eq!(total.label, "C/N0");
         assert_eq!(total.kind, LineKind::Total);
-        assert_approx_eq!(sum, total.value.as_f64(), atol <= 1e-10);
+        assert_approx_eq!(sum, total.value.to_decibels(), atol <= 1e-10);
         // The rain degradation appears as its own line on downlinks.
         assert!(
             lines
@@ -1385,7 +1403,11 @@ mod tests {
         let lines = m.budget_lines();
         let total = lines.last().unwrap();
         assert_eq!(total.label, "Link margin");
-        assert_approx_eq!(total.value.as_f64(), m.margin.as_f64(), atol <= 1e-12);
+        assert_approx_eq!(
+            total.value.to_decibels(),
+            m.margin.to_decibels(),
+            atol <= 1e-12
+        );
         // Margin = Eb/N0 − required − design margin, reconstructable from lines.
         let get = |label: &str| {
             lines
@@ -1393,11 +1415,11 @@ mod tests {
                 .find(|l| l.label.starts_with(label))
                 .unwrap()
                 .value
-                .as_f64()
+                .to_decibels()
         };
         assert_approx_eq!(
             get("Eb/N0") - get("Required Eb/N0") - get("Design margin"),
-            total.value.as_f64(),
+            total.value.to_decibels(),
             atol <= 1e-10
         );
     }
@@ -1415,15 +1437,15 @@ mod tests {
     fn test_combine_c_n() {
         // Two equal contributions halve the linear C/N: −3.01 dB.
         let combined = combine_c_n(&[10.0.db(), 10.0.db()]);
-        assert_approx_eq!(combined.as_f64(), 10.0 - 3.0103, atol <= 1e-3);
+        assert_approx_eq!(combined.to_decibels(), 10.0 - 3.0103, atol <= 1e-3);
         // A single contribution passes through.
-        assert_approx_eq!(combine_c_n(&[7.5.db()]).as_f64(), 7.5, atol <= 1e-12);
+        assert_approx_eq!(combine_c_n(&[7.5.db()]).to_decibels(), 7.5, atol <= 1e-12);
         // A dominant weak link controls the total.
         let combined = combine_c_n(&[30.0.db(), 3.0.db()]);
-        assert!(combined.as_f64() < 3.0);
-        assert!(combined.as_f64() > 2.9);
+        assert!(combined.to_decibels() < 3.0);
+        assert!(combined.to_decibels() > 2.9);
         // No contributions: nothing degrades the link.
-        assert!(combine_c_n(&[]).as_f64().is_infinite());
+        assert!(combine_c_n(&[]).to_decibels().is_infinite());
     }
 
     #[test]

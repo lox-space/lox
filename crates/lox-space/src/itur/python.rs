@@ -155,7 +155,7 @@ impl PyItuProvider {
             .0
             .cloud_attenuation(lat.0, lon.0, elevation.0, frequency.0, probability)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-        Ok(PyDecibel(Decibel::new(v)))
+        Ok(PyDecibel(Decibel::decibels(v)))
     }
 
     /// Computes tropospheric scintillation fade depth exceeded for a given

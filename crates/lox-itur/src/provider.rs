@@ -528,7 +528,7 @@ impl ItuProvider {
         let a = crate::p618::rain_attenuation_core(
             lat_deg, f_ghz, el_deg, p, tau_deg, hs_km, hr_km, r001,
         );
-        Ok(lox_core::units::Decibel::new(a))
+        Ok(lox_core::units::Decibel::decibels(a))
     }
 
     /// Tropospheric scintillation attenuation in dB exceeded for `p`% (P.618).
@@ -557,7 +557,7 @@ impl ItuProvider {
             crate::p618::scintillation_attenuation_sigma_raw(f_ghz, el_deg, d_m, eta, n_wet);
         let log_p = p.log10();
         let a_p = -0.061 * log_p.powi(3) + 0.072 * log_p.powi(2) - 1.71 * log_p + 3.0;
-        Ok(lox_core::units::Decibel::new(a_p * sigma))
+        Ok(lox_core::units::Decibel::decibels(a_p * sigma))
     }
 }
 

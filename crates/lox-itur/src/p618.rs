@@ -119,7 +119,7 @@ pub fn scintillation_attenuation_sigma(
     eta: f64,
     n_wet: f64,
 ) -> Decibel {
-    Decibel::new(scintillation_attenuation_sigma_raw(
+    Decibel::decibels(scintillation_attenuation_sigma_raw(
         frequency.to_gigahertz(),
         elevation.to_degrees().max(5.0),
         diameter.to_meters(),
@@ -180,8 +180,8 @@ pub fn rain_cross_polarization_discrimination(
     p: f64,
     polarisation_tilt: Angle,
 ) -> Decibel {
-    Decibel::new(rain_cross_polarization_discrimination_raw(
-        a_rain.as_f64(),
+    Decibel::decibels(rain_cross_polarization_discrimination_raw(
+        a_rain.to_decibels(),
         frequency.to_gigahertz(),
         elevation.to_degrees(),
         p,
@@ -280,7 +280,7 @@ mod tests {
                 lon,
             )
             .unwrap()
-            .as_f64()
+            .to_decibels()
     }
 
     fn rain(lat: f64, lon: f64, f_ghz: f64, el_deg: f64, p: f64, hs_km: Option<f64>) -> f64 {
@@ -295,7 +295,7 @@ mod tests {
                 hs_km.map(Distance::kilometers),
             )
             .unwrap()
-            .as_f64()
+            .to_decibels()
     }
 
     #[test]
@@ -448,7 +448,7 @@ mod tests {
             0.5,
             50.0,
         );
-        assert!(sigma.as_f64() > 0.0);
+        assert!(sigma > Decibel::ZERO);
     }
 
     #[test]
@@ -468,12 +468,12 @@ mod tests {
     fn test_unitful_xpd() {
         use lox_core::units::Decibel;
         let xpd: Decibel = rain_cross_polarization_discrimination(
-            Decibel::new(2.0),
+            Decibel::decibels(2.0),
             Frequency::gigahertz(14.0),
             Angle::degrees(30.0),
             0.01,
             Angle::degrees(45.0),
         );
-        assert!(xpd.as_f64() > 15.0);
+        assert!(xpd.to_decibels() > 15.0);
     }
 }

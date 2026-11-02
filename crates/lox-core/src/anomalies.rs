@@ -26,7 +26,7 @@
 //! - For hyperbolic orbits: represents hyperbolic anomaly F
 //! - For parabolic orbits: represents parabolic anomaly D (stored as radians)
 
-use lox_approx::ApproxEq;
+use lox_approx::{ApproxEq, ApproxEqResult, ApproxEqResults};
 use thiserror::Error;
 
 use crate::math::float::{
@@ -45,10 +45,23 @@ use core::{
 };
 
 /// True anomaly (ν): angle from periapsis to the position vector
-#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, ApproxEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct TrueAnomaly(#[approx(periodic = TAU)] Angle);
+pub struct TrueAnomaly(Angle);
+
+impl ApproxEq for TrueAnomaly {
+    /// Compares the true anomaly modulo 2π.
+    fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {
+        ApproxEqResults::single(ApproxEqResult::periodic(
+            self.0.to_radians(),
+            rhs.0.to_radians(),
+            TAU,
+            atol,
+            rtol,
+        ))
+    }
+}
 
 /// Eccentric anomaly: E for elliptic, F for hyperbolic, D for parabolic
 ///
@@ -84,7 +97,7 @@ macro_rules! anomaly_impls {
 
                 /// Returns the raw f64 value
                 pub fn as_f64(self) -> f64 {
-                    self.0.as_f64()
+                    self.0.to_radians()
                 }
             }
 
@@ -172,7 +185,7 @@ impl EccentricAnomaly {
             OrbitType::Hyperbolic => TrueAnomaly::new(hyperbolic_to_true(self.0, ecc)),
             OrbitType::Parabolic => {
                 // For parabolic orbits, Eccentric represents parabolic anomaly D
-                TrueAnomaly::new(parabolic_to_true(self.0.as_f64()))
+                TrueAnomaly::new(parabolic_to_true(self.0.to_radians()))
             }
         }
     }
@@ -187,7 +200,7 @@ impl EccentricAnomaly {
             OrbitType::Hyperbolic => MeanAnomaly::new(hyperbolic_to_mean(self.0, ecc)),
             OrbitType::Parabolic => {
                 // For parabolic orbits, Eccentric represents parabolic anomaly D
-                MeanAnomaly::new(parabolic_to_mean(self.0.as_f64()).rad())
+                MeanAnomaly::new(parabolic_to_mean(self.0.to_radians()).rad())
             }
         }
     }
@@ -210,7 +223,9 @@ impl MeanAnomaly {
             OrbitType::Elliptic => Ok(TrueAnomaly::new(mean_to_true(self.0, ecc)?)),
             OrbitType::Parabolic => {
                 // For parabolic orbits, value stores M_p
-                Ok(TrueAnomaly::new(mean_parabolic_to_true(self.0.as_f64())))
+                Ok(TrueAnomaly::new(mean_parabolic_to_true(
+                    self.0.to_radians(),
+                )))
             }
             OrbitType::Hyperbolic => Ok(TrueAnomaly::new(mean_hyperbolic_to_true(self.0, ecc)?)),
         }
@@ -234,7 +249,7 @@ impl MeanAnomaly {
             OrbitType::Parabolic => {
                 // For parabolic orbits, Eccentric represents parabolic anomaly D
                 Ok(EccentricAnomaly::new(
-                    mean_to_parabolic(self.0.as_f64()).rad(),
+                    mean_to_parabolic(self.0.to_radians()).rad(),
                 ))
             }
         }
@@ -294,8 +309,8 @@ pub fn true_to_eccentric(nu: Angle, e: Eccentricity) -> Angle {
     let ecc = e.as_f64();
     // Half-angle formula (most numerically stable)
     let factor = sqrt((1.0_f64 - ecc) / (1.0_f64 + ecc));
-    let principal = 2.0 * atan(factor * tan(nu.as_f64() / 2.0));
-    Angle::new(same_revolution(principal, nu.as_f64()))
+    let principal = 2.0 * atan(factor * tan(nu.to_radians() / 2.0));
+    Angle::radians(same_revolution(principal, nu.to_radians()))
 }
 
 /// Convert eccentric anomaly to true anomaly for elliptic orbits.
@@ -312,8 +327,8 @@ pub fn eccentric_to_true(ecc: Angle, e: Eccentricity) -> Angle {
     let ecc_val = e.as_f64();
     // Half-angle formula
     let factor = sqrt((1.0_f64 + ecc_val) / (1.0_f64 - ecc_val));
-    let principal = 2.0 * atan(factor * tan(ecc.as_f64() / 2.0));
-    Angle::new(same_revolution(principal, ecc.as_f64()))
+    let principal = 2.0 * atan(factor * tan(ecc.to_radians() / 2.0));
+    Angle::radians(same_revolution(principal, ecc.to_radians()))
 }
 
 /// Shifts `principal` by whole revolutions to lie within half a revolution of `reference`.
@@ -335,7 +350,7 @@ fn same_revolution(principal: f64, reference: f64) -> f64 {
 /// # Returns
 /// Mean anomaly, in the same revolution as `ecc`
 pub fn eccentric_to_mean(ecc: Angle, e: Eccentricity) -> Angle {
-    Angle::new(ecc.as_f64() - e.as_f64() * ecc.sin())
+    Angle::radians(ecc.to_radians() - e.as_f64() * ecc.sin())
 }
 
 /// Convert mean anomaly to eccentric anomaly for elliptic orbits.
@@ -355,7 +370,11 @@ pub fn mean_to_eccentric(mean: Angle, e: Eccentricity) -> Result<Angle> {
     if !e.is_circular_or_elliptic() {
         return Err(AnomalyError::NotElliptic(e));
     }
-    Ok(Angle::new(solve_kepler(mean.as_f64(), 0.0, e.as_f64())?))
+    Ok(Angle::radians(solve_kepler(
+        mean.to_radians(),
+        0.0,
+        e.as_f64(),
+    )?))
 }
 
 /// Solves the equinoctial form of Kepler's equation, λ = F - k·sin(F) + h·cos(F), for the
@@ -372,7 +391,9 @@ pub fn mean_to_eccentric(mean: Angle, e: Eccentricity) -> Result<Angle> {
 /// converge.
 pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> Result<f64> {
     if !mean_longitude.is_finite() {
-        return Err(AnomalyError::NonFiniteAnomaly(Angle::new(mean_longitude)));
+        return Err(AnomalyError::NonFiniteAnomaly(Angle::radians(
+            mean_longitude,
+        )));
     }
     let e_squared = h * h + k * k;
     if !e_squared.is_finite() || e_squared >= 1.0 {
@@ -380,9 +401,9 @@ pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> Result<f64> {
     }
 
     // Solve within a single revolution [-π, π) and add the whole revolutions back afterwards.
-    let lambda = Angle::new(mean_longitude)
+    let lambda = Angle::radians(mean_longitude)
         .normalize_two_pi(Angle::ZERO)
-        .as_f64();
+        .to_radians();
     let revolutions = mean_longitude - lambda;
 
     // The residual increases monotonically and the solution lies within λ ± e. The bracket
@@ -483,7 +504,7 @@ pub fn mean_to_true(mean: Angle, e: Eccentricity) -> Result<Angle> {
 /// # Returns
 /// Parabolic anomaly (dimensionless, unbounded)
 pub fn true_to_parabolic(nu: Angle) -> f64 {
-    tan(nu.as_f64() / 2.0)
+    tan(nu.to_radians() / 2.0)
 }
 
 /// Convert parabolic anomaly to true anomaly.
@@ -496,7 +517,7 @@ pub fn true_to_parabolic(nu: Angle) -> f64 {
 /// # Returns
 /// True anomaly, in range (-π, π)
 pub fn parabolic_to_true(parabolic: f64) -> Angle {
-    Angle::new(2.0 * atan(parabolic))
+    Angle::radians(2.0 * atan(parabolic))
 }
 
 /// Convert parabolic anomaly to parabolic mean anomaly.
@@ -564,17 +585,17 @@ pub fn true_to_hyperbolic(nu: Angle, e: Eccentricity) -> Result<Angle> {
     let ecc = e.as_f64();
     // Check if true anomaly is within asymptote limits
     let nu_max = Angle::from_acos(-1.0 / ecc);
-    if abs(nu.as_f64()) >= nu_max.as_f64() {
+    if abs(nu.to_radians()) >= nu_max.to_radians() {
         return Err(AnomalyError::InvalidTrueAnomaly { nu, max_nu: nu_max });
     }
 
     // Half-angle formula
     let factor = sqrt((ecc - 1.0_f64) / (ecc + 1.0_f64));
-    let tanh_f_half = factor * tan(nu.as_f64() / 2.0);
+    let tanh_f_half = factor * tan(nu.to_radians() / 2.0);
 
     // F = 2 * atanh(tanh(F/2))
     let f_half = atanh(tanh_f_half);
-    Ok(Angle::new(2.0 * f_half))
+    Ok(Angle::radians(2.0 * f_half))
 }
 
 /// Convert hyperbolic eccentric anomaly to true anomaly.
@@ -588,13 +609,13 @@ pub fn true_to_hyperbolic(nu: Angle, e: Eccentricity) -> Result<Angle> {
 /// # Returns
 /// True anomaly
 pub fn hyperbolic_to_true(hyperbolic: Angle, e: Eccentricity) -> Angle {
-    let hyperbolic = hyperbolic.as_f64();
+    let hyperbolic = hyperbolic.to_radians();
     let ecc = e.as_f64();
     // Half-angle formula
     let factor = sqrt((ecc + 1.0) / (ecc - 1.0));
     let tan_nu_half = factor * tanh(hyperbolic / 2.0);
 
-    Angle::new(2.0 * atan(tan_nu_half))
+    Angle::radians(2.0 * atan(tan_nu_half))
 }
 
 /// Convert hyperbolic eccentric anomaly to hyperbolic mean anomaly.
@@ -608,7 +629,7 @@ pub fn hyperbolic_to_true(hyperbolic: Angle, e: Eccentricity) -> Angle {
 /// # Returns
 /// Hyperbolic mean anomaly
 pub fn hyperbolic_to_mean(hyperbolic: Angle, e: Eccentricity) -> Angle {
-    Angle::new(e.as_f64() * sinh(hyperbolic.as_f64()) - hyperbolic.as_f64())
+    Angle::radians(e.as_f64() * sinh(hyperbolic.to_radians()) - hyperbolic.to_radians())
 }
 
 /// Convert hyperbolic mean anomaly to hyperbolic eccentric anomaly.
@@ -632,7 +653,7 @@ pub fn mean_to_hyperbolic(
     let tol = tolerance.unwrap_or(1e-10);
     let max_iterations = max_iter.unwrap_or(50);
     let ecc = e.as_f64();
-    let mean_hyperbolic = mean_hyperbolic.as_f64();
+    let mean_hyperbolic = mean_hyperbolic.to_radians();
 
     // Initial guess using domain-informed approximation
     // arcsinh(M/e) provides excellent starting point for hyperbolic case
@@ -715,10 +736,10 @@ mod tests {
         #[test]
         fn prop_mean_to_eccentric_round_trip(e in elliptic_eccentricity(), mean in -50.0..50.0f64) {
             let ecc = Eccentricity::try_new(e).unwrap();
-            let eccentric = mean_to_eccentric(Angle::new(mean), ecc).unwrap().as_f64();
+            let eccentric = mean_to_eccentric(Angle::radians(mean), ecc).unwrap().to_radians();
             // The solution stays within e of the mean anomaly, so in the same revolution.
             prop_assert!(abs(eccentric - mean) <= e + 8.0 * f64::EPSILON * abs(mean).max(1.0));
-            let residual = eccentric_to_mean(Angle::new(eccentric), ecc).as_f64() - mean;
+            let residual = eccentric_to_mean(Angle::radians(eccentric), ecc).to_radians() - mean;
             prop_assert!(
                 abs(residual) <= 8.0 * f64::EPSILON * abs(mean).max(1.0),
                 "residual: {residual}"
@@ -728,15 +749,15 @@ mod tests {
 
     #[test]
     fn test_true_anomaly_approx_eq_wraps_around() {
-        let near_zero = Angle::new(1e-12);
-        let near_two_pi = Angle::new(TAU - 1e-12);
+        let near_zero = Angle::radians(1e-12);
+        let near_two_pi = Angle::radians(TAU - 1e-12);
         assert_approx_eq!(
             TrueAnomaly::new(near_two_pi),
             TrueAnomaly::new(near_zero),
             atol <= 1e-11
         );
         assert_approx_ne!(
-            TrueAnomaly::new(Angle::new(-1e-20)),
+            TrueAnomaly::new(Angle::radians(-1e-20)),
             TrueAnomaly::new(Angle::ZERO),
             atol <= 0.0,
             rtol <= 0.0
@@ -757,23 +778,23 @@ mod tests {
     #[test]
     fn test_elliptic_round_trip() {
         let e = Eccentricity::try_new(0.5).unwrap();
-        let nu = Angle::new(1.0);
+        let nu = Angle::radians(1.0);
 
         let ecc = true_to_eccentric(nu, e);
         let nu_back = eccentric_to_true(ecc, e);
 
-        assert!((nu.as_f64() - nu_back.as_f64()).abs() < EPSILON);
+        assert_approx_eq!(nu, nu_back, atol <= EPSILON);
     }
 
     #[test]
     fn test_keplers_equation() {
         let e = Eccentricity::try_new(0.3).unwrap();
-        let ecc = Angle::new(1.5);
+        let ecc = Angle::radians(1.5);
 
         let mean = eccentric_to_mean(ecc, e);
         let ecc_back = mean_to_eccentric(mean, e).unwrap();
 
-        assert!((ecc.as_f64() - ecc_back.as_f64()).abs() < EPSILON);
+        assert_approx_eq!(ecc, ecc_back, atol <= EPSILON);
     }
 
     // Negative mean anomalies at high eccentricity, where the solver used to diverge
@@ -785,9 +806,9 @@ mod tests {
     fn test_keplers_equation_high_eccentricity(#[case] mean: f64, #[case] e: f64) {
         let e = Eccentricity::try_new(e).unwrap();
 
-        let ecc = mean_to_eccentric(Angle::new(mean), e).unwrap();
+        let ecc = mean_to_eccentric(Angle::radians(mean), e).unwrap();
 
-        let residual = ecc.as_f64() - e.as_f64() * ecc.sin() - mean;
+        let residual = ecc.to_radians() - e.as_f64() * ecc.sin() - mean;
         assert!(residual.abs() < EPSILON, "residual: {residual}");
     }
 
@@ -797,19 +818,19 @@ mod tests {
 
         let mean = eccentric_to_mean(Angle::PI, e);
 
-        assert!((mean.as_f64() - Angle::PI.as_f64()).abs() < EPSILON);
+        assert_approx_eq!(mean, Angle::PI, atol <= EPSILON);
     }
 
     #[test]
     fn test_conversions_keep_revolution() {
         let e = Eccentricity::try_new(0.3).unwrap();
-        let rev = Angle::new(TAU);
-        let nu = Angle::new(1.0);
+        let rev = Angle::radians(TAU);
+        let nu = Angle::radians(1.0);
 
         let ecc = true_to_eccentric(nu, e);
         let mean = eccentric_to_mean(ecc, e);
 
-        let close = |a: Angle, b: Angle| (a - b).as_f64().abs() < EPSILON;
+        let close = |a: Angle, b: Angle| (a - b).to_radians().abs() < EPSILON;
         assert!(close(true_to_eccentric(nu + rev, e), ecc + rev));
         assert!(close(eccentric_to_true(ecc - rev, e), nu - rev));
         assert!(close(eccentric_to_mean(ecc + rev, e), mean + rev));
@@ -864,11 +885,11 @@ mod tests {
     fn test_mean_to_eccentric_rejects_non_finite_anomaly(#[case] mean: f64) {
         let e = Eccentricity::try_new(0.3).unwrap();
         assert!(matches!(
-            mean_to_eccentric(Angle::new(mean), e),
+            mean_to_eccentric(Angle::radians(mean), e),
             Err(AnomalyError::NonFiniteAnomaly(_))
         ));
         assert!(matches!(
-            mean_to_true(Angle::new(mean), e),
+            mean_to_true(Angle::radians(mean), e),
             Err(AnomalyError::NonFiniteAnomaly(_))
         ));
     }
@@ -880,23 +901,23 @@ mod tests {
     fn test_mean_to_eccentric_rejects_open_orbits(#[case] e: f64) {
         let e = Eccentricity::try_new(e).unwrap();
         assert!(matches!(
-            mean_to_eccentric(Angle::new(1.0), e),
+            mean_to_eccentric(Angle::radians(1.0), e),
             Err(AnomalyError::NotElliptic(_))
         ));
         assert!(matches!(
-            mean_to_true(Angle::new(1.0), e),
+            mean_to_true(Angle::radians(1.0), e),
             Err(AnomalyError::NotElliptic(_))
         ));
     }
 
     #[test]
     fn test_parabolic_round_trip() {
-        let nu = Angle::new(1.0);
+        let nu = Angle::radians(1.0);
 
         let d = true_to_parabolic(nu);
         let nu_back = parabolic_to_true(d);
 
-        assert!((nu.as_f64() - nu_back.as_f64()).abs() < EPSILON);
+        assert_approx_eq!(nu, nu_back, atol <= EPSILON);
     }
 
     #[test]
@@ -912,12 +933,12 @@ mod tests {
     #[test]
     fn test_hyperbolic_round_trip() {
         let e = Eccentricity::try_new(1.5).unwrap();
-        let nu = Angle::new(0.5);
+        let nu = Angle::radians(0.5);
 
         let f = true_to_hyperbolic(nu, e).unwrap();
         let nu_back = hyperbolic_to_true(f, e);
 
-        assert!((nu.as_f64() - nu_back.as_f64()).abs() < EPSILON);
+        assert_approx_eq!(nu, nu_back, atol <= EPSILON);
     }
 
     #[test]
@@ -928,7 +949,7 @@ mod tests {
         let mh = hyperbolic_to_mean(f, e);
         let f_back = mean_to_hyperbolic(mh, e, None, None).unwrap();
 
-        assert!((f - f_back).abs().as_f64() < EPSILON);
+        assert!((f - f_back).abs().to_radians() < EPSILON);
     }
 
     #[test]
@@ -937,10 +958,10 @@ mod tests {
         let nu = Angle::ZERO;
 
         let ecc = true_to_eccentric(nu, e);
-        assert!(ecc.as_f64().abs() < EPSILON);
+        assert!(ecc.to_radians().abs() < EPSILON);
 
         let mean = eccentric_to_mean(ecc, e);
-        assert!(mean.as_f64().abs() < EPSILON);
+        assert!(mean.to_radians().abs() < EPSILON);
     }
 
     #[test]
@@ -950,152 +971,151 @@ mod tests {
 
         let ecc = true_to_eccentric(nu, e);
         // At apoapsis, eccentric anomaly should also be π
-        let diff = (ecc.as_f64() - Angle::PI.as_f64()).abs();
-        assert!(diff < EPSILON, "Expected π, got {}", ecc.as_f64());
+        assert_approx_eq!(ecc, Angle::PI, atol <= EPSILON);
     }
 
     #[test]
     fn test_anomaly_elliptic_true_to_eccentric() {
         let e = Eccentricity::try_new(0.5).unwrap();
-        let nu = Angle::new(1.0);
+        let nu = Angle::radians(1.0);
 
         let anomaly = TrueAnomaly::new(nu);
         let eccentric = anomaly.to_eccentric(e).unwrap();
 
         let true_back = eccentric.to_true(e);
-        assert!((nu.as_f64() - true_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(nu, true_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
     fn test_anomaly_elliptic_true_to_mean() {
         let e = Eccentricity::try_new(0.3).unwrap();
-        let nu = Angle::new(1.5);
+        let nu = Angle::radians(1.5);
 
         let anomaly = TrueAnomaly::new(nu);
         let mean = anomaly.to_mean(e).unwrap();
 
         // Convert back to verify
         let true_back = mean.to_true(e).unwrap();
-        assert!((nu.as_f64() - true_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(nu, true_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
     fn test_anomaly_elliptic_eccentric_to_mean() {
         let e = Eccentricity::try_new(0.4).unwrap();
-        let ecc = Angle::new(0.8);
+        let ecc = Angle::radians(0.8);
 
         let anomaly = EccentricAnomaly::new(ecc);
         let mean = anomaly.to_mean(e);
 
         // Convert back to verify
         let ecc_back = mean.to_eccentric(e).unwrap();
-        assert!((ecc.as_f64() - ecc_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(ecc, ecc_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
     fn test_anomaly_elliptic_mean_to_true() {
         let e = Eccentricity::try_new(0.6).unwrap();
-        let mean = Angle::new(2.0);
+        let mean = Angle::radians(2.0);
 
         let anomaly = MeanAnomaly::new(mean);
         let true_anom = anomaly.to_true(e).unwrap();
 
         // Convert back to verify
         let mean_back = true_anom.to_mean(e).unwrap();
-        assert!((mean.as_f64() - mean_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(mean, mean_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
     fn test_anomaly_elliptic_mean_to_eccentric() {
         let e = Eccentricity::try_new(0.5).unwrap();
-        let mean = Angle::new(1.2);
+        let mean = Angle::radians(1.2);
 
         let anomaly = MeanAnomaly::new(mean);
         let ecc = anomaly.to_eccentric(e).unwrap();
 
         // Convert back to verify
         let mean_back = ecc.to_mean(e);
-        assert!((mean.as_f64() - mean_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(mean, mean_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
     fn test_anomaly_circular_mean_equals_true() {
         let e = Eccentricity::try_new(0.0).unwrap();
-        let angle = Angle::new(1.5);
+        let angle = Angle::radians(1.5);
 
         let true_anom = TrueAnomaly::new(angle);
         let mean = true_anom.to_mean(e).unwrap();
 
         // For circular orbits, mean anomaly should equal true anomaly
-        assert!((angle.as_f64() - mean.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(angle, mean.as_angle(), atol <= EPSILON);
 
         // And converting back should give the same value
         let true_back = mean.to_true(e).unwrap();
-        assert!((angle.as_f64() - true_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(angle, true_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
     fn test_anomaly_circular_eccentric_conversion() {
         let e = Eccentricity::try_new(1e-10).unwrap(); // Nearly circular
-        let nu = Angle::new(0.5);
+        let nu = Angle::radians(0.5);
 
         let anomaly = TrueAnomaly::new(nu);
         let ecc = anomaly.to_eccentric(e).unwrap();
         let true_back = ecc.to_true(e);
 
-        assert!((nu.as_f64() - true_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(nu, true_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
     fn test_anomaly_hyperbolic_true_to_eccentric() {
         let e = Eccentricity::try_new(1.5).unwrap();
-        let nu = Angle::new(0.5); // Within asymptote limits
+        let nu = Angle::radians(0.5); // Within asymptote limits
 
         let anomaly = TrueAnomaly::new(nu);
         let eccentric = anomaly.to_eccentric(e).unwrap();
 
         // Convert back to verify
         let true_back = eccentric.to_true(e);
-        assert!((nu.as_f64() - true_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(nu, true_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
     fn test_anomaly_hyperbolic_true_to_mean() {
         let e = Eccentricity::try_new(2.0).unwrap();
-        let nu = Angle::new(0.8);
+        let nu = Angle::radians(0.8);
 
         let anomaly = TrueAnomaly::new(nu);
         let mean = anomaly.to_mean(e).unwrap();
 
         // Convert back to verify
         let true_back = mean.to_true(e).unwrap();
-        assert!((nu.as_f64() - true_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(nu, true_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
     fn test_anomaly_hyperbolic_eccentric_to_mean() {
         let e = Eccentricity::try_new(1.8).unwrap();
-        let f = Angle::new(0.5);
+        let f = Angle::radians(0.5);
 
         let anomaly = EccentricAnomaly::new(f);
         let mean = anomaly.to_mean(e);
 
         // Convert back to verify
         let ecc_back = mean.to_eccentric(e).unwrap();
-        assert!((f.as_f64() - ecc_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(f, ecc_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
     fn test_anomaly_hyperbolic_mean_to_true() {
         let e = Eccentricity::try_new(1.5).unwrap();
-        let mean = Angle::new(1.0);
+        let mean = Angle::radians(1.0);
 
         let anomaly = MeanAnomaly::new(mean);
         let true_anom = anomaly.to_true(e).unwrap();
 
         // Convert back to verify
         let mean_back = true_anom.to_mean(e).unwrap();
-        assert!((mean.as_f64() - mean_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(mean, mean_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
@@ -1104,7 +1124,7 @@ mod tests {
         let nu_max = hyperbolic_asymptote_angle(e);
 
         // Try to convert true anomaly beyond asymptote limit
-        let nu_invalid = Angle::new(nu_max.as_f64() + 0.1);
+        let nu_invalid = nu_max + 0.1.rad();
         let anomaly = TrueAnomaly::new(nu_invalid);
 
         let result = anomaly.to_eccentric(e);
@@ -1118,27 +1138,27 @@ mod tests {
     #[test]
     fn test_anomaly_parabolic_true_to_mean() {
         let e = Eccentricity::try_new(1.0).unwrap();
-        let nu = Angle::new(1.0);
+        let nu = Angle::radians(1.0);
 
         let anomaly = TrueAnomaly::new(nu);
         let mean = anomaly.to_mean(e).unwrap();
 
         // Convert back to verify
         let true_back = mean.to_true(e).unwrap();
-        assert!((nu.as_f64() - true_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(nu, true_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
     fn test_anomaly_parabolic_mean_to_true() {
         let e = Eccentricity::try_new(1.0).unwrap();
-        let mean = Angle::new(0.5);
+        let mean = Angle::radians(0.5);
 
         let anomaly = MeanAnomaly::new(mean);
         let true_anom = anomaly.to_true(e).unwrap();
 
         // Convert back to verify
         let mean_back = true_anom.to_mean(e).unwrap();
-        assert!((mean.as_f64() - mean_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(mean, mean_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
@@ -1155,7 +1175,7 @@ mod tests {
         // Convert back to eccentric (parabolic anomaly D)
         let ecc_back = true_anom.to_eccentric(e).unwrap();
 
-        assert!((d - ecc_back.as_angle().as_f64()).abs() < EPSILON);
+        assert!((d - ecc_back.as_angle().to_radians()).abs() < EPSILON);
     }
 
     #[test]
@@ -1172,13 +1192,13 @@ mod tests {
         // Convert back to eccentric (parabolic anomaly D)
         let ecc_back = mean.to_eccentric(e).unwrap();
 
-        assert!((d - ecc_back.as_angle().as_f64()).abs() < EPSILON);
+        assert!((d - ecc_back.as_angle().to_radians()).abs() < EPSILON);
     }
 
     #[test]
     fn test_anomaly_elliptic_full_round_trip() {
         let e = Eccentricity::try_new(0.5).unwrap();
-        let nu = Angle::new(1.2);
+        let nu = Angle::radians(1.2);
 
         // True -> Eccentric -> Mean -> Eccentric -> True
         let true_anom = TrueAnomaly::new(nu);
@@ -1187,13 +1207,13 @@ mod tests {
         let ecc2 = mean.to_eccentric(e).unwrap();
         let true_back = ecc2.to_true(e);
 
-        assert!((nu.as_f64() - true_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(nu, true_back.as_angle(), atol <= EPSILON);
     }
 
     #[test]
     fn test_anomaly_hyperbolic_full_round_trip() {
         let e = Eccentricity::try_new(2.0).unwrap();
-        let nu = Angle::new(0.5);
+        let nu = Angle::radians(0.5);
 
         // True -> Eccentric -> Mean -> Eccentric -> True
         let true_anom = TrueAnomaly::new(nu);
@@ -1202,7 +1222,7 @@ mod tests {
         let ecc2 = mean.to_eccentric(e).unwrap();
         let true_back = ecc2.to_true(e);
 
-        assert!((nu.as_f64() - true_back.as_angle().as_f64()).abs() < EPSILON);
+        assert_approx_eq!(nu, true_back.as_angle(), atol <= EPSILON);
     }
 
     macro_rules! newtype_tests {

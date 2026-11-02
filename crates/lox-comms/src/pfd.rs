@@ -76,12 +76,12 @@ impl PfdMask {
             return Err(PfdMaskError::TooFewNodes(nodes.len()));
         }
         for (elevation, value) in &nodes {
-            if !elevation.to_radians().is_finite() || !value.as_f64().is_finite() {
+            if !elevation.is_finite() || !value.is_finite() {
                 return Err(PfdMaskError::NonFiniteNode(*elevation, *value));
             }
         }
         for pair in nodes.windows(2) {
-            if pair[1].0.to_radians() <= pair[0].0.to_radians() {
+            if pair[1].0 <= pair[0].0 {
                 return Err(PfdMaskError::UnsortedBreakpoints(pair[0].0, pair[1].0));
             }
         }
@@ -96,27 +96,26 @@ impl PfdMask {
     pub fn art_21_16(start: Decibel) -> Self {
         Self::new(vec![
             (Angle::degrees(5.0), start),
-            (Angle::degrees(25.0), start + Decibel::new(10.0)),
+            (Angle::degrees(25.0), start + Decibel::decibels(10.0)),
         ])
         .expect("two ascending breakpoints are always valid")
     }
 
     /// Returns the mask value at the given elevation angle.
     pub fn value_at(&self, elevation: Angle) -> Decibel {
-        let el = elevation.to_radians();
         let (first, last) = (self.nodes[0], self.nodes[self.nodes.len() - 1]);
-        if el <= first.0.to_radians() {
+        if elevation <= first.0 {
             return first.1;
         }
-        if el >= last.0.to_radians() {
+        if elevation >= last.0 {
             return last.1;
         }
         for pair in self.nodes.windows(2) {
             let (el_lo, val_lo) = pair[0];
             let (el_hi, val_hi) = pair[1];
-            if el < el_hi.to_radians() {
-                let t = (el - el_lo.to_radians()) / (el_hi.to_radians() - el_lo.to_radians());
-                return Decibel::new(val_lo.as_f64() + t * (val_hi.as_f64() - val_lo.as_f64()));
+            if elevation < el_hi {
+                let t = (elevation - el_lo) / (el_hi - el_lo);
+                return val_lo + t * (val_hi - val_lo);
             }
         }
         last.1
@@ -136,7 +135,7 @@ pub enum PfdMaskError {
     #[error("PFD mask requires at least 2 nodes, got {0}")]
     TooFewNodes(usize),
     /// A breakpoint or mask value is not finite.
-    #[error("PFD mask node ({} deg, {} dB) must be finite", .0.to_degrees(), .1.as_f64())]
+    #[error("PFD mask node ({} deg, {} dB) must be finite", .0.to_degrees(), .1.to_decibels())]
     NonFiniteNode(Angle, Decibel),
     /// Breakpoint elevations must be strictly ascending.
     #[error(
@@ -164,7 +163,7 @@ mod tests {
         // PFD = 1 / (4*pi*(1e6)^2) = 7.958e-14 → -131.0 dBW/m²
         let pfd = power_flux_density(0.0.db(), Distance::kilometers(1000.0), 1.0.mhz(), 1.0.mhz());
         let expected = 10.0 * (1.0 / (4.0 * std::f64::consts::PI * 1e12)).log10();
-        assert_approx_eq!(pfd.as_f64(), expected, atol <= 0.01);
+        assert_approx_eq!(pfd.to_decibels(), expected, atol <= 0.01);
     }
 
     #[test]
@@ -179,19 +178,19 @@ mod tests {
         let pfd_equal =
             power_flux_density(10.0.db(), Distance::kilometers(500.0), 1.0.mhz(), 1.0.mhz());
         // 10 dB difference (10 MHz vs 1 MHz)
-        assert_approx_eq!((pfd_equal - pfd_wide).as_f64(), 10.0, atol <= 0.01);
+        assert_approx_eq!((pfd_equal - pfd_wide).to_decibels(), 10.0, atol <= 0.01);
     }
 
     #[test]
     fn test_pfd_mask_low_elevation() {
         let mask = art_21_16_mask();
         assert_approx_eq!(
-            mask.value_at(Angle::degrees(0.0)).as_f64(),
+            mask.value_at(Angle::degrees(0.0)).to_decibels(),
             -154.0,
             atol <= 1e-10
         );
         assert_approx_eq!(
-            mask.value_at(Angle::degrees(4.9)).as_f64(),
+            mask.value_at(Angle::degrees(4.9)).to_decibels(),
             -154.0,
             atol <= 1e-10
         );
@@ -202,7 +201,7 @@ mod tests {
         // At 15°: -154 + 0.5*(15-5) = -154 + 5 = -149
         let mask = art_21_16_mask();
         assert_approx_eq!(
-            mask.value_at(Angle::degrees(15.0)).as_f64(),
+            mask.value_at(Angle::degrees(15.0)).to_decibels(),
             -149.0,
             atol <= 1e-10
         );
@@ -212,12 +211,12 @@ mod tests {
     fn test_pfd_mask_high_elevation() {
         let mask = art_21_16_mask();
         assert_approx_eq!(
-            mask.value_at(Angle::degrees(25.0)).as_f64(),
+            mask.value_at(Angle::degrees(25.0)).to_decibels(),
             -144.0,
             atol <= 1e-10
         );
         assert_approx_eq!(
-            mask.value_at(Angle::degrees(90.0)).as_f64(),
+            mask.value_at(Angle::degrees(90.0)).to_decibels(),
             -144.0,
             atol <= 1e-10
         );
@@ -228,7 +227,7 @@ mod tests {
         // Exactly at 5°: start of the transition zone
         let mask = art_21_16_mask();
         assert_approx_eq!(
-            mask.value_at(Angle::degrees(5.0)).as_f64(),
+            mask.value_at(Angle::degrees(5.0)).to_decibels(),
             -154.0,
             atol <= 1e-10
         );
@@ -244,22 +243,22 @@ mod tests {
         ])
         .unwrap();
         assert_approx_eq!(
-            mask.value_at(Angle::degrees(0.0)).as_f64(),
+            mask.value_at(Angle::degrees(0.0)).to_decibels(),
             -150.0,
             atol <= 1e-10
         );
         assert_approx_eq!(
-            mask.value_at(Angle::degrees(10.0)).as_f64(),
+            mask.value_at(Angle::degrees(10.0)).to_decibels(),
             -147.5,
             atol <= 1e-10
         );
         assert_approx_eq!(
-            mask.value_at(Angle::degrees(20.0)).as_f64(),
+            mask.value_at(Angle::degrees(20.0)).to_decibels(),
             -143.75,
             atol <= 1e-10
         );
         assert_approx_eq!(
-            mask.value_at(Angle::degrees(60.0)).as_f64(),
+            mask.value_at(Angle::degrees(60.0)).to_decibels(),
             -142.5,
             atol <= 1e-10
         );
@@ -270,7 +269,7 @@ mod tests {
         let mask = art_21_16_mask();
         assert_eq!(mask.nodes().len(), 2);
         assert_approx_eq!(mask.nodes()[0].0.to_degrees(), 5.0, atol <= 1e-12);
-        assert_approx_eq!(mask.nodes()[1].1.as_f64(), -144.0, atol <= 1e-12);
+        assert_approx_eq!(mask.nodes()[1].1.to_decibels(), -144.0, atol <= 1e-12);
     }
 
     #[test]
@@ -304,7 +303,7 @@ mod tests {
     #[test]
     fn test_pfd_mask_rejects_non_finite_value() {
         let err = PfdMask::new(vec![
-            (Angle::degrees(5.0), Decibel::new(f64::NAN)),
+            (Angle::degrees(5.0), Decibel::decibels(f64::NAN)),
             (Angle::degrees(25.0), (-144.0).db()),
         ])
         .unwrap_err();
@@ -341,6 +340,6 @@ mod tests {
         let d_m = 500e3;
         let expected =
             10.0 * (eirp_w / (4.0 * std::f64::consts::PI * d_m * d_m) * (4e3 / 10e6)).log10();
-        assert_approx_eq!(pfd_val.as_f64(), expected, atol <= 0.01);
+        assert_approx_eq!(pfd_val.to_decibels(), expected, atol <= 0.01);
     }
 }
