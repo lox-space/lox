@@ -19,7 +19,10 @@ use thiserror::Error;
 use crate::{
     math::series::Series,
     time::deltas::TimeDelta,
-    units::{Angle, AngularRate, Distance, OBSERVABLE_UNIVERSE_RADIUS, SPEED_OF_LIGHT, Velocity},
+    units::{
+        Angle, AngleUnit, AngularRate, Distance, DistanceUnit, OBSERVABLE_UNIVERSE_RADIUS,
+        SPEED_OF_LIGHT, Velocity,
+    },
 };
 /// Reference ellipsoid (rotational, oblate) defined by its equatorial
 /// radius and flattening. Construction validates that `equatorial_radius
@@ -90,7 +93,7 @@ impl Ellipsoid {
 #[derive(Copy, Clone, Debug, Error, PartialEq)]
 pub enum EllipsoidError {
     /// Equatorial radius must be finite and strictly positive.
-    #[error("equatorial radius must be finite and > 0, got {0}")]
+    #[error("equatorial radius must be finite and > 0, got {}", .0.display_in(DistanceUnit::Kilometers))]
     InvalidEquatorialRadius(Distance),
     /// Flattening must be in `[0, 1)`.
     #[error("flattening must be in [0, 1), got {0}")]
@@ -253,13 +256,19 @@ impl LonLatAlt {
 #[derive(Copy, Clone, Debug, Error, PartialEq)]
 pub enum LonLatAltError {
     /// The longitude is outside the valid range [-180°, 180°].
-    #[error("longitude must be between -180 deg and 180 deg but was {0}")]
+    #[error(
+        "longitude must be between -180 deg and 180 deg but was {}",
+        .0.display_in(AngleUnit::Degrees)
+    )]
     InvalidLongitude(Angle),
     /// The latitude is outside the valid range [-90°, 90°].
-    #[error("latitude must between -90 deg and 90 deg but was {0}")]
+    #[error(
+        "latitude must be between -90 deg and 90 deg but was {}",
+        .0.display_in(AngleUnit::Degrees)
+    )]
     InvalidLatitude(Angle),
     /// The altitude is not a finite value.
-    #[error("invalid altitude {0}")]
+    #[error("invalid altitude {}", .0.display_in(DistanceUnit::Meters))]
     InvalidAltitude(Distance),
 }
 
@@ -1191,6 +1200,7 @@ impl<'a> IntoIterator for &'a CartesianTrajectory {
 #[cfg(test)]
 mod tests {
     use alloc::format;
+    use alloc::string::ToString;
 
     use lox_approx::assert_approx_eq;
     use rstest::rstest;
@@ -1200,6 +1210,18 @@ mod tests {
     use crate::units::{AngleUnits, AngularRate, DistanceUnits, VelocityUnits};
 
     use super::*;
+
+    #[test]
+    fn test_lon_lat_error_messages_use_degrees() {
+        assert_eq!(
+            LonLatAltError::InvalidLongitude(Angle::degrees(200.0)).to_string(),
+            "longitude must be between -180 deg and 180 deg but was 200 deg"
+        );
+        assert_eq!(
+            LonLatAltError::InvalidLatitude(Angle::degrees(-95.0)).to_string(),
+            "latitude must be between -90 deg and 90 deg but was -95 deg"
+        );
+    }
 
     #[rstest]
     #[case::leo(DVec3::new(7e6, 0.0, 0.0), DVec3::new(0.0, 7.5e3, 0.0), true)]

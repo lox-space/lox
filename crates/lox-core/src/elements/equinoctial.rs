@@ -45,7 +45,7 @@ use crate::elements::longitudes::{
 };
 use crate::elements::modified_equinoctial::{ModifiedEquinoctial, ModifiedEquinoctialError};
 use crate::math::float::{abs, atan, cos, hypot, sin, tan};
-use crate::units::{Angle, Distance};
+use crate::units::{Angle, Distance, DistanceUnit};
 
 /// The retrograde factor I of equinoctial elements.
 ///
@@ -211,10 +211,10 @@ impl TryFrom<EquinoctialRepr> for Equinoctial {
 #[derive(Debug, Clone, Error)]
 pub enum EquinoctialError {
     /// The semi-major axis is not finite and positive.
-    #[error("semi-major axis must be finite and positive but was {0}")]
+    #[error("semi-major axis must be finite and positive but was {}", .0.display_in(DistanceUnit::Kilometers))]
     InvalidSemiMajorAxis(Distance),
     /// The semi-parameter a·(1 - e²) is not positive.
-    #[error("semi-parameter must be positive but was {0}")]
+    #[error("semi-parameter must be positive but was {}", .0.display_in(DistanceUnit::Kilometers))]
     InvalidSemiParameter(Distance),
     /// An element is not finite.
     #[error("equinoctial elements must be finite")]

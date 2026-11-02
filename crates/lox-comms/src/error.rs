@@ -68,7 +68,7 @@ pub enum LinkBudgetError {
     #[error(transparent)]
     NonPhysical(#[from] NonPhysicalError),
     /// The carrier frequency lies outside a link end's frequency range.
-    #[error("carrier {} Hz outside the supported range {band}", carrier.to_hertz())]
+    #[error("carrier {carrier} outside the supported range {band}")]
     CarrierOutOfBand {
         /// The requested carrier frequency.
         carrier: Frequency,

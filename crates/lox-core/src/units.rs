@@ -4,9 +4,24 @@
 // SPDX-License-Identifier: MPL-2.0 AND LicenseRef-ERFA
 
 //! Newtype wrappers for unitful [`f64`] double precision values
+//!
+//! All quantities store SI units. `Display` prints the SI value with its unit symbol, e.g.
+//! `7000 m`; `display_in` formats in another unit, and `FromStr` parses `"<value> <unit>"`
+//! strings such as `"7 km"`. With the `serde` feature, quantities serialize and deserialize
+//! as plain numbers in SI units.
+//!
+//! Error messages and the `Display` of domain types such as orbital elements instead use the
+//! unit a reader expects in context, e.g. kilometers for orbital distances and degrees for
+//! angles.
 
+mod runtime;
 mod sexagesimal;
 
+pub use runtime::{
+    AngleUnit, AngularRateUnit, AreaToMassUnit, AreaUnit, DecibelUnit, DisplayIn, DistanceUnit,
+    FrequencyUnit, MassUnit, ParseUnitError, PowerUnit, PressureUnit, TemperatureUnit,
+    VelocityUnit,
+};
 pub use sexagesimal::{Dms, Hms, SexagesimalError};
 
 use core::{
@@ -161,6 +176,8 @@ impl Angle {
 
     /// Creates a new angle from an `f64` value in seconds of time, with 86400 seconds to the full
     /// circle.
+    ///
+    /// Seconds of time are an angle unit for hour angles and sidereal time, not a duration.
     pub const fn seconds_of_time(s: f64) -> Self {
         Self(s * RADIANS_IN_SECOND_OF_TIME)
     }
@@ -340,13 +357,6 @@ impl Angle {
     }
 }
 
-impl Display for Angle {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        to_degrees(self.0).fmt(f)?;
-        write!(f, " deg")
-    }
-}
-
 /// A trait for creating [`Angle`] instances from primitives.
 ///
 /// By default it is implemented for [`f64`] and [`i64`].
@@ -457,13 +467,6 @@ impl Distance {
     }
 }
 
-impl Display for Distance {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        (1e-3 * self.0).fmt(f)?;
-        write!(f, " km")
-    }
-}
-
 /// A trait for creating [`Distance`] instances from primitives.
 ///
 /// By default it is implemented for [`f64`] and [`i64`].
@@ -558,13 +561,6 @@ impl Velocity {
     /// Returns the value of the velocity in 1/c.
     pub const fn to_fraction_of_speed_of_light(self) -> f64 {
         self.0 / SPEED_OF_LIGHT
-    }
-}
-
-impl Display for Velocity {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        (1e-3 * self.0).fmt(f)?;
-        write!(f, " km/s")
     }
 }
 
@@ -696,13 +692,6 @@ impl Frequency {
     }
 }
 
-impl Display for Frequency {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        (1e-9 * self.0).fmt(f)?;
-        write!(f, " GHz")
-    }
-}
-
 /// A trait for creating [`Frequency`] instances from primitives.
 ///
 /// By default it is implemented for [`f64`] and [`i64`].
@@ -810,13 +799,6 @@ impl Mass {
     }
 }
 
-impl Display for Mass {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " kg")
-    }
-}
-
 /// A trait for creating [`Mass`] instances from primitives.
 ///
 /// By default it is implemented for [`f64`] and [`i64`].
@@ -894,13 +876,6 @@ impl Area {
     }
 }
 
-impl Display for Area {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " m²")
-    }
-}
-
 /// A trait for creating [`Area`] instances from primitives.
 ///
 /// By default it is implemented for [`f64`] and [`i64`].
@@ -961,13 +936,6 @@ impl AreaToMass {
     }
 }
 
-impl Display for AreaToMass {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " m²/kg")
-    }
-}
-
 /// A trait for creating [`AreaToMass`] instances from primitives.
 ///
 /// By default it is implemented for [`f64`] and [`i64`].
@@ -1012,13 +980,6 @@ impl Temperature {
     /// Returns the value in Kelvin.
     pub const fn to_kelvin(self) -> f64 {
         self.0
-    }
-}
-
-impl Display for Temperature {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " K")
     }
 }
 
@@ -1077,13 +1038,6 @@ impl Pressure {
     }
 }
 
-impl Display for Pressure {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " Pa")
-    }
-}
-
 /// Power in Watts.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -1114,13 +1068,6 @@ impl Power {
     /// Returns the value in dBW.
     pub fn to_dbw(self) -> f64 {
         10.0 * log10(self.0)
-    }
-}
-
-impl Display for Power {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " W")
     }
 }
 
@@ -1189,13 +1136,6 @@ impl AngularRate {
     }
 }
 
-impl Display for AngularRate {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        to_degrees(self.0).fmt(f)?;
-        write!(f, " deg/s")
-    }
-}
-
 /// A value in decibels.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -1221,13 +1161,6 @@ impl Decibel {
     /// Converts this decibel value to a linear power-ratio.
     pub fn to_linear(self) -> f64 {
         powf(10.0_f64, self.0 / 10.0)
-    }
-}
-
-impl Display for Decibel {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.0.fmt(f)?;
-        write!(f, " dB")
     }
 }
 
@@ -1453,7 +1386,11 @@ mod tests {
     #[test]
     fn test_angle_display() {
         let angle = 90.123456.deg();
-        assert_eq!(format!("{:.2}", angle), "90.12 deg")
+        assert_eq!(format!("{:.2}", angle), "1.57 rad");
+        assert_eq!(
+            format!("{:.2}", angle.display_in(AngleUnit::Degrees)),
+            "90.12 deg"
+        );
     }
 
     #[test]
@@ -1523,7 +1460,11 @@ mod tests {
     #[test]
     fn test_distance_display() {
         let distance = 9.123456.km();
-        assert_eq!(format!("{:.2}", distance), "9.12 km")
+        assert_eq!(format!("{:.2}", distance), "9123.46 m");
+        assert_eq!(
+            format!("{:.2}", distance.display_in(DistanceUnit::Kilometers)),
+            "9.12 km"
+        );
     }
 
     #[test]
@@ -1553,7 +1494,14 @@ mod tests {
     #[test]
     fn test_velocity_display() {
         let velocity = 9.123456.kps();
-        assert_eq!(format!("{:.2}", velocity), "9.12 km/s")
+        assert_eq!(format!("{:.2}", velocity), "9123.46 m/s");
+        assert_eq!(
+            format!(
+                "{:.2}",
+                velocity.display_in(VelocityUnit::KilometersPerSecond)
+            ),
+            "9.12 km/s"
+        );
     }
 
     #[test]
@@ -1631,7 +1579,11 @@ mod tests {
     #[test]
     fn test_frequency_display() {
         let frequency = 2.4123456.ghz();
-        assert_eq!(format!("{:.2}", frequency), "2.41 GHz");
+        assert_eq!(format!("{:.2}", frequency), "2412345600.00 Hz");
+        assert_eq!(
+            format!("{:.2}", frequency.display_in(FrequencyUnit::Gigahertz)),
+            "2.41 GHz"
+        );
     }
 
     #[test]
@@ -1759,8 +1711,11 @@ mod tests {
     #[test]
     fn test_angular_rate_display() {
         let ar = AngularRate::radians_per_second(1.0);
-        let s = format!("{}", ar);
-        assert!(s.contains("deg/s"));
+        assert_eq!(format!("{}", ar), "1 rad/s");
+        assert_eq!(
+            format!("{:.3}", ar.display_in(AngularRateUnit::DegreesPerSecond)),
+            "57.296 deg/s"
+        );
     }
 
     #[test]

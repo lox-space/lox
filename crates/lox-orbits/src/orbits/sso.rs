@@ -13,7 +13,7 @@ use lox_core::math::float::mul_add_relaxed;
 use lox_core::time::julian_dates::JulianDate;
 use lox_core::time::time_of_day::TimeOfDay;
 use lox_core::units::DistanceUnits;
-use lox_core::units::{Angle, AngleUnits, Distance};
+use lox_core::units::{Angle, AngleUnits, Distance, DistanceUnit};
 use lox_earth::ephemeris::apparent_sun_position;
 use lox_frames::Icrf;
 use lox_frames::iers::fundamental::iers03::lp_iers03;
@@ -36,7 +36,7 @@ pub enum SsoError {
     #[error("either altitude, semi-major axis, or inclination need to be provided")]
     InvalidParameters,
     /// The semi-major axis is too large for a sun-synchronous orbit.
-    #[error("semi-major axis is out-of-range: {0}")]
+    #[error("semi-major axis is out-of-range: {}", .0.display_in(DistanceUnit::Kilometers))]
     SemiMajorAxisOutOfRange(Distance),
     /// The local time of the ascending or descending node is invalid.
     #[error("invalid local time of ascending/descending node: {0}")]
@@ -425,6 +425,14 @@ mod tests {
     use lox_time::{deltas::TimeDelta, utc::Utc};
 
     use super::*;
+
+    #[test]
+    fn test_semi_major_axis_error_uses_kilometers() {
+        assert_eq!(
+            SsoError::SemiMajorAxisOutOfRange(Distance::kilometers(12000.0)).to_string(),
+            "semi-major axis is out-of-range: 12000 km"
+        );
+    }
 
     #[test]
     fn test_sso_inclination() {
