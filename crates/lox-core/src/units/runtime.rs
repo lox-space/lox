@@ -9,8 +9,8 @@ use core::fmt::{Display, Formatter, LowerExp, Result, UpperExp};
 use core::str::FromStr;
 
 use super::{
-    Angle, AngularRate, Area, AreaToMass, Decibel, Distance, Frequency, Mass, Power, Pressure,
-    Temperature, Velocity,
+    Angle, AngularRate, Area, AreaToMass, Decibel, DecibelWatts, Distance, Frequency, Mass, Power,
+    Pressure, Temperature, Velocity,
 };
 
 /// Error returned when parsing a unit or a `"<value> <unit>"` string fails.
@@ -219,6 +219,10 @@ runtime_units! {
     Decibel, DecibelUnit, si = Decibels {
         Decibels, "dB", decibels, to_decibels;
     }
+    DecibelWatts, DecibelWattsUnit, si = DecibelWatts {
+        DecibelWatts, "dBW", decibel_watts, to_decibel_watts;
+        DecibelMilliwatts, "dBm", decibel_milliwatts, to_decibel_milliwatts;
+    }
     Distance, DistanceUnit, si = Meters {
         Meters, "m", meters, to_meters;
         Kilometers, "km", kilometers, to_kilometers;
@@ -280,6 +284,8 @@ mod tests {
         assert_eq!(Angle::radians(0.5).to_string(), "0.5 rad");
         assert_eq!(Frequency::gigahertz(8.4).to_string(), "8400000000 Hz");
         assert_eq!(Decibel::decibels(3.0).to_string(), "3 dB");
+        assert_eq!(DecibelWatts::decibel_milliwatts(0.0).to_string(), "-30 dBW");
+        assert_eq!("10 dBm".parse(), Ok(DecibelWatts::decibel_watts(-20.0)));
     }
 
     #[test]

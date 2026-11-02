@@ -197,7 +197,7 @@ py_unit!(
 
         /// Returns the value in dBW.
         fn to_dbw(&self) -> f64 {
-            self.0.to_dbw()
+            self.0.to_decibel_watts().to_decibel_watts()
         }
     }),
     (Pressure, "Pressure", PyPressure, pascals, to_pascals, {
