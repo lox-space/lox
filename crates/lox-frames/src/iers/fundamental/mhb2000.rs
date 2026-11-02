@@ -25,10 +25,10 @@ use lox_core::units::{Angle, AngleUnits};
 ///
 /// # Returns
 ///
-/// The mean elongation D in radians, normalized to [-π, π]
+/// The mean elongation D in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn d_mhb2000_luni_solar(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(poly_array(
+    Angle::arcseconds_rem(poly_array(
         centuries_since_j2000_tdb,
         &[
             1072260.70369,
@@ -48,12 +48,12 @@ pub fn d_mhb2000_luni_solar(centuries_since_j2000_tdb: JulianCenturies) -> Angle
 ///
 /// # Returns
 ///
-/// The mean elongation D in radians, normalized to [-π, π]
+/// The mean elongation D in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn d_mhb2000_planetary(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     poly_array(centuries_since_j2000_tdb, &[5.198466741, 7771.3771468121])
         .rad()
-        .mod_two_pi_signed()
+        .rem_two_pi()
 }
 
 /// Sun's mean anomaly (l').
@@ -64,10 +64,10 @@ pub fn d_mhb2000_planetary(centuries_since_j2000_tdb: JulianCenturies) -> Angle 
 ///
 /// # Returns
 ///
-/// The Sun's mean anomaly l' in radians, normalized to [-π, π]
+/// The Sun's mean anomaly l' in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn lp_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
-    Angle::arcseconds_normalized_signed(poly_array(
+    Angle::arcseconds_rem(poly_array(
         centuries_since_j2000_tdb,
         &[
             1287104.79305,
@@ -87,12 +87,12 @@ pub fn lp_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// The Moon's mean anomaly l in radians, normalized to [-π, π]
+/// The Moon's mean anomaly l in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn l_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     poly_array(centuries_since_j2000_tdb, &[2.35555598, 8328.6914269554])
         .rad()
-        .mod_two_pi_signed()
+        .rem_two_pi()
 }
 
 /// Moon's mean argument of latitude (F).
@@ -106,12 +106,12 @@ pub fn l_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// The Moon's mean argument of latitude F in radians, normalized to [-π, π]
+/// The Moon's mean argument of latitude F in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn f_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     poly_array(centuries_since_j2000_tdb, &[1.627905234, 8433.466158131])
         .rad()
-        .mod_two_pi_signed()
+        .rem_two_pi()
 }
 
 /// Mean longitude of the Moon's ascending node (Ω).
@@ -122,12 +122,12 @@ pub fn f_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// The mean longitude of the Moon's ascending node Ω in radians, normalized to [-π, π]
+/// The mean longitude of the Moon's ascending node Ω in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn omega_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     poly_array(centuries_since_j2000_tdb, &[2.18243920, -33.757045])
         .rad()
-        .mod_two_pi_signed()
+        .rem_two_pi()
 }
 
 /// Neptune's mean longitude (L_N).
@@ -138,12 +138,12 @@ pub fn omega_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 ///
 /// # Returns
 ///
-/// Neptune's mean longitude in radians, normalized to [-π, π]
+/// Neptune's mean longitude in radians, reduced to (-2π, 2π)
 #[inline]
 pub fn neptune_l_mhb2000(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     poly_array(centuries_since_j2000_tdb, &[5.3211590, 3.81277740])
         .rad()
-        .mod_two_pi_signed()
+        .rem_two_pi()
 }
 
 #[cfg(test)]

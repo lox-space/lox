@@ -120,12 +120,12 @@ mod tests {
 
         assert_approx_eq!(
             Angle::radians(eccentric_longitude.to_radians() - pomega - eccentric_anomaly)
-                .mod_two_pi_signed(),
+                .rem_two_pi(),
             Angle::ZERO,
             atol <= 1e-12
         );
         assert_approx_eq!(
-            Angle::radians(mean_longitude.to_radians() - pomega - mean_anomaly).mod_two_pi_signed(),
+            Angle::radians(mean_longitude.to_radians() - pomega - mean_anomaly).rem_two_pi(),
             Angle::ZERO,
             atol <= 1e-12
         );

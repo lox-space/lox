@@ -59,7 +59,7 @@ fn luni_solar_nutation(
                 + coeff.f * args.f
                 + coeff.d * args.d
                 + coeff.om * args.om)
-                .mod_two_pi_signed();
+                .rem_two_pi();
 
             // Accumulate current term.
             let sin_arg = arg.sin();

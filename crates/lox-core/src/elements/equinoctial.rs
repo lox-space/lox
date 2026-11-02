@@ -615,8 +615,8 @@ mod tests {
         assert_approx_eq!(eq.p(), tan(i / 2.0) * sin(node), atol <= 1e-15);
         assert_approx_eq!(eq.q(), tan(i / 2.0) * cos(node), atol <= 1e-15);
         assert_approx_eq!(
-            eq.lambda().mod_two_pi(),
-            Angle::radians(mean_anomaly + periapsis + node).mod_two_pi(),
+            eq.lambda().wrap_unsigned(),
+            Angle::radians(mean_anomaly + periapsis + node).wrap_unsigned(),
             atol <= 1e-12
         );
         assert_approx_eq!(

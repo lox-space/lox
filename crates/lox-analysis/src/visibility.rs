@@ -160,11 +160,7 @@ impl HorizonMask {
 
         let mut points: Vec<(f64, f64)> = azimuth
             .into_iter()
-            .map(|az| {
-                Angle::radians(az)
-                    .normalize_two_pi(Angle::ZERO)
-                    .to_radians()
-            })
+            .map(|az| Angle::radians(az).wrap_signed().to_radians())
             .zip(elevation)
             .collect();
         points.sort_by(|(az1, _), (az2, _)| az1.total_cmp(az2));
@@ -199,7 +195,7 @@ impl HorizonMask {
 
     /// Returns the horizon elevation at the given azimuth.
     pub fn elevation_at(&self, azimuth: Angle) -> Angle {
-        let azimuth = azimuth.normalize_two_pi(Angle::ZERO);
+        let azimuth = azimuth.wrap_signed();
         Angle::radians(self.0.interpolate(azimuth.to_radians()))
     }
 

@@ -67,57 +67,52 @@ impl Nutation {
 }
 
 /// `l`, the mean longitude of the Moon measured from the mean position of the perigee,
-/// normalized to the range [0, 2π).
+/// normalized to the range [-π, π).
 fn l(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     let l_poly: Arcseconds = poly_array(
         centuries_since_j2000_tdb,
         &[485866.733, 715922.633, 31.31, 0.064],
     );
-    (l_poly.arcsec() + ((1325.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
-        .normalize_two_pi(Angle::ZERO)
+    (l_poly.arcsec() + ((1325.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad()).wrap_signed()
 }
 
 /// `l'`, the mean longitude of the Sun measured from the mean position of the perigee,
-/// normalized to the range [0, 2π).
+/// normalized to the range [-π, π).
 fn lp(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     let lp_poly: Arcseconds = poly_array(
         centuries_since_j2000_tdb,
         &[1287099.804, 1292581.224, -0.577, -0.012],
     );
-    (lp_poly.arcsec() + ((99.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
-        .normalize_two_pi(Angle::ZERO)
+    (lp_poly.arcsec() + ((99.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad()).wrap_signed()
 }
 
 /// `F`, the mean longitude of the Moon minus the mean longitude of the Moon's ascending node,
-/// normalized to the range [0, 2π).
+/// normalized to the range [-π, π).
 fn f(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     let f_poly: Arcseconds = poly_array(
         centuries_since_j2000_tdb,
         &[335778.877, 295263.137, -13.257, 0.011],
     );
-    (f_poly.arcsec() + ((1342.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
-        .normalize_two_pi(Angle::ZERO)
+    (f_poly.arcsec() + ((1342.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad()).wrap_signed()
 }
 
-/// `D`, the mean elongation of the Moon from the Sun, normalized to the range [0, 2π).
+/// `D`, the mean elongation of the Moon from the Sun, normalized to the range [-π, π).
 fn d(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     let d_poly: Arcseconds = poly_array(
         centuries_since_j2000_tdb,
         &[1072261.307, 1105601.328, -6.891, 0.019],
     );
-    (d_poly.arcsec() + ((1236.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
-        .normalize_two_pi(Angle::ZERO)
+    (d_poly.arcsec() + ((1236.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad()).wrap_signed()
 }
 
 /// `Ω`, the longitude of the mean ascending node of the lunar orbit on the ecliptic, measured from
-/// the mean equinox of date.
+/// the mean equinox of date, normalized to the range [-π, π).
 fn omega(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
     let om_poly: Arcseconds = poly_array(
         centuries_since_j2000_tdb,
         &[450160.280, -482890.539, 7.455, 0.008],
     );
-    (om_poly.arcsec() + ((-5.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad())
-        .normalize_two_pi(Angle::ZERO)
+    (om_poly.arcsec() + ((-5.0 * centuries_since_j2000_tdb % 1.0) * TAU).rad()).wrap_signed()
 }
 
 #[rustfmt::skip]

@@ -177,9 +177,9 @@ pub fn mean_to_cartesian(el: &MeanElements, mu: f64) -> Result<Cartesian, Anomal
     let f = MeanAnomaly::new(el.m.rad()).to_true(ecc)?;
     let kep = Keplerian::builder()
         .with_semi_major_axis(Distance::meters(el.a), el.e)
-        .with_inclination(el.i.rad().mod_two_pi())
-        .with_longitude_of_ascending_node(el.raan.rad().mod_two_pi())
-        .with_argument_of_periapsis(el.aop.rad().mod_two_pi())
+        .with_inclination(el.i.rad().wrap_unsigned())
+        .with_longitude_of_ascending_node(el.raan.rad().wrap_unsigned())
+        .with_argument_of_periapsis(el.aop.rad().wrap_unsigned())
         .with_true_anomaly(f.as_angle())
         .build()
         .expect("propagated elements should be valid");
@@ -277,9 +277,9 @@ pub fn kwok_osculating_cartesian(
     let ta = TrueAnomaly::new(f_osc.rad());
     let kep = Keplerian::builder()
         .with_semi_major_axis(Distance::meters(a_osc), ecc_osc.as_f64())
-        .with_inclination(i_osc.rad().mod_two_pi())
-        .with_longitude_of_ascending_node(raan_osc.rad().mod_two_pi())
-        .with_argument_of_periapsis(aop_osc.rad().mod_two_pi())
+        .with_inclination(i_osc.rad().wrap_unsigned())
+        .with_longitude_of_ascending_node(raan_osc.rad().wrap_unsigned())
+        .with_argument_of_periapsis(aop_osc.rad().wrap_unsigned())
         .with_true_anomaly(ta.as_angle())
         .build()
         .expect("osculating elements should be valid");
