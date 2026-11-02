@@ -6,7 +6,6 @@
 //! of `"<value> <unit>"` strings.
 
 use core::fmt::{Display, Formatter, LowerExp, Result, UpperExp};
-use core::str::FromStr;
 
 use super::{
     Angle, AngularRate, Area, AreaToMass, DataRate, DataVolume, Decibel, DecibelWatts, Distance,
@@ -41,6 +40,12 @@ pub struct DisplayIn {
     symbol: &'static str,
 }
 
+impl DisplayIn {
+    pub(crate) const fn new(value: f64, symbol: &'static str) -> Self {
+        Self { value, symbol }
+    }
+}
+
 impl Display for DisplayIn {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         Display::fmt(&self.value, f)?;
@@ -63,7 +68,7 @@ impl UpperExp for DisplayIn {
 }
 
 /// Parses a finite value followed by a unit, with or without whitespace in between.
-fn parse_value_and_unit<U>(
+pub(crate) fn parse_value_and_unit<U>(
     s: &str,
     from_symbol: fn(&str) -> Option<U>,
 ) -> core::result::Result<(f64, U), ParseUnitError> {
@@ -123,17 +128,17 @@ macro_rules! runtime_units {
                 }
             }
 
-            impl Display for $unit {
-                fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            impl ::core::fmt::Display for $unit {
+                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                     f.pad(self.symbol())
                 }
             }
 
-            impl FromStr for $unit {
-                type Err = ParseUnitError;
+            impl ::core::str::FromStr for $unit {
+                type Err = $crate::units::ParseUnitError;
 
                 fn from_str(s: &str) -> core::result::Result<Self, Self::Err> {
-                    Self::from_symbol(s).ok_or(ParseUnitError::UnknownUnit)
+                    Self::from_symbol(s).ok_or($crate::units::ParseUnitError::UnknownUnit)
                 }
             }
 
@@ -153,47 +158,46 @@ macro_rules! runtime_units {
                 }
 
                 /// Returns an adapter that displays the value in the given unit.
-                pub const fn display_in(self, unit: $unit) -> DisplayIn {
-                    DisplayIn {
-                        value: self.to(unit),
-                        symbol: unit.symbol(),
-                    }
+                pub const fn display_in(self, unit: $unit) -> $crate::units::DisplayIn {
+                    $crate::units::DisplayIn::new(self.to(unit), unit.symbol())
                 }
             }
 
             /// Displays the value in SI units. Use `display_in` for other units.
-            impl Display for $quantity {
-                fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-                    Display::fmt(&self.display_in($unit::$si), f)
+            impl ::core::fmt::Display for $quantity {
+                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                    ::core::fmt::Display::fmt(&self.display_in($unit::$si), f)
                 }
             }
 
             /// Displays the value in SI units in scientific notation.
-            impl LowerExp for $quantity {
-                fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-                    LowerExp::fmt(&self.display_in($unit::$si), f)
+            impl ::core::fmt::LowerExp for $quantity {
+                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                    ::core::fmt::LowerExp::fmt(&self.display_in($unit::$si), f)
                 }
             }
 
             /// Displays the value in SI units in scientific notation.
-            impl UpperExp for $quantity {
-                fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-                    UpperExp::fmt(&self.display_in($unit::$si), f)
+            impl ::core::fmt::UpperExp for $quantity {
+                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                    ::core::fmt::UpperExp::fmt(&self.display_in($unit::$si), f)
                 }
             }
 
             /// Parses a value followed by a unit symbol, e.g. `"500 km"` or `"500km"`.
-            impl FromStr for $quantity {
-                type Err = ParseUnitError;
+            impl ::core::str::FromStr for $quantity {
+                type Err = $crate::units::ParseUnitError;
 
                 fn from_str(s: &str) -> core::result::Result<Self, Self::Err> {
-                    let (value, unit) = parse_value_and_unit(s, $unit::from_symbol)?;
+                    let (value, unit) = $crate::units::parse_value_and_unit(s, $unit::from_symbol)?;
                     Ok(Self::new_in(value, unit))
                 }
             }
         )+
     };
 }
+
+pub(crate) use runtime_units;
 
 runtime_units! {
     Angle, AngleUnit, si = Radians {

@@ -9,8 +9,12 @@ pub mod keplerian;
 mod longitudes;
 pub mod mean;
 pub mod modified_equinoctial;
+pub mod quantities;
 
 pub use equinoctial::{Equinoctial, EquinoctialError, RetrogradeFactor};
 pub use keplerian::*;
 pub use mean::MeanElements;
 pub use modified_equinoctial::{ModifiedEquinoctial, ModifiedEquinoctialError};
+pub use quantities::{
+    SpecificAngularMomentum, SpecificAngularMomentumUnit, SpecificEnergy, SpecificEnergyUnit,
+};
