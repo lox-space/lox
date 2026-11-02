@@ -13,7 +13,24 @@
 //! Error messages and the `Display` of domain types such as orbital elements instead use the
 //! unit a reader expects in context, e.g. kilometers for orbital distances and degrees for
 //! angles.
+//!
+//! Besides arithmetic within a dimension, the following operators relate dimensions, with
+//! [`TimeDelta`](crate::time::deltas::TimeDelta) as the duration:
+//!
+//! | Expression | Result |
+//! |---|---|
+//! | `Distance / TimeDelta` | [`Velocity`] |
+//! | `Velocity * TimeDelta` | [`Distance`] |
+//! | `Angle / TimeDelta` | [`AngularRate`] |
+//! | `AngularRate * TimeDelta` | [`Angle`] |
+//! | `Distance * Distance` | [`Area`] |
+//! | `Area / Mass` | [`AreaToMass`] |
+//! | `DataRate * TimeDelta` | [`DataVolume`] |
+//! | `DataVolume / TimeDelta` | [`DataRate`] |
+//!
+//! Products with a `TimeDelta` can be written in either order.
 
+mod relations;
 mod runtime;
 mod sexagesimal;
 
