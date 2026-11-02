@@ -14,13 +14,13 @@ use lox_core::units::{Decibel, Distance, Frequency, Power, Temperature};
 
 use crate::channel::{Channel, LinkDirection};
 use crate::error::NonPhysicalError;
+use crate::frequency::FrequencyRange;
 use crate::modcod::ModCod;
 use crate::pointing::Pointing;
 use crate::utils::free_space_path_loss;
 use crate::{BOLTZMANN_CONSTANT, LinkBudgetError};
-use lox_core::comms::FrequencyRange;
 
-pub use lox_core::comms::PropagationLosses;
+pub use crate::losses::PropagationLosses;
 
 /// Boltzmann constant in dB(W/Hz/K).
 const BOLTZMANN_CONSTANT_DB: Decibel = Decibel::new(-228.599_167_173_217_67);

@@ -18,6 +18,7 @@ categories.workspace = true
 readme = "README.md"
 
 [dependencies]
+lox-comms.workspace = true
 lox-core = { workspace = true, features = ["std"] }
 
 libm = { workspace = true }
@@ -33,7 +34,7 @@ lox-approx = { workspace = true, features = ["std"] }
 tempfile = { workspace = true }
 
 [features]
-serde = ["lox-core/serde"]
+serde = ["lox-comms/serde", "lox-core/serde"]
 
 [lib]
 doctest = false

@@ -707,9 +707,9 @@ impl PayloadAccessor<SarPayload> for Spacecraft {
 mod tests {
     use super::*;
     #[cfg(feature = "comms")]
-    use lox_comms::terminal::{EirpModel, GtModel};
+    use lox_comms::FrequencyBand;
     #[cfg(feature = "comms")]
-    use lox_core::comms::FrequencyBand;
+    use lox_comms::terminal::{EirpModel, GtModel};
     use lox_core::coords::LonLatAlt;
     use lox_core::units::Angle;
     #[cfg(feature = "comms")]

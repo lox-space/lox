@@ -14,7 +14,6 @@ use core::{
 use glam::DMat3;
 use lox_approx::ApproxEq;
 
-use crate::comms::FrequencyBand;
 use crate::f64::consts::SECONDS_PER_DAY;
 use crate::math::float::{
     abs, acos, acosh, asin, asinh, atan, atan2, atanh, cos, cosh, log10, powf, round, sin, sin_cos,
@@ -782,14 +781,6 @@ impl Frequency {
     /// Returns the wavelength.
     pub fn wavelength(&self) -> Distance {
         Distance(SPEED_OF_LIGHT / self.0)
-    }
-
-    /// Returns the IEEE letter code if the frequency matches one of the bands.
-    pub fn band(&self) -> Option<FrequencyBand> {
-        FrequencyBand::ALL.into_iter().find(|band| {
-            let (min, max) = band.bounds();
-            min.to_hertz() <= self.0 && self.0 < max.to_hertz()
-        })
     }
 }
 

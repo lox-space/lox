@@ -1008,6 +1008,7 @@ version = "0.1.0-alpha.17"
 dependencies = [
  "lox-approx",
  "lox-core",
+ "rstest",
  "serde",
  "serde_json",
  "thiserror",
@@ -1102,6 +1103,7 @@ dependencies = [
  "codspeed-divan-compat",
  "libm",
  "lox-approx",
+ "lox-comms",
  "lox-core",
  "serde",
  "serde_json",

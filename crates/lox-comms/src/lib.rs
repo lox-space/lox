@@ -12,7 +12,9 @@
 pub mod antenna;
 pub mod channel;
 pub mod error;
+pub mod frequency;
 pub mod link_budget;
+pub mod losses;
 pub mod modcod;
 pub mod pattern;
 pub mod pfd;
@@ -23,10 +25,8 @@ pub mod transmitter;
 pub mod utils;
 
 pub use error::LinkBudgetError;
-pub use lox_core::comms::{
-    FrequencyBand, FrequencyRange, FrequencyRangeError, LossKind, LossLine,
-    ParseFrequencyBandError, PropagationLossError, PropagationLosses,
-};
+pub use frequency::{FrequencyBand, FrequencyRange, FrequencyRangeError, ParseFrequencyBandError};
+pub use losses::{LossKind, LossLine, PropagationLossError, PropagationLosses};
 
 use lox_core::units::Temperature;
 

@@ -820,7 +820,7 @@ mod tests {
     use lox_comms::receiver::CascadeReceiver;
     use lox_comms::terminal::{EirpModel, GtModel, RxChain, TxChain};
     use lox_comms::transmitter::AmplifierTransmitter;
-    use lox_core::comms::{FrequencyBand, FrequencyRange};
+    use lox_comms::{FrequencyBand, FrequencyRange};
     use lox_core::coords::LonLatAlt;
     use lox_core::units::{Power, Temperature};
     use lox_orbits::propagators::OrbitSource;
