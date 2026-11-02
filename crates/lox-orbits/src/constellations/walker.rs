@@ -87,14 +87,15 @@ fn walker_build(
     let mut satellites = Vec::with_capacity(params.nsats);
 
     for plane in 0..params.nplanes {
-        let raan = Angle::radians_normalized(
+        let raan = Angle::radians(
             params.longitude_of_ascending_node.to_radians() + plane as f64 * raan_spacing,
-        );
+        )
+        .wrap_unsigned();
 
         for sat in 0..sats_per_plane {
-            let mean_anomaly = Angle::radians_normalized(
-                sat as f64 * anomaly_spacing + plane as f64 * phase_offset,
-            );
+            let mean_anomaly =
+                Angle::radians(sat as f64 * anomaly_spacing + plane as f64 * phase_offset)
+                    .wrap_unsigned();
 
             let elements = KeplerianBuilder::new()
                 .with_semi_major_axis(sma, ecc)

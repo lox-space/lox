@@ -76,7 +76,7 @@ impl LocalTimeOfNode {
                 time_of_day.to_angle() + TimeOfDay::NOON.to_angle()
             }
         };
-        ltan.mod_two_pi()
+        ltan.wrap_unsigned()
     }
 }
 
@@ -115,7 +115,7 @@ fn semi_major_axis_sso(inclination: Inclination, eccentricity: Eccentricity) -> 
 
 fn right_ascension_sun(time: Time<Tdb>) -> Angle {
     let sun = apparent_sun_position(time);
-    sun.azimuth().mod_two_pi()
+    sun.azimuth().wrap_unsigned()
 }
 
 fn longitude_of_ascending_node_sso<P>(
@@ -158,7 +158,7 @@ where
     let smlt = salt + eq_time;
 
     // RAAN = smlt + LTAN
-    Ok((smlt + ltan.local_time_of_ascending_node()).mod_two_pi())
+    Ok((smlt + ltan.local_time_of_ascending_node()).wrap_unsigned())
 }
 
 #[derive(Debug)]

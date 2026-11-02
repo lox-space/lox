@@ -11,7 +11,7 @@
 //! - All angles use the [`Angle`] type
 //! - Conversions do not normalize: the result stays in the same revolution as the input, so
 //!   each conversion is continuous and monotonic across revolutions. Use
-//!   [`Angle::normalize_two_pi`] to reduce an anomaly to a single revolution
+//!   [`Angle::wrap_around`] to reduce an anomaly to a single revolution
 //! - Eccentricity uses the [`Eccentricity`] type which validates e >= 0
 //! - Orbit types: circular (e≈0), elliptic (0<e<1), parabolic (e≈1), hyperbolic (e>1)
 //! - True anomaly (ν): angle from periapsis to the position vector
@@ -401,9 +401,7 @@ pub(crate) fn solve_kepler(mean_longitude: f64, h: f64, k: f64) -> Result<f64> {
     }
 
     // Solve within a single revolution [-π, π) and add the whole revolutions back afterwards.
-    let lambda = Angle::radians(mean_longitude)
-        .normalize_two_pi(Angle::ZERO)
-        .to_radians();
+    let lambda = Angle::radians(mean_longitude).wrap_signed().to_radians();
     let revolutions = mean_longitude - lambda;
 
     // The residual increases monotonically and the solution lies within λ ± e. The bracket

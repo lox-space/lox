@@ -17,11 +17,11 @@ use alloc::format;
 use alloc::string::String;
 
 use core::cmp::Ordering;
+use core::f64::consts::TAU;
 use core::fmt::Display;
 use core::str::FromStr;
 
 use crate::units::Angle;
-use crate::units::Sign;
 use nom::{Parser, combinator::all_consuming};
 use thiserror::Error;
 
@@ -349,13 +349,7 @@ impl TimeOfDay {
 
     /// Converts the time of day to an [`Angle`] (hour angle representation).
     pub fn to_angle(&self) -> Angle {
-        // `TimeOfDay` hours are always non-negative.
-        Angle::from_hms(
-            Sign::Positive,
-            self.hour as u32,
-            self.minute,
-            self.second_f64(),
-        )
+        Angle::radians(self.to_day_fraction() * TAU)
     }
 }
 

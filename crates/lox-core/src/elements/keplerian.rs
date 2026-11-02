@@ -334,9 +334,9 @@ impl Keplerian {
         }
         let inclination = Inclination::try_new(inclination)?;
         let longitude_of_ascending_node =
-            LongitudeOfAscendingNode::try_new(longitude_of_ascending_node.mod_two_pi())?;
+            LongitudeOfAscendingNode::try_new(longitude_of_ascending_node.wrap_unsigned())?;
         let argument_of_periapsis =
-            ArgumentOfPeriapsis::try_new(argument_of_periapsis.mod_two_pi())?;
+            ArgumentOfPeriapsis::try_new(argument_of_periapsis.wrap_unsigned())?;
         if !true_anomaly.as_f64().is_finite() {
             return Err(KeplerianError::NonFiniteAnomaly(true_anomaly.as_angle()));
         }
@@ -430,7 +430,7 @@ impl Keplerian {
     /// Returns the argument of latitude, i.e. the angle from the ascending node to the position,
     /// in the interval [0, 2π).
     pub fn argument_of_latitude(&self) -> Angle {
-        (self.argument_of_periapsis.0 + self.true_anomaly.as_angle()).mod_two_pi()
+        (self.argument_of_periapsis.0 + self.true_anomaly.as_angle()).wrap_unsigned()
     }
 
     /// Returns the true longitude in the interval [0, 2π).
@@ -438,7 +438,7 @@ impl Keplerian {
         (self.longitude_of_ascending_node.0
             + self.argument_of_periapsis.0
             + self.true_anomaly.as_angle())
-        .mod_two_pi()
+        .wrap_unsigned()
     }
 
     /// Returns the mean longitude.
@@ -455,7 +455,7 @@ impl Keplerian {
             + self.argument_of_periapsis.0
             + mean_anomaly.as_angle();
         if self.eccentricity.is_circular_or_elliptic() {
-            Ok(mean_longitude.mod_two_pi())
+            Ok(mean_longitude.wrap_unsigned())
         } else {
             Ok(mean_longitude)
         }
@@ -578,7 +578,7 @@ fn check_true_anomaly(
         OrbitType::Parabolic => Angle::radians(PI),
         OrbitType::Hyperbolic => hyperbolic_asymptote_angle(eccentricity),
     };
-    let nu = true_anomaly.as_angle().normalize_two_pi(Angle::ZERO);
+    let nu = true_anomaly.as_angle().wrap_signed();
     // Close to the asymptotes, 1 + e·cos(ν) can round to zero even though ν lies inside them,
     // which would make the radius infinite.
     let (_, cos_nu) = nu.sin_cos();
@@ -595,9 +595,9 @@ fn check_true_anomaly(
 fn normalize_true_anomaly(true_anomaly: TrueAnomaly, eccentricity: Eccentricity) -> TrueAnomaly {
     let nu = true_anomaly.as_angle();
     if eccentricity.is_circular_or_elliptic() {
-        TrueAnomaly::new(nu.mod_two_pi())
+        TrueAnomaly::new(nu.wrap_unsigned())
     } else {
-        TrueAnomaly::new(nu.normalize_two_pi(Angle::ZERO))
+        TrueAnomaly::new(nu.wrap_signed())
     }
 }
 

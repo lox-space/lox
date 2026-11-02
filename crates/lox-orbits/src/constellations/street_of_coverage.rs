@@ -152,14 +152,15 @@ impl StreetOfCoverageBuilder {
         let mut satellites = Vec::with_capacity(self.nsats);
 
         for plane in 0..p {
-            let raan = Angle::radians_normalized(
+            let raan = Angle::radians(
                 self.longitude_of_ascending_node.to_radians() + plane as f64 * delta_raan,
-            );
+            )
+            .wrap_unsigned();
 
             for sat in 0..s {
-                let mean_anomaly = Angle::radians_normalized(
-                    sat as f64 * delta_anom_intra + plane as f64 * delta_anom_inter,
-                );
+                let mean_anomaly =
+                    Angle::radians(sat as f64 * delta_anom_intra + plane as f64 * delta_anom_inter)
+                        .wrap_unsigned();
 
                 let elements = KeplerianBuilder::new()
                     .with_semi_major_axis(sma, ecc)

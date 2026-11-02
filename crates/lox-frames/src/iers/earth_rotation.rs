@@ -12,7 +12,7 @@ use lox_approx::ApproxEq;
 use lox_core::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use lox_core::glam::DMat3;
 use lox_core::math::poly::poly_array;
-use lox_core::units::{Angle, AngleUnits, Sign};
+use lox_core::units::{Angle, AngleUnits};
 use lox_time::time_scales::{Tdb, Tt, Ut1};
 use lox_time::{Time, julian_dates::JulianDate};
 
@@ -76,16 +76,16 @@ impl ReferenceSystem {
             ReferenceSystem::Iers1996 => {
                 let ee = EquationOfTheEquinoxes::iau1994(tdb);
                 GreenwichApparentSiderealTime(
-                    (gmst.0 + ee.0 + epsa.0.cos() * ecl_corr.0).mod_two_pi(),
+                    (gmst.0 + ee.0 + epsa.0.cos() * ecl_corr.0).wrap_unsigned(),
                 )
             }
             ReferenceSystem::Iers2003(_) => {
                 let ee = EquationOfTheEquinoxes::iau2000(tt, epsa.0, nut.dpsi);
-                GreenwichApparentSiderealTime((gmst.0 + ee.0).mod_two_pi())
+                GreenwichApparentSiderealTime((gmst.0 + ee.0).wrap_unsigned())
             }
             ReferenceSystem::Iers2010 => {
                 let ee = EquationOfTheEquinoxes::iau2000(tt, epsa.0, nut.dpsi);
-                GreenwichApparentSiderealTime((gmst.0 + ee.0).mod_two_pi())
+                GreenwichApparentSiderealTime((gmst.0 + ee.0).wrap_unsigned())
             }
         }
     }
@@ -103,7 +103,7 @@ impl EarthRotationAngle {
         Self(
             (TAU * (f + 0.7790572732640 + 0.00273781191135448 * d))
                 .rad()
-                .mod_two_pi(),
+                .wrap_unsigned(),
         )
     }
 }
@@ -129,7 +129,7 @@ impl GreenwichMeanSiderealTime {
     pub fn iau1982(time: Time<Ut1>) -> Self {
         let t = time.centuries_since_j2000();
         let f = time.days_since_j2000().rem_euclid(1.0) * SECONDS_PER_DAY;
-        Self(Angle::from_hms(Sign::Positive, 0, 0, poly_array(t, &[A, B, C, D]) + f).mod_two_pi())
+        Self(Angle::seconds_of_time(poly_array(t, &[A, B, C, D]) + f).wrap_unsigned())
     }
 
     /// Computes GMST using the IAU 2000 model.
@@ -141,7 +141,7 @@ impl GreenwichMeanSiderealTime {
                     t,
                     &[0.014506, 4612.15739966, 1.39667721, -0.00009344, 0.00001882],
                 ))
-                .mod_two_pi(),
+                .wrap_unsigned(),
         )
     }
 
@@ -161,7 +161,7 @@ impl GreenwichMeanSiderealTime {
                         -0.0000000368,
                     ],
                 ))
-                .mod_two_pi(),
+                .wrap_unsigned(),
         )
     }
 }
@@ -179,7 +179,7 @@ impl GreenwichApparentSiderealTime {
         Self(
             (GreenwichMeanSiderealTime::iau1982(time).0
                 + EquationOfTheEquinoxes::iau1994(time.with_scale(Tdb)).0)
-                .mod_two_pi(),
+                .wrap_unsigned(),
         )
     }
 
@@ -188,7 +188,7 @@ impl GreenwichApparentSiderealTime {
         Self(
             (GreenwichMeanSiderealTime::iau2000(tt, ut1).0
                 + EquationOfTheEquinoxes::iau2000a(tt).0)
-                .mod_two_pi(),
+                .wrap_unsigned(),
         )
     }
 
@@ -197,7 +197,7 @@ impl GreenwichApparentSiderealTime {
         Self(
             (GreenwichMeanSiderealTime::iau2000(tt, ut1).0
                 + EquationOfTheEquinoxes::iau2000b(tt).0)
-                .mod_two_pi(),
+                .wrap_unsigned(),
         )
     }
 
@@ -206,7 +206,7 @@ impl GreenwichApparentSiderealTime {
         Self(
             (GreenwichMeanSiderealTime::iau2006(tt, ut1).0
                 + EquationOfTheEquinoxes::iau2006a(tt).0)
-                .mod_two_pi(),
+                .wrap_unsigned(),
         )
     }
 }
@@ -228,7 +228,7 @@ impl EquationOfTheEquinoxes {
         let t = time.centuries_since_j2000();
         let om = (Angle::arcseconds(poly_array(t, &[450160.280, -482890.539, 7.455, 0.008]))
             + Angle::radians((-5.0 * t).rem_euclid(1.0) * TAU))
-        .mod_two_pi();
+        .wrap_unsigned();
         let eps0 = MeanObliquity::iau1980(time.with_scale(Tt));
         Self(
             eps0.0.cos() * dpsi
