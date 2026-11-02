@@ -136,7 +136,7 @@ fn goes_13_omm_wire_gm_preserved() {
     let omm = read_omm(GOES_13_OMM).expect("read");
     let gm = omm.mean_elements.gm.expect("wire GM");
     // Wire value was 398600.8 km^3/s^2 → 3.986008e14 m^3/s^2
-    assert!((gm.as_f64() - 3.986008e14).abs() < 1e8);
+    assert!((gm.to_m3_per_s2() - 3.986008e14).abs() < 1e8);
 }
 
 #[test]

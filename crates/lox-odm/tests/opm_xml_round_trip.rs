@@ -162,7 +162,7 @@ fn legacy_fixture_keplerian_with_wire_gm() {
     assert!(diff_sma < 1e-6, "SMA unexpected: {sma_km}");
 
     // Wire GM preserved: 398600.9368 km³/s² = 3.986009368e14 m³/s²
-    let gm_m3s2 = kep.gm.expect("GM missing").as_f64();
+    let gm_m3s2 = kep.gm.expect("GM missing").to_m3_per_s2();
     let expected = 398600.9368e9;
     let diff_gm = (gm_m3s2 - expected).abs();
     assert!(diff_gm < 1.0, "GM unexpected: {gm_m3s2}");

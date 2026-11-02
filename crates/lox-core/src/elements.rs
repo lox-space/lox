@@ -16,5 +16,6 @@ pub use keplerian::*;
 pub use mean::MeanElements;
 pub use modified_equinoctial::{ModifiedEquinoctial, ModifiedEquinoctialError};
 pub use quantities::{
-    SpecificAngularMomentum, SpecificAngularMomentumUnit, SpecificEnergy, SpecificEnergyUnit,
+    GravitationalParameter, GravitationalParameterUnit, SpecificAngularMomentum,
+    SpecificAngularMomentumUnit, SpecificEnergy, SpecificEnergyUnit,
 };

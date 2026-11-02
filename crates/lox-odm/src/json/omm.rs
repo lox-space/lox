@@ -590,7 +590,7 @@ impl From<&Omm> for OmmJson {
         let semi_major_axis = Some(omm.mean_elements.elements.a / 1000.0);
 
         // Optional wire GM: m³/s² → km³/s²
-        let gm = omm.mean_elements.gm.map(|g| g.as_f64() / 1e9);
+        let gm = omm.mean_elements.gm.map(|g| g.to_km3_per_s2());
 
         // TLE fields
         let (
@@ -843,13 +843,13 @@ impl TryFrom<OmmJson> for Omm {
         // n in rad/s = (rev/day) * 2π / 86400
         let resolve_gm = || -> Result<f64, JsonError> {
             if let Some(gm) = wire_gm {
-                return Ok(gm.as_f64());
+                return Ok(gm.to_m3_per_s2());
             }
             metadata
                 .center
                 .known()
                 .and_then(|o| o.try_gravitational_parameter().ok())
-                .map(|gm| gm.as_f64())
+                .map(|gm| gm.to_m3_per_s2())
                 .ok_or_else(|| JsonError::MissingRequiredField("GM".to_string()))
         };
 
@@ -1263,7 +1263,7 @@ mod tests {
         let mu = Origin::Earth
             .try_gravitational_parameter()
             .unwrap()
-            .as_f64();
+            .to_m3_per_s2();
         let n = 15.5 * 2.0 * PI / 86400.0;
         let expected_a = (mu / (n * n)).cbrt();
         assert!((omm.mean_elements.elements.a - expected_a).abs() < 1.0);
@@ -1510,7 +1510,7 @@ mod tests {
         let parsed = read_omm(&json).expect("parse failed");
 
         let stored_gm = parsed.mean_elements.gm.expect("GM not preserved");
-        let diff = (stored_gm.as_f64() - wire_gm.as_f64()).abs();
+        let diff = (stored_gm.to_m3_per_s2() - wire_gm.to_m3_per_s2()).abs();
         assert!(diff < 1.0, "wire GM round-trip error: diff = {diff}");
     }
 
@@ -2109,7 +2109,7 @@ mod tests {
     fn de_f64_lax_opt_accepts_native_float() {
         let omm = read_omm(&omm_with_value("GM", "398600.4")).expect("read");
         let gm = omm.mean_elements.gm.expect("gm set");
-        assert!((gm.as_f64() - 3.986004e14).abs() < 1e8);
+        assert!((gm.to_m3_per_s2() - 3.986004e14).abs() < 1e8);
     }
 
     #[test]
@@ -2117,7 +2117,7 @@ mod tests {
         // JSON integer literals (no decimal point) trigger visit_i64 / visit_u64.
         let omm = read_omm(&omm_with_value("GM", "398600")).expect("read");
         let gm = omm.mean_elements.gm.expect("gm set");
-        assert!((gm.as_f64() - 3.986e14).abs() < 1e9);
+        assert!((gm.to_m3_per_s2() - 3.986e14).abs() < 1e9);
     }
 
     #[test]
@@ -2125,14 +2125,14 @@ mod tests {
         let omm = read_omm(&omm_with_value("GM", "-1")).expect("read");
         let gm = omm.mean_elements.gm.expect("gm set");
         // -1 km^3/s^2 = -1e9 m^3/s^2
-        assert!((gm.as_f64() - (-1e9)).abs() < 1.0);
+        assert!((gm.to_m3_per_s2() - (-1e9)).abs() < 1.0);
     }
 
     #[test]
     fn de_f64_lax_opt_accepts_quoted_string() {
         let omm = read_omm(&omm_with_value("GM", "\"398600.4\"")).expect("read");
         let gm = omm.mean_elements.gm.expect("gm set");
-        assert!((gm.as_f64() - 3.986004e14).abs() < 1e8);
+        assert!((gm.to_m3_per_s2() - 3.986004e14).abs() < 1e8);
     }
 
     #[test]

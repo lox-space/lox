@@ -24,8 +24,8 @@ use lox_core::units::{AngleUnits, Distance};
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BodyConstants {
-    /// Gravitational parameter [m³/s²].
-    pub mu: f64,
+    /// Gravitational parameter.
+    pub mu: GravitationalParameter,
     /// J2 zonal harmonic coefficient.
     pub j2: f64,
     /// Equatorial radius \[m\].
@@ -172,7 +172,10 @@ pub fn propagate_mean(kep: &Keplerian, m0: f64, rates: &SecularRates, dt: f64) -
 ///
 /// Solves the Kepler equation for the true anomaly and builds the
 /// position/velocity vector.
-pub fn mean_to_cartesian(el: &MeanElements, mu: f64) -> Result<Cartesian, AnomalyError> {
+pub fn mean_to_cartesian(
+    el: &MeanElements,
+    mu: GravitationalParameter,
+) -> Result<Cartesian, AnomalyError> {
     let ecc = Eccentricity::try_new(el.e).expect("eccentricity should be non-negative");
     let f = MeanAnomaly::new(el.m.rad()).to_true(ecc)?;
     let kep = Keplerian::builder()
@@ -183,7 +186,7 @@ pub fn mean_to_cartesian(el: &MeanElements, mu: f64) -> Result<Cartesian, Anomal
         .with_true_anomaly(f.as_angle())
         .build()
         .expect("propagated elements should be valid");
-    Ok(kep.to_cartesian(GravitationalParameter::m3_per_s2(mu)))
+    Ok(kep.to_cartesian(mu))
 }
 
 /// Apply Kwok short-period J2 corrections to mean elements and return
@@ -206,7 +209,8 @@ pub fn kwok_osculating_cartesian(
         aop,
         m,
     } = *el;
-    let BodyConstants { mu, j2, r_eq } = *body;
+    let BodyConstants { mu: gm, j2, r_eq } = *body;
+    let mu = gm.to_m3_per_s2();
 
     let ecc = Eccentricity::try_new(e).expect("eccentricity should be non-negative");
     let f = MeanAnomaly::new(m.rad()).to_true(ecc)?.as_f64();
@@ -283,7 +287,7 @@ pub fn kwok_osculating_cartesian(
         .with_true_anomaly(ta.as_angle())
         .build()
         .expect("osculating elements should be valid");
-    Ok(kep.to_cartesian(GravitationalParameter::m3_per_s2(mu)))
+    Ok(kep.to_cartesian(gm))
 }
 
 #[cfg(test)]

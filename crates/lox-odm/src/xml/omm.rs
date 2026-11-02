@@ -367,7 +367,7 @@ impl From<&Omm> for OmmXml {
             gm: omm
                 .mean_elements
                 .gm
-                .map(|g| ValueWithUnits::new(g.as_f64() / 1e9, "km**3/s**2")),
+                .map(|g| ValueWithUnits::new(g.to_km3_per_s2(), "km**3/s**2")),
         };
 
         let tle_parameters = omm.tle_parameters.as_ref().map(|tle| TleParametersXml {
@@ -537,13 +537,13 @@ impl TryFrom<OmmXml> for Omm {
         //  3. Error if neither available
         let resolve_gm_for_mean_motion = || -> Result<f64, XmlError> {
             if let Some(gm) = wire_gm {
-                return Ok(gm.as_f64());
+                return Ok(gm.to_m3_per_s2());
             }
             metadata
                 .center
                 .known()
                 .and_then(|o| o.try_gravitational_parameter().ok())
-                .map(|gm| gm.as_f64())
+                .map(|gm| gm.to_m3_per_s2())
                 .ok_or_else(|| XmlError::MissingRequiredField("GM".to_string()))
         };
 
@@ -843,7 +843,7 @@ mod tests {
         let parsed = read_omm(&xml_str).expect("GM round-trip parse failed");
 
         let parsed_gm = parsed.mean_elements.gm.expect("wire GM not preserved");
-        let diff = (parsed_gm.as_f64() - wire_gm.as_f64()).abs();
+        let diff = (parsed_gm.to_m3_per_s2() - wire_gm.to_m3_per_s2()).abs();
         assert!(
             diff < 1.0,
             "GM round-trip error too large: {diff} m³/s²; parsed={parsed_gm}, original={wire_gm}"
@@ -903,7 +903,7 @@ mod tests {
         let mu = Origin::Earth
             .try_gravitational_parameter()
             .unwrap()
-            .as_f64();
+            .to_m3_per_s2();
         let n = 15.5 * 2.0 * PI / 86400.0;
         let expected_a_m = (mu / (n * n)).cbrt();
         assert!(

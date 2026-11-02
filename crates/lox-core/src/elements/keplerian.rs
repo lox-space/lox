@@ -19,7 +19,9 @@ use crate::math::float::{abs, powf, powi, signum, sqrt};
 use crate::anomalies::MeanAnomaly;
 use crate::anomalies::{AnomalyError, hyperbolic_asymptote_angle};
 use crate::anomalies::{EccentricAnomaly, TrueAnomaly};
-use crate::elements::quantities::{SpecificAngularMomentum, SpecificEnergy};
+use crate::elements::quantities::{
+    GravitationalParameter, SpecificAngularMomentum, SpecificEnergy,
+};
 use crate::time::deltas::TimeDelta;
 use crate::utils::Linspace;
 use crate::{
@@ -27,36 +29,6 @@ use crate::{
     glam::Azimuth,
     units::{Angle, AngleUnit, AngleUnits, AngularRate, Distance, DistanceUnit, DistanceUnits},
 };
-
-/// The standard gravitational parameter of a celestial body µ = GM.
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, ApproxEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[repr(transparent)]
-pub struct GravitationalParameter(f64);
-
-impl GravitationalParameter {
-    /// Creates a new gravitational parameter from an `f64` value in m³/s².
-    pub const fn m3_per_s2(mu: f64) -> Self {
-        Self(mu)
-    }
-
-    /// Creates a new gravitational parameter from an `f64` value in km³/s².
-    pub const fn km3_per_s2(mu: f64) -> Self {
-        Self(1e9 * mu)
-    }
-
-    /// Returns the value of the gravitational parameters as an `f64`.
-    pub const fn as_f64(&self) -> f64 {
-        self.0
-    }
-}
-
-impl Display for GravitationalParameter {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        (self.0 / 1e9).fmt(f)?;
-        write!(f, " km³/s²")
-    }
-}
 
 /// The Keplerian orbit types or conic sections.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -489,7 +461,7 @@ impl Keplerian {
     /// `2·√(µ/p³)` for parabolic orbits. Mean anomalies and mean motions are therefore only
     /// comparable between orbits of the same [`OrbitType`].
     pub fn mean_motion(&self, grav_param: GravitationalParameter) -> AngularRate {
-        let mu = grav_param.as_f64();
+        let mu = grav_param.to_m3_per_s2();
         match self.semi_major_axis() {
             Some(a) => AngularRate::radians_per_second(sqrt(mu / powi(abs(a.to_meters()), 3))),
             None => {
@@ -504,7 +476,7 @@ impl Keplerian {
     /// The energy is negative for closed orbits, zero for parabolic orbits, and positive for
     /// hyperbolic orbits.
     pub fn specific_orbital_energy(&self, grav_param: GravitationalParameter) -> SpecificEnergy {
-        let mu = grav_param.as_f64();
+        let mu = grav_param.to_m3_per_s2();
         let p = self.semi_parameter.to_meters();
         SpecificEnergy::square_meters_per_second_squared(
             -mu * (1.0 - powi(self.eccentricity.0, 2)) / (2.0 * p),
@@ -517,14 +489,14 @@ impl Keplerian {
         grav_param: GravitationalParameter,
     ) -> SpecificAngularMomentum {
         SpecificAngularMomentum::square_meters_per_second(sqrt(
-            grav_param.as_f64() * self.semi_parameter.to_meters(),
+            grav_param.to_m3_per_s2() * self.semi_parameter.to_meters(),
         ))
     }
 
     /// Converts the orbital elements to position and velocity in the perifocal frame.
     pub fn to_perifocal(&self, grav_param: GravitationalParameter) -> (DVec3, DVec3) {
         let ecc = self.eccentricity.as_f64();
-        let mu = grav_param.as_f64();
+        let mu = grav_param.to_m3_per_s2();
         let semiparameter = self.semi_parameter.to_meters();
         let (sin_nu, cos_nu) = self.true_anomaly.as_angle().sin_cos();
         let sqrt_mu_p = sqrt(mu / semiparameter);
@@ -549,7 +521,7 @@ impl Keplerian {
         if !self.eccentricity().is_circular_or_elliptic() {
             return None;
         }
-        let mu = grav_param.as_f64();
+        let mu = grav_param.to_m3_per_s2();
         let a = self.semi_major_axis()?.to_meters();
         Some(TimeDelta::from_seconds_f64(TAU * sqrt(powf(a, 3.0) / mu)))
     }
@@ -621,7 +593,7 @@ impl Cartesian {
     /// The result is only meaningful for a physical state, see [`Cartesian::is_physical`]. Beyond
     /// that, intermediate results can overflow and silently drop terms.
     pub fn eccentricity_vector(&self, grav_param: GravitationalParameter) -> DVec3 {
-        let mu = grav_param.as_f64();
+        let mu = grav_param.to_m3_per_s2();
         let r = self.position();
         let v = self.velocity();
 
@@ -645,7 +617,7 @@ impl Cartesian {
     ) -> Result<Keplerian, KeplerianError> {
         let r = self.position();
         let v = self.velocity();
-        let mu = grav_param.as_f64();
+        let mu = grav_param.to_m3_per_s2();
 
         // A physical state, with a physical gravitational parameter, keeps every intermediate
         // result below from overflowing.
@@ -1114,7 +1086,7 @@ mod tests {
             // Circular
             Cartesian::from_vecs(
                 DVec3::new(7000e3, 0.0, 0.0),
-                DVec3::new(0.0, -sqrt(MU_EARTH.as_f64() / 7000e3), 0.0),
+                DVec3::new(0.0, -sqrt(MU_EARTH.to_m3_per_s2() / 7000e3), 0.0),
             ),
         ];
         for state in states {
@@ -1394,7 +1366,7 @@ mod tests {
         let k = elliptic();
         let a = 24464.560e3;
         let e = 0.7311;
-        let mu = MU_EARTH.as_f64();
+        let mu = MU_EARTH.to_m3_per_s2();
         let state = k.to_cartesian(MU_EARTH);
         let r = state.position();
         let v = state.velocity();
@@ -1562,7 +1534,7 @@ mod tests {
                 }
             };
             let (sin_fpa, cos_fpa) = sin_cos(flight_path_angle);
-            let v = v_scale * sqrt(2.0 * MU_EARTH.as_f64() / r);
+            let v = v_scale * sqrt(2.0 * MU_EARTH.to_m3_per_s2() / r);
             let state = Cartesian::from_vecs(r * r_dir, v * (sin_fpa * r_dir + cos_fpa * horizontal));
             let state1 = state.to_keplerian(MU_EARTH).unwrap().to_cartesian(MU_EARTH);
             assert_states_close(state, state1, 1e-8);
