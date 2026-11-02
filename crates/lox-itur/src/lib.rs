@@ -60,7 +60,7 @@ pub mod provider;
 
 pub use provider::{ItuProvider, ItuProviderError};
 
-use lox_core::comms::PropagationLosses;
+use lox_comms::PropagationLosses;
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 /// Builds a serialized manifest for the packager.
@@ -170,7 +170,7 @@ impl ItuProvider {
 #[cfg(test)]
 mod tests {
     use lox_approx::assert_approx_eq;
-    use lox_core::comms::LossKind;
+    use lox_comms::LossKind;
 
     use crate::provider::test_fixture::provider;
 

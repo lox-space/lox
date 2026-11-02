@@ -14,7 +14,6 @@
 extern crate alloc;
 
 pub mod anomalies;
-pub mod comms;
 pub mod coords;
 pub mod elements;
 pub mod error;

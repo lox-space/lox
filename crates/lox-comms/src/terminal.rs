@@ -21,12 +21,12 @@ use lox_core::units::{Angle, Decibel, Frequency, Temperature};
 
 use crate::antenna::{Antenna, AntennaGain};
 use crate::error::NonPhysicalError;
+use crate::frequency::FrequencyRange;
 use crate::link_budget::{Eirp, GOverT, MEDIUM_TEMPERATURE, RxTerms, degraded_sky_temperature};
 use crate::pointing::Pointing;
 use crate::receiver::Receiver;
 use crate::transmitter::AmplifierTransmitter;
 use crate::{LinkBudgetError, ROOM_TEMPERATURE};
-use lox_core::comms::FrequencyRange;
 
 /// A transmit chain: an antenna fed by a transmitter.
 ///
@@ -68,7 +68,7 @@ impl TxChain {
     /// Creates a new transmit chain.
     ///
     /// `band` accepts anything convertible into a [`FrequencyRange`],
-    /// including [`FrequencyBand`](lox_core::comms::FrequencyBand) letter
+    /// including [`FrequencyBand`](crate::frequency::FrequencyBand) letter
     /// codes. Rejects a non-finite or negative feed loss.
     pub fn new(
         antenna: impl Into<Antenna>,
@@ -174,7 +174,7 @@ impl RxChain {
     /// Creates a new receive chain.
     ///
     /// `band` accepts anything convertible into a [`FrequencyRange`],
-    /// including [`FrequencyBand`](lox_core::comms::FrequencyBand) letter
+    /// including [`FrequencyBand`](crate::frequency::FrequencyBand) letter
     /// codes. Rejects a non-finite or negative feed loss or antenna noise
     /// temperature.
     pub fn new(
@@ -835,7 +835,7 @@ mod tests {
 
     #[test]
     fn test_band_accepts_ieee_letter_bands() {
-        use lox_core::comms::FrequencyBand;
+        use crate::frequency::FrequencyBand;
 
         let tx = TxChain::new(
             ConstantAntenna::new(46.0.db()).unwrap(),

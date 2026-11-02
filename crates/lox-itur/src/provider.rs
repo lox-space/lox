@@ -169,7 +169,7 @@ fn grid_specs() -> Box<[GridSpec]> {
 pub enum ItuProviderError {
     /// A computed attenuation was non-physical.
     #[error(transparent)]
-    InvalidLoss(#[from] lox_core::comms::PropagationLossError),
+    InvalidLoss(#[from] lox_comms::PropagationLossError),
     /// The bundle file could not be opened.
     #[error("opening bundle at {path}: {source}")]
     Open {
