@@ -164,7 +164,7 @@ impl FlowerBuilder {
                     .try_rotation_rate(0.0)
                     .map_err(|e| ConstellationError::UndefinedProperty(e.to_string()))?;
 
-                let mu = grav_param.as_f64();
+                let mu = grav_param.to_m3_per_s2();
                 // Orbital period: T = (2*pi / omega_body) * n_days / n_petals
                 let period = (TAU / rotation_rate) * self.n_days as f64 / self.n_petals as f64;
                 // Kepler's 3rd law: a = (mu * T^2 / (4*pi^2))^(1/3)
@@ -217,7 +217,7 @@ mod tests {
         let omega = Earth.rotation_rate(0.0);
 
         let period = (TAU / omega) * 1.0 / 14.0;
-        let expected_sma = (earth_mu.as_f64() * period.powi(2) / (4.0 * PI * PI)).cbrt();
+        let expected_sma = (earth_mu.to_m3_per_s2() * period.powi(2) / (4.0 * PI * PI)).cbrt();
         let expected_ecc = 1.0 - (earth_r.to_meters() + 780.0e3) / expected_sma;
 
         let epoch = Time::j2000(TimeScale::Tai);

@@ -78,8 +78,8 @@ fn goes_13_omm_parse_succeeds() {
 
     // Wire GM: 398600.8 km³/s² = 3.988008e14 m³/s²
     let gm = omm.mean_elements.gm.expect("wire GM missing");
-    let diff_gm = (gm.as_f64() - 398600.8e9).abs();
-    assert!(diff_gm < 1e8, "GM unexpected: {}", gm.as_f64());
+    let diff_gm = (gm.to_m3_per_s2() - 398600.8e9).abs();
+    assert!(diff_gm < 1e8, "GM unexpected: {}", gm.to_m3_per_s2());
 }
 
 #[test]

@@ -146,7 +146,7 @@ fn build_data_section(omm: &Omm) -> KvnSection {
         // GravitationalParameter stores m³/s²; wire format is km³/s²
         entries.push(fld(
             "GM",
-            format!("{}", gm.as_f64() / 1e9),
+            format!("{}", gm.to_km3_per_s2()),
             Some("km**3/s**2"),
         ));
     }
@@ -681,7 +681,7 @@ impl TryFrom<KvnDocument> for Omm {
         //  3. Error if neither available
         let resolve_gm_for_mean_motion = || -> Result<f64, KvnError> {
             if let Some(gm) = wire_gm {
-                return Ok(gm.as_f64());
+                return Ok(gm.to_m3_per_s2());
             }
             metadata
                 .center
@@ -690,7 +690,7 @@ impl TryFrom<KvnDocument> for Omm {
                     use lox_bodies::TryPointMass;
                     o.try_gravitational_parameter().ok()
                 })
-                .map(|gm| gm.as_f64())
+                .map(|gm| gm.to_m3_per_s2())
                 .ok_or_else(|| KvnError {
                     span: Span::default(),
                     kind: KvnErrorKind::MissingRequiredField("GM".to_string()),

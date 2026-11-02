@@ -92,7 +92,7 @@ pub fn inclination_sso(
     eccentricity: Eccentricity,
 ) -> Result<Inclination, SsoError> {
     let r_eq = Earth.equatorial_radius().to_meters();
-    let mu = Earth.gravitational_parameter().as_f64();
+    let mu = Earth.gravitational_parameter().to_m3_per_s2();
     let num = -semi_major_axis.to_meters().powf(7.0 / 2.0)
         * 2.0
         * OMEGA_SUN_SYNC
@@ -107,7 +107,7 @@ pub fn inclination_sso(
 
 fn semi_major_axis_sso(inclination: Inclination, eccentricity: Eccentricity) -> Distance {
     let r_eq = Earth.equatorial_radius().to_meters();
-    let mu = Earth.gravitational_parameter().as_f64();
+    let mu = Earth.gravitational_parameter().to_m3_per_s2();
     let num = -3.0 * r_eq.powi(2) * J2_EARTH * mu.sqrt();
     let den = 2.0 * OMEGA_SUN_SYNC * (1.0 - eccentricity.as_f64().powi(2)).powi(2);
     (num * inclination.as_f64().cos() / den).powf(2.0 / 7.0).m()

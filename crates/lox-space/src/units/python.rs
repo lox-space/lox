@@ -277,28 +277,31 @@ impl PyGravitationalParameter {
 
     /// Returns the value in m³/s².
     fn to_m3_per_s2(&self) -> f64 {
-        self.0.as_f64()
+        self.0.to_m3_per_s2()
     }
 
     /// Returns the value in km³/s².
     fn to_km3_per_s2(&self) -> f64 {
-        self.0.as_f64() * 1e-9
+        self.0.to_km3_per_s2()
     }
 
     fn __float__(&self) -> f64 {
-        self.0.as_f64()
+        self.0.to_m3_per_s2()
     }
 
     fn __eq__(&self, other: &PyGravitationalParameter) -> bool {
-        self.0.as_f64() == other.0.as_f64()
+        self.0.to_m3_per_s2() == other.0.to_m3_per_s2()
     }
 
     fn __getnewargs__(&self) -> (f64,) {
-        (self.0.as_f64(),)
+        (self.0.to_m3_per_s2(),)
     }
 
     fn __repr__(&self) -> String {
-        format!("GravitationalParameter({})", repr_f64(self.0.as_f64()))
+        format!(
+            "GravitationalParameter({})",
+            repr_f64(self.0.to_m3_per_s2())
+        )
     }
 
     fn __str__(&self) -> String {

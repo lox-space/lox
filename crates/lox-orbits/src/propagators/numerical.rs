@@ -170,7 +170,7 @@ where
             .origin()
             .try_gravitational_parameter()
             .expect("gravitational parameter should be available")
-            .as_f64()
+            .to_m3_per_s2()
     }
 
     fn j2(&self) -> f64 {

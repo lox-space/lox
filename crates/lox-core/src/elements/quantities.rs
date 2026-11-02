@@ -8,6 +8,34 @@ use lox_approx::ApproxEq;
 
 use crate::units::{quantity_impls, runtime_units};
 
+/// The standard gravitational parameter of a celestial body, µ = GM, in m³/s².
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, ApproxEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
+pub struct GravitationalParameter(f64);
+
+impl GravitationalParameter {
+    /// Creates a new gravitational parameter from an `f64` value in m³/s².
+    pub const fn m3_per_s2(mu: f64) -> Self {
+        Self(mu)
+    }
+
+    /// Creates a new gravitational parameter from an `f64` value in km³/s².
+    pub const fn km3_per_s2(mu: f64) -> Self {
+        Self(mu * 1e9)
+    }
+
+    /// Returns the value in m³/s².
+    pub const fn to_m3_per_s2(self) -> f64 {
+        self.0
+    }
+
+    /// Returns the value in km³/s².
+    pub const fn to_km3_per_s2(self) -> f64 {
+        self.0 / 1e9
+    }
+}
+
 /// Specific energy in J/kg (m²/s²), such as the specific orbital energy.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -67,6 +95,11 @@ impl SpecificAngularMomentum {
 quantity_impls!(SpecificAngularMomentum, SpecificEnergy);
 
 runtime_units! {
+    GravitationalParameter, GravitationalParameterUnit, si = CubicMetersPerSecondSquared {
+        CubicMetersPerSecondSquared, "m³/s²" | "m3/s2" | "m^3/s^2", m3_per_s2, to_m3_per_s2;
+        CubicKilometersPerSecondSquared, "km³/s²" | "km3/s2" | "km^3/s^2", km3_per_s2,
+            to_km3_per_s2;
+    }
     SpecificEnergy, SpecificEnergyUnit, si = SquareMetersPerSecondSquared {
         SquareMetersPerSecondSquared, "m²/s²" | "m2/s2" | "m^2/s^2" | "J/kg",
             square_meters_per_second_squared, to_square_meters_per_second_squared;
@@ -83,9 +116,34 @@ runtime_units! {
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
     use alloc::string::ToString;
 
     use super::*;
+
+    #[test]
+    fn test_gravitational_parameter_units() {
+        let mu = GravitationalParameter::km3_per_s2(398600.4418);
+        assert_eq!(mu.to_m3_per_s2(), 398600.4418e9);
+        assert_eq!(mu.to_km3_per_s2(), 398600.4418);
+        assert_eq!(format!("{mu:e}"), "3.986004418e14 m³/s²");
+        assert_eq!(
+            format!(
+                "{:.1}",
+                mu.display_in(GravitationalParameterUnit::CubicKilometersPerSecondSquared)
+            ),
+            "398600.4 km³/s²"
+        );
+        assert_eq!("398600.4418 km³/s²".parse(), Ok(mu));
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_gravitational_parameter_serde() {
+        let mu: GravitationalParameter = serde_json::from_str("3.986004418e14").unwrap();
+        assert_eq!(mu.to_m3_per_s2(), 3.986004418e14);
+        assert_eq!(serde_json::to_string(&mu).unwrap(), "398600441800000.0");
+    }
 
     #[test]
     fn test_specific_energy_units() {

@@ -1011,7 +1011,7 @@ impl Sgp4 {
             eccentricity: me.e,
             argument_of_perigee: me.aop.to_degrees(),
             mean_anomaly: me.m.to_degrees(),
-            mean_motion: sma_to_mean_motion(me.a, gm.as_f64()),
+            mean_motion: sma_to_mean_motion(me.a, gm.to_m3_per_s2()),
             revolution_number: tle.and_then(|t| t.rev_at_epoch).unwrap_or(0),
             ephemeris_type: tle
                 .and_then(|t| t.ephemeris_type)

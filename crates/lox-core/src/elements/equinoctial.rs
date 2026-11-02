@@ -37,13 +37,12 @@ use thiserror::Error;
 
 use crate::anomalies::AnomalyError;
 use crate::coords::Cartesian;
-use crate::elements::keplerian::{
-    Eccentricity, EccentricityError, GravitationalParameter, Inclination, Keplerian,
-};
+use crate::elements::keplerian::{Eccentricity, EccentricityError, Inclination, Keplerian};
 use crate::elements::longitudes::{
     mean_to_eccentric_longitude, mean_to_true_longitude, true_to_mean_longitude,
 };
 use crate::elements::modified_equinoctial::{ModifiedEquinoctial, ModifiedEquinoctialError};
+use crate::elements::quantities::GravitationalParameter;
 use crate::math::float::{abs, atan, cos, hypot, sin, tan};
 use crate::units::{Angle, Distance, DistanceUnit};
 

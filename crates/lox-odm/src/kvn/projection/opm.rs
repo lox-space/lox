@@ -163,7 +163,7 @@ fn build_data_section(opm: &Opm) -> KvnSection {
             // GravitationalParameter stores m³/s²; wire format is km³/s²
             entries.push(fld(
                 "GM",
-                format!("{}", gm.as_f64() / 1e9),
+                format!("{}", gm.to_km3_per_s2()),
                 Some("km**3/s**2"),
             ));
         }
@@ -1383,7 +1383,7 @@ mod tests {
         assert_eq!(opm, parsed, "keplerian-with-gm round-trip mismatch");
         let parsed_gm = parsed.keplerian.unwrap().gm.unwrap();
         // Values should be within floating-point round-trip tolerance.
-        let diff = (parsed_gm.as_f64() - wire_gm.as_f64()).abs();
+        let diff = (parsed_gm.to_m3_per_s2() - wire_gm.to_m3_per_s2()).abs();
         assert!(
             diff < 1.0,
             "GM round-trip error too large: {diff} m³/s²; parsed={parsed_gm}, original={wire_gm}"

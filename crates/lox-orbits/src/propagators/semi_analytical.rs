@@ -87,7 +87,7 @@ where
             .origin()
             .try_gravitational_parameter()
             .expect("gravitational parameter should be available")
-            .as_f64()
+            .to_m3_per_s2()
     }
 
     /// Set the maximum number of iterations for the universal-variable solver.

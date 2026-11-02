@@ -92,7 +92,7 @@ where
     /// short-period corrections.
     pub fn try_new(orbit: KeplerianOrbit<O, R>) -> Result<Self, J4Error> {
         let body = BodyConstants {
-            mu: orbit.origin().try_gravitational_parameter()?.as_f64(),
+            mu: orbit.origin().try_gravitational_parameter()?,
             j2: orbit.origin().try_j2()?,
             r_eq: orbit.origin().try_equatorial_radius()?.to_meters(),
         };
@@ -111,7 +111,8 @@ where
         let e = ecc.as_f64();
         let i = kep.inclination().as_f64();
         let m0 = kep.true_anomaly().to_mean(ecc)?.as_f64();
-        let rates = kozai::j4_secular_rates(a, e, i, body.mu, body.j2, j4, body.r_eq);
+        let rates =
+            kozai::j4_secular_rates(a, e, i, body.mu.to_m3_per_s2(), body.j2, j4, body.r_eq);
 
         Ok(Self {
             initial_orbit: orbit,

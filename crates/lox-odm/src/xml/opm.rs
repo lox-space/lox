@@ -409,7 +409,7 @@ impl From<&Opm> for OpmXml {
                 mean_anomaly: None,
                 gm: kep
                     .gm
-                    .map(|g| ValueWithUnits::new(g.as_f64() / 1e9, "km**3/s**2")),
+                    .map(|g| ValueWithUnits::new(g.to_km3_per_s2(), "km**3/s**2")),
             })
         });
 
@@ -908,7 +908,7 @@ mod tests {
         let xml_str = write_opm(&opm).unwrap();
         let parsed = read_opm(&xml_str).expect("GM round-trip parse failed");
         let parsed_gm = parsed.keplerian.unwrap().gm.unwrap();
-        let diff = (parsed_gm.as_f64() - wire_gm.as_f64()).abs();
+        let diff = (parsed_gm.to_m3_per_s2() - wire_gm.to_m3_per_s2()).abs();
         assert!(
             diff < 1.0,
             "GM round-trip error too large: {diff} m³/s²; parsed={parsed_gm}, original={wire_gm}"
@@ -1053,7 +1053,7 @@ mod tests {
         // First maneuver comment preserved
         assert_eq!(opm.maneuvers[0].comments, vec!["Maneuver 1".to_string()]);
         // GM round-trip in km³/s²: 398600.9368 km³/s² = 3.986009368e14 m³/s²
-        let gm_m3s2 = opm.keplerian.unwrap().gm.unwrap().as_f64();
+        let gm_m3s2 = opm.keplerian.unwrap().gm.unwrap().to_m3_per_s2();
         let diff = (gm_m3s2 - 398600.9368e9).abs();
         assert!(diff < 1.0, "GM value unexpected: {gm_m3s2}");
     }

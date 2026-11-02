@@ -34,8 +34,9 @@ use crate::elements::equinoctial::{
     node_components_from_angular_momentum,
 };
 use crate::elements::keplerian::{
-    Eccentricity, EccentricityError, GravitationalParameter, Inclination, Keplerian, KeplerianError,
+    Eccentricity, EccentricityError, Inclination, Keplerian, KeplerianError,
 };
+use crate::elements::quantities::GravitationalParameter;
 use crate::math::float::{atan2, cos, hypot, sin, sqrt};
 use crate::units::{Angle, AngleUnit, AngleUnits, Distance, DistanceUnit};
 
@@ -247,7 +248,7 @@ impl ModifiedEquinoctial {
         let (f_hat, g_hat) = equinoctial_basis(self.k, self.h, self.retrograde_factor);
         let (sin_l, cos_l) = self.l.sin_cos();
         let r = p / (1.0 + self.f * cos_l + self.g * sin_l);
-        let sqrt_mu_p = sqrt(grav_param.as_f64() / p);
+        let sqrt_mu_p = sqrt(grav_param.to_m3_per_s2() / p);
 
         let pos = r * cos_l * f_hat + r * sin_l * g_hat;
         let vel = sqrt_mu_p * (-(sin_l + self.g) * f_hat + (cos_l + self.f) * g_hat);
@@ -293,7 +294,7 @@ impl Cartesian {
     ) -> Result<ModifiedEquinoctial, ModifiedEquinoctialError> {
         let r = self.position();
         let v = self.velocity();
-        let mu = grav_param.as_f64();
+        let mu = grav_param.to_m3_per_s2();
 
         // A physical state, with a physical gravitational parameter, keeps every intermediate
         // result below from overflowing.
@@ -517,7 +518,7 @@ mod tests {
         // Every conversion rejects an unphysical state with the same error, including finite
         // states whose magnitudes would overflow inside the conversions.
         let circular = |r: f64| {
-            let v = (mu().as_f64() / r).sqrt();
+            let v = (mu().to_m3_per_s2() / r).sqrt();
             Cartesian::from_vecs(DVec3::new(r, 0.0, 0.0), DVec3::new(0.0, v, 0.0))
         };
         for (name, state) in [
