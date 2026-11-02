@@ -271,13 +271,16 @@ impl Angle {
         } else if w < -PI {
             w += TAU;
         }
-        let a = w + center.0;
-        // Adding a non-zero center can round onto the open upper bound.
+        let mut a = w + center.0;
+        // Adding a non-zero center can round onto the open upper bound. The same value one turn
+        // down then lies on the closed lower bound, but can round to just below it.
         if a >= center.0 + PI {
-            Self(a - TAU)
-        } else {
-            Self(a)
+            a -= TAU;
+            if a < center.0 - PI {
+                a = center.0 - PI;
+            }
         }
+        Self(a)
     }
 
     /// Returns the remainder of the angle divided by 2π, with the sign of the angle, in the
@@ -2073,6 +2076,30 @@ mod tests {
             assert!((0.0..TAU).contains(&unsigned), "{x}: {unsigned}");
             let around = a.wrap_around(Angle::radians(1.0)).to_radians();
             assert!((1.0 - PI..1.0 + PI).contains(&around), "{x}: {around}");
+        }
+    }
+
+    #[test]
+    fn test_angle_wrap_around_boundaries_with_arbitrary_centers() {
+        let center = Angle::radians(-44.88935050308772);
+        let a = Angle::radians(-48.030943156677516).wrap_around(center);
+        assert!(a >= center - Angle::PI && a < center + Angle::PI);
+        // Deterministic pseudo-random centers, with inputs within 1e-13 of the boundaries.
+        let mut state: u64 = 0x2545_f491_4f6c_dd1d;
+        let mut uniform = || {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            (state >> 11) as f64 / (1u64 << 53) as f64
+        };
+        for _ in 0..100_000 {
+            let c = (uniform() - 0.5) * 200.0;
+            let turns = ((uniform() - 0.5) * 20.0).round();
+            let x = c + PI + turns * TAU + (uniform() - 0.5) * 1e-13;
+            let a = Angle::radians(x)
+                .wrap_around(Angle::radians(c))
+                .to_radians();
+            assert!(a >= c - PI && a < c + PI, "{x} around {c}: {a}");
         }
     }
 
