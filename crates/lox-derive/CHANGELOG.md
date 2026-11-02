@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/lox-space/lox/compare/lox-derive-v0.1.0...lox-derive-v0.2.0) - 2026-11-02
+
+### Other
+
+- *(lox-core)* [**breaking**] give all unit types a uniform named-unit API
+
 ## [0.1.0-alpha.13](https://github.com/lox-space/lox/compare/lox-derive-v0.1.0-alpha.12...lox-derive-v0.1.0-alpha.13) - 2026-08-25
 
 ### Added

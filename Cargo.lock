@@ -961,7 +961,7 @@ checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 
 [[package]]
 name = "lox-analysis"
-version = "0.1.0-alpha.16"
+version = "0.1.0-alpha.17"
 dependencies = [
  "codspeed-divan-compat",
  "csv",
@@ -984,7 +984,7 @@ dependencies = [
 
 [[package]]
 name = "lox-approx"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "codspeed-divan-compat",
  "glam 0.34.1",
@@ -993,7 +993,7 @@ dependencies = [
 
 [[package]]
 name = "lox-bodies"
-version = "0.1.0-alpha.28"
+version = "0.1.0-alpha.29"
 dependencies = [
  "lox-approx",
  "lox-core",
@@ -1004,7 +1004,7 @@ dependencies = [
 
 [[package]]
 name = "lox-comms"
-version = "0.1.0-alpha.17"
+version = "0.1.0-alpha.18"
 dependencies = [
  "lox-approx",
  "lox-core",
@@ -1016,7 +1016,7 @@ dependencies = [
 
 [[package]]
 name = "lox-core"
-version = "0.1.0-alpha.16"
+version = "0.1.0-alpha.17"
 dependencies = [
  "chrono",
  "glam 0.34.1",
@@ -1032,7 +1032,7 @@ dependencies = [
 
 [[package]]
 name = "lox-derive"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1042,7 +1042,7 @@ dependencies = [
 
 [[package]]
 name = "lox-earth"
-version = "0.1.0-alpha.31"
+version = "0.1.0-alpha.32"
 dependencies = [
  "csv",
  "lox-approx",
@@ -1058,7 +1058,7 @@ dependencies = [
 
 [[package]]
 name = "lox-ephem"
-version = "0.1.0-alpha.26"
+version = "0.1.0-alpha.27"
 dependencies = [
  "arrayvec",
  "itertools 0.15.0",
@@ -1072,7 +1072,7 @@ dependencies = [
 
 [[package]]
 name = "lox-frames"
-version = "0.1.0-alpha.22"
+version = "0.1.0-alpha.23"
 dependencies = [
  "lox-approx",
  "lox-bodies",
@@ -1086,7 +1086,7 @@ dependencies = [
 
 [[package]]
 name = "lox-io"
-version = "0.1.0-alpha.26"
+version = "0.1.0-alpha.27"
 dependencies = [
  "lox-core",
  "lox-test-utils",
@@ -1098,7 +1098,7 @@ dependencies = [
 
 [[package]]
 name = "lox-itur"
-version = "0.1.0-alpha.7"
+version = "0.1.0-alpha.8"
 dependencies = [
  "codspeed-divan-compat",
  "libm",
@@ -1115,7 +1115,7 @@ dependencies = [
 
 [[package]]
 name = "lox-odm"
-version = "0.1.0-alpha.5"
+version = "0.1.0-alpha.6"
 dependencies = [
  "codspeed-divan-compat",
  "lox-approx",
@@ -1133,7 +1133,7 @@ dependencies = [
 
 [[package]]
 name = "lox-orbits"
-version = "0.1.0-alpha.41"
+version = "0.1.0-alpha.42"
 dependencies = [
  "chrono",
  "csv",
@@ -1156,7 +1156,7 @@ dependencies = [
 
 [[package]]
 name = "lox-space"
-version = "0.1.0-alpha.51"
+version = "0.1.0-alpha.52"
 dependencies = [
  "codspeed-divan-compat",
  "geo",
@@ -1187,7 +1187,7 @@ version = "0.1.0-alpha.10"
 
 [[package]]
 name = "lox-time"
-version = "0.1.0-alpha.28"
+version = "0.1.0-alpha.29"
 dependencies = [
  "chrono",
  "lox-approx",
