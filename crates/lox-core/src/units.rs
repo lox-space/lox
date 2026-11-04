@@ -43,7 +43,6 @@ pub(crate) use runtime::{parse_value_and_unit, runtime_units};
 pub use sexagesimal::{Dms, Hms, SexagesimalError};
 
 use core::{
-    cmp::Ordering,
     f64::consts::{FRAC_PI_2, FRAC_PI_4, PI, TAU},
     fmt::{Display, Formatter, Result},
     ops::{Add, AddAssign, Sub, SubAssign},
@@ -1555,41 +1554,6 @@ impl DecibelWatts {
     pub fn to_power(self) -> Power {
         Power(powf(10.0_f64, self.0 / 10.0))
     }
-
-    /// Returns the minimum of the two values, ignoring NaN.
-    pub fn min(self, other: Self) -> Self {
-        Self(self.0.min(other.0))
-    }
-
-    /// Returns the maximum of the two values, ignoring NaN.
-    pub fn max(self, other: Self) -> Self {
-        Self(self.0.max(other.0))
-    }
-
-    /// Restricts the value to the interval `[min, max]`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `min > max`, `min` is NaN, or `max` is NaN.
-    pub fn clamp(self, min: Self, max: Self) -> Self {
-        Self(self.0.clamp(min.0, max.0))
-    }
-
-    /// Returns the ordering between `self` and `other` according to the IEEE 754 `totalOrder`
-    /// predicate.
-    pub fn total_cmp(&self, other: &Self) -> Ordering {
-        self.0.total_cmp(&other.0)
-    }
-
-    /// Returns `true` if the value is neither infinite nor NaN.
-    pub const fn is_finite(self) -> bool {
-        self.0.is_finite()
-    }
-
-    /// Returns `true` if the value is NaN.
-    pub const fn is_nan(self) -> bool {
-        self.0.is_nan()
-    }
 }
 
 impl From<Power> for DecibelWatts {
@@ -1687,19 +1651,11 @@ impl DecibelWattsUnits for i64 {
     }
 }
 
-/// Implements the arithmetic and comparison API shared by all unit types.
-macro_rules! quantity_impls {
+/// Implements the comparison API shared by all unit types and [`DecibelWatts`].
+macro_rules! comparison_impls {
     ($($unit:ident),*) => {
         $(
             impl $unit {
-                /// The zero value.
-                pub const ZERO: Self = Self(0.0);
-
-                /// Returns the absolute value.
-                pub fn abs(self) -> Self {
-                    Self($crate::math::float::abs(self.0))
-                }
-
                 /// Returns the minimum of the two values, ignoring NaN.
                 pub fn min(self, other: Self) -> Self {
                     Self(self.0.min(other.0))
@@ -1734,6 +1690,28 @@ macro_rules! quantity_impls {
                 pub const fn is_nan(self) -> bool {
                     self.0.is_nan()
                 }
+            }
+        )*
+    };
+}
+
+pub(crate) use comparison_impls;
+
+/// Implements the arithmetic and comparison API shared by all unit types.
+macro_rules! quantity_impls {
+    ($($unit:ident),*) => {
+        $crate::units::comparison_impls!($($unit),*);
+
+        $(
+            impl $unit {
+                /// The zero value.
+                pub const ZERO: Self = Self(0.0);
+
+                /// Returns the absolute value.
+                pub fn abs(self) -> Self {
+                    Self($crate::math::float::abs(self.0))
+                }
+
             }
 
             impl ::core::ops::Neg for $unit {
@@ -1832,6 +1810,8 @@ macro_rules! quantity_impls {
 }
 
 pub(crate) use quantity_impls;
+
+comparison_impls!(DecibelWatts);
 
 quantity_impls!(
     Angle,
