@@ -7,7 +7,7 @@
 use lox_core::coords::Cartesian;
 use lox_core::glam::DVec3;
 pub use sgp4::Elements;
-use sgp4::{Constants, ElementsError, MinutesSinceEpoch};
+use sgp4::{Constants, ElementsError, KozaiElementsError, MinutesSinceEpoch};
 use thiserror::Error;
 
 use lox_bodies::Earth;
@@ -17,26 +17,92 @@ use lox_time::Time;
 use lox_time::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::Tai;
-use lox_time::utc::UtcError;
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
 use crate::propagators::Propagator;
 
 /// Errors that can occur during SGP4 propagation.
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum Sgp4Error {
-    /// Invalid TLE elements.
-    #[error(transparent)]
-    ElementsError(#[from] ElementsError),
+    /// The elements are unphysical and no propagator could be built.
+    #[error("invalid SGP4 elements: {0}")]
+    InvalidElements(InvalidElements),
+    /// Propagation diverged, typically for a decayed or badly fitted object.
+    #[error("SGP4 propagation diverged {minutes_since_epoch} minutes after epoch: {kind}")]
+    Diverged {
+        /// How the propagation diverged.
+        kind: Divergence,
+        /// Minutes since the element epoch at which propagation failed.
+        minutes_since_epoch: f64,
+    },
     /// Error constructing the output trajectory.
     #[error(transparent)]
     TrajectoryError(#[from] TrajectoryError),
-    /// SGP4 prediction error.
-    #[error(transparent)]
-    Sgp4(#[from] sgp4::Error),
-    /// UTC conversion error.
-    #[error(transparent)]
-    Utc(#[from] UtcError),
+}
+
+/// Reasons SGP4 rejects a set of elements when the propagator is constructed.
+#[derive(Debug, Clone, Copy, PartialEq, Error)]
+#[non_exhaustive]
+pub enum InvalidElements {
+    /// The Kozai mean motion derived from the elements is not positive.
+    #[error("the Kozai mean motion at epoch is not positive")]
+    NegativeKozaiMeanMotion,
+    /// The Brouwer mean motion derived from the elements is not positive.
+    #[error("the Brouwer mean motion at epoch is not positive")]
+    NegativeBrouwerMeanMotion,
+    /// The eccentricity at epoch lies outside `[0, 1)`.
+    #[error("the epoch eccentricity ({0}) is outside the range [0, 1)")]
+    EpochEccentricityOutOfRange(f64),
+}
+
+/// Ways in which SGP4 propagation can diverge.
+#[derive(Debug, Clone, Copy, PartialEq, Error)]
+#[non_exhaustive]
+pub enum Divergence {
+    /// The propagated eccentricity left `[0, 1)` before third-body perturbations.
+    #[error("the eccentricity ({0}) left the range [0, 1) before third-body perturbations")]
+    EccentricityOutOfRange(f64),
+    /// The propagated eccentricity left `[0, 1)` after third-body perturbations.
+    #[error("the eccentricity ({0}) left the range [0, 1) after third-body perturbations")]
+    PerturbedEccentricityOutOfRange(f64),
+    /// The propagated semi-latus rectum became negative.
+    #[error("the semi-latus rectum became negative")]
+    NegativeSemiLatusRectum,
+}
+
+impl From<ElementsError> for Sgp4Error {
+    fn from(err: ElementsError) -> Self {
+        Sgp4Error::InvalidElements(match err {
+            ElementsError::KozaiElementsError(KozaiElementsError::NegativeKozaiMeanMotion) => {
+                InvalidElements::NegativeKozaiMeanMotion
+            }
+            ElementsError::KozaiElementsError(KozaiElementsError::NegativeBrouwerMeanMotion) => {
+                InvalidElements::NegativeBrouwerMeanMotion
+            }
+            ElementsError::OutOfRangeEpochEccentricity(e) => {
+                InvalidElements::EpochEccentricityOutOfRange(e.0)
+            }
+        })
+    }
+}
+
+impl From<sgp4::Error> for Sgp4Error {
+    fn from(err: sgp4::Error) -> Self {
+        let (kind, minutes_since_epoch) = match err {
+            sgp4::Error::OutOfRangeEccentricity { eccentricity, t } => {
+                (Divergence::EccentricityOutOfRange(eccentricity), t)
+            }
+            sgp4::Error::OutOfRangePerturbedEccentricity { eccentricity, t } => {
+                (Divergence::PerturbedEccentricityOutOfRange(eccentricity), t)
+            }
+            sgp4::Error::NegativeSemiLatusRectum { t } => (Divergence::NegativeSemiLatusRectum, t),
+        };
+        Sgp4Error::Diverged {
+            kind,
+            minutes_since_epoch,
+        }
+    }
 }
 
 /// SGP4/SDP4 orbit propagator for satellites described by Two-Line Element sets.
@@ -179,5 +245,77 @@ mod tests {
             .unwrap();
         assert!(traj.states().len() > 5);
         assert_eq!(traj.reference_frame(), Icrf);
+    }
+
+    /// Propagation diverges 25 minutes after epoch (negative semi-latus rectum).
+    const DIVERGING_LINE_1: &str =
+        "1 33333U 05037B   05333.02012661  .25992681  00000-0  24476-3 0  1532";
+    const DIVERGING_LINE_2: &str =
+        "2 33333  96.4736 157.9986 9950000 244.0492 110.6523  4.00004038 10700";
+
+    /// Propagation diverges at epoch (perturbed eccentricity out of range).
+    const DIVERGING_AT_EPOCH_LINE_1: &str =
+        "1 33334U 78066F   06174.85818871  .00000620  00000-0  10000-3 0  6806";
+    const DIVERGING_AT_EPOCH_LINE_2: &str =
+        "2 33334  68.4714 236.1303 5602877 123.7484 302.5767  0.00001000 67521";
+
+    fn elements(line_1: &str, line_2: &str) -> Elements {
+        Elements::from_tle(None, line_1.as_bytes(), line_2.as_bytes()).unwrap()
+    }
+
+    #[test]
+    fn test_sgp4_invalid_elements() {
+        let mut tle = elements(DIVERGING_LINE_1, DIVERGING_LINE_2);
+        tle.mean_motion = 0.0;
+        let err = Sgp4::new(tle).unwrap_err();
+        assert!(matches!(
+            err,
+            Sgp4Error::InvalidElements(InvalidElements::NegativeKozaiMeanMotion)
+        ));
+        assert!(err.to_string().contains("Kozai mean motion"));
+    }
+
+    #[test]
+    fn test_sgp4_invalid_epoch_eccentricity() {
+        let mut tle = elements(DIVERGING_LINE_1, DIVERGING_LINE_2);
+        tle.eccentricity = 1.5;
+        let err = Sgp4::new(tle).unwrap_err();
+        assert!(matches!(
+            err,
+            Sgp4Error::InvalidElements(InvalidElements::EpochEccentricityOutOfRange(e))
+                if e == 1.5
+        ));
+    }
+
+    #[test]
+    fn test_sgp4_diverged() {
+        let sgp4 = Sgp4::new(elements(DIVERGING_LINE_1, DIVERGING_LINE_2)).unwrap();
+        let t = sgp4.time() + TimeDelta::from_minutes(25);
+        let err = sgp4.state_at(t).unwrap_err();
+        assert!(matches!(
+            err,
+            Sgp4Error::Diverged {
+                kind: Divergence::NegativeSemiLatusRectum,
+                minutes_since_epoch,
+            } if (minutes_since_epoch - 25.0).abs() < 1e-9
+        ));
+        assert!(err.to_string().contains("25 minutes after epoch"));
+    }
+
+    #[test]
+    fn test_sgp4_diverged_perturbed_eccentricity() {
+        let sgp4 = Sgp4::new(elements(
+            DIVERGING_AT_EPOCH_LINE_1,
+            DIVERGING_AT_EPOCH_LINE_2,
+        ))
+        .unwrap();
+        let err = sgp4.state_at(sgp4.time()).unwrap_err();
+        assert!(matches!(
+            err,
+            Sgp4Error::Diverged {
+                kind: Divergence::PerturbedEccentricityOutOfRange(_),
+                ..
+            }
+        ));
     }
 }
