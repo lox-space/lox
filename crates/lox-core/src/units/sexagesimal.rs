@@ -9,7 +9,6 @@ use core::fmt::{Display, Formatter, Result, Write};
 
 use crate::math::float::{abs, round};
 
-use super::runtime::write_padded;
 use super::{Angle, Sign};
 
 /// Steps per second (or arcsecond) to which decomposed seconds are rounded, which suppresses
@@ -28,13 +27,12 @@ pub enum SexagesimalError {
     InvalidSeconds(f64),
 }
 
-/// Records the first two bytes, whether a non-zero digit occurs, and the number of characters
-/// written to it, without allocating.
+/// Records the first two bytes written to it and whether a non-zero digit occurs, without
+/// allocating.
 #[derive(Default)]
 struct Probe {
     prefix: [u8; 2],
     bytes: usize,
-    chars: usize,
     nonzero_digit: bool,
 }
 
@@ -47,7 +45,6 @@ impl Write for Probe {
             self.bytes += 1;
             self.nonzero_digit |= matches!(b, b'1'..=b'9');
         }
-        self.chars += s.chars().count();
         Ok(())
     }
 }
@@ -143,103 +140,47 @@ impl Parts {
 
     /// Formats the parts with the given unit symbols. The formatter's precision applies to the
     /// seconds, and rounding carries into the larger components when the rounded seconds reach
-    /// 60. Width, fill, alignment, and the `+` flag apply to the whole representation, which is
-    /// right-aligned by default, like numbers, and the `0` flag pads with zeros after the sign.
+    /// 60. The `+` flag prints a sign for positive values.
     fn fmt(&self, f: &mut Formatter<'_>, symbols: [&'static str; 3]) -> Result {
-        let mut text = Text {
-            sign: "",
-            major: self.major as u64,
-            minutes: self.minutes,
-            seconds: self.seconds,
-            precision: f.precision(),
-            symbols,
-        };
+        let [major_symbol, minutes_symbol, seconds_symbol] = symbols;
+        let precision = f.precision();
+        let (mut major, mut minutes, mut seconds) = (self.major as u64, self.minutes, self.seconds);
         // Format the seconds the same way as below to see whether they round up to 60 or
         // down to zero.
         let mut probe = Probe::default();
-        match text.precision {
-            Some(precision) => write!(probe, "{:.precision$}", self.seconds)?,
-            None => write!(probe, "{}", self.seconds)?,
+        match precision {
+            Some(precision) => write!(probe, "{seconds:.precision$}")?,
+            None => write!(probe, "{seconds}")?,
         }
         if &probe.prefix == b"60" {
-            text.seconds = 0.0;
-            text.minutes += 1;
-            if text.minutes == 60 {
-                text.minutes = 0;
-                text.major += 1;
+            seconds = 0.0;
+            minutes += 1;
+            if minutes == 60 {
+                minutes = 0;
+                major += 1;
             }
         }
-        let shows_zero = text.major == 0 && text.minutes == 0 && !probe.nonzero_digit;
-        text.sign = match self.sign {
+        let shows_zero = major == 0 && minutes == 0 && !probe.nonzero_digit;
+        let sign = match self.sign {
             Sign::Negative if !shows_zero => "-",
             _ if f.sign_plus() => "+",
             _ => "",
         };
-        let Some(width) = f.width() else {
-            return text.write(f, 0);
-        };
-        let seconds_chars = match text.precision {
-            Some(0) => 2,
-            Some(precision) => precision + 3,
-            None => probe.chars + usize::from(self.seconds < 10.0),
-        };
-        let chars = text.chars(seconds_chars);
-        if f.sign_aware_zero_pad() {
-            return text.write(f, width.saturating_sub(chars));
-        }
-        write_padded(f, chars, |f| text.write(f, 0))
-    }
-}
-
-/// The parts as they are written, after rounding to the requested precision.
-struct Text {
-    sign: &'static str,
-    major: u64,
-    minutes: u8,
-    seconds: f64,
-    precision: Option<usize>,
-    symbols: [&'static str; 3],
-}
-
-impl Text {
-    /// Returns the number of characters written, given the number of characters of the seconds.
-    fn chars(&self, seconds_chars: usize) -> usize {
-        let mut major_digits = 1;
-        let mut major = self.major;
-        while major >= 10 {
-            major /= 10;
-            major_digits += 1;
-        }
-        let symbols: usize = self.symbols.iter().map(|s| s.chars().count()).sum();
-        self.sign.len() + major_digits + 2 + seconds_chars + symbols
-    }
-
-    /// Writes the text with `zeros` zeros between the sign and the major unit.
-    fn write(&self, w: &mut impl Write, zeros: usize) -> Result {
-        let [major_symbol, minutes_symbol, seconds_symbol] = self.symbols;
-        w.write_str(self.sign)?;
-        for _ in 0..zeros {
-            w.write_char('0')?;
-        }
-        write!(
-            w,
-            "{}{major_symbol}{:02}{minutes_symbol}",
-            self.major, self.minutes
-        )?;
+        write!(f, "{sign}{major}{major_symbol}{minutes:02}{minutes_symbol}")?;
         // The seconds are zero-padded to two integer digits.
-        match self.precision {
+        match precision {
             Some(precision) => {
                 let width = if precision == 0 { 2 } else { precision + 3 };
-                write!(w, "{:0width$.precision$}", self.seconds)?;
+                write!(f, "{seconds:0width$.precision$}")?;
             }
             None => {
-                if self.seconds < 10.0 {
-                    w.write_char('0')?;
+                if seconds < 10.0 {
+                    f.write_char('0')?;
                 }
-                write!(w, "{}", self.seconds)?;
+                write!(f, "{seconds}")?;
             }
         }
-        w.write_str(seconds_symbol)
+        f.write_str(seconds_symbol)
     }
 }
 
@@ -249,8 +190,8 @@ impl Text {
 /// in `(−1°, 0°)` are representable. A zero angle is always positive.
 ///
 /// `Display` prints e.g. `-12°03′07.5″`. The formatter's precision applies to the arcseconds,
-/// and rounding carries into the arcminutes and degrees. Width, fill, alignment, and the `+`
-/// flag apply to the whole representation, which is right-aligned by default, like numbers.
+/// and rounding carries into the arcminutes and degrees. The `+` flag prints a sign for positive
+/// angles.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(
     feature = "serde",
@@ -356,8 +297,7 @@ impl Display for Dms {
 /// in `(−1h, 0h)` are representable. A zero angle is always positive.
 ///
 /// `Display` prints e.g. `12h03m07.5s`. The formatter's precision applies to the seconds, and
-/// rounding carries into the minutes and hours. Width, fill, alignment, and the `+` flag apply
-/// to the whole representation, which is right-aligned by default, like numbers.
+/// rounding carries into the minutes and hours. The `+` flag prints a sign for positive angles.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(
     feature = "serde",
@@ -657,21 +597,8 @@ mod tests {
         let dms = Dms::new(Sign::Positive, 1, 2, 3.0).unwrap();
         assert_eq!(dms.to_string(), "1°02′03″");
         assert_eq!(format!("{dms:+}"), "+1°02′03″");
-        assert_eq!(format!("{dms:>10}"), "  1°02′03″");
-        assert_eq!(format!("{dms:10}"), "  1°02′03″");
-        assert_eq!(format!("{dms:<10}|"), "1°02′03″  |");
-        assert_eq!(format!("{dms:*^10.1}"), "1°02′03.0″");
-        assert_eq!(format!("{dms:*^12}"), "**1°02′03″**");
         let hms = Hms::new(Sign::Negative, 1, 2, 3.5).unwrap();
-        assert_eq!(format!("{hms:<12.2}"), "-1h02m03.50s");
-        assert_eq!(format!("{hms:<14.2}|"), "-1h02m03.50s  |");
-        assert_eq!(format!("{hms:14.2}"), "  -1h02m03.50s");
-        assert_eq!(format!("{hms:014.2}"), "-001h02m03.50s");
-        assert_eq!(format!("{dms:+011}"), "+001°02′03″");
-        assert_eq!(
-            format!("{:>15}", Dms::new(Sign::Positive, 359, 59, 9.25).unwrap()),
-            "  359°59′09.25″"
-        );
+        assert_eq!(format!("{hms:+.2}"), "-1h02m03.50s");
     }
 
     #[test]
