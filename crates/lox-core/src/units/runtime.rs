@@ -5,7 +5,7 @@
 //! Units selected at runtime: per-dimension unit enums, formatting in a chosen unit, and parsing
 //! of `"<value> <unit>"` strings.
 
-use core::fmt::{Alignment, Display, Formatter, LowerExp, Result, UpperExp, Write};
+use core::fmt::{Display, Formatter, LowerExp, Result, UpperExp};
 use core::str::FromStr;
 
 use super::{
@@ -39,30 +39,6 @@ pub enum ParseUnitError {
 pub struct DisplayIn {
     value: f64,
     symbol: &'static str,
-}
-
-/// Writes content of `chars` characters, padded to the formatter's width with its fill and
-/// alignment. The content is right-aligned by default, like numbers.
-pub(crate) fn write_padded(
-    f: &mut Formatter<'_>,
-    chars: usize,
-    write: impl FnOnce(&mut Formatter<'_>) -> Result,
-) -> Result {
-    let padding = f.width().unwrap_or(0).saturating_sub(chars);
-    let (before, after) = match f.align() {
-        Some(Alignment::Left) => (0, padding),
-        Some(Alignment::Center) => (padding / 2, padding - padding / 2),
-        Some(Alignment::Right) | None => (padding, 0),
-    };
-    let fill = f.fill();
-    for _ in 0..before {
-        f.write_char(fill)?;
-    }
-    write(f)?;
-    for _ in 0..after {
-        f.write_char(fill)?;
-    }
-    Ok(())
 }
 
 impl Display for DisplayIn {
