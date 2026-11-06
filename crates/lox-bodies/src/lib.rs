@@ -22,7 +22,7 @@ use lox_core::coords::Ellipsoid;
 use lox_core::elements::GravitationalParameter;
 use lox_core::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 use lox_core::math::float::{cos, powi, sin};
-use lox_core::units::Distance;
+use lox_core::units::{AngularRate, Distance};
 use thiserror::Error;
 
 #[allow(clippy::approx_constant)]
@@ -394,6 +394,11 @@ where
     fn try_j2(&self) -> Result<f64, UndefinedOriginPropertyError> {
         Ok(self.j2())
     }
+}
+
+impl Earth {
+    /// Earth's nominal mean angular velocity (IERS Conventions 2010).
+    pub const ROTATION_RATE: AngularRate = AngularRate::radians_per_second(7.2921150e-5);
 }
 
 impl J2 for Earth {

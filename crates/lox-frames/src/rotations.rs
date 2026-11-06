@@ -5,9 +5,9 @@
 use std::ops::Mul;
 
 use lox_approx::ApproxEq;
-use lox_bodies::{TryRotationalElements, UndefinedOriginPropertyError};
+use lox_bodies::{Earth, TryRotationalElements, UndefinedOriginPropertyError};
+use lox_core::coords::Cartesian;
 use lox_core::glam::{DMat3, DVec3};
-use lox_core::{coords::Cartesian, f64::consts::ROTATION_RATE_EARTH};
 use lox_time::{
     Time,
     julian_dates::JulianDate,
@@ -223,7 +223,7 @@ pub trait RotationProvider<T: ContinuousTimeScale>: OffsetProvider {
             Rotation::new(sys.earth_rotation(tt, ut1, corr)).with_angular_velocity(DVec3::new(
                 0.0,
                 0.0,
-                ROTATION_RATE_EARTH,
+                Earth::ROTATION_RATE.to_radians_per_second(),
             )),
         )
     }
@@ -354,7 +354,7 @@ pub trait RotationProvider<T: ContinuousTimeScale>: OffsetProvider {
             Rotation::new(era.0.rotation_z()).with_angular_velocity(DVec3::new(
                 0.0,
                 0.0,
-                ROTATION_RATE_EARTH,
+                Earth::ROTATION_RATE.to_radians_per_second(),
             )),
         )
     }
