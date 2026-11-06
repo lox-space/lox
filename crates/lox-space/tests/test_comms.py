@@ -704,7 +704,7 @@ def test_modcod_evaluate():
     assert m.margin.to_decibels() == pytest.approx(
         m.eb_n0.to_decibels() - 10.0 - 3.0, abs=1e-9
     )
-    assert m.information_rate().to_hertz() == pytest.approx(5e6, rel=1e-10)
+    assert m.information_rate().to_bits_per_second() == pytest.approx(5e6, rel=1e-10)
     assert m.modcod == mc
     assert m.channel == ch
     assert m.design_margin.to_decibels() == pytest.approx(3.0)
@@ -822,7 +822,9 @@ def test_link_stats_end_to_end():
     # Properties
     assert stats.slant_range.to_kilometers() == pytest.approx(1000.0, abs=1e-6)
     assert modulated.symbol_rate.to_hertz() == pytest.approx(5e6, abs=1e-6)
-    assert modulated.information_rate().to_hertz() == pytest.approx(5e6, abs=1e-6)
+    assert modulated.information_rate().to_bits_per_second() == pytest.approx(
+        5e6, abs=1e-6
+    )
     assert stats.frequency.to_hertz() == pytest.approx(29e9, abs=1.0)
 
 
@@ -985,7 +987,9 @@ def test_modulate_best_acm():
 def test_modcod_information_rate():
     # QPSK rate 1/2 at 5 Msps: 5 Mbit/s information rate.
     mc = lox.ModCod("test", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
-    assert mc.information_rate(5 * lox.MHz).to_hertz() == pytest.approx(5e6, rel=1e-10)
+    assert mc.information_rate(5 * lox.MHz).to_bits_per_second() == pytest.approx(
+        5e6, rel=1e-10
+    )
 
 
 # --- LinkBudget additional outputs ---

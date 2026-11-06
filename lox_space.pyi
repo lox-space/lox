@@ -205,7 +205,7 @@ __all__ = [
     "power_flux_density",
     "rad",
     "rad_per_s",
-    "rain_specific_attenuation",
+    "rain_specific_attenuation_db_per_km",
     "seconds",
     "slant_range",
     "t",
@@ -2490,13 +2490,13 @@ class LinkWindow:
         no entry in the table closes there."""
         ...
     @property
-    def peak_information_rate(self) -> Frequency:
+    def peak_information_rate(self) -> DataRate:
         """Information rate supported at the peak, or zero when no MODCOD closes there."""
         ...
     @property
-    def data_volume(self) -> float:
-        """Data volume deliverable over the window in bits, integrating the
-        adaptively selected information rate."""
+    def data_volume(self) -> DataVolume:
+        """Data volume deliverable over the window, integrating the adaptively
+        selected information rate."""
         ...
 
 @final
@@ -2557,15 +2557,15 @@ class LinkBudgetResults:
     def link_ids(self) -> list[tuple[TerminalId, TerminalId]]:
         """The terminal pairs that form a link."""
         ...
-    def data_volume(self, tx: TerminalId, rx: TerminalId) -> float:
-        """Total data volume in bits deliverable over a link.
+    def data_volume(self, tx: TerminalId, rx: TerminalId) -> DataVolume:
+        """Total data volume deliverable over a link.
 
         Args:
             tx: Transmit terminal.
             rx: Receive terminal.
 
         Returns:
-            Data volume in bits, or 0.0 for a pair that is not a link.
+            Data volume, zero for a pair that is not a link.
         """
         ...
     def num_links(self) -> int:
@@ -2696,30 +2696,30 @@ class Origin:
     def polar_radius(self) -> Distance:
         """Return the polar radius."""
         ...
-    def rotational_elements(self, et: float) -> tuple[Angle, Angle, Angle]:
+    def rotational_elements(self, time: Time) -> tuple[Angle, Angle, Angle]:
         """Return rotational elements (right ascension, declination, rotation angle)."""
         ...
     def rotational_element_rates(
-        self, et: float
+        self, time: Time
     ) -> tuple[AngularRate, AngularRate, AngularRate]:
         """Return rotational element rates."""
         ...
-    def right_ascension(self, et: float) -> Angle:
+    def right_ascension(self, time: Time) -> Angle:
         """Return the right ascension of the pole."""
         ...
-    def right_ascension_rate(self, et: float) -> AngularRate:
+    def right_ascension_rate(self, time: Time) -> AngularRate:
         """Return the rate of change of right ascension."""
         ...
-    def declination(self, et: float) -> Angle:
+    def declination(self, time: Time) -> Angle:
         """Return the declination of the pole."""
         ...
-    def declination_rate(self, et: float) -> AngularRate:
+    def declination_rate(self, time: Time) -> AngularRate:
         """Return the rate of change of declination."""
         ...
-    def rotation_angle(self, et: float) -> Angle:
+    def rotation_angle(self, time: Time) -> Angle:
         """Return the rotation angle (prime meridian)."""
         ...
-    def rotation_rate(self, et: float) -> AngularRate:
+    def rotation_rate(self, time: Time) -> AngularRate:
         """Return the rotation rate."""
         ...
 
@@ -3152,8 +3152,8 @@ class Keplerian:
             UndefinedOriginPropertyError: If the origin has no gravitational parameter.
         """
         ...
-    def specific_orbital_energy(self) -> float:
-        """Return the specific orbital energy in km²/s².
+    def specific_orbital_energy(self) -> SpecificEnergy:
+        """Return the specific orbital energy.
 
         The energy is negative for closed orbits, zero for parabolic orbits, and positive for
         hyperbolic orbits.
@@ -3162,8 +3162,8 @@ class Keplerian:
             UndefinedOriginPropertyError: If the origin has no gravitational parameter.
         """
         ...
-    def specific_angular_momentum(self) -> float:
-        """Return the magnitude of the specific angular momentum in km²/s.
+    def specific_angular_momentum(self) -> SpecificAngularMomentum:
+        """Return the magnitude of the specific angular momentum.
 
         Raises:
             UndefinedOriginPropertyError: If the origin has no gravitational parameter.
@@ -3645,8 +3645,8 @@ class Numerical:
         initial_state: Initial orbital state.
         rtol: Relative tolerance (default: 1e-8).
         atol: Absolute tolerance (default: 1e-6).
-        h_max: Maximum step size in seconds (default: auto from orbital timescale).
-        h_min: Minimum step size in seconds (default: 1e-6).
+        h_max: Maximum step size (default: auto from orbital timescale).
+        h_min: Minimum step size (default: 1 µs).
         max_steps: Maximum number of integration steps (default: 100000).
     """
     def __new__(
@@ -3654,8 +3654,8 @@ class Numerical:
         initial_state: Cartesian,
         rtol: float | None = None,
         atol: float | None = None,
-        h_max: float | None = None,
-        h_min: float | None = None,
+        h_max: TimeDelta | None = None,
+        h_min: TimeDelta | None = None,
         max_steps: int | None = None,
     ) -> Self: ...
     @overload
@@ -3974,17 +3974,17 @@ class TLE:
     def mean_anomaly(self) -> Angle:
         """Mean anomaly."""
         ...
-    def mean_motion(self) -> float:
-        """Mean motion in revolutions per day (Kozai convention)."""
+    def mean_motion(self) -> AngularRate:
+        """Mean motion (Kozai convention)."""
         ...
-    def mean_motion_dot(self) -> float:
-        """First derivative of mean motion (rev/day²)."""
+    def half_mean_motion_dot_rev_per_day2(self) -> float:
+        """Half the first derivative of mean motion, as stored in the TLE (rev/day²)."""
         ...
-    def mean_motion_ddot(self) -> float:
-        """Second derivative of mean motion (rev/day³)."""
+    def sixth_mean_motion_ddot_rev_per_day3(self) -> float:
+        """One sixth of the second derivative of mean motion, as stored in the TLE (rev/day³)."""
         ...
-    def drag_term(self) -> float:
-        """BSTAR drag term (earth radii⁻¹)."""
+    def drag_term_per_earth_radius(self) -> float:
+        """BSTAR drag term (Earth radii⁻¹)."""
         ...
     def element_set_number(self) -> int:
         """Element set number."""
@@ -4398,7 +4398,9 @@ class TimeDelta:
         """Return the duration in seconds."""
         ...
     @classmethod
-    def range(cls, start: int, end: int, step: int | None = None) -> list[Self]:
+    def range(
+        cls, start: TimeDelta, end: TimeDelta, step: TimeDelta | None = None
+    ) -> list[Self]:
         """Generate a range of TimeDelta values."""
         ...
 
@@ -4944,7 +4946,7 @@ class ModCod:
     def reference(self) -> str:
         """Source of the mode definition."""
         ...
-    def information_rate(self, symbol_rate: Frequency) -> Frequency:
+    def information_rate(self, symbol_rate: Frequency) -> DataRate:
         """Returns the information bit rate at the given symbol rate."""
         ...
     def __eq__(self, other: object, /) -> bool: ...
@@ -5346,7 +5348,7 @@ class ModulatedLinkBudget:
     def symbol_rate(self) -> Frequency:
         """Symbol rate from the channel."""
         ...
-    def information_rate(self) -> Frequency:
+    def information_rate(self) -> DataRate:
         """Information bit rate: symbol rate × info bits per symbol."""
         ...
     def closes(self) -> bool:
@@ -5709,7 +5711,9 @@ class ItuProvider:
     def rain_height(self, lat: Angle, lon: Angle) -> Distance:
         """Return mean annual rain height at the given location (P.839-4)."""
         ...
-    def rainfall_rate(self, lat: Angle, lon: Angle, probability: float) -> float:
+    def rainfall_rate_mm_per_hour(
+        self, lat: Angle, lon: Angle, probability: float
+    ) -> float:
         """Return rainfall rate in mm/h exceeded for a given probability (P.837-7)."""
         ...
     def rain_attenuation(
@@ -5768,7 +5772,7 @@ def gaseous_attenuation_slant_path(
     frequency: Frequency,
     elevation: Angle,
     pressure: Pressure,
-    rho: float,
+    rho_g_per_m3: float,
     temperature: Temperature,
 ) -> tuple[Decibel, Decibel]:
     """Compute gaseous attenuation on a slant path (P.676-12).
@@ -5778,8 +5782,8 @@ def gaseous_attenuation_slant_path(
     """
     ...
 
-def rain_specific_attenuation(
-    rain_rate: float,
+def rain_specific_attenuation_db_per_km(
+    rain_rate_mm_per_hour: float,
     frequency: Frequency,
     elevation: Angle,
     polarisation_tilt: Angle | None = None,

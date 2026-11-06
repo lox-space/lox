@@ -26,11 +26,15 @@ use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
 use crate::time::time_scales::Tai;
-use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyVelocity, repr_f64};
+use crate::units::python::{
+    PyAngle, PyAngularRate, PyDistance, PySpecificAngularMomentum, PySpecificEnergy, PyVelocity,
+    repr_f64,
+};
 use lox_core::coords::{Cartesian, Ellipsoid, LonLatAlt};
 use lox_core::elements::{Equinoctial, ModifiedEquinoctial, RetrogradeFactor};
 use lox_core::glam::DVec3;
-use lox_core::units::{Angle, Distance, Velocity};
+use lox_core::time::constants::SECONDS_PER_DAY;
+use lox_core::units::{Angle, AngularRate, Distance, Velocity};
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_time::intervals::Interval;
@@ -39,6 +43,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyList, PyString, PyType};
 use sgp4::{Classification, Elements};
+use std::f64::consts::TAU;
 
 struct PyTrajectoryTransformationError(TrajectoryTransformationError);
 
@@ -923,31 +928,31 @@ impl PyKeplerian {
         ))
     }
 
-    /// Return the specific orbital energy in km²/s².
+    /// Return the specific orbital energy.
     ///
     /// The energy is negative for closed orbits, zero for parabolic orbits, and positive for
     /// hyperbolic orbits.
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
-    fn specific_orbital_energy(&self) -> PyResult<f64> {
+    fn specific_orbital_energy(&self) -> PyResult<PySpecificEnergy> {
         let energy = self
             .0
             .specific_orbital_energy()
             .map_err(PyUndefinedOriginPropertyError)?;
-        Ok(energy.to_square_kilometers_per_second_squared())
+        Ok(PySpecificEnergy(energy))
     }
 
-    /// Return the magnitude of the specific angular momentum in km²/s.
+    /// Return the magnitude of the specific angular momentum.
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If the origin has no gravitational parameter.
-    fn specific_angular_momentum(&self) -> PyResult<f64> {
+    fn specific_angular_momentum(&self) -> PyResult<PySpecificAngularMomentum> {
         let angular_momentum = self
             .0
             .specific_angular_momentum()
             .map_err(PyUndefinedOriginPropertyError)?;
-        Ok(angular_momentum.to_square_kilometers_per_second())
+        Ok(PySpecificAngularMomentum(angular_momentum))
     }
 
     /// Convert these Keplerian elements to a Cartesian state.
@@ -1760,8 +1765,8 @@ impl From<PyNumericalError> for PyErr {
 ///     initial_state: Initial orbital state.
 ///     rtol: Relative tolerance (default: 1e-8).
 ///     atol: Absolute tolerance (default: 1e-6).
-///     h_max: Maximum step size in seconds (default: auto from orbital timescale).
-///     h_min: Minimum step size in seconds (default: 1e-6).
+///     h_max: Maximum step size (default: auto from orbital timescale).
+///     h_min: Minimum step size (default: 1 µs).
 ///     max_steps: Maximum number of integration steps (default: 100000).
 #[pyclass(name = "Numerical", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
@@ -1775,8 +1780,8 @@ impl PyNumericalPropagator {
         initial_state: PyCartesian,
         rtol: Option<f64>,
         atol: Option<f64>,
-        h_max: Option<f64>,
-        h_min: Option<f64>,
+        h_max: Option<PyTimeDelta>,
+        h_min: Option<PyTimeDelta>,
         max_steps: Option<usize>,
     ) -> PyResult<Self> {
         let mut propagator = NumericalPropagator::try_new(initial_state.0)
@@ -1788,10 +1793,10 @@ impl PyNumericalPropagator {
             propagator = propagator.with_atol(atol);
         }
         if let Some(h_max) = h_max {
-            propagator = propagator.with_h_max(h_max);
+            propagator = propagator.with_h_max(h_max.0.as_seconds_f64());
         }
         if let Some(h_min) = h_min {
-            propagator = propagator.with_h_min(h_min);
+            propagator = propagator.with_h_min(h_min.0.as_seconds_f64());
         }
         if let Some(max_steps) = max_steps {
             propagator = propagator.with_max_steps(max_steps);
@@ -2366,23 +2371,25 @@ impl PyTle {
         PyAngle(Angle::degrees(self.elements.mean_anomaly))
     }
 
-    /// Mean motion in revolutions per day (Kozai convention).
-    fn mean_motion(&self) -> f64 {
-        self.elements.mean_motion
+    /// Mean motion (Kozai convention).
+    fn mean_motion(&self) -> PyAngularRate {
+        PyAngularRate(AngularRate::radians_per_second(
+            self.elements.mean_motion * TAU / SECONDS_PER_DAY as f64,
+        ))
     }
 
-    /// First derivative of mean motion (rev/day²).
-    fn mean_motion_dot(&self) -> f64 {
+    /// Half the first derivative of mean motion, as stored in the TLE (rev/day²).
+    fn half_mean_motion_dot_rev_per_day2(&self) -> f64 {
         self.elements.mean_motion_dot
     }
 
-    /// Second derivative of mean motion (rev/day³).
-    fn mean_motion_ddot(&self) -> f64 {
+    /// One sixth of the second derivative of mean motion, as stored in the TLE (rev/day³).
+    fn sixth_mean_motion_ddot_rev_per_day3(&self) -> f64 {
         self.elements.mean_motion_ddot
     }
 
-    /// BSTAR drag term (earth radii⁻¹).
-    fn drag_term(&self) -> f64 {
+    /// BSTAR drag term (Earth radii⁻¹).
+    fn drag_term_per_earth_radius(&self) -> f64 {
         self.elements.drag_term
     }
 

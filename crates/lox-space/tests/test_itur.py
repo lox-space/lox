@@ -90,7 +90,7 @@ def test_gaseous_attenuation():
         frequency=14.25 * lox.GHz,
         elevation=30.0 * lox.deg,
         pressure=1013.25 * lox.hPa,
-        rho=7.5,
+        rho_g_per_m3=7.5,
         temperature=288.15 * lox.K,
     )
     # Both should be small positive or near-zero at 14.25 GHz
@@ -126,8 +126,8 @@ def test_scintillation_attenuation(itur_provider):
 
 def test_rain_specific_attenuation():
     """Test specific rain attenuation."""
-    gamma = lox.rain_specific_attenuation(
-        rain_rate=25.0,
+    gamma = lox.rain_specific_attenuation_db_per_km(
+        rain_rate_mm_per_hour=25.0,
         frequency=14.25 * lox.GHz,
         elevation=30.0 * lox.deg,
     )
@@ -163,7 +163,7 @@ def test_surface_mean_temperature(itur_provider):
 
 def test_rainfall_rate(itur_provider):
     """Test rainfall rate at 0.01% exceedance."""
-    r = itur_provider.rainfall_rate(
+    r = itur_provider.rainfall_rate_mm_per_hour(
         lat=40.4 * lox.deg,
         lon=-3.7 * lox.deg,
         probability=0.01,

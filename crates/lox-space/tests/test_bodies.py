@@ -6,6 +6,8 @@ import pytest
 
 import lox_space as lox
 
+J2000 = lox.Time("TDB", 2000, 1, 1, 12)
+
 
 def test_origin_from_string():
     earth = lox.Origin("Earth")
@@ -61,7 +63,7 @@ def test_polar_radius():
 
 def test_rotational_elements():
     earth = lox.Origin("Earth")
-    ra, dec, rot = earth.rotational_elements(0.0)
+    ra, dec, rot = earth.rotational_elements(J2000)
     assert isinstance(ra, lox.Angle)
     assert isinstance(dec, lox.Angle)
     assert isinstance(rot, lox.Angle)
@@ -69,7 +71,7 @@ def test_rotational_elements():
 
 def test_rotational_element_rates():
     earth = lox.Origin("Earth")
-    ra_rate, dec_rate, rot_rate = earth.rotational_element_rates(0.0)
+    ra_rate, dec_rate, rot_rate = earth.rotational_element_rates(J2000)
     assert isinstance(ra_rate, lox.AngularRate)
     assert isinstance(dec_rate, lox.AngularRate)
     assert isinstance(rot_rate, lox.AngularRate)
@@ -77,38 +79,46 @@ def test_rotational_element_rates():
 
 def test_right_ascension():
     earth = lox.Origin("Earth")
-    ra = earth.right_ascension(0.0)
+    ra = earth.right_ascension(J2000)
     assert isinstance(ra, lox.Angle)
 
 
 def test_right_ascension_rate():
     earth = lox.Origin("Earth")
-    ra_rate = earth.right_ascension_rate(0.0)
+    ra_rate = earth.right_ascension_rate(J2000)
     assert isinstance(ra_rate, lox.AngularRate)
 
 
 def test_declination():
     earth = lox.Origin("Earth")
-    dec = earth.declination(0.0)
+    dec = earth.declination(J2000)
     assert isinstance(dec, lox.Angle)
 
 
 def test_declination_rate():
     earth = lox.Origin("Earth")
-    dec_rate = earth.declination_rate(0.0)
+    dec_rate = earth.declination_rate(J2000)
     assert isinstance(dec_rate, lox.AngularRate)
 
 
 def test_rotation_angle():
     earth = lox.Origin("Earth")
-    rot = earth.rotation_angle(0.0)
+    rot = earth.rotation_angle(J2000)
     assert isinstance(rot, lox.Angle)
 
 
 def test_rotation_rate():
     earth = lox.Origin("Earth")
-    rot_rate = earth.rotation_rate(0.0)
+    rot_rate = earth.rotation_rate(J2000)
     assert isinstance(rot_rate, lox.AngularRate)
+
+
+def test_rotational_elements_convert_to_tdb():
+    earth = lox.Origin("Earth")
+    tai = J2000.to_scale("TAI")
+    assert earth.rotation_angle(tai).to(lox.rad) == pytest.approx(
+        earth.rotation_angle(J2000).to(lox.rad), abs=1e-12
+    )
 
 
 def test_origin_string_in_cartesian():

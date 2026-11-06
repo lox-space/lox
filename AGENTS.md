@@ -80,19 +80,22 @@ This codebase uses the **modern Rust module convention** (`foo.rs` + `foo/` dire
 
 ### Unit Convention (strictly enforced)
 
-| Context | Position | Velocity | Notes |
-|---------|----------|----------|-------|
-| **Internal Rust storage** | meters (m) | m/s | All core types store SI units |
-| **Python API** | kilometers (km) | km/s | Conversion at the PyO3 boundary |
-| **CSV files** | kilometers | km/s | Conversion at parse time |
-| **Ephemeris (SPK)** | kilometers | km/s | Conversion where consumed |
+| Context | Scalars | Bulk arrays | Notes |
+|---------|---------|-------------|-------|
+| **Internal Rust storage** | SI (m, m/s, rad, s) | SI | Unit types store a single SI `f64` |
+| **Python API** | Unit types (`Distance`, `Angle`, …) | SI (m, m/s, rad, s) | No implicit `float` conversion |
+| **CSV files** | — | km, km/s | Conversion at parse time |
+| **Ephemeris (SPK)** | — | km, km/s | Conversion inside the SPK implementation |
 
 Key details:
 - `Cartesian::from_vecs()` expects **meters**.
-- `Distance` stores meters internally, even when created via `kilometers()`.
+- Unit types are constructed and read through named units only, e.g. `Distance::kilometers(7.0)` and `d.to_kilometers()`; `Distance` stores meters internally, even when created via `kilometers()`.
 - `GravitationalParameter` stores m³/s² internally, even when created via `km3_per_s2()`.
 - `Angle` stores **radians** internally.
-- `EllipsoidLocation` and `Observables` accessors return **unitful** types (`Angle`, `Distance`, `Velocity`), not raw `f64` — prefer this for new scalar accessors. Bulk numeric arrays feeding interpolation series (e.g. `HorizonMask::new`) stay `Vec<f64>` in radians.
+- Rust `Display` of a unit type prints SI (`7000 m`); use `display_in(unit)` for other units. Error messages and domain-type `Display` use the unit a reader expects (km for orbits, deg for angles, m for altitudes).
+- Serde serializes unit types as plain SI numbers.
+- Every dimensioned scalar in the public API is a unit type — prefer this for new accessors and parameters. Dimensions without a unit type carry the unit in the name (e.g. `rainfall_rate_mm_per_hour`). Bulk numeric arrays (positions, velocities, interpolation series such as `HorizonMask::new`) stay plain SI floats.
+- In Python, `lox.km`, `lox.deg`, `lox.seconds` etc. are unit objects: `7000 * lox.km` creates a `Distance`, `d.to(lox.km)` returns a `float`. Quantities have no `__float__`, and no positional constructor.
 
 **Getting this wrong will produce silently incorrect results. Always verify units.**
 

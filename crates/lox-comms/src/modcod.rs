@@ -19,7 +19,7 @@
 use core::fmt;
 use std::sync::LazyLock;
 
-use lox_core::units::{Decibel, Frequency};
+use lox_core::units::{DataRate, Decibel, Frequency};
 
 use crate::channel::Modulation;
 use crate::error::NonPhysicalError;
@@ -143,13 +143,13 @@ impl LinkMode {
     }
 
     /// Returns the information bit rate at the given symbol rate.
-    pub fn information_rate(&self, symbol_rate: Frequency) -> Frequency {
-        self.info_bits_per_symbol() * symbol_rate
+    pub fn information_rate(&self, symbol_rate: Frequency) -> DataRate {
+        DataRate::bits_per_second(self.info_bits_per_symbol() * symbol_rate.to_hertz())
     }
 
     /// Returns the symbol rate required for the given information bit rate.
-    pub fn symbol_rate_for(&self, information_rate: Frequency) -> Frequency {
-        information_rate / self.info_bits_per_symbol()
+    pub fn symbol_rate_for(&self, information_rate: DataRate) -> Frequency {
+        Frequency::hertz(information_rate.to_bits_per_second() / self.info_bits_per_symbol())
     }
 }
 
@@ -456,7 +456,11 @@ mod tests {
         assert_approx_eq!(mode.info_bits_per_symbol(), 223.0 / 510.0, rtol <= 1e-12);
         // 1 Msps → 437.25 kbit/s information rate, and back.
         let info = mode.information_rate(1.0.mhz());
-        assert_approx_eq!(info.to_hertz(), 1e6 * 223.0 / 510.0, rtol <= 1e-12);
+        assert_approx_eq!(
+            info.to_bits_per_second(),
+            1e6 * 223.0 / 510.0,
+            rtol <= 1e-12
+        );
         assert_approx_eq!(mode.symbol_rate_for(info).to_hertz(), 1e6, rtol <= 1e-12);
     }
 

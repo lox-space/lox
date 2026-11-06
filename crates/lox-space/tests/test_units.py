@@ -258,6 +258,19 @@ def test_time_delta_repr_is_exact():
     assert eval(repr(td), {"TimeDelta": lox.TimeDelta}) == td
 
 
+def test_time_delta_range():
+    deltas = lox.TimeDelta.range(0 * lox.seconds, 1 * lox.minutes, 20 * lox.seconds)
+    assert [d.to(lox.seconds) for d in deltas] == [0.0, 20.0, 40.0, 60.0]
+    assert len(lox.TimeDelta.range(0 * lox.seconds, 2 * lox.seconds)) == 3
+    with pytest.raises(ValueError, match="non-zero"):
+        lox.TimeDelta.range(0 * lox.seconds, 2 * lox.seconds, 0 * lox.seconds)
+    with pytest.raises(ValueError, match="more than"):
+        lox.TimeDelta.range(0 * lox.seconds, 1 * lox.days, 1 * lox.nanoseconds)
+    huge = lox.TimeDelta.from_seconds(2**62)
+    with pytest.raises(ValueError, match="more than"):
+        lox.TimeDelta.range(-huge, huge)
+
+
 def test_time_delta_units_are_exact_for_whole_values():
     ns = 123456789012
     assert ns * lox.nanoseconds == lox.TimeDelta.from_nanoseconds(ns)

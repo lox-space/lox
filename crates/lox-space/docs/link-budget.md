@@ -102,10 +102,10 @@ for window in results.windows(tx, rx):
         f"{window.interval.start()}  "
         f"peak {window.peak_margin.to_decibels():.1f} dB  "
         f"{window.peak_modcod.name}  "
-        f"{window.data_volume / 8e9:.2f} GB"
+        f"{window.data_volume.to(lox.GB):.2f} GB"
     )
 
-print(f"Total downlinked: {results.data_volume(tx, rx) / 8e9:.1f} GB")
+print(f"Total downlinked: {results.data_volume(tx, rx).to(lox.GB):.1f} GB")
 ```
 
 ---

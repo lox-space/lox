@@ -10,7 +10,7 @@
 //! built-in implementors live in [`terminal`](crate::terminal); custom ends
 //! only need to answer the trait questions.
 
-use lox_core::units::{Decibel, Distance, Frequency, Power, Temperature};
+use lox_core::units::{DataRate, Decibel, Distance, Frequency, Power, Temperature};
 
 use crate::channel::{Channel, LinkDirection};
 use crate::error::NonPhysicalError;
@@ -671,7 +671,7 @@ impl ModulatedLinkBudget {
     }
 
     /// Returns the information bit rate: symbol rate × info bits per symbol.
-    pub fn information_rate(&self) -> Frequency {
+    pub fn information_rate(&self) -> DataRate {
         self.modcod
             .mode()
             .information_rate(self.channel.symbol_rate())
@@ -1230,7 +1230,11 @@ mod tests {
         // required_eb_n0 = 10, design margin = 3 → margin ≈ 24.91
         assert_approx_eq!(m.margin.to_decibels(), 24.91, atol <= 0.02);
         // Information rate: 5 Msps × 1 info bit/symbol.
-        assert_approx_eq!(m.information_rate().to_hertz(), 5e6, rtol <= 1e-12);
+        assert_approx_eq!(
+            m.information_rate().to_bits_per_second(),
+            5e6,
+            rtol <= 1e-12
+        );
         assert_approx_eq!(m.symbol_rate().to_hertz(), 5e6, rtol <= 1e-12);
         // C/N derives from the channel's occupied bandwidth.
         assert_approx_eq!(

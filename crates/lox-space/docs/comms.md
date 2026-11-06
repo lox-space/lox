@@ -190,7 +190,9 @@ modulated = link.modulate(channel, modcod, design_margin=3.0 * lox.dB)
 # Adaptive coding and modulation: the highest-efficiency mode that closes,
 # selected and evaluated in one step (the result always closes):
 best = link.modulate_best(channel, table, design_margin=3.0 * lox.dB)
-print(f"{best.modcod.name}: {best.information_rate().to_megahertz():.1f} Mbit/s")
+print(
+    f"{best.modcod.name}: {best.information_rate().to_megabits_per_second():.1f} Mbit/s"
+)
 ```
 
 ### Budget Report
@@ -303,7 +305,9 @@ print(f"G/T:         {link.gt.to_decibels():.2f} dB/K (clear sky)")
 print(f"G/T:         {link.gt_degraded.to_decibels():.2f} dB/K (rain)")
 print(f"C/N0:        {link.c_n0.to_decibels():.2f} dB·Hz")
 print(f"Eb/N0:       {modulated.eb_n0.to_decibels():.2f} dB")
-print(f"Data rate:   {modulated.information_rate().to_megahertz():.1f} Mbit/s")
+print(
+    f"Data rate:   {modulated.information_rate().to_megabits_per_second():.1f} Mbit/s"
+)
 print(f"Link margin: {modulated.margin.to_decibels():.2f} dB")
 
 # Regulatory check: PFD on the ground vs. the RR Art. 21.16 mask

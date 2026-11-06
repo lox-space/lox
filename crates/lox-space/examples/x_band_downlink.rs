@@ -126,7 +126,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     print!("{modulated}");
     println!(
         "Data rate:       {:>8.1} Mbit/s",
-        modulated.information_rate().to_megahertz()
+        modulated.information_rate().to_megabits_per_second()
     );
     assert!(
         modulated.closes(),
@@ -141,7 +141,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!(
         "\nBest ACM mode:   {} ({:.1} Mbit/s, +{:.0} %)",
         best.modcod.mode().name(),
-        best.information_rate().to_megahertz(),
+        best.information_rate().to_megabits_per_second(),
         (best.modcod.mode().info_bits_per_symbol() / modcod.mode().info_bits_per_symbol() - 1.0)
             * 100.0
     );

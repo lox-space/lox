@@ -10,8 +10,9 @@ use std::sync::Arc;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
-use crate::units::python::PyDecibel;
-use crate::units::python::{PyAngle, PyDistance, PyFrequency, PyPressure, PyTemperature};
+use crate::units::python::{
+    PyAngle, PyDecibel, PyDistance, PyFrequency, PyPressure, PyTemperature,
+};
 
 use lox_core::units::{Angle, Decibel};
 use lox_itur::ItuProvider;
@@ -83,7 +84,12 @@ impl PyItuProvider {
     ///
     /// Returns:
     ///     Rainfall rate in mm/h.
-    fn rainfall_rate(&self, lat: PyAngle, lon: PyAngle, probability: f64) -> PyResult<f64> {
+    fn rainfall_rate_mm_per_hour(
+        &self,
+        lat: PyAngle,
+        lon: PyAngle,
+        probability: f64,
+    ) -> PyResult<f64> {
         self.0
             .rainfall_rate(lat.0, lon.0, probability)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))
@@ -261,7 +267,7 @@ impl PyItuProvider {
 ///     frequency: Frequency.
 ///     elevation: Elevation angle.
 ///     pressure: Surface pressure.
-///     rho: Surface water vapour density in g/m³.
+///     rho_g_per_m3: Surface water vapour density in g/m³.
 ///     temperature: Surface temperature.
 ///
 /// Returns:
@@ -271,14 +277,14 @@ pub fn gaseous_attenuation_slant_path(
     frequency: PyFrequency,
     elevation: PyAngle,
     pressure: PyPressure,
-    rho: f64,
+    rho_g_per_m3: f64,
     temperature: PyTemperature,
 ) -> (PyDecibel, PyDecibel) {
     let (a_o, a_w) = lox_itur::p676::gaseous_attenuation_slant_path(
         frequency.0,
         elevation.0,
         pressure.0,
-        rho,
+        rho_g_per_m3,
         temperature.0,
     );
     (PyDecibel(a_o), PyDecibel(a_w))
@@ -287,7 +293,7 @@ pub fn gaseous_attenuation_slant_path(
 /// Computes the specific attenuation from rain (P.838-3).
 ///
 /// Args:
-///     rain_rate: Rainfall rate in mm/h.
+///     rain_rate_mm_per_hour: Rainfall rate in mm/h.
 ///     frequency: Frequency.
 ///     elevation: Elevation angle.
 ///     polarisation_tilt: Polarisation tilt angle (default 45° for circular).
@@ -295,9 +301,9 @@ pub fn gaseous_attenuation_slant_path(
 /// Returns:
 ///     Specific rain attenuation in dB/km.
 #[pyfunction]
-#[pyo3(signature = (rain_rate, frequency, elevation, polarisation_tilt=None))]
-pub fn rain_specific_attenuation(
-    rain_rate: f64,
+#[pyo3(signature = (rain_rate_mm_per_hour, frequency, elevation, polarisation_tilt=None))]
+pub fn rain_specific_attenuation_db_per_km(
+    rain_rate_mm_per_hour: f64,
     frequency: PyFrequency,
     elevation: PyAngle,
     polarisation_tilt: Option<PyAngle>,
@@ -305,7 +311,7 @@ pub fn rain_specific_attenuation(
     let tau = polarisation_tilt
         .map(|a| a.0)
         .unwrap_or(Angle::degrees(45.0));
-    lox_itur::p838::rain_specific_attenuation(rain_rate, frequency.0, elevation.0, tau)
+    lox_itur::p838::rain_specific_attenuation(rain_rate_mm_per_hour, frequency.0, elevation.0, tau)
 }
 
 /// Registers the pure-formula ITU-R functions with the Python module.
@@ -313,6 +319,6 @@ pub fn rain_specific_attenuation(
 /// Grid-based recommendations are exposed as methods on `ItuProvider`.
 pub fn register_itur_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(gaseous_attenuation_slant_path, m)?)?;
-    m.add_function(wrap_pyfunction!(rain_specific_attenuation, m)?)?;
+    m.add_function(wrap_pyfunction!(rain_specific_attenuation_db_per_km, m)?)?;
     Ok(())
 }

@@ -29,7 +29,7 @@ use lox_comms::{FrequencyBand, FrequencyRange, PropagationLosses};
 use lox_core::units::{Angle, Decibel};
 
 use crate::units::python::{
-    PyAngle, PyDecibel, PyDistance, PyFrequency, PyPower, PyTemperature, repr_f64,
+    PyAngle, PyDataRate, PyDecibel, PyDistance, PyFrequency, PyPower, PyTemperature, repr_f64,
 };
 
 // --- Modulation ---
@@ -1010,8 +1010,8 @@ impl PyModCod {
     }
 
     /// Returns the information bit rate at the given symbol rate.
-    fn information_rate(&self, symbol_rate: PyFrequency) -> PyFrequency {
-        PyFrequency(self.0.mode().information_rate(symbol_rate.0))
+    fn information_rate(&self, symbol_rate: PyFrequency) -> PyDataRate {
+        PyDataRate(self.0.mode().information_rate(symbol_rate.0))
     }
 
     fn __eq__(&self, other: &PyModCod) -> bool {
@@ -1516,8 +1516,8 @@ impl PyModulatedLinkBudget {
     }
 
     /// Information bit rate: symbol rate × info bits per symbol.
-    fn information_rate(&self) -> PyFrequency {
-        PyFrequency(self.0.information_rate())
+    fn information_rate(&self) -> PyDataRate {
+        PyDataRate(self.0.information_rate())
     }
 
     /// Es/N0 (energy per symbol to noise spectral density) in dB.

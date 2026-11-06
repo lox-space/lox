@@ -86,7 +86,7 @@ a_oxygen, a_water = lox.gaseous_attenuation_slant_path(
     frequency=14.25 * lox.GHz,
     elevation=30.0 * lox.deg,
     pressure=1013.25 * lox.hPa,
-    rho=7.5,  # water vapour density (g/m³)
+    rho_g_per_m3=7.5,  # water vapour density (g/m³)
     temperature=288.15 * lox.K,
 )
 ```
@@ -119,8 +119,8 @@ a_scint = provider.scintillation_attenuation(
 ### Specific Rain Attenuation (P.838)
 
 ```python
-gamma_r = lox.rain_specific_attenuation(
-    rain_rate=25.0,  # mm/h
+gamma_r = lox.rain_specific_attenuation_db_per_km(
+    rain_rate_mm_per_hour=25.0,  # mm/h
     frequency=14.25 * lox.GHz,
     elevation=30.0 * lox.deg,
 )
@@ -145,7 +145,9 @@ print(f"Temperature: {t.to_kelvin():.1f} K")
 ### Rainfall Rate (P.837)
 
 ```python
-r = provider.rainfall_rate(lat=40.4 * lox.deg, lon=-3.7 * lox.deg, probability=0.01)
+r = provider.rainfall_rate_mm_per_hour(
+    lat=40.4 * lox.deg, lon=-3.7 * lox.deg, probability=0.01
+)
 print(f"Rainfall rate: {r:.1f} mm/h")
 ```
 
@@ -226,6 +228,6 @@ for the packaging workflow.
 
 ---
 
-::: lox_space.rain_specific_attenuation
+::: lox_space.rain_specific_attenuation_db_per_km
     options:
       show_source: false
