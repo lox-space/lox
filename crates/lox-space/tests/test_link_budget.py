@@ -60,7 +60,7 @@ def t0(oneweb_subset):
 def scenario(t0, space_assets, ground_assets):
     return lox.Scenario(
         t0,
-        t0 + lox.TimeDelta(86400),
+        t0 + lox.TimeDelta.from_seconds(86400),
         spacecraft=space_assets,
         ground_stations=ground_assets,
     )
@@ -123,12 +123,14 @@ class TestTerminalId:
 class TestCarrierPlan:
     def test_defaults(self, plan):
         assert plan.carrier.to_gigahertz() == pytest.approx(8.2)
-        assert float(plan.design_margin) == pytest.approx(0.0)
+        assert plan.design_margin.to_decibels() == pytest.approx(0.0)
         assert len(plan.modcods) == len(lox.ModCod.dvb_s2())
 
     def test_detection_modcod_is_most_robust(self, plan):
-        weakest = min(float(mc.required_es_n0) for mc in lox.ModCod.dvb_s2())
-        assert float(plan.detection_modcod.required_es_n0) == pytest.approx(weakest)
+        weakest = min(mc.required_es_n0.to_decibels() for mc in lox.ModCod.dvb_s2())
+        assert plan.detection_modcod.required_es_n0.to_decibels() == pytest.approx(
+            weakest
+        )
 
     def test_empty_modcod_table_is_rejected(self):
         with pytest.raises(ValueError, match="at least one MODCOD"):
@@ -169,7 +171,7 @@ class TestLinkBudgetAnalysis:
     @pytest.mark.parametrize("seconds", [0, -60])
     def test_non_positive_step_is_rejected(self, scenario, visibility, plan, seconds):
         analysis = lox.LinkBudgetAnalysis(
-            scenario, visibility, plan, step=lox.TimeDelta(seconds)
+            scenario, visibility, plan, step=lox.TimeDelta.from_seconds(seconds)
         )
         with pytest.raises(ValueError, match="step must be positive"):
             analysis.compute()
@@ -243,12 +245,12 @@ class TestLinkBudgetResults:
     def test_refinement_actually_shrinks_the_windows(self, results, visibility):
         """The fit-out must be marginal, or the subset test below proves nothing."""
         visible = sum(
-            float(iv.duration())
+            iv.duration().to_seconds()
             for intervals in visibility.all_intervals().values()
             for iv in intervals
         )
         closed = sum(
-            float(w.interval.duration())
+            w.interval.duration().to_seconds()
             for windows in results.all_windows().values()
             for w in windows
         )
@@ -278,7 +280,7 @@ class TestLinkBudgetResults:
         tx, rx = ids(space_assets, ground_assets)
         window = results.windows(tx, rx)[0]
         assert window.direction == "downlink"
-        assert float(window.peak_margin) >= float(window.min_margin)
+        assert window.peak_margin.to_decibels() >= window.min_margin.to_decibels()
         assert window.data_volume > 0.0
         assert window.peak_information_rate.to_hertz() > 0.0
         assert window.peak_modcod is not None

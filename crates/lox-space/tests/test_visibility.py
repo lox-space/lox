@@ -39,7 +39,7 @@ def t0(oneweb_subset):
 
 @pytest.fixture(scope="module")
 def t1(t0):
-    return t0 + lox.TimeDelta(86400)  # 24-hour window
+    return t0 + lox.TimeDelta.from_seconds(86400)  # 24-hour window
 
 
 @pytest.fixture(scope="module")
@@ -121,7 +121,7 @@ class TestVisibilityAnalysis:
             analysis.compute()
 
     def test_with_custom_step(self, scenario, ephemeris, ground_assets, space_assets):
-        analysis = lox.VisibilityAnalysis(scenario, step=lox.TimeDelta(30))
+        analysis = lox.VisibilityAnalysis(scenario, step=lox.TimeDelta.from_seconds(30))
         results = analysis.compute(ephemeris)
         assert results.num_pairs() == len(ground_assets) * len(space_assets)
 
@@ -129,7 +129,7 @@ class TestVisibilityAnalysis:
         self, scenario, ephemeris, ground_assets, space_assets
     ):
         analysis = lox.VisibilityAnalysis(
-            scenario, min_pass_duration=lox.TimeDelta(300)
+            scenario, min_pass_duration=lox.TimeDelta.from_seconds(300)
         )
         results = analysis.compute(ephemeris)
         assert results.num_pairs() == len(ground_assets) * len(space_assets)
@@ -138,8 +138,8 @@ class TestVisibilityAnalysis:
         analysis = lox.VisibilityAnalysis(
             scenario,
             occulting_bodies=[lox.Origin("Earth")],
-            step=lox.TimeDelta(30),
-            min_pass_duration=lox.TimeDelta(300),
+            step=lox.TimeDelta.from_seconds(30),
+            min_pass_duration=lox.TimeDelta.from_seconds(300),
         )
         results = analysis.compute(ephemeris)
         assert results.num_pairs() == len(ground_assets) * len(space_assets)
@@ -389,7 +389,7 @@ class TestInterval:
         assert isinstance(start, lox.Time)
         assert isinstance(end, lox.Time)
         assert isinstance(duration, lox.TimeDelta)
-        assert float(duration) > 0
+        assert duration.to_seconds() > 0
 
     def test_repr(self, results, ground_assets, space_assets):
         w = self._first_interval(results, ground_assets, space_assets)
@@ -406,9 +406,9 @@ class TestInterval:
 
     def test_contains_time(self, results, ground_assets, space_assets, t0):
         w = self._first_interval(results, ground_assets, space_assets)
-        mid = w.start() + lox.TimeDelta(float(w.duration()) / 2.0)
+        mid = w.start() + lox.TimeDelta.from_seconds(w.duration().to_seconds() / 2.0)
         assert w.contains_time(mid)
-        before = w.start() - lox.TimeDelta(86400)
+        before = w.start() - lox.TimeDelta.from_seconds(86400)
         assert not w.contains_time(before)
 
     def test_contains(self, results, ground_assets, space_assets):
@@ -419,11 +419,11 @@ class TestInterval:
         w = self._first_interval(results, ground_assets, space_assets)
         # Self-intersection equals self
         inter = w.intersect(w)
-        assert float(inter.duration()) == pytest.approx(float(w.duration()))
+        assert inter.duration().to_seconds() == pytest.approx(w.duration().to_seconds())
         # Intersection with non-overlapping is empty
         far = lox.Interval(
-            w.end() + lox.TimeDelta(86400),
-            w.end() + lox.TimeDelta(2 * 86400),
+            w.end() + lox.TimeDelta.from_seconds(86400),
+            w.end() + lox.TimeDelta.from_seconds(2 * 86400),
         )
         assert w.intersect(far).is_empty()
 
@@ -431,17 +431,17 @@ class TestInterval:
         w = self._first_interval(results, ground_assets, space_assets)
         assert w.overlaps(w)
         far = lox.Interval(
-            w.end() + lox.TimeDelta(86400),
-            w.end() + lox.TimeDelta(2 * 86400),
+            w.end() + lox.TimeDelta.from_seconds(86400),
+            w.end() + lox.TimeDelta.from_seconds(2 * 86400),
         )
         assert not w.overlaps(far)
 
     def test_step_by(self, results, ground_assets, space_assets):
         w = self._first_interval(results, ground_assets, space_assets)
-        step = lox.TimeDelta(60)
+        step = lox.TimeDelta.from_seconds(60)
         times = w.step_by(step)
         assert all(isinstance(t, lox.Time) for t in times)
-        expected_count = int(float(w.duration()) / 60) + 1
+        expected_count = int(w.duration().to_seconds() / 60) + 1
         assert abs(len(times) - expected_count) <= 1
 
     def test_linspace(self, results, ground_assets, space_assets):
@@ -453,7 +453,7 @@ class TestInterval:
     def test_step_by_zero_raises(self, results, ground_assets, space_assets):
         w = self._first_interval(results, ground_assets, space_assets)
         with pytest.raises(ValueError):
-            w.step_by(lox.TimeDelta(0))
+            w.step_by(lox.TimeDelta.from_seconds(0))
 
     def test_linspace_one_raises(self, results, ground_assets, space_assets):
         w = self._first_interval(results, ground_assets, space_assets)
@@ -468,34 +468,34 @@ class TestInterval:
 
 class TestIntervalOperations:
     def test_step_by_inclusive(self, t0):
-        w = lox.Interval(t0, t0 + lox.TimeDelta(150))
-        times = w.step_by_inclusive(lox.TimeDelta(60))
-        assert times == [t0 + lox.TimeDelta(s) for s in (0, 60, 120, 150)]
-        assert w.step_by(lox.TimeDelta(60)) == times[:-1]
+        w = lox.Interval(t0, t0 + lox.TimeDelta.from_seconds(150))
+        times = w.step_by_inclusive(lox.TimeDelta.from_seconds(60))
+        assert times == [t0 + lox.TimeDelta.from_seconds(s) for s in (0, 60, 120, 150)]
+        assert w.step_by(lox.TimeDelta.from_seconds(60)) == times[:-1]
 
     def test_step_by_inclusive_zero_raises(self, t0):
-        w = lox.Interval(t0, t0 + lox.TimeDelta(150))
+        w = lox.Interval(t0, t0 + lox.TimeDelta.from_seconds(150))
         with pytest.raises(ValueError):
-            w.step_by_inclusive(lox.TimeDelta(0))
+            w.step_by_inclusive(lox.TimeDelta.from_seconds(0))
 
     def test_intersect_intervals(self, t0):
-        t1 = t0 + lox.TimeDelta(100)
-        t2 = t0 + lox.TimeDelta(200)
-        t3 = t0 + lox.TimeDelta(300)
+        t1 = t0 + lox.TimeDelta.from_seconds(100)
+        t2 = t0 + lox.TimeDelta.from_seconds(200)
+        t3 = t0 + lox.TimeDelta.from_seconds(300)
         # Disjoint → empty
         a = [lox.Interval(t0, t1)]
         b = [lox.Interval(t2, t3)]
         assert lox.intersect_intervals(a, b) == []
         # Overlapping → non-empty
-        b2 = [lox.Interval(t0 + lox.TimeDelta(50), t2)]
+        b2 = [lox.Interval(t0 + lox.TimeDelta.from_seconds(50), t2)]
         result = lox.intersect_intervals(a, b2)
         assert len(result) == 1
         assert not result[0].is_empty()
 
     def test_union_intervals(self, t0):
-        t1 = t0 + lox.TimeDelta(100)
-        t2 = t0 + lox.TimeDelta(200)
-        t3 = t0 + lox.TimeDelta(300)
+        t1 = t0 + lox.TimeDelta.from_seconds(100)
+        t2 = t0 + lox.TimeDelta.from_seconds(200)
+        t3 = t0 + lox.TimeDelta.from_seconds(300)
         # Adjacent/overlapping → merged
         a = [lox.Interval(t0, t2)]
         b = [lox.Interval(t1, t3)]
@@ -508,16 +508,16 @@ class TestIntervalOperations:
         assert len(result2) == 2
 
     def test_complement_intervals(self, t0):
-        t1 = t0 + lox.TimeDelta(100)
-        t2 = t0 + lox.TimeDelta(200)
-        t3 = t0 + lox.TimeDelta(300)
+        t1 = t0 + lox.TimeDelta.from_seconds(100)
+        t2 = t0 + lox.TimeDelta.from_seconds(200)
+        t3 = t0 + lox.TimeDelta.from_seconds(300)
         bound = lox.Interval(t0, t3)
         intervals = [lox.Interval(t1, t2)]
         result = lox.complement_intervals(intervals, bound)
         assert len(result) == 2
         # The gaps should be [t0, t1) and [t2, t3)
-        assert float(result[0].duration()) == pytest.approx(100.0)
-        assert float(result[1].duration()) == pytest.approx(100.0)
+        assert result[0].duration().to_seconds() == pytest.approx(100.0)
+        assert result[1].duration().to_seconds() == pytest.approx(100.0)
 
 
 # ---------------------------------------------------------------------------
@@ -543,7 +543,7 @@ class TestPass:
         p = self._first_pass(results, ground_assets, space_assets)
         w = p.interval()
         assert isinstance(w, lox.Interval)
-        assert float(w.duration()) > 0
+        assert w.duration().to_seconds() > 0
 
     def test_times(self, results, ground_assets, space_assets):
         p = self._first_pass(results, ground_assets, space_assets)
@@ -557,15 +557,15 @@ class TestPass:
         assert len(obs_list) == len(p.times())
         for obs in obs_list:
             assert isinstance(obs, lox.Observables)
-            assert float(obs.range()) > 0
-            assert -math.pi <= float(obs.azimuth()) <= math.pi
+            assert obs.range().to_meters() > 0
+            assert -math.pi <= obs.azimuth().to_radians() <= math.pi
 
     def test_observables_above_threshold(self, results, ground_assets, space_assets):
         """All observables in a pass should be above the station's threshold."""
         p, gs = self._first_pass_with_gs(results, ground_assets, space_assets)
         for obs in p.observables():
             threshold = gs.threshold_at(obs.azimuth())
-            assert float(obs.elevation()) >= float(threshold)
+            assert obs.elevation().to_radians() >= threshold.to_radians()
 
     def test_interpolate_within_pass(self, results, ground_assets, space_assets):
         p = self._first_pass(results, ground_assets, space_assets)
@@ -573,12 +573,12 @@ class TestPass:
         obs = p.interpolate(mid)
         assert obs is not None
         assert isinstance(obs, lox.Observables)
-        assert float(obs.range()) > 0
+        assert obs.range().to_meters() > 0
 
     def test_interpolate_outside_pass(self, results, ground_assets, space_assets, t0):
         p = self._first_pass(results, ground_assets, space_assets)
         # Well before the pass
-        before = t0 - lox.TimeDelta(86400)
+        before = t0 - lox.TimeDelta.from_seconds(86400)
         assert p.interpolate(before) is None
 
     def test_repr(self, results, ground_assets, space_assets):
@@ -608,7 +608,7 @@ class TestAssets:
         for ga in ground_assets:
             assert ga.min_elevation() is None
             assert ga.horizon_mask() is None
-            assert float(ga.threshold_at(0 * lox.rad)) == 0.0
+            assert (ga.threshold_at(0 * lox.rad)).to_radians() == 0.0
 
     def test_ground_station_threshold_combines_floor_and_horizon(self):
         loc = lox.EllipsoidLocation(
@@ -625,13 +625,13 @@ class TestAssets:
             min_elevation=10 * lox.deg,
             horizon_mask=lox.HorizonMask(az, el),
         )
-        assert float(gs.min_elevation()) == pytest.approx(np.radians(10))
+        assert gs.min_elevation().to_radians() == pytest.approx(np.radians(10))
         assert gs.horizon_mask() is not None
         # The horizon dominates in the western sector, the floor in the east.
-        assert float(gs.threshold_at(-np.pi / 2 * lox.rad)) == pytest.approx(
+        assert (gs.threshold_at(-np.pi / 2 * lox.rad)).to_radians() == pytest.approx(
             np.radians(20)
         )
-        assert float(gs.threshold_at(np.pi / 2 * lox.rad)) == pytest.approx(
+        assert (gs.threshold_at(np.pi / 2 * lox.rad)).to_radians() == pytest.approx(
             np.radians(10)
         )
 
@@ -731,8 +731,10 @@ class TestHorizonMask:
         az = np.array([-np.pi, 0.0, np.pi])
         el = np.array([0.0, np.radians(10), 0.0])
         mask = lox.HorizonMask(az, el)
-        assert float(mask.elevation_at(0 * lox.rad)) == pytest.approx(np.radians(10))
-        assert float(mask.elevation_at(-np.pi * lox.rad)) == pytest.approx(0.0)
+        assert (mask.elevation_at(0 * lox.rad)).to_radians() == pytest.approx(
+            np.radians(10)
+        )
+        assert (mask.elevation_at(-np.pi * lox.rad)).to_radians() == pytest.approx(0.0)
         # The repeated wrap-around point is dropped.
         assert mask.azimuth() == pytest.approx([-np.pi, 0.0])
         assert mask.elevation() == pytest.approx([0.0, np.radians(10)])
@@ -751,9 +753,11 @@ class TestHorizonMask:
         az = np.array([-np.pi / 2, 0.0, np.pi / 2])
         el = np.array([0.0, 0.1, 0.4])
         mask = lox.HorizonMask(az, el)
-        assert float(mask.elevation_at(2 * np.pi * lox.rad)) == pytest.approx(0.1)
+        assert (mask.elevation_at(2 * np.pi * lox.rad)).to_radians() == pytest.approx(
+            0.1
+        )
         # The seam at ±π is interpolated across.
-        assert float(mask.elevation_at(np.pi * lox.rad)) == pytest.approx(0.2)
+        assert (mask.elevation_at(np.pi * lox.rad)).to_radians() == pytest.approx(0.2)
 
     def test_conflicting_elevations(self):
         az = np.array([-np.pi, 0.0, np.pi])
@@ -795,8 +799,8 @@ class TestInterSatelliteRangeFiltering:
             id1, id2 = pair
             ivs_unlim = res_unlimited.intervals(id1, id2)
             ivs_lim = res_limited.intervals(id1, id2)
-            dur_unlim = sum(float(iv.duration()) for iv in ivs_unlim)
-            dur_lim = sum(float(iv.duration()) for iv in ivs_lim)
+            dur_unlim = sum(iv.duration().to_seconds() for iv in ivs_unlim)
+            dur_lim = sum(iv.duration().to_seconds() for iv in ivs_lim)
             assert dur_lim <= dur_unlim + 1e-6
 
     def test_large_max_range_matches_unlimited(self, t0, t1, space_assets, ephemeris):
@@ -815,8 +819,8 @@ class TestInterSatelliteRangeFiltering:
             id1, id2 = pair
             ivs_unlim = res_unlimited.intervals(id1, id2)
             ivs_lim = res_limited.intervals(id1, id2)
-            dur_unlim = sum(float(iv.duration()) for iv in ivs_unlim)
-            dur_lim = sum(float(iv.duration()) for iv in ivs_lim)
+            dur_unlim = sum(iv.duration().to_seconds() for iv in ivs_unlim)
+            dur_lim = sum(iv.duration().to_seconds() for iv in ivs_lim)
             assert dur_lim == pytest.approx(dur_unlim, abs=1.0)
 
     def test_min_range_restricts_intervals(self, t0, t1, space_assets, ephemeris):
@@ -832,8 +836,8 @@ class TestInterSatelliteRangeFiltering:
             id1, id2 = pair
             ivs_unlim = res_unlimited.intervals(id1, id2)
             ivs_lim = res_limited.intervals(id1, id2)
-            dur_unlim = sum(float(iv.duration()) for iv in ivs_unlim)
-            dur_lim = sum(float(iv.duration()) for iv in ivs_lim)
+            dur_unlim = sum(iv.duration().to_seconds() for iv in ivs_unlim)
+            dur_lim = sum(iv.duration().to_seconds() for iv in ivs_lim)
             assert dur_lim <= dur_unlim + 1e-6
 
     def test_combined_min_and_max_range(self, t0, t1, space_assets, ephemeris):
@@ -852,8 +856,12 @@ class TestInterSatelliteRangeFiltering:
         res_both = both.compute(ephemeris)
         for pair in res_max.inter_satellite_pair_ids():
             id1, id2 = pair
-            dur_max = sum(float(iv.duration()) for iv in res_max.intervals(id1, id2))
-            dur_both = sum(float(iv.duration()) for iv in res_both.intervals(id1, id2))
+            dur_max = sum(
+                iv.duration().to_seconds() for iv in res_max.intervals(id1, id2)
+            )
+            dur_both = sum(
+                iv.duration().to_seconds() for iv in res_both.intervals(id1, id2)
+            )
             assert dur_both <= dur_max + 1e-6
 
     def test_range_with_los(self, t0, t1, space_assets, ephemeris):
@@ -924,10 +932,10 @@ class TestInterSatelliteSlewRateFiltering:
         for pair in res_unlimited.inter_satellite_pair_ids():
             id1, id2 = pair
             dur_unlim = sum(
-                float(iv.duration()) for iv in res_unlimited.intervals(id1, id2)
+                iv.duration().to_seconds() for iv in res_unlimited.intervals(id1, id2)
             )
             dur_lim = sum(
-                float(iv.duration()) for iv in res_limited.intervals(id1, id2)
+                iv.duration().to_seconds() for iv in res_limited.intervals(id1, id2)
             )
             assert dur_lim <= dur_unlim + 1e-6
 
@@ -952,10 +960,10 @@ class TestInterSatelliteSlewRateFiltering:
         for pair in res_unlimited.inter_satellite_pair_ids():
             id1, id2 = pair
             dur_unlim = sum(
-                float(iv.duration()) for iv in res_unlimited.intervals(id1, id2)
+                iv.duration().to_seconds() for iv in res_unlimited.intervals(id1, id2)
             )
             dur_gen = sum(
-                float(iv.duration()) for iv in res_generous.intervals(id1, id2)
+                iv.duration().to_seconds() for iv in res_generous.intervals(id1, id2)
             )
             assert dur_gen == pytest.approx(dur_unlim, abs=1.0)
 

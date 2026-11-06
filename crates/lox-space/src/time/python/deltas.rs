@@ -2,13 +2,73 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use lox_time::deltas::InvalidFloatSeconds;
-use pyo3::exceptions::PyValueError;
-use pyo3::types::PyType;
-use pyo3::{Bound, PyErr, PyResult, pyclass, pymethods};
+use lox_core::time::constants::ATTOSECONDS_IN_SECOND;
+use lox_time::deltas::{InvalidFloatSeconds, TimeDeltaUnit};
+use numpy::PyUntypedArray;
+use pyo3::exceptions::{PyOverflowError, PyTypeError, PyValueError};
+use pyo3::prelude::*;
+use pyo3::types::{PyFloat, PyInt, PyType};
 
 use crate::time::deltas::TimeDelta;
 use crate::time::intervals::TimeDeltaInterval;
+use crate::units::python::{format_with_unit, repr_f64};
+
+/// A unit of `TimeDelta`.
+///
+/// Multiply a number by a unit to create a duration, e.g. `90 * lox.minutes`.
+///
+/// Args:
+///     symbol: The unit symbol, e.g. "min".
+#[pyclass(
+    name = "TimeDeltaUnit",
+    module = "lox_space",
+    frozen,
+    eq,
+    hash,
+    from_py_object
+)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PyTimeDeltaUnit(pub TimeDeltaUnit);
+
+#[pymethods]
+impl PyTimeDeltaUnit {
+    #[new]
+    fn new(symbol: &str) -> PyResult<Self> {
+        symbol
+            .parse()
+            .map(Self)
+            .map_err(|_| PyValueError::new_err(format!("unknown unit `{symbol}`")))
+    }
+
+    /// The unit symbol.
+    #[getter]
+    fn symbol(&self) -> &'static str {
+        self.0.symbol()
+    }
+
+    fn __mul__(&self, py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
+        match new_in(value, self.0)? {
+            Some(delta) => Ok(PyTimeDelta(delta).into_pyobject(py)?.into_any().unbind()),
+            None => Ok(py.NotImplemented()),
+        }
+    }
+
+    fn __rmul__(&self, py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
+        self.__mul__(py, value)
+    }
+
+    fn __getnewargs__(&self) -> (&'static str,) {
+        (self.0.symbol(),)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("TimeDeltaUnit(\"{}\")", self.0.symbol())
+    }
+
+    fn __str__(&self) -> &'static str {
+        self.0.symbol()
+    }
+}
 
 /// Represents a duration or time difference.
 ///
@@ -16,8 +76,8 @@ use crate::time::intervals::TimeDeltaInterval;
 /// It can be added to or subtracted from `Time` objects, and arithmetic
 /// operations between `TimeDelta` objects are supported.
 ///
-/// Args:
-///     seconds: Duration in seconds (can be negative).
+/// Create one by multiplying a number by a unit, e.g. `90 * lox.minutes`, or with a
+/// named constructor such as `TimeDelta.from_seconds(5400)`.
 ///
 /// See Also:
 ///     Time: For representing instants in time.
@@ -27,27 +87,82 @@ pub struct PyTimeDelta(pub TimeDelta);
 
 #[pymethods]
 impl PyTimeDelta {
-    #[new]
-    /// Constructs a `TimeDelta` from a duration in seconds.
-    pub fn new(seconds: f64) -> PyResult<Self> {
-        Ok(Self(
-            TimeDelta::try_from_seconds_f64(seconds).map_err(PyInvalidFloatSeconds)?,
-        ))
-    }
-
-    /// Returns the developer representation of the `TimeDelta`.
+    /// Returns a representation that evaluates to an equal value.
     pub fn __repr__(&self) -> String {
-        format!("TimeDelta({})", self.to_seconds())
+        let seconds = self.to_seconds();
+        if TimeDelta::try_new_in(seconds, TimeDeltaUnit::Seconds).is_ok_and(|delta| delta == self.0)
+        {
+            return format!("TimeDelta.from_seconds({})", repr_f64(seconds));
+        }
+        format!(
+            "TimeDelta.from_seconds({}) + TimeDelta.from_attoseconds({})",
+            self.0.seconds(),
+            self.0.attoseconds()
+        )
     }
 
     /// Returns the human-readable string representation of the `TimeDelta`.
     pub fn __str__(&self) -> String {
-        format!("{} seconds", self.to_seconds())
+        self.0.to_string()
     }
 
-    /// Returns the duration as a `float` in seconds.
-    pub fn __float__(&self) -> f64 {
-        self.to_seconds()
+    fn __format__(&self, py: Python<'_>, format_spec: &str) -> PyResult<String> {
+        if format_spec.is_empty() {
+            return Ok(self.0.to_string());
+        }
+        self.display_in(py, PyTimeDeltaUnit(TimeDeltaUnit::Seconds), format_spec)
+    }
+
+    fn __reduce__<'py>(slf: &Bound<'py, Self>) -> PyResult<(Bound<'py, PyAny>, (i64, i64))> {
+        let ctor = slf.get_type().getattr("_from_parts")?;
+        let delta = slf.get().0;
+        Ok((ctor, (delta.seconds(), delta.attoseconds())))
+    }
+
+    #[staticmethod]
+    fn _from_parts(seconds: i64, attoseconds: i64) -> PyResult<Self> {
+        if !(0..ATTOSECONDS_IN_SECOND).contains(&attoseconds) {
+            return Err(PyValueError::new_err(format!(
+                "attoseconds must be in [0, {ATTOSECONDS_IN_SECOND}), got {attoseconds}"
+            )));
+        }
+        Ok(Self(TimeDelta::new(seconds, attoseconds)))
+    }
+
+    /// Returns the duration in the given unit.
+    pub fn to(&self, unit: PyTimeDeltaUnit) -> f64 {
+        self.0.to(unit.0)
+    }
+
+    /// Returns the duration formatted in the given unit.
+    ///
+    /// Args:
+    ///     unit: The unit to display the duration in.
+    ///     format_spec: A format spec for the number, e.g. ".3f".
+    #[pyo3(signature = (unit, format_spec = ""))]
+    pub fn display_in(
+        &self,
+        py: Python<'_>,
+        unit: PyTimeDeltaUnit,
+        format_spec: &str,
+    ) -> PyResult<String> {
+        format_with_unit(py, self.0.to(unit.0), format_spec, unit.0.symbol())
+    }
+
+    fn __lt__(&self, other: PyTimeDelta) -> bool {
+        self.0 < other.0
+    }
+
+    fn __le__(&self, other: PyTimeDelta) -> bool {
+        self.0 <= other.0
+    }
+
+    fn __gt__(&self, other: PyTimeDelta) -> bool {
+        self.0 > other.0
+    }
+
+    fn __ge__(&self, other: PyTimeDelta) -> bool {
+        self.0 >= other.0
     }
 
     /// Returns the negation of the `TimeDelta`.
@@ -96,50 +211,45 @@ impl PyTimeDelta {
         self.0.subsecond()
     }
 
-    /// Create a TimeDelta from integer seconds.
+    /// Create a TimeDelta from seconds.
+    ///
+    /// Integers are converted exactly.
     #[classmethod]
-    pub fn from_seconds(_cls: &Bound<'_, PyType>, seconds: i64) -> Self {
-        Self(TimeDelta::from_seconds(seconds))
+    pub fn from_seconds(_cls: &Bound<'_, PyType>, seconds: &Bound<'_, PyAny>) -> PyResult<Self> {
+        from_number(seconds, TimeDeltaUnit::Seconds).map(Self)
     }
 
     /// Create a TimeDelta from minutes.
     #[classmethod]
-    pub fn from_minutes(_cls: &Bound<'_, PyType>, minutes: f64) -> PyResult<Self> {
-        Ok(Self(
-            TimeDelta::try_from_minutes_f64(minutes).map_err(PyInvalidFloatSeconds)?,
-        ))
+    pub fn from_minutes(_cls: &Bound<'_, PyType>, minutes: &Bound<'_, PyAny>) -> PyResult<Self> {
+        from_number(minutes, TimeDeltaUnit::Minutes).map(Self)
     }
 
     /// Create a TimeDelta from hours.
     #[classmethod]
-    pub fn from_hours(_cls: &Bound<'_, PyType>, hours: f64) -> PyResult<Self> {
-        Ok(Self(
-            TimeDelta::try_from_hours_f64(hours).map_err(PyInvalidFloatSeconds)?,
-        ))
+    pub fn from_hours(_cls: &Bound<'_, PyType>, hours: &Bound<'_, PyAny>) -> PyResult<Self> {
+        from_number(hours, TimeDeltaUnit::Hours).map(Self)
     }
 
     /// Create a TimeDelta from days (86400 seconds per day).
     #[classmethod]
-    pub fn from_days(_cls: &Bound<'_, PyType>, days: f64) -> PyResult<Self> {
-        Ok(Self(
-            TimeDelta::try_from_days_f64(days).map_err(PyInvalidFloatSeconds)?,
-        ))
+    pub fn from_days(_cls: &Bound<'_, PyType>, days: &Bound<'_, PyAny>) -> PyResult<Self> {
+        from_number(days, TimeDeltaUnit::Days).map(Self)
     }
 
     /// Create a TimeDelta from Julian years (365.25 days per year).
     #[classmethod]
-    pub fn from_julian_years(_cls: &Bound<'_, PyType>, years: f64) -> PyResult<Self> {
-        Ok(Self(
-            TimeDelta::try_from_julian_years(years).map_err(PyInvalidFloatSeconds)?,
-        ))
+    pub fn from_julian_years(_cls: &Bound<'_, PyType>, years: &Bound<'_, PyAny>) -> PyResult<Self> {
+        from_number(years, TimeDeltaUnit::JulianYears).map(Self)
     }
 
     /// Create a TimeDelta from Julian centuries (36525 days per century).
     #[classmethod]
-    pub fn from_julian_centuries(_cls: &Bound<'_, PyType>, centuries: f64) -> PyResult<Self> {
-        Ok(Self(
-            TimeDelta::try_from_julian_centuries(centuries).map_err(PyInvalidFloatSeconds)?,
-        ))
+    pub fn from_julian_centuries(
+        _cls: &Bound<'_, PyType>,
+        centuries: &Bound<'_, PyAny>,
+    ) -> PyResult<Self> {
+        from_number(centuries, TimeDeltaUnit::JulianCenturies).map(Self)
     }
 
     /// Create a TimeDelta from integer milliseconds.
@@ -211,6 +321,61 @@ impl PyTimeDelta {
     pub fn to_seconds(&self) -> f64 {
         self.0.as_seconds_f64()
     }
+}
+
+/// Creates a `TimeDelta` from a number in the given unit, exactly if the number is an integer.
+///
+/// Returns `None` if `value` is not a number, including NumPy arrays, so that NumPy can apply
+/// the operation elementwise.
+fn new_in(value: &Bound<'_, PyAny>, unit: TimeDeltaUnit) -> PyResult<Option<TimeDelta>> {
+    if value.is_instance_of::<PyFloat>() {
+        return float_in(value, unit).map(Some);
+    }
+    if value.is_instance_of::<PyUntypedArray>() {
+        return Ok(None);
+    }
+    // Integer types such as `int` and the NumPy integer scalars implement `__index__`.
+    if value.is_instance_of::<PyInt>() || value.get_type().hasattr("__index__")? {
+        let count: i128 = value.extract().map_err(|err: PyErr| {
+            if err.is_instance_of::<PyOverflowError>(value.py()) {
+                out_of_range(value, unit)
+            } else {
+                err
+            }
+        })?;
+        return TimeDelta::checked_new_in(count, unit)
+            .map(Some)
+            .ok_or_else(|| out_of_range(value, unit));
+    }
+    match float_in(value, unit) {
+        Ok(delta) => Ok(Some(delta)),
+        Err(err) if err.is_instance_of::<PyTypeError>(value.py()) => Ok(None),
+        Err(err) => Err(err),
+    }
+}
+
+/// Creates a `TimeDelta` from a value that converts to a float.
+fn float_in(value: &Bound<'_, PyAny>, unit: TimeDeltaUnit) -> PyResult<TimeDelta> {
+    TimeDelta::try_new_in(value.extract()?, unit).map_err(|_| out_of_range(value, unit))
+}
+
+fn out_of_range(value: &Bound<'_, PyAny>, unit: TimeDeltaUnit) -> PyErr {
+    PyValueError::new_err(format!(
+        "value {value} {unit} is non-finite or out-of-range"
+    ))
+}
+
+/// Like [`new_in`], but raises a `TypeError` if `value` is not a number.
+fn from_number(value: &Bound<'_, PyAny>, unit: TimeDeltaUnit) -> PyResult<TimeDelta> {
+    new_in(value, unit)?.ok_or_else(|| {
+        PyTypeError::new_err(format!(
+            "expected a number, got '{}'",
+            value
+                .get_type()
+                .name()
+                .map_or_else(|_| "?".into(), |name| name.to_string())
+        ))
+    })
 }
 
 pub(crate) struct PyInvalidFloatSeconds(pub InvalidFloatSeconds);

@@ -87,7 +87,7 @@ FSPL_CASES = [
 @pytest.mark.parametrize("distance_km,frequency_ghz", FSPL_CASES)
 def test_fspl(distance_km, frequency_ghz):
     """FSPL should agree between lox and spacelink to better than 1e-4 dB."""
-    lox_db = float(lox.fspl(distance_km * lox.km, frequency_ghz * lox.GHz))
+    lox_db = (lox.fspl(distance_km * lox.km, frequency_ghz * lox.GHz)).to_decibels()
     sl_db = float(sl_fspl(distance_km * u.km, frequency_ghz * u.GHz).value)
     assert lox_db == pytest.approx(sl_db, abs=1e-4)
 
@@ -104,7 +104,7 @@ def test_fspl(distance_km, frequency_ghz):
 @pytest.mark.parametrize("distance_km,frequency_ghz", FSPL_CASES)
 def test_fspl_decomposition(distance_km, frequency_ghz):
     """lox FSPL should equal spacelink's spreading_loss + aperture_loss."""
-    lox_db = float(lox.fspl(distance_km * lox.km, frequency_ghz * lox.GHz))
+    lox_db = (lox.fspl(distance_km * lox.km, frequency_ghz * lox.GHz)).to_decibels()
     sl_db = (
         sl_spreading_loss(distance_km * u.km).value
         + sl_aperture_loss(frequency_ghz * u.GHz).value
@@ -127,10 +127,10 @@ DISH_CASES = [
 @pytest.mark.parametrize("diameter_m,frequency_ghz,efficiency", DISH_CASES)
 def test_parabolic_peak_gain(diameter_m, frequency_ghz, efficiency):
     """Parabolic peak gain should agree between lox and spacelink to better than 1e-4 dB."""
-    lox_db = float(
-        lox.ParabolicPattern(diameter_m * lox.m, efficiency).peak_gain(
-            frequency_ghz * lox.GHz
-        )
+    lox_db = (
+        lox.ParabolicPattern(diameter_m * lox.m, efficiency)
+        .peak_gain(frequency_ghz * lox.GHz)
+        .to_decibels()
     )
     sl_db = float(
         sl_dish_gain(
@@ -154,10 +154,10 @@ def test_parabolic_peak_gain(diameter_m, frequency_ghz, efficiency):
 @pytest.mark.parametrize("diameter_m,frequency_ghz,efficiency", DISH_CASES)
 def test_gaussian_peak_gain(diameter_m, frequency_ghz, efficiency):
     """Gaussian peak gain should agree with spacelink dish_gain to better than 1e-4 dB."""
-    lox_db = float(
-        lox.GaussianPattern(diameter_m * lox.m, efficiency).peak_gain(
-            frequency_ghz * lox.GHz
-        )
+    lox_db = (
+        lox.GaussianPattern(diameter_m * lox.m, efficiency)
+        .peak_gain(frequency_ghz * lox.GHz)
+        .to_decibels()
     )
     sl_db = float(
         sl_dish_gain(
@@ -210,7 +210,7 @@ def test_chain_noise_temperature_degenerate(noise_figure_db):
         stages=[
             lox.NoiseStage(
                 gain=0.0 * lox.dB,
-                noise_temperature=lox.Temperature(
+                noise_temperature=lox.Temperature.kelvin(
                     290.0 * (10 ** (noise_figure_db / 10) - 1)
                 ),
             ),
@@ -244,8 +244,8 @@ CN0_CASES = [
 @pytest.mark.parametrize("cn0_dbhz,data_rate_hz", CN0_CASES)
 def test_cn0_to_ebn0(cn0_dbhz, data_rate_hz):
     # BPSK uncoded: 1 info bit/symbol, so Es/N0 == Eb/N0.
-    ch = lox.Channel(symbol_rate=lox.Frequency(data_rate_hz))
-    lox_ebn0 = float(ch.es_n0(cn0_dbhz * lox.dB))
+    ch = lox.Channel(symbol_rate=lox.Frequency.hertz(data_rate_hz))
+    lox_ebn0 = (ch.es_n0(cn0_dbhz * lox.dB)).to_decibels()
     sl_ebn0 = float(
         sl_cn0_to_ebn0(
             u.LogQuantity(cn0_dbhz, unit=u.dB(u.Hz)),
@@ -273,7 +273,7 @@ NOISE_POWER_CASES = [
 
 def t_sys_from_stats(stats, bandwidth_hz):
     """Recovers T_sys in Kelvin from the noise power reported by LinkBudget."""
-    return 10.0 ** (float(stats.noise_power(bandwidth_hz * lox.Hz)) / 10.0) / (
+    return 10.0 ** ((stats.noise_power(bandwidth_hz * lox.Hz)).to_decibels() / 10.0) / (
         BOLTZMANN_CONSTANT * bandwidth_hz
     )
 
@@ -282,7 +282,7 @@ def t_sys_from_stats(stats, bandwidth_hz):
 def test_noise_power(t_sys_k, bandwidth_hz):
     """LinkBudget.noise_power should agree with spacelink to 0.001 dBW."""
     stats = noise_temp_link_budget(t_sys_k)
-    lox_dbw = float(stats.noise_power(bandwidth_hz * lox.Hz))
+    lox_dbw = (stats.noise_power(bandwidth_hz * lox.Hz)).to_decibels()
     sl_w = float(sl_noise_power(bandwidth_hz * u.Hz, t_sys_k * u.K).to(u.W).value)
     sl_dbw = 10.0 * math.log10(sl_w)
     assert lox_dbw == pytest.approx(sl_dbw, abs=1e-3)
@@ -327,7 +327,7 @@ def test_noise_power_density(t_sys_k):
     """k_B · T should agree between lox and spacelink to 0.001 dB."""
     stats = noise_temp_link_budget(t_sys_k)
     # noise_power(BW=1Hz) = 10·log₁₀(k_B · T · 1) = noise power density in dBW/Hz
-    lox_dbw_hz = float(stats.noise_power(1.0 * lox.Hz))
+    lox_dbw_hz = (stats.noise_power(1.0 * lox.Hz)).to_decibels()
     sl_w_hz = float(sl_npd(t_sys_k * u.K).to(u.W / u.Hz).value)
     sl_dbw_hz = 10.0 * math.log10(sl_w_hz)
     assert lox_dbw_hz == pytest.approx(sl_dbw_hz, abs=1e-3)
@@ -353,7 +353,7 @@ GT_CASES = [
 def test_gt_decomposition(gain_db, t_sys_k):
     """G/T computed by lox should decompose correctly via spacelink."""
     stats = noise_temp_link_budget(t_sys_k, rx_gain_db=gain_db)
-    lox_gt = float(stats.gt)
+    lox_gt = stats.gt.to_decibels()
     # Use spacelink to recover gain from G/T and T_sys
     recovered_gain = float(sl_gain_from_gt(lox_gt * u.dB(1 / u.K), t_sys_k * u.K).value)
     assert recovered_gain == pytest.approx(gain_db, abs=1e-3)
@@ -451,7 +451,7 @@ def test_tdrs_ka_band_return_link():
     )
 
     # Cross-check TX antenna gain against spacelink
-    lox_tx_gain = float(tx_pattern.peak_gain(freq))
+    lox_tx_gain = tx_pattern.peak_gain(freq).to_decibels()
     sl_tx_gain = float(
         sl_dish_gain(
             tx_diameter * u.m,
@@ -484,7 +484,7 @@ def test_tdrs_ka_band_return_link():
     )
 
     # Cross-check RX antenna gain against spacelink
-    lox_rx_gain = float(rx_pattern.peak_gain(freq))
+    lox_rx_gain = rx_pattern.peak_gain(freq).to_decibels()
     sl_rx_gain = float(
         sl_dish_gain(
             rx_diameter * u.m,
@@ -505,7 +505,7 @@ def test_tdrs_ka_band_return_link():
 
     # --- Link budget ---
     range_km = 40000.0
-    bandwidth_hz = float(channel.bandwidth())
+    bandwidth_hz = channel.bandwidth().to_hertz()
     stats = lox.LinkBudget(
         tx,
         rx,
@@ -522,27 +522,29 @@ def test_tdrs_ka_band_return_link():
 
     # Cross-check FSPL against spacelink
     sl_fspl_db = float(sl_fspl(range_km * u.km, freq_ghz * u.GHz).value)
-    assert float(stats.fspl) == pytest.approx(sl_fspl_db, abs=1e-4)
+    assert stats.fspl.to_decibels() == pytest.approx(sl_fspl_db, abs=1e-4)
 
     # Cross-check Eb/N0 against spacelink
     # For QPSK with FEC=0.5: information_rate = symbol_rate * 2 * 0.5 = symbol_rate
     information_rate_hz = 25e6
     sl_ebn0 = float(
         sl_cn0_to_ebn0(
-            u.LogQuantity(float(stats.c_n0), unit=u.dB(u.Hz)),
+            u.LogQuantity(stats.c_n0.to_decibels(), unit=u.dB(u.Hz)),
             information_rate_hz * u.Hz,
         ).value
     )
-    assert float(modulated.eb_n0) == pytest.approx(sl_ebn0, abs=1e-4)
+    assert modulated.eb_n0.to_decibels() == pytest.approx(sl_ebn0, abs=1e-4)
 
     # Verify G/T via spacelink gain recovery
     recovered_gain = float(
-        sl_gain_from_gt(float(stats.gt) * u.dB(1 / u.K), lox_t_sys * u.K).value
+        sl_gain_from_gt(stats.gt.to_decibels() * u.dB(1 / u.K), lox_t_sys * u.K).value
     )
     # G/T uses antenna gain only (no chain gain), so recovered gain
     # should equal the RX antenna peak gain
     assert recovered_gain == pytest.approx(lox_rx_gain, abs=0.1)
 
     # Sanity checks: the link should close with these parameters
-    assert float(modulated.margin) > 0.0, "TDRS Ka-band return link should close"
-    assert float(stats.c_n0) > 60.0, "C/N0 should be reasonable for Ka-band relay"
+    assert modulated.margin.to_decibels() > 0.0, "TDRS Ka-band return link should close"
+    assert stats.c_n0.to_decibels() > 60.0, (
+        "C/N0 should be reasonable for Ka-band relay"
+    )

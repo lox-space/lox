@@ -3,269 +3,325 @@
 # SPDX-License-Identifier: MPL-2.0
 
 import math
+import pickle
 
+import numpy as np
 import pytest
 
 import lox_space as lox
 
+QUANTITIES = [
+    (lox.Angle, lox.AngleUnit, "rad"),
+    (lox.AngularRate, lox.AngularRateUnit, "rad/s"),
+    (lox.Area, lox.AreaUnit, "m²"),
+    (lox.AreaToMass, lox.AreaToMassUnit, "m²/kg"),
+    (lox.DataRate, lox.DataRateUnit, "bit/s"),
+    (lox.DataVolume, lox.DataVolumeUnit, "bit"),
+    (lox.Decibel, lox.DecibelUnit, "dB"),
+    (lox.DecibelWatts, lox.DecibelWattsUnit, "dBW"),
+    (lox.Distance, lox.DistanceUnit, "m"),
+    (lox.Frequency, lox.FrequencyUnit, "Hz"),
+    (lox.GravitationalParameter, lox.GravitationalParameterUnit, "m³/s²"),
+    (lox.Mass, lox.MassUnit, "kg"),
+    (lox.Power, lox.PowerUnit, "W"),
+    (lox.Pressure, lox.PressureUnit, "Pa"),
+    (lox.SpecificAngularMomentum, lox.SpecificAngularMomentumUnit, "m²/s"),
+    (lox.SpecificEnergy, lox.SpecificEnergyUnit, "m²/s²"),
+    (lox.Temperature, lox.TemperatureUnit, "K"),
+    (lox.Velocity, lox.VelocityUnit, "m/s"),
+]
 
-def test_angle_rad():
-    a = math.pi * lox.rad
-    assert str(a) == "3.141592653589793 rad"
-    assert repr(a) == "Angle(3.141592653589793)"
-    assert float(a) == math.pi
-    assert int(a) == 3
-    assert complex(a) == complex(math.pi)
+
+@pytest.mark.parametrize(("quantity", "unit", "symbol"), QUANTITIES)
+def test_si_unit_round_trip(quantity, unit, symbol):
+    si = unit(symbol)
+    q = 2.5 * si
+    assert isinstance(q, quantity)
+    assert q.to(si) == 2.5
+    assert str(q) == f"2.5 {symbol}"
+    assert eval(repr(q), {quantity.__name__: quantity}) == q
+    assert pickle.loads(pickle.dumps(q)) == q
+    assert pickle.loads(pickle.dumps(si)) == si
 
 
-def test_angle_deg():
+@pytest.mark.parametrize(("quantity", "unit", "symbol"), QUANTITIES)
+def test_no_implicit_float_conversion(quantity, unit, symbol):
+    q = 1.0 * unit(symbol)
+    with pytest.raises(TypeError):
+        float(q)
+    with pytest.raises(TypeError):
+        int(q)
+    with pytest.raises(TypeError):
+        complex(q)
+    with pytest.raises(TypeError):
+        quantity(1.0)
+
+
+def test_units_are_not_quantities():
+    assert isinstance(lox.km, lox.DistanceUnit)
+    assert lox.km.symbol == "km"
+    assert str(lox.km) == "km"
+    assert repr(lox.km) == 'DistanceUnit("km")'
+    assert lox.DistanceUnit("km") == lox.km
+    assert hash(lox.DistanceUnit("km")) == hash(lox.km)
+    with pytest.raises(TypeError):
+        lox.km + 1 * lox.km
+    with pytest.raises(TypeError):
+        lox.km * lox.km
+    with pytest.raises(ValueError, match="unknown unit"):
+        lox.DistanceUnit("parsec")
+
+
+def test_unit_aliases():
+    assert lox.AngleUnit("uas") == lox.uas
+    assert lox.AngleUnit("°") == lox.deg
+    assert lox.DistanceUnit("AU") == lox.au
+
+
+def test_angle():
     a = 180 * lox.deg
     assert str(a) == "3.141592653589793 rad"
-    assert repr(a) == "Angle(3.141592653589793)"
-    assert float(a) == math.pi
-    assert int(a) == 3
-    assert complex(a) == complex(math.pi)
+    assert repr(a) == "Angle.radians(3.141592653589793)"
+    assert a.to(lox.rad) == math.pi
+    assert a.to_degrees() == pytest.approx(180.0)
+    assert lox.Angle.degrees(180) == a
+    assert (1 * lox.arcsec).to(lox.mas) == pytest.approx(1000.0)
 
 
-def test_distance_km():
+def test_distance():
     d = 1024 * lox.km
     assert str(d) == "1024000 m"
-    assert repr(d) == "Distance(1024000.0)"
-    assert float(d) == 1024000.0
-    assert int(d) == 1024000
-    assert complex(d) == complex(1024000.0)
+    assert repr(d) == "Distance.meters(1024000.0)"
+    assert d.to(lox.km) == 1024.0
+    assert d.to_meters() == 1024000.0
+    assert lox.Distance.kilometers(1024) == d
+    assert (1 * lox.au).to_astronomical_units() == pytest.approx(1.0)
 
 
-def test_distance_m():
-    d = 2048 * lox.m
-    assert str(d) == "2048 m"
-    assert repr(d) == "Distance(2048.0)"
-    assert float(d) == 2048.0
-    assert int(d) == 2048
-    assert complex(d) == complex(2048.0)
+def test_repr_integer_value():
+    assert repr(1 * lox.km) == "Distance.meters(1000.0)"
 
 
-def test_frequency_hz():
-    f = 1073741824 * lox.Hz
-    assert str(f) == "1073741824 Hz"
-    assert repr(f) == "Frequency(1073741824.0)"
-    assert float(f) == 1073741824.0
-    assert int(f) == 1073741824
-    assert complex(f) == complex(1073741824.0)
+def test_frequency():
+    f = 2.4 * lox.GHz
+    assert f.to(lox.MHz) == pytest.approx(2400.0)
+    assert f.to_gigahertz() == pytest.approx(2.4)
+    assert (2000000 * lox.kHz).to_hertz() == 2e9
 
 
-def test_frequency_khz():
-    f = 2000000 * lox.kHz
-    assert str(f) == "2000000000 Hz"
-    assert repr(f) == "Frequency(2000000000.0)"
-    assert float(f) == 2000000000.0
-    assert int(f) == 2000000000
-    assert complex(f) == complex(2000000000.0)
+def test_velocity():
+    v = 7.8 * lox.km_per_s
+    assert v.to(lox.m_per_s) == pytest.approx(7800.0)
+    assert v.to_kilometers_per_second() == pytest.approx(7.8)
+    assert (1 * lox.c).to(lox.m_per_s) == 299792458.0
+    assert (1 * lox.au_per_d).to(lox.au_per_d) == pytest.approx(1.0)
+    assert (
+        lox.Velocity.fraction_of_speed_of_light(1).to_meters_per_second() == 299792458.0
+    )
 
 
-def test_velocity_ms():
-    v = 262144 * lox.m_per_s
-    assert str(v) == "262144 m/s"
-    assert repr(v) == "Velocity(262144.0)"
-    assert float(v) == 262144.0
-    assert int(v) == 262144
-    assert complex(v) == complex(262144.0)
+def test_formatting():
+    d = 1500 * lox.m
+    assert f"{d}" == "1500 m"
+    assert f"{d:.1f}" == "1500.0 m"
+    assert f"{d:.2e}" == "1.50e+03 m"
+    assert d.display_in(lox.km) == "1.5 km"
+    assert d.display_in(lox.km, ".3f") == "1.500 km"
 
 
-def test_velocity_kms():
-    v = 16 * lox.km_per_s
-    assert str(v) == "16000 m/s"
-    assert repr(v) == "Velocity(16000.0)"
-    assert float(v) == 16000.0
-    assert int(v) == 16000
-    assert complex(v) == complex(16000.0)
+def test_arithmetic():
+    d = 100 * lox.km + 500 * lox.m
+    assert d.to(lox.m) == 100500.0
+    assert (d - 500 * lox.m).to(lox.km) == 100.0
+    assert (-d).to(lox.m) == -100500.0
+    assert abs(-d) == d
+    assert +d == d
+    assert (2 * d).to(lox.m) == 201000.0
+    assert (d * 2).to(lox.m) == 201000.0
+    assert (d / 2).to(lox.m) == 50250.0
+    assert (2 * lox.km) / (500 * lox.m) == 4.0
+    with pytest.raises(TypeError):
+        1 * lox.km + 1 * lox.deg
+    with pytest.raises(TypeError):
+        1 * lox.km + 1.0
 
 
-# --- Arithmetic operations (covers __add__, __sub__, __neg__, __mul__, __eq__) ---
+def test_comparisons():
+    assert 1 * lox.km > 500 * lox.m
+    assert 1 * lox.km >= 1000 * lox.m
+    assert 1 * lox.m < 1 * lox.km
+    assert 1 * lox.m <= 1 * lox.m
+    assert 1 * lox.km == 1000 * lox.m
+    assert 1 * lox.km != 1 * lox.m
+    assert (1 * lox.km == 1 * lox.deg) is False
+    with pytest.raises(TypeError):
+        _ = 1 * lox.km < 1 * lox.deg
 
 
-def test_distance_arithmetic():
-    a = 100 * lox.m
-    b = 200 * lox.m
-    assert a + b == lox.Distance(300.0)
-    assert b - a == lox.Distance(100.0)
-    assert -a == lox.Distance(-100.0)
-    assert a * 3 == lox.Distance(300.0)
+def test_cross_dimension_operators():
+    t = 10 * lox.seconds
+    v = (70 * lox.km) / t
+    assert isinstance(v, lox.Velocity)
+    assert v.to(lox.km_per_s) == 7.0
+    assert ((7 * lox.km_per_s) * t).to(lox.km) == 70.0
+    assert (t * (7 * lox.km_per_s)).to(lox.km) == 70.0
+    assert ((90 * lox.deg) / t).to(lox.deg_per_s) == pytest.approx(9.0)
+    assert ((9 * lox.deg_per_s) * t).to(lox.deg) == pytest.approx(90.0)
+    area = (2 * lox.m) * (3 * lox.m)
+    assert isinstance(area, lox.Area)
+    assert area.to(lox.m2) == 6.0
+    assert (area / (3 * lox.kg)).to(lox.m2_per_kg) == 2.0
+    assert ((8 * lox.Mbps) * t).to(lox.MB) == 10.0
+    assert ((10 * lox.MB) / t).to(lox.Mbps) == 8.0
 
 
-def test_angle_arithmetic():
-    a = 1.0 * lox.rad
-    b = 2.0 * lox.rad
-    assert a + b == lox.Angle(3.0)
-    assert b - a == lox.Angle(1.0)
-    assert -a == lox.Angle(-1.0)
-    assert a * 2 == lox.Angle(2.0)
+def test_decibels():
+    p = 20 * lox.W
+    level = p.to_decibel_watts()
+    assert isinstance(level, lox.DecibelWatts)
+    assert level.to(lox.dBW) == pytest.approx(13.0103, abs=1e-4)
+    assert level.to_power().to_watts() == pytest.approx(20.0)
+    eirp = 10 * lox.dBW + 30 * lox.dB
+    assert eirp.to(lox.dBW) == 40.0
+    assert (30 * lox.dB + 10 * lox.dBW).to(lox.dBW) == 40.0
+    assert (eirp - 3 * lox.dB).to(lox.dBW) == 37.0
+    margin = eirp - 10 * lox.dBW
+    assert isinstance(margin, lox.Decibel)
+    assert margin.to(lox.dB) == 30.0
+    assert (0 * lox.dBm).to(lox.dBW) == -30.0
+    assert lox.Decibel.from_linear(100).to_decibels() == pytest.approx(20.0)
+    assert (3 * lox.dB).to_linear() == pytest.approx(1.9953, abs=1e-4)
+    assert (2 * (3 * lox.dB)).to(lox.dB) == 6.0
 
 
-def test_velocity_arithmetic():
-    a = 10 * lox.m_per_s
-    b = 20 * lox.m_per_s
-    assert a + b == lox.Velocity(30.0)
-    assert b - a == lox.Velocity(10.0)
-    assert -a == lox.Velocity(-10.0)
-
-
-def test_frequency_eq():
-    assert 1000 * lox.Hz == 1 * lox.kHz
-
-
-# --- Conversion methods ---
-
-
-def test_angle_conversions():
-    a = math.pi * lox.rad
-    assert a.to_radians() == pytest.approx(math.pi)
-    assert a.to_degrees() == pytest.approx(180.0)
-    a2 = lox.Angle(math.pi / 180.0 / 3600.0)
-    assert a2.to_arcseconds() == pytest.approx(1.0)
-
-
-def test_distance_conversions():
-    d = 1 * lox.km
-    assert d.to_meters() == pytest.approx(1000.0)
-    assert d.to_kilometers() == pytest.approx(1.0)
-    au = lox.Distance(lox.au.to_meters())
-    assert au.to_astronomical_units() == pytest.approx(1.0)
-
-
-def test_velocity_conversions():
-    v = 1 * lox.km_per_s
-    assert v.to_meters_per_second() == pytest.approx(1000.0)
-    assert v.to_kilometers_per_second() == pytest.approx(1.0)
-
-
-def test_frequency_conversions():
-    f = 1 * lox.GHz
-    assert f.to_hertz() == pytest.approx(1e9)
-    assert f.to_kilohertz() == pytest.approx(1e6)
-    assert f.to_megahertz() == pytest.approx(1e3)
-    assert f.to_gigahertz() == pytest.approx(1.0)
-    assert f.to_terahertz() == pytest.approx(1e-3)
-
-
-# --- New unit types ---
-
-
-def test_angular_rate():
-    ar = 1.0 * lox.rad_per_s
-    assert str(ar)
-    assert repr(ar) == "AngularRate(1.0)"
-    assert float(ar) == 1.0
-    assert ar.to_radians_per_second() == pytest.approx(1.0)
-    assert ar.to_degrees_per_second() == pytest.approx(math.degrees(1.0))
-
-
-def test_angular_rate_deg_per_s():
-    ar = 180.0 * lox.deg_per_s
-    assert ar.to_radians_per_second() == pytest.approx(math.pi)
-    assert ar.to_degrees_per_second() == pytest.approx(180.0)
-
-
-def test_angular_rate_arithmetic():
-    a = 1.0 * lox.rad_per_s
-    b = 2.0 * lox.rad_per_s
-    assert a + b == lox.AngularRate(3.0)
-    assert b - a == lox.AngularRate(1.0)
-    assert -a == lox.AngularRate(-1.0)
-
-
-def test_power():
-    p = 100 * lox.W
-    assert repr(p) == "Power(100.0)"
-    assert float(p) == 100.0
-    assert p.to_watts() == pytest.approx(100.0)
-    assert p.to_kilowatts() == pytest.approx(0.1)
-    assert p.to_dbw() == pytest.approx(20.0)
-
-
-def test_power_kw():
-    p = 1 * lox.kW
-    assert p.to_watts() == pytest.approx(1000.0)
-
-
-def test_power_arithmetic():
-    a = 50 * lox.W
-    b = 150 * lox.W
-    assert a + b == lox.Power(200.0)
-    assert b - a == lox.Power(100.0)
-    assert -a == lox.Power(-50.0)
+def test_pressure():
+    p = 1013.25 * lox.hPa
+    assert p.to_hectopascals() == pytest.approx(1013.25)
+    assert p.to(lox.Pa) == pytest.approx(101325.0)
 
 
 def test_temperature():
     t = 290 * lox.K
-    assert repr(t) == "Temperature(290.0)"
-    assert float(t) == 290.0
-    assert t.to_kelvin() == pytest.approx(290.0)
+    assert t.to_kelvin() == 290.0
+    assert (t + 10 * lox.K).to(lox.K) == 300.0
 
 
-def test_temperature_arithmetic():
-    a = 100 * lox.K
-    b = 200 * lox.K
-    assert a + b == lox.Temperature(300.0)
-    assert b - a == lox.Temperature(100.0)
-
-
-# --- GravitationalParameter ---
+def test_mass_and_data_volume():
+    assert (1.5 * lox.kg).to_grams() == 1500.0
+    assert lox.Mass.metric_tons(2).to(lox.kg) == 2000.0
+    assert (1 * lox.KiB).to(lox.bit) == 8192.0
+    assert (1 * lox.B).to_bits() == 8.0
+    assert (1500 * lox.g).to(lox.kg) == 1.5
+    assert (2 * lox.t).to(lox.kg) == 2000.0
 
 
 def test_gravitational_parameter():
-    gm = lox.GravitationalParameter(3.986004418e14)
-    assert repr(gm) == "GravitationalParameter(398600441800000.0)"
-    assert float(gm) == 3.986004418e14
+    gm = 398600.4418 * lox.km3_per_s2
     assert gm.to_m3_per_s2() == pytest.approx(3.986004418e14)
-    assert gm.to_km3_per_s2() == pytest.approx(398600.4418)
+    assert gm.to(lox.km3_per_s2) == pytest.approx(398600.4418)
+    assert lox.GravitationalParameter.km3_per_s2(398600.4418) == gm
+    assert str(lox.GravitationalParameter.m3_per_s2(2.0)) == "2 m³/s²"
+    with pytest.raises(TypeError):
+        gm + gm
 
 
-def test_gravitational_parameter_from_km3():
-    gm = lox.GravitationalParameter.from_km3_per_s2(398600.4418)
-    assert gm.to_m3_per_s2() == pytest.approx(3.986004418e14)
-    assert gm.to_km3_per_s2() == pytest.approx(398600.4418)
+def test_specific_quantities():
+    e = -29.6 * lox.km2_per_s2
+    assert e.to_square_meters_per_second_squared() == pytest.approx(-29.6e6)
+    h = 52000 * lox.km2_per_s
+    assert h.to(lox.m2_per_s) == pytest.approx(5.2e10)
 
 
-def test_gravitational_parameter_eq():
-    gm1 = lox.GravitationalParameter(1e14)
-    gm2 = lox.GravitationalParameter(1e14)
-    assert gm1 == gm2
+def test_time_delta_units():
+    td = 90 * lox.minutes
+    assert isinstance(td, lox.TimeDelta)
+    assert td.to(lox.hours) == 1.5
+    assert td.to(lox.seconds) == 5400.0
+    assert (1.5 * lox.milliseconds).to(lox.microseconds) == 1500.0
+    assert (1 * lox.julian_years).to(lox.days) == 365.25
+    assert td.display_in(lox.hours) == "1.5 h"
+    assert f"{td:.1f}" == "5400.0 s"
+    assert lox.TimeDeltaUnit("min") == lox.minutes
+    assert repr(lox.minutes) == 'TimeDeltaUnit("min")'
+    assert pickle.loads(pickle.dumps(td)) == td
+    assert eval(repr(td), {"TimeDelta": lox.TimeDelta}) == td
+    with pytest.raises(TypeError):
+        float(td)
+    with pytest.raises(TypeError):
+        lox.TimeDelta(1.0)
+    with pytest.raises(ValueError):
+        math.inf * lox.seconds
 
 
-# --- __getnewargs__ (pickle support) ---
+def test_time_delta_repr_is_exact():
+    td = lox.TimeDelta.from_seconds(2**60) + lox.TimeDelta.from_attoseconds(1)
+    assert eval(repr(td), {"TimeDelta": lox.TimeDelta}) == td
 
 
-def test_distance_getnewargs():
-    d = 42.0 * lox.m
-    args = d.__getnewargs__()
-    assert args == (42.0,)
-    assert lox.Distance(*args) == d
+def test_time_delta_units_are_exact_for_whole_values():
+    ns = 123456789012
+    assert ns * lox.nanoseconds == lox.TimeDelta.from_nanoseconds(ns)
+    unix_ns = 1_700_000_000_123_456_789
+    assert unix_ns * lox.nanoseconds == lox.TimeDelta.from_nanoseconds(unix_ns)
+    assert lox.nanoseconds * np.int64(unix_ns) == lox.TimeDelta.from_nanoseconds(
+        unix_ns
+    )
+    assert (10**19 + 1) * lox.attoseconds == lox.TimeDelta.from_seconds(
+        10
+    ) + lox.TimeDelta.from_attoseconds(1)
+    with pytest.raises(ValueError, match="out-of-range"):
+        2**63 * lox.julian_centuries
+    with pytest.raises(ValueError, match="out-of-range"):
+        2**200 * lox.seconds
 
 
-def test_gravitational_parameter_getnewargs():
-    gm = lox.GravitationalParameter(1e14)
-    args = gm.__getnewargs__()
-    assert lox.GravitationalParameter(*args) == gm
+def test_time_delta_units_with_numpy():
+    assert lox.seconds * np.array(1.5) == lox.TimeDelta.from_seconds(1.5)
+    assert lox.seconds * np.float64(1.5) == lox.TimeDelta.from_seconds(1.5)
+    deltas = lox.seconds * np.arange(3)
+    assert list(deltas) == [lox.TimeDelta.from_seconds(n) for n in range(3)]
+    single = lox.seconds * np.array([5])
+    assert isinstance(single, np.ndarray)
+    assert list(single) == [5 * lox.seconds]
+    assert lox.seconds * np.int64(2**60) == lox.TimeDelta.from_seconds(2**60)
 
 
-# --- repr with integer values (covers repr_f64 for non-decimal values) ---
+def test_time_delta_unit_mul_unsupported():
+    with pytest.raises(TypeError, match="unsupported operand"):
+        lox.seconds * object()
+    with pytest.raises(TypeError, match="unsupported operand"):
+        (1 * lox.Mbps) * lox.seconds
 
 
-def test_repr_integer_value():
-    d = lox.Distance(1000.0)
-    assert repr(d) == "Distance(1000.0)"
+def test_time_delta_constructors_are_exact_for_integers():
+    big = 2**60 + 7
+    assert lox.TimeDelta.from_days(big // 86400) == (big // 86400) * lox.days
+    assert lox.TimeDelta.from_days(10**14).seconds() == 86400 * 10**14
+    assert lox.TimeDelta.from_minutes(1.5) == 90 * lox.seconds
+    with pytest.raises(TypeError, match="expected a number"):
+        lox.TimeDelta.from_days("1")
 
 
-# --- Module-level dB constant ---
+def test_time_delta_repr_round_trips_floats():
+    for value in [0.7, 1e-18, 123456.789, -0.1]:
+        td = lox.TimeDelta.from_seconds(value)
+        assert eval(repr(td), {"TimeDelta": lox.TimeDelta}) == td
+    td = lox.TimeDelta.from_attoseconds(700_000_000_000_000_001)
+    assert eval(repr(td), {"TimeDelta": lox.TimeDelta}) == td
 
 
-def test_db_constant():
-    db = 3 * lox.dB
-    assert float(db) == pytest.approx(3.0)
+def test_time_delta_unpickle_validates_parts():
+    with pytest.raises(ValueError, match="attoseconds"):
+        lox.TimeDelta._from_parts(0, 10**18)
+    with pytest.raises(ValueError, match="attoseconds"):
+        lox.TimeDelta._from_parts(0, -1)
 
 
-def test_decibel_mul():
-    db = lox.Decibel(2.0)
-    assert float(db * 3) == pytest.approx(6.0)
-    assert float(3 * db) == pytest.approx(6.0)
+def test_time_delta_from_seconds_is_exact_for_integers():
+    big = 2**60 + 1
+    assert lox.TimeDelta.from_seconds(big).seconds() == big
+    assert lox.TimeDelta.from_seconds(np.int64(big)).seconds() == big
+    with pytest.raises(ValueError, match="out-of-range"):
+        lox.TimeDelta.from_seconds(2**70)
+    with pytest.raises(ValueError, match="out-of-range"):
+        lox.TimeDelta.from_seconds(2.0**70)

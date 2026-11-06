@@ -166,7 +166,7 @@ class TestSarAccessAnalysis:
         )
         results = analysis.compute()
         for iv in results.windows("s1a", "europe"):
-            dur = float(iv.interval().duration())
+            dur = iv.interval().duration().to_seconds()
             assert dur > 0, "zero-length SAR window"
             assert dur < 600, f"SAR window too long ({dur:.0f}s)"
 

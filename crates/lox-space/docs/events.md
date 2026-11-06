@@ -34,8 +34,8 @@ sc = lox.Spacecraft("ISS", lox.SGP4(tle))
 scenario = lox.Scenario(start, end, spacecraft=[sc], ground_stations=[gs])
 analysis = lox.VisibilityAnalysis(
     scenario,
-    step=lox.TimeDelta(60),
-    min_pass_duration=lox.TimeDelta(300),
+    step=lox.TimeDelta.from_seconds(60),
+    min_pass_duration=lox.TimeDelta.from_seconds(300),
 )
 results = analysis.compute(spk)
 

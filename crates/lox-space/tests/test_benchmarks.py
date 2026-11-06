@@ -19,7 +19,7 @@ def t0(oneweb):
 
 @pytest.fixture(scope="session")
 def t1(t0):
-    return t0 + lox.TimeDelta(86400)
+    return t0 + lox.TimeDelta.from_seconds(86400)
 
 
 @pytest.fixture(scope="session")
@@ -35,7 +35,7 @@ def ensemble(scenario):
 @pytest.mark.benchmark()
 def test_visibility_benchmark(scenario, ensemble, oneweb, estrack, ephemeris):
     analysis = lox.VisibilityAnalysis(
-        scenario, ensemble=ensemble, min_pass_duration=lox.TimeDelta(600)
+        scenario, ensemble=ensemble, min_pass_duration=lox.TimeDelta.from_seconds(600)
     )
     results = analysis.compute(ephemeris)
     assert results.num_pairs() == len(oneweb) * len(estrack)

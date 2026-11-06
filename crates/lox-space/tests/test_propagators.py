@@ -103,7 +103,7 @@ def test_sgp4_from_tle_object():
 @pytest.mark.parametrize("offsets", [[0, 0], [60, 0], [0]])
 def test_propagate_invalid_time_list(offsets):
     sgp4 = lox.SGP4(ISS_TLE)
-    steps = [sgp4.time() + lox.TimeDelta(dt) for dt in offsets]
+    steps = [sgp4.time() + lox.TimeDelta.from_seconds(dt) for dt in offsets]
     with pytest.raises(ValueError):
         sgp4.propagate(steps)
 
@@ -140,8 +140,12 @@ def iss_state():
     t = lox.Time("TAI", 2024, 1, 1)
     return lox.Cartesian(
         t,
-        position=(6678.0 * lox.km, 0.0 * lox.km, 0.0 * lox.km),
-        velocity=(0.0 * lox.km_per_s, 7.73 * lox.km_per_s, 0.0 * lox.km_per_s),
+        x=6678.0 * lox.km,
+        y=0.0 * lox.km,
+        z=0.0 * lox.km,
+        vx=0.0 * lox.km_per_s,
+        vy=7.73 * lox.km_per_s,
+        vz=0.0 * lox.km_per_s,
     )
 
 

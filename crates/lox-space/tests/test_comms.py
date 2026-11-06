@@ -46,77 +46,77 @@ def link_budget(tx, rx, **kwargs):
 
 
 def test_decibel_new():
-    db = lox.Decibel(3.0)
-    assert float(db) == 3.0
+    db = lox.Decibel.decibels(3.0)
+    assert db.to_decibels() == 3.0
 
 
 def test_decibel_from_linear():
     db = lox.Decibel.from_linear(100.0)
-    assert float(db) == pytest.approx(20.0, abs=1e-10)
+    assert db.to_decibels() == pytest.approx(20.0, abs=1e-10)
 
 
 def test_decibel_to_linear():
-    db = lox.Decibel(20.0)
+    db = lox.Decibel.decibels(20.0)
     assert db.to_linear() == pytest.approx(100.0, abs=1e-10)
 
 
 def test_decibel_roundtrip():
-    db = lox.Decibel(13.5)
-    assert float(lox.Decibel.from_linear(db.to_linear())) == pytest.approx(
+    db = lox.Decibel.decibels(13.5)
+    assert lox.Decibel.from_linear(db.to_linear()).to_decibels() == pytest.approx(
         13.5, abs=1e-10
     )
 
 
 def test_decibel_add():
-    a = lox.Decibel(3.0)
-    b = lox.Decibel(3.0)
-    assert float(a + b) == pytest.approx(6.0, abs=1e-10)
+    a = lox.Decibel.decibels(3.0)
+    b = lox.Decibel.decibels(3.0)
+    assert (a + b).to_decibels() == pytest.approx(6.0, abs=1e-10)
 
 
 def test_decibel_sub():
-    a = lox.Decibel(6.0)
-    b = lox.Decibel(3.0)
-    assert float(a - b) == pytest.approx(3.0, abs=1e-10)
+    a = lox.Decibel.decibels(6.0)
+    b = lox.Decibel.decibels(3.0)
+    assert (a - b).to_decibels() == pytest.approx(3.0, abs=1e-10)
 
 
 def test_decibel_neg():
-    db = lox.Decibel(3.0)
-    assert float(-db) == pytest.approx(-3.0, abs=1e-10)
+    db = lox.Decibel.decibels(3.0)
+    assert (-db).to_decibels() == pytest.approx(-3.0, abs=1e-10)
 
 
 def test_decibel_repr():
-    db = lox.Decibel(3.0)
-    assert repr(db) == "Decibel(3.0)"
+    db = lox.Decibel.decibels(3.0)
+    assert repr(db) == "Decibel.decibels(3.0)"
 
 
 def test_decibel_str():
-    db = lox.Decibel(3.0)
+    db = lox.Decibel.decibels(3.0)
     assert str(db) == "3 dB"
 
 
 def test_decibel_eq():
-    assert lox.Decibel(3.0) == lox.Decibel(3.0)
-    assert not (lox.Decibel(3.0) == lox.Decibel(4.0))
+    assert lox.Decibel.decibels(3.0) == lox.Decibel.decibels(3.0)
+    assert not (lox.Decibel.decibels(3.0) == lox.Decibel.decibels(4.0))
 
 
 def test_decibel_pickle():
-    db = lox.Decibel(13.5)
+    db = lox.Decibel.decibels(13.5)
     assert pickle.loads(pickle.dumps(db)) == db
 
 
 def test_decibel_repr_roundtrip():
-    db = lox.Decibel(13.5)
+    db = lox.Decibel.decibels(13.5)
     assert eval(repr(db), {"Decibel": lox.Decibel}) == db
 
 
 def test_decibel_mul():
     db = 14.0 * lox.dB
-    assert float(db) == pytest.approx(14.0, abs=1e-10)
+    assert db.to_decibels() == pytest.approx(14.0, abs=1e-10)
 
 
 def test_decibel_rmul():
     db = lox.dB * 14.0
-    assert float(db) == pytest.approx(14.0, abs=1e-10)
+    assert db.to_decibels() == pytest.approx(14.0, abs=1e-10)
 
 
 # --- Modulation ---
@@ -162,7 +162,7 @@ def test_modulation_repr_roundtrip():
 def test_parabolic_peak_gain():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
     gain = p.peak_gain(frequency=29e9 * lox.Hz)
-    assert float(gain) == pytest.approx(46.01119, rel=1e-4)
+    assert gain.to_decibels() == pytest.approx(46.01119, rel=1e-4)
 
 
 def test_parabolic_beamwidth():
@@ -187,13 +187,13 @@ def test_parabolic_on_axis_equals_peak():
     f = 29e9 * lox.Hz
     gain = p.gain(f, theta=0.0 * lox.deg)
     peak = p.peak_gain(f)
-    assert float(gain) == pytest.approx(float(peak), abs=1e-6)
+    assert gain.to_decibels() == pytest.approx(peak.to_decibels(), abs=1e-6)
 
 
 def test_parabolic_gain_at_180():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
     gain = p.gain(29e9 * lox.Hz, theta=180.0 * lox.deg)
-    assert float(gain) < -50.0
+    assert gain.to_decibels() < -50.0
 
 
 def test_parabolic_from_beamwidth_roundtrip():
@@ -234,7 +234,7 @@ def test_parabolic_repr_roundtrip():
 def test_gaussian_peak_gain():
     p = lox.GaussianPattern(diameter=0.98 * lox.m, efficiency=0.45)
     gain = p.peak_gain(frequency=29e9 * lox.Hz)
-    assert float(gain) == pytest.approx(46.01119, rel=1e-4)
+    assert gain.to_decibels() == pytest.approx(46.01119, rel=1e-4)
 
 
 def test_gaussian_3db_at_half_beamwidth():
@@ -242,8 +242,8 @@ def test_gaussian_3db_at_half_beamwidth():
     f = 29e9 * lox.Hz
     bw = p.beamwidth(f)
     half_bw = bw * 0.5
-    peak = float(p.peak_gain(f))
-    gain = float(p.gain(f, theta=half_bw))
+    peak = p.peak_gain(f).to_decibels()
+    gain = (p.gain(f, theta=half_bw)).to_decibels()
     assert peak - gain == pytest.approx(3.0103, abs=0.01)
 
 
@@ -279,7 +279,7 @@ def test_half_wave_dipole_broadside():
     wavelength = c / 29e9
     d = lox.DipolePattern(length=(wavelength / 2.0) * lox.m)
     gain = d.gain(29e9 * lox.Hz, theta=90.0 * lox.deg)
-    assert float(gain) == pytest.approx(2.15, abs=0.01)
+    assert gain.to_decibels() == pytest.approx(2.15, abs=0.01)
 
 
 def test_half_wave_dipole_endfire():
@@ -287,7 +287,7 @@ def test_half_wave_dipole_endfire():
     wavelength = c / 29e9
     d = lox.DipolePattern(length=(wavelength / 2.0) * lox.m)
     gain = d.gain(29e9 * lox.Hz, theta=0.0 * lox.deg)
-    assert float(gain) < -50.0
+    assert gain.to_decibels() < -50.0
 
 
 def test_short_dipole_peak():
@@ -295,7 +295,7 @@ def test_short_dipole_peak():
     wavelength = c / 29e9
     d = lox.DipolePattern(length=(wavelength / 100.0) * lox.m)
     peak = d.peak_gain(29e9 * lox.Hz)
-    assert float(peak) == pytest.approx(1.76, abs=0.1)
+    assert peak.to_decibels() == pytest.approx(1.76, abs=0.1)
 
 
 def test_dipole_eq():
@@ -325,7 +325,7 @@ def test_dipole_repr_roundtrip():
 def test_simple_antenna():
     a = lox.ConstantAntenna(gain=30.0 * lox.dB)
     r = repr(a)
-    assert r == "ConstantAntenna(gain=Decibel(30.0))"
+    assert r == "ConstantAntenna(gain=Decibel.decibels(30.0))"
 
 
 def test_simple_antenna_eq():
@@ -359,7 +359,7 @@ def test_complex_antenna():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
     a = lox.PatternedAntenna(pattern=p)
     gain = a.gain(29e9 * lox.Hz, theta=0.0 * lox.deg)
-    assert float(gain) == pytest.approx(46.01119, rel=1e-4)
+    assert gain.to_decibels() == pytest.approx(46.01119, rel=1e-4)
 
 
 def test_complex_antenna_invalid_pattern():
@@ -372,8 +372,8 @@ def test_complex_antenna_pickle():
     a = lox.PatternedAntenna(pattern=p)
     restored = pickle.loads(pickle.dumps(a))
     # PatternedAntenna doesn't have __eq__, verify via gain
-    assert float(restored.gain(29e9 * lox.Hz, 0.0 * lox.deg)) == pytest.approx(
-        float(a.gain(29e9 * lox.Hz, 0.0 * lox.deg)), abs=1e-10
+    assert (restored.gain(29e9 * lox.Hz, 0.0 * lox.deg)).to_decibels() == pytest.approx(
+        (a.gain(29e9 * lox.Hz, 0.0 * lox.deg)).to_decibels(), abs=1e-10
     )
 
 
@@ -398,12 +398,12 @@ def test_antenna_frame_angles_for():
         [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]
     )
     theta, phi = frame.angles_for([1.0, 0.0, 0.0])
-    assert float(theta) == pytest.approx(0.0, abs=1e-12)
-    assert float(phi) == pytest.approx(0.0, abs=1e-12)
+    assert theta.to_radians() == pytest.approx(0.0, abs=1e-12)
+    assert phi.to_radians() == pytest.approx(0.0, abs=1e-12)
 
     theta, phi = frame.angles_for([0.0, 0.0, 1.0])
-    assert float(theta) == pytest.approx(math.pi / 2.0, abs=1e-12)
-    assert float(phi) == pytest.approx(0.0, abs=1e-12)
+    assert theta.to_radians() == pytest.approx(math.pi / 2.0, abs=1e-12)
+    assert phi.to_radians() == pytest.approx(0.0, abs=1e-12)
 
 
 def test_antenna_frame_rejects_invalid_inputs():
@@ -423,8 +423,10 @@ def test_complex_antenna_gain_toward_uses_frame():
     a = lox.PatternedAntenna(pattern=p, frame=frame)
     on_axis = a.gain_toward(29e9 * lox.Hz, [1.0, 0.0, 0.0])
     off_axis = a.gain_toward(29e9 * lox.Hz, [0.0, 1.0, 0.0])
-    assert float(on_axis) == pytest.approx(float(a.peak_gain(29e9 * lox.Hz)), abs=1e-10)
-    assert float(off_axis) < float(on_axis)
+    assert on_axis.to_decibels() == pytest.approx(
+        (a.peak_gain(29e9 * lox.Hz)).to_decibels(), abs=1e-10
+    )
+    assert off_axis.to_decibels() < on_axis.to_decibels()
 
 
 def test_complex_antenna_gain_toward_rejects_invalid_direction():
@@ -442,18 +444,18 @@ def test_transmitter_eirp():
     # EIRP = 10 + 10*log10(5) - 1 = 15.99 dBW
     tx = make_tx(gain=10.0, power=5.0, feed_loss=1.0)
     stats = link_budget(tx, make_rx())
-    assert float(stats.eirp) == pytest.approx(15.99, abs=0.01)
+    assert stats.eirp.to_decibels() == pytest.approx(15.99, abs=0.01)
 
 
 def test_transmitter_getters():
     tx = lox.AmplifierTransmitter(power=10.0 * lox.W, output_back_off=0.5 * lox.dB)
     assert tx.power.to_watts() == pytest.approx(10.0, abs=1e-12)
-    assert float(tx.output_back_off) == pytest.approx(0.5, abs=1e-12)
+    assert tx.output_back_off.to_decibels() == pytest.approx(0.5, abs=1e-12)
 
 
 def test_transmitter_default_obo():
     tx = lox.AmplifierTransmitter(power=10.0 * lox.W)
-    assert repr(tx).endswith("output_back_off=Decibel(0.0))")
+    assert repr(tx).endswith("output_back_off=Decibel.decibels(0.0))")
 
 
 def test_transmitter_eq():
@@ -617,7 +619,7 @@ def test_channel_es_n0():
     ch = lox.Channel(symbol_rate=500 * lox.kHz)
     es_n0 = ch.es_n0(80.0 * lox.dB)
     expected = 80.0 - 10.0 * math.log10(500e3)
-    assert float(es_n0) == pytest.approx(expected, abs=1e-6)
+    assert es_n0.to_decibels() == pytest.approx(expected, abs=1e-6)
 
 
 def test_channel_rejects_invalid():
@@ -632,7 +634,7 @@ def test_channel_rejects_invalid():
 def test_channel_dsss():
     ch = lox.Channel(symbol_rate=10 * lox.kHz, chip_rate=4 * lox.MHz)
     assert ch.spreading_factor() == pytest.approx(400.0, rel=1e-10)
-    assert float(ch.processing_gain()) == pytest.approx(26.02, abs=0.01)
+    assert ch.processing_gain().to_decibels() == pytest.approx(26.02, abs=0.01)
 
 
 def test_channel_pickle():
@@ -655,8 +657,8 @@ def test_modcod_from_required_eb_n0():
     mc = lox.ModCod("my downlink", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
     assert mc.name == "my downlink"
     assert mc.info_bits_per_symbol == pytest.approx(1.0, abs=1e-12)
-    assert float(mc.required_eb_n0) == pytest.approx(10.0, abs=1e-12)
-    assert float(mc.required_es_n0) == pytest.approx(10.0, abs=1e-9)
+    assert mc.required_eb_n0.to_decibels() == pytest.approx(10.0, abs=1e-12)
+    assert mc.required_es_n0.to_decibels() == pytest.approx(10.0, abs=1e-9)
     assert mc.metric == "BER"
     assert mc.error_rate == pytest.approx(1e-6)
 
@@ -674,7 +676,7 @@ def test_modcod_dvb_s2_table():
     qpsk12 = next(mc for mc in table if mc.name == "QPSK 1/2")
     # ETSI EN 302 307-1 Table 13: efficiency 0.988858, Es/N0 = 1.0 dB.
     assert qpsk12.info_bits_per_symbol == pytest.approx(0.988858, abs=5e-7)
-    assert float(qpsk12.required_es_n0) == pytest.approx(1.0, abs=1e-9)
+    assert qpsk12.required_es_n0.to_decibels() == pytest.approx(1.0, abs=1e-9)
     assert qpsk12.reference.startswith("ETSI")
     # The coding chain is exposed.
     names = [name for name, _ in qpsk12.codes]
@@ -695,15 +697,17 @@ def test_modcod_evaluate():
     stats = link_budget(make_tx(), make_rx(), losses=losses)
     m = stats.modulate(ch, mc, design_margin=3.0 * lox.dB)
     # Es/N0 = C/N0 - 10*log10(5e6); Eb/N0 = Es/N0 (1 info bit/symbol)
-    assert float(m.es_n0) == pytest.approx(
-        float(stats.c_n0) - 10 * math.log10(5e6), abs=1e-9
+    assert m.es_n0.to_decibels() == pytest.approx(
+        stats.c_n0.to_decibels() - 10 * math.log10(5e6), abs=1e-9
     )
-    assert float(m.eb_n0) == pytest.approx(float(m.es_n0), abs=1e-9)
-    assert float(m.margin) == pytest.approx(float(m.eb_n0) - 10.0 - 3.0, abs=1e-9)
+    assert m.eb_n0.to_decibels() == pytest.approx(m.es_n0.to_decibels(), abs=1e-9)
+    assert m.margin.to_decibels() == pytest.approx(
+        m.eb_n0.to_decibels() - 10.0 - 3.0, abs=1e-9
+    )
     assert m.information_rate().to_hertz() == pytest.approx(5e6, rel=1e-10)
     assert m.modcod == mc
     assert m.channel == ch
-    assert float(m.design_margin) == pytest.approx(3.0)
+    assert m.design_margin.to_decibels() == pytest.approx(3.0)
 
 
 # --- Propagation Losses ---
@@ -711,7 +715,7 @@ def test_modcod_evaluate():
 
 def test_propagation_losses_none():
     losses = lox.PropagationLosses.none()
-    assert float(losses.total()) == pytest.approx(0.0, abs=1e-15)
+    assert losses.total().to_decibels() == pytest.approx(0.0, abs=1e-15)
     assert losses.lines == []
 
 
@@ -719,18 +723,18 @@ def test_propagation_losses_total_and_absorptive():
     losses = lox.PropagationLosses(
         rain=2.0 * lox.dB, gaseous=0.5 * lox.dB, scintillation=0.3 * lox.dB
     )
-    assert float(losses.total()) == pytest.approx(2.8, abs=1e-10)
+    assert losses.total().to_decibels() == pytest.approx(2.8, abs=1e-10)
     # Scintillation is non-absorptive.
-    assert float(losses.absorptive()) == pytest.approx(2.5, abs=1e-10)
+    assert losses.absorptive().to_decibels() == pytest.approx(2.5, abs=1e-10)
 
 
 def test_propagation_losses_other_lines():
     losses = lox.PropagationLosses(other=[("Radome wetting", 0.5 * lox.dB, True)])
-    assert float(losses.total()) == pytest.approx(0.5, abs=1e-10)
-    assert float(losses.absorptive()) == pytest.approx(0.5, abs=1e-10)
+    assert losses.total().to_decibels() == pytest.approx(0.5, abs=1e-10)
+    assert losses.absorptive().to_decibels() == pytest.approx(0.5, abs=1e-10)
     label, value, absorptive = losses.lines[0]
     assert label == "Radome wetting"
-    assert float(value) == pytest.approx(0.5, abs=1e-10)
+    assert value.to_decibels() == pytest.approx(0.5, abs=1e-10)
     assert absorptive
 
 
@@ -760,7 +764,7 @@ def test_propagation_losses_repr():
 def test_fspl():
     # 1000 km, 29 GHz -> ~181.7 dB
     loss = lox.fspl(distance=1000.0 * lox.km, frequency=29e9 * lox.Hz)
-    assert float(loss) == pytest.approx(181.696, abs=0.1)
+    assert loss.to_decibels() == pytest.approx(181.696, abs=0.1)
 
 
 def test_freq_overlap_full():
@@ -786,7 +790,9 @@ def test_freq_overlap_partial():
 
 def test_link_budget_noise_power():
     budget = link_budget(make_tx(), make_rx())
-    assert float(budget.noise_power(1.0 * lox.MHz)) == pytest.approx(-141.61, abs=0.01)
+    assert (budget.noise_power(1.0 * lox.MHz)).to_decibels() == pytest.approx(
+        -141.61, abs=0.01
+    )
 
 
 def test_link_stats_end_to_end():
@@ -802,17 +808,17 @@ def test_link_stats_end_to_end():
     modulated = stats.modulate(ch, mc, design_margin=3.0 * lox.dB)
 
     # EIRP = 46 + 10 - 1 = 55 dBW
-    assert float(stats.eirp) == pytest.approx(55.0, abs=0.01)
+    assert stats.eirp.to_decibels() == pytest.approx(55.0, abs=0.01)
     # FSPL at 1000 km, 29 GHz
-    assert float(stats.fspl) == pytest.approx(181.7, abs=0.1)
+    assert stats.fspl.to_decibels() == pytest.approx(181.7, abs=0.1)
     # C/N0
-    assert float(stats.c_n0) == pytest.approx(104.9, abs=0.2)
+    assert stats.c_n0.to_decibels() == pytest.approx(104.9, abs=0.2)
     # Es/N0 = C/N0 - 10*log10(5e6)
-    assert float(modulated.es_n0) == pytest.approx(37.91, abs=0.2)
+    assert modulated.es_n0.to_decibels() == pytest.approx(37.91, abs=0.2)
     # Eb/N0 = Es/N0 - 10*log10(2*0.5) = Es/N0
-    assert float(modulated.eb_n0) == pytest.approx(37.91, abs=0.2)
+    assert modulated.eb_n0.to_decibels() == pytest.approx(37.91, abs=0.2)
     # Margin = Eb/N0 - 10 - 3
-    assert float(modulated.margin) == pytest.approx(24.91, abs=0.2)
+    assert modulated.margin.to_decibels() == pytest.approx(24.91, abs=0.2)
     # Properties
     assert stats.slant_range.to_kilometers() == pytest.approx(1000.0, abs=1e-6)
     assert modulated.symbol_rate.to_hertz() == pytest.approx(5e6, abs=1e-6)
@@ -833,11 +839,11 @@ def test_link_stats_downlink_degrades_gt():
     assert clear.gt_degraded is None
     assert clear.link_type is None
     assert faded.link_type == "downlink"
-    assert float(faded.gt) == pytest.approx(float(clear.gt), abs=1e-12)
-    assert float(faded.gt_degraded) < float(faded.gt)
+    assert faded.gt.to_decibels() == pytest.approx(clear.gt.to_decibels(), abs=1e-12)
+    assert faded.gt_degraded.to_decibels() < faded.gt.to_decibels()
     # The budget uses the degraded G/T.
-    assert float(clear.c_n0) - float(faded.c_n0) == pytest.approx(
-        float(faded.gt) - float(faded.gt_degraded), abs=1e-10
+    assert clear.c_n0.to_decibels() - faded.c_n0.to_decibels() == pytest.approx(
+        faded.gt.to_decibels() - faded.gt_degraded.to_decibels(), abs=1e-10
     )
 
 
@@ -846,7 +852,9 @@ def test_link_stats_uplink_stays_clear_sky():
     clear = link_budget(make_tx(), make_rx(), losses=losses)
     uplink = link_budget(make_tx(), make_rx(), losses=losses, link_type="uplink")
     assert uplink.gt_degraded is None
-    assert float(uplink.c_n0) == pytest.approx(float(clear.c_n0), abs=1e-12)
+    assert uplink.c_n0.to_decibels() == pytest.approx(
+        clear.c_n0.to_decibels(), abs=1e-12
+    )
 
 
 def test_link_stats_rejects_unknown_link_type():
@@ -868,7 +876,9 @@ def test_link_stats_with_losses():
     modulated_loss = stats_loss.modulate(ch, mc, design_margin=3.0 * lox.dB)
 
     # 3 dB of environmental losses should reduce margin by 3 dB
-    margin_diff = float(modulated_no_loss.margin) - float(modulated_loss.margin)
+    margin_diff = (
+        modulated_no_loss.margin.to_decibels() - modulated_loss.margin.to_decibels()
+    )
     assert margin_diff == pytest.approx(3.0, abs=0.01)
 
 
@@ -880,7 +890,7 @@ def test_channel_c_n():
     c_n = ch.c_n(80.0 * lox.dB)
     bw = 5e6 * 1.35
     expected = 80.0 - 10.0 * math.log10(bw)
-    assert float(c_n) == pytest.approx(expected, abs=1e-3)
+    assert c_n.to_decibels() == pytest.approx(expected, abs=1e-3)
 
 
 def test_channel_spreading_factor_narrowband():
@@ -938,10 +948,14 @@ def test_budget_lines_and_table():
     # Gains minus losses reproduce the C/N0 total on the agnostic stage.
     link_lines = budget.budget_lines()
     total = sum(
-        float(v) if kind == "gain" else -float(v) if kind == "loss" else 0.0
+        v.to_decibels()
+        if kind == "gain"
+        else -v.to_decibels()
+        if kind == "loss"
+        else 0.0
         for _, v, kind in link_lines
     )
-    c_n0 = next(float(v) for label, v, _ in link_lines if label == "C/N0")
+    c_n0 = next(v.to_decibels() for label, v, _ in link_lines if label == "C/N0")
     assert total == pytest.approx(c_n0, abs=1e-9)
     # The rendered table is the same data.
     table = str(m)
@@ -951,8 +965,8 @@ def test_budget_lines_and_table():
 
 def test_combine_carrier_to_noise():
     combined = lox.combine_carrier_to_noise([10.0 * lox.dB, 10.0 * lox.dB])
-    assert float(combined) == pytest.approx(10.0 - 3.0103, abs=1e-3)
-    assert float(lox.combine_carrier_to_noise([])) == math.inf
+    assert combined.to_decibels() == pytest.approx(10.0 - 3.0103, abs=1e-3)
+    assert lox.combine_carrier_to_noise([]).to_decibels() == math.inf
 
 
 def test_modulate_best_acm():
@@ -980,7 +994,7 @@ def test_modcod_information_rate():
 def test_link_stats_carrier_power():
     stats = link_budget(make_tx(), make_rx())
     # carrier_rx_power should be finite for component-tier links
-    assert math.isfinite(float(stats.carrier_rx_power))
+    assert math.isfinite(stats.carrier_rx_power.to_decibels())
 
 
 def test_tx_chain_invalid_antenna():
@@ -1016,8 +1030,8 @@ def test_complex_antenna_gaussian_repr():
     assert "GaussianPattern" in r
     # Pickle roundtrip
     restored = pickle.loads(pickle.dumps(a))
-    assert float(restored.gain(29e9 * lox.Hz, 0.0 * lox.deg)) == pytest.approx(
-        float(a.gain(29e9 * lox.Hz, 0.0 * lox.deg)), abs=1e-10
+    assert (restored.gain(29e9 * lox.Hz, 0.0 * lox.deg)).to_decibels() == pytest.approx(
+        (a.gain(29e9 * lox.Hz, 0.0 * lox.deg)).to_decibels(), abs=1e-10
     )
 
 
@@ -1031,8 +1045,8 @@ def test_complex_antenna_dipole_repr():
     assert "DipolePattern" in r
     # Pickle roundtrip
     restored = pickle.loads(pickle.dumps(a))
-    assert float(restored.peak_gain(29e9 * lox.Hz)) == pytest.approx(
-        float(a.peak_gain(29e9 * lox.Hz)), abs=1e-10
+    assert (restored.peak_gain(29e9 * lox.Hz)).to_decibels() == pytest.approx(
+        (a.peak_gain(29e9 * lox.Hz)).to_decibels(), abs=1e-10
     )
 
 
@@ -1040,7 +1054,7 @@ def test_complex_antenna_peak_gain():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
     a = lox.PatternedAntenna(pattern=p)
     pg = a.peak_gain(frequency=29e9 * lox.Hz)
-    assert float(pg) == pytest.approx(46.01119, rel=1e-4)
+    assert pg.to_decibels() == pytest.approx(46.01119, rel=1e-4)
 
 
 # --- CascadeReceiver additional methods ---
@@ -1054,7 +1068,7 @@ def test_complex_receiver_chain_gain():
         ],
     )
     cg = rx.chain_gain()
-    assert float(cg) == pytest.approx(30.0, abs=1e-10)
+    assert cg.to_decibels() == pytest.approx(30.0, abs=1e-10)
 
 
 # --- NoiseStage ---
@@ -1083,20 +1097,20 @@ def test_link_stats_all_getters():
     stats = link_budget(make_tx(), make_rx())
 
     # Derived views take the bandwidth explicitly.
-    assert math.isfinite(float(stats.c_n(ch.bandwidth())))
+    assert math.isfinite(stats.c_n(ch.bandwidth()).to_decibels())
     assert stats.carrier_rx_power is not None
-    assert math.isfinite(float(stats.carrier_rx_power))
+    assert math.isfinite(stats.carrier_rx_power.to_decibels())
     assert stats.noise_power(ch.bandwidth()) is not None
-    assert math.isfinite(float(stats.noise_power(ch.bandwidth())))
-    assert math.isfinite(float(stats.gt))
+    assert math.isfinite(stats.noise_power(ch.bandwidth()).to_decibels())
+    assert math.isfinite(stats.gt.to_decibels())
     # C/N0 consistency through the views.
     bw = ch.bandwidth()
     c_n0 = (
-        float(stats.carrier_rx_power)
-        - float(stats.noise_power(bw))
-        + 10 * math.log10(float(bw))
+        stats.carrier_rx_power.to_decibels()
+        - stats.noise_power(bw).to_decibels()
+        + 10 * math.log10(bw.to_hertz())
     )
-    assert float(stats.c_n0) == pytest.approx(c_n0, abs=1e-9)
+    assert stats.c_n0.to_decibels() == pytest.approx(c_n0, abs=1e-9)
 
 
 def test_link_stats_repr():
@@ -1131,14 +1145,20 @@ def test_power_flux_density():
         reference_bw=1 * lox.MHz,
     )
     expected = 10.0 * math.log10(1.0 / (4.0 * math.pi * (1e6) ** 2))
-    assert float(pfd) == pytest.approx(expected, abs=0.01)
+    assert pfd.to_decibels() == pytest.approx(expected, abs=0.01)
 
 
 def test_pfd_mask_art_21_16():
     mask = lox.PfdMask.art_21_16(-154.0 * lox.dB)
-    assert float(mask.value_at(0.0 * lox.deg)) == pytest.approx(-154.0, abs=1e-10)
-    assert float(mask.value_at(15.0 * lox.deg)) == pytest.approx(-149.0, abs=1e-10)
-    assert float(mask.value_at(90.0 * lox.deg)) == pytest.approx(-144.0, abs=1e-10)
+    assert (mask.value_at(0.0 * lox.deg)).to_decibels() == pytest.approx(
+        -154.0, abs=1e-10
+    )
+    assert (mask.value_at(15.0 * lox.deg)).to_decibels() == pytest.approx(
+        -149.0, abs=1e-10
+    )
+    assert (mask.value_at(90.0 * lox.deg)).to_decibels() == pytest.approx(
+        -144.0, abs=1e-10
+    )
 
 
 def test_pfd_mask_custom_nodes():
@@ -1149,10 +1169,18 @@ def test_pfd_mask_custom_nodes():
             (25.0 * lox.deg, -142.5 * lox.dB),
         ]
     )
-    assert float(mask.value_at(0.0 * lox.deg)) == pytest.approx(-150.0, abs=1e-10)
-    assert float(mask.value_at(10.0 * lox.deg)) == pytest.approx(-147.5, abs=1e-10)
-    assert float(mask.value_at(20.0 * lox.deg)) == pytest.approx(-143.75, abs=1e-10)
-    assert float(mask.value_at(60.0 * lox.deg)) == pytest.approx(-142.5, abs=1e-10)
+    assert (mask.value_at(0.0 * lox.deg)).to_decibels() == pytest.approx(
+        -150.0, abs=1e-10
+    )
+    assert (mask.value_at(10.0 * lox.deg)).to_decibels() == pytest.approx(
+        -147.5, abs=1e-10
+    )
+    assert (mask.value_at(20.0 * lox.deg)).to_decibels() == pytest.approx(
+        -143.75, abs=1e-10
+    )
+    assert (mask.value_at(60.0 * lox.deg)).to_decibels() == pytest.approx(
+        -142.5, abs=1e-10
+    )
     assert len(mask.nodes()) == 3
 
 
@@ -1173,6 +1201,7 @@ def test_pfd_mask_eq_and_pickle():
     assert mask == lox.PfdMask.art_21_16(-154.0 * lox.dB)
     assert mask != lox.PfdMask.art_21_16(-150.0 * lox.dB)
     assert pickle.loads(pickle.dumps(mask)) == mask
+    assert eval(repr(mask), vars(lox)) == mask
 
 
 # --- AmplifierTransmitter with PatternedAntenna ---
@@ -1182,7 +1211,7 @@ def test_transmitter_eirp_complex_antenna():
     p = lox.ParabolicPattern(diameter=0.98 * lox.m, efficiency=0.45)
     a = lox.PatternedAntenna(pattern=p)
     stats = link_budget(make_tx(antenna=a), make_rx())
-    assert math.isfinite(float(stats.eirp))
+    assert math.isfinite(stats.eirp.to_decibels())
 
 
 def test_tx_chain_rejects_negative_feed_loss():
@@ -1222,9 +1251,12 @@ def test_modulated_with_interference_component_tier():
     modulated = link.modulate(channel, mc, design_margin=3.0 * lox.dB)
     interference = modulated.with_interference(1e-12 * lox.W)
 
-    assert float(interference.margin_with_interference) < float(modulated.margin)
-    assert float(interference.eb_n0i0) < float(modulated.eb_n0)
-    assert float(interference.interference_power) == 1e-12
+    assert (
+        interference.margin_with_interference.to_decibels()
+        < modulated.margin.to_decibels()
+    )
+    assert interference.eb_n0i0.to_decibels() < modulated.eb_n0.to_decibels()
+    assert interference.interference_power.to_watts() == 1e-12
 
 
 # --- NoiseTempReceiver repr ---
@@ -1246,8 +1278,8 @@ def test_channel_dsss_pickle():
     assert restored.spreading_factor() == pytest.approx(
         ch.spreading_factor(), rel=1e-10
     )
-    assert float(restored.processing_gain()) == pytest.approx(
-        float(ch.processing_gain()), abs=1e-10
+    assert restored.processing_gain().to_decibels() == pytest.approx(
+        ch.processing_gain().to_decibels(), abs=1e-10
     )
 
 
@@ -1259,12 +1291,12 @@ def test_link_stats_off_boresight_angle_reduces_eirp():
     tx_ant = lox.PatternedAntenna(pattern=pattern)
     boresight = link_budget(make_tx(antenna=tx_ant), make_rx())
     off = link_budget(make_tx(antenna=tx_ant), make_rx(), tx_angle=2.0 * lox.deg)
-    assert float(off.eirp) < float(boresight.eirp)
+    assert off.eirp.to_decibels() < boresight.eirp.to_decibels()
 
 
 def test_link_stats_defaults_to_boresight():
     stats = link_budget(make_tx(), make_rx())
-    assert float(stats.c_n0) == pytest.approx(104.913, abs=0.1)
+    assert stats.c_n0.to_decibels() == pytest.approx(104.913, abs=0.1)
 
 
 def test_link_stats_direction_pointing():
@@ -1284,7 +1316,7 @@ def test_link_stats_direction_pointing():
         tx_direction=[0.0, 0.0, 1.0],
     )
 
-    assert float(off_axis.eirp) < float(on_axis.eirp)
+    assert off_axis.eirp.to_decibels() < on_axis.eirp.to_decibels()
 
 
 def test_link_stats_rejects_angle_and_direction():
@@ -1308,12 +1340,12 @@ def test_modulated_link_stats_link_and_channel_getters():
 
     # budget getter returns the underlying LinkBudget
     assert modulated.budget.c_n0 == stats.c_n0
-    assert math.isfinite(float(modulated.c_n))
+    assert math.isfinite(modulated.c_n.to_decibels())
     assert modulated.closes()
     # channel and modcod getters round-trip
     assert modulated.channel == ch
     assert modulated.modcod == mc
-    assert float(modulated.design_margin) == pytest.approx(0.0)
+    assert modulated.design_margin.to_decibels() == pytest.approx(0.0)
 
 
 # --- InterferenceStats c_n0i0 and repr ---
@@ -1326,7 +1358,7 @@ def test_interference_stats_c_n0i0_and_repr():
     modulated = link.modulate(channel, mc, design_margin=3.0 * lox.dB)
     interference = modulated.with_interference(1e-12 * lox.W)
 
-    assert math.isfinite(float(interference.c_n0i0))
+    assert math.isfinite(interference.c_n0i0.to_decibels())
     r = repr(interference)
     assert "InterferenceStats" in r
     assert "c_n0i0" in r
@@ -1350,9 +1382,9 @@ def test_modulated_link_stats_repr():
 
 
 def test_decibel_mul_left():
-    db = lox.Decibel(5.0)
+    db = lox.Decibel.decibels(5.0)
     result = db * 3.0
-    assert float(result) == pytest.approx(15.0, abs=1e-10)
+    assert result.to_decibels() == pytest.approx(15.0, abs=1e-10)
 
 
 # --- Modulation: all variants pickle to correct name ---
@@ -1394,6 +1426,7 @@ def test_frequency_range():
     with pytest.raises(ValueError):
         lox.FrequencyRange(31.0 * lox.GHz, 27.0 * lox.GHz)
     assert pickle.loads(pickle.dumps(KA_BAND)) == KA_BAND
+    assert eval(repr(KA_BAND), vars(lox)) == KA_BAND
 
 
 def test_for_link_reference_values():
@@ -1401,10 +1434,10 @@ def test_for_link_reference_values():
     # 30 dBi / 500 K \u2192 G/T 3.0103 dB/K; C/N0 104.913 dB\u00b7Hz at 1000 km.
     stats = link_budget(make_tx(), make_rx())
 
-    assert float(stats.eirp) == pytest.approx(55.0, abs=0.01)
-    assert float(stats.gt) == pytest.approx(3.0103, abs=0.01)
-    assert float(stats.c_n0) == pytest.approx(104.913, abs=0.01)
-    assert math.isfinite(float(stats.carrier_rx_power))
+    assert stats.eirp.to_decibels() == pytest.approx(55.0, abs=0.01)
+    assert stats.gt.to_decibels() == pytest.approx(3.0103, abs=0.01)
+    assert stats.c_n0.to_decibels() == pytest.approx(104.913, abs=0.01)
+    assert math.isfinite(stats.carrier_rx_power.to_decibels())
 
 
 def test_lumped_link():
@@ -1414,7 +1447,7 @@ def test_lumped_link():
         carrier=29.0 * lox.GHz,
         range=1000.0 * lox.km,
     )
-    assert float(stats.c_n0) == pytest.approx(104.913, abs=0.1)
+    assert stats.c_n0.to_decibels() == pytest.approx(104.913, abs=0.1)
     assert stats.carrier_rx_power is None
     assert stats.noise_power(5.0 * lox.MHz) is None
 
@@ -1433,11 +1466,11 @@ def test_for_link_carrier_out_of_band():
 def test_tx_chain_accessors_and_eirp():
     tx = make_tx()
     assert tx.band == KA_BAND
-    assert float(tx.feed_loss) == pytest.approx(1.0, abs=1e-12)
+    assert tx.feed_loss.to_decibels() == pytest.approx(1.0, abs=1e-12)
     assert tx.antenna == lox.ConstantAntenna(gain=46.0 * lox.dB)
     assert tx.transmitter == lox.AmplifierTransmitter(power=10.0 * lox.W)
     # EIRP = 46 + 10\u00b7log10(10) \u2212 1 = 55 dBW
-    assert float(tx.eirp_at(29.0 * lox.GHz)) == pytest.approx(55.0, abs=1e-9)
+    assert (tx.eirp_at(29.0 * lox.GHz)).to_decibels() == pytest.approx(55.0, abs=1e-9)
     with pytest.raises(ValueError, match="angle or direction"):
         tx.eirp_at(29.0 * lox.GHz, angle=1.0 * lox.deg, direction=[1.0, 0.0, 0.0])
 
@@ -1451,7 +1484,7 @@ def test_rx_chain_accessors_gt_and_noise():
         feed_loss=0.5 * lox.dB,
     )
     assert rx.band == KA_BAND
-    assert float(rx.feed_loss) == pytest.approx(0.5, abs=1e-12)
+    assert rx.feed_loss.to_decibels() == pytest.approx(0.5, abs=1e-12)
     assert rx.antenna_noise_temperature.to_kelvin() == pytest.approx(0.0, abs=1e-12)
     # T_sys = 290\u00b7(L \u2212 1) + 500\u00b7L with L = 10^0.05
     expected_t_sys = 290.0 * (10 ** (0.5 / 10.0) - 1.0) + 500.0 * 10 ** (0.5 / 10.0)
@@ -1459,7 +1492,7 @@ def test_rx_chain_accessors_gt_and_noise():
         expected_t_sys, rel=1e-12
     )
     gt = rx.gt_at(29.0 * lox.GHz)
-    assert float(gt) == pytest.approx(
+    assert gt.to_decibels() == pytest.approx(
         46.0 - 10.0 * math.log10(expected_t_sys), abs=1e-9
     )
 
@@ -1488,18 +1521,18 @@ def test_shared_antenna_transceiver():
         range=1000.0 * lox.km,
         rx_angle=0.0 * lox.deg,
     )
-    assert float(link.eirp) == pytest.approx(46.0 + 10.0 - 1.0, abs=1e-9)
-    assert math.isfinite(float(rx.gt_at(29.0 * lox.GHz)))
+    assert link.eirp.to_decibels() == pytest.approx(46.0 + 10.0 - 1.0, abs=1e-9)
+    assert math.isfinite((rx.gt_at(29.0 * lox.GHz)).to_decibels())
 
 
 def test_eirp_model_accessors():
     model = lox.EirpModel(KA_BAND, 55.0 * lox.dB)
     assert model.band == KA_BAND
-    assert float(model.eirp) == pytest.approx(55.0, abs=1e-12)
+    assert model.eirp.to_decibels() == pytest.approx(55.0, abs=1e-12)
     # The pointing is ignored for lumped figures.
-    assert float(model.eirp_at(29.0 * lox.GHz, angle=10.0 * lox.deg)) == pytest.approx(
-        55.0, abs=1e-12
-    )
+    assert (
+        model.eirp_at(29.0 * lox.GHz, angle=10.0 * lox.deg)
+    ).to_decibels() == pytest.approx(55.0, abs=1e-12)
     assert "EirpModel" in repr(model)
 
 
@@ -1533,10 +1566,10 @@ def test_band_accepts_letter_band_names():
 def test_gt_model_accessors():
     model = lox.GtModel(KA_BAND, 3.01 * lox.dB)
     assert model.band == KA_BAND
-    assert float(model.gt) == pytest.approx(3.01, abs=1e-12)
-    assert float(model.gt_at(29.0 * lox.GHz, angle=10.0 * lox.deg)) == pytest.approx(
-        3.01, abs=1e-12
-    )
+    assert model.gt.to_decibels() == pytest.approx(3.01, abs=1e-12)
+    assert (
+        model.gt_at(29.0 * lox.GHz, angle=10.0 * lox.deg)
+    ).to_decibels() == pytest.approx(3.01, abs=1e-12)
     assert "GtModel" in repr(model)
 
 
@@ -1605,8 +1638,8 @@ def test_antenna_patterns_reject_non_physical_parameters():
 
 def test_amplifier_transmitter_accessors_repr_pickle():
     tx = lox.AmplifierTransmitter(power=10.0 * lox.W, output_back_off=0.5 * lox.dB)
-    assert float(tx.power) == pytest.approx(10.0)
-    assert float(tx.output_back_off) == pytest.approx(0.5)
+    assert tx.power.to_watts() == pytest.approx(10.0)
+    assert tx.output_back_off.to_decibels() == pytest.approx(0.5)
     assert "AmplifierTransmitter" in repr(tx)
     restored = pickle.loads(pickle.dumps(tx))
     assert restored == tx
@@ -1621,7 +1654,7 @@ def test_cascade_receiver_accessors_and_validation():
         demodulator_loss=0.5 * lox.dB,
     )
     assert rx.chain_noise_temperature().to_kelvin() == pytest.approx(50.0)
-    assert float(rx.chain_gain()) == pytest.approx(35.0)
+    assert rx.chain_gain().to_decibels() == pytest.approx(35.0)
     assert "CascadeReceiver" in repr(rx)
     restored = pickle.loads(pickle.dumps(rx))
     assert restored == rx
@@ -1749,7 +1782,7 @@ def test_chain_direction_pointing_methods():
     )
     on = tx.eirp_at(29.0 * lox.GHz, direction=[1.0, 0.0, 0.0])
     off = tx.eirp_at(29.0 * lox.GHz, direction=[0.0, 0.0, 1.0])
-    assert float(off) < float(on)
+    assert off.to_decibels() < on.to_decibels()
 
     rx = lox.RxChain(
         antenna,
@@ -1759,20 +1792,18 @@ def test_chain_direction_pointing_methods():
     )
     on = rx.gt_at(29.0 * lox.GHz, direction=[1.0, 0.0, 0.0])
     off = rx.gt_at(29.0 * lox.GHz, direction=[0.0, 0.0, 1.0])
-    assert float(off) < float(on)
+    assert off.to_decibels() < on.to_decibels()
     with pytest.raises(ValueError, match="angle or direction"):
         rx.gt_at(29.0 * lox.GHz, angle=1.0 * lox.deg, direction=[1.0, 0.0, 0.0])
 
 
 def test_model_direction_pointing_is_ignored():
     eirp = lox.EirpModel(KA_BAND, 55.0 * lox.dB)
-    assert float(
-        eirp.eirp_at(29.0 * lox.GHz, direction=[0.0, 0.0, 1.0])
-    ) == pytest.approx(55.0)
+    eirp_db = eirp.eirp_at(29.0 * lox.GHz, direction=[0.0, 0.0, 1.0])
+    assert eirp_db.to_decibels() == pytest.approx(55.0)
     gt = lox.GtModel(KA_BAND, 3.0 * lox.dB)
-    assert float(gt.gt_at(29.0 * lox.GHz, direction=[0.0, 0.0, 1.0])) == pytest.approx(
-        3.0
-    )
+    gt_db = gt.gt_at(29.0 * lox.GHz, direction=[0.0, 0.0, 1.0])
+    assert gt_db.to_decibels() == pytest.approx(3.0)
     with pytest.raises(ValueError, match="angle or direction"):
         eirp.eirp_at(29.0 * lox.GHz, angle=1.0 * lox.deg, direction=[1.0, 0.0, 0.0])
 

@@ -28,89 +28,9 @@ use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
 use lox_comms::{FrequencyBand, FrequencyRange, PropagationLosses};
 use lox_core::units::{Angle, Decibel};
 
-use crate::units::python::{PyAngle, PyDistance, PyFrequency, PyPower, PyTemperature};
-
-/// Formats an f64 as a valid Python float literal (always includes a decimal point).
-fn repr_f64(v: f64) -> String {
-    let s = v.to_string();
-    if v.is_finite() && !s.contains('.') {
-        format!("{s}.0")
-    } else {
-        s
-    }
-}
-
-// --- Decibel ---
-
-/// A value in decibels.
-///
-/// Args:
-///     value: The value in dB.
-#[pyclass(name = "Decibel", module = "lox_space", frozen, from_py_object)]
-#[derive(Debug, Clone, Copy)]
-pub struct PyDecibel(pub Decibel);
-
-#[pymethods]
-impl PyDecibel {
-    #[new]
-    /// Constructs a Decibel value from a raw dB number.
-    pub fn new(value: f64) -> Self {
-        Self(Decibel::decibels(value))
-    }
-
-    /// Creates a Decibel value from a linear power ratio.
-    #[staticmethod]
-    fn from_linear(value: f64) -> Self {
-        Self(Decibel::from_linear(value))
-    }
-
-    /// Returns the linear power ratio.
-    #[allow(clippy::wrong_self_convention)]
-    fn to_linear(&self) -> f64 {
-        self.0.to_linear()
-    }
-
-    fn __float__(&self) -> f64 {
-        self.0.to_decibels()
-    }
-
-    fn __add__(&self, other: &PyDecibel) -> Self {
-        Self(self.0 + other.0)
-    }
-
-    fn __sub__(&self, other: &PyDecibel) -> Self {
-        Self(self.0 - other.0)
-    }
-
-    fn __mul__(&self, other: f64) -> Self {
-        Self(Decibel::decibels(other * self.0.to_decibels()))
-    }
-
-    fn __rmul__(&self, other: f64) -> Self {
-        Self(Decibel::decibels(other * self.0.to_decibels()))
-    }
-
-    fn __neg__(&self) -> Self {
-        Self(-self.0)
-    }
-
-    fn __eq__(&self, other: &PyDecibel) -> bool {
-        self.0 == other.0
-    }
-
-    fn __getnewargs__(&self) -> (f64,) {
-        (self.0.to_decibels(),)
-    }
-
-    /// Returns the developer-readable representation.
-    pub fn __repr__(&self) -> String {
-        format!("Decibel({})", repr_f64(self.0.to_decibels()))
-    }
-
-    fn __str__(&self) -> String {
-        self.0.to_string()
-    }
-}
+use crate::units::python::{
+    PyAngle, PyDecibel, PyDistance, PyFrequency, PyPower, PyTemperature, repr_f64,
+};
 
 // --- Modulation ---
 
@@ -600,7 +520,7 @@ fn build_receiver(obj: &Bound<'_, PyAny>) -> PyResult<Receiver> {
 ///
 /// Args:
 ///     power: Transmit power.
-///     output_back_off: Output back-off as Decibel (default Decibel(0)).
+///     output_back_off: Output back-off as Decibel (default 0 * lox.dB).
 #[pyclass(
     name = "AmplifierTransmitter",
     module = "lox_space",
@@ -743,8 +663,8 @@ impl PyNoiseStage {
 ///
 /// Args:
 ///     stages: Non-empty list of NoiseStage (ordered: LNA first, then downstream).
-///     demodulator_loss: Demodulator loss as Decibel (default Decibel(0)).
-///     implementation_loss: Other implementation losses as Decibel (default Decibel(0)).
+///     demodulator_loss: Demodulator loss as Decibel (default 0 * lox.dB).
+///     implementation_loss: Other implementation losses as Decibel (default 0 * lox.dB).
 #[pyclass(name = "CascadeReceiver", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyCascadeReceiver(pub CascadeReceiver);
@@ -1769,9 +1689,9 @@ impl PyPfdMask {
             .iter()
             .map(|(elevation, value)| {
                 format!(
-                    "(Angle({}), Decibel({}))",
-                    repr_f64(elevation.to_radians()),
-                    repr_f64(value.to_decibels())
+                    "({}, {})",
+                    PyAngle(*elevation).__repr__(),
+                    PyDecibel(*value).__repr__()
                 )
             })
             .collect::<Vec<_>>()
@@ -1857,9 +1777,9 @@ impl PyFrequencyRange {
 
     fn __repr__(&self) -> String {
         format!(
-            "FrequencyRange(min=Frequency({}), max=Frequency({}))",
-            repr_f64(self.0.min().to_hertz()),
-            repr_f64(self.0.max().to_hertz()),
+            "FrequencyRange(min={}, max={})",
+            self.min().__repr__(),
+            self.max().__repr__(),
         )
     }
 }
@@ -1977,7 +1897,7 @@ pub fn rx_terminal_to_py<'py>(py: Python<'py>, terminal: &RxTerminal) -> Bound<'
 ///     transmitter: AmplifierTransmitter.
 ///     band: Supported frequency range, as a FrequencyRange or an IEEE
 ///         letter-band name like "Ka".
-///     feed_loss: Feed loss as Decibel (default Decibel(0)).
+///     feed_loss: Feed loss as Decibel (default 0 * lox.dB).
 #[pyclass(name = "TxChain", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyTxChain(pub TxChain);
@@ -2090,7 +2010,7 @@ impl PyTxChain {
 ///     band: Supported frequency range, as a FrequencyRange or an IEEE
 ///         letter-band name like "Ka".
 ///     antenna_noise_temperature: Clear-sky antenna noise temperature at the flange.
-///     feed_loss: Feed loss as Decibel (default Decibel(0)).
+///     feed_loss: Feed loss as Decibel (default 0 * lox.dB).
 #[pyclass(name = "RxChain", module = "lox_space", frozen, from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PyRxChain(pub RxChain);

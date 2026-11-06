@@ -31,7 +31,7 @@ def t0(iss_sgp4):
 
 @pytest.fixture(scope="module")
 def t1(t0):
-    return t0 + lox.TimeDelta(86400)  # 24-hour window
+    return t0 + lox.TimeDelta.from_seconds(86400)  # 24-hour window
 
 
 @pytest.fixture(scope="module")
@@ -181,7 +181,9 @@ class TestPowerBudgetFiltering:
 
 class TestPowerBudgetCustomStep:
     def test_custom_step(self, scenario):
-        analysis = lox.PowerBudgetAnalysis(scenario, step=lox.TimeDelta(120))
+        analysis = lox.PowerBudgetAnalysis(
+            scenario, step=lox.TimeDelta.from_seconds(120)
+        )
         results = analysis.compute()
         # Should still produce valid results
         ts = results.beta_angles("ISS")

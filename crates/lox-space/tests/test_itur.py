@@ -31,8 +31,8 @@ def test_propagation_losses_from_provider(itur_provider):
         probability=0.01,
         diameter=1.2 * lox.m,
     )
-    assert 0.0 < float(losses.total()) < 30.0
-    assert 0.0 < float(losses.absorptive()) <= float(losses.total())
+    assert 0.0 < losses.total().to_decibels() < 30.0
+    assert 0.0 < losses.absorptive().to_decibels() <= losses.total().to_decibels()
 
 
 def test_propagation_losses_lines(itur_provider):
@@ -52,7 +52,7 @@ def test_propagation_losses_lines(itur_provider):
         "Cloud attenuation",
         "Scintillation",
     ]
-    assert all(float(value) >= 0.0 for _, value, _ in losses.lines)
+    assert all(value.to_decibels() >= 0.0 for _, value, _ in losses.lines)
     # Scintillation does not contribute to the absorptive part.
     absorptive = [absorptive for _, _, absorptive in losses.lines]
     assert absorptive == [True, True, True, False]
@@ -69,7 +69,7 @@ def test_propagation_losses_with_custom_tilt(itur_provider):
         diameter=0.6 * lox.m,
         polarisation_tilt=0.0 * lox.deg,
     )
-    assert float(losses.total()) > 0.0
+    assert losses.total().to_decibels() > 0.0
 
 
 def test_rain_attenuation(itur_provider):
@@ -81,7 +81,7 @@ def test_rain_attenuation(itur_provider):
         elevation=30.0 * lox.deg,
         probability=0.01,
     )
-    assert 0.0 < float(a) < 20.0
+    assert 0.0 < a.to_decibels() < 20.0
 
 
 def test_gaseous_attenuation():
@@ -94,9 +94,9 @@ def test_gaseous_attenuation():
         temperature=288.15 * lox.K,
     )
     # Both should be small positive or near-zero at 14.25 GHz
-    assert float(a_o) + float(a_w) > 0.0
+    assert a_o.to_decibels() + a_w.to_decibels() > 0.0
     # Total gaseous < 1 dB at this frequency and elevation
-    assert float(a_o) + float(a_w) < 1.0
+    assert a_o.to_decibels() + a_w.to_decibels() < 1.0
 
 
 def test_cloud_attenuation(itur_provider):
@@ -108,7 +108,7 @@ def test_cloud_attenuation(itur_provider):
         frequency=14.25 * lox.GHz,
         probability=1.0,
     )
-    assert float(a) >= 0.0
+    assert a.to_decibels() >= 0.0
 
 
 def test_scintillation_attenuation(itur_provider):
@@ -121,7 +121,7 @@ def test_scintillation_attenuation(itur_provider):
         lat=40.4 * lox.deg,
         lon=-3.7 * lox.deg,
     )
-    assert 0.0 < float(a) < 2.0
+    assert 0.0 < a.to_decibels() < 2.0
 
 
 def test_rain_specific_attenuation():
@@ -192,10 +192,10 @@ def test_propagation_losses_total_is_combined(itur_provider):
         probability=0.01,
         diameter=1.2 * lox.m,
     )
-    total = sum(float(value) for _, value, _ in losses.lines)
-    assert float(losses.total()) == pytest.approx(total, abs=1e-12)
-    absorptive = sum(float(value) for _, value, flag in losses.lines if flag)
-    assert float(losses.absorptive()) == pytest.approx(absorptive, abs=1e-12)
+    total = sum(value.to_decibels() for _, value, _ in losses.lines)
+    assert losses.total().to_decibels() == pytest.approx(total, abs=1e-12)
+    absorptive = sum(value.to_decibels() for _, value, flag in losses.lines if flag)
+    assert losses.absorptive().to_decibels() == pytest.approx(absorptive, abs=1e-12)
 
 
 def test_high_frequency_ka_band(itur_provider):
@@ -208,7 +208,7 @@ def test_high_frequency_ka_band(itur_provider):
         probability=0.01,
         diameter=0.6 * lox.m,
     )
-    assert float(losses.total()) > 0.0
+    assert losses.total().to_decibels() > 0.0
     # Ka-band should have higher attenuation than Ku-band
     losses_ku = itur_provider.propagation_losses(
         lat=51.5 * lox.deg,
@@ -218,7 +218,7 @@ def test_high_frequency_ka_band(itur_provider):
         probability=0.01,
         diameter=0.6 * lox.m,
     )
-    assert float(losses.total()) > float(losses_ku.total())
+    assert losses.total().to_decibels() > losses_ku.total().to_decibels()
 
 
 def test_equatorial_location(itur_provider):
@@ -231,11 +231,11 @@ def test_equatorial_location(itur_provider):
         probability=0.01,
         diameter=1.2 * lox.m,
     )
-    assert float(losses.total()) > 0.0
+    assert losses.total().to_decibels() > 0.0
 
 
 def test_pressure_unit():
     """Test Pressure unit type."""
     p = 1013.25 * lox.hPa
-    assert abs(p.to_hpa() - 1013.25) < 1e-6
-    assert abs(p.to_pa() - 101325.0) < 0.1
+    assert abs(p.to_hectopascals() - 1013.25) < 1e-6
+    assert abs(p.to_pascals() - 101325.0) < 0.1
