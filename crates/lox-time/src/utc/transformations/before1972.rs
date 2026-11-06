@@ -9,9 +9,9 @@
 //!
 //! Data sourced from ftp://maia.usno.navy.mil/ser7/tai-utc.dat.
 
-use lox_core::f64::consts::SECONDS_PER_DAY;
 use lox_core::math::float::floor;
 use lox_core::math::slices::Monotonic;
+use lox_core::time::constants::SECONDS_PER_DAY;
 
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::Epoch::ModifiedJulianDate;
@@ -76,10 +76,10 @@ pub fn delta_tai_utc(tai: &Time<Tai>) -> TimeDelta {
         .iter()
         .rposition(|item| item <= &threshold)
         .expect("threshold is >= EPOCHS[0]");
-    let rate_utc = DRIFT_RATES[position] / SECONDS_PER_DAY;
-    let rate_tai = rate_utc / (1.0 + rate_utc) * SECONDS_PER_DAY;
+    let rate_utc = DRIFT_RATES[position] / SECONDS_PER_DAY as f64;
+    let rate_tai = rate_utc / (1.0 + rate_utc) * SECONDS_PER_DAY as f64;
     let offset = OFFSETS[position];
-    let dt = mjd - DRIFT_EPOCHS[position] as f64 - offset / SECONDS_PER_DAY;
+    let dt = mjd - DRIFT_EPOCHS[position] as f64 - offset / SECONDS_PER_DAY as f64;
     let raw_delta = offset + dt * rate_tai;
     TimeDelta::from_seconds_f64(raw_delta)
 }

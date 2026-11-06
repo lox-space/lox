@@ -9,9 +9,9 @@ use std::f64::consts::TAU;
 use std::iter::zip;
 
 use lox_approx::ApproxEq;
-use lox_core::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use lox_core::glam::DMat3;
 use lox_core::math::poly::poly_array;
+use lox_core::time::constants::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use lox_core::units::{Angle, AngleUnits};
 use lox_time::time_scales::{Tdb, Tt, Ut1};
 use lox_time::{Time, julian_dates::JulianDate};
@@ -119,7 +119,7 @@ pub struct GreenwichMeanSiderealTime(pub Angle);
 pub type Gmst = GreenwichMeanSiderealTime;
 
 // Coefficients of IAU 1982 GMST-UT1 model
-const A: f64 = 24110.54841 - SECONDS_PER_HALF_DAY;
+const A: f64 = 24110.54841 - SECONDS_PER_HALF_DAY as f64;
 const B: f64 = 8640184.812866;
 const C: f64 = 0.093104;
 const D: f64 = -6.2e-6;
@@ -128,7 +128,7 @@ impl GreenwichMeanSiderealTime {
     /// Computes GMST using the IAU 1982 model.
     pub fn iau1982(time: Time<Ut1>) -> Self {
         let t = time.centuries_since_j2000();
-        let f = time.days_since_j2000().rem_euclid(1.0) * SECONDS_PER_DAY;
+        let f = time.days_since_j2000().rem_euclid(1.0) * SECONDS_PER_DAY as f64;
         Self(Angle::seconds_of_time(poly_array(t, &[A, B, C, D]) + f).wrap_unsigned())
     }
 

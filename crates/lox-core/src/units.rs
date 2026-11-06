@@ -51,11 +51,11 @@ use core::{
 use glam::DMat3;
 use lox_approx::ApproxEq;
 
-use crate::f64::consts::SECONDS_PER_DAY;
 use crate::math::float::{
     acos, acosh, asin, asinh, atan, atan2, atanh, cos, cosh, log10, powf, sin, sin_cos, sinh, tan,
     tanh, to_degrees, to_radians,
 };
+use crate::time::constants::SECONDS_PER_DAY;
 
 /// Degrees in full circle
 pub const DEGREES_IN_CIRCLE: f64 = 360.0;
@@ -67,7 +67,7 @@ pub const ARCSECONDS_IN_CIRCLE: f64 = DEGREES_IN_CIRCLE * 60.0 * 60.0;
 pub const RADIANS_IN_ARCSECOND: f64 = TAU / ARCSECONDS_IN_CIRCLE;
 
 /// Radians per second of time
-const RADIANS_IN_SECOND_OF_TIME: f64 = TAU / SECONDS_PER_DAY;
+const RADIANS_IN_SECOND_OF_TIME: f64 = TAU / SECONDS_PER_DAY as f64;
 
 /// Sign of a signed component. Used for HMS/DMS decomposition.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -551,7 +551,7 @@ impl Velocity {
 
     /// Creates a new velocity from an `f64` value in au/d.
     pub const fn astronomical_units_per_day(aud: f64) -> Self {
-        Self(aud * ASTRONOMICAL_UNIT / SECONDS_PER_DAY)
+        Self(aud * ASTRONOMICAL_UNIT / SECONDS_PER_DAY as f64)
     }
 
     /// Creates a new velocity from an `f64` value in 1/c.
@@ -571,7 +571,7 @@ impl Velocity {
 
     /// Returns the value of the velocity in au/d.
     pub const fn to_astronomical_units_per_day(self) -> f64 {
-        self.0 * SECONDS_PER_DAY / ASTRONOMICAL_UNIT
+        self.0 * SECONDS_PER_DAY as f64 / ASTRONOMICAL_UNIT
     }
 
     /// Returns the value of the velocity in 1/c.
@@ -2660,7 +2660,7 @@ mod tests {
     #[test]
     fn test_velocity_astronomical_units_per_day() {
         let v = Velocity::astronomical_units_per_day(1.0);
-        let expected = ASTRONOMICAL_UNIT / SECONDS_PER_DAY;
+        let expected = ASTRONOMICAL_UNIT / SECONDS_PER_DAY as f64;
         assert_approx_eq!(v.to_meters_per_second(), expected, rtol <= 1e-10);
         assert_approx_eq!(v.to_astronomical_units_per_day(), 1.0, rtol <= 1e-10);
     }
@@ -2693,7 +2693,7 @@ mod tests {
         let c = 1_i64.aud();
         assert_approx_eq!(
             c.to_meters_per_second(),
-            ASTRONOMICAL_UNIT / SECONDS_PER_DAY,
+            ASTRONOMICAL_UNIT / SECONDS_PER_DAY as f64,
             rtol <= 1e-10
         );
         let d = 1_i64.c();

@@ -12,8 +12,8 @@ use crate::time_of_day::CivilTime;
 use crate::time_of_day::TimeOfDay;
 use crate::time_scales::ContinuousTimeScale;
 use crate::time_scales::{Tai, TimeScale};
-use lox_core::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use lox_core::time::calendar_dates::Date;
+use lox_core::time::constants::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 
 use super::LeapSecondsProvider;
 use super::Utc;

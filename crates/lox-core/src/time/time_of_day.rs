@@ -26,7 +26,7 @@ use thiserror::Error;
 
 use super::iso;
 use super::subsecond::Subsecond;
-use crate::i64::consts::{
+use crate::time::constants::{
     SECONDS_PER_DAY, SECONDS_PER_HALF_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
 

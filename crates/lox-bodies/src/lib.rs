@@ -20,8 +20,8 @@ use core::fmt::{Display, Formatter};
 pub use generated::*;
 use lox_core::coords::Ellipsoid;
 use lox_core::elements::GravitationalParameter;
-use lox_core::f64::consts::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 use lox_core::math::float::{cos, powi, sin};
+use lox_core::time::constants::{SECONDS_PER_DAY, SECONDS_PER_JULIAN_CENTURY};
 use lox_core::units::{AngularRate, Distance};
 use thiserror::Error;
 
@@ -220,8 +220,8 @@ impl RotationalElementType {
 
     fn dt(&self) -> f64 {
         match self {
-            RotationalElementType::Rotation => SECONDS_PER_DAY,
-            _ => SECONDS_PER_JULIAN_CENTURY,
+            RotationalElementType::Rotation => SECONDS_PER_DAY as f64,
+            _ => SECONDS_PER_JULIAN_CENTURY as f64,
         }
     }
 }
@@ -245,7 +245,7 @@ impl<const N: usize> RotationalElement<N> {
             .map(|((&c, &theta0), &theta1)| {
                 c * self
                     .typ
-                    .sincos(theta0 + theta1 * t / SECONDS_PER_JULIAN_CENTURY)
+                    .sincos(theta0 + theta1 * t / SECONDS_PER_JULIAN_CENTURY as f64)
             })
             .sum()
     }
@@ -256,10 +256,10 @@ impl<const N: usize> RotationalElement<N> {
             .zip(self.theta0.iter())
             .zip(self.theta1.iter())
             .map(|((&c, &theta0), &theta1)| {
-                c * theta1 / SECONDS_PER_JULIAN_CENTURY
+                c * theta1 / SECONDS_PER_JULIAN_CENTURY as f64
                     * self
                         .typ
-                        .sincos_dot(theta0 + theta1 * t / SECONDS_PER_JULIAN_CENTURY)
+                        .sincos_dot(theta0 + theta1 * t / SECONDS_PER_JULIAN_CENTURY as f64)
             })
             .sum()
     }

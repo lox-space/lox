@@ -8,7 +8,7 @@
     representations as Julian dates relative to standard [Epoch]s and in a variety of [Unit]s.
 */
 
-use crate::i64::consts::SECONDS_BETWEEN_JD_AND_J2000;
+use crate::time::constants::SECONDS_BETWEEN_JD_AND_J2000;
 
 use super::deltas::TimeDelta;
 

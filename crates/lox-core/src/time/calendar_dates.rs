@@ -22,7 +22,7 @@ use thiserror::Error;
 
 use super::iso;
 use super::julian_dates::{Epoch, JulianDate, Unit};
-use crate::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+use crate::time::constants::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 
 /// Error type returned when attempting to construct a [Date] from invalid inputs.
 #[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
@@ -385,7 +385,7 @@ pub trait CalendarDate {
 
 #[cfg(test)]
 mod tests {
-    use crate::f64::consts::{DAYS_PER_JULIAN_CENTURY, SECONDS_PER_JULIAN_CENTURY};
+    use crate::time::constants::{DAYS_PER_JULIAN_CENTURY, SECONDS_PER_JULIAN_CENTURY};
     use rstest::rstest;
 
     use super::*;
@@ -449,7 +449,7 @@ mod tests {
         let date = Date::new(2100, 1, 1).unwrap();
         assert_eq!(
             date.seconds_since_j2000(),
-            SECONDS_PER_JULIAN_CENTURY - SECONDS_PER_HALF_DAY as f64
+            SECONDS_PER_JULIAN_CENTURY as f64 - SECONDS_PER_HALF_DAY as f64
         );
         assert_eq!(date.days_since_j2000(), DAYS_PER_JULIAN_CENTURY - 0.5);
         assert_eq!(

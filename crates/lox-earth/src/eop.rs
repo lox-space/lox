@@ -8,8 +8,8 @@ use std::{
 };
 
 use csv::{ByteRecord, ReaderBuilder};
-use lox_core::f64::consts::{SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY};
 use lox_core::math::series::{InterpolationType, Series, SeriesError};
+use lox_core::time::constants::{SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY};
 use lox_core::units::Angle;
 use lox_frames::iers::{Corrections, polar_motion::PoleCoords};
 use lox_io::spice::lsk::LeapSecondsKernel;
@@ -163,7 +163,10 @@ impl EopParser {
             let r2: EopRecord = raw2.deserialize(Some(&headers))?;
             let r = r1.merge(&r2);
 
-            j2000.push(r.modified_julian_date * SECONDS_PER_DAY - SECONDS_BETWEEN_MJD_AND_J2000);
+            j2000.push(
+                r.modified_julian_date * SECONDS_PER_DAY as f64
+                    - SECONDS_BETWEEN_MJD_AND_J2000 as f64,
+            );
 
             if let Some(delta_ut1_utc) = r.delta_ut1_utc {
                 let utc = Utc::builder().with_ymd(r.year, r.month, r.day).build()?;

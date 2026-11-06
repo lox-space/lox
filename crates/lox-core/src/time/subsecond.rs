@@ -41,8 +41,7 @@ use alloc::string::{String, ToString};
 use core::fmt::Display;
 use core::str::FromStr;
 
-use crate::f64::consts::SECONDS_PER_ATTOSECOND;
-use crate::i64::consts::{
+use crate::time::constants::{
     ATTOSECONDS_IN_FEMTOSECOND, ATTOSECONDS_IN_MICROSECOND, ATTOSECONDS_IN_MILLISECOND,
     ATTOSECONDS_IN_NANOSECOND, ATTOSECONDS_IN_PICOSECOND, ATTOSECONDS_IN_SECOND,
 };
@@ -136,7 +135,7 @@ impl Subsecond {
         // Convert to attoseconds with rounding (half away from zero) to handle
         // floating-point precision issues. Inlined const-compatible round; the
         // scaled value is bounded by 1e18, well within `i64` range.
-        let scaled = rem / crate::f64::consts::SECONDS_PER_ATTOSECOND;
+        let scaled = rem * ATTOSECONDS_IN_SECOND as f64;
         let i = scaled as i64 as f64;
         let frac = scaled - i;
         let rounded = if frac >= 0.5 {
@@ -248,7 +247,7 @@ impl Subsecond {
     /// assert_eq!(s.as_seconds_f64(), 0.5);
     /// ```
     pub const fn as_seconds_f64(&self) -> f64 {
-        self.as_attoseconds() as f64 * SECONDS_PER_ATTOSECOND
+        self.as_attoseconds() as f64 / ATTOSECONDS_IN_SECOND as f64
     }
 
     /// Returns the millisecond component (10⁻³ seconds).
@@ -385,7 +384,7 @@ mod tests {
             .set_attoseconds(789);
 
         assert_eq!(s.as_attoseconds(), 123456789123456789);
-        assert_eq!(s.as_seconds_f64(), 0.1234567891234568);
+        assert_eq!(s.as_seconds_f64(), 0.12345678912345678);
         assert_eq!(s.milliseconds(), 123);
         assert_eq!(s.microseconds(), 456);
         assert_eq!(s.nanoseconds(), 789);
@@ -399,7 +398,7 @@ mod tests {
         let s = Subsecond::from_attoseconds(123456789123456789);
 
         assert_eq!(s.as_attoseconds(), 123456789123456789);
-        assert_eq!(s.as_seconds_f64(), 0.1234567891234568);
+        assert_eq!(s.as_seconds_f64(), 0.12345678912345678);
         assert_eq!(s.milliseconds(), 123);
         assert_eq!(s.microseconds(), 456);
         assert_eq!(s.nanoseconds(), 789);
