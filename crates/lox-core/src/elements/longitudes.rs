@@ -95,7 +95,7 @@ mod tests {
     use crate::anomalies::TrueAnomaly;
     use crate::elements::Eccentricity;
     use crate::math::float::{abs, cos, sin};
-    use crate::units::AngleUnits;
+    use crate::units::literals::AngleLiterals;
 
     use super::*;
 

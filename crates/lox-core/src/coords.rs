@@ -1210,7 +1210,8 @@ mod tests {
 
     #[cfg(feature = "serde")]
     use crate::math::series::InterpolationType;
-    use crate::units::{AngleUnits, AngularRate, DistanceUnits, VelocityUnits};
+    use crate::units::AngularRate;
+    use crate::units::literals::{AngleLiterals, DistanceLiterals, VelocityLiterals};
 
     use super::*;
 

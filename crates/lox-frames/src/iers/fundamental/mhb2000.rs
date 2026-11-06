@@ -15,7 +15,8 @@
 
 use lox_core::math::poly::poly_array;
 use lox_core::time::julian_dates::JulianCenturies;
-use lox_core::units::{Angle, AngleUnits};
+use lox_core::units::Angle;
+use lox_core::units::literals::AngleLiterals;
 
 /// Mean elongation of the Moon from the Sun (D) for luni-solar nutation.
 ///

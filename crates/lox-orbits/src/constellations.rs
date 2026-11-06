@@ -205,7 +205,7 @@ mod tests {
     use lox_frames::Icrf;
     use lox_time::Time;
 
-    use lox_core::units::{AngleUnits, DistanceUnits};
+    use lox_core::units::literals::{AngleLiterals, DistanceLiterals};
     use lox_time::time_scales::TimeScale;
 
     fn make_constellation() -> Constellation<Earth, Icrf> {

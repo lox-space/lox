@@ -349,7 +349,7 @@ impl ChannelBuilder {
 #[cfg(test)]
 mod tests {
     use lox_approx::assert_approx_eq;
-    use lox_core::units::{DecibelUnits, FrequencyUnits};
+    use lox_core::units::literals::{DecibelLiterals, FrequencyLiterals};
 
     use super::*;
 

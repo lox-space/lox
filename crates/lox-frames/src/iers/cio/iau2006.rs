@@ -8,7 +8,8 @@
 
 use lox_core::math::poly::poly_array;
 use lox_core::time::julian_dates::JulianCenturies;
-use lox_core::units::{Angle, AngleUnits};
+use lox_core::units::Angle;
+use lox_core::units::literals::AngleLiterals;
 use lox_time::Time;
 use lox_time::julian_dates::JulianDate;
 use lox_time::time_scales::Tdb;

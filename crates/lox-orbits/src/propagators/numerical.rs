@@ -458,7 +458,7 @@ where
 mod tests {
     use lox_approx::assert_approx_eq;
     use lox_bodies::Earth;
-    use lox_core::units::{DistanceUnits, VelocityUnits};
+    use lox_core::units::literals::{DistanceLiterals, VelocityLiterals};
     use lox_frames::Icrf;
     use lox_time::intervals::Interval;
     use lox_time::time;

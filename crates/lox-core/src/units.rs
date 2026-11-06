@@ -30,6 +30,7 @@
 //!
 //! Products with a `TimeDelta` can be written in either order.
 
+pub mod literals;
 mod relations;
 mod runtime;
 mod sexagesimal;
@@ -371,75 +372,6 @@ impl Angle {
     }
 }
 
-/// A trait for creating [`Angle`] instances from primitives.
-///
-/// By default it is implemented for [`f64`] and [`i64`].
-///
-/// # Examples
-///
-/// ```
-/// use lox_core::units::AngleUnits;
-///
-/// let angle = 360.deg();
-/// assert_eq!(angle.to_radians(), std::f64::consts::TAU);
-/// ```
-pub trait AngleUnits {
-    /// Creates an angle from a value in radians.
-    fn rad(&self) -> Angle;
-    /// Creates an angle from a value in degrees.
-    fn deg(&self) -> Angle;
-    /// Creates an angle from a value in arcseconds.
-    fn arcsec(&self) -> Angle;
-    /// Creates an angle from a value in milliarcseconds.
-    fn mas(&self) -> Angle;
-    /// Creates an angle from a value in microarcseconds.
-    fn uas(&self) -> Angle;
-}
-
-impl AngleUnits for f64 {
-    fn rad(&self) -> Angle {
-        Angle::radians(*self)
-    }
-
-    fn deg(&self) -> Angle {
-        Angle::degrees(*self)
-    }
-
-    fn arcsec(&self) -> Angle {
-        Angle::arcseconds(*self)
-    }
-
-    fn mas(&self) -> Angle {
-        Angle::milliarcseconds(*self)
-    }
-
-    fn uas(&self) -> Angle {
-        Angle::microarcseconds(*self)
-    }
-}
-
-impl AngleUnits for i64 {
-    fn rad(&self) -> Angle {
-        Angle::radians(*self as f64)
-    }
-
-    fn deg(&self) -> Angle {
-        Angle::degrees(*self as f64)
-    }
-
-    fn arcsec(&self) -> Angle {
-        Angle::arcseconds(*self as f64)
-    }
-
-    fn mas(&self) -> Angle {
-        Angle::milliarcseconds(*self as f64)
-    }
-
-    fn uas(&self) -> Angle {
-        Angle::microarcseconds(*self as f64)
-    }
-}
-
 /// Distance in meters.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -475,55 +407,6 @@ impl Distance {
     /// Returns the value of the distance in astronomical units.
     pub const fn to_astronomical_units(self) -> f64 {
         self.0 / ASTRONOMICAL_UNIT.to_meters()
-    }
-}
-
-/// A trait for creating [`Distance`] instances from primitives.
-///
-/// By default it is implemented for [`f64`] and [`i64`].
-///
-/// # Examples
-///
-/// ```
-/// use lox_core::units::DistanceUnits;
-///
-/// let d = 1.km();
-/// assert_eq!(d.to_meters(), 1e3);
-/// ```
-pub trait DistanceUnits {
-    /// Creates a distance from a value in meters.
-    fn m(&self) -> Distance;
-    /// Creates a distance from a value in kilometers.
-    fn km(&self) -> Distance;
-    /// Creates a distance from a value in astronomical units.
-    fn au(&self) -> Distance;
-}
-
-impl DistanceUnits for f64 {
-    fn m(&self) -> Distance {
-        Distance::meters(*self)
-    }
-
-    fn km(&self) -> Distance {
-        Distance::kilometers(*self)
-    }
-
-    fn au(&self) -> Distance {
-        Distance::astronomical_units(*self)
-    }
-}
-
-impl DistanceUnits for i64 {
-    fn m(&self) -> Distance {
-        Distance::meters(*self as f64)
-    }
-
-    fn km(&self) -> Distance {
-        Distance::kilometers(*self as f64)
-    }
-
-    fn au(&self) -> Distance {
-        Distance::astronomical_units(*self as f64)
     }
 }
 
@@ -572,65 +455,6 @@ impl Velocity {
     /// Returns the value of the velocity in 1/c.
     pub const fn to_fraction_of_speed_of_light(self) -> f64 {
         self.0 / SPEED_OF_LIGHT.to_meters_per_second()
-    }
-}
-
-/// A trait for creating [`Velocity`] instances from primitives.
-///
-/// By default it is implemented for [`f64`] and [`i64`].
-///
-/// # Examples
-///
-/// ```
-/// use lox_core::units::VelocityUnits;
-///
-/// let v = 1.kps();
-/// assert_eq!(v.to_meters_per_second(), 1e3);
-/// ```
-pub trait VelocityUnits {
-    /// Creates a velocity from a value in m/s.
-    fn mps(&self) -> Velocity;
-    /// Creates a velocity from a value in km/s.
-    fn kps(&self) -> Velocity;
-    /// Creates a velocity from a value in au/d.
-    fn aud(&self) -> Velocity;
-    /// Crates a velocity from a value in 1/c (fraction of the speed of light).
-    fn c(&self) -> Velocity;
-}
-
-impl VelocityUnits for f64 {
-    fn mps(&self) -> Velocity {
-        Velocity::meters_per_second(*self)
-    }
-
-    fn kps(&self) -> Velocity {
-        Velocity::kilometers_per_second(*self)
-    }
-
-    fn aud(&self) -> Velocity {
-        Velocity::astronomical_units_per_day(*self)
-    }
-
-    fn c(&self) -> Velocity {
-        Velocity::fraction_of_speed_of_light(*self)
-    }
-}
-
-impl VelocityUnits for i64 {
-    fn mps(&self) -> Velocity {
-        Velocity::meters_per_second(*self as f64)
-    }
-
-    fn kps(&self) -> Velocity {
-        Velocity::kilometers_per_second(*self as f64)
-    }
-
-    fn aud(&self) -> Velocity {
-        Velocity::astronomical_units_per_day(*self as f64)
-    }
-
-    fn c(&self) -> Velocity {
-        Velocity::fraction_of_speed_of_light(*self as f64)
     }
 }
 
@@ -697,75 +521,6 @@ impl Frequency {
     }
 }
 
-/// A trait for creating [`Frequency`] instances from primitives.
-///
-/// By default it is implemented for [`f64`] and [`i64`].
-///
-/// # Examples
-///
-/// ```
-/// use lox_core::units::FrequencyUnits;
-///
-/// let f = 1.ghz();
-/// assert_eq!(f.to_hertz(), 1e9);
-/// ```
-pub trait FrequencyUnits {
-    /// Creates a frequency from a value in Hz.
-    fn hz(&self) -> Frequency;
-    /// Creates a frequency from a value in KHz.
-    fn khz(&self) -> Frequency;
-    /// Creates a frequency from a value in MHz.
-    fn mhz(&self) -> Frequency;
-    /// Creates a frequency from a value in GHz.
-    fn ghz(&self) -> Frequency;
-    /// Creates a frequency from a value in THz.
-    fn thz(&self) -> Frequency;
-}
-
-impl FrequencyUnits for f64 {
-    fn hz(&self) -> Frequency {
-        Frequency::hertz(*self)
-    }
-
-    fn khz(&self) -> Frequency {
-        Frequency::kilohertz(*self)
-    }
-
-    fn mhz(&self) -> Frequency {
-        Frequency::megahertz(*self)
-    }
-
-    fn ghz(&self) -> Frequency {
-        Frequency::gigahertz(*self)
-    }
-
-    fn thz(&self) -> Frequency {
-        Frequency::terahertz(*self)
-    }
-}
-
-impl FrequencyUnits for i64 {
-    fn hz(&self) -> Frequency {
-        Frequency::hertz(*self as f64)
-    }
-
-    fn khz(&self) -> Frequency {
-        Frequency::kilohertz(*self as f64)
-    }
-
-    fn mhz(&self) -> Frequency {
-        Frequency::megahertz(*self as f64)
-    }
-
-    fn ghz(&self) -> Frequency {
-        Frequency::gigahertz(*self as f64)
-    }
-
-    fn thz(&self) -> Frequency {
-        Frequency::terahertz(*self as f64)
-    }
-}
-
 /// Mass in kilograms.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -804,55 +559,6 @@ impl Mass {
     }
 }
 
-/// A trait for creating [`Mass`] instances from primitives.
-///
-/// By default it is implemented for [`f64`] and [`i64`].
-///
-/// # Examples
-///
-/// ```
-/// use lox_core::units::MassUnits;
-///
-/// let m = 1.kg();
-/// assert_eq!(m.to_kilograms(), 1.0);
-/// ```
-pub trait MassUnits {
-    /// Creates a mass from a value in kilograms.
-    fn kg(&self) -> Mass;
-    /// Creates a mass from a value in grams.
-    fn g(&self) -> Mass;
-    /// Creates a mass from a value in metric tons.
-    fn t(&self) -> Mass;
-}
-
-impl MassUnits for f64 {
-    fn kg(&self) -> Mass {
-        Mass::kilograms(*self)
-    }
-
-    fn g(&self) -> Mass {
-        Mass::grams(*self)
-    }
-
-    fn t(&self) -> Mass {
-        Mass::metric_tons(*self)
-    }
-}
-
-impl MassUnits for i64 {
-    fn kg(&self) -> Mass {
-        Mass::kilograms(*self as f64)
-    }
-
-    fn g(&self) -> Mass {
-        Mass::grams(*self as f64)
-    }
-
-    fn t(&self) -> Mass {
-        Mass::metric_tons(*self as f64)
-    }
-}
-
 /// Area in square meters.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -881,45 +587,6 @@ impl Area {
     }
 }
 
-/// A trait for creating [`Area`] instances from primitives.
-///
-/// By default it is implemented for [`f64`] and [`i64`].
-///
-/// # Examples
-///
-/// ```
-/// use lox_core::units::AreaUnits;
-///
-/// let a = 4.m2();
-/// assert_eq!(a.to_square_meters(), 4.0);
-/// ```
-pub trait AreaUnits {
-    /// Creates an area from a value in square meters.
-    fn m2(&self) -> Area;
-    /// Creates an area from a value in square kilometers.
-    fn km2(&self) -> Area;
-}
-
-impl AreaUnits for f64 {
-    fn m2(&self) -> Area {
-        Area::square_meters(*self)
-    }
-
-    fn km2(&self) -> Area {
-        Area::square_kilometers(*self)
-    }
-}
-
-impl AreaUnits for i64 {
-    fn m2(&self) -> Area {
-        Area::square_meters(*self as f64)
-    }
-
-    fn km2(&self) -> Area {
-        Area::square_kilometers(*self as f64)
-    }
-}
-
 /// Area-to-mass ratio in m²/kg.
 ///
 /// Used for ballistic and radiation-pressure coefficients (e.g. the OMM
@@ -941,35 +608,6 @@ impl AreaToMass {
     }
 }
 
-/// A trait for creating [`AreaToMass`] instances from primitives.
-///
-/// By default it is implemented for [`f64`] and [`i64`].
-///
-/// # Examples
-///
-/// ```
-/// use lox_core::units::AreaToMassUnits;
-///
-/// let r = 0.05.m2_per_kg();
-/// assert_eq!(r.to_square_meters_per_kilogram(), 0.05);
-/// ```
-pub trait AreaToMassUnits {
-    /// Creates an area-to-mass ratio from a value in m²/kg.
-    fn m2_per_kg(&self) -> AreaToMass;
-}
-
-impl AreaToMassUnits for f64 {
-    fn m2_per_kg(&self) -> AreaToMass {
-        AreaToMass::square_meters_per_kilogram(*self)
-    }
-}
-
-impl AreaToMassUnits for i64 {
-    fn m2_per_kg(&self) -> AreaToMass {
-        AreaToMass::square_meters_per_kilogram(*self as f64)
-    }
-}
-
 /// Temperature in Kelvin.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -985,33 +623,6 @@ impl Temperature {
     /// Returns the value in Kelvin.
     pub const fn to_kelvin(self) -> f64 {
         self.0
-    }
-}
-
-/// Extension trait for ergonomic temperature construction.
-///
-/// # Example
-///
-/// ```
-/// use lox_core::units::TemperatureUnits;
-///
-/// let t = 290.k();
-/// assert_eq!(t.to_kelvin(), 290.0);
-/// ```
-pub trait TemperatureUnits {
-    /// Creates a temperature from a value in Kelvin.
-    fn k(&self) -> Temperature;
-}
-
-impl TemperatureUnits for f64 {
-    fn k(&self) -> Temperature {
-        Temperature::kelvin(*self)
-    }
-}
-
-impl TemperatureUnits for i64 {
-    fn k(&self) -> Temperature {
-        Temperature::kelvin(*self as f64)
     }
 }
 
@@ -1076,43 +687,6 @@ impl Power {
     }
 }
 
-/// Extension trait for ergonomic power construction.
-///
-/// # Example
-///
-/// ```
-/// use lox_core::units::PowerUnits;
-///
-/// let p = 2.w();
-/// assert_eq!(p.to_watts(), 2.0);
-/// ```
-pub trait PowerUnits {
-    /// Creates a power from a value in watts.
-    fn w(&self) -> Power;
-    /// Creates a power from a value in kilowatts.
-    fn kw(&self) -> Power;
-}
-
-impl PowerUnits for f64 {
-    fn w(&self) -> Power {
-        Power::watts(*self)
-    }
-
-    fn kw(&self) -> Power {
-        Power::kilowatts(*self)
-    }
-}
-
-impl PowerUnits for i64 {
-    fn w(&self) -> Power {
-        Power::watts(*self as f64)
-    }
-
-    fn kw(&self) -> Power {
-        Power::kilowatts(*self as f64)
-    }
-}
-
 /// Angular rate in radians per second.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -1166,35 +740,6 @@ impl Decibel {
     /// Converts this decibel value to a linear power-ratio.
     pub fn to_linear(self) -> f64 {
         powf(10.0_f64, self.0 / 10.0)
-    }
-}
-
-/// A trait for creating [`Decibel`] instances from primitives.
-///
-/// By default it is implemented for [`f64`] and [`i64`].
-///
-/// # Examples
-///
-/// ```
-/// use lox_core::units::DecibelUnits;
-///
-/// let d = 3.0.db();
-/// assert_eq!(d.to_decibels(), 3.0);
-/// ```
-pub trait DecibelUnits {
-    /// Creates a decibel value.
-    fn db(&self) -> Decibel;
-}
-
-impl DecibelUnits for f64 {
-    fn db(&self) -> Decibel {
-        Decibel::decibels(*self)
-    }
-}
-
-impl DecibelUnits for i64 {
-    fn db(&self) -> Decibel {
-        Decibel::decibels(*self as f64)
     }
 }
 
@@ -1255,65 +800,6 @@ impl DataRate {
     /// Returns the value in Gbit/s.
     pub const fn to_gigabits_per_second(self) -> f64 {
         self.0 / 1e9
-    }
-}
-
-/// A trait for creating [`DataRate`] instances from primitives.
-///
-/// By default it is implemented for [`f64`] and [`i64`].
-///
-/// # Examples
-///
-/// ```
-/// use lox_core::units::DataRateUnits;
-///
-/// let r = 150.mbps();
-/// assert_eq!(r.to_bits_per_second(), 150e6);
-/// ```
-pub trait DataRateUnits {
-    /// Creates a data rate from a value in bit/s.
-    fn bps(&self) -> DataRate;
-    /// Creates a data rate from a value in kbit/s.
-    fn kbps(&self) -> DataRate;
-    /// Creates a data rate from a value in Mbit/s.
-    fn mbps(&self) -> DataRate;
-    /// Creates a data rate from a value in Gbit/s.
-    fn gbps(&self) -> DataRate;
-}
-
-impl DataRateUnits for f64 {
-    fn bps(&self) -> DataRate {
-        DataRate::bits_per_second(*self)
-    }
-
-    fn kbps(&self) -> DataRate {
-        DataRate::kilobits_per_second(*self)
-    }
-
-    fn mbps(&self) -> DataRate {
-        DataRate::megabits_per_second(*self)
-    }
-
-    fn gbps(&self) -> DataRate {
-        DataRate::gigabits_per_second(*self)
-    }
-}
-
-impl DataRateUnits for i64 {
-    fn bps(&self) -> DataRate {
-        DataRate::bits_per_second(*self as f64)
-    }
-
-    fn kbps(&self) -> DataRate {
-        DataRate::kilobits_per_second(*self as f64)
-    }
-
-    fn mbps(&self) -> DataRate {
-        DataRate::megabits_per_second(*self as f64)
-    }
-
-    fn gbps(&self) -> DataRate {
-        DataRate::gigabits_per_second(*self as f64)
     }
 }
 
@@ -1468,45 +954,6 @@ impl DataVolume {
     }
 }
 
-/// A trait for creating [`DataVolume`] instances from primitives.
-///
-/// By default it is implemented for [`f64`] and [`i64`].
-///
-/// # Examples
-///
-/// ```
-/// use lox_core::units::DataVolumeUnits;
-///
-/// let v = 2.bytes();
-/// assert_eq!(v.to_bits(), 16.0);
-/// ```
-pub trait DataVolumeUnits {
-    /// Creates a data volume from a value in bits.
-    fn bits(&self) -> DataVolume;
-    /// Creates a data volume from a value in bytes.
-    fn bytes(&self) -> DataVolume;
-}
-
-impl DataVolumeUnits for f64 {
-    fn bits(&self) -> DataVolume {
-        DataVolume::bits(*self)
-    }
-
-    fn bytes(&self) -> DataVolume {
-        DataVolume::bytes(*self)
-    }
-}
-
-impl DataVolumeUnits for i64 {
-    fn bits(&self) -> DataVolume {
-        DataVolume::bits(*self as f64)
-    }
-
-    fn bytes(&self) -> DataVolume {
-        DataVolume::bytes(*self as f64)
-    }
-}
-
 /// An absolute power level in decibels relative to one watt (dBW).
 ///
 /// Adding or subtracting a [`Decibel`] ratio gives another power level, and the difference of
@@ -1598,45 +1045,6 @@ impl Sub for DecibelWatts {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Decibel(self.0 - rhs.0)
-    }
-}
-
-/// A trait for creating [`DecibelWatts`] instances from primitives.
-///
-/// By default it is implemented for [`f64`] and [`i64`].
-///
-/// # Examples
-///
-/// ```
-/// use lox_core::units::DecibelWattsUnits;
-///
-/// let p = 30.dbm();
-/// assert_eq!(p.to_decibel_watts(), 0.0);
-/// ```
-pub trait DecibelWattsUnits {
-    /// Creates a power level from a value in dBW.
-    fn dbw(&self) -> DecibelWatts;
-    /// Creates a power level from a value in dBm.
-    fn dbm(&self) -> DecibelWatts;
-}
-
-impl DecibelWattsUnits for f64 {
-    fn dbw(&self) -> DecibelWatts {
-        DecibelWatts::decibel_watts(*self)
-    }
-
-    fn dbm(&self) -> DecibelWatts {
-        DecibelWatts::decibel_milliwatts(*self)
-    }
-}
-
-impl DecibelWattsUnits for i64 {
-    fn dbw(&self) -> DecibelWatts {
-        DecibelWatts::decibel_watts(*self as f64)
-    }
-
-    fn dbm(&self) -> DecibelWatts {
-        DecibelWatts::decibel_milliwatts(*self as f64)
     }
 }
 
@@ -1829,6 +1237,7 @@ mod tests {
 
     extern crate alloc;
 
+    use super::literals::*;
     use super::*;
 
     #[test]
@@ -2011,13 +1420,6 @@ mod tests {
         let f1 = 2.4.ghz();
         let f2 = 2400.0.mhz();
         assert_eq!(f1.0, f2.0);
-    }
-
-    #[test]
-    fn test_temperature_units_trait() {
-        assert_eq!(290.0.k().to_kelvin(), 290.0);
-        assert_eq!(290.k().to_kelvin(), 290.0);
-        assert_eq!(290.0.k().to_kelvin(), 290.0);
     }
 
     #[test]
@@ -2237,12 +1639,6 @@ mod tests {
     fn test_mass_units_kg() {
         let m = 1.5.kg();
         assert_eq!(m.to_kilograms(), 1.5);
-    }
-
-    #[test]
-    fn test_mass_units_g() {
-        let m = 500.0.g();
-        assert_approx_eq!(m.to_kilograms(), 0.5, rtol <= 1e-12);
     }
 
     #[test]
@@ -2689,12 +2085,6 @@ mod tests {
             ASTRONOMICAL_UNIT.to_meters() / SECONDS_PER_DAY as f64,
             rtol <= 1e-10
         );
-        let d = 1_i64.c();
-        assert_approx_eq!(
-            d.to_meters_per_second(),
-            SPEED_OF_LIGHT.to_meters_per_second(),
-            rtol <= 1e-10
-        );
     }
 
     #[test]
@@ -2717,12 +2107,6 @@ mod tests {
     fn test_mass_to_metric_tons() {
         let m = Mass::kilograms(1000.0);
         assert_approx_eq!(m.to_metric_tons(), 1.0, rtol <= 1e-12);
-    }
-
-    #[test]
-    fn test_mass_i64_metric_tons() {
-        let m = 1_i64.t();
-        assert_approx_eq!(m.to_kilograms(), 1000.0, rtol <= 1e-12);
     }
 
     #[test]

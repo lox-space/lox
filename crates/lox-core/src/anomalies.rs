@@ -36,7 +36,7 @@ use crate::math::float::{
 use crate::math::roots::{BracketedHalley, FindBracketedRootWithSecondDerivative, RootFinderError};
 use crate::{
     elements::{Eccentricity, OrbitType},
-    units::{Angle, AngleUnit, AngleUnits},
+    units::{Angle, AngleUnit, literals::AngleLiterals},
 };
 
 use core::{

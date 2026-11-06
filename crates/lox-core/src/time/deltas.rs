@@ -643,106 +643,6 @@ impl<'a> Sum<&'a TimeDelta> for TimeDelta {
     }
 }
 
-/// Extension trait for creating [`TimeDelta`] values from numeric types.
-///
-/// # Examples
-///
-/// ```
-/// use lox_core::time::deltas::TimeUnits;
-///
-/// let delta = 1.5.days();
-/// let delta = 30.mins();
-/// let delta = 500.millis();
-/// ```
-pub trait TimeUnits {
-    /// Creates a [`TimeDelta`] from a value in days.
-    fn days(&self) -> TimeDelta;
-    /// Creates a [`TimeDelta`] from a value in hours.
-    fn hours(&self) -> TimeDelta;
-    /// Creates a [`TimeDelta`] from a value in minutes.
-    fn mins(&self) -> TimeDelta;
-    /// Creates a [`TimeDelta`] from a value in seconds.
-    fn secs(&self) -> TimeDelta;
-    /// Creates a [`TimeDelta`] from a value in milliseconds.
-    fn millis(&self) -> TimeDelta;
-    /// Creates a [`TimeDelta`] from a value in microseconds.
-    fn micros(&self) -> TimeDelta;
-    /// Creates a [`TimeDelta`] from a value in nanoseconds.
-    fn nanos(&self) -> TimeDelta;
-    /// Creates a [`TimeDelta`] from a value in picoseconds.
-    fn picos(&self) -> TimeDelta;
-    /// Creates a [`TimeDelta`] from a value in femtoseconds.
-    fn femtos(&self) -> TimeDelta;
-    /// Creates a [`TimeDelta`] from a value in attoseconds.
-    fn attos(&self) -> TimeDelta;
-}
-
-impl TimeUnits for f64 {
-    fn days(&self) -> TimeDelta {
-        TimeDelta::from_days_f64(*self)
-    }
-    fn hours(&self) -> TimeDelta {
-        TimeDelta::from_hours_f64(*self)
-    }
-    fn mins(&self) -> TimeDelta {
-        TimeDelta::from_minutes_f64(*self)
-    }
-    fn secs(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self)
-    }
-    fn millis(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self / 1e3)
-    }
-    fn micros(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self / 1e6)
-    }
-    fn nanos(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self / 1e9)
-    }
-    fn picos(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self / 1e12)
-    }
-    fn femtos(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self / 1e15)
-    }
-    fn attos(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self / 1e18)
-    }
-}
-
-impl TimeUnits for i64 {
-    fn days(&self) -> TimeDelta {
-        TimeDelta::from_days(*self)
-    }
-    fn hours(&self) -> TimeDelta {
-        TimeDelta::from_hours(*self)
-    }
-    fn mins(&self) -> TimeDelta {
-        TimeDelta::from_minutes(*self)
-    }
-    fn secs(&self) -> TimeDelta {
-        TimeDelta::from_seconds(*self)
-    }
-    fn millis(&self) -> TimeDelta {
-        TimeDelta::from_milliseconds(*self)
-    }
-    fn micros(&self) -> TimeDelta {
-        TimeDelta::from_microseconds(*self)
-    }
-    fn nanos(&self) -> TimeDelta {
-        TimeDelta::from_nanoseconds(*self)
-    }
-    fn picos(&self) -> TimeDelta {
-        TimeDelta::from_picoseconds(*self)
-    }
-    fn femtos(&self) -> TimeDelta {
-        TimeDelta::from_femtoseconds(*self)
-    }
-    fn attos(&self) -> TimeDelta {
-        TimeDelta::from_attoseconds(*self)
-    }
-}
-
 /// A unifying trait for types that can be converted into a [TimeDelta].
 pub trait ToDelta {
     /// Transforms the value into a [TimeDelta].
@@ -879,6 +779,106 @@ impl TimeDeltaBuilder {
         } else {
             TimeDelta::new(seconds, attoseconds)
         }
+    }
+}
+
+/// Extension trait for creating [`TimeDelta`] values from numeric types.
+///
+/// # Examples
+///
+/// ```
+/// use lox_core::time::deltas::TimeDeltaLiterals;
+///
+/// let delta = 1.5.days();
+/// let delta = 30.mins();
+/// let delta = 500.millis();
+/// ```
+pub trait TimeDeltaLiterals {
+    /// Creates a [`TimeDelta`] from a value in days.
+    fn days(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in hours.
+    fn hours(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in minutes.
+    fn mins(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in seconds.
+    fn secs(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in milliseconds.
+    fn millis(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in microseconds.
+    fn micros(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in nanoseconds.
+    fn nanos(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in picoseconds.
+    fn picos(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in femtoseconds.
+    fn femtos(&self) -> TimeDelta;
+    /// Creates a [`TimeDelta`] from a value in attoseconds.
+    fn attos(&self) -> TimeDelta;
+}
+
+impl TimeDeltaLiterals for f64 {
+    fn days(&self) -> TimeDelta {
+        TimeDelta::from_days_f64(*self)
+    }
+    fn hours(&self) -> TimeDelta {
+        TimeDelta::from_hours_f64(*self)
+    }
+    fn mins(&self) -> TimeDelta {
+        TimeDelta::from_minutes_f64(*self)
+    }
+    fn secs(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self)
+    }
+    fn millis(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self / 1e3)
+    }
+    fn micros(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self / 1e6)
+    }
+    fn nanos(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self / 1e9)
+    }
+    fn picos(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self / 1e12)
+    }
+    fn femtos(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self / 1e15)
+    }
+    fn attos(&self) -> TimeDelta {
+        TimeDelta::from_seconds_f64(*self / 1e18)
+    }
+}
+
+impl TimeDeltaLiterals for i64 {
+    fn days(&self) -> TimeDelta {
+        TimeDelta::from_days(*self)
+    }
+    fn hours(&self) -> TimeDelta {
+        TimeDelta::from_hours(*self)
+    }
+    fn mins(&self) -> TimeDelta {
+        TimeDelta::from_minutes(*self)
+    }
+    fn secs(&self) -> TimeDelta {
+        TimeDelta::from_seconds(*self)
+    }
+    fn millis(&self) -> TimeDelta {
+        TimeDelta::from_milliseconds(*self)
+    }
+    fn micros(&self) -> TimeDelta {
+        TimeDelta::from_microseconds(*self)
+    }
+    fn nanos(&self) -> TimeDelta {
+        TimeDelta::from_nanoseconds(*self)
+    }
+    fn picos(&self) -> TimeDelta {
+        TimeDelta::from_picoseconds(*self)
+    }
+    fn femtos(&self) -> TimeDelta {
+        TimeDelta::from_femtoseconds(*self)
+    }
+    fn attos(&self) -> TimeDelta {
+        TimeDelta::from_attoseconds(*self)
     }
 }
 

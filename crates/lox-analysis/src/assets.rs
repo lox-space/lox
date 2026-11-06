@@ -713,7 +713,7 @@ mod tests {
     use lox_core::coords::LonLatAlt;
     use lox_core::units::Angle;
     #[cfg(feature = "comms")]
-    use lox_core::units::DecibelUnits;
+    use lox_core::units::literals::DecibelLiterals;
     use lox_frames::Frame;
     use lox_orbits::ground::EllipsoidLocation;
     use lox_time::deltas::TimeDelta;
@@ -1009,7 +1009,7 @@ mod tests {
 
     #[test]
     fn test_scenario_with_constellation() {
-        use lox_core::units::{AngleUnits, DistanceUnits};
+        use lox_core::units::literals::{AngleLiterals, DistanceLiterals};
         use lox_orbits::constellations::WalkerDeltaBuilder;
 
         let start = Time::j2000(TimeScale::Tai);

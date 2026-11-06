@@ -27,7 +27,10 @@ use crate::utils::Linspace;
 use crate::{
     coords::Cartesian,
     glam::Azimuth,
-    units::{Angle, AngleUnit, AngleUnits, AngularRate, Distance, DistanceUnit, DistanceUnits},
+    units::{
+        Angle, AngleUnit, AngularRate, Distance, DistanceUnit, literals::AngleLiterals,
+        literals::DistanceLiterals,
+    },
 };
 
 /// The Keplerian orbit types or conic sections.
@@ -954,7 +957,7 @@ mod tests {
     use proptest::prelude::*;
 
     use crate::math::float::{asin, sin_cos};
-    use crate::units::VelocityUnits;
+    use crate::units::literals::VelocityLiterals;
 
     use super::*;
 

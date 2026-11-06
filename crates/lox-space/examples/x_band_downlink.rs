@@ -30,14 +30,13 @@ use lox_space::comms::receiver::CascadeReceiver;
 use lox_space::comms::terminal::{RxChain, TxChain};
 use lox_space::comms::transmitter::AmplifierTransmitter;
 use lox_space::comms::utils::slant_range;
-use lox_space::units::{
-    AngleUnits, DecibelUnits, DistanceUnits, FrequencyUnits, PowerUnits, TemperatureUnits,
+use lox_space::units::Temperature;
+use lox_space::units::literals::{
+    AngleLiterals, DecibelLiterals, DistanceLiterals, FrequencyLiterals, PowerLiterals,
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // ------------------------------------------------------------------
     // Mission geometry: 500 km orbit, tracked down to 5° elevation.
-    // ------------------------------------------------------------------
     // The EESS allocation is a sub-band of IEEE X band; `FrequencyBand::X`
     // would give the full 8-12 GHz letter band instead.
     let eess_band = FrequencyRange::new(8.025.ghz(), 8.4.ghz())?;
@@ -50,10 +49,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         range.to_kilometers()
     );
 
-    // ------------------------------------------------------------------
     // Spacecraft: 0.25 m gimballed dish, 2 W X-band amplifier with 0.5 dB
     // output back-off, 0.8 dB feed run — one transmit chain.
-    // ------------------------------------------------------------------
     let tx = TxChain::new(
         Antenna::parabolic(0.25.m(), 0.6)?,
         AmplifierTransmitter::new(2.0.w(), 0.5.db())?,
@@ -61,14 +58,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         eess_band,
     )?;
 
-    // ------------------------------------------------------------------
     // Ground station: 3.7 m dish with an X-band front end described as a
     // Friis cascade (LNA → downconverter), 0.3 dB feed run, and 60 K
     // clear-sky antenna noise temperature at low elevation.
-    // ------------------------------------------------------------------
     let front_end = CascadeReceiver::builder()
-        .stage(35.0.db(), 50.0.k()) // LNA
-        .stage(0.0.db(), 1540.0.k()) // downconverter, NF ≈ 8 dB
+        .stage(35.0.db(), Temperature::kelvin(50.0)) // LNA
+        .stage(0.0.db(), Temperature::kelvin(1540.0)) // downconverter, NF ≈ 8 dB
         .demodulator_loss(0.5.db())
         .implementation_loss(0.5.db())
         .build()?;
@@ -76,7 +71,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Antenna::parabolic(3.7.m(), 0.6)?,
         front_end,
         0.3.db(),
-        60.0.k(),
+        Temperature::kelvin(60.0),
         eess_band,
     )?;
 
@@ -100,10 +95,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         rx.system_noise_temperature().to_kelvin()
     );
 
-    // ------------------------------------------------------------------
     // Atmospherics at X-band, 5° elevation, 99.9 % availability — static
     // values here; `lox-itur` computes them from the ITU-R P-series maps.
-    // ------------------------------------------------------------------
     let losses = PropagationLosses::builder()
         .rain(1.2.db())
         .gaseous(0.4.db())
@@ -111,10 +104,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         .cloud(0.1.db())
         .build()?;
 
-    // ------------------------------------------------------------------
     // DVB-S2 QPSK 3/4 at 150 Msps; the MODCOD table carries the exact
     // Table 13 thresholds and coding chains (BBFRAME, BCH, LDPC, PLFRAME).
-    // ------------------------------------------------------------------
     let channel = Channel::builder(150.0.mhz()).roll_off(0.25).build()?;
     let modcod = dvb_s2()
         .iter()
@@ -142,10 +133,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         "the downlink should close at worst-case geometry"
     );
 
-    // ------------------------------------------------------------------
     // ACM: the best DVB-S2 mode that closes at this Es/N0 with the same
     // design margin.
-    // ------------------------------------------------------------------
     let best = budget
         .modulate_best(&channel, dvb_s2(), design_margin)
         .expect("a mode closes");
@@ -157,10 +146,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             * 100.0
     );
 
-    // ------------------------------------------------------------------
     // Regulatory check: PFD on the ground vs. the RR Art. 21.16 mask
     // (−150 dBW/m²/4 kHz below 5° for the 8.025–8.4 GHz EESS allocation).
-    // ------------------------------------------------------------------
     let pfd = power_flux_density(modulated.budget.eirp, range, channel.bandwidth(), 4.0.khz());
     let mask = PfdMask::art_21_16((-150.0).db());
     let limit = mask.value_at(elevation);

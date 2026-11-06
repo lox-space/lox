@@ -413,7 +413,8 @@ impl Antenna {
 mod tests {
     use lox_approx::assert_approx_eq;
     use lox_core::glam::DVec3;
-    use lox_core::units::{Angle, Decibel, DecibelUnits, Distance, FrequencyUnits};
+    use lox_core::units::literals::{DecibelLiterals, FrequencyLiterals};
+    use lox_core::units::{Angle, Decibel, Distance};
 
     use crate::pattern::{AntennaPattern, DipolePattern, GaussianPattern, ParabolicPattern};
 

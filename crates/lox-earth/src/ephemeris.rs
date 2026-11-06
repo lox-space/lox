@@ -8,7 +8,8 @@ use lox_core::constants::{ASTRONOMICAL_UNIT, SPEED_OF_LIGHT};
 use lox_core::coords::Cartesian;
 use lox_core::glam::{DMat3, DVec3};
 use lox_core::time::constants::SECONDS_PER_JULIAN_YEAR;
-use lox_core::units::{Distance, DistanceUnits};
+use lox_core::units::Distance;
+use lox_core::units::literals::DistanceLiterals;
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tdb};
 
 mod coefficients;
@@ -158,7 +159,7 @@ const BARICENTRIC_COEFFS: Coeffs = Coeffs {
 #[cfg(test)]
 mod tests {
     use lox_approx::assert_approx_eq;
-    use lox_core::units::{DistanceUnits, VelocityUnits};
+    use lox_core::units::literals::{DistanceLiterals, VelocityLiterals};
 
     use super::*;
 

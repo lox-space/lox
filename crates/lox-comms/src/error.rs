@@ -79,7 +79,7 @@ pub enum LinkBudgetError {
 
 #[cfg(test)]
 mod tests {
-    use lox_core::units::FrequencyUnits;
+    use lox_core::units::literals::FrequencyLiterals;
 
     use crate::frequency::FrequencyRange;
 

@@ -511,7 +511,7 @@ mod tests {
     use std::convert::Infallible;
 
     use lox_approx::assert_approx_eq;
-    use lox_core::units::AngleUnits;
+    use lox_core::units::literals::AngleLiterals;
     use lox_time::{deltas::TimeDelta, offsets::OffsetProvider};
 
     use crate::iers::Iau2000Model;

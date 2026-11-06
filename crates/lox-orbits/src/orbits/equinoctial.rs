@@ -238,7 +238,7 @@ mod tests {
     use lox_approx::assert_approx_eq;
     use lox_bodies::{Earth, Origin};
     use lox_core::elements::Keplerian;
-    use lox_core::units::{AngleUnits, DistanceUnits};
+    use lox_core::units::literals::{AngleLiterals, DistanceLiterals};
     use lox_frames::{Frame, Icrf};
     use lox_time::Time;
     use lox_time::time_scales::TimeScale;

@@ -105,7 +105,7 @@ pub fn omega_simon1994(centuries_since_j2000_tdb: JulianCenturies) -> Angle {
 #[cfg(test)]
 mod tests {
     use lox_approx::assert_approx_eq;
-    use lox_core::units::AngleUnits;
+    use lox_core::units::literals::AngleLiterals;
 
     use super::*;
 
