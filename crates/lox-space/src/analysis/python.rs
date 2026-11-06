@@ -44,7 +44,8 @@ use crate::time::python::intervals::PyInterval;
 use crate::time::python::time::PyTime;
 use crate::time::python::time_series::PyTimeSeries;
 use crate::units::python::{
-    PyAngle, PyAngularRate, PyDecibel, PyDistance, PyFrequency, PyVelocity,
+    PyAngle, PyAngularRate, PyDataRate, PyDataVolume, PyDecibel, PyDistance, PyFrequency,
+    PyVelocity,
 };
 use lox_core::units::Distance;
 use lox_frames::Frame;
@@ -2140,15 +2141,15 @@ impl PyLinkWindow {
 
     /// Information rate supported at the peak, or zero when no MODCOD closes there.
     #[getter]
-    fn peak_information_rate(&self) -> PyFrequency {
-        PyFrequency(self.0.peak_information_rate())
+    fn peak_information_rate(&self) -> PyDataRate {
+        PyDataRate(self.0.peak_information_rate())
     }
 
-    /// Data volume deliverable over the window in bits, integrating the
-    /// adaptively selected information rate.
+    /// Data volume deliverable over the window, integrating the adaptively
+    /// selected information rate.
     #[getter]
-    fn data_volume(&self) -> f64 {
-        self.0.data_volume()
+    fn data_volume(&self) -> PyDataVolume {
+        PyDataVolume(self.0.data_volume())
     }
 
     fn __repr__(&self) -> String {
@@ -2156,7 +2157,7 @@ impl PyLinkWindow {
             "LinkWindow({}, peak_margin={:.2} dB, {:.3} Gbit)",
             self.0.direction(),
             self.0.peak_margin().to_decibels(),
-            self.0.data_volume() / 1e9
+            self.0.data_volume().to_gigabits()
         )
     }
 }
@@ -2309,16 +2310,16 @@ impl PyLinkBudgetResults {
             .collect()
     }
 
-    /// Total data volume in bits deliverable over a link.
+    /// Total data volume deliverable over a link.
     ///
     /// Args:
     ///     tx: Transmit terminal.
     ///     rx: Receive terminal.
     ///
     /// Returns:
-    ///     Data volume in bits, or 0.0 for a pair that is not a link.
-    fn data_volume(&self, tx: &PyTerminalId, rx: &PyTerminalId) -> f64 {
-        self.results.data_volume_for(&tx.0, &rx.0)
+    ///     Data volume, zero for a pair that is not a link.
+    fn data_volume(&self, tx: &PyTerminalId, rx: &PyTerminalId) -> PyDataVolume {
+        PyDataVolume(self.results.data_volume_for(&tx.0, &rx.0))
     }
 
     /// Number of links that closed at least once.

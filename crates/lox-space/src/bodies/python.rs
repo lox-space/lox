@@ -6,8 +6,11 @@ use crate::bodies::{
     CoordinateOrigin, Origin, TryMeanRadius, TryPointMass, TryRotationalElements, TrySpheroid,
     TryTriaxialEllipsoid, UnknownOriginId, UnknownOriginName,
 };
+use crate::time::python::time::PyTime;
 use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyGravitationalParameter};
 use lox_core::units::{Angle, AngularRate};
+use lox_time::julian_dates::JulianDate;
+use lox_time::time_scales::Tdb;
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -160,17 +163,17 @@ impl PyOrigin {
     /// Return rotational elements (right ascension, declination, rotation angle).
     ///
     /// Args:
-    ///     et: Ephemeris time in seconds from J2000.
+    ///     time: The time at which to evaluate the elements.
     ///
     /// Returns:
     ///     Tuple of (right_ascension, declination, rotation_angle) as Angles.
     ///
     /// Raises:
     ///     UndefinedOriginPropertyError: If not defined for this body.
-    pub fn rotational_elements(&self, et: f64) -> PyResult<(PyAngle, PyAngle, PyAngle)> {
+    pub fn rotational_elements(&self, time: PyTime) -> PyResult<(PyAngle, PyAngle, PyAngle)> {
         let (ra, dec, rot) = self
             .0
-            .try_rotational_elements(et)
+            .try_rotational_elements(tdb_seconds(&time))
             .map_err(PyUndefinedOriginPropertyError)?;
         Ok((
             PyAngle(Angle::radians(ra)),
@@ -182,7 +185,7 @@ impl PyOrigin {
     /// Return rotational element rates.
     ///
     /// Args:
-    ///     et: Ephemeris time in seconds from J2000.
+    ///     time: The time at which to evaluate the elements.
     ///
     /// Returns:
     ///     Tuple of (ra_rate, dec_rate, rotation_rate) as AngularRates.
@@ -191,11 +194,11 @@ impl PyOrigin {
     ///     UndefinedOriginPropertyError: If not defined for this body.
     pub fn rotational_element_rates(
         &self,
-        et: f64,
+        time: PyTime,
     ) -> PyResult<(PyAngularRate, PyAngularRate, PyAngularRate)> {
         let (ra_rate, dec_rate, rot_rate) = self
             .0
-            .try_rotational_element_rates(et)
+            .try_rotational_element_rates(tdb_seconds(&time))
             .map_err(PyUndefinedOriginPropertyError)?;
         Ok((
             PyAngularRate(AngularRate::radians_per_second(ra_rate)),
@@ -207,11 +210,11 @@ impl PyOrigin {
     /// Return the right ascension of the pole.
     ///
     /// Args:
-    ///     et: Ephemeris time in seconds from J2000.
-    pub fn right_ascension(&self, et: f64) -> PyResult<PyAngle> {
+    ///     time: The time at which to evaluate the elements.
+    pub fn right_ascension(&self, time: PyTime) -> PyResult<PyAngle> {
         Ok(PyAngle(Angle::radians(
             self.0
-                .try_right_ascension(et)
+                .try_right_ascension(tdb_seconds(&time))
                 .map_err(PyUndefinedOriginPropertyError)?,
         )))
     }
@@ -219,11 +222,11 @@ impl PyOrigin {
     /// Return the rate of change of right ascension.
     ///
     /// Args:
-    ///     et: Ephemeris time in seconds from J2000.
-    pub fn right_ascension_rate(&self, et: f64) -> PyResult<PyAngularRate> {
+    ///     time: The time at which to evaluate the elements.
+    pub fn right_ascension_rate(&self, time: PyTime) -> PyResult<PyAngularRate> {
         Ok(PyAngularRate(AngularRate::radians_per_second(
             self.0
-                .try_right_ascension_rate(et)
+                .try_right_ascension_rate(tdb_seconds(&time))
                 .map_err(PyUndefinedOriginPropertyError)?,
         )))
     }
@@ -231,11 +234,11 @@ impl PyOrigin {
     /// Return the declination of the pole.
     ///
     /// Args:
-    ///     et: Ephemeris time in seconds from J2000.
-    pub fn declination(&self, et: f64) -> PyResult<PyAngle> {
+    ///     time: The time at which to evaluate the elements.
+    pub fn declination(&self, time: PyTime) -> PyResult<PyAngle> {
         Ok(PyAngle(Angle::radians(
             self.0
-                .try_declination(et)
+                .try_declination(tdb_seconds(&time))
                 .map_err(PyUndefinedOriginPropertyError)?,
         )))
     }
@@ -243,11 +246,11 @@ impl PyOrigin {
     /// Return the rate of change of declination.
     ///
     /// Args:
-    ///     et: Ephemeris time in seconds from J2000.
-    pub fn declination_rate(&self, et: f64) -> PyResult<PyAngularRate> {
+    ///     time: The time at which to evaluate the elements.
+    pub fn declination_rate(&self, time: PyTime) -> PyResult<PyAngularRate> {
         Ok(PyAngularRate(AngularRate::radians_per_second(
             self.0
-                .try_declination_rate(et)
+                .try_declination_rate(tdb_seconds(&time))
                 .map_err(PyUndefinedOriginPropertyError)?,
         )))
     }
@@ -255,11 +258,11 @@ impl PyOrigin {
     /// Return the rotation angle (prime meridian).
     ///
     /// Args:
-    ///     et: Ephemeris time in seconds from J2000.
-    pub fn rotation_angle(&self, et: f64) -> PyResult<PyAngle> {
+    ///     time: The time at which to evaluate the elements.
+    pub fn rotation_angle(&self, time: PyTime) -> PyResult<PyAngle> {
         Ok(PyAngle(Angle::radians(
             self.0
-                .try_rotation_angle(et)
+                .try_rotation_angle(tdb_seconds(&time))
                 .map_err(PyUndefinedOriginPropertyError)?,
         )))
     }
@@ -267,11 +270,11 @@ impl PyOrigin {
     /// Return the rotation rate.
     ///
     /// Args:
-    ///     et: Ephemeris time in seconds from J2000.
-    pub fn rotation_rate(&self, et: f64) -> PyResult<PyAngularRate> {
+    ///     time: The time at which to evaluate the elements.
+    pub fn rotation_rate(&self, time: PyTime) -> PyResult<PyAngularRate> {
         Ok(PyAngularRate(AngularRate::radians_per_second(
             self.0
-                .try_rotation_rate(et)
+                .try_rotation_rate(tdb_seconds(&time))
                 .map_err(PyUndefinedOriginPropertyError)?,
         )))
     }
@@ -294,4 +297,9 @@ impl TryFrom<&Bound<'_, PyAny>> for PyOrigin {
             "'origin' argument must be a string, an integer, or an 'Origin' instance",
         ))
     }
+}
+
+/// Returns the seconds since J2000 in TDB, the time argument of the IAU rotational elements.
+fn tdb_seconds(time: &PyTime) -> f64 {
+    time.0.to_scale(Tdb).seconds_since_j2000()
 }

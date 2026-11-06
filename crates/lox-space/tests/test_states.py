@@ -267,8 +267,10 @@ def test_keplerian_derived_quantities():
     assert k.mean_motion().to_radians_per_second() == pytest.approx(
         math.sqrt(mu / a**3)
     )
-    assert k.specific_orbital_energy() == pytest.approx(-mu / (2 * a))
-    assert k.specific_angular_momentum() == pytest.approx(
+    assert k.specific_orbital_energy().to(lox.km2_per_s2) == pytest.approx(
+        -mu / (2 * a)
+    )
+    assert k.specific_angular_momentum().to(lox.km2_per_s) == pytest.approx(
         math.sqrt(mu * a * (1 - e**2))
     )
 
@@ -281,8 +283,10 @@ def test_keplerian_derived_quantities():
     assert k.flight_path_angle().to_radians() == pytest.approx(
         math.asin(float(np.dot(r, v)) / (r_norm * v_norm))
     )
-    assert k.specific_orbital_energy() == pytest.approx(v_norm**2 / 2 - mu / r_norm)
-    assert k.specific_angular_momentum() == pytest.approx(
+    assert k.specific_orbital_energy().to(lox.km2_per_s2) == pytest.approx(
+        v_norm**2 / 2 - mu / r_norm
+    )
+    assert k.specific_angular_momentum().to(lox.km2_per_s) == pytest.approx(
         float(np.linalg.norm(np.cross(r, v)))
     )
 
@@ -293,7 +297,7 @@ def test_keplerian_derived_quantities_open_orbit():
     assert k.apoapsis_radius() is None
     assert k.apoapsis_altitude() is None
     assert k.periapsis_radius().to_kilometers() == pytest.approx(10000.0)
-    assert k.specific_orbital_energy() > 0.0
+    assert k.specific_orbital_energy() > 0 * lox.km2_per_s2
     assert k.semi_major_axis().to_kilometers() == pytest.approx(-20000.0)
 
 
@@ -422,7 +426,9 @@ def test_keplerian_semi_parameter_parabolic():
     )
     assert k.semi_major_axis() is None
     assert k.periapsis_radius().to_kilometers() == pytest.approx(7000.0)
-    assert k.specific_orbital_energy() == pytest.approx(0.0, abs=1e-12)
+    assert k.specific_orbital_energy().to(lox.km2_per_s2) == pytest.approx(
+        0.0, abs=1e-12
+    )
 
 
 def test_keplerian_semi_parameter_requires_eccentricity():

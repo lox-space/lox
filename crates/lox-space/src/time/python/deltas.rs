@@ -13,6 +13,9 @@ use crate::time::deltas::TimeDelta;
 use crate::time::intervals::TimeDeltaInterval;
 use crate::units::python::{format_with_unit, repr_f64};
 
+/// The largest number of values `TimeDelta.range` returns.
+const MAX_RANGE_LEN: usize = 10_000_000;
+
 /// A unit of `TimeDelta`.
 ///
 /// Multiply a number by a unit to create a duration, e.g. `90 * lox.minutes`.
@@ -291,27 +294,42 @@ impl PyTimeDelta {
     /// Create a range of TimeDelta values.
     ///
     /// Args:
-    ///     start: Start value in seconds (inclusive).
-    ///     end: End value in seconds (inclusive).
-    ///     step: Step size in seconds. Defaults to 1.
+    ///     start: Start of the range (inclusive).
+    ///     end: End of the range (inclusive if it falls on a step).
+    ///     step: Non-zero step size. Defaults to one second.
     ///
     /// Returns:
     ///     A list of TimeDelta objects.
     ///
+    /// Raises:
+    ///     ValueError: If `step` is zero, or if the range has more than 10,000,000 values.
+    ///
     /// Examples:
-    ///     >>> deltas = lox.TimeDelta.range(0, 10, 2)  # [0, 2, 4, 6, 8, 10]
+    ///     >>> deltas = lox.TimeDelta.range(0 * lox.seconds, 10 * lox.seconds, 2 * lox.seconds)
     #[classmethod]
     #[pyo3(signature = (start, end, step=None))]
     pub fn range(
         _cls: &Bound<'_, PyType>,
-        start: i64,
-        end: i64,
-        step: Option<i64>,
+        start: PyTimeDelta,
+        end: PyTimeDelta,
+        step: Option<PyTimeDelta>,
     ) -> PyResult<Vec<Self>> {
-        let step = TimeDelta::from_seconds(step.unwrap_or(1));
-        let interval =
-            TimeDeltaInterval::new(TimeDelta::from_seconds(start), TimeDelta::from_seconds(end));
-        Ok(interval.step_by(step).map(Self).collect())
+        let step = step.map_or(TimeDelta::from_seconds(1), |step| step.0);
+        if step.is_zero() {
+            return Err(PyValueError::new_err("step must be non-zero"));
+        }
+        let too_long = end.0.checked_sub(start.0).is_none_or(|span| {
+            (span.as_seconds_f64() / step.as_seconds_f64()).abs() >= MAX_RANGE_LEN as f64
+        });
+        if too_long {
+            return Err(PyValueError::new_err(format!(
+                "range would have more than {MAX_RANGE_LEN} values"
+            )));
+        }
+        Ok(TimeDeltaInterval::new(start.0, end.0)
+            .step_by(step)
+            .map(Self)
+            .collect())
     }
 
     /// Convert to seconds.

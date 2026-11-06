@@ -33,8 +33,8 @@ print(f"Earth radius: {earth.mean_radius().to_kilometers():.1f} km")
 print(f"Earth GM: {earth.gravitational_parameter().to_km3_per_s2():.6e} km³/s²")
 
 # Rotational elements at a given epoch
-et = 0.0  # Ephemeris time (seconds from J2000)
-ra, dec, w = earth.rotational_elements(et)
+t = lox.Time("TDB", 2000, 1, 1, 12)
+ra, dec, w = earth.rotational_elements(t)
 print(f"RA: {ra.to_degrees():.2f} deg")
 ```
 

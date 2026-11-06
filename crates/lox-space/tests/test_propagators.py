@@ -56,7 +56,9 @@ def test_tle_orbital_elements():
     assert tle.eccentricity() == pytest.approx(0.0010444)
     assert tle.argument_of_perigee().to_degrees() == pytest.approx(339.5369)
     assert tle.mean_anomaly().to_degrees() == pytest.approx(107.8830)
-    assert tle.mean_motion() == pytest.approx(15.49495945)
+    assert tle.mean_motion().to(lox.deg_per_s) == pytest.approx(
+        15.49495945 * 360 / 86400
+    )
 
 
 def test_tle_metadata():
@@ -64,9 +66,9 @@ def test_tle_metadata():
     assert tle.element_set_number() == 999
     assert tle.revolution_number() == 45873
     assert tle.ephemeris_type() == 0
-    assert tle.mean_motion_dot() == pytest.approx(0.00016566)
-    assert tle.mean_motion_ddot() == pytest.approx(0.0)
-    assert tle.drag_term() == pytest.approx(0.30244e-3)
+    assert tle.half_mean_motion_dot_rev_per_day2() == pytest.approx(0.00016566)
+    assert tle.sixth_mean_motion_ddot_rev_per_day3() == pytest.approx(0.0)
+    assert tle.drag_term_per_earth_radius() == pytest.approx(0.30244e-3)
 
 
 def test_tle_repr_and_str():
@@ -186,7 +188,9 @@ def test_numerical_custom_tolerances():
 
 def test_numerical_custom_step_size():
     state = iss_state()
-    n = lox.Numerical(state, h_max=10.0, h_min=1e-8, max_steps=200_000)
+    n = lox.Numerical(
+        state, h_max=10 * lox.seconds, h_min=10 * lox.nanoseconds, max_steps=200_000
+    )
     t1 = state.time() + 90 * lox.minutes
     result = n.propagate(t1)
     assert isinstance(result, lox.Cartesian)

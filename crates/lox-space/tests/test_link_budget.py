@@ -281,15 +281,15 @@ class TestLinkBudgetResults:
         window = results.windows(tx, rx)[0]
         assert window.direction == "downlink"
         assert window.peak_margin.to_decibels() >= window.min_margin.to_decibels()
-        assert window.data_volume > 0.0
-        assert window.peak_information_rate.to_hertz() > 0.0
+        assert window.data_volume > 0 * lox.bit
+        assert window.peak_information_rate > 0 * lox.bps
         assert window.peak_modcod is not None
         assert repr(window).startswith("LinkWindow(downlink")
 
     def test_data_volume_sums_windows(self, results, space_assets, ground_assets):
         tx, rx = ids(space_assets, ground_assets)
-        total = sum(w.data_volume for w in results.windows(tx, rx))
-        assert results.data_volume(tx, rx) == pytest.approx(total)
+        total = sum((w.data_volume for w in results.windows(tx, rx)), 0 * lox.bit)
+        assert results.data_volume(tx, rx).to_bits() == pytest.approx(total.to_bits())
 
     def test_all_windows_keys(self, results):
         all_windows = results.all_windows()
@@ -301,7 +301,7 @@ class TestLinkBudgetResults:
         tx = lox.TerminalId("nonexistent", "downlink")
         rx = lox.TerminalId("nowhere", "main")
         assert results.windows(tx, rx) == []
-        assert results.data_volume(tx, rx) == 0.0
+        assert results.data_volume(tx, rx) == 0 * lox.bit
 
     def test_repr(self, results):
         assert repr(results).startswith("LinkBudgetResults(")

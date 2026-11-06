@@ -25,7 +25,7 @@ use lox_comms::modcod::ModCod;
 use lox_comms::terminal::{RxTerminal, TxTerminal};
 use lox_comms::{LinkBudgetError, PropagationLosses};
 use lox_core::error::LoxError;
-use lox_core::units::{Decibel, Distance, Frequency};
+use lox_core::units::{DataRate, DataVolume, Decibel, Distance, Frequency};
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_frames::{Frame, ReferenceFrame};
@@ -42,10 +42,6 @@ use crate::assets::{AssetId, GroundStation, Scenario, Spacecraft, TerminalId};
 use crate::events::{DetectError, DetectFn, DetectFnExt as _, UniformSampler};
 use crate::parallel;
 use crate::visibility::{EvalError, PairType, VisibilityResults};
-
-// ---------------------------------------------------------------------------
-// Errors
-// ---------------------------------------------------------------------------
 
 /// Errors from evaluating a link budget at a single time.
 #[derive(Debug, Error)]
@@ -97,10 +93,6 @@ pub enum LinkAnalysisError {
     #[error(transparent)]
     Eval(#[from] LinkEvalError),
 }
-
-// ---------------------------------------------------------------------------
-// CarrierPlan
-// ---------------------------------------------------------------------------
 
 /// The carrier, waveform, and coding a link is evaluated against.
 ///
@@ -233,10 +225,6 @@ fn most_robust(table: &[ModCod]) -> Option<&ModCod> {
     })
 }
 
-// ---------------------------------------------------------------------------
-// Geometry
-// ---------------------------------------------------------------------------
-
 /// The pair of ends a link spans, and how to resolve the range between them.
 enum LinkGeometry<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     /// A ground station and a spacecraft.
@@ -277,10 +265,6 @@ where
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Link
-// ---------------------------------------------------------------------------
 
 /// One directed link between two terminals, with the visibility windows it is
 /// refined within.
@@ -349,10 +333,6 @@ where
     }
 }
 
-// ---------------------------------------------------------------------------
-// Results
-// ---------------------------------------------------------------------------
-
 /// An interval in which a link closes, with the throughput it supports.
 #[derive(Debug, Clone)]
 pub struct LinkWindow {
@@ -362,7 +342,7 @@ pub struct LinkWindow {
     min_margin: Decibel,
     peak_modcod: Option<ModCod>,
     symbol_rate: Frequency,
-    data_volume: f64,
+    data_volume: DataVolume,
 }
 
 impl LinkWindow {
@@ -399,16 +379,16 @@ impl LinkWindow {
 
     /// Returns the information rate supported at the peak, or zero when no
     /// entry in the table closes there.
-    pub fn peak_information_rate(&self) -> Frequency {
+    pub fn peak_information_rate(&self) -> DataRate {
         self.peak_modcod
             .as_ref()
             .map(|modcod| modcod.mode().information_rate(self.symbol_rate))
-            .unwrap_or(Frequency::hertz(0.0))
+            .unwrap_or(DataRate::ZERO)
     }
 
-    /// Returns the data volume deliverable over the window in bits,
-    /// integrating the adaptively selected information rate.
-    pub fn data_volume(&self) -> f64 {
+    /// Returns the data volume deliverable over the window, integrating the
+    /// adaptively selected information rate.
+    pub fn data_volume(&self) -> DataVolume {
         self.data_volume
     }
 }
@@ -458,18 +438,14 @@ impl LinkBudgetResults {
         self.windows.values().map(|w| w.len()).sum()
     }
 
-    /// Returns the total data volume in bits deliverable over a link.
-    pub fn data_volume_for(&self, tx: &TerminalId, rx: &TerminalId) -> f64 {
+    /// Returns the total data volume deliverable over a link.
+    pub fn data_volume_for(&self, tx: &TerminalId, rx: &TerminalId) -> DataVolume {
         self.windows_for(tx, rx)
             .iter()
             .map(LinkWindow::data_volume)
             .sum()
     }
 }
-
-// ---------------------------------------------------------------------------
-// LinkBudgetAnalysis
-// ---------------------------------------------------------------------------
 
 /// Refines visibility windows into the intervals in which links close.
 ///
@@ -762,7 +738,7 @@ where
         .detection_modcod
         .mode()
         .information_rate(plan.channel.symbol_rate())
-        .to_hertz();
+        .to_bits_per_second();
 
     for i in 0..=subdivisions {
         let time = start + TimeDelta::from_seconds_f64(i as f64 * dt);
@@ -783,7 +759,7 @@ where
         // instead would drop a whole trapezoid cell from the integral.
         let rate = best
             .as_ref()
-            .map(|b| b.information_rate().to_hertz())
+            .map(|b| b.information_rate().to_bits_per_second())
             .unwrap_or(detection_rate);
 
         if margin > peak_margin {
@@ -805,7 +781,7 @@ where
         min_margin: Decibel::decibels(min_margin),
         peak_modcod,
         symbol_rate: plan.channel.symbol_rate(),
-        data_volume,
+        data_volume: DataVolume::bits(data_volume),
     })
 }
 
@@ -1002,8 +978,6 @@ mod tests {
             .unwrap()
     }
 
-    // -----------------------------------------------------------------------
-
     #[test]
     fn test_carrier_plan_rejects_empty_modcod_table() {
         let channel = Channel::builder(Frequency::megahertz(1.0)).build().unwrap();
@@ -1135,13 +1109,13 @@ mod tests {
     #[test]
     fn test_data_volume_is_non_decreasing_in_eirp() {
         let (tx, rx) = downlink_ids();
-        let volumes: Vec<f64> = [10.0, 20.0, 30.0, 40.0]
+        let volumes: Vec<DataVolume> = [10.0, 20.0, 30.0, 40.0]
             .into_iter()
             .map(|eirp| run(eirp, 20.0, plan()).data_volume_for(&tx, &rx))
             .collect();
 
         assert!(
-            volumes.last().unwrap() > &0.0,
+            *volumes.last().unwrap() > DataVolume::ZERO,
             "the strongest link delivers data"
         );
         for pair in volumes.windows(2) {
@@ -1162,7 +1136,7 @@ mod tests {
             plan().with_design_margin(Decibel::decibels(1000.0)),
         );
         let (tx, rx) = downlink_ids();
-        assert_eq!(results.data_volume_for(&tx, &rx), 0.0);
+        assert_eq!(results.data_volume_for(&tx, &rx), DataVolume::ZERO);
         assert_eq!(results.total_windows(), 0);
         assert_eq!(results.num_links(), 0);
         assert!(results.windows_for(&tx, &rx).is_empty());
@@ -1412,7 +1386,7 @@ mod tests {
             .detection_modcod()
             .mode()
             .information_rate(plan.channel().symbol_rate())
-            .to_hertz();
+            .to_bits_per_second();
 
         let results = run(20.0, 20.0, plan);
         let (tx, rx) = downlink_ids();
@@ -1421,7 +1395,11 @@ mod tests {
 
         for window in windows {
             let duration = window.interval().duration().as_seconds_f64();
-            assert_approx_eq!(window.data_volume(), rate * duration, rtol <= 1e-12);
+            assert_approx_eq!(
+                window.data_volume().to_bits(),
+                rate * duration,
+                rtol <= 1e-12
+            );
         }
     }
 
