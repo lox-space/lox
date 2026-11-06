@@ -5,9 +5,9 @@
 use chrono::{DateTime, Utc};
 use thiserror::Error;
 
-use crate::{
-    i64::consts::ATTOSECONDS_IN_NANOSECOND,
-    time::{constants::UNIX_EPOCH, deltas::TimeDelta},
+use crate::time::{
+    constants::{ATTOSECONDS_IN_NANOSECOND, UNIX_EPOCH},
+    deltas::TimeDelta,
 };
 
 /// Errors that can occur when converting between Lox and `chrono` time types.

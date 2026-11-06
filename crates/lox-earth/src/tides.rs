@@ -10,7 +10,7 @@ use lox_core::math::poly::poly_array;
 use lox_core::units::{Angle, AngleUnits};
 use thiserror::Error;
 
-use lox_core::f64::consts::{DAYS_PER_JULIAN_CENTURY, MJD_J2000};
+use lox_core::time::constants::{DAYS_PER_JULIAN_CENTURY, MJD_J2000};
 use lox_frames::iers::fundamental::iers03::{
     d_iers03, f_iers03, l_iers03, lp_iers03, omega_iers03,
 };

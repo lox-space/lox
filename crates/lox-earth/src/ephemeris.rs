@@ -4,9 +4,10 @@
 
 use std::iter::zip;
 
+use lox_core::coords::Cartesian;
 use lox_core::glam::{DMat3, DVec3};
+use lox_core::time::constants::SECONDS_PER_JULIAN_YEAR;
 use lox_core::units::{ASTRONOMICAL_UNIT, Distance, DistanceUnits, SPEED_OF_LIGHT};
-use lox_core::{coords::Cartesian, f64::consts::SECONDS_PER_JULIAN_YEAR};
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tdb};
 
 mod coefficients;
@@ -132,7 +133,7 @@ impl Coeffs {
             // Scale from AU to m
             let pos = DVec3::new(x, y, z) * ASTRONOMICAL_UNIT;
             // Scale from AU/year to m/s
-            let vel = DVec3::new(vx, vy, vz) * ASTRONOMICAL_UNIT / SECONDS_PER_JULIAN_YEAR;
+            let vel = DVec3::new(vx, vy, vz) * ASTRONOMICAL_UNIT / SECONDS_PER_JULIAN_YEAR as f64;
             Cartesian::from_vecs(pos, vel)
         } else {
             unreachable!()

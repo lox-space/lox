@@ -16,8 +16,10 @@ use lox_core::time::deltas::InvalidFloatSeconds;
 
 use lox_approx::ApproxEq;
 use lox_approx::ApproxEqResults;
-use lox_core::f64;
-use lox_core::i64;
+use lox_core::time::constants::{
+    SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
+    SECONDS_PER_DAY,
+};
 use lox_core::time::julian_dates::Days;
 use thiserror::Error;
 
@@ -97,7 +99,7 @@ impl<T: ContinuousTimeScale> Time<T> {
     /// * Returns `TimeError::LeapSecondsOutsideUtc` if `time` is a leap second, since leap seconds
     ///   cannot be unambiguously represented by a continuous time format.
     pub fn from_date_and_time(scale: T, date: Date, time: TimeOfDay) -> Result<Self, TimeError> {
-        let secs_f = date.days_since_j2000() * f64::consts::SECONDS_PER_DAY;
+        let secs_f = date.days_since_j2000() * SECONDS_PER_DAY as f64;
         if !secs_f.is_finite() || secs_f < i64::MIN as f64 || secs_f > i64::MAX as f64 {
             return Err(TimeError::DateOutOfRange { year: date.year() });
         }
@@ -148,15 +150,15 @@ impl<T: ContinuousTimeScale> Time<T> {
         match epoch {
             Epoch::JulianDate => Self {
                 scale,
-                delta: TimeDelta::from_seconds(-i64::consts::SECONDS_BETWEEN_JD_AND_J2000),
+                delta: TimeDelta::from_seconds(-SECONDS_BETWEEN_JD_AND_J2000),
             },
             Epoch::ModifiedJulianDate => Self {
                 scale,
-                delta: TimeDelta::from_seconds(-i64::consts::SECONDS_BETWEEN_MJD_AND_J2000),
+                delta: TimeDelta::from_seconds(-SECONDS_BETWEEN_MJD_AND_J2000),
             },
             Epoch::J1950 => Self {
                 scale,
-                delta: TimeDelta::from_seconds(-i64::consts::SECONDS_BETWEEN_J1950_AND_J2000),
+                delta: TimeDelta::from_seconds(-SECONDS_BETWEEN_J1950_AND_J2000),
             },
             Epoch::J2000 => Self {
                 scale,
@@ -584,16 +586,16 @@ mod tests {
     use alloc::string::ToString;
     use core::cmp::Ordering;
     use lox_approx::assert_approx_eq;
-    use lox_core::f64::consts::DAYS_PER_JULIAN_CENTURY;
+    use lox_core::time::constants::DAYS_PER_JULIAN_CENTURY;
     use rstest::rstest;
 
     use crate::Time;
     use crate::time_scales::{Tai, Tdb, TimeScale, Tt};
-    use lox_core::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+    use lox_core::time::constants::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 
     use super::*;
 
-    use lox_core::i64::consts::{
+    use lox_core::time::constants::{
         SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000,
         SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY,
         SECONDS_PER_MINUTE,
@@ -636,7 +638,7 @@ mod tests {
 
     #[test]
     fn test_time_from_julian_date_subsecond() {
-        let time = Time::from_julian_date(Tai, 0.3 / f64::consts::SECONDS_PER_DAY, Epoch::J2000);
+        let time = Time::from_julian_date(Tai, 0.3 / SECONDS_PER_DAY as f64, Epoch::J2000);
         assert_approx_eq!(time.subsecond(), 0.3, atol <= 1e-15);
     }
 
@@ -650,18 +652,18 @@ mod tests {
 
     #[rstest]
     #[case(
-        (SECONDS_BETWEEN_JD_AND_J2000 as f64) / f64::consts::SECONDS_PER_DAY,
+        (SECONDS_BETWEEN_JD_AND_J2000 as f64) / SECONDS_PER_DAY as f64,
         0.0,
         0,
     )]
     #[case(
-        (SECONDS_BETWEEN_JD_AND_J2000 as f64 + 0.5) / f64::consts::SECONDS_PER_DAY,
-        0.6 / f64::consts::SECONDS_PER_DAY,
+        (SECONDS_BETWEEN_JD_AND_J2000 as f64 + 0.5) / SECONDS_PER_DAY as f64,
+        0.6 / SECONDS_PER_DAY as f64,
         1,
     )]
     #[case(
-        (SECONDS_BETWEEN_JD_AND_J2000 as f64 + 0.5) / f64::consts::SECONDS_PER_DAY,
-        -0.6 / f64::consts::SECONDS_PER_DAY,
+        (SECONDS_BETWEEN_JD_AND_J2000 as f64 + 0.5) / SECONDS_PER_DAY as f64,
+        -0.6 / SECONDS_PER_DAY as f64,
         -1,
     )]
     fn test_time_from_two_part_julian_date_adjustments(
@@ -680,8 +682,8 @@ mod tests {
     #[case(-f64::INFINITY)]
     #[case(f64::NAN)]
     #[case(-f64::NAN)]
-    #[case(i64::MAX as f64 / f64::consts::SECONDS_PER_DAY + 1.0)]
-    #[case(i64::MIN as f64 / f64::consts::SECONDS_PER_DAY - 1.0)]
+    #[case(i64::MAX as f64 / SECONDS_PER_DAY as f64 + 1.0)]
+    #[case(i64::MIN as f64 / SECONDS_PER_DAY as f64 - 1.0)]
     #[should_panic]
     fn test_time_from_julian_date_special_values(#[case] julian_date: f64) {
         Time::from_julian_date(Tai, julian_date, Epoch::J2000);
@@ -700,7 +702,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_time_from_two_part_julian_date_overflow() {
-        let half_max_days = i64::MAX as f64 / f64::consts::SECONDS_PER_DAY * 0.6;
+        let half_max_days = i64::MAX as f64 / SECONDS_PER_DAY as f64 * 0.6;
         Time::from_two_part_julian_date(Tai, half_max_days, half_max_days);
     }
 

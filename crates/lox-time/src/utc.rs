@@ -16,7 +16,7 @@ use core::fmt::{self, Display, Formatter};
 use core::str::FromStr;
 
 use lox_approx::{ApproxEq, ApproxEqResults};
-use lox_core::i64::consts::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
+use lox_core::time::constants::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use thiserror::Error;
 
 use crate::calendar_dates::{CalendarDate, Date, DateError};

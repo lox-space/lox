@@ -16,7 +16,7 @@ use lox_bodies::{CoordinateOrigin, Origin};
 use lox_core::anomalies::AnomalyError;
 use lox_core::coords::Cartesian;
 use lox_core::elements::{Keplerian, MeanElements};
-use lox_core::f64::consts::SECONDS_PER_DAY;
+use lox_core::time::constants::SECONDS_PER_DAY;
 use lox_core::units::{Angle, Distance};
 use lox_frames::{Frame, ReferenceFrame};
 use lox_odm::Format;
@@ -948,7 +948,7 @@ fn classification_from_str(s: Option<&str>) -> sgp4::Classification {
 /// of [`mean_motion_to_sma`].
 fn sma_to_mean_motion(sma_m: f64, gm_m3_per_s2: f64) -> f64 {
     let n_rad_per_s = (gm_m3_per_s2 / sma_m.powi(3)).sqrt();
-    n_rad_per_s * SECONDS_PER_DAY / (2.0 * PI)
+    n_rad_per_s * SECONDS_PER_DAY as f64 / (2.0 * PI)
 }
 
 // ----------------------------------------------------------------------------

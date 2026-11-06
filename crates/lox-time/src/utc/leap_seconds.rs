@@ -22,7 +22,7 @@ use crate::time::Time;
 use crate::time_of_day::CivilTime;
 use crate::time_scales::Tai;
 use crate::utc::Utc;
-use lox_core::i64::consts::SECONDS_PER_DAY;
+use lox_core::time::constants::SECONDS_PER_DAY;
 
 /// UTC epochs (seconds since J2000) at which each leap second takes effect.
 pub const LEAP_SECOND_EPOCHS_UTC: [i64; 28] = [
