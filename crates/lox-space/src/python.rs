@@ -21,6 +21,7 @@ use crate::comms::python::{
     slant_range,
 };
 use crate::constellations::python::{PyConstellation, PyConstellationSatellite};
+use crate::core::constants::ASTRONOMICAL_UNIT;
 use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
 use crate::ephem::python::PySpk;
 use crate::frames::python::{FrameTransformationError, PyFrame};
@@ -40,12 +41,9 @@ use crate::time::python::{
     time_series::PyTimeSeries,
     utc::PyUtc,
 };
-use crate::units::{
-    ASTRONOMICAL_UNIT,
-    python::{
-        PyAngle, PyAngularRate, PyDistance, PyFrequency, PyGravitationalParameter, PyPower,
-        PyPressure, PyTemperature, PyVelocity,
-    },
+use crate::units::python::{
+    PyAngle, PyAngularRate, PyDistance, PyFrequency, PyGravitationalParameter, PyPower, PyPressure,
+    PyTemperature, PyVelocity,
 };
 
 use pyo3::prelude::*;
@@ -189,7 +187,7 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyDistance>()?;
     m.add("m", PyDistance::new(1.0))?;
     m.add("km", PyDistance::new(1e3))?;
-    m.add("au", PyDistance::new(ASTRONOMICAL_UNIT))?;
+    m.add("au", PyDistance::new(ASTRONOMICAL_UNIT.to_meters()))?;
     m.add_class::<PyFrequency>()?;
     m.add("Hz", PyFrequency::new(1.0))?;
     m.add("kHz", PyFrequency::new(1e3))?;

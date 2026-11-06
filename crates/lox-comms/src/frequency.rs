@@ -7,7 +7,8 @@
 use std::fmt::{Display, Formatter, Result};
 use std::str::FromStr;
 
-use lox_core::units::{Distance, Frequency, SPEED_OF_LIGHT};
+use lox_core::constants::SPEED_OF_LIGHT;
+use lox_core::units::{Distance, Frequency};
 
 /// The letter code does not name a known frequency band.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, thiserror::Error)]
@@ -219,8 +220,8 @@ impl FrequencyRange {
             return Err(FrequencyRangeError::InvalidWavelengths { min_m, max_m });
         }
         Self::new(
-            Frequency::hertz(SPEED_OF_LIGHT / max_m),
-            Frequency::hertz(SPEED_OF_LIGHT / min_m),
+            Frequency::hertz(SPEED_OF_LIGHT.to_meters_per_second() / max_m),
+            Frequency::hertz(SPEED_OF_LIGHT.to_meters_per_second() / min_m),
         )
     }
 

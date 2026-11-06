@@ -4,10 +4,11 @@
 
 use std::iter::zip;
 
+use lox_core::constants::{ASTRONOMICAL_UNIT, SPEED_OF_LIGHT};
 use lox_core::coords::Cartesian;
 use lox_core::glam::{DMat3, DVec3};
 use lox_core::time::constants::SECONDS_PER_JULIAN_YEAR;
-use lox_core::units::{ASTRONOMICAL_UNIT, Distance, DistanceUnits, SPEED_OF_LIGHT};
+use lox_core::units::{Distance, DistanceUnits};
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tdb};
 
 mod coefficients;
@@ -78,7 +79,7 @@ fn aberration(pnat: DVec3, v: DVec3, s: Distance, bm1: f64) -> DVec3 {
 pub fn apparent_sun_position(time: Time<Tdb>) -> DVec3 {
     let s = earth_state(time);
     let pe = s.heliocentric.position();
-    let vb = s.barycentric.velocity() / SPEED_OF_LIGHT;
+    let vb = s.barycentric.velocity() / SPEED_OF_LIGHT.to_meters_per_second();
     let dsun = pe.length().m();
     let lorentz_inv = (1.0 - vb.powf(2.0).element_sum()).powf(0.5);
     let proper = aberration(pe / dsun.to_meters(), -vb, dsun, lorentz_inv);
@@ -131,9 +132,10 @@ impl Coeffs {
             let (z, vz) = z.iter().fold((0.0, 0.0), &f);
 
             // Scale from AU to m
-            let pos = DVec3::new(x, y, z) * ASTRONOMICAL_UNIT;
+            let pos = DVec3::new(x, y, z) * ASTRONOMICAL_UNIT.to_meters();
             // Scale from AU/year to m/s
-            let vel = DVec3::new(vx, vy, vz) * ASTRONOMICAL_UNIT / SECONDS_PER_JULIAN_YEAR as f64;
+            let vel = DVec3::new(vx, vy, vz) * ASTRONOMICAL_UNIT.to_meters()
+                / SECONDS_PER_JULIAN_YEAR as f64;
             Cartesian::from_vecs(pos, vel)
         } else {
             unreachable!()

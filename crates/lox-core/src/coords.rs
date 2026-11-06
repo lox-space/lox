@@ -16,14 +16,16 @@ use lox_approx::ApproxEq;
 use crate::math::float::{abs, atan2, powi, sin_cos, sqrt};
 use thiserror::Error;
 
+use crate::constants::SPEED_OF_LIGHT;
 use crate::{
     math::series::Series,
     time::deltas::TimeDelta,
-    units::{
-        Angle, AngleUnit, AngularRate, Distance, DistanceUnit, OBSERVABLE_UNIVERSE_RADIUS,
-        SPEED_OF_LIGHT, Velocity,
-    },
+    units::{Angle, AngleUnit, AngularRate, Distance, DistanceUnit, Velocity},
 };
+
+/// The comoving radius of the observable universe, about 46.5 billion light-years, in m.
+const OBSERVABLE_UNIVERSE_RADIUS: f64 = 4.4e26;
+
 /// Reference ellipsoid (rotational, oblate) defined by its equatorial
 /// radius and flattening. Construction validates that `equatorial_radius
 /// > 0` and `flattening ∈ [0, 1)`.
@@ -642,8 +644,9 @@ impl Cartesian {
     pub fn is_physical(&self) -> bool {
         // Comparing squares avoids the square roots, and the comparisons are false for non-finite
         // states, whose squares are infinite or NaN.
+        let c = SPEED_OF_LIGHT.to_meters_per_second();
         self.pos.length_squared() < OBSERVABLE_UNIVERSE_RADIUS * OBSERVABLE_UNIVERSE_RADIUS
-            && self.vel.length_squared() < SPEED_OF_LIGHT * SPEED_OF_LIGHT
+            && self.vel.length_squared() < c * c
     }
 
     /// Sets the velocity vector in m/s.
