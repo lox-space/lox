@@ -31,6 +31,10 @@ use thiserror::Error;
 use super::julian_dates::{Epoch, JulianDate, Unit};
 use super::subsecond::Subsecond;
 
+mod unit;
+
+pub use unit::TimeDeltaUnit;
+
 /// A signed finite time delta with whole seconds and an attosecond remainder in `[0, 10¹⁸)`.
 ///
 /// `TimeDelta` represents a duration as whole seconds plus a fractional attosecond
@@ -101,51 +105,7 @@ impl TimeDelta {
     /// Panics if a non-finite or out-of-range value is encountered.
     #[track_caller]
     pub const fn from_seconds_f64(value: f64) -> Self {
-        assert!(
-            value.is_finite() && value >= i64::MIN as f64 && value < i64::MAX as f64,
-            "non-finite or out-of-range value encountered"
-        );
-
-        // Inline const-compatible round_ties_even (banker's rounding). The
-        // bounds check above guarantees `value` fits in `i64::MIN..=i64::MAX`.
-        let i = value as i64 as f64;
-        let frac = value - i;
-        let seconds = if frac > 0.5 {
-            i + 1.0
-        } else if frac < -0.5 {
-            i - 1.0
-        } else if frac == 0.5 {
-            if (i as i64) % 2 == 0 { i } else { i + 1.0 }
-        } else if frac == -0.5 {
-            if (i as i64) % 2 == 0 { i } else { i - 1.0 }
-        } else {
-            i
-        };
-        let subseconds = value - seconds;
-        // Inline const-compatible round (half away from zero). The product is
-        // bounded by `ATTOSECONDS_IN_SECOND` (1e18), within `i64` range.
-        let scaled = subseconds * ATTOSECONDS_IN_SECOND as f64;
-        let si = scaled as i64 as f64;
-        let sfrac = scaled - si;
-        let attos_rounded = if sfrac >= 0.5 {
-            si + 1.0
-        } else if sfrac <= -0.5 {
-            si - 1.0
-        } else {
-            si
-        };
-
-        if subseconds.is_sign_negative() {
-            Self {
-                seconds: seconds as i64 - 1,
-                attoseconds: attos_rounded as i64 + ATTOSECONDS_IN_SECOND,
-            }
-        } else {
-            Self {
-                seconds: seconds as i64,
-                attoseconds: attos_rounded as i64,
-            }
-        }
+        Self::from_f64_in(value, TimeDeltaUnit::Seconds)
     }
 
     /// Tries to create a `TimeDelta` from a floating-point number of seconds.
@@ -153,10 +113,19 @@ impl TimeDelta {
     /// # Errors
     /// Returns an error if an out-of-range value is encountered.
     pub fn try_from_seconds_f64(value: f64) -> Result<Self, InvalidFloatSeconds> {
-        if !value.is_finite() || value < i64::MIN as f64 || value >= i64::MAX as f64 {
-            return Err(InvalidFloatSeconds(value));
+        Self::try_new_in(value, TimeDeltaUnit::Seconds)
+    }
+
+    /// Creates a `TimeDelta` from a value in the given unit.
+    ///
+    /// # Panics
+    /// Panics if a non-finite or out-of-range value is encountered.
+    #[track_caller]
+    const fn from_f64_in(value: f64, unit: TimeDeltaUnit) -> Self {
+        match Self::checked_from_f64_in(value, unit) {
+            Some(delta) => delta,
+            None => panic!("non-finite or out-of-range value encountered"),
         }
-        Ok(Self::from_seconds_f64(value))
     }
 
     /// Creates a `TimeDelta` from a whole number of seconds.
@@ -171,7 +140,7 @@ impl TimeDelta {
 
     /// Creates a `TimeDelta` from a floating-point number of minutes.
     pub const fn from_minutes_f64(value: f64) -> Self {
-        Self::from_seconds_f64(value * SECONDS_PER_MINUTE as f64)
+        Self::from_f64_in(value, TimeDeltaUnit::Minutes)
     }
 
     /// Tries to create a `TimeDelta` from a floating-point number of minutes.
@@ -179,7 +148,7 @@ impl TimeDelta {
     /// # Errors
     /// Returns an error if an out-of-range value is encountered.
     pub fn try_from_minutes_f64(value: f64) -> Result<Self, InvalidFloatSeconds> {
-        Self::try_from_seconds_f64(value * SECONDS_PER_MINUTE as f64)
+        Self::try_new_in(value, TimeDeltaUnit::Minutes)
     }
 
     /// Creates a `TimeDelta` from a whole number of hours.
@@ -189,7 +158,7 @@ impl TimeDelta {
 
     /// Creates a `TimeDelta` from a floating-point number of hours.
     pub const fn from_hours_f64(value: f64) -> Self {
-        Self::from_seconds_f64(value * SECONDS_PER_HOUR as f64)
+        Self::from_f64_in(value, TimeDeltaUnit::Hours)
     }
 
     /// Tries to create a `TimeDelta` from a floating-point number of hours.
@@ -197,7 +166,7 @@ impl TimeDelta {
     /// # Errors
     /// Returns an error if an out-of-range value is encountered.
     pub fn try_from_hours_f64(value: f64) -> Result<Self, InvalidFloatSeconds> {
-        Self::try_from_seconds_f64(value * SECONDS_PER_HOUR as f64)
+        Self::try_new_in(value, TimeDeltaUnit::Hours)
     }
 
     /// Creates a `TimeDelta` from a whole number of days.
@@ -207,7 +176,7 @@ impl TimeDelta {
 
     /// Creates a `TimeDelta` from a floating-point number of days.
     pub const fn from_days_f64(value: f64) -> Self {
-        Self::from_seconds_f64(value * SECONDS_PER_DAY as f64)
+        Self::from_f64_in(value, TimeDeltaUnit::Days)
     }
 
     /// Tries to create a `TimeDelta` from a floating-point number of days.
@@ -215,7 +184,7 @@ impl TimeDelta {
     /// # Errors
     /// Returns an error if an out-of-range value is encountered.
     pub fn try_from_days_f64(value: f64) -> Result<Self, InvalidFloatSeconds> {
-        Self::try_from_seconds_f64(value * SECONDS_PER_DAY as f64)
+        Self::try_new_in(value, TimeDeltaUnit::Days)
     }
 
     /// Creates a `TimeDelta` from a number of milliseconds.
@@ -262,7 +231,7 @@ impl TimeDelta {
 
     /// Creates a `TimeDelta` from a floating-point number of Julian years (365.25 days each).
     pub const fn from_julian_years(value: f64) -> Self {
-        Self::from_seconds_f64(value * SECONDS_PER_JULIAN_YEAR as f64)
+        Self::from_f64_in(value, TimeDeltaUnit::JulianYears)
     }
 
     /// Tries to create a `TimeDelta` from a floating-point number of Julian years.
@@ -270,12 +239,12 @@ impl TimeDelta {
     /// # Errors
     /// Returns an error if an out-of-range value is encountered.
     pub fn try_from_julian_years(value: f64) -> Result<Self, InvalidFloatSeconds> {
-        Self::try_from_seconds_f64(value * SECONDS_PER_JULIAN_YEAR as f64)
+        Self::try_new_in(value, TimeDeltaUnit::JulianYears)
     }
 
     /// Creates a `TimeDelta` from a floating-point number of Julian centuries (36525 days each).
     pub const fn from_julian_centuries(value: f64) -> Self {
-        Self::from_seconds_f64(value * SECONDS_PER_JULIAN_CENTURY as f64)
+        Self::from_f64_in(value, TimeDeltaUnit::JulianCenturies)
     }
 
     /// Tries to create a `TimeDelta` from a floating-point number of Julian centuries.
@@ -283,7 +252,7 @@ impl TimeDelta {
     /// # Errors
     /// Returns an error if an out-of-range value is encountered.
     pub fn try_from_julian_centuries(value: f64) -> Result<Self, InvalidFloatSeconds> {
-        Self::try_from_seconds_f64(value * SECONDS_PER_JULIAN_CENTURY as f64)
+        Self::try_new_in(value, TimeDeltaUnit::JulianCenturies)
     }
 
     /// Creates a `TimeDelta` from whole seconds and a [`Subsecond`] fractional part.

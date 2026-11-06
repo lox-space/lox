@@ -28,6 +28,9 @@ pub enum ParseUnitError {
     /// The value is infinite or NaN.
     #[error("value must be finite")]
     NonFinite,
+    /// The value is outside the range the quantity can represent.
+    #[error("value out of range")]
+    OutOfRange,
 }
 
 /// Displays a value in a chosen unit, see e.g. [`Distance::display_in`].
