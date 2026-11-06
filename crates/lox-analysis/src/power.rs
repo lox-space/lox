@@ -11,9 +11,9 @@
 use std::collections::HashMap;
 
 use lox_bodies::{CoordinateOrigin, Origin, Sun, TryMeanRadius, TrySpheroid};
+use lox_core::constants::ASTRONOMICAL_UNIT;
 use lox_core::glam::DVec3;
 use lox_core::math::series::InterpolationType;
-use lox_core::units::ASTRONOMICAL_UNIT;
 use lox_ephem::Ephemeris;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
@@ -61,7 +61,7 @@ pub fn beta_angle(orbit_normal: DVec3, sun_direction: DVec3) -> f64 {
 /// # Arguments
 /// * `distance_m` — distance from the Sun in **meters**
 pub fn solar_flux(distance_m: f64) -> f64 {
-    let ratio = ASTRONOMICAL_UNIT / distance_m;
+    let ratio = ASTRONOMICAL_UNIT.to_meters() / distance_m;
     SOLAR_CONSTANT * ratio * ratio
 }
 
@@ -385,12 +385,16 @@ mod tests {
 
     #[test]
     fn test_solar_flux_at_1au() {
-        assert_approx_eq!(solar_flux(ASTRONOMICAL_UNIT), SOLAR_CONSTANT, rtol <= 1e-10);
+        assert_approx_eq!(
+            solar_flux(ASTRONOMICAL_UNIT.to_meters()),
+            SOLAR_CONSTANT,
+            rtol <= 1e-10
+        );
     }
 
     #[test]
     fn test_solar_flux_inverse_square() {
-        let d = 2.0 * ASTRONOMICAL_UNIT;
+        let d = 2.0 * ASTRONOMICAL_UNIT.to_meters();
         assert_approx_eq!(solar_flux(d), SOLAR_CONSTANT / 4.0, rtol <= 1e-10);
     }
 

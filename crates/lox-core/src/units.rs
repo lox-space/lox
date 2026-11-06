@@ -51,20 +51,18 @@ use core::{
 use glam::DMat3;
 use lox_approx::ApproxEq;
 
+use crate::constants::{ASTRONOMICAL_UNIT, SPEED_OF_LIGHT};
 use crate::math::float::{
     acos, acosh, asin, asinh, atan, atan2, atanh, cos, cosh, log10, powf, sin, sin_cos, sinh, tan,
     tanh, to_degrees, to_radians,
 };
 use crate::time::constants::SECONDS_PER_DAY;
 
-/// Degrees in full circle
-pub const DEGREES_IN_CIRCLE: f64 = 360.0;
+/// Arcseconds in a full circle.
+const ARCSECONDS_IN_CIRCLE: f64 = 360.0 * 60.0 * 60.0;
 
-/// Arcseconds in full circle
-pub const ARCSECONDS_IN_CIRCLE: f64 = DEGREES_IN_CIRCLE * 60.0 * 60.0;
-
-/// Radians per arcsecond
-pub const RADIANS_IN_ARCSECOND: f64 = TAU / ARCSECONDS_IN_CIRCLE;
+/// Radians per arcsecond.
+const RADIANS_IN_ARCSECOND: f64 = TAU / ARCSECONDS_IN_CIRCLE;
 
 /// Radians per second of time
 const RADIANS_IN_SECOND_OF_TIME: f64 = TAU / SECONDS_PER_DAY as f64;
@@ -442,9 +440,6 @@ impl AngleUnits for i64 {
     }
 }
 
-/// The astronomical unit in meters.
-pub const ASTRONOMICAL_UNIT: f64 = 1.495978707e11;
-
 /// Distance in meters.
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -464,7 +459,7 @@ impl Distance {
 
     /// Create a new distance from an `f64` value in astronomical units.
     pub const fn astronomical_units(au: f64) -> Self {
-        Self(au * ASTRONOMICAL_UNIT)
+        Self(au * ASTRONOMICAL_UNIT.to_meters())
     }
 
     /// Returns the value of the distance in meters.
@@ -479,7 +474,7 @@ impl Distance {
 
     /// Returns the value of the distance in astronomical units.
     pub const fn to_astronomical_units(self) -> f64 {
-        self.0 / ASTRONOMICAL_UNIT
+        self.0 / ASTRONOMICAL_UNIT.to_meters()
     }
 }
 
@@ -551,12 +546,12 @@ impl Velocity {
 
     /// Creates a new velocity from an `f64` value in au/d.
     pub const fn astronomical_units_per_day(aud: f64) -> Self {
-        Self(aud * ASTRONOMICAL_UNIT / SECONDS_PER_DAY as f64)
+        Self(aud * ASTRONOMICAL_UNIT.to_meters() / SECONDS_PER_DAY as f64)
     }
 
     /// Creates a new velocity from an `f64` value in 1/c.
     pub const fn fraction_of_speed_of_light(c: f64) -> Self {
-        Self(c * SPEED_OF_LIGHT)
+        Self(c * SPEED_OF_LIGHT.to_meters_per_second())
     }
 
     /// Returns the value of the velocity in m/s.
@@ -571,12 +566,12 @@ impl Velocity {
 
     /// Returns the value of the velocity in au/d.
     pub const fn to_astronomical_units_per_day(self) -> f64 {
-        self.0 * SECONDS_PER_DAY as f64 / ASTRONOMICAL_UNIT
+        self.0 * SECONDS_PER_DAY as f64 / ASTRONOMICAL_UNIT.to_meters()
     }
 
     /// Returns the value of the velocity in 1/c.
     pub const fn to_fraction_of_speed_of_light(self) -> f64 {
-        self.0 / SPEED_OF_LIGHT
+        self.0 / SPEED_OF_LIGHT.to_meters_per_second()
     }
 }
 
@@ -639,12 +634,6 @@ impl VelocityUnits for i64 {
     }
 }
 
-/// The speed of light in vacuum in m/s.
-pub const SPEED_OF_LIGHT: f64 = 299792458.0;
-
-/// The comoving radius of the observable universe, about 46.5 billion light-years, in m.
-pub const OBSERVABLE_UNIVERSE_RADIUS: f64 = 4.4e26;
-
 /// Frequency in Hertz
 #[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd, ApproxEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -704,7 +693,7 @@ impl Frequency {
 
     /// Returns the wavelength.
     pub fn wavelength(self) -> Distance {
-        Distance(SPEED_OF_LIGHT / self.0)
+        Distance(SPEED_OF_LIGHT.to_meters_per_second() / self.0)
     }
 }
 
@@ -1925,13 +1914,13 @@ mod tests {
     #[test]
     fn test_distance_au() {
         let distance = 1.0.au();
-        assert_eq!(distance.0, ASTRONOMICAL_UNIT);
+        assert_eq!(distance.0, ASTRONOMICAL_UNIT.to_meters());
     }
 
     #[test]
     fn test_distance_conversions() {
         let d1 = 1.5e11.m();
-        let d2 = (1.5e11 / ASTRONOMICAL_UNIT).au();
+        let d2 = (1.5e11 / ASTRONOMICAL_UNIT.to_meters()).au();
         assert_approx_eq!(d1.0, d2.0, rtol <= 1e-9);
     }
 
@@ -2638,7 +2627,7 @@ mod tests {
         let e = 1000_i64.m();
         assert_eq!(e.to_meters(), 1000.0);
         let f = 1_i64.au();
-        assert_approx_eq!(f.to_meters(), ASTRONOMICAL_UNIT, rtol <= 1e-10);
+        assert_approx_eq!(f.to_meters(), ASTRONOMICAL_UNIT.to_meters(), rtol <= 1e-10);
     }
 
     #[test]
@@ -2660,7 +2649,7 @@ mod tests {
     #[test]
     fn test_velocity_astronomical_units_per_day() {
         let v = Velocity::astronomical_units_per_day(1.0);
-        let expected = ASTRONOMICAL_UNIT / SECONDS_PER_DAY as f64;
+        let expected = ASTRONOMICAL_UNIT.to_meters() / SECONDS_PER_DAY as f64;
         assert_approx_eq!(v.to_meters_per_second(), expected, rtol <= 1e-10);
         assert_approx_eq!(v.to_astronomical_units_per_day(), 1.0, rtol <= 1e-10);
     }
@@ -2668,7 +2657,11 @@ mod tests {
     #[test]
     fn test_velocity_fraction_of_speed_of_light() {
         let v = Velocity::fraction_of_speed_of_light(1.0);
-        assert_approx_eq!(v.to_meters_per_second(), SPEED_OF_LIGHT, rtol <= 1e-10);
+        assert_approx_eq!(
+            v.to_meters_per_second(),
+            SPEED_OF_LIGHT.to_meters_per_second(),
+            rtol <= 1e-10
+        );
         assert_approx_eq!(v.to_fraction_of_speed_of_light(), 1.0, rtol <= 1e-10);
     }
 
@@ -2693,11 +2686,15 @@ mod tests {
         let c = 1_i64.aud();
         assert_approx_eq!(
             c.to_meters_per_second(),
-            ASTRONOMICAL_UNIT / SECONDS_PER_DAY as f64,
+            ASTRONOMICAL_UNIT.to_meters() / SECONDS_PER_DAY as f64,
             rtol <= 1e-10
         );
         let d = 1_i64.c();
-        assert_approx_eq!(d.to_meters_per_second(), SPEED_OF_LIGHT, rtol <= 1e-10);
+        assert_approx_eq!(
+            d.to_meters_per_second(),
+            SPEED_OF_LIGHT.to_meters_per_second(),
+            rtol <= 1e-10
+        );
     }
 
     #[test]
