@@ -157,7 +157,7 @@ class TestOpticalAccessAnalysis:
         )
         results = analysis.compute()
         for iv in results.windows("S2A", "europe"):
-            dur = float(iv.interval().duration())
+            dur = iv.interval().duration().to_seconds()
             assert dur > 0, "zero-length interval"
             assert dur < 600, f"imaging window too long ({dur:.0f}s)"
 
@@ -214,10 +214,11 @@ class TestOpticalAccessAnalysis:
         ).compute()
 
         dur_nadir = sum(
-            float(iv.interval().duration()) for iv in res_n.windows("nadir", "europe")
+            iv.interval().duration().to_seconds()
+            for iv in res_n.windows("nadir", "europe")
         )
         dur_off_nadir = sum(
-            float(iv.interval().duration())
+            iv.interval().duration().to_seconds()
             for iv in res_a.windows("off_nadir", "europe")
         )
         assert dur_off_nadir >= dur_nadir - 1.0, (

@@ -27,7 +27,7 @@ use crate::analysis::visibility::{
 use crate::bodies::Origin;
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
-    PyChannel, PyDecibel, PyModCod, PyPropagationLosses, build_rx_terminal, build_tx_terminal,
+    PyChannel, PyModCod, PyPropagationLosses, build_rx_terminal, build_tx_terminal,
     rx_terminal_to_py, tx_terminal_to_py,
 };
 use crate::ephem::python::PySpk;
@@ -43,7 +43,9 @@ use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::intervals::PyInterval;
 use crate::time::python::time::PyTime;
 use crate::time::python::time_series::PyTimeSeries;
-use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyFrequency, PyVelocity};
+use crate::units::python::{
+    PyAngle, PyAngularRate, PyDecibel, PyDistance, PyFrequency, PyVelocity,
+};
 use lox_core::units::Distance;
 use lox_frames::Frame;
 use lox_frames::providers::DefaultRotationProvider;

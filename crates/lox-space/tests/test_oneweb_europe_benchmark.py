@@ -112,7 +112,7 @@ def t0(oneweb):
 
 @pytest.fixture(scope="session")
 def t1(t0):
-    return t0 + lox.TimeDelta(7200)
+    return t0 + lox.TimeDelta.from_seconds(7200)
 
 
 def make_space_assets(oneweb_dict):

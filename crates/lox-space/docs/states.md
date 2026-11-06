@@ -80,7 +80,7 @@ kep = lox.Keplerian(
 # Derived quantities
 print(f"hp = {kep.periapsis_altitude().to_kilometers():.1f} km")
 print(f"ha = {kep.apoapsis_altitude().to_kilometers():.1f} km")
-print(f"n = {float(kep.mean_motion()):.3e} rad/s")
+print(f"n = {kep.mean_motion().to_radians_per_second():.3e} rad/s")
 print(f"energy = {kep.specific_orbital_energy():.3f} km²/s²")
 
 # Create a circular orbit from altitude
@@ -110,14 +110,16 @@ state = mee.to_equinoctial().to_cartesian()
 
 # Work with trajectories
 trajectory = lox.Trajectory([state1, state2, state3])
-interpolated = trajectory.at(t + lox.TimeDelta(100))
+interpolated = trajectory.at(t + lox.TimeDelta.from_seconds(100))
 
 # Queries up to 1 ms before the first or after the last state are
 # extrapolated, queries beyond raise a ValueError. Widen the limit on demand:
-extended = trajectory.with_extrapolation_limit(lox.TimeDelta(10))
+extended = trajectory.with_extrapolation_limit(lox.TimeDelta.from_seconds(10))
 
 # Use step_by_inclusive to sample an interval including its end
-times = lox.Interval(t, t + lox.TimeDelta(150)).step_by_inclusive(lox.TimeDelta(60))
+times = lox.Interval(t, t + lox.TimeDelta.from_seconds(150)).step_by_inclusive(
+    lox.TimeDelta.from_seconds(60)
+)
 ```
 
 ---

@@ -48,7 +48,7 @@ def test_from_numpy():
     )
     trajectory = lox.Trajectory.from_numpy(time, states)
     npt.assert_allclose(
-        trajectory.at(time + lox.TimeDelta(1.5)).position(),
+        trajectory.at(time + lox.TimeDelta.from_seconds(1.5)).position(),
         [2.5e3, 2.5e3, 2.5e3],
     )
     states1 = trajectory.to_numpy()
@@ -85,47 +85,47 @@ def test_interpolation(orbit, trajectory):
     dt = orbit.orbital_period()
     s1 = trajectory.at(dt)
     k1 = s1.to_keplerian()
-    assert float(orbit.semi_major_axis()) == pytest.approx(
-        float(k1.semi_major_axis()), rel=1e-8
+    assert orbit.semi_major_axis().to_meters() == pytest.approx(
+        k1.semi_major_axis().to_meters(), rel=1e-8
     )
     assert orbit.eccentricity() == pytest.approx(k1.eccentricity(), rel=1e-8)
-    assert float(orbit.inclination()) == pytest.approx(
-        float(k1.inclination()), rel=1e-8
+    assert orbit.inclination().to_radians() == pytest.approx(
+        k1.inclination().to_radians(), rel=1e-8
     )
-    assert float(orbit.longitude_of_ascending_node()) == pytest.approx(
-        float(k1.longitude_of_ascending_node()), rel=1e-8
+    assert orbit.longitude_of_ascending_node().to_radians() == pytest.approx(
+        k1.longitude_of_ascending_node().to_radians(), rel=1e-8
     )
-    assert float(orbit.argument_of_periapsis()) == pytest.approx(
-        float(k1.argument_of_periapsis()), rel=1e-8
+    assert orbit.argument_of_periapsis().to_radians() == pytest.approx(
+        k1.argument_of_periapsis().to_radians(), rel=1e-8
     )
-    assert float(orbit.true_anomaly()) == pytest.approx(
-        float(k1.true_anomaly()), rel=1e-8
+    assert orbit.true_anomaly().to_radians() == pytest.approx(
+        k1.true_anomaly().to_radians(), rel=1e-8
     )
 
 
 def test_extrapolation_limit(trajectory):
     start = trajectory.states()[0].time()
     end = trajectory.states()[-1].time()
-    assert float(trajectory.extrapolation_limit()) == pytest.approx(1e-3)
-    trajectory.at(start - lox.TimeDelta(0.5e-3))
-    trajectory.at(end + lox.TimeDelta(0.5e-3))
+    assert trajectory.extrapolation_limit().to_seconds() == pytest.approx(1e-3)
+    trajectory.at(start - lox.TimeDelta.from_seconds(0.5e-3))
+    trajectory.at(end + lox.TimeDelta.from_seconds(0.5e-3))
     with pytest.raises(ValueError, match="outside of the trajectory"):
-        trajectory.at(end + lox.TimeDelta(1))
+        trajectory.at(end + lox.TimeDelta.from_seconds(1))
     with pytest.raises(ValueError, match="outside of the trajectory"):
-        trajectory.at(lox.TimeDelta(-1))
+        trajectory.at(lox.TimeDelta.from_seconds(-1))
 
-    extended = trajectory.with_extrapolation_limit(lox.TimeDelta(10))
-    assert float(extended.extrapolation_limit()) == 10.0
-    extended.at(end + lox.TimeDelta(1))
+    extended = trajectory.with_extrapolation_limit(lox.TimeDelta.from_seconds(10))
+    assert extended.extrapolation_limit().to_seconds() == 10.0
+    extended.at(end + lox.TimeDelta.from_seconds(1))
     with pytest.raises(ValueError, match="outside of the trajectory"):
-        extended.at(end + lox.TimeDelta(11))
+        extended.at(end + lox.TimeDelta.from_seconds(11))
     # The original trajectory is unchanged.
-    assert float(trajectory.extrapolation_limit()) == pytest.approx(1e-3)
+    assert trajectory.extrapolation_limit().to_seconds() == pytest.approx(1e-3)
 
 
 @pytest.mark.parametrize("limit", [0.0, 10.0])
 def test_conversions_keep_extrapolation_limit(trajectory, ephemeris, limit):
-    trajectory = trajectory.with_extrapolation_limit(lox.TimeDelta(limit))
+    trajectory = trajectory.with_extrapolation_limit(lox.TimeDelta.from_seconds(limit))
     end = trajectory.states()[-1].time()
     converted = [
         trajectory.to_frame("ICRF"),
@@ -133,12 +133,12 @@ def test_conversions_keep_extrapolation_limit(trajectory, ephemeris, limit):
         trajectory.to_origin("Moon", ephemeris),
     ]
     for c in converted:
-        assert float(c.extrapolation_limit()) == limit
+        assert c.extrapolation_limit().to_seconds() == limit
         if limit > 0.0:
-            c.at(end + lox.TimeDelta(1))
+            c.at(end + lox.TimeDelta.from_seconds(1))
         else:
             with pytest.raises(ValueError, match="outside of the trajectory"):
-                c.at(end + lox.TimeDelta(0.5e-3))
+                c.at(end + lox.TimeDelta.from_seconds(0.5e-3))
 
 
 def test_scenario_rejects_uncovered_trajectory(trajectory):
@@ -147,7 +147,9 @@ def test_scenario_rejects_uncovered_trajectory(trajectory):
     sc = lox.Spacecraft("sc", trajectory)
 
     lox.Scenario(start, end, spacecraft=[sc]).propagate()
-    scenario = lox.Scenario(start, end + lox.TimeDelta(60), spacecraft=[sc])
+    scenario = lox.Scenario(
+        start, end + lox.TimeDelta.from_seconds(60), spacecraft=[sc]
+    )
     with pytest.raises(ValueError, match="does not cover"):
         scenario.propagate()
 
@@ -155,8 +157,8 @@ def test_scenario_rejects_uncovered_trajectory(trajectory):
 def test_keplerian_repr(orbit):
     r = repr(orbit)
     assert r.startswith("Keplerian(")
-    assert "Distance(" in r
-    assert "Angle(" in r
+    assert "Distance.meters(" in r
+    assert "Angle.radians(" in r
     assert "Origin(" in r
 
 

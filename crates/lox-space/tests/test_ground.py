@@ -30,8 +30,12 @@ def test_observables():
     assert observables.range_rate().to_kilometers_per_second() == pytest.approx(
         expected_range_rate, rel=1e-2
     )
-    assert float(observables.azimuth()) == pytest.approx(expected_azimuth, rel=1e-2)
-    assert float(observables.elevation()) == pytest.approx(expected_elevation, rel=1e-2)
+    assert observables.azimuth().to_radians() == pytest.approx(
+        expected_azimuth, rel=1e-2
+    )
+    assert observables.elevation().to_radians() == pytest.approx(
+        expected_elevation, rel=1e-2
+    )
 
 
 def test_ground_location_repr():
@@ -41,8 +45,8 @@ def test_ground_location_repr():
     r = repr(location)
     assert r.startswith("EllipsoidLocation(")
     assert "Frame(" in r
-    assert "Angle(" in r
-    assert "Distance(" in r
+    assert "Angle.radians(" in r
+    assert "Distance.meters(" in r
     assert "Ellipsoid(" in r
 
 
@@ -136,4 +140,6 @@ def test_ellipsoid_rejects_invalid_flattening():
 
 def test_horizon_mask():
     mask = lox.HorizonMask(np.array([-np.pi, 0.0, np.pi]), np.array([0.0, 5.0, 0.0]))
-    assert float(mask.elevation_at(lox.Angle(np.pi / 2))) == pytest.approx(2.5)
+    assert (
+        mask.elevation_at(lox.Angle.radians(np.pi / 2))
+    ).to_radians() == pytest.approx(2.5)

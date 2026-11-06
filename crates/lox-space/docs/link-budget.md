@@ -100,7 +100,7 @@ rx = lox.TerminalId("Kiruna", "main")
 for window in results.windows(tx, rx):
     print(
         f"{window.interval.start()}  "
-        f"peak {float(window.peak_margin):.1f} dB  "
+        f"peak {window.peak_margin.to_decibels():.1f} dB  "
         f"{window.peak_modcod.name}  "
         f"{window.data_volume / 8e9:.2f} GB"
     )

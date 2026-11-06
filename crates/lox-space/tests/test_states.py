@@ -29,8 +29,8 @@ def test_state_to_ellipsoid_location():
         [-3.53237875783652, -3.152377656863808, 5.642296713889555],
     )
     ground = state.to_ellipsoid_location()
-    assert float(ground.longitude()) == pytest.approx(2.643578045424445)
-    assert float(ground.latitude()) == pytest.approx(-0.27944957125091063)
+    assert ground.longitude().to_radians() == pytest.approx(2.643578045424445)
+    assert ground.latitude().to_radians() == pytest.approx(-0.27944957125091063)
     assert ground.altitude().to_kilometers() == pytest.approx(417.8524151150059)
 
 
@@ -233,10 +233,10 @@ def test_keplerian_defaults():
         periapsis_radius=7000.0 * lox.km,
         apoapsis_radius=7000.0 * lox.km,
     )
-    assert float(k.inclination()) == pytest.approx(0.0, abs=1e-15)
-    assert float(k.longitude_of_ascending_node()) == pytest.approx(0.0, abs=1e-15)
-    assert float(k.argument_of_periapsis()) == pytest.approx(0.0, abs=1e-15)
-    assert float(k.true_anomaly()) == pytest.approx(0.0, abs=1e-15)
+    assert k.inclination().to_radians() == pytest.approx(0.0, abs=1e-15)
+    assert k.longitude_of_ascending_node().to_radians() == pytest.approx(0.0, abs=1e-15)
+    assert k.argument_of_periapsis().to_radians() == pytest.approx(0.0, abs=1e-15)
+    assert k.true_anomaly().to_radians() == pytest.approx(0.0, abs=1e-15)
 
 
 def test_keplerian_derived_quantities():
@@ -263,8 +263,10 @@ def test_keplerian_derived_quantities():
     assert k.apoapsis_altitude().to_kilometers() == pytest.approx(a * (1 + e) - r_mean)
     assert k.argument_of_latitude().to_degrees() == pytest.approx(50.0)
     assert k.true_longitude().to_degrees() == pytest.approx(60.0)
-    assert 0.0 <= float(k.mean_longitude()) < 2 * math.pi
-    assert float(k.mean_motion()) == pytest.approx(math.sqrt(mu / a**3))
+    assert 0.0 <= k.mean_longitude().to_radians() < 2 * math.pi
+    assert k.mean_motion().to_radians_per_second() == pytest.approx(
+        math.sqrt(mu / a**3)
+    )
     assert k.specific_orbital_energy() == pytest.approx(-mu / (2 * a))
     assert k.specific_angular_momentum() == pytest.approx(
         math.sqrt(mu * a * (1 - e**2))
@@ -276,7 +278,7 @@ def test_keplerian_derived_quantities():
     v = state.velocity() * 1e-3
     r_norm = float(np.linalg.norm(r))
     v_norm = float(np.linalg.norm(v))
-    assert float(k.flight_path_angle()) == pytest.approx(
+    assert k.flight_path_angle().to_radians() == pytest.approx(
         math.asin(float(np.dot(r, v)) / (r_norm * v_norm))
     )
     assert k.specific_orbital_energy() == pytest.approx(v_norm**2 / 2 - mu / r_norm)
@@ -380,7 +382,7 @@ def test_keplerian_mean_anomaly():
         mean_anomaly=90.0 * lox.deg,
     )
     # mean anomaly of 90 deg should produce a non-zero true anomaly
-    assert float(k.true_anomaly()) != pytest.approx(0.0, abs=1e-3)
+    assert k.true_anomaly().to_radians() != pytest.approx(0.0, abs=1e-3)
 
 
 def test_keplerian_both_anomalies_raises():

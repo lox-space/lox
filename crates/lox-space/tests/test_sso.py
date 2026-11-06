@@ -29,8 +29,8 @@ def test_sso_from_semi_major_axis(epoch, provider):
         provider=provider,
     )
 
-    assert float(sso.inclination()) == pytest.approx(EXP_INC_RAD, rel=1e-5)
-    assert float(sso.longitude_of_ascending_node()) == pytest.approx(
+    assert sso.inclination().to_radians() == pytest.approx(EXP_INC_RAD, rel=1e-5)
+    assert sso.longitude_of_ascending_node().to_radians() == pytest.approx(
         EXP_RAAN_RAD, rel=4e-3
     )
 
@@ -46,8 +46,8 @@ def test_sso_from_altitude(epoch, provider):
         provider=provider,
     )
 
-    assert float(sso.inclination()) == pytest.approx(EXP_INC_RAD, rel=1e-5)
-    assert float(sso.longitude_of_ascending_node()) == pytest.approx(
+    assert sso.inclination().to_radians() == pytest.approx(EXP_INC_RAD, rel=1e-5)
+    assert sso.longitude_of_ascending_node().to_radians() == pytest.approx(
         EXP_RAAN_RAD, rel=4e-3
     )
 

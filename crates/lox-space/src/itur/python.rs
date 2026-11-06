@@ -10,7 +10,7 @@ use std::sync::Arc;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
-use crate::comms::python::PyDecibel;
+use crate::units::python::PyDecibel;
 use crate::units::python::{PyAngle, PyDistance, PyFrequency, PyPressure, PyTemperature};
 
 use lox_core::units::{Angle, Decibel};

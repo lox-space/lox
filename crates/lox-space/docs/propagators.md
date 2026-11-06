@@ -29,8 +29,12 @@ import lox_space as lox
 t = lox.Time("TAI", 2024, 1, 1)
 state = lox.Cartesian(
     t,
-    position=(6678.0 * lox.km, 0.0 * lox.km, 0.0 * lox.km),
-    velocity=(0.0 * lox.km_per_s, 7.73 * lox.km_per_s, 0.0 * lox.km_per_s),
+    x=6678.0 * lox.km,
+    y=0.0 * lox.km,
+    z=0.0 * lox.km,
+    vx=0.0 * lox.km_per_s,
+    vy=7.73 * lox.km_per_s,
+    vz=0.0 * lox.km_per_s,
 )
 
 propagator = lox.Vallado(state)
@@ -39,7 +43,7 @@ propagator = lox.Vallado(state)
 future = propagator.propagate(t + lox.TimeDelta.from_hours(1))
 
 # Propagate to multiple times
-times = [t + lox.TimeDelta(i * 60) for i in range(100)]
+times = [t + lox.TimeDelta.from_seconds(i * 60) for i in range(100)]
 trajectory = propagator.propagate(times)
 
 # J2 secular propagation (Kozai theory, works for all orbits) from mean

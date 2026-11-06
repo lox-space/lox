@@ -29,10 +29,10 @@ def test_time(provider):
     assert tai_exp < tai1
     assert tai_exp <= tai1
     assert tai_exp != tai1
-    dt = lox.TimeDelta(0.5)
+    dt = lox.TimeDelta.from_seconds(0.5)
     assert (tai_exp + dt).isclose(tai1)
     assert (tai1 - dt).isclose(tai_exp)
-    assert float(tai1 - tai_exp) == pytest.approx(float(dt))
+    assert (tai1 - tai_exp).to_seconds() == pytest.approx(dt.to_seconds())
 
 
 def test_utc(provider):
@@ -58,16 +58,16 @@ def test_utc(provider):
 
 
 def test_time_delta():
-    delta = lox.TimeDelta(1.5)
-    assert str(delta) == "1.5 seconds"
-    assert repr(delta) == "TimeDelta(1.5)"
+    delta = lox.TimeDelta.from_seconds(1.5)
+    assert str(delta) == "1.5 s"
+    assert repr(delta) == "TimeDelta.from_seconds(1.5)"
     assert delta.seconds() == 1
     assert delta.subsecond() == 0.5
-    assert str(delta + delta) == "3 seconds"
-    assert str(delta - delta) == "0 seconds"
-    assert str(-delta) == "-1.5 seconds"
+    assert str(delta + delta) == "3 s"
+    assert str(delta - delta) == "0 s"
+    assert str(-delta) == "-1.5 s"
     with pytest.raises(ValueError):
-        lox.TimeDelta(float("nan"))
+        lox.TimeDelta.from_seconds(float("nan"))
     with pytest.raises(ValueError):
         delta * float("nan")
     with pytest.raises(ValueError):

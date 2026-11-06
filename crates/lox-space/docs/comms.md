@@ -132,7 +132,7 @@ link = lox.LinkBudget(
     carrier=29.0 * lox.GHz,
     range=1000.0 * lox.km,
 )
-print(f"C/N0 = {float(link.c_n0):.2f} dB·Hz")
+print(f"C/N0 = {link.c_n0.to_decibels():.2f} dB·Hz")
 ```
 
 Terminals attach to assets for scenario analysis as named collections via
@@ -156,7 +156,7 @@ link = lox.LinkBudget(
     carrier=29.0 * lox.GHz,
     range=1000.0 * lox.km,
 )
-print(f"C/N0 = {float(link.c_n0):.2f} dB·Hz")
+print(f"C/N0 = {link.c_n0.to_decibels():.2f} dB·Hz")
 ```
 
 For lumped links, `link.carrier_rx_power` and `link.noise_power(bandwidth)`
@@ -174,7 +174,7 @@ derives from the channel; the design margin is an input:
 channel = lox.Channel(symbol_rate=5 * lox.MHz)
 modcod = lox.ModCod("QPSK 1/2", lox.Modulation("QPSK"), 0.5, 10.0 * lox.dB)
 modulated = link.modulate(channel, modcod, design_margin=3.0 * lox.dB)
-print(f"Closes: {modulated.closes()}, margin = {float(modulated.margin):.2f} dB")
+print(f"Closes: {modulated.closes()}, margin = {modulated.margin.to_decibels():.2f} dB")
 ```
 
 For standards-based links, use the built-in DVB-S2 table — 28 modes whose
@@ -190,7 +190,7 @@ modulated = link.modulate(channel, modcod, design_margin=3.0 * lox.dB)
 # Adaptive coding and modulation: the highest-efficiency mode that closes,
 # selected and evaluated in one step (the result always closes):
 best = link.modulate_best(channel, table, design_margin=3.0 * lox.dB)
-print(f"{best.modcod.name}: {float(best.information_rate()) / 1e6:.1f} Mbit/s")
+print(f"{best.modcod.name}: {best.information_rate().to_megahertz():.1f} Mbit/s")
 ```
 
 ### Budget Report
@@ -297,19 +297,19 @@ link = lox.LinkBudget(
 )
 modulated = link.modulate(channel, modcod, design_margin=3.0 * lox.dB)
 
-print(f"EIRP:        {float(link.eirp):.2f} dBW")
-print(f"FSPL:        {float(link.fspl):.2f} dB")
-print(f"G/T:         {float(link.gt):.2f} dB/K (clear sky)")
-print(f"G/T:         {float(link.gt_degraded):.2f} dB/K (rain)")
-print(f"C/N0:        {float(link.c_n0):.2f} dB·Hz")
-print(f"Eb/N0:       {float(modulated.eb_n0):.2f} dB")
-print(f"Data rate:   {float(modulated.information_rate()) / 1e6:.1f} Mbit/s")
-print(f"Link margin: {float(modulated.margin):.2f} dB")
+print(f"EIRP:        {link.eirp.to_decibels():.2f} dBW")
+print(f"FSPL:        {link.fspl.to_decibels():.2f} dB")
+print(f"G/T:         {link.gt.to_decibels():.2f} dB/K (clear sky)")
+print(f"G/T:         {link.gt_degraded.to_decibels():.2f} dB/K (rain)")
+print(f"C/N0:        {link.c_n0.to_decibels():.2f} dB·Hz")
+print(f"Eb/N0:       {modulated.eb_n0.to_decibels():.2f} dB")
+print(f"Data rate:   {modulated.information_rate().to_megahertz():.1f} Mbit/s")
+print(f"Link margin: {modulated.margin.to_decibels():.2f} dB")
 
 # Regulatory check: PFD on the ground vs. the RR Art. 21.16 mask
 pfd = lox.power_flux_density(link.eirp, slant_range, channel.bandwidth(), 4.0 * lox.kHz)
 mask = lox.PfdMask.art_21_16(-150.0 * lox.dB)
-assert float(pfd) <= float(mask.value_at(elevation))
+assert pfd.to_decibels() <= mask.value_at(elevation).to_decibels()
 ```
 
 ### Direction-Aware Pointing
@@ -356,7 +356,7 @@ total = gain + 3.0 * lox.dB  # 33.0 dB
 diff = gain - 10.0 * lox.dB  # 20.0 dB
 
 # Convert back
-print(f"{float(gain)} dB = {gain.to_linear():.0f} linear")
+print(f"{gain.to_decibels()} dB = {gain.to_linear():.0f} linear")
 ```
 
 ### Free-Space Path Loss
@@ -366,7 +366,7 @@ import lox_space as lox
 
 # FSPL at 1000 km range and 29 GHz
 loss = lox.fspl(distance=1000 * lox.km, frequency=29 * lox.GHz)
-print(f"FSPL: {float(loss):.1f} dB")
+print(f"FSPL: {loss.to_decibels():.1f} dB")
 ```
 
 ### Propagation Losses
@@ -384,8 +384,8 @@ losses = lox.PropagationLosses(
     gaseous=0.3 * lox.dB,
     other=[("Radome wetting", 0.5 * lox.dB, True)],
 )
-print(f"Total: {float(losses.total()):.1f} dB")
-print(f"Absorptive: {float(losses.absorptive()):.1f} dB")
+print(f"Total: {losses.total().to_decibels():.1f} dB")
+print(f"Absorptive: {losses.absorptive().to_decibels():.1f} dB")
 
 # Pass to LinkBudget via the losses parameter
 link = lox.LinkBudget(

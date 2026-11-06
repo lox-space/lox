@@ -6,10 +6,11 @@
 # Keep this short: every entry should be a runtime artefact that the stub
 # deliberately does not model, never a real stub/runtime mismatch.
 
-# PyO3 fills the reflected number slots whenever it implements `__add__` and
-# `__sub__`; they return `NotImplemented` for anything but the class itself,
-# so they add nothing over the forward operators declared in the stub.
-lox_space\.\w+\.__r(add|sub)__
+# PyO3 fills the reflected number slots whenever it implements `__add__`,
+# `__sub__` and `__truediv__`; they return `NotImplemented` for anything but
+# the class itself, so they add nothing over the forward operators declared in
+# the stub.
+lox_space\.\w+\.__r(add|sub|truediv)__
 
 # Stub-only type aliases used in annotations; they do not exist at runtime.
 lox_space\.(Epoch|RxTerminal|Scale|TxTerminal|Unit)

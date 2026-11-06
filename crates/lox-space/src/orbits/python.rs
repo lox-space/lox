@@ -26,11 +26,11 @@ use crate::time::deltas::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
 use crate::time::time_scales::Tai;
-use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyVelocity};
+use crate::units::python::{PyAngle, PyAngularRate, PyDistance, PyVelocity, repr_f64};
 use lox_core::coords::{Cartesian, Ellipsoid, LonLatAlt};
 use lox_core::elements::{Equinoctial, ModifiedEquinoctial, RetrogradeFactor};
 use lox_core::glam::DVec3;
-use lox_core::units::{Distance, Velocity};
+use lox_core::units::{Angle, Distance, Velocity};
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_time::intervals::Interval;
@@ -39,17 +39,6 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyList, PyString, PyType};
 use sgp4::{Classification, Elements};
-use std::f64::consts::PI;
-
-/// Formats an f64 as a valid Python float literal (always includes a decimal point).
-fn repr_f64(v: f64) -> String {
-    let s = v.to_string();
-    if v.is_finite() && !s.contains('.') {
-        format!("{s}.0")
-    } else {
-        s
-    }
-}
 
 struct PyTrajectoryTransformationError(TrajectoryTransformationError);
 
@@ -2354,12 +2343,12 @@ impl PyTle {
 
     /// Orbital inclination.
     fn inclination(&self) -> PyAngle {
-        PyAngle::new(self.elements.inclination * PI / 180.0)
+        PyAngle(Angle::degrees(self.elements.inclination))
     }
 
     /// Right ascension of the ascending node (RAAN).
     fn right_ascension(&self) -> PyAngle {
-        PyAngle::new(self.elements.right_ascension * PI / 180.0)
+        PyAngle(Angle::degrees(self.elements.right_ascension))
     }
 
     /// Orbital eccentricity (dimensionless).
@@ -2369,12 +2358,12 @@ impl PyTle {
 
     /// Argument of perigee.
     fn argument_of_perigee(&self) -> PyAngle {
-        PyAngle::new(self.elements.argument_of_perigee * PI / 180.0)
+        PyAngle(Angle::degrees(self.elements.argument_of_perigee))
     }
 
     /// Mean anomaly.
     fn mean_anomaly(&self) -> PyAngle {
-        PyAngle::new(self.elements.mean_anomaly * PI / 180.0)
+        PyAngle(Angle::degrees(self.elements.mean_anomaly))
     }
 
     /// Mean motion in revolutions per day (Kozai convention).
