@@ -12,8 +12,9 @@ use lox_core::glam::Azimuth;
 use lox_core::math::float::mul_add_relaxed;
 use lox_core::time::julian_dates::JulianDate;
 use lox_core::time::time_of_day::TimeOfDay;
-use lox_core::units::DistanceUnits;
-use lox_core::units::{Angle, AngleUnits, Distance, DistanceUnit};
+use lox_core::units::literals::AngleLiterals;
+use lox_core::units::literals::DistanceLiterals;
+use lox_core::units::{Angle, Distance, DistanceUnit};
 use lox_earth::ephemeris::apparent_sun_position;
 use lox_frames::Icrf;
 use lox_frames::iers::fundamental::iers03::lp_iers03;
@@ -419,7 +420,7 @@ mod tests {
     use std::sync::OnceLock;
 
     use lox_approx::assert_approx_eq;
-    use lox_core::units::DistanceUnits;
+    use lox_core::units::literals::DistanceLiterals;
     use lox_earth::eop::{EopParser, EopProvider};
     use lox_test_utils::data_file;
     use lox_time::{deltas::TimeDelta, utc::Utc};

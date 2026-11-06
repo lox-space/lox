@@ -320,7 +320,7 @@ mod tests {
     use lox_approx::assert_approx_eq;
     use rstest::rstest;
 
-    use lox_core::units::FrequencyUnits;
+    use lox_core::units::literals::FrequencyLiterals;
 
     use super::*;
 

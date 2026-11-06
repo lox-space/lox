@@ -351,7 +351,7 @@ impl<O: CoordinateOrigin> CircularBuilder<O> {
 mod tests {
     use lox_approx::assert_approx_eq;
     use lox_bodies::{Earth, MeanRadius};
-    use lox_core::units::{AngleUnits, DistanceUnits};
+    use lox_core::units::literals::{AngleLiterals, DistanceLiterals};
     use lox_time::time_scales::Tdb;
     use lox_time::{Time, deltas::TimeDelta, utc::Utc};
 

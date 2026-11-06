@@ -7,7 +7,8 @@ use std::f64::consts::TAU;
 
 use lox_core::math::float::mul_add_relaxed;
 use lox_core::math::poly::poly_array;
-use lox_core::units::{Angle, AngleUnits};
+use lox_core::units::Angle;
+use lox_core::units::literals::AngleLiterals;
 use thiserror::Error;
 
 use lox_core::time::constants::{DAYS_PER_JULIAN_CENTURY, MJD_J2000};

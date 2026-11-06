@@ -191,7 +191,7 @@ mod tests {
     use lox_bodies::RotationalElements;
     use lox_frames::Icrf;
 
-    use lox_core::units::{AngleUnits, DistanceUnits};
+    use lox_core::units::literals::{AngleLiterals, DistanceLiterals};
     use lox_time::time_scales::TimeScale;
 
     use super::*;

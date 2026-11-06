@@ -102,7 +102,7 @@ impl Add<&Self> for Nutation {
 #[cfg(test)]
 mod tests {
     use lox_approx::assert_approx_eq;
-    use lox_core::units::AngleUnits;
+    use lox_core::units::literals::AngleLiterals;
 
     use super::*;
 

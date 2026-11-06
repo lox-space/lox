@@ -38,7 +38,8 @@ use crate::elements::keplerian::{
 };
 use crate::elements::quantities::GravitationalParameter;
 use crate::math::float::{atan2, cos, hypot, sin, sqrt};
-use crate::units::{Angle, AngleUnit, AngleUnits, Distance, DistanceUnit};
+use crate::units::literals::AngleLiterals;
+use crate::units::{Angle, AngleUnit, Distance, DistanceUnit};
 
 /// Modified Equinoctial Elements (MEE).
 ///
@@ -370,7 +371,7 @@ mod tests {
     use rstest::rstest;
 
     use crate::math::float::acos;
-    use crate::units::{DistanceUnits, VelocityUnits};
+    use crate::units::literals::{DistanceLiterals, VelocityLiterals};
 
     use super::*;
 

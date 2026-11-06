@@ -474,7 +474,7 @@ mod tests {
 
     use crate::anomalies::TrueAnomaly;
     use crate::math::float::acos;
-    use crate::units::{AngleUnits, DistanceUnits};
+    use crate::units::literals::{AngleLiterals, DistanceLiterals};
 
     use super::*;
 

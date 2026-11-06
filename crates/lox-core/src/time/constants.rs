@@ -4,8 +4,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
 //! Well-known time constants.
-//!
-//! Durations that are whole numbers of seconds or attoseconds are `i64`.
 
 use crate::time::{calendar_dates::Date, deltas::TimeDelta};
 

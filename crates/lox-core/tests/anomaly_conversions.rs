@@ -7,7 +7,8 @@
 use lox_approx::approx_eq;
 use lox_core::anomalies::{EccentricAnomaly, MeanAnomaly, TrueAnomaly};
 use lox_core::elements::Eccentricity;
-use lox_core::units::{Angle, AngleUnits};
+use lox_core::units::Angle;
+use lox_core::units::literals::AngleLiterals;
 use proptest::prelude::*;
 
 // Strategy for generating eccentricities for different orbit types

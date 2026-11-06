@@ -18,7 +18,8 @@
 use lox_core::anomalies::{AnomalyError, MeanAnomaly, TrueAnomaly};
 use lox_core::coords::Cartesian;
 use lox_core::elements::{Eccentricity, GravitationalParameter, Keplerian, MeanElements};
-use lox_core::units::{AngleUnits, Distance};
+use lox_core::units::Distance;
+use lox_core::units::literals::AngleLiterals;
 
 /// Body constants needed by the propagator.
 #[derive(Debug, Clone, Copy)]

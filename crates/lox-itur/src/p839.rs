@@ -12,7 +12,8 @@
 #[cfg(test)]
 mod tests {
     use lox_approx::assert_approx_eq;
-    use lox_core::units::{Angle, DistanceUnits};
+    use lox_core::units::Angle;
+    use lox_core::units::literals::DistanceLiterals;
 
     use crate::provider::test_fixture::provider;
 

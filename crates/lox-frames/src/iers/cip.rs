@@ -9,7 +9,8 @@
 use std::ops::{Add, AddAssign};
 
 use lox_core::glam::DMat3;
-use lox_core::units::{Angle, AngleUnits};
+use lox_core::units::Angle;
+use lox_core::units::literals::AngleLiterals;
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tdb};
 
 use crate::iers::cio::CioLocator;

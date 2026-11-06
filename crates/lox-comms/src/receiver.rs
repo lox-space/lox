@@ -336,7 +336,7 @@ impl From<CascadeReceiver> for Receiver {
 #[cfg(test)]
 mod tests {
     use lox_approx::assert_approx_eq;
-    use lox_core::units::DecibelUnits;
+    use lox_core::units::literals::DecibelLiterals;
 
     use super::*;
 

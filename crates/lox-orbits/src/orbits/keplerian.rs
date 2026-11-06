@@ -8,7 +8,8 @@ use super::{CartesianOrbit, CheckFrame, KeplerianOrbit, Orbit, Trajectory};
 use lox_bodies::{
     CoordinateOrigin, PointMass, TryMeanRadius, TryPointMass, UndefinedOriginPropertyError,
 };
-use lox_core::units::{Angle, AngleUnits, AngularRate, Distance};
+use lox_core::units::literals::AngleLiterals;
+use lox_core::units::{Angle, AngularRate, Distance};
 use lox_core::{
     anomalies::{AnomalyError, EccentricAnomaly, MeanAnomaly, TrueAnomaly},
     coords::{CartesianTrajectory, TimeStampedCartesian},
@@ -286,7 +287,7 @@ where
 mod tests {
     use lox_approx::assert_approx_eq;
     use lox_bodies::{Earth, MeanRadius};
-    use lox_core::units::DistanceUnits;
+    use lox_core::units::literals::DistanceLiterals;
     use lox_frames::Icrf;
     use lox_time::time_scales::TimeScale;
     use lox_time::{Time, utc::Utc};
@@ -332,8 +333,9 @@ mod tests {
     #[test]
     fn test_try_from_keplerian_to_cartesian() {
         use lox_core::elements::Keplerian;
-        use lox_core::units::DistanceUnits;
-        use lox_core::units::{AngleUnits, Distance};
+        use lox_core::units::Distance;
+        use lox_core::units::literals::AngleLiterals;
+        use lox_core::units::literals::DistanceLiterals;
 
         let time = Time::j2000(TimeScale::Tai);
         let kep = Keplerian::builder()

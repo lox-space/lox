@@ -10,7 +10,8 @@ use lox_core::glam::DVec2;
 use lox_core::math::poly::poly_array;
 
 use lox_core::time::julian_dates::JulianCenturies;
-use lox_core::units::{Angle, AngleUnits};
+use lox_core::units::Angle;
+use lox_core::units::literals::AngleLiterals;
 
 use crate::iers::fundamental::iers03::{
     d_iers03, earth_l_iers03, f_iers03, jupiter_l_iers03, l_iers03, lp_iers03, mars_l_iers03,
