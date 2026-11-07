@@ -338,3 +338,121 @@ def test_time_delta_from_seconds_is_exact_for_integers():
         lox.TimeDelta.from_seconds(2**70)
     with pytest.raises(ValueError, match="out-of-range"):
         lox.TimeDelta.from_seconds(2.0**70)
+
+
+NON_LINEAR = (lox.DecibelWatts, lox.GravitationalParameter)
+LINEAR_QUANTITIES = [q for q in QUANTITIES if q[0] not in NON_LINEAR]
+UNITS = {quantity: unit for quantity, unit, _ in QUANTITIES}
+
+
+def named_units(quantity):
+    """Returns the names `x` of the quantity's `x`/`to_x` constructor-accessor pairs."""
+    return [
+        name
+        for name in dir(quantity)
+        if not name.startswith("_") and hasattr(quantity, f"to_{name}")
+    ]
+
+
+@pytest.mark.parametrize(("quantity", "unit", "symbol"), QUANTITIES)
+def test_named_units_round_trip(quantity, unit, symbol):
+    names = named_units(quantity)
+    assert names
+    for name in names:
+        q = getattr(quantity, name)(2.5)
+        assert isinstance(q, quantity)
+        assert getattr(q, f"to_{name}")() == pytest.approx(2.5, rel=1e-12)
+
+
+@pytest.mark.parametrize(("quantity", "unit", "symbol"), QUANTITIES)
+def test_comparisons_all_quantities(quantity, unit, symbol):
+    si = unit(symbol)
+    a, b = 1 * si, 2 * si
+    assert a < b and b > a
+    assert a <= a and a >= a
+    assert a == 1 * si
+    assert a != b
+    assert (a == 1.0) is False
+    assert a.__eq__(1.0) is NotImplemented
+    with pytest.raises(TypeError):
+        _ = a < 1.0
+    with pytest.raises(TypeError):
+        hash(a)
+
+
+@pytest.mark.parametrize(("quantity", "unit", "symbol"), LINEAR_QUANTITIES)
+def test_linear_arithmetic(quantity, unit, symbol):
+    si = unit(symbol)
+    q = 3 * si
+    assert -q == -3 * si
+    assert abs(-q) == q
+    assert +q == q
+    assert q + q == 6 * si
+    assert q - q == 0 * si
+    assert 2 * q == 6 * si
+    assert q * 2 == 6 * si
+    assert q / 2 == 1.5 * si
+    assert q / q == 1.0
+    with pytest.raises(TypeError):
+        q + 1.0
+    with pytest.raises(TypeError):
+        q * "2"
+
+
+@pytest.mark.parametrize("quantity", NON_LINEAR)
+def test_non_linear_arithmetic_is_unsupported(quantity):
+    q = getattr(quantity, named_units(quantity)[0])(3.0)
+    for op in (
+        lambda: q + q,
+        lambda: 2 * q,
+        lambda: q * 2,
+        lambda: q / 2,
+        lambda: -q,
+    ):
+        with pytest.raises(TypeError):
+            op()
+
+
+@pytest.mark.parametrize(("quantity", "unit", "symbol"), QUANTITIES)
+def test_formatting_all_quantities(quantity, unit, symbol):
+    si = unit(symbol)
+    q = 2.5 * si
+    assert f"{q:.1f}" == f"2.5 {symbol}"
+    assert q.display_in(si, ".1f") == f"2.5 {symbol}"
+
+
+@pytest.mark.parametrize(("quantity", "unit", "symbol"), QUANTITIES)
+def test_unit_classes(quantity, unit, symbol):
+    u = unit(symbol)
+    assert u.symbol == symbol
+    assert str(u) == symbol
+    assert repr(u) == f'{unit.__name__}("{symbol}")'
+    assert eval(repr(u), {unit.__name__: unit}) == u
+    assert hash(unit(symbol)) == hash(u)
+    with pytest.raises(ValueError, match="unknown unit"):
+        unit("not-a-unit")
+
+
+SECONDS = 3 * lox.seconds
+
+
+@pytest.mark.parametrize(
+    ("product", "result", "symbol", "expected"),
+    [
+        (lambda: (6 * lox.AngularRateUnit("rad/s")) * SECONDS, lox.Angle, "rad", 18.0),
+        (lambda: SECONDS * (6 * lox.AngularRateUnit("rad/s")), lox.Angle, "rad", 18.0),
+        (lambda: (6 * lox.rad) / SECONDS, lox.AngularRate, "rad/s", 2.0),
+        (lambda: (6 * lox.m2) / (3 * lox.kg), lox.AreaToMass, "m²/kg", 2.0),
+        (lambda: (6 * lox.bps) * SECONDS, lox.DataVolume, "bit", 18.0),
+        (lambda: SECONDS * (6 * lox.bps), lox.DataVolume, "bit", 18.0),
+        (lambda: (6 * lox.bit) / SECONDS, lox.DataRate, "bit/s", 2.0),
+        (lambda: (6 * lox.m) * (3 * lox.m), lox.Area, "m²", 18.0),
+        (lambda: (6 * lox.m) / SECONDS, lox.Velocity, "m/s", 2.0),
+        (lambda: (6 * lox.m_per_s) * SECONDS, lox.Distance, "m", 18.0),
+        (lambda: SECONDS * (6 * lox.m_per_s), lox.Distance, "m", 18.0),
+    ],
+)
+def test_cross_dimension_operators_all(product, result, symbol, expected):
+    q = product()
+    assert isinstance(q, result)
+    assert q == expected * UNITS[result](symbol)
