@@ -456,3 +456,97 @@ def test_cross_dimension_operators_all(product, result, symbol, expected):
     q = product()
     assert isinstance(q, result)
     assert q == expected * UNITS[result](symbol)
+
+
+TIME_DELTA_UNITS = [
+    ("seconds", "s", "from_seconds"),
+    ("minutes", "min", "from_minutes"),
+    ("hours", "h", "from_hours"),
+    ("days", "d", "from_days"),
+    ("julian_years", "a", "from_julian_years"),
+    ("julian_centuries", "cy", "from_julian_centuries"),
+    ("milliseconds", "ms", "from_milliseconds"),
+    ("microseconds", "µs", "from_microseconds"),
+    ("nanoseconds", "ns", "from_nanoseconds"),
+    ("picoseconds", "ps", "from_picoseconds"),
+    ("femtoseconds", "fs", "from_femtoseconds"),
+    ("attoseconds", "as", "from_attoseconds"),
+]
+
+
+@pytest.mark.parametrize(("name", "symbol", "ctor"), TIME_DELTA_UNITS)
+def test_time_delta_unit_classes(name, symbol, ctor):
+    unit = getattr(lox, name)
+    assert lox.TimeDeltaUnit(symbol) == unit
+    assert unit.symbol == symbol
+    assert str(unit) == symbol
+    assert eval(repr(unit), {"TimeDeltaUnit": lox.TimeDeltaUnit}) == unit
+    assert hash(lox.TimeDeltaUnit(symbol)) == hash(unit)
+    assert pickle.loads(pickle.dumps(unit)) == unit
+    td = 3 * unit
+    assert td.to(unit) == 3.0
+    assert td.display_in(unit) == f"3.0 {symbol}"
+    assert getattr(lox.TimeDelta, ctor)(3) == td
+
+
+def test_time_delta_unit_unknown_symbol():
+    with pytest.raises(ValueError, match="unknown unit"):
+        lox.TimeDeltaUnit("fortnight")
+
+
+def test_time_delta_comparisons():
+    a, b = 1 * lox.seconds, 1 * lox.minutes
+    assert a < b and b > a
+    assert a <= a and a >= a
+    assert a == 1000 * lox.milliseconds
+    assert a != b
+    assert (a == 1.0) is False
+    assert a.__eq__(1.0) is NotImplemented
+    assert sorted([b, -a, a]) == [-a, a, b]
+    with pytest.raises(TypeError):
+        _ = a < 1.0
+    with pytest.raises(TypeError):
+        hash(a)
+
+
+def test_time_delta_arithmetic():
+    td = 90 * lox.minutes
+    assert +td == td
+    assert abs(-td) == td
+    assert abs(td) == td
+    assert td / 2 == 45 * lox.minutes
+    assert td / (1 * lox.hours) == 1.5
+    assert 2 * td == td * 2 == 3 * lox.hours
+    with pytest.raises(ZeroDivisionError):
+        td / 0
+    with pytest.raises(TypeError):
+        td / "2"
+    with pytest.raises(TypeError):
+        td * td
+    with pytest.raises(TypeError):
+        td + 1.0
+
+
+def test_time_delta_negative_components():
+    td = -1.5 * lox.seconds
+    assert td.seconds() == -2
+    assert td.subsecond() == 0.5
+    assert str(td) == "-1.5 s"
+
+
+def test_time_delta_formatting():
+    td = 90 * lox.minutes
+    assert f"{td}" == str(td) == "5400 s"
+    assert f"{td:.1e}" == "5.4e+03 s"
+    assert td.display_in(lox.hours, ".2f") == "1.50 h"
+
+
+def test_time_delta_range_direction():
+    def seconds(deltas):
+        return [d.to(lox.seconds) for d in deltas]
+
+    start, end = 0 * lox.seconds, 5 * lox.seconds
+    assert seconds(lox.TimeDelta.range(start, end, 2 * lox.seconds)) == [0, 2, 4]
+    assert seconds(lox.TimeDelta.range(end, start)) == [5, 4, 3, 2, 1, 0]
+    assert seconds(lox.TimeDelta.range(start, end, -2 * lox.seconds)) == [0, 2, 4]
+    assert seconds(lox.TimeDelta.range(start, start)) == [0]
