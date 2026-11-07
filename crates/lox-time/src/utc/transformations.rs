@@ -5,7 +5,6 @@
 
 use crate::calendar_dates::Date;
 use crate::deltas::TimeDelta;
-use crate::deltas::ToDelta;
 use crate::offsets::DefaultOffsetProvider;
 use crate::offsets::Offset;
 use crate::time::Time;

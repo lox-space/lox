@@ -17,7 +17,7 @@
 use alloc::vec::Vec;
 
 use crate::calendar_dates::Date;
-use crate::deltas::{TimeDelta, ToDelta};
+use crate::deltas::TimeDelta;
 use crate::time::Time;
 use crate::time_of_day::CivilTime;
 use crate::time_scales::Tai;

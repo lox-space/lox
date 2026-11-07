@@ -27,7 +27,6 @@ use crate::calendar_dates::CalendarDate;
 use crate::calendar_dates::Date;
 use crate::calendar_dates::DateError;
 use crate::deltas::TimeDelta;
-use crate::deltas::ToDelta;
 use crate::julian_dates::Epoch;
 use crate::julian_dates::JulianDate;
 use crate::julian_dates::{
@@ -362,13 +361,18 @@ impl<T: ContinuousTimeScale + core::fmt::Debug> ApproxEq for Time<T> {
     }
 }
 
-impl<T: ContinuousTimeScale> ToDelta for Time<T> {
-    fn to_delta(&self) -> TimeDelta {
+impl<T: ContinuousTimeScale> Time<T> {
+    /// Returns the time since J2000 in the time's scale.
+    pub const fn to_delta(&self) -> TimeDelta {
         self.delta
     }
 }
 
-impl<T: ContinuousTimeScale> JulianDate for Time<T> {}
+impl<T: ContinuousTimeScale> JulianDate for Time<T> {
+    fn to_delta(&self) -> TimeDelta {
+        Time::to_delta(self)
+    }
+}
 
 impl<T: ContinuousTimeScale> Display for Time<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {

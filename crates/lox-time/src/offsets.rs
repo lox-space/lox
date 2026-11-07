@@ -246,7 +246,7 @@ mod tests {
     use super::*;
     use crate::offsets::TryOffset;
     use crate::time_scales::TimeScale;
-    use crate::{Time, calendar_dates::Date, deltas::ToDelta, time_of_day::TimeOfDay};
+    use crate::{Time, calendar_dates::Date, time_of_day::TimeOfDay};
 
     /// Without EOP data UT1 is approximated by UTC, so the TAI->UT1 offset is
     /// the *negated* leap-second count. Getting the sign wrong puts UT1 out by

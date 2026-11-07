@@ -101,7 +101,6 @@ mod tests {
     use lox_io::spice::lsk::LeapSecondsKernel;
     use lox_test_utils::data_file;
     use lox_time::Time;
-    use lox_time::deltas::ToDelta;
     use lox_time::offsets::TryOffset;
     use lox_time::subsecond::Subsecond;
     use lox_time::time;
