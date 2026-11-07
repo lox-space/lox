@@ -94,11 +94,6 @@ impl TimeDelta {
         (seconds, attoseconds)
     }
 
-    /// Returns a [`TimeDeltaBuilder`] for constructing a `TimeDelta` from individual components.
-    pub const fn builder() -> TimeDeltaBuilder {
-        TimeDeltaBuilder::new()
-    }
-
     /// Creates a `TimeDelta` from a floating-point number of seconds.
     ///
     /// # Panics
@@ -618,139 +613,6 @@ pub trait ToDelta {
     fn to_delta(&self) -> TimeDelta;
 }
 
-/// A builder for constructing [`TimeDelta`] values from individual time components.
-#[derive(Copy, Clone, Debug, Default)]
-pub struct TimeDeltaBuilder {
-    seconds: i64,
-    subsecond: Subsecond,
-    negative: bool,
-}
-
-impl TimeDeltaBuilder {
-    /// Creates a new builder with all components set to zero.
-    pub const fn new() -> Self {
-        Self {
-            seconds: 0,
-            subsecond: Subsecond::new(),
-            negative: false,
-        }
-    }
-
-    /// Sets the whole seconds component.
-    pub const fn seconds(mut self, seconds: i64) -> Self {
-        self.seconds = seconds;
-        self
-    }
-
-    /// Marks the resulting `TimeDelta` as negative.
-    pub const fn negative(mut self) -> Self {
-        self.negative = true;
-        self
-    }
-
-    /// Sets the milliseconds component, carrying overflow into seconds.
-    pub const fn milliseconds(mut self, milliseconds: u32) -> Self {
-        let extra_seconds = milliseconds / 1000;
-        let milliseconds = milliseconds % 1000;
-        self.seconds += extra_seconds as i64;
-        self.subsecond = self.subsecond.set_milliseconds(milliseconds);
-        self
-    }
-
-    /// Sets the microseconds component, carrying overflow into milliseconds.
-    pub const fn microseconds(mut self, microseconds: u32) -> Self {
-        let extra_milliseconds = microseconds / 1000;
-        let microseconds = microseconds % 1000;
-        let current_millis = self.subsecond.milliseconds();
-        self.subsecond = self
-            .subsecond
-            .set_milliseconds(current_millis + extra_milliseconds);
-        self.subsecond = self.subsecond.set_microseconds(microseconds);
-        self
-    }
-
-    /// Sets the nanoseconds component, carrying overflow into microseconds.
-    pub const fn nanoseconds(mut self, nanoseconds: u32) -> Self {
-        let extra_microseconds = nanoseconds / 1000;
-        let nanoseconds = nanoseconds % 1000;
-        let current_micros = self.subsecond.microseconds();
-        self.subsecond = self
-            .subsecond
-            .set_microseconds(current_micros + extra_microseconds);
-        self.subsecond = self.subsecond.set_nanoseconds(nanoseconds);
-        self
-    }
-
-    /// Sets the picoseconds component, carrying overflow into nanoseconds.
-    pub const fn picoseconds(mut self, picoseconds: u32) -> Self {
-        let extra_nanoseconds = picoseconds / 1000;
-        let picoseconds = picoseconds % 1000;
-        let current_nanos = self.subsecond.nanoseconds();
-        self.subsecond = self
-            .subsecond
-            .set_nanoseconds(current_nanos + extra_nanoseconds);
-        self.subsecond = self.subsecond.set_picoseconds(picoseconds);
-        self
-    }
-
-    /// Sets the femtoseconds component, carrying overflow into picoseconds.
-    pub const fn femtoseconds(mut self, femtoseconds: u32) -> Self {
-        let extra_picoseconds = femtoseconds / 1000;
-        let femtoseconds = femtoseconds % 1000;
-        let current_picos = self.subsecond.picoseconds();
-        self.subsecond = self
-            .subsecond
-            .set_picoseconds(current_picos + extra_picoseconds);
-        self.subsecond = self.subsecond.set_femtoseconds(femtoseconds);
-        self
-    }
-
-    /// Sets the attoseconds component, carrying overflow into femtoseconds.
-    pub const fn attoseconds(mut self, attoseconds: u32) -> Self {
-        let extra_femtoseconds = attoseconds / 1000;
-        let attoseconds = attoseconds % 1000;
-        let current_femtos = self.subsecond.femtoseconds();
-        self.subsecond = self
-            .subsecond
-            .set_femtoseconds(current_femtos + extra_femtoseconds);
-        self.subsecond = self.subsecond.set_attoseconds(attoseconds);
-        self
-    }
-
-    /// Builds the `TimeDelta` from the configured components.
-    ///
-    /// All subsecond components are automatically normalized and carried
-    /// into the seconds component as needed.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use lox_core::time::deltas::TimeDelta;
-    ///
-    /// let dt = TimeDelta::builder()
-    ///     .seconds(1)
-    ///     .milliseconds(500)
-    ///     .build();
-    /// assert_eq!(dt.seconds(), 1);
-    /// ```
-    pub const fn build(self) -> TimeDelta {
-        let seconds = self.seconds;
-        let attoseconds = self.subsecond.as_attoseconds();
-
-        // Check if negative: explicit flag OR negative seconds
-        let is_negative = self.negative || seconds < 0;
-
-        if is_negative {
-            // Use absolute value of seconds, then negate the whole thing
-            let abs_seconds = if seconds < 0 { -seconds } else { seconds };
-            let magnitude = TimeDelta::new(abs_seconds, attoseconds);
-            magnitude.neg_const()
-        } else {
-            TimeDelta::new(seconds, attoseconds)
-        }
-    }
-}
-
 /// Extension trait for creating [`TimeDelta`] values from numeric types.
 ///
 /// # Examples
@@ -1119,26 +981,6 @@ mod tests {
     }
 
     #[test]
-    fn test_builder() {
-        let dt = TimeDelta::builder()
-            .seconds(1)
-            .milliseconds(500)
-            .microseconds(250)
-            .build();
-
-        assert_eq!(dt.seconds(), 1);
-        assert_eq!(dt.attoseconds(), 500_250_000_000_000_000);
-    }
-
-    #[test]
-    fn test_builder_overflow() {
-        let dt = TimeDelta::builder().seconds(0).milliseconds(1500).build();
-
-        assert_eq!(dt.seconds(), 1);
-        assert_eq!(dt.attoseconds(), 500_000_000_000_000_000);
-    }
-
-    #[test]
     fn test_as_seconds_f64() {
         let dt = TimeDelta::new(1, 500_000_000_000_000_000);
         assert_eq!(dt.as_seconds_f64(), 1.5);
@@ -1163,10 +1005,7 @@ mod tests {
 
     #[test]
     fn test_time_delta_julian_date() {
-        let dt = TimeDelta::builder()
-            .seconds(-725803232)
-            .milliseconds(184)
-            .build();
+        let dt = TimeDelta::from_milliseconds(-725_803_232_184);
         let exp = -725803232.184;
         let act = dt.julian_date(Epoch::J2000, Unit::Seconds);
         assert_eq!(act, exp);
@@ -1211,61 +1050,6 @@ mod tests {
         // Multiply by zero
         let result = 0.0 * dt;
         assert!(result.is_zero());
-    }
-
-    #[test]
-    fn test_builder_negative_subsecond_only() {
-        // Test that negative() works for sub-second values (the main fix)
-        let dt = TimeDelta::builder()
-            .microseconds(65)
-            .nanoseconds(500)
-            .negative()
-            .build();
-
-        // Should be -65.5 microseconds = -6.55e-5 seconds
-        let expected = -65.5e-6;
-        assert!(
-            abs(dt.as_seconds_f64() - expected) < 1e-15,
-            "expected {} but got {}",
-            expected,
-            dt.as_seconds_f64()
-        );
-        assert!(dt.is_negative());
-    }
-
-    #[test]
-    fn test_builder_negative_with_seconds() {
-        // Test negative() with whole seconds
-        let dt = TimeDelta::builder()
-            .seconds(1)
-            .milliseconds(500)
-            .negative()
-            .build();
-
-        assert_eq!(dt.as_seconds_f64(), -1.5);
-        assert!(dt.is_negative());
-    }
-
-    #[test]
-    fn test_builder_negative_seconds_without_flag() {
-        // Existing behavior: negative seconds should still work
-        let dt = TimeDelta::builder().seconds(-1).milliseconds(500).build();
-
-        assert_eq!(dt.as_seconds_f64(), -1.5);
-        assert!(dt.is_negative());
-    }
-
-    #[test]
-    fn test_builder_negative_flag_with_negative_seconds() {
-        // Both negative flag and negative seconds: should be negative (no double negation)
-        let dt = TimeDelta::builder()
-            .seconds(-1)
-            .milliseconds(500)
-            .negative()
-            .build();
-
-        assert_eq!(dt.as_seconds_f64(), -1.5);
-        assert!(dt.is_negative());
     }
 
     #[test]
