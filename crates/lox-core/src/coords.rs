@@ -24,7 +24,7 @@ use crate::{
 };
 
 /// The comoving radius of the observable universe, about 46.5 billion light-years, in m.
-const OBSERVABLE_UNIVERSE_RADIUS: f64 = 4.4e26;
+const OBSERVABLE_UNIVERSE_RADIUS: Distance = Distance::meters(4.4e26);
 
 /// Reference ellipsoid (rotational, oblate) defined by its equatorial
 /// radius and flattening. Construction validates that `equatorial_radius
@@ -644,9 +644,9 @@ impl Cartesian {
     pub fn is_physical(&self) -> bool {
         // Comparing squares avoids the square roots, and the comparisons are false for non-finite
         // states, whose squares are infinite or NaN.
+        let r = OBSERVABLE_UNIVERSE_RADIUS.to_meters();
         let c = SPEED_OF_LIGHT.to_meters_per_second();
-        self.pos.length_squared() < OBSERVABLE_UNIVERSE_RADIUS * OBSERVABLE_UNIVERSE_RADIUS
-            && self.vel.length_squared() < c * c
+        self.pos.length_squared() < r * r && self.vel.length_squared() < c * c
     }
 
     /// Sets the velocity vector in m/s.
