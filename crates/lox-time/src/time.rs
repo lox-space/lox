@@ -14,13 +14,13 @@ use core::ops::Sub;
 use core::str::FromStr;
 use lox_core::time::deltas::InvalidFloatSeconds;
 
+use crate::julian_dates::Days;
 use lox_approx::ApproxEq;
 use lox_approx::ApproxEqResults;
 use lox_core::time::constants::{
     SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
     SECONDS_PER_DAY,
 };
-use lox_core::time::julian_dates::Days;
 use thiserror::Error;
 
 use crate::calendar_dates::CalendarDate;
@@ -280,7 +280,10 @@ impl<T: ContinuousTimeScale> Time<T> {
 
     /// Returns the seconds and subsecond components.
     pub fn as_seconds_and_subsecond(&self) -> (i64, Subsecond) {
-        self.delta.as_seconds_and_subsecond()
+        (
+            self.delta.seconds(),
+            Subsecond::from_attoseconds(self.delta.attoseconds()),
+        )
     }
 
     /// Returns the number of whole seconds since J2000.
@@ -1054,10 +1057,10 @@ mod tests {
 
     #[rstest]
     #[case::zero_delta(Time::default(), TimeDelta::default(), Time::default())]
-    #[case::pos_delta_no_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(300)), TimeDelta::from_seconds_and_subsecond(1, Subsecond::new().set_milliseconds(600)), Time::new(Tai, 2, Subsecond::new().set_milliseconds(900)))]
-    #[case::pos_delta_with_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(300)), TimeDelta::from_seconds_and_subsecond(1, Subsecond::new().set_milliseconds(900)), Time::new(Tai, 3, Subsecond::new().set_milliseconds(200)))]
-    #[case::neg_delta_no_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(600)), TimeDelta::from_seconds_and_subsecond(-2, Subsecond::new().set_milliseconds(700)), Time::new(Tai, 0, Subsecond::new().set_milliseconds(300)))]
-    #[case::neg_delta_with_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(600)), TimeDelta::from_seconds_and_subsecond(-2, Subsecond::new().set_milliseconds(300)), Time::new(Tai, -1, Subsecond::new().set_milliseconds(900)))]
+    #[case::pos_delta_no_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(300)), TimeDelta::from_milliseconds(1600), Time::new(Tai, 2, Subsecond::new().set_milliseconds(900)))]
+    #[case::pos_delta_with_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(300)), TimeDelta::from_milliseconds(1900), Time::new(Tai, 3, Subsecond::new().set_milliseconds(200)))]
+    #[case::neg_delta_no_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(600)), TimeDelta::from_milliseconds(-1300), Time::new(Tai, 0, Subsecond::new().set_milliseconds(300)))]
+    #[case::neg_delta_with_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(600)), TimeDelta::from_milliseconds(-1700), Time::new(Tai, -1, Subsecond::new().set_milliseconds(900)))]
     fn test_time_add_time_delta(
         #[case] time: Time<Tai>,
         #[case] delta: TimeDelta,
@@ -1069,10 +1072,10 @@ mod tests {
 
     #[rstest]
     #[case::zero_delta(Time::default(), TimeDelta::default(), Time::default())]
-    #[case::pos_delta_no_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(900)), TimeDelta::from_seconds_and_subsecond(1, Subsecond::new().set_milliseconds(300)), Time::new(Tai, 0, Subsecond::new().set_milliseconds(600)))]
-    #[case::pos_delta_with_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(300)), TimeDelta::from_seconds_and_subsecond(1, Subsecond::new().set_milliseconds(400)), Time::new(Tai, -1, Subsecond::new().set_milliseconds(900)))]
-    #[case::neg_delta_no_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(600)), TimeDelta::from_seconds_and_subsecond(-1, Subsecond::new().set_milliseconds(700)), Time::new(Tai, 1, Subsecond::new().set_milliseconds(900)))]
-    #[case::neg_delta_with_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(900)), TimeDelta::from_seconds_and_subsecond(-1, Subsecond::new().set_milliseconds(300)), Time::new(Tai, 2, Subsecond::new().set_milliseconds(600)))]
+    #[case::pos_delta_no_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(900)), TimeDelta::from_milliseconds(1300), Time::new(Tai, 0, Subsecond::new().set_milliseconds(600)))]
+    #[case::pos_delta_with_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(300)), TimeDelta::from_milliseconds(1400), Time::new(Tai, -1, Subsecond::new().set_milliseconds(900)))]
+    #[case::neg_delta_no_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(600)), TimeDelta::from_milliseconds(-300), Time::new(Tai, 1, Subsecond::new().set_milliseconds(900)))]
+    #[case::neg_delta_with_carry(Time::new(Tai, 1, Subsecond::new().set_milliseconds(900)), TimeDelta::from_milliseconds(-700), Time::new(Tai, 2, Subsecond::new().set_milliseconds(600)))]
     fn test_time_sub_time_delta(
         #[case] time: Time<Tai>,
         #[case] delta: TimeDelta,

@@ -22,7 +22,6 @@ lox-approx = { workspace = true, default-features = false, features = ["derive",
 chrono = { workspace = true, optional = true }
 glam.workspace = true
 libm = { workspace = true, optional = true }
-nom = { workspace = true, features = ["alloc"] }
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
 
@@ -30,7 +29,6 @@ thiserror.workspace = true
 default = ["std"]
 std = [
     "glam/std",
-    "nom/std",
     "lox-approx/std",
     "chrono?/std",
     "serde?/std",

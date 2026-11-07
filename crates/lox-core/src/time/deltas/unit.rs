@@ -103,7 +103,7 @@ impl TimeDeltaUnit {
     }
 
     /// Converts a number of seconds to this unit.
-    pub(crate) const fn convert_seconds(self, seconds: f64) -> f64 {
+    pub const fn convert_seconds(self, seconds: f64) -> f64 {
         match self.scale() {
             Scale::Subsecond(attoseconds) => seconds * (ATTOSECONDS_IN_SECOND / attoseconds) as f64,
             Scale::Seconds(per_unit) => seconds / per_unit as f64,

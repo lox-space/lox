@@ -6,9 +6,9 @@
 use std::f64::consts::TAU;
 
 use lox_core::math::poly::poly_array;
-use lox_core::time::julian_dates::JulianCenturies;
 use lox_core::units::Angle;
 use lox_core::units::literals::AngleLiterals;
+use lox_time::julian_dates::JulianCenturies;
 use lox_time::{Time, julian_dates::JulianDate, time_scales::Tdb};
 
 use crate::iers::nutation::Nutation;

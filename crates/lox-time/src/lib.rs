@@ -36,26 +36,22 @@
 
 extern crate alloc;
 
-/// Calendar date types (re-exported from `lox-core`).
 pub mod calendar_dates;
 /// Conversions between `lox-time` and `chrono` types.
 #[cfg(feature = "chrono")]
 pub mod chrono;
-/// Time deltas (re-exported from `lox-core`).
 pub mod deltas;
 /// Time intervals and set operations on them.
 pub mod intervals;
-/// Julian date types (re-exported from `lox-core`).
+mod iso;
 pub mod julian_dates;
 /// Time scale offset computation.
 pub mod offsets;
 /// Time-indexed interpolation series.
 pub mod series;
-/// Sub-second precision types (re-exported from `lox-core`).
 pub mod subsecond;
 /// The [`Time`] type representing an instant in a continuous time scale.
 pub mod time;
-/// Time-of-day types (re-exported from `lox-core`).
 pub mod time_of_day;
 /// Astronomical time scale definitions.
 pub mod time_scales;
