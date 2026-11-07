@@ -115,6 +115,9 @@ macro_rules! runtime_units {
                 /// All units of this dimension.
                 pub const ALL: &'static [Self] = &[$(Self::$variant),+];
 
+                /// The SI unit of this dimension, which values are stored in.
+                pub const SI: Self = Self::$si;
+
                 /// Returns the unit symbol.
                 pub const fn symbol(self) -> &'static str {
                     match self {
@@ -169,21 +172,21 @@ macro_rules! runtime_units {
             /// Displays the value in SI units. Use `display_in` for other units.
             impl ::core::fmt::Display for $quantity {
                 fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                    ::core::fmt::Display::fmt(&self.display_in($unit::$si), f)
+                    ::core::fmt::Display::fmt(&self.display_in($unit::SI), f)
                 }
             }
 
             /// Displays the value in SI units in scientific notation.
             impl ::core::fmt::LowerExp for $quantity {
                 fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                    ::core::fmt::LowerExp::fmt(&self.display_in($unit::$si), f)
+                    ::core::fmt::LowerExp::fmt(&self.display_in($unit::SI), f)
                 }
             }
 
             /// Displays the value in SI units in scientific notation.
             impl ::core::fmt::UpperExp for $quantity {
                 fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                    ::core::fmt::UpperExp::fmt(&self.display_in($unit::$si), f)
+                    ::core::fmt::UpperExp::fmt(&self.display_in($unit::SI), f)
                 }
             }
 
@@ -305,6 +308,13 @@ mod tests {
         assert_eq!(d.to(DistanceUnit::Meters), 7e6);
         let a = Angle::new_in(90.0, AngleUnit::Degrees);
         assert_eq!(a, Angle::FRAC_PI_2);
+    }
+
+    #[test]
+    fn test_si_unit() {
+        assert_eq!(DistanceUnit::SI, DistanceUnit::Meters);
+        assert_eq!(AngleUnit::SI, AngleUnit::Radians);
+        assert_eq!(Distance::meters(5.0).to(DistanceUnit::SI), 5.0);
     }
 
     #[test]
