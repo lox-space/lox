@@ -331,7 +331,7 @@ impl EopProvider {
 
     /// Returns the UT1-TAI offset for the given TAI epoch.
     pub fn delta_ut1_tai(&self, tai: TimeDelta) -> Result<TimeDelta, EopProviderError> {
-        let seconds = tai.seconds_since_j2000();
+        let seconds = tai.as_seconds_f64();
         let (t0, _) = self.delta_ut1_tai.first();
         let (tn, _) = self.delta_ut1_tai.last();
         let val = self.delta_ut1_tai.interpolate(seconds);
@@ -343,7 +343,7 @@ impl EopProvider {
 
     /// Returns the TAI-UT1 offset for the given UT1 epoch.
     pub fn delta_tai_ut1(&self, ut1: TimeDelta) -> Result<TimeDelta, EopProviderError> {
-        let seconds = ut1.seconds_since_j2000();
+        let seconds = ut1.as_seconds_f64();
         let (t0, _) = self.delta_ut1_tai.first();
         let (tn, _) = self.delta_ut1_tai.last();
         // Use the UT1 offset as an initial guess even though the table is based on TAI

@@ -181,7 +181,8 @@ mod test {
         Utc::new_unchecked(Date::new_unchecked(1971, 1, 1), TimeOfDay::MIDNIGHT);
 
     const TAI_AT_UTC_1971_01_01: Time<Tai> = {
-        const DELTA: TimeDelta = TimeDelta::from_seconds_and_subsecond_f64(8.0, 0.9461620000000011);
+        const DELTA: TimeDelta =
+            TimeDelta::from_seconds(8).add_const(TimeDelta::from_seconds_f64(0.9461620000000011));
         let seconds = Date::new_unchecked(1971, 1, 1).j2000_day_number() * SECONDS_PER_DAY
             - SECONDS_PER_HALF_DAY;
         let base = TimeDelta::from_seconds(seconds);

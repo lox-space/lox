@@ -115,7 +115,7 @@ mod tests {
     use lox_approx::assert_approx_eq;
     use lox_frames::Icrf;
     use lox_frames::providers::DefaultRotationProvider;
-    use lox_time::deltas::TimeDelta;
+    use lox_time::deltas::{TimeDelta, TimeDeltaUnit};
     use lox_time::intervals::Interval;
 
     use super::*;
@@ -130,7 +130,7 @@ mod tests {
         .unwrap();
         let sgp4 = Sgp4::new(tle).unwrap();
         let orbital_period = 92.821;
-        let t1 = sgp4.time() + TimeDelta::from_minutes_f64(orbital_period);
+        let t1 = sgp4.time() + TimeDelta::new_in(orbital_period, TimeDeltaUnit::Minutes);
         let s1 = sgp4.state_at(t1).unwrap();
         let s1_icrf = s1.try_to_frame(Icrf, &DefaultRotationProvider).unwrap();
         let k1 = s1_icrf.to_keplerian().unwrap();
@@ -151,7 +151,7 @@ mod tests {
         .unwrap();
         let sgp4 = Sgp4::new(tle).unwrap();
         let t0 = sgp4.time();
-        let t1 = t0 + TimeDelta::from_minutes_f64(92.821);
+        let t1 = t0 + TimeDelta::new_in(92.821, TimeDeltaUnit::Minutes);
         let interval = Interval::new(t0, t1);
         let traj = sgp4.propagate(interval.into_dynamic()).unwrap();
         // With 60s default step over ~93 min, we should have ~94 points

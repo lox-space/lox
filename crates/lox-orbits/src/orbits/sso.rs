@@ -423,7 +423,8 @@ mod tests {
     use lox_core::units::literals::DistanceLiterals;
     use lox_earth::eop::{EopParser, EopProvider};
     use lox_test_utils::data_file;
-    use lox_time::{deltas::TimeDelta, utc::Utc};
+    use lox_time::julian_dates::two_part_julian_date_to_delta;
+    use lox_time::utc::Utc;
 
     use super::*;
 
@@ -467,7 +468,7 @@ mod tests {
         let exp = 350.5997.deg();
         let jd1 = 2458849.5;
         let jd2 = 49.78099017 - 1.0;
-        let epoch = Utc::from_delta(TimeDelta::from_two_part_julian_date(jd1, jd2))
+        let epoch = Utc::from_delta(two_part_julian_date_to_delta(jd1, jd2))
             .to_dynamic_time()
             .to_scale(Tdb);
         let ltan = LocalTimeOfNode::LTAN(TimeOfDay::from_hour_and_minute(13, 30).unwrap());
@@ -495,7 +496,7 @@ mod tests {
         let semi_major_axis = 7178.1363.km();
         let jd1 = 2458849.5;
         let jd2 = 49.78099017 - 1.0;
-        let epoch = Utc::from_delta(TimeDelta::from_two_part_julian_date(jd1, jd2))
+        let epoch = Utc::from_delta(two_part_julian_date_to_delta(jd1, jd2))
             .to_dynamic_time()
             .to_scale(Tdb);
 

@@ -21,7 +21,7 @@ use thiserror::Error;
 
 use crate::calendar_dates::{CalendarDate, Date, DateError};
 use crate::deltas::{TimeDelta, ToDelta};
-use crate::julian_dates::{self, Epoch, JulianDate};
+use crate::julian_dates::JulianDate;
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 use crate::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};
 
@@ -175,11 +175,7 @@ impl CivilTime for Utc {
     }
 }
 
-impl JulianDate for Utc {
-    fn julian_date(&self, epoch: Epoch, unit: julian_dates::Unit) -> f64 {
-        self.to_delta().julian_date(epoch, unit)
-    }
-}
+impl JulianDate for Utc {}
 
 impl ApproxEq for Utc {
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {

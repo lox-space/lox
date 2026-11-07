@@ -13,10 +13,10 @@ use lox_core::math::float::floor;
 use lox_core::math::slices::Monotonic;
 use lox_core::time::constants::SECONDS_PER_DAY;
 
-use crate::deltas::{TimeDelta, ToDelta};
+use crate::deltas::TimeDelta;
+use crate::deltas::TimeDeltaUnit;
 use crate::julian_dates::Epoch::ModifiedJulianDate;
 use crate::julian_dates::JulianDate;
-use crate::julian_dates::Unit::Days;
 use crate::time::Time;
 use crate::time_scales::Tai;
 use crate::utc::Utc;
@@ -46,7 +46,7 @@ pub fn delta_utc_tai(utc: &Utc) -> TimeDelta {
     // Invariant: EPOCHS must be sorted for the search below to work
     debug_assert!(&EPOCHS.is_strictly_increasing());
 
-    let mjd = utc.to_delta().days_since_modified_julian_epoch();
+    let mjd = utc.days_since_modified_julian_epoch();
     if mjd < EPOCHS[0] as f64 {
         return TimeDelta::ZERO;
     }
@@ -67,7 +67,7 @@ pub fn delta_tai_utc(tai: &Time<Tai>) -> TimeDelta {
     // Invariant: EPOCHS must be sorted for the search below to work
     debug_assert!(&EPOCHS.is_strictly_increasing());
 
-    let mjd = tai.julian_date(ModifiedJulianDate, Days);
+    let mjd = tai.julian_date(ModifiedJulianDate, TimeDeltaUnit::Days);
     if mjd < EPOCHS[0] as f64 {
         return TimeDelta::ZERO;
     }

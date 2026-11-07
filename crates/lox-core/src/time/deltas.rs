@@ -19,16 +19,12 @@ use core::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 use crate::time::constants::{
     ATTOSECONDS_IN_FEMTOSECOND, ATTOSECONDS_IN_MICROSECOND, ATTOSECONDS_IN_MILLISECOND,
-    ATTOSECONDS_IN_NANOSECOND, ATTOSECONDS_IN_PICOSECOND, ATTOSECONDS_IN_SECOND,
-    SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000, SECONDS_BETWEEN_MJD_AND_J2000,
-    SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_JULIAN_CENTURY, SECONDS_PER_JULIAN_YEAR,
-    SECONDS_PER_MINUTE,
+    ATTOSECONDS_IN_NANOSECOND, ATTOSECONDS_IN_PICOSECOND, ATTOSECONDS_IN_SECOND, SECONDS_PER_DAY,
+    SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
 };
-use crate::time::julian_dates::Days;
 use lox_approx::ApproxEq;
 use thiserror::Error;
 
-use super::julian_dates::{Epoch, JulianDate, Unit};
 use super::subsecond::Subsecond;
 
 mod unit;
@@ -100,7 +96,7 @@ impl TimeDelta {
     /// Panics if a non-finite or out-of-range value is encountered.
     #[track_caller]
     pub const fn from_seconds_f64(value: f64) -> Self {
-        Self::from_f64_in(value, TimeDeltaUnit::Seconds)
+        Self::new_in(value, TimeDeltaUnit::Seconds)
     }
 
     /// Tries to create a `TimeDelta` from a floating-point number of seconds.
@@ -109,18 +105,6 @@ impl TimeDelta {
     /// Returns an error if an out-of-range value is encountered.
     pub fn try_from_seconds_f64(value: f64) -> Result<Self, InvalidFloatSeconds> {
         Self::try_new_in(value, TimeDeltaUnit::Seconds)
-    }
-
-    /// Creates a `TimeDelta` from a value in the given unit.
-    ///
-    /// # Panics
-    /// Panics if a non-finite or out-of-range value is encountered.
-    #[track_caller]
-    const fn from_f64_in(value: f64, unit: TimeDeltaUnit) -> Self {
-        match Self::checked_from_f64_in(value, unit) {
-            Some(delta) => delta,
-            None => panic!("non-finite or out-of-range value encountered"),
-        }
     }
 
     /// Creates a `TimeDelta` from a whole number of seconds.
@@ -133,53 +117,14 @@ impl TimeDelta {
         Self::from_seconds(minutes * SECONDS_PER_MINUTE)
     }
 
-    /// Creates a `TimeDelta` from a floating-point number of minutes.
-    pub const fn from_minutes_f64(value: f64) -> Self {
-        Self::from_f64_in(value, TimeDeltaUnit::Minutes)
-    }
-
-    /// Tries to create a `TimeDelta` from a floating-point number of minutes.
-    ///
-    /// # Errors
-    /// Returns an error if an out-of-range value is encountered.
-    pub fn try_from_minutes_f64(value: f64) -> Result<Self, InvalidFloatSeconds> {
-        Self::try_new_in(value, TimeDeltaUnit::Minutes)
-    }
-
     /// Creates a `TimeDelta` from a whole number of hours.
     pub const fn from_hours(hours: i64) -> Self {
         Self::from_seconds(hours * SECONDS_PER_HOUR)
     }
 
-    /// Creates a `TimeDelta` from a floating-point number of hours.
-    pub const fn from_hours_f64(value: f64) -> Self {
-        Self::from_f64_in(value, TimeDeltaUnit::Hours)
-    }
-
-    /// Tries to create a `TimeDelta` from a floating-point number of hours.
-    ///
-    /// # Errors
-    /// Returns an error if an out-of-range value is encountered.
-    pub fn try_from_hours_f64(value: f64) -> Result<Self, InvalidFloatSeconds> {
-        Self::try_new_in(value, TimeDeltaUnit::Hours)
-    }
-
     /// Creates a `TimeDelta` from a whole number of days.
     pub const fn from_days(days: i64) -> Self {
         Self::from_seconds(days * SECONDS_PER_DAY)
-    }
-
-    /// Creates a `TimeDelta` from a floating-point number of days.
-    pub const fn from_days_f64(value: f64) -> Self {
-        Self::from_f64_in(value, TimeDeltaUnit::Days)
-    }
-
-    /// Tries to create a `TimeDelta` from a floating-point number of days.
-    ///
-    /// # Errors
-    /// Returns an error if an out-of-range value is encountered.
-    pub fn try_from_days_f64(value: f64) -> Result<Self, InvalidFloatSeconds> {
-        Self::try_new_in(value, TimeDeltaUnit::Days)
     }
 
     /// Creates a `TimeDelta` from a number of milliseconds.
@@ -224,93 +169,9 @@ impl TimeDelta {
         Self::new(seconds, remainder)
     }
 
-    /// Creates a `TimeDelta` from a floating-point number of Julian years (365.25 days each).
-    pub const fn from_julian_years(value: f64) -> Self {
-        Self::from_f64_in(value, TimeDeltaUnit::JulianYears)
-    }
-
-    /// Tries to create a `TimeDelta` from a floating-point number of Julian years.
-    ///
-    /// # Errors
-    /// Returns an error if an out-of-range value is encountered.
-    pub fn try_from_julian_years(value: f64) -> Result<Self, InvalidFloatSeconds> {
-        Self::try_new_in(value, TimeDeltaUnit::JulianYears)
-    }
-
-    /// Creates a `TimeDelta` from a floating-point number of Julian centuries (36525 days each).
-    pub const fn from_julian_centuries(value: f64) -> Self {
-        Self::from_f64_in(value, TimeDeltaUnit::JulianCenturies)
-    }
-
-    /// Tries to create a `TimeDelta` from a floating-point number of Julian centuries.
-    ///
-    /// # Errors
-    /// Returns an error if an out-of-range value is encountered.
-    pub fn try_from_julian_centuries(value: f64) -> Result<Self, InvalidFloatSeconds> {
-        Self::try_new_in(value, TimeDeltaUnit::JulianCenturies)
-    }
-
     /// Creates a `TimeDelta` from whole seconds and a [`Subsecond`] fractional part.
     pub const fn from_seconds_and_subsecond(seconds: i64, subsecond: Subsecond) -> Self {
         Self::new(seconds, subsecond.as_attoseconds())
-    }
-
-    /// Creates a `TimeDelta` from floating-point seconds and a subsecond fraction.
-    pub const fn from_seconds_and_subsecond_f64(seconds: f64, subsecond: f64) -> Self {
-        Self::from_seconds_f64(subsecond).add_const(Self::from_seconds_f64(seconds))
-    }
-
-    /// Converts a Julian date relative to `epoch` into seconds since J2000.
-    const fn julian_date_seconds(julian_date: Days, epoch: Epoch) -> f64 {
-        let seconds = julian_date * SECONDS_PER_DAY as f64;
-        match epoch {
-            Epoch::JulianDate => seconds - SECONDS_BETWEEN_JD_AND_J2000 as f64,
-            Epoch::ModifiedJulianDate => seconds - SECONDS_BETWEEN_MJD_AND_J2000 as f64,
-            Epoch::J1950 => seconds - SECONDS_BETWEEN_J1950_AND_J2000 as f64,
-            Epoch::J2000 => seconds,
-        }
-    }
-
-    /// Creates a `TimeDelta` from a Julian date relative to the given epoch.
-    pub const fn from_julian_date(julian_date: Days, epoch: Epoch) -> Self {
-        Self::from_seconds_f64(Self::julian_date_seconds(julian_date, epoch))
-    }
-
-    /// Tries to create a `TimeDelta` from a Julian date relative to the given epoch.
-    ///
-    /// # Errors
-    /// Returns an error if an out-of-range value is encountered.
-    pub fn try_from_julian_date(
-        julian_date: Days,
-        epoch: Epoch,
-    ) -> Result<Self, InvalidFloatSeconds> {
-        Self::try_from_seconds_f64(Self::julian_date_seconds(julian_date, epoch))
-    }
-
-    /// Creates a `TimeDelta` from a two-part Julian date (`jd1 + jd2`).
-    pub const fn from_two_part_julian_date(jd1: Days, jd2: Days) -> Self {
-        TimeDelta::from_seconds_f64(jd1 * SECONDS_PER_DAY as f64)
-            .add_const(TimeDelta::from_seconds_f64(jd2 * SECONDS_PER_DAY as f64))
-            .sub_const(TimeDelta::from_seconds(SECONDS_BETWEEN_JD_AND_J2000))
-    }
-
-    /// Tries to create a `TimeDelta` from a two-part Julian date (`jd1 + jd2`).
-    ///
-    /// # Errors
-    /// Returns an error if an out-of-range value is encountered.
-    pub fn try_from_two_part_julian_date(
-        jd1: Days,
-        jd2: Days,
-    ) -> Result<Self, InvalidFloatSeconds> {
-        let dt1 = TimeDelta::try_from_seconds_f64(jd1 * SECONDS_PER_DAY as f64)?;
-        let dt2 = TimeDelta::try_from_seconds_f64(jd2 * SECONDS_PER_DAY as f64)?;
-        let dt = dt1
-            .checked_add(dt2)
-            .and_then(|dt| dt.checked_sub(TimeDelta::from_seconds(SECONDS_BETWEEN_JD_AND_J2000)))
-            .ok_or(InvalidFloatSeconds(
-                jd1 + jd2 - SECONDS_BETWEEN_JD_AND_J2000 as f64,
-            ))?;
-        Ok(dt)
     }
 
     /// Returns the whole seconds and [`Subsecond`] components.
@@ -480,6 +341,13 @@ impl TimeDelta {
 #[error("value {0} is non-finite or out-of-range")]
 pub struct InvalidFloatSeconds(f64);
 
+impl InvalidFloatSeconds {
+    /// Creates the error for a value in seconds.
+    pub(crate) const fn new(seconds: f64) -> Self {
+        Self(seconds)
+    }
+}
+
 impl Default for TimeDelta {
     fn default() -> Self {
         Self::new(0, 0)
@@ -509,27 +377,6 @@ impl PartialOrd for TimeDelta {
 impl Display for TimeDelta {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{} s", self.as_seconds_f64())
-    }
-}
-
-impl JulianDate for TimeDelta {
-    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
-        let epoch_offset = match epoch {
-            Epoch::JulianDate => SECONDS_BETWEEN_JD_AND_J2000 as f64,
-            Epoch::ModifiedJulianDate => SECONDS_BETWEEN_MJD_AND_J2000 as f64,
-            Epoch::J1950 => SECONDS_BETWEEN_J1950_AND_J2000 as f64,
-            Epoch::J2000 => 0.0,
-        };
-        // Whole seconds and the integral epoch offsets add exactly in f64, so the
-        // subsecond part is only rounded once.
-        let seconds = (self.seconds as f64 + epoch_offset)
-            + self.attoseconds as f64 / ATTOSECONDS_IN_SECOND as f64;
-        match unit {
-            Unit::Seconds => seconds,
-            Unit::Days => seconds / SECONDS_PER_DAY as f64,
-            Unit::Years => seconds / SECONDS_PER_JULIAN_YEAR as f64,
-            Unit::Centuries => seconds / SECONDS_PER_JULIAN_CENTURY as f64,
-        }
     }
 }
 
@@ -649,44 +496,34 @@ pub trait TimeDeltaLiterals {
 
 impl TimeDeltaLiterals for f64 {
     fn days(&self) -> TimeDelta {
-        TimeDelta::from_days_f64(*self)
+        TimeDelta::new_in(*self, TimeDeltaUnit::Days)
     }
     fn hours(&self) -> TimeDelta {
-        TimeDelta::from_hours_f64(*self)
+        TimeDelta::new_in(*self, TimeDeltaUnit::Hours)
     }
     fn mins(&self) -> TimeDelta {
-        TimeDelta::from_minutes_f64(*self)
+        TimeDelta::new_in(*self, TimeDeltaUnit::Minutes)
     }
     fn secs(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self)
+        TimeDelta::new_in(*self, TimeDeltaUnit::Seconds)
     }
     fn millis(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(
-            *self / (ATTOSECONDS_IN_SECOND / ATTOSECONDS_IN_MILLISECOND) as f64,
-        )
+        TimeDelta::new_in(*self, TimeDeltaUnit::Milliseconds)
     }
     fn micros(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(
-            *self / (ATTOSECONDS_IN_SECOND / ATTOSECONDS_IN_MICROSECOND) as f64,
-        )
+        TimeDelta::new_in(*self, TimeDeltaUnit::Microseconds)
     }
     fn nanos(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(
-            *self / (ATTOSECONDS_IN_SECOND / ATTOSECONDS_IN_NANOSECOND) as f64,
-        )
+        TimeDelta::new_in(*self, TimeDeltaUnit::Nanoseconds)
     }
     fn picos(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(
-            *self / (ATTOSECONDS_IN_SECOND / ATTOSECONDS_IN_PICOSECOND) as f64,
-        )
+        TimeDelta::new_in(*self, TimeDeltaUnit::Picoseconds)
     }
     fn femtos(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(
-            *self / (ATTOSECONDS_IN_SECOND / ATTOSECONDS_IN_FEMTOSECOND) as f64,
-        )
+        TimeDelta::new_in(*self, TimeDeltaUnit::Femtoseconds)
     }
     fn attos(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self / ATTOSECONDS_IN_SECOND as f64)
+        TimeDelta::new_in(*self, TimeDeltaUnit::Attoseconds)
     }
 }
 
@@ -782,57 +619,20 @@ mod tests {
 
     #[test]
     fn test_from_minutes() {
-        let dt = TimeDelta::from_minutes_f64(1.0);
+        let dt = TimeDelta::from_minutes(1);
         assert_eq!(dt.seconds(), 60);
     }
 
     #[test]
     fn test_from_hours() {
-        let dt = TimeDelta::from_hours_f64(1.0);
+        let dt = TimeDelta::from_hours(1);
         assert_eq!(dt.seconds(), 3600);
     }
 
     #[test]
     fn test_from_days() {
-        let dt = TimeDelta::from_days_f64(1.0);
+        let dt = TimeDelta::from_days(1);
         assert_eq!(dt.seconds(), 86400);
-    }
-
-    #[test]
-    fn test_try_from_days_f64() {
-        assert_eq!(
-            TimeDelta::try_from_days_f64(1.5).unwrap(),
-            TimeDelta::from_hours(36)
-        );
-        assert!(TimeDelta::try_from_days_f64(f64::INFINITY).is_err());
-    }
-
-    #[test]
-    fn test_try_from_julian_years() {
-        assert_eq!(
-            TimeDelta::try_from_julian_years(1.0).unwrap(),
-            TimeDelta::from_seconds_f64(SECONDS_PER_JULIAN_YEAR as f64)
-        );
-        assert!(TimeDelta::try_from_julian_years(f64::NAN).is_err());
-    }
-
-    #[test]
-    fn test_try_from_julian_centuries() {
-        assert_eq!(
-            TimeDelta::try_from_julian_centuries(1.0).unwrap(),
-            TimeDelta::from_seconds_f64(SECONDS_PER_JULIAN_CENTURY as f64)
-        );
-        assert!(TimeDelta::try_from_julian_centuries(f64::INFINITY).is_err());
-    }
-
-    #[test]
-    fn test_try_from_two_part_julian_date() {
-        assert_eq!(
-            TimeDelta::try_from_two_part_julian_date(2451545.0, 0.0).unwrap(),
-            TimeDelta::ZERO
-        );
-        assert!(TimeDelta::try_from_two_part_julian_date(2451545.0, f64::NAN).is_err());
-        assert!(TimeDelta::try_from_two_part_julian_date(f64::INFINITY, 0.0).is_err());
     }
 
     #[test]
@@ -1004,14 +804,6 @@ mod tests {
     }
 
     #[test]
-    fn test_time_delta_julian_date() {
-        let dt = TimeDelta::from_milliseconds(-725_803_232_184);
-        let exp = -725803232.184;
-        let act = dt.julian_date(Epoch::J2000, Unit::Seconds);
-        assert_eq!(act, exp);
-    }
-
-    #[test]
     fn test_mul_precision() {
         // Test that multiplication preserves precision better than naive conversion
         let dt = TimeDelta::new(1000000, 123_456_789_012_345_678);
@@ -1054,23 +846,26 @@ mod tests {
 
     #[test]
     fn test_time_units_f64() {
-        assert_eq!(1.0.days(), TimeDelta::from_days_f64(1.0));
-        assert_eq!(2.0.hours(), TimeDelta::from_hours_f64(2.0));
-        assert_eq!(30.0.mins(), TimeDelta::from_minutes_f64(30.0));
-        assert_eq!(60.0.secs(), TimeDelta::from_seconds_f64(60.0));
-        assert_eq!(500.0.millis(), TimeDelta::from_seconds_f64(0.5));
-        assert_eq!(1000.0.micros(), TimeDelta::from_seconds_f64(1e-3));
-        assert_eq!(1000.0.nanos(), TimeDelta::from_seconds_f64(1e-6));
-        assert_eq!(1000.0.picos(), TimeDelta::from_seconds_f64(1e-9));
-        assert_eq!(1000.0.femtos(), TimeDelta::from_seconds_f64(1e-12));
-        assert_eq!(1000.0.attos(), TimeDelta::from_seconds_f64(1e-15));
+        assert_eq!(1.5.days(), TimeDelta::from_hours(36));
+        assert_eq!(2.0.hours(), TimeDelta::from_hours(2));
+        assert_eq!(30.0.mins(), TimeDelta::from_minutes(30));
+        assert_eq!(60.0.secs(), TimeDelta::from_seconds(60));
+        assert_eq!(500.0.millis(), TimeDelta::from_milliseconds(500));
+        assert_eq!(1000.0.micros(), TimeDelta::from_microseconds(1000));
+        assert_eq!(
+            123_456_789.0.nanos(),
+            TimeDelta::from_nanoseconds(123_456_789)
+        );
+        assert_eq!(1000.0.picos(), TimeDelta::from_picoseconds(1000));
+        assert_eq!(1000.0.femtos(), TimeDelta::from_femtoseconds(1000));
+        assert_eq!(1000.0.attos(), TimeDelta::from_attoseconds(1000));
     }
 
     #[test]
     fn test_time_units_i64() {
-        assert_eq!(1_i64.days(), TimeDelta::from_days_f64(1.0));
-        assert_eq!(2_i64.hours(), TimeDelta::from_hours_f64(2.0));
-        assert_eq!(30_i64.mins(), TimeDelta::from_minutes_f64(30.0));
+        assert_eq!(1_i64.days(), TimeDelta::from_days(1));
+        assert_eq!(2_i64.hours(), TimeDelta::from_hours(2));
+        assert_eq!(30_i64.mins(), TimeDelta::from_minutes(30));
         assert_eq!(60_i64.secs(), TimeDelta::from_seconds(60));
         assert_eq!(500_i64.millis(), TimeDelta::from_milliseconds(500));
         assert_eq!(1000_i64.micros(), TimeDelta::from_microseconds(1000));

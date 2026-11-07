@@ -289,6 +289,7 @@ mod tests {
     use lox_bodies::{Earth, MeanRadius};
     use lox_core::units::literals::DistanceLiterals;
     use lox_frames::Icrf;
+    use lox_time::julian_dates::two_part_julian_date_to_delta;
     use lox_time::time_scales::TimeScale;
     use lox_time::{Time, utc::Utc};
     use rstest::rstest;
@@ -306,8 +307,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let epoch =
-            Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2)).to_dynamic_time();
+        let epoch = Utc::from_delta(two_part_julian_date_to_delta(JD1, JD2)).to_dynamic_time();
 
         let result =
             KeplerianOrbit::try_from_keplerian(elements, epoch.into_dynamic(), Earth, Icrf);
@@ -324,8 +324,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let epoch =
-            Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2)).to_dynamic_time();
+        let epoch = Utc::from_delta(two_part_julian_date_to_delta(JD1, JD2)).to_dynamic_time();
 
         KeplerianOrbit::try_from_keplerian(elements, epoch.into_dynamic(), Earth, Icrf).unwrap();
     }

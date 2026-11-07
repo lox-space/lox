@@ -102,6 +102,14 @@ impl TimeDeltaUnit {
         }
     }
 
+    /// Converts a number of seconds to this unit.
+    pub(crate) const fn convert_seconds(self, seconds: f64) -> f64 {
+        match self.scale() {
+            Scale::Subsecond(attoseconds) => seconds * (ATTOSECONDS_IN_SECOND / attoseconds) as f64,
+            Scale::Seconds(per_unit) => seconds / per_unit as f64,
+        }
+    }
+
     /// Returns the exact number of attoseconds in one unit.
     const fn attoseconds(self) -> i128 {
         match self.scale() {
@@ -169,6 +177,23 @@ impl FromStr for TimeDeltaUnit {
 }
 
 impl TimeDelta {
+    /// Creates a `TimeDelta` from a value in the given unit.
+    ///
+    /// The whole part of `value` is converted exactly, so that e.g. an integral number of
+    /// nanoseconds equals the result of [`TimeDelta::from_nanoseconds`]. The fractional part is
+    /// rounded. Use [`try_new_in`](Self::try_new_in) for values that may be out of range.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the value is not finite or the result is out of range.
+    #[track_caller]
+    pub const fn new_in(value: f64, unit: TimeDeltaUnit) -> Self {
+        match Self::checked_from_f64_in(value, unit) {
+            Some(delta) => delta,
+            None => panic!("non-finite or out-of-range value encountered"),
+        }
+    }
+
     /// Creates a `TimeDelta` from a value in the given unit.
     ///
     /// The whole part of `value` is converted exactly, so that e.g. an integral number of
@@ -310,6 +335,22 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
+
+    #[test]
+    fn test_new_in() {
+        const DELTA: TimeDelta = TimeDelta::new_in(1.5, TimeDeltaUnit::Days);
+        assert_eq!(DELTA, TimeDelta::from_seconds(129_600));
+        assert_eq!(
+            TimeDelta::new_in(2.5, TimeDeltaUnit::Milliseconds),
+            TimeDelta::try_new_in(2.5, TimeDeltaUnit::Milliseconds).unwrap()
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "non-finite or out-of-range")]
+    fn test_new_in_panics_out_of_range() {
+        TimeDelta::new_in(1e300, TimeDeltaUnit::Days);
+    }
 
     #[test]
     fn test_try_new_in_and_to() {

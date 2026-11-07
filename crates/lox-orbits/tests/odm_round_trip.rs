@@ -18,7 +18,7 @@ use lox_odm::types::common::OdmTimeSystem;
 use lox_orbits::odm::OmmBuildError;
 use lox_orbits::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
 use lox_orbits::propagators::sgp4::Sgp4;
-use lox_time::deltas::TimeDelta;
+use lox_time::deltas::{TimeDelta, TimeDeltaUnit};
 use lox_time::time::Time;
 use lox_time::time_scales::TimeScale;
 
@@ -356,7 +356,7 @@ fn sgp4_from_omm_str_iss() {
 
     // Propagate to t + one orbital period (≈ 92.82 min from the ISS mean motion).
     let orbital_period = 92.821;
-    let t1 = sgp4.time() + TimeDelta::from_minutes_f64(orbital_period);
+    let t1 = sgp4.time() + TimeDelta::new_in(orbital_period, TimeDeltaUnit::Minutes);
     let s1 = sgp4.state_at(t1).expect("state_at");
     // Position magnitude should be roughly the orbital radius (~ 6.78 Mm).
     let r = s1.position().length();
