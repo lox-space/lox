@@ -141,6 +141,19 @@ const fn round_half_away_from_zero(value: f64) -> i128 {
     }
 }
 
+/// Like [`round_half_away_from_zero`], for values whose magnitude is at most 10¹⁸.
+const fn round_half_away_from_zero_i64(value: f64) -> i64 {
+    let truncated = value as i64;
+    let remainder = value - truncated as f64;
+    if remainder >= 0.5 {
+        truncated + 1
+    } else if remainder <= -0.5 {
+        truncated - 1
+    } else {
+        truncated
+    }
+}
+
 impl Display for TimeDeltaUnit {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.pad(self.symbol())
@@ -186,6 +199,29 @@ impl TimeDelta {
     /// Every `f64` constructor of [`TimeDelta`] goes through this function, so that they all
     /// round the same way.
     pub(super) const fn checked_from_f64_in(value: f64, unit: TimeDeltaUnit) -> Option<Self> {
+        if let TimeDeltaUnit::Seconds = unit {
+            return Self::checked_from_seconds_f64(value);
+        }
+        Self::checked_from_f64_in_attoseconds(value, unit)
+    }
+
+    /// Converts a number of seconds like [`checked_from_f64_in`](Self::checked_from_f64_in),
+    /// but in `i64` arithmetic, which is much cheaper than the `i128` arithmetic of the general
+    /// case.
+    const fn checked_from_seconds_f64(value: f64) -> Option<Self> {
+        // The comparisons are false for NaN.
+        if !(value >= i64::MIN as f64 && value < i64::MAX as f64) {
+            return None;
+        }
+        let whole = value as i64;
+        // The fraction lies in (-1, 1), so `new` carries at most one second. It cannot overflow:
+        // `whole` is only `i64::MIN` for exactly -2⁶³, whose fraction is zero.
+        let attoseconds =
+            round_half_away_from_zero_i64((value - whole as f64) * ATTOSECONDS_IN_SECOND as f64);
+        Some(Self::new(whole, attoseconds))
+    }
+
+    const fn checked_from_f64_in_attoseconds(value: f64, unit: TimeDeltaUnit) -> Option<Self> {
         if !value.is_finite() {
             return None;
         }
@@ -270,6 +306,9 @@ mod tests {
     use alloc::format;
     use alloc::string::ToString;
 
+    use proptest::prelude::*;
+    use rstest::rstest;
+
     use super::*;
 
     #[test]
@@ -305,24 +344,45 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_f64_constructors_agree() {
-        for value in [0.7, -0.7, 1.5, -2.25, 123_456.789, 1e-18, 0.1 + 0.2] {
-            assert_eq!(
-                Ok(TimeDelta::from_seconds_f64(value)),
-                TimeDelta::try_new_in(value, TimeDeltaUnit::Seconds)
-            );
-            assert_eq!(
-                Ok(TimeDelta::from_seconds_f64(value)),
-                TimeDelta::try_from_seconds_f64(value)
-            );
-            assert_eq!(
-                Ok(TimeDelta::from_days_f64(value)),
-                TimeDelta::try_new_in(value, TimeDeltaUnit::Days)
-            );
-            assert_eq!(
-                value * TimeDelta::from_seconds(1),
-                TimeDelta::from_seconds_f64(value)
+    #[rstest]
+    #[case(0.7, 0, 700_000_000_000_000_000)]
+    #[case(-0.7, -1, 300_000_000_000_000_000)]
+    #[case(1.5, 1, 500_000_000_000_000_000)]
+    #[case(-2.25, -3, 750_000_000_000_000_000)]
+    #[case(1e-18, 0, 1)]
+    #[case(-1e-18, -1, 999_999_999_999_999_999)]
+    #[case(-9_223_372_036_854_775_808.0, i64::MIN, 0)]
+    fn test_from_seconds_f64(#[case] value: f64, #[case] seconds: i64, #[case] attoseconds: i64) {
+        let expected = TimeDelta::new(seconds, attoseconds);
+        assert_eq!(TimeDelta::from_seconds_f64(value), expected);
+        assert_eq!(
+            TimeDelta::checked_from_f64_in_attoseconds(value, TimeDeltaUnit::Seconds),
+            Some(expected)
+        );
+    }
+
+    #[rstest]
+    #[case(f64::NAN)]
+    #[case(f64::INFINITY)]
+    #[case(f64::NEG_INFINITY)]
+    #[case(9_223_372_036_854_775_808.0)]
+    #[case(-9_223_372_036_854_777_856.0)]
+    fn test_from_seconds_f64_out_of_range(#[case] value: f64) {
+        assert!(TimeDelta::try_from_seconds_f64(value).is_err());
+        assert_eq!(
+            TimeDelta::checked_from_f64_in_attoseconds(value, TimeDeltaUnit::Seconds),
+            None
+        );
+    }
+
+    proptest! {
+        #[test]
+        fn prop_seconds_fast_path_matches_general_case(
+            value in prop_oneof![proptest::num::f64::ANY, -1e12..1e12f64, -1.0..1.0f64]
+        ) {
+            prop_assert_eq!(
+                TimeDelta::checked_from_seconds_f64(value),
+                TimeDelta::checked_from_f64_in_attoseconds(value, TimeDeltaUnit::Seconds)
             );
         }
     }
