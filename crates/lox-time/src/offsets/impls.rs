@@ -460,14 +460,14 @@ mod tests {
     fn tai_to_gps_is_negative_19_seconds() {
         let p = DefaultOffsetProvider;
         let delta = p.offset(Tai, Gps, TimeDelta::default());
-        assert_eq!(delta, TimeDelta::builder().seconds(-19).build());
+        assert_eq!(delta, TimeDelta::from_seconds(-19));
     }
 
     #[test]
     fn gps_to_tai_is_positive_19_seconds() {
         let p = DefaultOffsetProvider;
         let delta = p.offset(Gps, Tai, TimeDelta::default());
-        assert_eq!(delta, TimeDelta::builder().seconds(19).build());
+        assert_eq!(delta, TimeDelta::from_seconds(19));
     }
 
     #[test]

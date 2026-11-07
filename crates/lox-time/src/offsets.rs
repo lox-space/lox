@@ -140,7 +140,7 @@ impl OffsetProvider for DefaultOffsetProvider {
 // TAI <-> TT
 
 /// The constant offset between TAI and TT.
-pub const D_TAI_TT: TimeDelta = TimeDelta::builder().seconds(32).milliseconds(184).build();
+pub const D_TAI_TT: TimeDelta = TimeDelta::from_milliseconds(32_184);
 
 // TAI <-> GPS
 
@@ -149,15 +149,12 @@ pub const D_TAI_TT: TimeDelta = TimeDelta::builder().seconds(32).milliseconds(18
 /// This is the value added when converting TAI to GPS (negative 19
 /// seconds, since GPS-time labels are 19 seconds less than the
 /// corresponding TAI-time labels).
-pub const D_TAI_GPS: TimeDelta = TimeDelta::builder().seconds(-19).build();
+pub const D_TAI_GPS: TimeDelta = TimeDelta::from_seconds(-19);
 
 // TT <-> TCG
 
 /// The difference between J2000 TT and 1977 January 1.0 TAI as TT.
-const J77_TT: TimeDelta = TimeDelta::builder()
-    .seconds(-725803167)
-    .milliseconds(816)
-    .build();
+const J77_TT: TimeDelta = TimeDelta::from_milliseconds(-725_803_167_816);
 
 /// The rate of change of TCG with respect to TT.
 const LG: f64 = 6.969290134e-10;
@@ -186,12 +183,7 @@ const ONE_MINUS_LB_INV: f64 = 1.0 / (1.0 - LB);
 
 /// Constant term of TDB − TT formula of Fairhead & Bretagnon (1990).
 // const TDB_0: f64 = -6.55e-5;
-const TDB_0: TimeDelta = TimeDelta::builder()
-    .seconds(0)
-    .microseconds(65)
-    .nanoseconds(500)
-    .negative()
-    .build();
+const TDB_0: TimeDelta = TimeDelta::from_nanoseconds(-65_500);
 
 const TCB_77: TimeDelta = TDB_0.add_const(J77_TT.mul_const(LB));
 
