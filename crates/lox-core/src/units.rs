@@ -1420,6 +1420,7 @@ mod tests {
         let f1 = 2.4.ghz();
         let f2 = 2400.0.mhz();
         assert_eq!(f1.0, f2.0);
+        assert_eq!(f1.to_megahertz(), 2400.0);
     }
 
     #[test]
@@ -2420,6 +2421,7 @@ mod tests {
         let r = DataRate::megabits_per_second(150.0);
         assert_eq!(r.to_bits_per_second(), 150e6);
         assert_eq!(r.to_kilobits_per_second(), 150e3);
+        assert_eq!(r.to_megabits_per_second(), 150.0);
         assert_eq!(r.to_gigabits_per_second(), 0.15);
         assert_eq!(1.5.gbps(), DataRate::gigabits_per_second(1.5));
         assert_eq!(64.kbps(), DataRate::bits_per_second(64e3));
@@ -2436,6 +2438,31 @@ mod tests {
         assert_eq!(DataVolume::terabits(1.0).to_gigabits(), 1000.0);
         assert_eq!(DataVolume::kibibytes(1.0).to_kilobytes(), 1.024);
         assert_eq!(16.bits(), 2.bytes());
+    }
+
+    #[test]
+    fn test_data_volume_decimal_roundtrips() {
+        assert_eq!(DataVolume::kilobits(1.5).to_bits(), 1500.0);
+        assert_eq!(DataVolume::kilobits(1.5).to_kilobits(), 1.5);
+        assert_eq!(DataVolume::megabits(2.0).to_bits(), 2e6);
+        assert_eq!(DataVolume::megabits(2.0).to_megabits(), 2.0);
+        assert_eq!(DataVolume::terabits(3.0).to_terabits(), 3.0);
+        assert_eq!(DataVolume::gigabytes(4.0).to_gigabytes(), 4.0);
+        assert_eq!(DataVolume::terabytes(1.0).to_bits(), 8e12);
+        assert_eq!(DataVolume::terabytes(5.0).to_terabytes(), 5.0);
+        assert_eq!(DataVolume::terabytes(1.0).to_gigabytes(), 1000.0);
+    }
+
+    #[test]
+    fn test_data_volume_binary_roundtrips() {
+        assert_eq!(DataVolume::kibibytes(3.0).to_kibibytes(), 3.0);
+        assert_eq!(DataVolume::mebibytes(3.0).to_mebibytes(), 3.0);
+        assert_eq!(DataVolume::gibibytes(3.0).to_gibibytes(), 3.0);
+        assert_eq!(DataVolume::tebibytes(3.0).to_tebibytes(), 3.0);
+        assert_eq!(DataVolume::mebibytes(1.0).to_kibibytes(), 1024.0);
+        assert_eq!(DataVolume::gibibytes(1.0).to_mebibytes(), 1024.0);
+        assert_eq!(DataVolume::tebibytes(1.0).to_gibibytes(), 1024.0);
+        assert_eq!(DataVolume::bytes(1024.0).to_kibibytes(), 1.0);
     }
 
     #[test]
@@ -2477,6 +2504,11 @@ mod tests {
         assert_approx_eq!(
             DecibelWatts::decibel_watts(20.0).to_power().to_watts(),
             100.0,
+            rtol <= 1e-12
+        );
+        assert_approx_eq!(
+            Power::from(DecibelWatts::decibel_milliwatts(30.0)).to_watts(),
+            1.0,
             rtol <= 1e-12
         );
     }
