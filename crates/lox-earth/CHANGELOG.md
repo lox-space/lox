@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.32](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.31...lox-earth-v0.1.0-alpha.32) - 2026-11-07
+
+### Added
+
+- *(lox-core)* [**breaking**] add typed physical constants
+
+### Fixed
+
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- *(lox-core)* [**breaking**] trim TimeDelta constructors and decouple Julian dates
+- *(lox-core)* [**breaking**] move the literal traits into units::literals
+- *(lox-core)* [**breaking**] merge the numeric constant modules into time::constants
+- *(lox-core)* [**breaking**] rework angle wrapping and sexagesimal angles
+- *(lox-core)* [**breaking**] give all unit types a uniform named-unit API
+- remove unnecessary Seconds type
+
 ## [0.1.0-alpha.31](https://github.com/lox-space/lox/compare/lox-earth-v0.1.0-alpha.30...lox-earth-v0.1.0-alpha.31) - 2026-10-14
 
 ### Other

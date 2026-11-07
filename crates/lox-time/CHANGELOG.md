@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.29](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.28...lox-time-v0.1.0-alpha.29) - 2026-11-07
+
+### Added
+
+- *(lox-core)* [**breaking**] limit trajectory extrapolation and sample interval ends
+
+### Fixed
+
+- *(lox-time)* merge sub-microsecond last steps in step_by_inclusive
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- *(lox-core)* [**breaking**] trim TimeDelta constructors and decouple Julian dates
+- *(lox-core)* [**breaking**] remove TimeDeltaBuilder
+- *(lox-core)* clean-up imports and constants
+- *(lox-core)* [**breaking**] merge the numeric constant modules into time::constants
+- remove unnecessary Seconds type
+- repair changelogs broken by SPDX headers
+
 ## [0.1.0-alpha.28](https://github.com/lox-space/lox/compare/lox-time-v0.1.0-alpha.27...lox-time-v0.1.0-alpha.28) - 2026-10-14
 
 ### Fixed
