@@ -4,13 +4,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
 /*!
-    Module `deltas` contains [TimeDelta], the key primitive of the `lox-time` crate.
-
-    [TimeDelta] is a signed, unscaled delta relative to an arbitrary epoch. This forms the basis
-    of instants in all continuous time scales.
-
-    The [ToDelta] trait specifies the method by which such scaled time representations should
-    expose their underlying [TimeDelta].
+    Module `deltas` contains [TimeDelta], a signed duration with attosecond resolution, and
+    [TimeDeltaUnit], the units it can be created in and converted to.
 */
 
 use core::fmt::Display;
@@ -24,8 +19,6 @@ use crate::time::constants::{
 };
 use lox_approx::ApproxEq;
 use thiserror::Error;
-
-use super::subsecond::Subsecond;
 
 mod unit;
 
@@ -169,16 +162,6 @@ impl TimeDelta {
         Self::new(seconds, remainder)
     }
 
-    /// Creates a `TimeDelta` from whole seconds and a [`Subsecond`] fractional part.
-    pub const fn from_seconds_and_subsecond(seconds: i64, subsecond: Subsecond) -> Self {
-        Self::new(seconds, subsecond.as_attoseconds())
-    }
-
-    /// Returns the whole seconds and [`Subsecond`] components.
-    pub const fn as_seconds_and_subsecond(&self) -> (i64, Subsecond) {
-        (self.seconds, Subsecond::from_attoseconds(self.attoseconds))
-    }
-
     /// Returns the time delta as a floating-point number of seconds.
     ///
     /// The conversion is lossy for large values. Do arithmetic on [`TimeDelta`]
@@ -209,7 +192,7 @@ impl TimeDelta {
 
     /// Returns the subsecond fraction as an `f64`.
     pub const fn subsecond(&self) -> f64 {
-        self.as_seconds_and_subsecond().1.as_seconds_f64()
+        self.attoseconds as f64 / ATTOSECONDS_IN_SECOND as f64
     }
 
     /// Returns the attosecond component.
@@ -339,14 +322,7 @@ impl TimeDelta {
 /// Error returned when trying to create a `TimeDelta` from an out-of-range `f64`.
 #[derive(Debug, Error, PartialEq)]
 #[error("value {0} is non-finite or out-of-range")]
-pub struct InvalidFloatSeconds(f64);
-
-impl InvalidFloatSeconds {
-    /// Creates the error for a value in seconds.
-    pub(crate) const fn new(seconds: f64) -> Self {
-        Self(seconds)
-    }
-}
+pub struct InvalidFloatSeconds(pub f64);
 
 impl Default for TimeDelta {
     fn default() -> Self {
@@ -452,12 +428,6 @@ impl<'a> Sum<&'a TimeDelta> for TimeDelta {
     fn sum<I: Iterator<Item = &'a TimeDelta>>(iter: I) -> Self {
         TimeDelta::sum(iter.copied())
     }
-}
-
-/// A unifying trait for types that can be converted into a [TimeDelta].
-pub trait ToDelta {
-    /// Transforms the value into a [TimeDelta].
-    fn to_delta(&self) -> TimeDelta;
 }
 
 /// Extension trait for creating [`TimeDelta`] values from numeric types.

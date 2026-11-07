@@ -14,8 +14,8 @@
 //! Both parsers are partial: they consume their grammar and stop. Callers
 //! wrap them in [`nom::combinator::all_consuming`] to forbid trailing input.
 //!
-//! [`Date`]: crate::time::calendar_dates::Date
-//! [`Subsecond`]: crate::time::subsecond::Subsecond
+//! [`Date`]: crate::calendar_dates::Date
+//! [`Subsecond`]: crate::subsecond::Subsecond
 
 use nom::{
     IResult, Parser,

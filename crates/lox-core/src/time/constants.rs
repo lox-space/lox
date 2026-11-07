@@ -5,8 +5,6 @@
 
 //! Well-known time constants.
 
-use crate::time::{calendar_dates::Date, deltas::TimeDelta};
-
 /// Number of seconds in a minute.
 pub const SECONDS_PER_MINUTE: i64 = 60;
 
@@ -60,6 +58,3 @@ pub const SECONDS_BETWEEN_MJD_AND_J2000: i64 = 4453444800;
 
 /// Seconds between J1950 and J2000.
 pub const SECONDS_BETWEEN_J1950_AND_J2000: i64 = 1577880000;
-
-/// The duration from J2000 (2000-01-01T12:00:00) to the Unix epoch (1970-01-01T00:00:00).
-pub const UNIX_EPOCH: TimeDelta = Date::new_unchecked(1970, 1, 1).to_delta();

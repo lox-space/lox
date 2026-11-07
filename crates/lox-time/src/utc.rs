@@ -22,6 +22,7 @@ use thiserror::Error;
 use crate::calendar_dates::{CalendarDate, Date, DateError};
 use crate::deltas::{TimeDelta, ToDelta};
 use crate::julian_dates::JulianDate;
+use crate::subsecond::Subsecond;
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 use crate::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};
 
@@ -133,7 +134,8 @@ impl Utc {
     ///
     /// Note that this constructor is not leap-second aware.
     pub fn from_delta(delta: TimeDelta) -> Self {
-        let (seconds, subsecond) = delta.as_seconds_and_subsecond();
+        let seconds = delta.seconds();
+        let subsecond = Subsecond::from_attoseconds(delta.attoseconds());
         let date = Date::from_seconds_since_j2000(seconds);
         let time = TimeOfDay::from_seconds_since_j2000(seconds).with_subsecond(subsecond);
         Self { date, time }
@@ -144,7 +146,7 @@ impl ToDelta for Utc {
     fn to_delta(&self) -> TimeDelta {
         let seconds = self.date.j2000_day_number() * SECONDS_PER_DAY + self.time.second_of_day()
             - SECONDS_PER_HALF_DAY;
-        TimeDelta::from_seconds_and_subsecond(seconds, self.time.subsecond())
+        TimeDelta::new(seconds, self.time.subsecond().as_attoseconds())
     }
 }
 

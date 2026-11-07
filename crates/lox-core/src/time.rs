@@ -6,15 +6,12 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Time representation: deltas, calendar dates, Julian dates, and time-of-day.
+//! Durations: [`TimeDelta`](deltas::TimeDelta) and time constants.
+//!
+//! Calendar dates, Julian dates, time of day and instants in time scales live in `lox-time`.
 
-pub mod calendar_dates;
 /// Conversions between Lox and `chrono` types.
 #[cfg(feature = "chrono")]
 pub mod chrono;
 pub mod constants;
 pub mod deltas;
-mod iso;
-pub mod julian_dates;
-pub mod subsecond;
-pub mod time_of_day;
