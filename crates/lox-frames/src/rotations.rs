@@ -31,7 +31,6 @@ use crate::{
 
 /// IAU body-fixed frame rotation calculations.
 pub mod to_iau;
-/// Hub-based rotation composition through ICRF.
 pub mod to_icrf;
 
 /// Computes the rotation from one reference frame to another at a given time.

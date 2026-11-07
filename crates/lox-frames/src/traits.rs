@@ -119,7 +119,7 @@ impl<T: BodyFixed> TryBodyFixed for T {
 ///
 /// The ellipsoid is the one conventionally paired with the frame rather than an
 /// intrinsic property of its origin: the terrestrial frames
-/// ([`Itrf`](crate::Itrf), [`Tirf`](crate::Tirf) and [`Pef`](crate::Pef)) are
+/// ([`Itrf`](crate::Itrf), [`Tirf`](crate::Tirf) and [`Pef`](crate::frames::Pef)) are
 /// paired with GRS80, while [`Iau`](crate::Iau) frames use their body's own
 /// spheroid. Callers needing a different datum supply the ellipsoid explicitly.
 pub trait ReferenceEllipsoid: BodyFixed {
