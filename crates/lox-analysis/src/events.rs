@@ -1031,7 +1031,7 @@ mod tests {
     use std::f64::consts::PI;
 
     use lox_core::math::roots::BracketedNewton;
-    use lox_time::{Time, deltas::ToDelta};
+    use lox_time::Time;
 
     use super::*;
 

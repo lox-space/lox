@@ -14,7 +14,7 @@ use pyo3::{Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python, pyclass, 
 
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::time::calendar_dates::{CalendarDate, Date};
-use crate::time::deltas::{TimeDelta, TimeDeltaUnit, ToDelta};
+use crate::time::deltas::{TimeDelta, TimeDeltaUnit};
 use crate::time::julian_dates::{Epoch, JulianDate};
 use crate::time::python::deltas::{PyInvalidFloatSeconds, PyTimeDelta};
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
@@ -535,13 +535,18 @@ impl PyTime {
     }
 }
 
-impl ToDelta for PyTime {
-    fn to_delta(&self) -> TimeDelta {
+impl PyTime {
+    /// Returns the time since J2000 in the time's scale.
+    pub fn to_delta(&self) -> TimeDelta {
         self.0.to_delta()
     }
 }
 
-impl JulianDate for PyTime {}
+impl JulianDate for PyTime {
+    fn to_delta(&self) -> TimeDelta {
+        PyTime::to_delta(self)
+    }
+}
 
 impl Add<TimeDelta> for PyTime {
     type Output = PyTime;

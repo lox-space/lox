@@ -16,7 +16,7 @@ use core::{
     str::FromStr,
 };
 
-use crate::deltas::{TimeDelta, ToDelta};
+use crate::deltas::TimeDelta;
 use nom::{Parser, combinator::all_consuming};
 use thiserror::Error;
 
@@ -264,13 +264,11 @@ impl Date {
 /// The Unix epoch, 1970-01-01T00:00:00, as a time since J2000.
 pub const UNIX_EPOCH: TimeDelta = Date::new_unchecked(1970, 1, 1).to_delta();
 
-impl ToDelta for Date {
+impl JulianDate for Date {
     fn to_delta(&self) -> TimeDelta {
         Date::to_delta(self)
     }
 }
-
-impl JulianDate for Date {}
 
 fn find_year(calendar: Calendar, j2000day: i64) -> i64 {
     match calendar {

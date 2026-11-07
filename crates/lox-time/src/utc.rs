@@ -20,7 +20,7 @@ use lox_core::time::constants::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use thiserror::Error;
 
 use crate::calendar_dates::{CalendarDate, Date, DateError};
-use crate::deltas::{TimeDelta, ToDelta};
+use crate::deltas::TimeDelta;
 use crate::julian_dates::JulianDate;
 use crate::subsecond::Subsecond;
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
@@ -142,8 +142,9 @@ impl Utc {
     }
 }
 
-impl ToDelta for Utc {
-    fn to_delta(&self) -> TimeDelta {
+impl Utc {
+    /// Returns the time since J2000, ignoring leap seconds.
+    pub fn to_delta(&self) -> TimeDelta {
         let seconds = self.date.j2000_day_number() * SECONDS_PER_DAY + self.time.second_of_day()
             - SECONDS_PER_HALF_DAY;
         TimeDelta::new(seconds, self.time.subsecond().as_attoseconds())
@@ -177,7 +178,11 @@ impl CivilTime for Utc {
     }
 }
 
-impl JulianDate for Utc {}
+impl JulianDate for Utc {
+    fn to_delta(&self) -> TimeDelta {
+        Utc::to_delta(self)
+    }
+}
 
 impl ApproxEq for Utc {
     fn approx_eq(&self, rhs: &Self, atol: f64, rtol: f64) -> ApproxEqResults {

@@ -13,7 +13,6 @@ use lox_core::glam::DVec3;
 use lox_core::math::float::mul_add_relaxed;
 use lox_core::time::deltas::TimeDelta;
 use lox_time::Time;
-use lox_time::deltas::ToDelta;
 use lox_time::time_scales::Tdb;
 
 use crate::{Ephemeris, path_from_ids};

@@ -14,7 +14,7 @@ use lox_core::time::constants::{
     SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY,
 };
 
-use crate::deltas::{InvalidFloatSeconds, TimeDelta, TimeDeltaUnit, ToDelta};
+use crate::deltas::{InvalidFloatSeconds, TimeDelta, TimeDeltaUnit};
 
 /// A Julian date or a duration in days, as an `f64`.
 pub type Days = f64;
@@ -111,8 +111,11 @@ pub fn try_two_part_julian_date_to_delta(
 
 /// Enables a time or date type to be expressed as a Julian date.
 ///
-/// Implementors only provide [`ToDelta`], the time since J2000.
-pub trait JulianDate: ToDelta {
+/// Implementors only provide [`to_delta`](Self::to_delta), the time since J2000.
+pub trait JulianDate {
+    /// Returns the time since J2000.
+    fn to_delta(&self) -> TimeDelta;
+
     /// Expresses `self` as a Julian date in the specified unit, relative to the given [Epoch].
     fn julian_date(&self, epoch: Epoch, unit: TimeDeltaUnit) -> f64 {
         let delta = self.to_delta();
