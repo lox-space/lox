@@ -15,17 +15,11 @@ use self::numerical::{NumericalError, NumericalPropagator};
 use self::semi_analytical::{Vallado, ValladoError};
 use self::sgp4::{Sgp4, Sgp4Error};
 
-/// Analytical J2 orbit propagators (Kozai secular ± Kwok short-period).
 pub mod j2;
-/// Analytical J4 orbit propagators (Kozai secular ± Kwok short-period).
 pub mod j4;
-/// Shared math for Kozai-based analytical propagators.
 pub mod kozai;
-/// Numerical orbit propagators (e.g. J2 perturbation via ODE integration).
 pub mod numerical;
-/// Semi-analytical orbit propagators (e.g. Vallado universal variable method).
 pub mod semi_analytical;
-/// SGP4 orbit propagator for TLE-based satellite prediction.
 pub mod sgp4;
 mod stumpff;
 

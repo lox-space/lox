@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! SGP4 orbit propagator for TLE-based satellite prediction.
+
 use lox_core::coords::Cartesian;
 use lox_core::glam::DVec3;
 pub use sgp4::Elements;
