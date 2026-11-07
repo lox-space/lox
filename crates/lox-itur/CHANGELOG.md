@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.8](https://github.com/lox-space/lox/compare/lox-itur-v0.1.0-alpha.7...lox-itur-v0.1.0-alpha.8) - 2026-11-07
+
+### Fixed
+
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- *(lox-core)* [**breaking**] move the literal traits into units::literals
+- *(lox-core)* [**breaking**] give all unit types a uniform named-unit API
+- *(lox-core)* [**breaking**] move the comms module to lox-comms
+
 ## [0.1.0-alpha.7](https://github.com/lox-space/lox/compare/lox-itur-v0.1.0-alpha.6...lox-itur-v0.1.0-alpha.7) - 2026-10-14
 
 ### Other
