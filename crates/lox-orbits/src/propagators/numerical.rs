@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Numerical orbit propagators (e.g. J2 perturbation via ODE integration).
+
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
 use differential_equations::{

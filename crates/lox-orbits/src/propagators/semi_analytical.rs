@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Semi-analytical orbit propagators (e.g. Vallado universal variable method).
+
 use lox_core::coords::Cartesian;
 use lox_time::Time;
 use lox_time::deltas::TimeDelta;
