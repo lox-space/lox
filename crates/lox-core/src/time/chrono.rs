@@ -2,102 +2,70 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use chrono::{DateTime, Utc};
 use thiserror::Error;
 
-use crate::time::{
-    constants::{ATTOSECONDS_IN_NANOSECOND, UNIX_EPOCH},
-    deltas::TimeDelta,
-};
+use crate::time::{constants::ATTOSECONDS_IN_NANOSECOND, deltas::TimeDelta};
 
-/// Errors that can occur when converting between Lox and `chrono` time types.
+/// Error returned when a [`TimeDelta`] cannot be represented as a `chrono::TimeDelta`.
 #[derive(Debug, Error)]
-pub enum ChronoError {
-    /// The [`TimeDelta`] cannot be represented as a `chrono::DateTime`.
-    #[error("{0} cannot be represented as a `chrono::DateTime`")]
-    DateTime(TimeDelta),
-    /// The [`TimeDelta`] cannot be represented as a `chrono::TimeDelta`.
-    #[error("{0} cannot be represented as a `chrono::TimeDelta`")]
-    TimeDelta(TimeDelta),
-}
-
-impl TryFrom<TimeDelta> for DateTime<Utc> {
-    type Error = ChronoError;
-
-    fn try_from(delta: TimeDelta) -> Result<Self, Self::Error> {
-        let (second, nanos) = delta.to_unix_second_and_nanos();
-        DateTime::from_timestamp(second, nanos).ok_or(ChronoError::DateTime(delta))
-    }
-}
-
-impl From<DateTime<Utc>> for TimeDelta {
-    fn from(dt: DateTime<Utc>) -> Self {
-        TimeDelta::from_unix_second_and_nanos(dt.timestamp(), dt.timestamp_subsec_nanos())
-    }
-}
+#[error("{0} cannot be represented as a `chrono::TimeDelta`")]
+pub struct ChronoTimeDeltaError(pub TimeDelta);
 
 impl TryFrom<TimeDelta> for chrono::TimeDelta {
-    type Error = ChronoError;
+    type Error = ChronoTimeDeltaError;
 
+    /// Converts the duration, rounding it down to whole nanoseconds.
     fn try_from(delta: TimeDelta) -> Result<Self, Self::Error> {
-        let (second, nanos) = delta.to_unix_second_and_nanos();
-        chrono::TimeDelta::new(second, nanos).ok_or(ChronoError::TimeDelta(delta))
+        let nanos = (delta.attoseconds() / ATTOSECONDS_IN_NANOSECOND) as u32;
+        chrono::TimeDelta::new(delta.seconds(), nanos).ok_or(ChronoTimeDeltaError(delta))
     }
 }
 
 impl From<chrono::TimeDelta> for TimeDelta {
     fn from(delta: chrono::TimeDelta) -> Self {
-        let mut second = delta.num_seconds();
-        let mut nanos = delta.subsec_nanos();
-        if nanos < 0 {
-            second -= 1;
-            nanos += 1_000_000_000;
-        }
-        TimeDelta::from_unix_second_and_nanos(second, nanos as u32)
-    }
-}
-
-impl TimeDelta {
-    fn to_unix_second_and_nanos(self) -> (i64, u32) {
-        let delta = self - UNIX_EPOCH;
-        let (second, subsecond) = delta.as_seconds_and_subsecond();
-        (
-            second,
-            (subsecond.as_attoseconds() / ATTOSECONDS_IN_NANOSECOND) as u32,
+        // `subsec_nanos` has the sign of the duration; `TimeDelta::new` normalises it.
+        TimeDelta::new(
+            delta.num_seconds(),
+            delta.subsec_nanos() as i64 * ATTOSECONDS_IN_NANOSECOND,
         )
-    }
-
-    fn from_unix_second_and_nanos(second: i64, nanos: u32) -> Self {
-        TimeDelta::new(second, nanos as i64 * ATTOSECONDS_IN_NANOSECOND) + UNIX_EPOCH
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use lox_approx::assert_approx_eq;
     use rstest::rstest;
 
     use super::*;
 
     #[rstest]
-    #[case(UNIX_EPOCH)]
-    #[case(TimeDelta::default())]
-    #[case(TimeDelta::from_seconds_f64(0.123456))]
-    fn test_chrono_time_delta_roundtrip(#[case] exp: TimeDelta) {
-        let dt: DateTime<Utc> = exp.try_into().unwrap();
-        let act: TimeDelta = dt.into();
-        assert_eq!(act, exp)
+    #[case(TimeDelta::ZERO, chrono::TimeDelta::zero())]
+    #[case(TimeDelta::from_seconds(1), chrono::TimeDelta::seconds(1))]
+    #[case(TimeDelta::from_seconds(-1), chrono::TimeDelta::seconds(-1))]
+    #[case(
+        TimeDelta::from_milliseconds(1_500),
+        chrono::TimeDelta::milliseconds(1_500)
+    )]
+    #[case(TimeDelta::from_milliseconds(-1_500), chrono::TimeDelta::milliseconds(-1_500))]
+    #[case(
+        TimeDelta::from_nanoseconds(123_456_789),
+        chrono::TimeDelta::nanoseconds(123_456_789)
+    )]
+    fn test_chrono_time_delta(#[case] delta: TimeDelta, #[case] chrono: chrono::TimeDelta) {
+        assert_eq!(chrono::TimeDelta::try_from(delta).unwrap(), chrono);
+        assert_eq!(TimeDelta::from(chrono), delta);
     }
 
-    #[rstest]
-    #[case(UNIX_EPOCH)]
-    #[case(UNIX_EPOCH + TimeDelta::from_seconds(1))]
-    #[case(UNIX_EPOCH + TimeDelta::from_seconds(-1))]
-    #[case(UNIX_EPOCH + TimeDelta::from_seconds_f64(1.123456))]
-    #[case(UNIX_EPOCH + TimeDelta::from_seconds_f64(-1.123456))]
-    fn test_foo(#[case] exp: TimeDelta) {
-        let delta: chrono::TimeDelta = exp.try_into().unwrap();
-        let act: TimeDelta = delta.into();
-        assert_approx_eq!(act, exp, atol <= 1e-8);
+    #[test]
+    fn test_chrono_time_delta_rounds_down_to_nanoseconds() {
+        let delta = TimeDelta::from_attoseconds(1_999_999_999);
+        assert_eq!(
+            chrono::TimeDelta::try_from(delta).unwrap(),
+            chrono::TimeDelta::nanoseconds(1)
+        );
+    }
+
+    #[test]
+    fn test_chrono_time_delta_out_of_range() {
+        assert!(chrono::TimeDelta::try_from(TimeDelta::from_seconds(i64::MAX)).is_err());
     }
 }
