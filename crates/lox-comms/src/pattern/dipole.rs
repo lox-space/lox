@@ -240,6 +240,7 @@ fn golden_section_max(a: f64, b: f64, f: impl Fn(f64) -> f64) -> (f64, f64) {
 #[cfg(test)]
 mod tests {
     use lox_approx::assert_approx_eq;
+    use lox_core::constants::SPEED_OF_LIGHT;
     use lox_core::units::literals::FrequencyLiterals;
 
     use super::*;
@@ -278,8 +279,7 @@ mod tests {
 
     #[test]
     fn test_gain_pattern_regimes() {
-        let c = 299792458.0;
-        let wavelength = c / 29e9;
+        let wavelength = SPEED_OF_LIGHT.to_meters_per_second() / 29e9;
         let f = Frequency::hertz(29e9);
 
         // Short dipole: F(90 deg) = sin^2 = 1.

@@ -830,22 +830,32 @@ impl TimeDeltaLiterals for f64 {
         TimeDelta::from_seconds_f64(*self)
     }
     fn millis(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self / 1e3)
+        TimeDelta::from_seconds_f64(
+            *self / (ATTOSECONDS_IN_SECOND / ATTOSECONDS_IN_MILLISECOND) as f64,
+        )
     }
     fn micros(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self / 1e6)
+        TimeDelta::from_seconds_f64(
+            *self / (ATTOSECONDS_IN_SECOND / ATTOSECONDS_IN_MICROSECOND) as f64,
+        )
     }
     fn nanos(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self / 1e9)
+        TimeDelta::from_seconds_f64(
+            *self / (ATTOSECONDS_IN_SECOND / ATTOSECONDS_IN_NANOSECOND) as f64,
+        )
     }
     fn picos(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self / 1e12)
+        TimeDelta::from_seconds_f64(
+            *self / (ATTOSECONDS_IN_SECOND / ATTOSECONDS_IN_PICOSECOND) as f64,
+        )
     }
     fn femtos(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self / 1e15)
+        TimeDelta::from_seconds_f64(
+            *self / (ATTOSECONDS_IN_SECOND / ATTOSECONDS_IN_FEMTOSECOND) as f64,
+        )
     }
     fn attos(&self) -> TimeDelta {
-        TimeDelta::from_seconds_f64(*self / 1e18)
+        TimeDelta::from_seconds_f64(*self / ATTOSECONDS_IN_SECOND as f64)
     }
 }
 
