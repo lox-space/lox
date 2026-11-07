@@ -5,7 +5,8 @@
 use lox_core::time::constants::ATTOSECONDS_IN_SECOND;
 use lox_time::deltas::{InvalidFloatSeconds, TimeDeltaUnit};
 use numpy::PyUntypedArray;
-use pyo3::exceptions::{PyOverflowError, PyTypeError, PyValueError};
+use pyo3::IntoPyObjectExt;
+use pyo3::exceptions::{PyOverflowError, PyTypeError, PyValueError, PyZeroDivisionError};
 use pyo3::prelude::*;
 use pyo3::types::{PyFloat, PyInt, PyType};
 
@@ -84,8 +85,15 @@ impl PyTimeDeltaUnit {
 ///
 /// See Also:
 ///     Time: For representing instants in time.
-#[pyclass(name = "TimeDelta", module = "lox_space", frozen, from_py_object)]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[pyclass(
+    name = "TimeDelta",
+    module = "lox_space",
+    frozen,
+    eq,
+    ord,
+    from_py_object
+)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PyTimeDelta(pub TimeDelta);
 
 #[pymethods]
@@ -152,25 +160,21 @@ impl PyTimeDelta {
         format_with_unit(py, self.0.to(unit.0), format_spec, unit.0.symbol())
     }
 
-    fn __lt__(&self, other: PyTimeDelta) -> bool {
-        self.0 < other.0
-    }
-
-    fn __le__(&self, other: PyTimeDelta) -> bool {
-        self.0 <= other.0
-    }
-
-    fn __gt__(&self, other: PyTimeDelta) -> bool {
-        self.0 > other.0
-    }
-
-    fn __ge__(&self, other: PyTimeDelta) -> bool {
-        self.0 >= other.0
-    }
-
     /// Returns the negation of the `TimeDelta`.
     pub fn __neg__(&self) -> Self {
         Self(-self.0)
+    }
+
+    fn __pos__(&self) -> Self {
+        self.clone()
+    }
+
+    fn __abs__(&self) -> Self {
+        if self.0.is_negative() {
+            Self(-self.0)
+        } else {
+            self.clone()
+        }
     }
 
     /// Returns the sum of two `TimeDelta` values.
@@ -193,9 +197,24 @@ impl PyTimeDelta {
         Ok(Self(self.0.try_mul(other).map_err(PyInvalidFloatSeconds)?))
     }
 
-    /// Returns `true` if two `TimeDelta` values are equal.
-    pub fn __eq__(&self, other: PyTimeDelta) -> bool {
-        self.0 == other.0
+    /// Returns the ratio of two `TimeDelta` values as a float, or the `TimeDelta` divided by a
+    /// number.
+    fn __truediv__(&self, py: Python<'_>, other: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
+        if let Ok(rhs) = other.cast::<Self>() {
+            return (self.0.as_seconds_f64() / rhs.get().0.as_seconds_f64()).into_py_any(py);
+        }
+        let Ok(divisor) = other.extract::<f64>() else {
+            return Ok(py.NotImplemented());
+        };
+        if divisor == 0.0 {
+            return Err(PyZeroDivisionError::new_err("TimeDelta division by zero"));
+        }
+        Self(
+            self.0
+                .try_mul(1.0 / divisor)
+                .map_err(PyInvalidFloatSeconds)?,
+        )
+        .into_py_any(py)
     }
 
     /// Return the integer seconds component.
@@ -296,7 +315,8 @@ impl PyTimeDelta {
     /// Args:
     ///     start: Start of the range (inclusive).
     ///     end: End of the range (inclusive if it falls on a step).
-    ///     step: Non-zero step size. Defaults to one second.
+    ///     step: Non-zero step size. Defaults to one second. Its sign is adjusted to the
+    ///         direction from `start` to `end`.
     ///
     /// Returns:
     ///     A list of TimeDelta objects.
