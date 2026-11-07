@@ -30,7 +30,10 @@ use crate::deltas::TimeDelta;
 use crate::deltas::ToDelta;
 use crate::julian_dates::Epoch;
 use crate::julian_dates::JulianDate;
-use crate::julian_dates::Unit;
+use crate::julian_dates::{
+    julian_date_to_delta, try_julian_date_to_delta, try_two_part_julian_date_to_delta,
+    two_part_julian_date_to_delta,
+};
 use crate::offsets::DefaultOffsetProvider;
 use crate::offsets::Offset;
 use crate::offsets::TryOffset;
@@ -170,7 +173,7 @@ impl<T: ContinuousTimeScale> Time<T> {
     /// Creates a [Time] in the specified [ContinuousTimeScale], given a Julian date relative to
     /// `epoch`.
     pub const fn from_julian_date(scale: T, julian_date: Days, epoch: Epoch) -> Self {
-        let delta = TimeDelta::from_julian_date(julian_date, epoch);
+        let delta = julian_date_to_delta(julian_date, epoch);
         Self { scale, delta }
     }
 
@@ -181,13 +184,13 @@ impl<T: ContinuousTimeScale> Time<T> {
         julian_date: Days,
         epoch: Epoch,
     ) -> Result<Self, InvalidFloatSeconds> {
-        let delta = TimeDelta::try_from_julian_date(julian_date, epoch)?;
+        let delta = try_julian_date_to_delta(julian_date, epoch)?;
         Ok(Self { scale, delta })
     }
 
     /// Creates a [Time] from a two-part Julian date `jd1 + jd2` in days.
     pub const fn from_two_part_julian_date(scale: T, jd1: Days, jd2: Days) -> Self {
-        let delta = TimeDelta::from_two_part_julian_date(jd1, jd2);
+        let delta = two_part_julian_date_to_delta(jd1, jd2);
         Self { scale, delta }
     }
 
@@ -197,7 +200,7 @@ impl<T: ContinuousTimeScale> Time<T> {
         jd1: Days,
         jd2: Days,
     ) -> Result<Self, InvalidFloatSeconds> {
-        let delta = TimeDelta::try_from_two_part_julian_date(jd1, jd2)?;
+        let delta = try_two_part_julian_date_to_delta(jd1, jd2)?;
         Ok(Self { scale, delta })
     }
 
@@ -362,11 +365,7 @@ impl<T: ContinuousTimeScale> ToDelta for Time<T> {
     }
 }
 
-impl<T: ContinuousTimeScale> JulianDate for Time<T> {
-    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
-        self.delta.julian_date(epoch, unit)
-    }
-}
+impl<T: ContinuousTimeScale> JulianDate for Time<T> {}
 
 impl<T: ContinuousTimeScale> Display for Time<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -593,6 +592,7 @@ mod tests {
     use rstest::rstest;
 
     use crate::Time;
+    use crate::deltas::TimeDeltaUnit;
     use crate::time_scales::{Tai, Tdb, TimeScale, Tt};
 
     use super::*;
@@ -825,7 +825,10 @@ mod tests {
     #[test]
     fn test_julian_date() {
         let time = Time::jd0(Tdb);
-        assert_eq!(time.julian_date(Epoch::JulianDate, Unit::Days), 0.0);
+        assert_eq!(
+            time.julian_date(Epoch::JulianDate, TimeDeltaUnit::Days),
+            0.0
+        );
         assert_eq!(time.seconds_since_julian_epoch(), 0.0);
         assert_eq!(time.days_since_julian_epoch(), 0.0);
         assert_eq!(time.centuries_since_julian_epoch(), 0.0);
@@ -834,7 +837,10 @@ mod tests {
     #[test]
     fn test_modified_julian_date() {
         let time = Time::mjd0(Tdb);
-        assert_eq!(time.julian_date(Epoch::ModifiedJulianDate, Unit::Days), 0.0);
+        assert_eq!(
+            time.julian_date(Epoch::ModifiedJulianDate, TimeDeltaUnit::Days),
+            0.0
+        );
         assert_eq!(time.seconds_since_modified_julian_epoch(), 0.0);
         assert_eq!(time.days_since_modified_julian_epoch(), 0.0);
         assert_eq!(time.centuries_since_modified_julian_epoch(), 0.0);
@@ -843,7 +849,7 @@ mod tests {
     #[test]
     fn test_j1950() {
         let time = Time::j1950(Tdb);
-        assert_eq!(time.julian_date(Epoch::J1950, Unit::Days), 0.0);
+        assert_eq!(time.julian_date(Epoch::J1950, TimeDeltaUnit::Days), 0.0);
         assert_eq!(time.seconds_since_j1950(), 0.0);
         assert_eq!(time.days_since_j1950(), 0.0);
         assert_eq!(time.centuries_since_j1950(), 0.0);
@@ -852,7 +858,7 @@ mod tests {
     #[test]
     fn test_j2000() {
         let time = Time::j2000(Tdb);
-        assert_eq!(time.julian_date(Epoch::J2000, Unit::Days), 0.0);
+        assert_eq!(time.julian_date(Epoch::J2000, TimeDeltaUnit::Days), 0.0);
         assert_eq!(time.seconds_since_j2000(), 0.0);
         assert_eq!(time.days_since_j2000(), 0.0);
         assert_eq!(time.centuries_since_j2000(), 0.0);
@@ -862,7 +868,7 @@ mod tests {
     fn test_j2100() {
         let time = time!(Tdb, 2100, 1, 1, 12).unwrap();
         assert_eq!(
-            time.julian_date(Epoch::J2000, Unit::Days),
+            time.julian_date(Epoch::J2000, TimeDeltaUnit::Days),
             DAYS_PER_JULIAN_CENTURY
         );
         assert_eq!(time.seconds_since_j2000(), 3155760000.0);

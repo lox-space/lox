@@ -14,8 +14,8 @@ use pyo3::{Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python, pyclass, 
 
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::time::calendar_dates::{CalendarDate, Date};
-use crate::time::deltas::{TimeDelta, ToDelta};
-use crate::time::julian_dates::{Epoch, JulianDate, Unit};
+use crate::time::deltas::{TimeDelta, TimeDeltaUnit, ToDelta};
+use crate::time::julian_dates::{Epoch, JulianDate};
 use crate::time::python::deltas::{PyInvalidFloatSeconds, PyTimeDelta};
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
 use crate::time::time_scales::Tai;
@@ -58,16 +58,16 @@ impl FromStr for PyEpoch {
     }
 }
 
-struct PyUnit(pub Unit);
+struct PyUnit(pub TimeDeltaUnit);
 
 impl FromStr for PyUnit {
     type Err = PyErr;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "seconds" => Ok(Unit::Seconds),
-            "days" => Ok(Unit::Days),
-            "centuries" => Ok(Unit::Centuries),
+            "seconds" => Ok(TimeDeltaUnit::Seconds),
+            "days" => Ok(TimeDeltaUnit::Days),
+            "centuries" => Ok(TimeDeltaUnit::JulianCenturies),
             _ => Err(PyValueError::new_err(format!("unknown unit: {s}"))),
         }
         .map(PyUnit)
@@ -541,11 +541,7 @@ impl ToDelta for PyTime {
     }
 }
 
-impl JulianDate for PyTime {
-    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
-        self.0.julian_date(epoch, unit)
-    }
-}
+impl JulianDate for PyTime {}
 
 impl Add<TimeDelta> for PyTime {
     type Output = PyTime;

@@ -352,8 +352,9 @@ mod tests {
     use lox_approx::assert_approx_eq;
     use lox_bodies::{Earth, MeanRadius};
     use lox_core::units::literals::{AngleLiterals, DistanceLiterals};
+    use lox_time::julian_dates::two_part_julian_date_to_delta;
     use lox_time::time_scales::Tdb;
-    use lox_time::{Time, deltas::TimeDelta, utc::Utc};
+    use lox_time::{Time, utc::Utc};
 
     use super::*;
 
@@ -361,7 +362,7 @@ mod tests {
     const JD2: f64 = 49.78099017 - 1.0;
 
     fn epoch() -> Time {
-        Utc::from_delta(TimeDelta::from_two_part_julian_date(JD1, JD2))
+        Utc::from_delta(two_part_julian_date_to_delta(JD1, JD2))
             .to_dynamic_time()
             .to_scale(Tdb)
             .into_dynamic()

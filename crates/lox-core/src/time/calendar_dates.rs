@@ -16,12 +16,12 @@ use core::{
     str::FromStr,
 };
 
-use crate::time::deltas::TimeDelta;
+use crate::time::deltas::{TimeDelta, ToDelta};
 use nom::{Parser, combinator::all_consuming};
 use thiserror::Error;
 
 use super::iso;
-use super::julian_dates::{Epoch, JulianDate, Unit};
+use super::julian_dates::JulianDate;
 use crate::time::constants::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 
 /// Error type returned when attempting to construct a [Date] from invalid inputs.
@@ -261,11 +261,13 @@ impl Date {
     }
 }
 
-impl JulianDate for Date {
-    fn julian_date(&self, epoch: Epoch, unit: Unit) -> f64 {
-        self.to_delta().julian_date(epoch, unit)
+impl ToDelta for Date {
+    fn to_delta(&self) -> TimeDelta {
+        Date::to_delta(self)
     }
 }
+
+impl JulianDate for Date {}
 
 fn find_year(calendar: Calendar, j2000day: i64) -> i64 {
     match calendar {
