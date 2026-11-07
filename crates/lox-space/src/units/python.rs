@@ -6,6 +6,7 @@
 // `wrong_self_convention` lint for `to_*` methods on Copy types.
 #![allow(clippy::wrong_self_convention)]
 
+use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyFloat;
@@ -50,37 +51,38 @@ pub(crate) fn format_with_unit(
 
 /// Defines the Python classes for a quantity and its unit.
 ///
-/// `ops` is either `linear`, which adds the arithmetic shared by all linear quantities, or
-/// `none`. `mul` and `div` list products and quotients with other types, as
-/// `Rhs => Output`. Products listed in `mul` are also available with the operands swapped.
-/// `square` gives the type of the product of two values of the quantity.
+/// `units` lists the named constructors and accessors, with the SI unit first. `ops` is either
+/// `linear`, which adds the arithmetic shared by all linear quantities, or `none`. The optional
+/// `mul` and `div` list products and quotients with other types, as `Rhs => Output`. Products
+/// listed in `mul` are also available with the operands swapped. The optional `square` gives the
+/// type of the product of two values of the quantity.
 macro_rules! py_quantity {
     (
         $quantity:ident, $py_quantity:ident, $name:literal,
         $unit:ident, $py_unit:ident, $unit_name:literal,
-        si = ($si_variant:ident, $si_ctor:ident, $si_accessor:ident),
-        units = [$(($ctor:ident, $accessor:ident)),+ $(,)?],
+        units = [($si_ctor:ident, $si_accessor:ident) $(, ($ctor:ident, $accessor:ident))* $(,)?],
         ops = none
         $(, extra = { $($extra:tt)* })?
     ) => {
         py_quantity!(@define $quantity, $py_quantity, $name, $unit, $py_unit, $unit_name,
-            ($si_variant, $si_ctor, $si_accessor), [$(($ctor, $accessor)),+],
+            $si_ctor,
+            [($si_ctor, $si_accessor) $(, ($ctor, $accessor))*],
             { $($($extra)*)? });
     };
 
     (
         $quantity:ident, $py_quantity:ident, $name:literal,
         $unit:ident, $py_unit:ident, $unit_name:literal,
-        si = ($si_variant:ident, $si_ctor:ident, $si_accessor:ident),
-        units = [$(($ctor:ident, $accessor:ident)),+ $(,)?],
-        ops = linear,
-        $(square = $square_out:ident,)?
-        mul = [$($mul_rhs:ident => $mul_out:ident),* $(,)?],
-        div = [$($div_rhs:ident => $div_out:ident),* $(,)?]
+        units = [($si_ctor:ident, $si_accessor:ident) $(, ($ctor:ident, $accessor:ident))* $(,)?],
+        ops = linear
+        $(, square = $square_out:ident)?
+        $(, mul = [$($mul_rhs:ident => $mul_out:ident),* $(,)?])?
+        $(, div = [$($div_rhs:ident => $div_out:ident),* $(,)?])?
         $(, extra = { $($extra:tt)* })?
     ) => {
         py_quantity!(@define $quantity, $py_quantity, $name, $unit, $py_unit, $unit_name,
-            ($si_variant, $si_ctor, $si_accessor), [$(($ctor, $accessor)),+],
+            $si_ctor,
+            [($si_ctor, $si_accessor) $(, ($ctor, $accessor))*],
             {
                 fn __neg__(&self) -> Self {
                     Self(-self.0)
@@ -105,45 +107,45 @@ macro_rules! py_quantity {
                 fn __mul__(&self, py: Python<'_>, other: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
                     $(
                         if let Ok(rhs) = other.cast::<Self>() {
-                            return Ok($square_out(self.0 * rhs.get().0).into_pyobject(py)?.into_any().unbind());
+                            return $square_out(self.0 * rhs.get().0).into_py_any(py);
                         }
                     )?
-                    $(
+                    $($(
                         if let Ok(rhs) = other.cast::<$mul_rhs>() {
-                            return Ok($mul_out(self.0 * rhs.get().0).into_pyobject(py)?.into_any().unbind());
+                            return $mul_out(self.0 * rhs.get().0).into_py_any(py);
                         }
-                    )*
-                    match other.extract::<f64>() {
-                        Ok(factor) => Ok(Self(self.0 * factor).into_pyobject(py)?.into_any().unbind()),
-                        Err(_) => Ok(py.NotImplemented()),
+                    )*)?
+                    if let Ok(factor) = other.extract::<f64>() {
+                        return Self(self.0 * factor).into_py_any(py);
                     }
+                    Ok(py.NotImplemented())
                 }
 
                 fn __rmul__(&self, py: Python<'_>, other: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
-                    $(
+                    $($(
                         if let Ok(lhs) = other.cast::<$mul_rhs>() {
-                            return Ok($mul_out(lhs.get().0 * self.0).into_pyobject(py)?.into_any().unbind());
+                            return $mul_out(lhs.get().0 * self.0).into_py_any(py);
                         }
-                    )*
-                    match other.extract::<f64>() {
-                        Ok(factor) => Ok(Self(factor * self.0).into_pyobject(py)?.into_any().unbind()),
-                        Err(_) => Ok(py.NotImplemented()),
+                    )*)?
+                    if let Ok(factor) = other.extract::<f64>() {
+                        return Self(factor * self.0).into_py_any(py);
                     }
+                    Ok(py.NotImplemented())
                 }
 
                 fn __truediv__(&self, py: Python<'_>, other: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
                     if let Ok(rhs) = other.cast::<Self>() {
-                        return Ok((self.0 / rhs.get().0).into_pyobject(py)?.into_any().unbind());
+                        return (self.0 / rhs.get().0).into_py_any(py);
                     }
-                    $(
+                    $($(
                         if let Ok(rhs) = other.cast::<$div_rhs>() {
-                            return Ok($div_out(self.0 / rhs.get().0).into_pyobject(py)?.into_any().unbind());
+                            return $div_out(self.0 / rhs.get().0).into_py_any(py);
                         }
-                    )*
-                    match other.extract::<f64>() {
-                        Ok(divisor) => Ok(Self(self.0 / divisor).into_pyobject(py)?.into_any().unbind()),
-                        Err(_) => Ok(py.NotImplemented()),
+                    )*)?
+                    if let Ok(divisor) = other.extract::<f64>() {
+                        return Self(self.0 / divisor).into_py_any(py);
                     }
+                    Ok(py.NotImplemented())
                 }
 
                 $($($extra)*)?
@@ -153,7 +155,7 @@ macro_rules! py_quantity {
     (
         @define $quantity:ident, $py_quantity:ident, $name:literal,
         $unit:ident, $py_unit:ident, $unit_name:literal,
-        ($si_variant:ident, $si_ctor:ident, $si_accessor:ident),
+        $si_ctor:ident,
         [$(($ctor:ident, $accessor:ident)),+],
         { $($methods:tt)* }
     ) => {
@@ -210,8 +212,8 @@ macro_rules! py_quantity {
             "Create it by multiplying a number by a `", $unit_name,
             "`, or with one of the static constructors named after the units."
         )]
-        #[pyclass(name = $name, module = "lox_space", frozen, from_py_object)]
-        #[derive(Clone, Copy)]
+        #[pyclass(name = $name, module = "lox_space", frozen, eq, ord, from_py_object)]
+        #[derive(Clone, Copy, PartialEq, PartialOrd)]
         pub struct $py_quantity(pub $quantity);
 
         #[pymethods]
@@ -248,7 +250,7 @@ macro_rules! py_quantity {
                 if format_spec.is_empty() {
                     return Ok(self.0.to_string());
                 }
-                format_with_unit(py, self.0.$si_accessor(), format_spec, $unit::$si_variant.symbol())
+                format_with_unit(py, self.0.to($unit::SI), format_spec, $unit::SI.symbol())
             }
 
             /// Returns the value in SI units with the unit symbol.
@@ -262,7 +264,7 @@ macro_rules! py_quantity {
                     "{}.{}({})",
                     $name,
                     stringify!($si_ctor),
-                    repr_f64(self.0.$si_accessor())
+                    repr_f64(self.0.to($unit::SI))
                 )
             }
 
@@ -270,27 +272,7 @@ macro_rules! py_quantity {
                 slf: &Bound<'py, Self>,
             ) -> PyResult<(Bound<'py, PyAny>, (f64,))> {
                 let ctor = slf.get_type().getattr(stringify!($si_ctor))?;
-                Ok((ctor, (slf.get().0.$si_accessor(),)))
-            }
-
-            fn __eq__(&self, other: &Self) -> bool {
-                self.0 == other.0
-            }
-
-            fn __lt__(&self, other: &Self) -> bool {
-                self.0 < other.0
-            }
-
-            fn __le__(&self, other: &Self) -> bool {
-                self.0 <= other.0
-            }
-
-            fn __gt__(&self, other: &Self) -> bool {
-                self.0 > other.0
-            }
-
-            fn __ge__(&self, other: &Self) -> bool {
-                self.0 >= other.0
+                Ok((ctor, (slf.get().0.to($unit::SI),)))
             }
 
             $($methods)*
@@ -300,7 +282,6 @@ macro_rules! py_quantity {
 
 py_quantity!(
     Angle, PyAngle, "Angle", AngleUnit, PyAngleUnit, "AngleUnit",
-    si = (Radians, radians, to_radians),
     units = [
         (radians, to_radians),
         (microradians, to_microradians),
@@ -310,32 +291,27 @@ py_quantity!(
         (microarcseconds, to_microarcseconds),
     ],
     ops = linear,
-    mul = [],
     div = [PyTimeDelta => PyAngularRate]
 );
 
 py_quantity!(
     AngularRate, PyAngularRate, "AngularRate", AngularRateUnit, PyAngularRateUnit,
     "AngularRateUnit",
-    si = (RadiansPerSecond, radians_per_second, to_radians_per_second),
     units = [
         (radians_per_second, to_radians_per_second),
         (degrees_per_second, to_degrees_per_second),
     ],
     ops = linear,
-    mul = [PyTimeDelta => PyAngle],
-    div = []
+    mul = [PyTimeDelta => PyAngle]
 );
 
 py_quantity!(
     Area, PyArea, "Area", AreaUnit, PyAreaUnit, "AreaUnit",
-    si = (SquareMeters, square_meters, to_square_meters),
     units = [
         (square_meters, to_square_meters),
         (square_kilometers, to_square_kilometers),
     ],
     ops = linear,
-    mul = [],
     div = [PyMass => PyAreaToMass]
 );
 
@@ -346,20 +322,12 @@ py_quantity!(
     AreaToMassUnit,
     PyAreaToMassUnit,
     "AreaToMassUnit",
-    si = (
-        SquareMetersPerKilogram,
-        square_meters_per_kilogram,
-        to_square_meters_per_kilogram
-    ),
     units = [(square_meters_per_kilogram, to_square_meters_per_kilogram)],
-    ops = linear,
-    mul = [],
-    div = []
+    ops = linear
 );
 
 py_quantity!(
     DataRate, PyDataRate, "DataRate", DataRateUnit, PyDataRateUnit, "DataRateUnit",
-    si = (BitsPerSecond, bits_per_second, to_bits_per_second),
     units = [
         (bits_per_second, to_bits_per_second),
         (kilobits_per_second, to_kilobits_per_second),
@@ -367,13 +335,11 @@ py_quantity!(
         (gigabits_per_second, to_gigabits_per_second),
     ],
     ops = linear,
-    mul = [PyTimeDelta => PyDataVolume],
-    div = []
+    mul = [PyTimeDelta => PyDataVolume]
 );
 
 py_quantity!(
     DataVolume, PyDataVolume, "DataVolume", DataVolumeUnit, PyDataVolumeUnit, "DataVolumeUnit",
-    si = (Bits, bits, to_bits),
     units = [
         (bits, to_bits),
         (kilobits, to_kilobits),
@@ -391,7 +357,6 @@ py_quantity!(
         (tebibytes, to_tebibytes),
     ],
     ops = linear,
-    mul = [],
     div = [PyTimeDelta => PyDataRate]
 );
 
@@ -402,11 +367,8 @@ py_quantity!(
     DecibelUnit,
     PyDecibelUnit,
     "DecibelUnit",
-    si = (Decibels, decibels, to_decibels),
     units = [(decibels, to_decibels)],
     ops = linear,
-    mul = [],
-    div = [],
     extra = {
         /// Creates a value in decibels from a linear power ratio.
         #[staticmethod]
@@ -428,7 +390,6 @@ py_quantity!(
     DecibelWattsUnit,
     PyDecibelWattsUnit,
     "DecibelWattsUnit",
-    si = (DecibelWatts, decibel_watts, to_decibel_watts),
     units = [
         (decibel_watts, to_decibel_watts),
         (decibel_milliwatts, to_decibel_milliwatts),
@@ -468,7 +429,6 @@ py_quantity!(
 
 py_quantity!(
     Distance, PyDistance, "Distance", DistanceUnit, PyDistanceUnit, "DistanceUnit",
-    si = (Meters, meters, to_meters),
     units = [
         (meters, to_meters),
         (kilometers, to_kilometers),
@@ -476,7 +436,6 @@ py_quantity!(
     ],
     ops = linear,
     square = PyArea,
-    mul = [],
     div = [PyTimeDelta => PyVelocity]
 );
 
@@ -487,7 +446,6 @@ py_quantity!(
     FrequencyUnit,
     PyFrequencyUnit,
     "FrequencyUnit",
-    si = (Hertz, hertz, to_hertz),
     units = [
         (hertz, to_hertz),
         (kilohertz, to_kilohertz),
@@ -495,9 +453,7 @@ py_quantity!(
         (gigahertz, to_gigahertz),
         (terahertz, to_terahertz),
     ],
-    ops = linear,
-    mul = [],
-    div = []
+    ops = linear
 );
 
 py_quantity!(
@@ -507,7 +463,6 @@ py_quantity!(
     GravitationalParameterUnit,
     PyGravitationalParameterUnit,
     "GravitationalParameterUnit",
-    si = (CubicMetersPerSecondSquared, m3_per_s2, to_m3_per_s2),
     units = [(m3_per_s2, to_m3_per_s2), (km3_per_s2, to_km3_per_s2)],
     ops = none
 );
@@ -519,15 +474,12 @@ py_quantity!(
     MassUnit,
     PyMassUnit,
     "MassUnit",
-    si = (Kilograms, kilograms, to_kilograms),
     units = [
         (kilograms, to_kilograms),
         (grams, to_grams),
         (metric_tons, to_metric_tons),
     ],
-    ops = linear,
-    mul = [],
-    div = []
+    ops = linear
 );
 
 py_quantity!(
@@ -537,11 +489,8 @@ py_quantity!(
     PowerUnit,
     PyPowerUnit,
     "PowerUnit",
-    si = (Watts, watts, to_watts),
     units = [(watts, to_watts), (kilowatts, to_kilowatts)],
     ops = linear,
-    mul = [],
-    div = [],
     extra = {
         /// Returns the power as a level in dBW.
         fn to_decibel_watts(&self) -> PyDecibelWatts {
@@ -557,11 +506,8 @@ py_quantity!(
     PressureUnit,
     PyPressureUnit,
     "PressureUnit",
-    si = (Pascals, pascals, to_pascals),
     units = [(pascals, to_pascals), (hectopascals, to_hectopascals)],
-    ops = linear,
-    mul = [],
-    div = []
+    ops = linear
 );
 
 py_quantity!(
@@ -571,11 +517,6 @@ py_quantity!(
     SpecificAngularMomentumUnit,
     PySpecificAngularMomentumUnit,
     "SpecificAngularMomentumUnit",
-    si = (
-        SquareMetersPerSecond,
-        square_meters_per_second,
-        to_square_meters_per_second
-    ),
     units = [
         (square_meters_per_second, to_square_meters_per_second),
         (
@@ -583,9 +524,7 @@ py_quantity!(
             to_square_kilometers_per_second
         ),
     ],
-    ops = linear,
-    mul = [],
-    div = []
+    ops = linear
 );
 
 py_quantity!(
@@ -595,11 +534,6 @@ py_quantity!(
     SpecificEnergyUnit,
     PySpecificEnergyUnit,
     "SpecificEnergyUnit",
-    si = (
-        SquareMetersPerSecondSquared,
-        square_meters_per_second_squared,
-        to_square_meters_per_second_squared
-    ),
     units = [
         (
             square_meters_per_second_squared,
@@ -610,9 +544,7 @@ py_quantity!(
             to_square_kilometers_per_second_squared
         ),
     ],
-    ops = linear,
-    mul = [],
-    div = []
+    ops = linear
 );
 
 py_quantity!(
@@ -622,16 +554,12 @@ py_quantity!(
     TemperatureUnit,
     PyTemperatureUnit,
     "TemperatureUnit",
-    si = (Kelvin, kelvin, to_kelvin),
     units = [(kelvin, to_kelvin)],
-    ops = linear,
-    mul = [],
-    div = []
+    ops = linear
 );
 
 py_quantity!(
     Velocity, PyVelocity, "Velocity", VelocityUnit, PyVelocityUnit, "VelocityUnit",
-    si = (MetersPerSecond, meters_per_second, to_meters_per_second),
     units = [
         (meters_per_second, to_meters_per_second),
         (kilometers_per_second, to_kilometers_per_second),
@@ -639,8 +567,7 @@ py_quantity!(
         (fraction_of_speed_of_light, to_fraction_of_speed_of_light),
     ],
     ops = linear,
-    mul = [PyTimeDelta => PyDistance],
-    div = []
+    mul = [PyTimeDelta => PyDistance]
 );
 
 /// The module constants for `DataVolumeUnit`, e.g. `lox.MB`.
