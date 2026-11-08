@@ -4,11 +4,12 @@
 
 //! Tridiagonal matrix representation and solver.
 
-use alloc::vec;
 use alloc::vec::Vec;
 use core::ops::Index;
 
 use thiserror::Error;
+
+use crate::math::float::abs;
 
 /// Error returned when the diagonal dimensions of a [`Tridiagonal`] matrix are inconsistent.
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
@@ -51,7 +52,10 @@ impl<'a> Tridiagonal<'a> {
         (self.d.len(), self.d.len())
     }
 
-    /// Solves the tridiagonal system `Ax = d`.
+    /// Solves the tridiagonal system `Ax = d` by Gaussian elimination with partial pivoting.
+    ///
+    /// The result is not finite if elimination encounters a zero pivot. A singular matrix may
+    /// avoid one through rounding and return large finite values instead.
     ///
     /// # Panics
     ///
@@ -67,31 +71,48 @@ impl<'a> Tridiagonal<'a> {
         if n == 0 {
             return Vec::new();
         }
-        let a = self.dl;
-        let b = self.d;
-        let c = self.du;
 
-        let mut w = vec![0.0; n - 1];
-        let mut g = vec![0.0; n];
-        let mut p = vec![0.0; n];
+        // Follows LAPACK's `dgtsv`. A row interchange fills in the second superdiagonal, which
+        // is stored in `dl` once the lower diagonal has been eliminated.
+        let mut dl = self.dl.to_vec();
+        let mut diag = self.d.to_vec();
+        let mut du = self.du.to_vec();
+        let mut x = d.to_vec();
 
+        for i in 0..n - 1 {
+            if abs(diag[i]) >= abs(dl[i]) {
+                // No row interchange.
+                let fact = dl[i] / diag[i];
+                diag[i + 1] -= fact * du[i];
+                x[i + 1] -= fact * x[i];
+                dl[i] = 0.0;
+            } else {
+                // Interchange rows i and i + 1.
+                let fact = diag[i] / dl[i];
+                diag[i] = dl[i];
+                let temp = diag[i + 1];
+                diag[i + 1] = du[i] - fact * temp;
+                if i + 2 < n {
+                    dl[i] = du[i + 1];
+                    du[i + 1] = -fact * dl[i];
+                } else {
+                    dl[i] = 0.0;
+                }
+                du[i] = temp;
+                let temp = x[i];
+                x[i] = x[i + 1];
+                x[i + 1] = temp - fact * x[i + 1];
+            }
+        }
+
+        x[n - 1] /= diag[n - 1];
         if n > 1 {
-            w[0] = c[0] / b[0];
+            x[n - 2] = (x[n - 2] - du[n - 2] * x[n - 1]) / diag[n - 2];
         }
-        g[0] = d[0] / b[0];
-
-        for i in 1..n - 1 {
-            w[i] = c[i] / (b[i] - a[i - 1] * w[i - 1]);
+        for i in (0..n.saturating_sub(2)).rev() {
+            x[i] = (x[i] - du[i] * x[i + 1] - dl[i] * x[i + 2]) / diag[i];
         }
-        for i in 1..n {
-            g[i] = (d[i] - a[i - 1] * g[i - 1]) / (b[i] - a[i - 1] * w[i - 1]);
-        }
-        p[n - 1] = g[n - 1];
-        for i in (1..n).rev() {
-            p[i - 1] = g[i - 1] - w[i - 1] * p[i];
-        }
-
-        p
+        x
     }
 }
 
@@ -120,6 +141,8 @@ impl Index<Idx> for Tridiagonal<'_> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
+
     use lox_approx::assert_approx_eq;
 
     use super::*;
@@ -142,6 +165,28 @@ mod tests {
         assert_eq!(&tri[(0, 2)], &0.0);
         assert_eq!(&tri[(1, 2)], &2.0);
         assert_eq!(&tri[(2, 2)], &5.0);
+    }
+
+    #[test]
+    fn test_tridiagonal_solve_requires_pivoting() {
+        // The first pivot is zero, so elimination without row interchanges divides by zero.
+        let tri = Tridiagonal::new(&[1.0], &[0.0, 0.0], &[1.0]).unwrap();
+        assert_eq!(tri.solve(&[2.0, 3.0]), vec![3.0, 2.0]);
+
+        // | 1e-20  1    0  |   | 1 |   | 2 |
+        // | 1      1    1  | · | 2 | = | 6 |
+        // | 0      1    1  |   | 3 |   | 5 |
+        let tri = Tridiagonal::new(&[1.0, 1.0], &[1e-20, 1.0, 1.0], &[1.0, 1.0]).unwrap();
+        let x = tri.solve(&[2.0, 6.0, 5.0]);
+        assert_approx_eq!(x[0], 1.0, rtol <= 1e-15);
+        assert_approx_eq!(x[1], 2.0, rtol <= 1e-15);
+        assert_approx_eq!(x[2], 3.0, rtol <= 1e-15);
+    }
+
+    #[test]
+    fn test_tridiagonal_solve_single_row() {
+        let tri = Tridiagonal::new(&[], &[4.0], &[]).unwrap();
+        assert_eq!(tri.solve(&[2.0]), vec![0.5]);
     }
 
     #[test]
