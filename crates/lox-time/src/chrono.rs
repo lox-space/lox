@@ -4,11 +4,11 @@
 
 use crate::calendar_dates::UNIX_EPOCH;
 use chrono::{DateTime, Utc};
+use lox_core::time::TimeDelta;
 use lox_core::time::constants::ATTOSECONDS_IN_NANOSECOND;
-use lox_core::time::deltas::TimeDelta;
 use thiserror::Error;
 
-pub use lox_core::time::chrono::ChronoTimeDeltaError;
+pub use lox_core::time::ChronoTimeDeltaError;
 
 use crate::Time;
 use crate::offsets::{DefaultOffsetProvider, Offset};

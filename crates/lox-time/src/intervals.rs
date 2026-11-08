@@ -11,7 +11,7 @@ use core::{
 
 use lox_approx::ApproxEq;
 use lox_approx::ApproxEqResults;
-use lox_core::time::deltas::TimeDelta;
+use lox_core::time::TimeDelta;
 
 use crate::{Time, time::TimeScaleMismatch, time_scales::ContinuousTimeScale};
 

@@ -21,7 +21,7 @@ pub use crate::time::time_scales::{Tai, Tdb, TimeScale, Ut1};
 pub use crate::time::utc::Utc;
 
 // Units (types + extension traits for 800.0.km() syntax)
-pub use crate::core::time::deltas::TimeDeltaLiterals;
+pub use crate::core::time::TimeDeltaLiterals;
 pub use crate::core::units::literals::*;
 pub use crate::core::units::{Angle, Distance, Velocity};
 

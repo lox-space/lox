@@ -4,7 +4,7 @@
 
 use core::convert::Infallible;
 
-use lox_core::time::deltas::TimeDelta;
+use lox_core::time::TimeDelta;
 
 use crate::{
     offsets::{Offset, OffsetProvider, TryOffset},

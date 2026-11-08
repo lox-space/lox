@@ -15,7 +15,7 @@ use std::collections::BTreeMap;
 
 use lox_core::coords::Cartesian;
 use lox_core::elements::{GravitationalParameter, Keplerian};
-use lox_core::time::deltas::TimeDelta;
+use lox_core::time::TimeDelta;
 use lox_core::units::{Angle, Area, Distance, Mass, Velocity};
 use nalgebra::Matrix6;
 use serde::{Deserialize, Serialize};
@@ -736,7 +736,7 @@ mod tests {
 
     use lox_bodies::Origin;
     use lox_core::elements::{GravitationalParameter, Keplerian};
-    use lox_core::time::deltas::TimeDelta;
+    use lox_core::time::TimeDelta;
     use lox_core::units::{Angle, Area, Distance, Mass, Velocity};
     use lox_frames::Frame;
     use nalgebra::Matrix6;

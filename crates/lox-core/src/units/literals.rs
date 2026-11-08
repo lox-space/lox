@@ -4,8 +4,8 @@
 
 //! Extension traits for writing quantities as literals, e.g. `7.0.km()` or `30.deg()`.
 //!
-//! The literals for [`TimeDelta`](crate::time::deltas::TimeDelta) are
-//! [`TimeDeltaLiterals`](crate::time::deltas::TimeDeltaLiterals).
+//! The literals for [`TimeDelta`](crate::time::TimeDelta) are
+//! [`TimeDeltaLiterals`](crate::time::TimeDeltaLiterals).
 
 use super::{
     Angle, Area, AreaToMass, DataRate, DataVolume, Decibel, DecibelWatts, Distance, Frequency,

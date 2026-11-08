@@ -17,7 +17,7 @@ use crate::types::common::{
 use lox_bodies::TryPointMass;
 use lox_core::coords::Cartesian;
 use lox_core::elements::{GravitationalParameter, Keplerian};
-use lox_core::time::deltas::TimeDelta;
+use lox_core::time::TimeDelta;
 use lox_core::units::{Mass, Velocity};
 
 /// Per-message metadata for the OPM (CCSDS 502.0-B-3 §3.3).
