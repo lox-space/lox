@@ -123,7 +123,8 @@ impl TryFrom<SeriesRepr> for Series {
 pub enum InterpolationType {
     /// Linear interpolation.
     Linear,
-    /// Natural cubic spline interpolation (falls back to linear if fewer than 4 points).
+    /// Cubic spline interpolation with not-a-knot end conditions (falls back to linear if fewer
+    /// than 4 points).
     #[cfg_attr(feature = "serde", serde(rename = "cubic"))]
     CubicSpline,
 }
@@ -312,12 +313,15 @@ impl Series {
     }
 
     /// Finds the interval index for interpolation at point `xp`.
+    ///
+    /// Points before the first or after the last data point map to the first or last
+    /// interval, and so does NaN.
     #[inline]
     pub fn find_index(&self, xp: f64) -> usize {
         let x = self.x.as_ref();
         let x0 = *x.first().unwrap();
         let xn = *x.last().unwrap();
-        if xp <= x0 {
+        if xp.is_nan() || xp <= x0 {
             0
         } else if xp >= xn {
             x.len() - 2
@@ -368,6 +372,9 @@ impl Series {
     }
 
     /// Interpolates the series at point `xp`.
+    ///
+    /// Outside the range of the data points, the series is extrapolated from the first or last
+    /// interval. The result is NaN if `xp` is NaN.
     #[inline]
     pub fn interpolate(&self, xp: f64) -> f64 {
         let idx = self.find_index(xp);
@@ -513,6 +520,42 @@ mod tests {
         let s = Series::try_new(x, y, InterpolationType::CubicSpline).unwrap();
         let actual = s.interpolate(xp);
         assert_approx_eq!(actual, expected, rtol <= 1e-12);
+    }
+
+    // Reference values from `scipy.interpolate.CubicSpline` with `bc_type="not-a-knot"`, including
+    // extrapolation on both sides.
+    #[rstest]
+    #[case(0.05, 0.050704141454165026)]
+    #[case(1.5, 0.8225776508153226)]
+    #[case(3.02, 0.12146747505827003)]
+    #[case(6.0, -4.123313453514045)]
+    #[case(-1.0, -1.3396917281497036)]
+    #[case(11.0, 4.745506764687779)]
+    fn test_series_spline_irregular_spacing(#[case] xp: f64, #[case] expected: f64) {
+        let x = vec![0.0, 0.1, 3.0, 3.05, 10.0];
+        let y = vec![
+            0.0,
+            0.09983341664682815,
+            0.1411200080598672,
+            0.0914646422324372,
+            -0.5440211108893698,
+        ];
+
+        let s = Series::try_new(x, y, InterpolationType::CubicSpline).unwrap();
+        assert_approx_eq!(s.interpolate(xp), expected, rtol <= 1e-12);
+    }
+
+    #[rstest]
+    #[case(InterpolationType::Linear)]
+    #[case(InterpolationType::CubicSpline)]
+    fn test_series_interpolate_nan(#[case] interpolation: InterpolationType) {
+        let s = Series::try_new(
+            vec![1.0, 2.0, 3.0, 4.0],
+            vec![1.0, 4.0, 9.0, 16.0],
+            interpolation,
+        )
+        .unwrap();
+        assert!(s.interpolate(f64::NAN).is_nan());
     }
 
     #[rstest]
