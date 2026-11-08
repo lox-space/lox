@@ -116,18 +116,36 @@ impl TimeDelta {
     }
 
     /// Creates a `TimeDelta` from a whole number of minutes.
+    ///
+    /// # Panics
+    /// Panics if the number of seconds overflows `i64`.
     pub const fn from_minutes(minutes: i64) -> Self {
-        Self::from_seconds(minutes * SECONDS_PER_MINUTE)
+        match minutes.checked_mul(SECONDS_PER_MINUTE) {
+            Some(seconds) => Self::from_seconds(seconds),
+            None => panic!("overflow in `TimeDelta::from_minutes`"),
+        }
     }
 
     /// Creates a `TimeDelta` from a whole number of hours.
+    ///
+    /// # Panics
+    /// Panics if the number of seconds overflows `i64`.
     pub const fn from_hours(hours: i64) -> Self {
-        Self::from_seconds(hours * SECONDS_PER_HOUR)
+        match hours.checked_mul(SECONDS_PER_HOUR) {
+            Some(seconds) => Self::from_seconds(seconds),
+            None => panic!("overflow in `TimeDelta::from_hours`"),
+        }
     }
 
     /// Creates a `TimeDelta` from a whole number of days.
+    ///
+    /// # Panics
+    /// Panics if the number of seconds overflows `i64`.
     pub const fn from_days(days: i64) -> Self {
-        Self::from_seconds(days * SECONDS_PER_DAY)
+        match days.checked_mul(SECONDS_PER_DAY) {
+            Some(seconds) => Self::from_seconds(seconds),
+            None => panic!("overflow in `TimeDelta::from_days`"),
+        }
     }
 
     /// Creates a `TimeDelta` from a number of milliseconds.
@@ -210,17 +228,30 @@ impl TimeDelta {
         self.attoseconds
     }
 
-    const fn neg_const(self) -> Self {
+    /// Negates the `TimeDelta` and returns `None` if overflow occurred.
+    ///
+    /// Only [`i64::MIN`] whole seconds with zero attoseconds overflows.
+    pub const fn checked_neg(self) -> Option<Self> {
         if self.attoseconds == 0 {
-            return Self {
-                seconds: -self.seconds,
-                attoseconds: self.attoseconds,
+            let Some(seconds) = self.seconds.checked_neg() else {
+                return None;
             };
+            return Some(Self {
+                seconds,
+                attoseconds: 0,
+            });
         }
-
-        Self {
-            seconds: -self.seconds - 1,
+        // The attoseconds borrow a second: -s - 1 equals !s, which never overflows.
+        Some(Self {
+            seconds: !self.seconds,
             attoseconds: ATTOSECONDS_IN_SECOND - self.attoseconds,
+        })
+    }
+
+    const fn neg_const(self) -> Self {
+        match self.checked_neg() {
+            Some(negated) => negated,
+            None => panic!("overflow negating `TimeDelta`"),
         }
     }
 
@@ -369,6 +400,9 @@ impl Display for TimeDelta {
 impl Neg for TimeDelta {
     type Output = Self;
 
+    /// # Panics
+    /// Panics if the negation overflows, i.e. for [`i64::MIN`] whole seconds. Use
+    /// [`checked_neg`](TimeDelta::checked_neg) for a fallible alternative.
     fn neg(self) -> Self::Output {
         self.neg_const()
     }
@@ -631,6 +665,51 @@ mod tests {
                 .checked_add(TimeDelta::new(0, 300_000_000_000_000_000))
                 .is_none()
         );
+    }
+
+    #[test]
+    fn test_checked_neg() {
+        assert_eq!(
+            TimeDelta::new(1, 250_000_000_000_000_000).checked_neg(),
+            Some(TimeDelta::new(-2, 750_000_000_000_000_000))
+        );
+        assert_eq!(
+            TimeDelta::from_seconds(i64::MAX).checked_neg(),
+            Some(TimeDelta::from_seconds(-i64::MAX))
+        );
+        assert_eq!(
+            TimeDelta::new(i64::MAX, 1).checked_neg(),
+            Some(TimeDelta::new(i64::MIN, ATTOSECONDS_IN_SECOND - 1))
+        );
+        assert_eq!(TimeDelta::from_seconds(i64::MIN).checked_neg(), None);
+        assert_eq!(
+            TimeDelta::new(i64::MIN, 1).checked_neg(),
+            Some(TimeDelta::new(i64::MAX, ATTOSECONDS_IN_SECOND - 1))
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "overflow negating `TimeDelta`")]
+    fn test_neg_overflow_panics() {
+        let _ = -TimeDelta::from_seconds(i64::MIN);
+    }
+
+    #[test]
+    #[should_panic(expected = "overflow in `TimeDelta::from_minutes`")]
+    fn test_from_minutes_overflow_panics() {
+        let _ = TimeDelta::from_minutes(i64::MAX);
+    }
+
+    #[test]
+    #[should_panic(expected = "overflow in `TimeDelta::from_hours`")]
+    fn test_from_hours_overflow_panics() {
+        let _ = TimeDelta::from_hours(i64::MIN);
+    }
+
+    #[test]
+    #[should_panic(expected = "overflow in `TimeDelta::from_days`")]
+    fn test_from_days_overflow_panics() {
+        let _ = TimeDelta::from_days(i64::MAX / SECONDS_PER_DAY + 1);
     }
 
     #[test]
