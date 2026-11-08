@@ -212,7 +212,7 @@ impl TimeOfDay {
             let subsecond: Subsecond = subsecond_str
                 .parse()
                 .map_err(|_| TimeOfDayError::InvalidIsoString(input.to_owned()))?;
-            time.with_subsecond(subsecond);
+            time = time.with_subsecond(subsecond);
         }
         Ok(time)
     }
@@ -306,10 +306,11 @@ impl TimeOfDay {
         )
     }
 
-    /// Sets the [TimeOfDay]'s subsecond component.
-    pub const fn with_subsecond(&mut self, subsecond: Subsecond) -> Self {
+    /// Returns a copy of the [TimeOfDay] with the given subsecond component.
+    #[must_use]
+    pub const fn with_subsecond(mut self, subsecond: Subsecond) -> Self {
         self.subsecond = subsecond;
-        *self
+        self
     }
 
     /// Returns the hour (0–23).
