@@ -4,7 +4,7 @@
 
 use thiserror::Error;
 
-use crate::time::{constants::ATTOSECONDS_IN_NANOSECOND, deltas::TimeDelta};
+use crate::time::{TimeDelta, constants::ATTOSECONDS_IN_NANOSECOND};
 
 /// Error returned when a [`TimeDelta`] cannot be represented as a `chrono::TimeDelta`.
 #[derive(Debug, Error)]

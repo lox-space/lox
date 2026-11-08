@@ -12,7 +12,7 @@ use core::fmt::Formatter;
 use core::ops::Add;
 use core::ops::Sub;
 use core::str::FromStr;
-use lox_core::time::deltas::InvalidFloatSeconds;
+use lox_core::time::InvalidFloatSeconds;
 
 use crate::julian_dates::Days;
 use lox_approx::ApproxEq;

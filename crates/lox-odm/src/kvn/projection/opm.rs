@@ -15,7 +15,7 @@ use std::convert::TryFrom;
 
 use lox_core::coords::Cartesian;
 use lox_core::elements::{GravitationalParameter, Keplerian};
-use lox_core::time::deltas::TimeDelta;
+use lox_core::time::TimeDelta;
 use lox_core::units::{Angle, Area, Distance, Mass, Velocity};
 
 use crate::kvn::ast::{KvnDocument, KvnEntry, KvnField, KvnSection};
@@ -1184,7 +1184,7 @@ mod tests {
 
     #[test]
     fn write_opm_with_maneuver() {
-        use lox_core::time::deltas::TimeDelta;
+        use lox_core::time::TimeDelta;
 
         let mut opm = sample_opm();
         let man = Maneuver {
@@ -1291,7 +1291,7 @@ mod tests {
 
     #[test]
     fn round_trip_opm_with_two_maneuvers() {
-        use lox_core::time::deltas::TimeDelta;
+        use lox_core::time::TimeDelta;
 
         let mut opm = sample_opm();
         opm.maneuvers.push(Maneuver {
@@ -1525,7 +1525,7 @@ USER_DEFINED_OPERATOR = GSOC
 
     #[test]
     fn read_multiple_maneuvers_split_correctly() {
-        use lox_core::time::deltas::TimeDelta;
+        use lox_core::time::TimeDelta;
 
         let mut opm = sample_opm();
         opm.maneuvers.push(Maneuver {
@@ -1790,7 +1790,7 @@ DRAG_COEFF = 2.2
 
     #[test]
     fn read_opm_maneuver_with_ref_frame() {
-        use lox_core::time::deltas::TimeDelta;
+        use lox_core::time::TimeDelta;
 
         let mut opm = sample_opm();
         opm.maneuvers.push(Maneuver {
@@ -2016,7 +2016,7 @@ MAN_DV_3 = 0.0 [km/s]
 
     #[test]
     fn write_opm_with_maneuver_with_frame() {
-        use lox_core::time::deltas::TimeDelta;
+        use lox_core::time::TimeDelta;
 
         let mut opm = sample_opm();
         opm.maneuvers.push(Maneuver {

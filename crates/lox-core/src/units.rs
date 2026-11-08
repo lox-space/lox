@@ -15,7 +15,7 @@
 //! angles.
 //!
 //! Besides arithmetic within a dimension, the following operators relate dimensions, with
-//! [`TimeDelta`](crate::time::deltas::TimeDelta) as the duration:
+//! [`TimeDelta`](crate::time::TimeDelta) as the duration:
 //!
 //! | Expression | Result |
 //! |---|---|

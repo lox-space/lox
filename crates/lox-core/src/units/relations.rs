@@ -6,7 +6,7 @@
 
 use core::ops::{Div, Mul};
 
-use crate::time::deltas::TimeDelta;
+use crate::time::TimeDelta;
 
 use super::{Angle, AngularRate, Area, AreaToMass, DataRate, DataVolume, Distance, Mass, Velocity};
 

@@ -19,7 +19,7 @@ use thiserror::Error;
 use crate::constants::SPEED_OF_LIGHT;
 use crate::{
     math::series::Series,
-    time::deltas::TimeDelta,
+    time::TimeDelta,
     units::{Angle, AngleUnit, AngularRate, Distance, DistanceUnit, Velocity},
 };
 

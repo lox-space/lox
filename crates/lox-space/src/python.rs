@@ -40,7 +40,7 @@ use crate::time::python::{
 };
 use crate::units::python::register_units;
 
-use lox_core::time::deltas::TimeDeltaUnit;
+use lox_core::time::TimeDeltaUnit;
 use pyo3::prelude::*;
 
 /// Register all lox-space Python types, functions, and constants into the given module.

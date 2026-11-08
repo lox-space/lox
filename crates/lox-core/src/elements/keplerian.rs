@@ -22,7 +22,7 @@ use crate::anomalies::{EccentricAnomaly, TrueAnomaly};
 use crate::elements::quantities::{
     GravitationalParameter, SpecificAngularMomentum, SpecificEnergy,
 };
-use crate::time::deltas::TimeDelta;
+use crate::time::TimeDelta;
 use crate::utils::Linspace;
 use crate::{
     coords::Cartesian,

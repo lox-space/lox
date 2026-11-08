@@ -6,4 +6,4 @@
 //! Durations, re-exported from `lox-core`.
 
 #[doc(inline)]
-pub use lox_core::time::deltas::*;
+pub use lox_core::time::{InvalidFloatSeconds, TimeDelta, TimeDeltaLiterals, TimeDeltaUnit};
