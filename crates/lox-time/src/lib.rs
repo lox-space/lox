@@ -37,25 +37,18 @@
 extern crate alloc;
 
 pub mod calendar_dates;
-/// Conversions between `lox-time` and `chrono` types.
 #[cfg(feature = "chrono")]
 pub mod chrono;
 pub mod deltas;
-/// Time intervals and set operations on them.
 pub mod intervals;
 mod iso;
 pub mod julian_dates;
-/// Time scale offset computation.
 pub mod offsets;
-/// Time-indexed interpolation series.
 pub mod series;
 pub mod subsecond;
-/// The [`Time`] type representing an instant in a continuous time scale.
 pub mod time;
 pub mod time_of_day;
-/// Astronomical time scale definitions.
 pub mod time_scales;
-/// Coordinated Universal Time (UTC) with leap-second support.
 pub mod utc;
 
 pub use time::{Time, TimeBuilder, TimeError, TimeScaleMismatch};

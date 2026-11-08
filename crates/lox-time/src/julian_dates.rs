@@ -3,11 +3,10 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-/*!
-    Module `julian_dates` exposes the [JulianDate] trait for expressing arbitrary time
-    representations as Julian dates relative to standard [Epoch]s and in a variety of
-    [TimeDeltaUnit]s.
-*/
+//! Julian dates.
+//!
+//! The [JulianDate] trait expresses time representations as Julian dates relative to standard
+//! [Epoch]s and in a variety of [TimeDeltaUnit]s.
 
 use lox_core::time::constants::{
     ATTOSECONDS_IN_SECOND, SECONDS_BETWEEN_J1950_AND_J2000, SECONDS_BETWEEN_JD_AND_J2000,

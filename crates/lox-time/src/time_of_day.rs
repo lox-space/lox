@@ -4,13 +4,10 @@
 //
 // SPDX-License-Identifier: MPL-2.0 AND LicenseRef-ERFA
 
-/*!
-    Module `time_of_day` exposes the concrete representation of a time of day with leap second
-    support, [TimeOfDay].
-
-    The [CivilTime] trait supports arbitrary time representations to express themselves as a
-    human-readable time of day.
-*/
+//! Time of day with leap-second support.
+//!
+//! [TimeOfDay] is a concrete time of day, and the [CivilTime] trait lets other time
+//! representations express themselves as a human-readable time of day.
 
 use alloc::borrow::ToOwned;
 use alloc::format;

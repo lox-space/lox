@@ -3,16 +3,15 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-/*!
-    Module `leap_seconds` exposes the [LeapSecondsProvider] trait for defining sources of leap
-    second data. Lox's standard implementation, [DefaultLeapSecondsProvider], is suitable for most
-    applications.
-
-    The `lox-io` crate additionally exposes a lower-level `LeapSecondsKernel` for working directly
-    with [NAIF Leap Seconds Kernel][LSK] data.
-
-    [LSK]: https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/time.html#The%20Leapseconds%20Kernel%20LSK
-*/
+//! Leap second tables and provider trait.
+//!
+//! The [LeapSecondsProvider] trait defines sources of leap second data. Lox's standard
+//! implementation, [DefaultLeapSecondsProvider], is suitable for most applications.
+//!
+//! The `lox-io` crate additionally exposes a lower-level `LeapSecondsKernel` for working directly
+//! with [NAIF Leap Seconds Kernel][LSK] data.
+//!
+//! [LSK]: https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/time.html#The%20Leapseconds%20Kernel%20LSK
 
 use alloc::vec::Vec;
 

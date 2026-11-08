@@ -3,12 +3,11 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-/*!
-    Module `utc` exposes [Utc](crate::utc::Utc), a leap-second aware representation for UTC datetimes.
-
-    Due to the complexity inherent in working with leap seconds, it is intentionally segregated
-    from the continuous time formats, and is used exclusively as an input format to Lox.
-*/
+//! Coordinated Universal Time (UTC) with leap-second support.
+//!
+//! [`Utc`] is a leap-second aware representation of UTC datetimes. Due to the complexity
+//! inherent in working with leap seconds, it is segregated from the continuous time formats
+//! and is used exclusively as an I/O format.
 
 use alloc::borrow::ToOwned;
 use alloc::string::String;
@@ -26,9 +25,7 @@ use crate::subsecond::Subsecond;
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};
 use crate::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};
 
-/// Leap second tables and provider trait.
 pub mod leap_seconds;
-/// Transformations between UTC and continuous time scales.
 pub mod transformations;
 
 /// Error type returned when attempting to construct a [Utc] instance from invalid inputs.

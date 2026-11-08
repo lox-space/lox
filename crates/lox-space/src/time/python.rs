@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Module `python` aggregates the Python binding for `lox-time`.
+//! Python bindings for `lox-time`.
 
 /// Python bindings for time delta types.
 pub mod deltas;

@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Time intervals and set operations on them.
+
 use alloc::vec::Vec;
 use core::{
     cmp::{max, min},

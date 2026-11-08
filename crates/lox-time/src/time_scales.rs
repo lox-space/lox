@@ -3,15 +3,15 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-/*!
-    Module `time_scales` provides a marker trait denoting a continuous astronomical time scale,
-    along with zero-sized implementations for the most commonly used scales.
-
-    # Utc
-
-    As a discontinuous time scale, [Utc](crate::utc::Utc) does not implement
-    [ContinuousTimeScale](crate::time_scales::ContinuousTimeScale) and is treated by Lox exclusively as an IO format.
-*/
+//! Astronomical time scale definitions.
+//!
+//! [`ContinuousTimeScale`] marks a continuous astronomical time scale, and this module provides
+//! zero-sized implementations for the most commonly used scales.
+//!
+//! # Utc
+//!
+//! As a discontinuous time scale, [`Utc`](crate::utc::Utc) does not implement
+//! [`ContinuousTimeScale`] and is treated by Lox exclusively as an I/O format.
 
 use alloc::borrow::ToOwned;
 use alloc::string::String;
