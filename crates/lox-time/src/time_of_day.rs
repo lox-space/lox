@@ -155,21 +155,30 @@ impl TimeOfDay {
     /// - [TimeOfDayError::InvalidHour] if `hour` is not in the range `0..24`.
     /// - [TimeOfDayError::InvalidMinute] if `minute` is not in the range `0..60`.
     /// - [TimeOfDayError::InvalidSecond] if `second` is not in the range `0..61`.
-    pub fn new(hour: u8, minute: u8, second: u8) -> Result<Self, TimeOfDayError> {
-        if !(0..24).contains(&hour) {
+    pub const fn new(hour: u8, minute: u8, second: u8) -> Result<Self, TimeOfDayError> {
+        Self::from_components(hour, minute, second, Subsecond::ZERO)
+    }
+
+    const fn from_components(
+        hour: u8,
+        minute: u8,
+        second: u8,
+        subsecond: Subsecond,
+    ) -> Result<Self, TimeOfDayError> {
+        if hour >= 24 {
             return Err(TimeOfDayError::InvalidHour(hour));
         }
-        if !(0..60).contains(&minute) {
+        if minute >= 60 {
             return Err(TimeOfDayError::InvalidMinute(minute));
         }
-        if !(0..61).contains(&second) {
+        if second >= 61 {
             return Err(TimeOfDayError::InvalidSecond(second));
         }
         Ok(Self {
             hour,
             minute,
             second,
-            subsecond: Subsecond::default(),
+            subsecond,
         })
     }
 
@@ -209,12 +218,12 @@ impl TimeOfDay {
     }
 
     /// Constructs a `TimeOfDay` from an hour only (minute and second default to zero).
-    pub fn from_hour(hour: u8) -> Result<Self, TimeOfDayError> {
+    pub const fn from_hour(hour: u8) -> Result<Self, TimeOfDayError> {
         Self::new(hour, 0, 0)
     }
 
     /// Constructs a `TimeOfDay` from hour and minute (second defaults to zero).
-    pub fn from_hour_and_minute(hour: u8, minute: u8) -> Result<Self, TimeOfDayError> {
+    pub const fn from_hour_and_minute(hour: u8, minute: u8) -> Result<Self, TimeOfDayError> {
         Self::new(hour, minute, 0)
     }
 
@@ -226,15 +235,17 @@ impl TimeOfDay {
     /// - [TimeOfDayError::InvalidHour] if `hour` is not in the range `0..24`.
     /// - [TimeOfDayError::InvalidMinute] if `minute` is not in the range `0..60`.
     /// - [TimeOfDayError::InvalidSeconds] if `seconds` is not in the range `0.0..86401.0`.
-    pub fn from_hms(hour: u8, minute: u8, seconds: f64) -> Result<Self, TimeOfDayError> {
-        if !(0.0..86401.0).contains(&seconds) {
+    pub const fn from_hms(hour: u8, minute: u8, seconds: f64) -> Result<Self, TimeOfDayError> {
+        // The comparison is false for NaN.
+        if !(seconds >= 0.0 && seconds < 86401.0) {
             return Err(TimeOfDayError::InvalidSeconds(InvalidSeconds(seconds)));
         }
-        let second = lox_core::math::float::trunc(seconds) as u8;
-        let fraction = lox_core::math::float::fract(seconds);
-        let subsecond = Subsecond::from_f64(fraction)
-            .ok_or(TimeOfDayError::InvalidSeconds(InvalidSeconds(seconds)))?;
-        Ok(Self::new(hour, minute, second)?.with_subsecond(subsecond))
+        // Casting truncates. The cast to `u8` also saturates at 255, which is rejected below.
+        let fraction = seconds - (seconds as u64) as f64;
+        let Some(subsecond) = Subsecond::from_f64(fraction) else {
+            return Err(TimeOfDayError::InvalidSeconds(InvalidSeconds(seconds)));
+        };
+        Self::from_components(hour, minute, seconds as u8, subsecond)
     }
 
     /// Constructs a `TimeOfDay` from a fractional day in `[0.0, 1.0)`.
@@ -250,8 +261,9 @@ impl TimeOfDay {
     /// # References
     ///
     /// - ERFA [`d2tf`](https://github.com/liberfa/erfa/blob/master/src/d2tf.c)
-    pub fn from_day_fraction(days: f64) -> Result<Self, TimeOfDayError> {
-        if !days.is_finite() || !(0.0..1.0).contains(&days) {
+    pub const fn from_day_fraction(days: f64) -> Result<Self, TimeOfDayError> {
+        // The comparison is false for NaN.
+        if !(days >= 0.0 && days < 1.0) {
             return Err(TimeOfDayError::InvalidSeconds(InvalidSeconds(
                 days * SECONDS_PER_DAY as f64,
             )));
@@ -269,8 +281,8 @@ impl TimeOfDay {
     /// # Errors
     ///
     /// - [TimeOfDayError::InvalidSecondOfDay] if `second_of_day` is not in the range `0..86401`.
-    pub fn from_second_of_day(second_of_day: u64) -> Result<Self, TimeOfDayError> {
-        if !(0..86401).contains(&second_of_day) {
+    pub const fn from_second_of_day(second_of_day: u64) -> Result<Self, TimeOfDayError> {
+        if second_of_day > SECONDS_PER_DAY as u64 {
             return Err(TimeOfDayError::InvalidSecondOfDay(second_of_day));
         }
         if second_of_day == SECONDS_PER_DAY as u64 {
@@ -285,43 +297,43 @@ impl TimeOfDay {
     /// Constructs a new `TimeOfDay` instance from an integral number of seconds since J2000.
     ///
     /// Note that this constructor is not leap-second aware.
-    pub fn from_seconds_since_j2000(seconds: i64) -> Self {
-        let mut second_of_day = (seconds + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY;
-        if second_of_day.is_negative() {
-            second_of_day += SECONDS_PER_DAY;
-        }
-        Self::from_second_of_day(second_of_day as u64)
-            .unwrap_or_else(|_| unreachable!("second of day should be in range"))
+    pub const fn from_seconds_since_j2000(seconds: i64) -> Self {
+        let second_of_day = (seconds + SECONDS_PER_HALF_DAY).rem_euclid(SECONDS_PER_DAY);
+        Self::new_unchecked(
+            (second_of_day / SECONDS_PER_HOUR) as u8,
+            (second_of_day % SECONDS_PER_HOUR / SECONDS_PER_MINUTE) as u8,
+            (second_of_day % SECONDS_PER_MINUTE) as u8,
+        )
     }
 
     /// Sets the [TimeOfDay]'s subsecond component.
-    pub fn with_subsecond(&mut self, subsecond: Subsecond) -> Self {
+    pub const fn with_subsecond(&mut self, subsecond: Subsecond) -> Self {
         self.subsecond = subsecond;
         *self
     }
 
     /// Returns the hour (0–23).
-    pub fn hour(&self) -> u8 {
+    pub const fn hour(&self) -> u8 {
         self.hour
     }
 
     /// Returns the minute (0–59).
-    pub fn minute(&self) -> u8 {
+    pub const fn minute(&self) -> u8 {
         self.minute
     }
 
     /// Returns the second (0–60, where 60 represents a leap second).
-    pub fn second(&self) -> u8 {
+    pub const fn second(&self) -> u8 {
         self.second
     }
 
     /// Returns the subsecond component.
-    pub fn subsecond(&self) -> Subsecond {
+    pub const fn subsecond(&self) -> Subsecond {
         self.subsecond
     }
 
     /// Returns the second including the subsecond fraction as an `f64`.
-    pub fn second_f64(&self) -> f64 {
+    pub const fn second_f64(&self) -> f64 {
         self.subsecond.as_seconds_f64() + self.second as f64
     }
 
@@ -332,26 +344,26 @@ impl TimeOfDay {
     /// # References
     ///
     /// - ERFA [`tf2d`](https://github.com/liberfa/erfa/blob/master/src/tf2d.c)
-    pub fn to_day_fraction(&self) -> f64 {
+    pub const fn to_day_fraction(&self) -> f64 {
         self.seconds_of_day_f64() / SECONDS_PER_DAY as f64
     }
 
     /// Returns the seconds since the start of the day, including the subsecond.
-    fn seconds_of_day_f64(&self) -> f64 {
+    const fn seconds_of_day_f64(&self) -> f64 {
         self.hour as f64 * SECONDS_PER_HOUR as f64
             + self.minute as f64 * SECONDS_PER_MINUTE as f64
             + self.second_f64()
     }
 
     /// Returns the number of integral seconds since the start of the day.
-    pub fn second_of_day(&self) -> i64 {
+    pub const fn second_of_day(&self) -> i64 {
         self.hour as i64 * SECONDS_PER_HOUR
             + self.minute as i64 * SECONDS_PER_MINUTE
             + self.second as i64
     }
 
     /// Converts the time of day to an [`Angle`] (hour angle representation).
-    pub fn to_angle(&self) -> Angle {
+    pub const fn to_angle(&self) -> Angle {
         Angle::seconds_of_time(self.seconds_of_day_f64())
     }
 }
@@ -396,6 +408,18 @@ mod tests {
     ) {
         let actual = TimeOfDay::from_second_of_day(second_of_day);
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_time_of_day_const() {
+        const TIME: TimeOfDay = TimeOfDay::from_seconds_since_j2000(3661);
+        const SECOND_OF_DAY: i64 = TIME.second_of_day();
+        assert_eq!(TIME, TimeOfDay::new(13, 1, 1).unwrap());
+        assert_eq!(SECOND_OF_DAY, 13 * 3600 + 61);
+        assert_eq!(
+            TimeOfDay::from_seconds_since_j2000(-SECONDS_PER_HALF_DAY - 1),
+            TimeOfDay::new(23, 59, 59).unwrap()
+        );
     }
 
     #[test]

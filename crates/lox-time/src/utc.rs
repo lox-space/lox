@@ -144,7 +144,7 @@ impl Utc {
 
 impl Utc {
     /// Returns the time since J2000, ignoring leap seconds.
-    pub fn to_delta(&self) -> TimeDelta {
+    pub const fn to_delta(&self) -> TimeDelta {
         let seconds = self.date.j2000_day_number() * SECONDS_PER_DAY + self.time.second_of_day()
             - SECONDS_PER_HALF_DAY;
         TimeDelta::new(seconds, self.time.subsecond().as_attoseconds())
