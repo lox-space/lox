@@ -3,6 +3,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Transformations between UTC and continuous time scales.
+
 use crate::calendar_dates::Date;
 use crate::deltas::TimeDelta;
 use crate::offsets::DefaultOffsetProvider;

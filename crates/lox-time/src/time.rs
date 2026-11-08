@@ -4,6 +4,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! The [`Time`] type representing an instant in a continuous time scale.
+
 use alloc::borrow::ToOwned;
 use alloc::string::String;
 use core::fmt;

@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Time scale offset computation.
+
 use core::convert::Infallible;
 
 use lox_core::math::float::sin;

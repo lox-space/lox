@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Conversions between `lox-time` and `chrono` types.
+
 use crate::calendar_dates::UNIX_EPOCH;
 use chrono::{DateTime, Utc};
 use lox_core::time::TimeDelta;

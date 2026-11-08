@@ -3,10 +3,10 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-/*!
-    `calendar_dates` exposes a concrete [Date] struct and the [CalendarDate] trait for working with
-    human-readable dates.
-*/
+//! Calendar dates.
+//!
+//! [Date] is a concrete calendar date, and the [CalendarDate] trait lets other time
+//! representations express themselves as human-readable dates.
 
 use alloc::borrow::ToOwned;
 use alloc::string::String;
