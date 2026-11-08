@@ -10,7 +10,8 @@ use core::ops::Sub;
 
 /// Computes consecutive differences of a slice.
 pub trait Diff<T> {
-    /// Returns a vector of differences between consecutive elements.
+    /// Returns a vector of differences between consecutive elements, which is empty for fewer
+    /// than two elements.
     fn diff(&self) -> Vec<T>;
 }
 
@@ -19,12 +20,7 @@ where
     T: Copy + Sub<Output = T>,
 {
     fn diff(&self) -> Vec<T> {
-        let n = self.len();
-        self.iter()
-            .take(n - 1)
-            .enumerate()
-            .map(|(idx, x)| self[idx + 1] - *x)
-            .collect()
+        self.windows(2).map(|pair| pair[1] - pair[0]).collect()
     }
 }
 
@@ -72,6 +68,13 @@ mod tests {
         let x: Vec<f64> = vec![1.0, 2.0, 3.0];
         let exp: Vec<f64> = vec![1.0, 1.0];
         assert_eq!(x.diff(), exp);
+    }
+
+    #[test]
+    fn test_diff_short_slices() {
+        let empty: [f64; 0] = [];
+        assert!(empty.diff().is_empty());
+        assert!([1.0].diff().is_empty());
     }
 
     #[test]
