@@ -8,7 +8,7 @@ use divan::Bencher;
 use lox_space::bodies::{Earth, MercuryBarycenter, Moon, SolarSystemBarycenter};
 use lox_space::ephem::Ephemeris;
 use lox_space::ephem::spk::parser::Spk;
-use lox_space::time::{Time, deltas::TimeDelta, time_scales::Tdb};
+use lox_space::time::{Time, TimeDelta, time_scales::Tdb};
 
 fn main() {
     divan::main();

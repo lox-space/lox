@@ -14,7 +14,7 @@ use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::{RotationError, TryRotation};
 use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
-use lox_time::deltas::TimeDelta;
+use lox_time::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
 use lox_time::time_scales::{Tdb, TimeScale};

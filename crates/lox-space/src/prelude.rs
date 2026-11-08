@@ -12,7 +12,7 @@
 #[cfg(feature = "time")]
 pub use crate::time::Time;
 #[cfg(feature = "time")]
-pub use crate::time::deltas::TimeDelta;
+pub use crate::time::TimeDelta;
 #[cfg(feature = "time")]
 pub use crate::time::intervals::Interval;
 #[cfg(feature = "time")]

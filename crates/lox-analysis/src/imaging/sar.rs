@@ -308,7 +308,7 @@ mod integration_tests {
     use lox_orbits::propagators::OrbitSource;
     use lox_orbits::propagators::Propagator;
     use lox_orbits::propagators::sgp4::{Elements, Sgp4};
-    use lox_time::deltas::TimeDelta;
+    use lox_time::TimeDelta;
     use lox_time::intervals::{Interval, TimeInterval};
     use lox_time::time_scales::TimeScale;
 

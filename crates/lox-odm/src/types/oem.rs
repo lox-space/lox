@@ -116,7 +116,7 @@ mod tests {
     use lox_bodies::Origin;
     use lox_core::units::{Distance, Velocity};
     use lox_frames::Frame;
-    use lox_time::deltas::TimeDelta;
+    use lox_time::TimeDelta;
     use lox_time::time::Time;
     use lox_time::time_scales::TimeScale;
 

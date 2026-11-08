@@ -28,7 +28,7 @@ use lox_space::bodies::Origin;
 use lox_space::frames::Frame;
 use lox_space::orbits::Trajectory;
 use lox_space::time::Time;
-use lox_space::time::deltas::TimeDelta;
+use lox_space::time::TimeDelta;
 
 #[path = "common/mod.rs"]
 mod common;

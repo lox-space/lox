@@ -22,7 +22,7 @@ use crate::orbits::{
     TrajectoryTransformationError,
 };
 use crate::time::Time;
-use crate::time::deltas::TimeDelta;
+use crate::time::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
 use crate::time::time_scales::Tai;

@@ -9,7 +9,7 @@ use alloc::vec::Vec;
 
 use lox_core::math::series::{InterpolationType, Series, SeriesError};
 
-use crate::deltas::TimeDelta;
+use crate::TimeDelta;
 use crate::time::Time;
 use crate::time_scales::ContinuousTimeScale;
 

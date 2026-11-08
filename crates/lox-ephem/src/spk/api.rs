@@ -247,7 +247,7 @@ mod test {
     use lox_bodies::{MercuryBarycenter, SolarSystemBarycenter};
     use lox_core::glam::DVec3;
     use lox_time::Time;
-    use lox_time::deltas::TimeDelta;
+    use lox_time::TimeDelta;
     use lox_time::time_scales::Tdb;
 
     use crate::spk::parser::tests::{FILE_CONTENTS, get_expected_segments};

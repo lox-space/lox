@@ -29,7 +29,7 @@ use lox_core::elements::{Keplerian, OrbitType};
 use lox_frames::TryQuasiInertial;
 use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
-use lox_time::deltas::TimeDelta;
+use lox_time::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use thiserror::Error;
 

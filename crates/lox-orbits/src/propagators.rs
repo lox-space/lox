@@ -143,7 +143,7 @@ mod tests {
     use super::*;
     use lox_bodies::Origin;
     use lox_frames::Frame;
-    use lox_time::deltas::TimeDelta;
+    use lox_time::TimeDelta;
     use lox_time::time_scales::TimeScale;
 
     fn make_trajectory() -> Trajectory {

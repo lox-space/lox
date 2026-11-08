@@ -11,7 +11,7 @@
 
 use divan::Bencher;
 use lox_space::analysis::power::PowerBudgetAnalysis;
-use lox_space::time::deltas::TimeDelta;
+use lox_space::time::TimeDelta;
 
 #[path = "common/mod.rs"]
 mod common;

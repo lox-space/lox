@@ -14,13 +14,13 @@ use pyo3::{Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python, pyclass, 
 
 use crate::earth::python::ut1::{PyEopProvider, PyEopProviderError};
 use crate::time::calendar_dates::{CalendarDate, Date};
-use crate::time::deltas::{TimeDelta, TimeDeltaUnit};
 use crate::time::julian_dates::{Epoch, JulianDate};
 use crate::time::python::deltas::{PyInvalidFloatSeconds, PyTimeDelta};
 use crate::time::time_of_day::{CivilTime, TimeOfDay};
 use crate::time::time_scales::Tai;
 use crate::time::utc::transformations::ToUtc;
 use crate::time::{Time, TimeError, TimeScaleMismatch};
+use crate::time::{TimeDelta, TimeDeltaUnit};
 
 use super::time_scales::PyTimeScale;
 use super::utc::PyUtc;

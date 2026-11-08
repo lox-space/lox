@@ -15,8 +15,8 @@
 
 use alloc::vec::Vec;
 
+use crate::TimeDelta;
 use crate::calendar_dates::Date;
-use crate::deltas::TimeDelta;
 use crate::time::Time;
 use crate::time_of_day::CivilTime;
 use crate::time_scales::Tai;
@@ -125,7 +125,7 @@ mod tests {
     use super::*;
     use rstest::rstest;
 
-    use crate::deltas::TimeDelta;
+    use crate::TimeDelta;
     use crate::time;
     use crate::time::Time;
     use crate::time_scales::Tai;

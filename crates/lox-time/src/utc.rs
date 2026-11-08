@@ -18,8 +18,8 @@ use lox_approx::{ApproxEq, ApproxEqResults};
 use lox_core::time::constants::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use thiserror::Error;
 
+use crate::TimeDelta;
 use crate::calendar_dates::{CalendarDate, Date, DateError};
-use crate::deltas::TimeDelta;
 use crate::julian_dates::JulianDate;
 use crate::subsecond::Subsecond;
 use crate::time_of_day::{CivilTime, TimeOfDay, TimeOfDayError};

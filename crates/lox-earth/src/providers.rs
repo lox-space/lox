@@ -7,7 +7,7 @@ use lox_frames::iers::polar_motion::PoleCoords;
 use lox_frames::iers::{Corrections, ReferenceSystem};
 use lox_frames::rotations::RotationProvider;
 use lox_time::Time;
-use lox_time::deltas::TimeDelta;
+use lox_time::TimeDelta;
 use lox_time::offsets::{OffsetProvider, TryOffset};
 use lox_time::time_scales::{ContinuousTimeScale, Tai};
 use lox_time::utc::Utc;

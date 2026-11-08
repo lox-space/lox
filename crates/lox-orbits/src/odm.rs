@@ -1397,7 +1397,7 @@ mod tests {
     use lox_frames::{Frame, Icrf};
     use lox_odm::Format;
     use lox_odm::types::common::{OdmCenter, OdmFrame, OdmTime};
-    use lox_time::deltas::TimeDelta;
+    use lox_time::TimeDelta;
     use lox_time::time_scales::Tai;
     use lox_time::{Time, time};
 
@@ -1457,7 +1457,7 @@ mod tests {
     }
 
     fn sample_dynamic_trajectory() -> Trajectory {
-        use lox_time::deltas::TimeDelta;
+        use lox_time::TimeDelta;
         let t0 = sample_epoch_tai().into_dynamic();
         let t1 = t0 + TimeDelta::from_seconds(60);
         let t2 = t0 + TimeDelta::from_seconds(120);
@@ -1706,7 +1706,7 @@ mod tests {
     #[test]
     fn from_oem_segment_specific_segment() {
         use lox_odm::types::oem::OemMetadata;
-        use lox_time::deltas::TimeDelta;
+        use lox_time::TimeDelta;
         let t0 = sample_epoch_tai().into_dynamic();
         let t1 = t0 + TimeDelta::from_seconds(60);
         let epoch0 = OdmTime::Time(t0);

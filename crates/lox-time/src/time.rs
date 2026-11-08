@@ -25,10 +25,10 @@ use lox_core::time::constants::{
 };
 use thiserror::Error;
 
+use crate::TimeDelta;
 use crate::calendar_dates::CalendarDate;
 use crate::calendar_dates::Date;
 use crate::calendar_dates::DateError;
-use crate::deltas::TimeDelta;
 use crate::julian_dates::Epoch;
 use crate::julian_dates::JulianDate;
 use crate::julian_dates::{
@@ -601,7 +601,7 @@ mod tests {
     use rstest::rstest;
 
     use crate::Time;
-    use crate::deltas::TimeDeltaUnit;
+    use crate::TimeDeltaUnit;
     use crate::time_scales::{Tai, Tdb, TimeScale, Tt};
 
     use super::*;

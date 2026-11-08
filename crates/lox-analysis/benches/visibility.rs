@@ -16,7 +16,7 @@ use lox_orbits::ground::EllipsoidLocation;
 use lox_orbits::orbits::{Ensemble, Trajectory};
 use lox_orbits::propagators::OrbitSource;
 use lox_test_utils::read_data_file;
-use lox_time::deltas::TimeDelta;
+use lox_time::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::TimeScale;
 

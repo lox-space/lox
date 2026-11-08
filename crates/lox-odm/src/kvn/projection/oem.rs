@@ -729,7 +729,7 @@ mod tests {
     }
 
     fn sample_epoch_plus(seconds: i64) -> OdmTime {
-        use lox_time::deltas::TimeDelta;
+        use lox_time::TimeDelta;
         OdmTime::Time(
             lox_time::time::Time::j2000(lox_time::time_scales::TimeScale::Tai)
                 + TimeDelta::from_seconds(seconds),

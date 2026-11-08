@@ -12,9 +12,8 @@ use std::{fs::read_to_string, num::ParseIntError, path::Path};
 
 use lox_core::time::constants::{SECONDS_PER_DAY, SECONDS_PER_HALF_DAY};
 use lox_time::{
-    Time,
+    Time, TimeDelta,
     calendar_dates::{Date, DateError},
-    deltas::TimeDelta,
     time_scales::Tai,
     utc::{
         Utc,

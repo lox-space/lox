@@ -11,7 +11,7 @@ use lox_core::coords::{
 use lox_core::glam::DVec3;
 use lox_ephem::Ephemeris;
 use lox_frames::{Frame, Icrf, ReferenceFrame, rotations::TryRotation, traits::frame_key};
-use lox_time::{Time, deltas::TimeDelta, time_scales::TimeScale, utc::Utc};
+use lox_time::{Time, TimeDelta, time_scales::TimeScale, utc::Utc};
 use thiserror::Error;
 
 use lox_time::intervals::TimeInterval;
@@ -433,8 +433,8 @@ mod tests {
 
     fn sample_trajectory() -> Trajectory<Earth, Icrf> {
         let t0 = time!(Tdb, 2023, 1, 1, 12).unwrap();
-        let t1 = t0 + lox_time::deltas::TimeDelta::from_seconds(60);
-        let t2 = t0 + lox_time::deltas::TimeDelta::from_seconds(120);
+        let t1 = t0 + lox_time::TimeDelta::from_seconds(60);
+        let t2 = t0 + lox_time::TimeDelta::from_seconds(120);
         let s0 = CartesianOrbit::new(
             Cartesian::from_vecs(DVec3::new(7000e3, 0.0, 0.0), DVec3::new(0.0, 7500.0, 0.0)),
             t0.into_dynamic(),

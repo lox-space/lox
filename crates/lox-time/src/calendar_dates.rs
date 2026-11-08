@@ -16,7 +16,7 @@ use core::{
     str::FromStr,
 };
 
-use crate::deltas::TimeDelta;
+use crate::TimeDelta;
 use nom::{Parser, combinator::all_consuming};
 use thiserror::Error;
 

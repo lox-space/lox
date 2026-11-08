@@ -5,8 +5,7 @@
 use std::convert::Infallible;
 
 use lox_time::{
-    Time,
-    deltas::TimeDelta,
+    Time, TimeDelta,
     offsets::OffsetProvider,
     time_scales::{ContinuousTimeScale, Tai},
     utc::{
