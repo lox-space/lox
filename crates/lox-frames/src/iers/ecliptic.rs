@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Obliquity of the ecliptic.
+
 use lox_approx::ApproxEq;
 use lox_core::math::poly::poly_array;
 use lox_core::units::Angle;

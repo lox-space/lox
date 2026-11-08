@@ -3,8 +3,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Module s06 exposes a function for calculating the Celestial Intermediate Origin (CIO) locator,
-//! s, using IAU 2006 precession and IAU 2000A nutation.
+//! Celestial Intermediate Origin (CIO) locator, s, using IAU 2006 precession and IAU 2000A
+//! nutation.
 
 use lox_core::math::poly::poly_array;
 use lox_core::units::Angle;

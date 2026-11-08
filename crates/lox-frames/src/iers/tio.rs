@@ -3,8 +3,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Module tio exposes functions for calculating the Terrestrial Intermediate Origin (TIO) locator,
-//! s', which places the TIO on the equator of the Celestial Intermediate Pole (CIP).
+//! Terrestrial Intermediate Origin (TIO) locator, s'.
+//!
+//! s' places the TIO on the equator of the Celestial Intermediate Pole (CIP).
 
 use lox_approx::ApproxEq;
 use lox_core::units::Angle;

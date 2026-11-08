@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Default rotation provider (no EOP data).
+
 use std::convert::Infallible;
 
 use lox_time::{

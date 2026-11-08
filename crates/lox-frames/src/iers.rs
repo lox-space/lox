@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! IERS reference systems, conventions, and Earth orientation sub-models.
+
 use std::{
     fmt::Display,
     ops::{Add, AddAssign},
@@ -12,23 +14,14 @@ use lox_core::units::Angle;
 
 use crate::iers::{cip::CipCoords, ecliptic::MeanObliquity, nutation::Nutation};
 
-/// Celestial Intermediate Origin locator.
 pub mod cio;
-/// Celestial Intermediate Pole coordinates.
 pub mod cip;
-/// Earth rotation angle and equation of the equinoxes.
 pub mod earth_rotation;
-/// Obliquity of the ecliptic.
 pub mod ecliptic;
-/// Fundamental (Delaunay) arguments.
 pub mod fundamental;
-/// Nutation models.
 pub mod nutation;
-/// Polar motion coordinates and matrices.
 pub mod polar_motion;
-/// Precession matrices and frame bias.
 pub mod precession;
-/// Terrestrial Intermediate Origin locator.
 pub mod tio;
 
 mod sealed {

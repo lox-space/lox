@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Module cio exposes functions for calculating the Celestial Intermediate Origin (CIO) locator, s.
+//! Celestial Intermediate Origin (CIO) locator, s.
 
 use lox_approx::ApproxEq;
 use lox_core::units::Angle;

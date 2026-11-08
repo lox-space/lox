@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Polar motion coordinates and matrices.
+
 use lox_core::glam::DMat3;
 use lox_core::units::Angle;
 use lox_time::{Time, time_scales::Tt};

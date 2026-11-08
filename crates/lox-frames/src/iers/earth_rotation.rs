@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Module rotation_angle exposes functions for calculating the Earth Rotation Angle (ERA).
+//! Earth rotation angle and equation of the equinoxes.
 
 use std::f64::consts::TAU;
 use std::iter::zip;

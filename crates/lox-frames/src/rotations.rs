@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Rotation matrices, the [`TryRotation`] trait, and [`RotationProvider`].
+
 use std::ops::Mul;
 
 use lox_approx::ApproxEq;

@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Precession matrices and frame bias.
+
 use lox_approx::ApproxEq;
 use lox_core::glam::DMat3;
 use lox_core::math::poly::poly_array;

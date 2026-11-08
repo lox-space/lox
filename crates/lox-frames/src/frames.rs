@@ -3,6 +3,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Reference frame types: the zero-sized marker types and the [`Frame`]
+//! enum covering the same set at runtime.
+
 use std::str::FromStr;
 
 use lox_bodies::{

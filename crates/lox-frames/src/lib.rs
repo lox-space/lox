@@ -6,16 +6,10 @@
 
 //! Reference frames, rotations, and coordinate transformations.
 
-/// Reference frame types: the zero-sized marker types and the [`frames::Frame`]
-/// enum covering the same set at runtime.
 pub mod frames;
-/// IERS reference systems, conventions, and Earth orientation sub-models.
 pub mod iers;
-/// Default rotation provider (no EOP data).
 pub mod providers;
-/// Rotation matrices, the [`rotations::TryRotation`] trait, and [`rotations::RotationProvider`].
 pub mod rotations;
-/// Core reference frame traits.
 pub mod traits;
 
 pub use frames::{Cirf, Frame, Iau, Icrf, Itrf, J2000, Teme, Tirf, UnknownFrameError};
