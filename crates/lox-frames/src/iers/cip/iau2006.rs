@@ -3,8 +3,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Module xy06 provides a function to calculate the (X, Y) position of the Celestial Intermediate
-//! Pole (CIP) using the IAU 2006 precession and IAU 2000A nutation models.
+//! (X, Y) coordinates of the Celestial Intermediate Pole (CIP) using the IAU 2006 precession
+//! and IAU 2000A nutation models.
 
 use lox_core::glam::DVec2;
 use lox_core::math::poly::poly_array;

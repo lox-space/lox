@@ -3,8 +3,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-//! Module nutation exposes a function for calculating Earth nutation using a number of IAU nutation
-//! models.
+//! Nutation models.
+//!
+//! Earth nutation according to a number of IAU nutation models.
 
 use std::ops::Add;
 

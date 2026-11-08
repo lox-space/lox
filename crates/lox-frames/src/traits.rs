@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+//! Core reference frame traits.
+
 use lox_bodies::{CoordinateOrigin, NaifId, UndefinedOriginPropertyError};
 use lox_core::coords::Ellipsoid;
 use thiserror::Error;
