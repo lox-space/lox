@@ -31,7 +31,7 @@ use lox_approx::{ApproxEq, ApproxEqResult, ApproxEqResults};
 use thiserror::Error;
 
 use crate::math::float::{
-    abs, atan, atanh, cbrt, cos, cosh, powi, round, sin, sinh, sqrt, tan, tanh,
+    abs, asinh, atan, atanh, cbrt, copysign, cos, cosh, powi, round, sin, sinh, sqrt, tan, tanh,
 };
 use crate::math::roots::{BracketedHalley, FindBracketedRootWithSecondDerivative, RootFinderError};
 use crate::{
@@ -150,7 +150,7 @@ impl TrueAnomaly {
             OrbitType::Hyperbolic => Ok(EccentricAnomaly::new(true_to_hyperbolic(self.0, ecc)?)),
             OrbitType::Parabolic => {
                 // For parabolic orbits, Eccentric represents parabolic anomaly D
-                Ok(EccentricAnomaly::new(true_to_parabolic(self.0).rad()))
+                Ok(EccentricAnomaly::new(true_to_parabolic(self.0)?.rad()))
             }
         }
     }
@@ -168,7 +168,7 @@ impl TrueAnomaly {
             OrbitType::Elliptic => Ok(MeanAnomaly::new(true_to_mean(self.0, ecc))),
             OrbitType::Parabolic => {
                 // For parabolic orbits, store parabolic mean anomaly M_p as angle
-                Ok(MeanAnomaly::new(true_to_mean_parabolic(self.0).rad()))
+                Ok(MeanAnomaly::new(true_to_mean_parabolic(self.0)?.rad()))
             }
             OrbitType::Hyperbolic => Ok(MeanAnomaly::new(true_to_mean_hyperbolic(self.0, ecc)?)),
         }
@@ -244,9 +244,7 @@ impl MeanAnomaly {
             OrbitType::Circular | OrbitType::Elliptic => {
                 Ok(EccentricAnomaly::new(mean_to_eccentric(self.0, ecc)?))
             }
-            OrbitType::Hyperbolic => Ok(EccentricAnomaly::new(mean_to_hyperbolic(
-                self.0, ecc, None, None,
-            )?)),
+            OrbitType::Hyperbolic => Ok(EccentricAnomaly::new(mean_to_hyperbolic(self.0, ecc)?)),
             OrbitType::Parabolic => {
                 // For parabolic orbits, Eccentric represents parabolic anomaly D
                 Ok(EccentricAnomaly::new(
@@ -287,6 +285,9 @@ pub enum AnomalyError {
     /// The orbit is not circular or elliptic.
     #[error("expected a circular or elliptic orbit but the eccentricity was {0}")]
     NotElliptic(Eccentricity),
+    /// The orbit is not hyperbolic.
+    #[error("expected a hyperbolic orbit but the eccentricity was {0}")]
+    NotHyperbolic(Eccentricity),
     /// The eccentricity vector (k, h) of Kepler's equation is not finite or not inside the unit
     /// circle.
     #[error("eccentricity vector (k = {k}, h = {h}) must be finite with h² + k² < 1")]
@@ -507,8 +508,23 @@ pub fn mean_to_true(mean: Angle, e: Eccentricity) -> Result<Angle> {
 ///
 /// # Returns
 /// Parabolic anomaly (dimensionless, unbounded)
-pub fn true_to_parabolic(nu: Angle) -> f64 {
-    tan(nu.to_radians() / 2.0)
+///
+/// # Errors
+/// Returns `NonFiniteAnomaly` if the true anomaly is not finite and `InvalidTrueAnomaly` if it
+/// points away from the orbit, i.e. it is ±180° in any revolution.
+pub fn true_to_parabolic(nu: Angle) -> Result<f64> {
+    let wrapped = nu.wrap_signed().to_radians();
+    if !wrapped.is_finite() {
+        return Err(AnomalyError::NonFiniteAnomaly(nu));
+    }
+    // `wrap_signed` maps ±180° to -180°, which is the only direction the orbit never reaches.
+    if wrapped <= -PI {
+        return Err(AnomalyError::InvalidTrueAnomaly {
+            nu,
+            max_nu: Angle::radians(PI),
+        });
+    }
+    Ok(tan(wrapped / 2.0))
 }
 
 /// Convert parabolic anomaly to true anomaly.
@@ -547,23 +563,20 @@ pub fn parabolic_to_mean(parabolic: f64) -> f64 {
 /// # Returns
 /// Parabolic anomaly
 pub fn mean_to_parabolic(mean_parabolic: f64) -> f64 {
-    // Analytical solution using Cardano's method
-    // Solve: D³ + 3D - 3M_p = 0
-    // Let A = 3M_p/2
-    let a = 1.5 * mean_parabolic;
-
-    // z = cbrt(A + sqrt(A² + 1))
-    let discriminant = a * a + 1.0;
-    let z = cbrt(a + sqrt(discriminant));
-
-    // D = z - 1/z
-    z - 1.0 / z
+    // Cardano's solution D = z - 1/z with z = cbrt(A + sqrt(A² + 1)) and A = 3M_p/2 cancels
+    // for small and negative M_p. With A + sqrt(A² + 1) = exp(asinh(A)) it becomes
+    // D = 2·sinh(asinh(A)/3), which is odd and has no cancellation.
+    2.0 * sinh(asinh(1.5 * mean_parabolic) / 3.0)
 }
 
 /// Convert true anomaly to parabolic mean anomaly.
-pub fn true_to_mean_parabolic(nu: Angle) -> f64 {
-    let d = true_to_parabolic(nu);
-    parabolic_to_mean(d)
+///
+/// # Errors
+/// Returns `NonFiniteAnomaly` if the true anomaly is not finite and `InvalidTrueAnomaly` if it is
+/// ±180° in any revolution.
+pub fn true_to_mean_parabolic(nu: Angle) -> Result<f64> {
+    let d = true_to_parabolic(nu)?;
+    Ok(parabolic_to_mean(d))
 }
 
 /// Convert parabolic mean anomaly to true anomaly.
@@ -584,18 +597,23 @@ pub fn mean_parabolic_to_true(mean_parabolic: f64) -> Angle {
 /// Hyperbolic eccentric anomaly (unbounded)
 ///
 /// # Errors
-/// Returns `InvalidTrueAnomaly` if true anomaly is outside asymptote limits
+/// Returns `NonFiniteAnomaly` if the true anomaly is not finite and `InvalidTrueAnomaly` if it is
+/// outside the asymptote limits in every revolution
 pub fn true_to_hyperbolic(nu: Angle, e: Eccentricity) -> Result<Angle> {
     let ecc = e.as_f64();
-    // Check if true anomaly is within asymptote limits
+    // A hyperbolic orbit has no revolutions, so only the direction of ν matters.
+    let wrapped = nu.wrap_signed().to_radians();
+    if !wrapped.is_finite() {
+        return Err(AnomalyError::NonFiniteAnomaly(nu));
+    }
     let nu_max = Angle::from_acos(-1.0 / ecc);
-    if abs(nu.to_radians()) >= nu_max.to_radians() {
+    if abs(wrapped) >= nu_max.to_radians() {
         return Err(AnomalyError::InvalidTrueAnomaly { nu, max_nu: nu_max });
     }
 
     // Half-angle formula
     let factor = sqrt((ecc - 1.0_f64) / (ecc + 1.0_f64));
-    let tanh_f_half = factor * tan(nu.to_radians() / 2.0);
+    let tanh_f_half = factor * tan(wrapped / 2.0);
 
     // F = 2 * atanh(tanh(F/2))
     let f_half = atanh(tanh_f_half);
@@ -633,59 +651,113 @@ pub fn hyperbolic_to_true(hyperbolic: Angle, e: Eccentricity) -> Angle {
 /// # Returns
 /// Hyperbolic mean anomaly
 pub fn hyperbolic_to_mean(hyperbolic: Angle, e: Eccentricity) -> Angle {
-    Angle::radians(e.as_f64() * sinh(hyperbolic.to_radians()) - hyperbolic.to_radians())
+    let f = hyperbolic.to_radians();
+    // e·sinh(F) - F cancels for e close to 1 and small F, (e - 1)·sinh(F) + (sinh(F) - F) does not.
+    Angle::radians((e.as_f64() - 1.0) * sinh(f) + sinh_minus_identity(f))
+}
+
+/// Returns sinh(x) - x without cancellation for small x.
+fn sinh_minus_identity(x: f64) -> f64 {
+    if abs(x) >= 1.0 {
+        return sinh(x) - x;
+    }
+    // The Taylor series x³/3! + x⁵/5! + … converges quickly for |x| < 1.
+    let x_squared = x * x;
+    let mut term = x * x_squared / 6.0;
+    let mut sum = term;
+    let mut n = 3.0;
+    while abs(term) > f64::EPSILON * abs(sum) {
+        term *= x_squared / ((n + 1.0) * (n + 2.0));
+        sum += term;
+        n += 2.0;
+    }
+    sum
 }
 
 /// Convert hyperbolic mean anomaly to hyperbolic eccentric anomaly.
 ///
-/// Solves: M_h = e*sinh(F) - F iteratively using Newton-Raphson method.
+/// Solves M_h = e·sinh(F) - F.
 ///
 /// # Arguments
 /// * `mean_hyperbolic` - Hyperbolic mean anomaly
-/// * `e` - Eccentricity (should be hyperbolic: e > 1)
-/// * `tolerance` - Convergence tolerance (default: 1e-10)
-/// * `max_iter` - Maximum iterations (default: 50)
+/// * `e` - Eccentricity (must be hyperbolic: e > 1)
 ///
 /// # Returns
 /// Hyperbolic eccentric anomaly
-pub fn mean_to_hyperbolic(
-    mean_hyperbolic: Angle,
-    e: Eccentricity,
-    tolerance: Option<f64>,
-    max_iter: Option<usize>,
-) -> Result<Angle> {
-    let tol = tolerance.unwrap_or(1e-10);
-    let max_iterations = max_iter.unwrap_or(50);
-    let ecc = e.as_f64();
-    let mean_hyperbolic = mean_hyperbolic.to_radians();
-
-    // Initial guess using domain-informed approximation
-    // arcsinh(M/e) provides excellent starting point for hyperbolic case
-    let mut f = crate::math::float::asinh(mean_hyperbolic / ecc);
-
-    // Newton-Raphson iteration
-    for _iteration in 0..max_iterations {
-        let sinh_f = sinh(f);
-        let cosh_f = cosh(f);
-
-        // Function: g(F) = e*sinh(F) - F - M_h
-        let g = ecc * sinh_f - f - mean_hyperbolic;
-
-        // Derivative: g'(F) = e*cosh(F) - 1
-        let dg = ecc * cosh_f - 1.0;
-
-        let delta = g / dg;
-        f -= delta;
-
-        if abs(delta) < tol {
-            return Ok(f.rad());
-        }
+///
+/// # Errors
+///
+/// Returns an [`AnomalyError`] if the orbit is not hyperbolic, `mean_hyperbolic` is not finite,
+/// or the equation does not converge.
+pub fn mean_to_hyperbolic(mean_hyperbolic: Angle, e: Eccentricity) -> Result<Angle> {
+    if e.orbit_type() != OrbitType::Hyperbolic {
+        return Err(AnomalyError::NotHyperbolic(e));
     }
+    let mean = mean_hyperbolic.to_radians();
+    if !mean.is_finite() {
+        return Err(AnomalyError::NonFiniteAnomaly(mean_hyperbolic));
+    }
+    if mean == 0.0 {
+        return Ok(mean_hyperbolic);
+    }
+    let ecc = e.as_f64();
 
-    Err(AnomalyError::ConvergenceFailure {
-        iterations: max_iterations,
-        residual: abs(ecc * sinh(f) - f - mean_hyperbolic),
-    })
+    // The equation is odd in F and M_h, so solve for |M_h| and restore the sign afterwards.
+    let m = abs(mean);
+    // As in `hyperbolic_to_mean`, split off e - 1 to avoid cancellation near e = 1.
+    let ecc_minus_one = ecc - 1.0;
+    let residual = |f: f64| {
+        let (sinh_f, cosh_f) = (sinh(f), cosh(f));
+        (
+            ecc_minus_one * sinh_f + sinh_minus_identity(f) - m,
+            ecc_minus_one * cosh_f + (cosh_f - 1.0),
+            ecc * sinh_f,
+        )
+    };
+
+    // The residual increases monotonically for F > 0. At asinh(M/e) it is -asinh(M/e) < 0.
+    // Since sinh(F) ≥ F, it is at least (e - 1)·sinh(F) - M, which vanishes at
+    // asinh(M/(e - 1)), and since sinh(F) ≥ F + F³/6, at least e·F³/6 - M, which vanishes at
+    // cbrt(6M/e). The first bound is tight for large M and the second one close to e = 1.
+    let lower = asinh(m / ecc);
+    let upper = asinh(m / ecc_minus_one).min(cbrt(6.0 * m / ecc));
+    let f = BracketedHalley::default()
+        .with_max_iter(200)
+        .with_abs_tol(8.0 * f64::EPSILON)
+        .with_rel_tol(4.0 * f64::EPSILON)
+        .find_in_oriented_bracket_with_second_derivative_from(residual, (lower, upper), lower)
+        .map_err(|err| {
+            // The bracket and the initial guess are valid for every finite mean anomaly. That
+            // leaves non-convergence and, for a mean anomaly close to `f64::MAX`, an overflowing
+            // residual as the only failures. Any other would be a failure of the solver as well,
+            // so release builds report it the same way.
+            debug_assert!(
+                matches!(
+                    err,
+                    RootFinderError::NotConverged { .. } | RootFinderError::NonFinite { .. }
+                ),
+                "unexpected failure of the hyperbolic Kepler solver: {err}"
+            );
+            match err {
+                RootFinderError::NotConverged {
+                    iterations,
+                    residual,
+                    ..
+                } => AnomalyError::ConvergenceFailure {
+                    iterations: iterations as usize,
+                    residual,
+                },
+                RootFinderError::NonFinite { value, .. } => AnomalyError::ConvergenceFailure {
+                    iterations: 0,
+                    residual: value,
+                },
+                _ => AnomalyError::ConvergenceFailure {
+                    iterations: 0,
+                    residual: f64::NAN,
+                },
+            }
+        })?;
+    Ok(Angle::radians(copysign(f, mean)))
 }
 
 /// Convert true anomaly to hyperbolic mean anomaly.
@@ -696,7 +768,7 @@ pub fn true_to_mean_hyperbolic(nu: Angle, e: Eccentricity) -> Result<Angle> {
 
 /// Convert hyperbolic mean anomaly to true anomaly.
 pub fn mean_hyperbolic_to_true(mean_hyperbolic: Angle, e: Eccentricity) -> Result<Angle> {
-    let f = mean_to_hyperbolic(mean_hyperbolic, e, None, None)?;
+    let f = mean_to_hyperbolic(mean_hyperbolic, e)?;
     Ok(hyperbolic_to_true(f, e))
 }
 
@@ -749,7 +821,32 @@ mod tests {
         ]
     }
 
+    /// Eccentricities that `Eccentricity::orbit_type` classifies as hyperbolic, with extra weight
+    /// on the near-parabolic end.
+    fn hyperbolic_eccentricity() -> impl Strategy<Value = f64> {
+        prop_oneof![1.0 + 2e-8..1.0001, 1.0001..1.1, 1.1..100.0]
+    }
+
     proptest! {
+        #[test]
+        fn prop_mean_to_hyperbolic_round_trip(e in hyperbolic_eccentricity(), f in -30.0..30.0f64) {
+            let ecc = Eccentricity::try_new(e).unwrap();
+            let mean = hyperbolic_to_mean(Angle::radians(f), ecc);
+            let f_back = mean_to_hyperbolic(mean, ecc).unwrap().to_radians();
+            let residual = hyperbolic_to_mean(Angle::radians(f_back), ecc).to_radians()
+                - mean.to_radians();
+            prop_assert!(
+                abs(residual) <= 16.0 * f64::EPSILON * abs(mean.to_radians()).max(1.0),
+                "residual: {residual}"
+            );
+        }
+
+        #[test]
+        fn prop_mean_to_parabolic_round_trip(d in prop_oneof![-1e-6..1e-6f64, -1e3..1e3f64]) {
+            let d_back = mean_to_parabolic(parabolic_to_mean(d));
+            prop_assert!(abs(d_back - d) <= 8.0 * f64::EPSILON * abs(d), "{d} != {d_back}");
+        }
+
         #[test]
         fn prop_mean_to_eccentric_round_trip(e in elliptic_eccentricity(), mean in -50.0..50.0f64) {
             let ecc = Eccentricity::try_new(e).unwrap();
@@ -931,7 +1028,7 @@ mod tests {
     fn test_parabolic_round_trip() {
         let nu = Angle::radians(1.0);
 
-        let d = true_to_parabolic(nu);
+        let d = true_to_parabolic(nu).unwrap();
         let nu_back = parabolic_to_true(d);
 
         assert_approx_eq!(nu, nu_back, atol <= EPSILON);
@@ -964,9 +1061,77 @@ mod tests {
         let f = 0.8.rad();
 
         let mh = hyperbolic_to_mean(f, e);
-        let f_back = mean_to_hyperbolic(mh, e, None, None).unwrap();
+        let f_back = mean_to_hyperbolic(mh, e).unwrap();
 
         assert!((f - f_back).abs().to_radians() < EPSILON);
+    }
+
+    #[test]
+    fn test_mean_to_hyperbolic_near_parabolic() {
+        let e = Eccentricity::try_new(1.0 + 1e-6).unwrap();
+        for mean in [1e-9, 1e-3, 1.0, 1e3, 1e6] {
+            let f = mean_to_hyperbolic(mean.rad(), e).unwrap();
+            let mean_back = hyperbolic_to_mean(f, e);
+            assert_approx_eq!(mean.rad(), mean_back, rtol <= 1e-12);
+            let f_negative = mean_to_hyperbolic((-mean).rad(), e).unwrap();
+            assert_eq!(f_negative, -f);
+        }
+    }
+
+    #[test]
+    fn test_mean_to_hyperbolic_errors() {
+        let e = Eccentricity::try_new(1.5).unwrap();
+        assert_eq!(mean_to_hyperbolic(Angle::ZERO, e), Ok(Angle::ZERO));
+        assert!(matches!(
+            mean_to_hyperbolic(f64::NAN.rad(), e),
+            Err(AnomalyError::NonFiniteAnomaly(_))
+        ));
+        let elliptic = Eccentricity::try_new(0.5).unwrap();
+        assert_eq!(
+            mean_to_hyperbolic(1.0.rad(), elliptic),
+            Err(AnomalyError::NotHyperbolic(elliptic))
+        );
+    }
+
+    #[test]
+    fn test_true_to_hyperbolic_ignores_revolutions() {
+        let e = Eccentricity::try_new(1.5).unwrap();
+        let f = true_to_hyperbolic(0.5.rad(), e).unwrap();
+        assert_eq!(true_to_hyperbolic((0.5 + TAU).rad(), e).unwrap(), f);
+        assert_eq!(true_to_hyperbolic((0.5 - 2.0 * TAU).rad(), e).unwrap(), f);
+    }
+
+    #[test]
+    fn test_true_to_parabolic_ignores_revolutions() {
+        let d = true_to_parabolic(1.0.rad()).unwrap();
+        assert_approx_eq!(
+            true_to_parabolic((1.0 + TAU).rad()).unwrap(),
+            d,
+            rtol <= 1e-14
+        );
+    }
+
+    #[test]
+    fn test_true_anomaly_not_finite() {
+        let e = Eccentricity::try_new(1.5).unwrap();
+        assert!(matches!(
+            true_to_hyperbolic(f64::NAN.rad(), e),
+            Err(AnomalyError::NonFiniteAnomaly(_))
+        ));
+        assert!(matches!(
+            true_to_parabolic(f64::INFINITY.rad()),
+            Err(AnomalyError::NonFiniteAnomaly(_))
+        ));
+    }
+
+    #[test]
+    fn test_true_to_parabolic_at_infinity() {
+        for nu in [PI, -PI] {
+            assert!(matches!(
+                true_to_parabolic(nu.rad()),
+                Err(AnomalyError::InvalidTrueAnomaly { .. })
+            ));
+        }
     }
 
     #[test]
