@@ -14,7 +14,7 @@ use lox_core::units::Angle;
 use lox_frames::iers::{Corrections, polar_motion::PoleCoords};
 use lox_io::spice::lsk::LeapSecondsKernel;
 use lox_time::{
-    deltas::TimeDelta,
+    TimeDelta,
     julian_dates::JulianDate,
     utc::{
         Utc, UtcError,

@@ -74,7 +74,7 @@ mod tests {
     use lox_time::time_scales::TimeScale;
 
     use lox_time::Time;
-    use lox_time::deltas::TimeDelta;
+    use lox_time::TimeDelta;
 
     #[test]
     fn pass_direction_variants_distinct() {

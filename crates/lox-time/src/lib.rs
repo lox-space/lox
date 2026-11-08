@@ -39,7 +39,6 @@ extern crate alloc;
 pub mod calendar_dates;
 #[cfg(feature = "chrono")]
 pub mod chrono;
-pub mod deltas;
 pub mod intervals;
 mod iso;
 pub mod julian_dates;
@@ -51,4 +50,5 @@ pub mod time_of_day;
 pub mod time_scales;
 pub mod utc;
 
+pub use lox_core::time::{InvalidFloatSeconds, TimeDelta, TimeDeltaLiterals, TimeDeltaUnit};
 pub use time::{Time, TimeBuilder, TimeError, TimeScaleMismatch};

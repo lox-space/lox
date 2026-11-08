@@ -716,7 +716,7 @@ mod tests {
     use lox_core::units::literals::DecibelLiterals;
     use lox_frames::Frame;
     use lox_orbits::ground::EllipsoidLocation;
-    use lox_time::deltas::TimeDelta;
+    use lox_time::TimeDelta;
 
     fn dummy_location() -> EllipsoidLocation {
         let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();

@@ -9,7 +9,7 @@ use core::convert::Infallible;
 use lox_core::math::float::sin;
 
 use crate::Time;
-use crate::deltas::TimeDelta;
+use crate::TimeDelta;
 use crate::time_scales::{ContinuousTimeScale, Tai};
 use crate::utc::Utc;
 use crate::utc::leap_seconds::{DefaultLeapSecondsProvider, LeapSecondsProvider};

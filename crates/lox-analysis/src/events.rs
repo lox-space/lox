@@ -12,7 +12,7 @@ use lox_core::{
     },
     sync::CancellationToken,
 };
-use lox_time::{Time, deltas::TimeDelta, intervals::TimeInterval};
+use lox_time::{Time, TimeDelta, intervals::TimeInterval};
 use thiserror::Error;
 
 pub use lox_core::math::zero_crossing::ZeroCrossing;

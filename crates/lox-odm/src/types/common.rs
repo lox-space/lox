@@ -550,7 +550,7 @@ impl From<TimeScale> for OdmTimeSystem {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lox_time::deltas::TimeDelta;
+    use lox_time::TimeDelta;
     use lox_time::time::Time;
     use lox_time::time_scales::TimeScale;
 

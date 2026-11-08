@@ -29,7 +29,7 @@ mod imaging_benches {
     use lox_space::orbits::Trajectory;
     use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
     use lox_space::orbits::propagators::{OrbitSource, Propagator};
-    use lox_space::time::deltas::TimeDelta;
+    use lox_space::time::TimeDelta;
     use lox_space::time::intervals::Interval;
 
     use super::common::{self, DynamicEnsemble};

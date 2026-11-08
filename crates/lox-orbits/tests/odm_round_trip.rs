@@ -18,9 +18,9 @@ use lox_odm::types::common::OdmTimeSystem;
 use lox_orbits::odm::OmmBuildError;
 use lox_orbits::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
 use lox_orbits::propagators::sgp4::Sgp4;
-use lox_time::deltas::{TimeDelta, TimeDeltaUnit};
 use lox_time::time::Time;
 use lox_time::time_scales::TimeScale;
+use lox_time::{TimeDelta, TimeDeltaUnit};
 
 // ---------------------------------------------------------------------------
 // Inline fixtures (KVN form — same wire text used in lox-odm's own tests)

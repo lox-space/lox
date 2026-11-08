@@ -31,7 +31,7 @@ mod tests {
     use lox_frames::Frame;
     use lox_orbits::orbits::{Ensemble, Trajectory};
     use lox_orbits::propagators::OrbitSource;
-    use lox_time::deltas::TimeDelta;
+    use lox_time::TimeDelta;
     use lox_time::intervals::TimeInterval;
     use lox_time::time_scales::TimeScale;
 

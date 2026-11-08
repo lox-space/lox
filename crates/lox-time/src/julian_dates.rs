@@ -13,7 +13,7 @@ use lox_core::time::constants::{
     SECONDS_BETWEEN_MJD_AND_J2000, SECONDS_PER_DAY,
 };
 
-use crate::deltas::{InvalidFloatSeconds, TimeDelta, TimeDeltaUnit};
+use crate::{InvalidFloatSeconds, TimeDelta, TimeDeltaUnit};
 
 /// A Julian date or a duration in days, as an `f64`.
 pub type Days = f64;

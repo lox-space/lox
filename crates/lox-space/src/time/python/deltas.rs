@@ -3,14 +3,14 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use lox_core::time::constants::ATTOSECONDS_IN_SECOND;
-use lox_time::deltas::{InvalidFloatSeconds, TimeDeltaUnit};
+use lox_time::{InvalidFloatSeconds, TimeDeltaUnit};
 use numpy::PyUntypedArray;
 use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::{PyOverflowError, PyTypeError, PyValueError, PyZeroDivisionError};
 use pyo3::prelude::*;
 use pyo3::types::{PyFloat, PyInt, PyType};
 
-use crate::time::deltas::TimeDelta;
+use crate::time::TimeDelta;
 use crate::time::intervals::TimeDeltaInterval;
 use crate::units::python::{format_with_unit, repr_f64};
 

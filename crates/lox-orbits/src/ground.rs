@@ -13,7 +13,7 @@ use lox_frames::traits::{
 };
 use lox_frames::{BodyFixed, Frame, NonBodyFixedFrameError, TryBodyFixed};
 use lox_time::Time;
-use lox_time::deltas::TimeDelta;
+use lox_time::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use thiserror::Error;
 

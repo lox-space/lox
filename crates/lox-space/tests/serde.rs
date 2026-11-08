@@ -843,7 +843,7 @@ fn test_sar_payload() {
 #[test]
 fn test_access_window() {
     use lox_space::analysis::imaging::{AccessWindow, PassDirection};
-    use lox_space::time::deltas::TimeDelta;
+    use lox_space::time::TimeDelta;
 
     let start = Time::j2000(Tai).into_dynamic();
     let end = start + TimeDelta::from_seconds(120);

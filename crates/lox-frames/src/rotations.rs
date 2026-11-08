@@ -511,7 +511,7 @@ mod tests {
 
     use lox_approx::assert_approx_eq;
     use lox_core::units::literals::AngleLiterals;
-    use lox_time::{deltas::TimeDelta, offsets::OffsetProvider};
+    use lox_time::{TimeDelta, offsets::OffsetProvider};
 
     use crate::iers::Iau2000Model;
 

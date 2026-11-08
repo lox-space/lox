@@ -20,7 +20,7 @@ use lox_core::{
     utils::Linspace,
 };
 use lox_frames::{NonQuasiInertialFrameError, QuasiInertial, ReferenceFrame, TryQuasiInertial};
-use lox_time::deltas::TimeDelta;
+use lox_time::TimeDelta;
 use thiserror::Error;
 
 /// Errors that can occur when constructing a Keplerian orbit.

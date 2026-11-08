@@ -14,7 +14,7 @@ use lox_bodies::Earth;
 use lox_core::time::constants::SECONDS_PER_MINUTE;
 use lox_frames::Teme;
 use lox_time::Time;
-use lox_time::deltas::TimeDelta;
+use lox_time::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::Tai;
 use lox_time::utc::UtcError;
@@ -117,8 +117,8 @@ mod tests {
     use lox_approx::assert_approx_eq;
     use lox_frames::Icrf;
     use lox_frames::providers::DefaultRotationProvider;
-    use lox_time::deltas::{TimeDelta, TimeDeltaUnit};
     use lox_time::intervals::Interval;
+    use lox_time::{TimeDelta, TimeDeltaUnit};
 
     use super::*;
 

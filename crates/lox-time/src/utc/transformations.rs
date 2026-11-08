@@ -5,8 +5,8 @@
 
 //! Transformations between UTC and continuous time scales.
 
+use crate::TimeDelta;
 use crate::calendar_dates::Date;
-use crate::deltas::TimeDelta;
 use crate::offsets::DefaultOffsetProvider;
 use crate::offsets::Offset;
 use crate::time::Time;

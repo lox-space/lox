@@ -21,7 +21,7 @@ use lox_core::coords::Cartesian;
 use lox_core::glam::DVec3;
 use lox_frames::{Frame, ReferenceFrame};
 use lox_time::Time;
-use lox_time::deltas::TimeDelta;
+use lox_time::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use thiserror::Error;
 

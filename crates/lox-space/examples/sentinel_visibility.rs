@@ -23,7 +23,7 @@ use lox_space::frames::providers::DefaultRotationProvider;
 use lox_space::orbits::ground::EllipsoidLocation;
 use lox_space::orbits::propagators::OrbitSource;
 use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
-use lox_space::time::deltas::TimeDelta;
+use lox_space::time::TimeDelta;
 use lox_space::time::intervals::TimeInterval;
 
 const SENTINEL_1A_NAME: &str = "SENTINEL-1A";

@@ -30,7 +30,7 @@ use lox_space::orbits::ground::EllipsoidLocation;
 use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
 use lox_space::orbits::propagators::{OrbitSource, Propagator};
 use lox_space::orbits::{Ensemble, Trajectory};
-use lox_space::time::deltas::TimeDelta;
+use lox_space::time::TimeDelta;
 use lox_space::time::intervals::{Interval, TimeInterval};
 use lox_space::time::time_scales::TimeScale;
 

@@ -16,7 +16,7 @@ use lox_core::glam::DVec3;
 use lox_core::math::series::InterpolationType;
 use lox_ephem::Ephemeris;
 use lox_time::Time;
-use lox_time::deltas::TimeDelta;
+use lox_time::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::series::TimeSeries;
 use lox_time::time_scales::Tdb;

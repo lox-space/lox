@@ -6,7 +6,7 @@
 
 use lox_core::coords::Cartesian;
 use lox_time::Time;
-use lox_time::deltas::TimeDelta;
+use lox_time::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use thiserror::Error;
 

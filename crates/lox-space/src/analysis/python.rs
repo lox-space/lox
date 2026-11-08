@@ -38,7 +38,7 @@ use crate::orbits::python::{
     PyEllipsoidLocation, PyJ2Propagator, PyJ4Propagator, PyNumericalPropagator, PySgp4,
     PyTrajectory, PyVallado,
 };
-use crate::time::deltas::TimeDelta;
+use crate::time::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::intervals::PyInterval;
 use crate::time::python::time::PyTime;

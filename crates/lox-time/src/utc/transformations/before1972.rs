@@ -13,8 +13,8 @@ use lox_core::math::float::floor;
 use lox_core::math::slices::Monotonic;
 use lox_core::time::constants::SECONDS_PER_DAY;
 
-use crate::deltas::TimeDelta;
-use crate::deltas::TimeDeltaUnit;
+use crate::TimeDelta;
+use crate::TimeDeltaUnit;
 use crate::julian_dates::Epoch::ModifiedJulianDate;
 use crate::julian_dates::JulianDate;
 use crate::time::Time;
