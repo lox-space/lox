@@ -587,16 +587,113 @@ fn test_j4_propagator() {
 
 #[test]
 fn test_sgp4() {
-    use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
+    use lox_space::orbits::propagators::sgp4::Sgp4;
+    use lox_space::orbits::tle::Tle;
 
-    let tle = Elements::from_tle(
+    let tle = Tle::from_lines(
         Some("ISS (ZARYA)".to_string()),
         "1 25544U 98067A   24170.37528350  .00016566  00000+0  30244-3 0  9996".as_bytes(),
         "2 25544  51.6410 309.3890 0010444 339.5369 107.8830 15.49495945458731".as_bytes(),
     )
     .unwrap();
+    round_trip_no_eq(&tle);
     let sgp4 = Sgp4::new(tle).unwrap();
     round_trip_no_eq(&sgp4);
+}
+
+/// A general perturbations record in CelesTrak's JSON format.
+const CELESTRAK_JSON: &str = r#"{
+    "OBJECT_NAME": "ISS (ZARYA)",
+    "OBJECT_ID": "1998-067A",
+    "EPOCH": "2020-07-12T01:19:07.402656",
+    "MEAN_MOTION": 15.49560532,
+    "ECCENTRICITY": 0.0001771,
+    "INCLINATION": 51.6435,
+    "RA_OF_ASC_NODE": 225.4004,
+    "ARG_OF_PERICENTER": 44.9625,
+    "MEAN_ANOMALY": 5.1087,
+    "EPHEMERIS_TYPE": 0,
+    "CLASSIFICATION_TYPE": "U",
+    "NORAD_CAT_ID": 25544,
+    "ELEMENT_SET_NO": 999,
+    "REV_AT_EPOCH": 23587,
+    "BSTAR": 0.0049645,
+    "MEAN_MOTION_DOT": 0.00289036,
+    "MEAN_MOTION_DDOT": 0
+}"#;
+
+fn assert_close(actual: f64, expected: f64) {
+    assert!(
+        (actual - expected).abs() <= 1e-12 * expected.abs(),
+        "{actual} != {expected}"
+    );
+}
+
+#[test]
+fn test_tle_deserializes_celestrak_json() {
+    use lox_space::orbits::tle::{Classification, Tle};
+
+    let tle: Tle = serde_json::from_str(CELESTRAK_JSON).unwrap();
+    assert_eq!(tle.object_name.as_deref(), Some("ISS (ZARYA)"));
+    assert_eq!(tle.international_designator.as_deref(), Some("1998-067A"));
+    assert_eq!(tle.norad_id, 25544);
+    assert_eq!(tle.classification, Classification::Unclassified);
+    assert_eq!(tle.epoch.to_string(), "2020-07-12T01:19:07.402 UTC");
+    assert_eq!(tle.eccentricity, 0.0001771);
+    assert_close(tle.inclination.to_degrees(), 51.6435);
+    assert_close(tle.right_ascension.to_degrees(), 225.4004);
+    assert_close(tle.argument_of_perigee.to_degrees(), 44.9625);
+    assert_close(tle.mean_anomaly.to_degrees(), 5.1087);
+    assert_close(
+        tle.mean_motion.to_radians_per_second(),
+        15.49560532 * std::f64::consts::TAU / 86400.0,
+    );
+    assert_eq!(tle.half_mean_motion_dot_rev_per_day2, 0.00289036);
+    assert_eq!(tle.sixth_mean_motion_ddot_rev_per_day3, 0.0);
+    assert_eq!(tle.drag_term_per_earth_radius, 0.0049645);
+    assert_eq!(tle.ephemeris_type, 0);
+    assert_eq!(tle.element_set_number, 999);
+    assert_eq!(tle.revolution_number, 23587);
+}
+
+#[test]
+fn test_tle_deserializes_celestrak_json_array() {
+    use lox_space::orbits::tle::Tle;
+
+    let json = format!("[{CELESTRAK_JSON}, {CELESTRAK_JSON}]");
+    let tles: Vec<Tle> = serde_json::from_str(&json).unwrap();
+    assert_eq!(tles.len(), 2);
+}
+
+#[test]
+fn test_tle_serializes_celestrak_json() {
+    use lox_space::orbits::tle::Tle;
+
+    let tle: Tle = serde_json::from_str(CELESTRAK_JSON).unwrap();
+    let actual = serde_json::to_value(&tle).unwrap();
+    let expected: serde_json::Value = serde_json::from_str(CELESTRAK_JSON).unwrap();
+
+    let keys = |v: &serde_json::Value| {
+        let mut keys: Vec<String> = v.as_object().unwrap().keys().cloned().collect();
+        keys.sort();
+        keys
+    };
+    assert_eq!(keys(&actual), keys(&expected));
+    for key in [
+        "OBJECT_NAME",
+        "OBJECT_ID",
+        "EPOCH",
+        "CLASSIFICATION_TYPE",
+        "NORAD_CAT_ID",
+    ] {
+        assert_eq!(actual[key], expected[key], "{key}");
+    }
+    for key in ["INCLINATION", "RA_OF_ASC_NODE", "MEAN_MOTION"] {
+        assert_close(
+            actual[key].as_f64().unwrap(),
+            expected[key].as_f64().unwrap(),
+        );
+    }
 }
 
 #[test]
@@ -648,9 +745,10 @@ fn test_orbit_source_vallado() {
 #[test]
 fn test_orbit_source_sgp4() {
     use lox_space::orbits::propagators::OrbitSource;
-    use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
+    use lox_space::orbits::propagators::sgp4::Sgp4;
+    use lox_space::orbits::tle::Tle;
 
-    let tle = Elements::from_tle(
+    let tle = Tle::from_lines(
         Some("ISS (ZARYA)".to_string()),
         "1 25544U 98067A   24170.37528350  .00016566  00000+0  30244-3 0  9996".as_bytes(),
         "2 25544  51.6410 309.3890 0010444 339.5369 107.8830 15.49495945458731".as_bytes(),

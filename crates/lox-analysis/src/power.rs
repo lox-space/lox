@@ -345,8 +345,9 @@ mod tests {
     use lox_core::glam::DVec3;
     use lox_ephem::spk::parser::Spk;
     use lox_frames::Frame;
-    use lox_orbits::propagators::sgp4::{Elements, Sgp4};
+    use lox_orbits::propagators::sgp4::Sgp4;
     use lox_orbits::propagators::{OrbitSource, Propagator};
+    use lox_orbits::tle::Tle;
     use lox_test_utils::data_file;
     use lox_time::intervals::Interval;
 
@@ -406,7 +407,7 @@ mod tests {
         }
 
         // ISS in LEO — guaranteed multiple eclipses per day.
-        let iss = Elements::from_tle(
+        let iss = Tle::from_lines(
             Some("ISS (ZARYA)".to_string()),
             b"1 25544U 98067A   24170.37528350  .00016566  00000+0  30244-3 0  9996",
             b"2 25544  51.6410 309.3890 0010444 339.5369 107.8830 15.49495945458731",

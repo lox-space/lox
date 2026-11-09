@@ -22,7 +22,8 @@ use lox_space::frames::Frame;
 use lox_space::frames::providers::DefaultRotationProvider;
 use lox_space::orbits::ground::EllipsoidLocation;
 use lox_space::orbits::propagators::OrbitSource;
-use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
+use lox_space::orbits::propagators::sgp4::Sgp4;
+use lox_space::orbits::tle::Tle;
 use lox_space::time::TimeDelta;
 use lox_space::time::intervals::TimeInterval;
 
@@ -46,7 +47,7 @@ const PROPAGATION_STEP_SECS: i64 = 10;
 const MIN_ELEVATION_DEG: f64 = 5.0;
 
 fn tle_to_sgp4(name: &str, line_1: &[u8], line_2: &[u8]) -> Result<Sgp4, Box<dyn Error>> {
-    let elements = Elements::from_tle(Some(name.to_string()), line_1, line_2)?;
+    let elements = Tle::from_lines(Some(name.to_string()), line_1, line_2)?;
     Ok(Sgp4::new(elements)?)
 }
 

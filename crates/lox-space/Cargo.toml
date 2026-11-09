@@ -40,7 +40,6 @@ lox-time = { workspace = true, optional = true, features = ["chrono"] }
 geo = { workspace = true, optional = true }
 numpy = { workspace = true, optional = true }
 pyo3 = { workspace = true, optional = true }
-sgp4 = { workspace = true, optional = true }
 
 [dev-dependencies]
 divan.workspace = true
@@ -142,7 +141,6 @@ python = [
   "time",
   "dep:numpy",
   "dep:pyo3",
-  "dep:sgp4",
 ]
 time = ["io", "dep:lox-time"]
 serde = [

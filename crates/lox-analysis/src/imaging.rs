@@ -45,10 +45,11 @@ mod tests {
     /// Propagate a Sentinel-2 TLE into a Trajectory over a 6-hour window.
     fn sentinel2_trajectory(name: &str, line1: &[u8], line2: &[u8]) -> Trajectory {
         use lox_orbits::propagators::Propagator;
-        use lox_orbits::propagators::sgp4::{Elements, Sgp4};
+        use lox_orbits::propagators::sgp4::Sgp4;
+        use lox_orbits::tle::Tle;
         use lox_time::intervals::Interval;
 
-        let tle = Elements::from_tle(Some(name.to_string()), line1, line2).unwrap();
+        let tle = Tle::from_lines(Some(name.to_string()), line1, line2).unwrap();
         let sgp4 = Sgp4::new(tle).unwrap();
         let t0 = sgp4.time();
         let t1 = t0 + TimeDelta::from_hours(6);

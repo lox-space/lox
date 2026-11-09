@@ -307,7 +307,8 @@ mod integration_tests {
     use lox_orbits::orbits::{Ensemble, Trajectory};
     use lox_orbits::propagators::OrbitSource;
     use lox_orbits::propagators::Propagator;
-    use lox_orbits::propagators::sgp4::{Elements, Sgp4};
+    use lox_orbits::propagators::sgp4::Sgp4;
+    use lox_orbits::tle::Tle;
     use lox_time::TimeDelta;
     use lox_time::intervals::{Interval, TimeInterval};
     use lox_time::time_scales::TimeScale;
@@ -327,7 +328,7 @@ mod integration_tests {
         b"2 39634  98.1817 105.0000 0001300  90.0000 270.0000 14.59197557600008";
 
     fn s1a_trajectory() -> Trajectory {
-        let tle = Elements::from_tle(Some(S1A_NAME.to_string()), S1A_LINE1, S1A_LINE2).unwrap();
+        let tle = Tle::from_lines(Some(S1A_NAME.to_string()), S1A_LINE1, S1A_LINE2).unwrap();
         let sgp4 = Sgp4::new(tle).unwrap();
         let t0 = sgp4.time();
         let t1 = t0 + TimeDelta::from_hours(6);
@@ -475,7 +476,7 @@ mod integration_tests {
     }
 
     fn s1a_trajectory_12h() -> Trajectory {
-        let tle = Elements::from_tle(Some(S1A_NAME.to_string()), S1A_LINE1, S1A_LINE2).unwrap();
+        let tle = Tle::from_lines(Some(S1A_NAME.to_string()), S1A_LINE1, S1A_LINE2).unwrap();
         let sgp4 = Sgp4::new(tle).unwrap();
         let t0 = sgp4.time();
         let t1 = t0 + TimeDelta::from_hours(12);
