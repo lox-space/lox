@@ -275,7 +275,8 @@ impl TimeDelta {
         }
     }
 
-    const fn from_total_attoseconds(attoseconds: i128) -> Option<Self> {
+    /// Create `TimeDelta` from an `i128` of attoseconds
+    pub const fn from_total_attoseconds(attoseconds: i128) -> Option<Self> {
         let seconds = attoseconds.div_euclid(ATTOSECONDS_IN_SECOND as i128);
         if seconds < i64::MIN as i128 || seconds > i64::MAX as i128 {
             return None;
@@ -283,6 +284,11 @@ impl TimeDelta {
         // The remainder lies in [0, 10¹⁸), which fits an i64.
         let subsecond = attoseconds.rem_euclid(ATTOSECONDS_IN_SECOND as i128) as i64;
         Some(Self::new(seconds as i64, subsecond))
+    }
+
+    /// Returns whole delta as `i128` of attoseconds
+    pub const fn total_attoseconds(&self) -> i128 {
+        self.seconds as i128 * ATTOSECONDS_IN_SECOND as i128 + self.attoseconds as i128
     }
 
     /// Returns the value in the given unit.
