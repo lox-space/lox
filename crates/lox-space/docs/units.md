@@ -62,12 +62,15 @@ the dimension:
 |------------|--------|
 | `Distance / TimeDelta` | `Velocity` |
 | `Velocity * TimeDelta` | `Distance` |
+| `Distance / Velocity` | `TimeDelta` |
 | `Angle / TimeDelta` | `AngularRate` |
 | `AngularRate * TimeDelta` | `Angle` |
+| `Angle / AngularRate` | `TimeDelta` |
 | `Distance * Distance` | `Area` |
 | `Area / Mass` | `AreaToMass` |
 | `DataRate * TimeDelta` | `DataVolume` |
 | `DataVolume / TimeDelta` | `DataRate` |
+| `DataVolume / DataRate` | `TimeDelta` |
 | `DecibelWatts ± Decibel` | `DecibelWatts` |
 | `DecibelWatts - DecibelWatts` | `Decibel` |
 
