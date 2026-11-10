@@ -25,6 +25,7 @@ use lox_comms::link_budget::{Eirp, GOverT, LinkBudget, LinkConditions};
 use lox_comms::modcod::ModCod;
 use lox_comms::terminal::{RxTerminal, TxTerminal};
 use lox_comms::{LinkBudgetError, PropagationLosses};
+use lox_core::constants::SPEED_OF_LIGHT;
 use lox_core::error::LoxError;
 use lox_core::units::{DataRate, DataVolume, Decibel, Distance, Frequency};
 use lox_frames::providers::DefaultRotationProvider;
@@ -343,6 +344,7 @@ pub struct LinkWindowPart {
     peak_modcod: Option<ModCod>,
     symbol_rate: Frequency,
     data_volume: DataVolume,
+    max_propagation_delay: TimeDelta,
 }
 
 impl LinkWindowPart {
@@ -384,6 +386,11 @@ impl LinkWindowPart {
     /// adaptively selected information rate.
     pub fn data_volume(&self) -> DataVolume {
         self.data_volume
+    }
+
+    /// Returns the longest one-way propagation delay within the part.
+    pub fn max_propagation_delay(&self) -> TimeDelta {
+        self.max_propagation_delay
     }
 }
 
@@ -802,6 +809,7 @@ where
     let mut min_margin = f64::INFINITY;
     let mut peak_modcod = None;
     let mut data_volume = 0.0;
+    let mut max_range = f64::NEG_INFINITY;
     let mut previous_rate: Option<f64> = None;
     let mut previous_start = start;
     let mut offset = TimeDelta::ZERO;
@@ -849,6 +857,7 @@ where
             peak_modcod = best.as_ref().map(|b| b.modcod.clone());
         }
         min_margin = min_margin.min(margin);
+        max_range = max_range.max(budget.slant_range.to_meters());
 
         if let Some(prev_rate) = previous_rate {
             data_volume += 0.5 * (prev_rate + rate) * delta.as_seconds_f64();
@@ -861,6 +870,8 @@ where
                     peak_modcod,
                     symbol_rate: plan.channel.symbol_rate(),
                     data_volume: DataVolume::bits(data_volume),
+                    max_propagation_delay: (Distance::meters(max_range) / SPEED_OF_LIGHT)
+                        .expect("max_range should have a valid light time"),
                 });
 
                 previous_start = time;
@@ -868,6 +879,7 @@ where
                 min_margin = f64::INFINITY;
                 peak_modcod = None;
                 data_volume = 0.0;
+                max_range = budget.slant_range.to_meters();
             }
         }
         previous_rate = Some(rate);
@@ -1672,6 +1684,62 @@ mod tests {
             let volume = window.data_volume().to_bits();
             assert!(volume <= peak_rate * duration * (1.0 + 1e-12));
             assert!(volume >= detection_rate * duration * (1.0 - 1e-12));
+        }
+    }
+
+    #[test]
+    fn test_max_propagation_delay_bounds_each_part() {
+        let f = fixture();
+        let (tx, rx) = lumped(30.0, 20.0);
+        let scenario = scenario(
+            &f.location,
+            &f.trajectory,
+            &[("downlink", tx)],
+            &[("main", rx)],
+        );
+        let analysis = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan());
+        let links = analysis.links().unwrap();
+        let link = links.first().expect("one downlink");
+        let results = analysis.compute().unwrap();
+        let (tx_id, rx_id) = downlink_ids();
+
+        let windows = results.windows_for(&tx_id, &rx_id);
+        assert!(
+            windows.iter().any(|w| w.parts().len() > 1),
+            "expected a window with more than one part"
+        );
+
+        let delay_at = |time: Time| {
+            (link.geometry.range(time).unwrap() / SPEED_OF_LIGHT)
+                .unwrap()
+                .as_seconds_f64()
+        };
+        for window in windows {
+            let mut part_start = window.interval().start();
+            for part in window.parts() {
+                let part_end = part_start + part.duration();
+                let delay = part.max_propagation_delay().as_seconds_f64();
+
+                // Both edges of a part are samples of it, the start one shared
+                // with the previous part, so the maximum covers them exactly.
+                assert!(delay >= delay_at(part_start));
+                assert!(delay >= delay_at(part_end));
+
+                // No instant inside the part may take much longer than the
+                // sampled maximum.
+                let duration = part.duration().as_seconds_f64();
+                let samples = ((duration / 10.0).ceil() as usize).max(1);
+                let dense = (0..=samples)
+                    .map(|i| {
+                        let offset =
+                            TimeDelta::from_seconds_f64(duration * i as f64 / samples as f64);
+                        delay_at(part_start + offset)
+                    })
+                    .fold(f64::NEG_INFINITY, f64::max);
+                assert_approx_eq!(delay, dense, atol <= 1e-6);
+
+                part_start = part_end;
+            }
         }
     }
 
