@@ -34,6 +34,16 @@ impl Mul<Velocity> for TimeDelta {
     }
 }
 
+/// Returns the time it takes to cover the distance at the velocity, or `None` if the
+/// result is not representable as a [`TimeDelta`], e.g. for a zero velocity.
+impl Div<Velocity> for Distance {
+    type Output = Option<TimeDelta>;
+
+    fn div(self, rhs: Velocity) -> Option<TimeDelta> {
+        TimeDelta::try_from_seconds_f64(self.0 / rhs.0).ok()
+    }
+}
+
 impl Div<TimeDelta> for Angle {
     type Output = AngularRate;
 
@@ -55,6 +65,16 @@ impl Mul<AngularRate> for TimeDelta {
 
     fn mul(self, rhs: AngularRate) -> Angle {
         rhs * self
+    }
+}
+
+/// Returns the time it takes to sweep the angle at the angular rate, or `None` if the
+/// result is not representable as a [`TimeDelta`], e.g. for a zero rate.
+impl Div<AngularRate> for Angle {
+    type Output = Option<TimeDelta>;
+
+    fn div(self, rhs: AngularRate) -> Option<TimeDelta> {
+        TimeDelta::try_from_seconds_f64(self.0 / rhs.0).ok()
     }
 }
 
@@ -98,6 +118,16 @@ impl Div<TimeDelta> for DataVolume {
     }
 }
 
+/// Returns the time it takes to transfer the volume at the rate, or `None` if the result
+/// is not representable as a [`TimeDelta`], e.g. for a zero rate.
+impl Div<DataRate> for DataVolume {
+    type Output = Option<TimeDelta>;
+
+    fn div(self, rhs: DataRate) -> Option<TimeDelta> {
+        TimeDelta::try_from_seconds_f64(self.0 / rhs.0).ok()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use lox_approx::assert_approx_eq;
@@ -119,6 +149,24 @@ mod tests {
             dt * Velocity::meters_per_second(7500.0),
             Distance::kilometers(750.0)
         );
+        assert_eq!(
+            Distance::kilometers(750.0) / Velocity::meters_per_second(7500.0),
+            Some(dt)
+        );
+    }
+
+    #[test]
+    fn test_kinematics_unrepresentable() {
+        let distance = Distance::kilometers(750.0);
+        assert_eq!(distance / Velocity::meters_per_second(0.0), None);
+        assert_eq!(
+            Distance::meters(0.0) / Velocity::meters_per_second(0.0),
+            None
+        );
+        assert_eq!(
+            distance / Velocity::meters_per_second(f64::MIN_POSITIVE),
+            None
+        );
     }
 
     #[test]
@@ -132,6 +180,20 @@ mod tests {
         );
         assert_approx_eq!(rate * day, Angle::TAU, rtol <= 1e-15);
         assert_approx_eq!(day * rate, Angle::TAU, rtol <= 1e-15);
+        assert_eq!(
+            Angle::radians(6.0) / AngularRate::radians_per_second(0.25),
+            Some(TimeDelta::from_seconds(24))
+        );
+    }
+
+    #[test]
+    fn test_rotation_unrepresentable() {
+        assert_eq!(Angle::TAU / AngularRate::radians_per_second(0.0), None);
+        assert_eq!(Angle::ZERO / AngularRate::radians_per_second(0.0), None);
+        assert_eq!(
+            Angle::TAU / AngularRate::radians_per_second(f64::MIN_POSITIVE),
+            None
+        );
     }
 
     #[test]
@@ -153,5 +215,14 @@ mod tests {
         assert_eq!(volume, DataVolume::gigabits(90.0));
         assert_eq!(pass * rate, volume);
         assert_eq!(volume / pass, rate);
+        assert_eq!(volume / rate, Some(pass));
+    }
+
+    #[test]
+    fn test_data_transfer_unrepresentable() {
+        let volume = DataVolume::gigabits(90.0);
+        assert_eq!(volume / DataRate::bits_per_second(0.0), None);
+        assert_eq!(DataVolume::bits(0.0) / DataRate::bits_per_second(0.0), None);
+        assert_eq!(volume / DataRate::bits_per_second(f64::MIN_POSITIVE), None);
     }
 }

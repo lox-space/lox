@@ -458,6 +458,38 @@ def test_cross_dimension_operators_all(product, result, symbol, expected):
     assert q == expected * UNITS[result](symbol)
 
 
+@pytest.mark.parametrize(
+    ("quotient", "expected"),
+    [
+        (lambda: (90 * lox.Gbit) / (150 * lox.Mbps), 600 * lox.seconds),
+        (lambda: (750 * lox.km) / (7.5 * lox.km_per_s), 100 * lox.seconds),
+        (
+            lambda: (6 * lox.rad) / (0.25 * lox.AngularRateUnit("rad/s")),
+            24 * lox.seconds,
+        ),
+    ],
+)
+def test_time_from_quotient(quotient, expected):
+    q = quotient()
+    assert isinstance(q, lox.TimeDelta)
+    assert q == expected
+
+
+@pytest.mark.parametrize(
+    ("numerator", "rate"),
+    [
+        (90 * lox.Gbit, lox.bps),
+        (750 * lox.km, lox.m_per_s),
+        (90 * lox.deg, lox.AngularRateUnit("rad/s")),
+    ],
+)
+def test_time_from_quotient_errors(numerator, rate):
+    with pytest.raises(ZeroDivisionError, match="division by zero"):
+        numerator / (0 * rate)
+    with pytest.raises(ValueError, match="out of range for TimeDelta"):
+        numerator / (1e-300 * rate)
+
+
 TIME_DELTA_UNITS = [
     ("seconds", "s", "from_seconds"),
     ("minutes", "min", "from_minutes"),

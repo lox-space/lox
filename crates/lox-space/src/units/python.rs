@@ -7,7 +7,8 @@
 #![allow(clippy::wrong_self_convention)]
 
 use pyo3::IntoPyObjectExt;
-use pyo3::exceptions::PyValueError;
+use pyo3::PyTypeInfo;
+use pyo3::exceptions::{PyValueError, PyZeroDivisionError};
 use pyo3::prelude::*;
 use pyo3::types::PyFloat;
 use std::format;
@@ -78,6 +79,7 @@ macro_rules! py_quantity {
         $(, square = $square_out:ident)?
         $(, mul = [$($mul_rhs:ident => $mul_out:ident),* $(,)?])?
         $(, div = [$($div_rhs:ident => $div_out:ident),* $(,)?])?
+        $(, try_div = [$($try_div_rhs:ident => $try_div_out:ident),* $(,)?])?
         $(, extra = { $($extra:tt)* })?
     ) => {
         py_quantity!(@define $quantity, $py_quantity, $name, $unit, $py_unit, $unit_name,
@@ -140,6 +142,25 @@ macro_rules! py_quantity {
                     $($(
                         if let Ok(rhs) = other.cast::<$div_rhs>() {
                             return $div_out(self.0 / rhs.get().0).into_py_any(py);
+                        }
+                    )*)?
+                    $($(
+                        if let Ok(rhs) = other.cast::<$try_div_rhs>() {
+                            let rhs = rhs.get().0;
+                            if rhs == Default::default() {
+                                return Err(PyZeroDivisionError::new_err(
+                                    concat!($name, " division by zero"),
+                                ));
+                            }
+                            let Some(quotient) = self.0 / rhs else {
+                                return Err(PyValueError::new_err(format!(
+                                    "{} / {} is out of range for {}",
+                                    $name,
+                                    $try_div_rhs::type_object(py).name()?,
+                                    $try_div_out::type_object(py).name()?,
+                                )));
+                            };
+                            return $try_div_out(quotient).into_py_any(py);
                         }
                     )*)?
                     if let Ok(divisor) = other.extract::<f64>() {
@@ -291,7 +312,8 @@ py_quantity!(
         (microarcseconds, to_microarcseconds),
     ],
     ops = linear,
-    div = [PyTimeDelta => PyAngularRate]
+    div = [PyTimeDelta => PyAngularRate],
+    try_div = [PyAngularRate => PyTimeDelta]
 );
 
 py_quantity!(
@@ -357,7 +379,8 @@ py_quantity!(
         (tebibytes, to_tebibytes),
     ],
     ops = linear,
-    div = [PyTimeDelta => PyDataRate]
+    div = [PyTimeDelta => PyDataRate],
+    try_div = [PyDataRate => PyTimeDelta]
 );
 
 py_quantity!(
@@ -436,7 +459,8 @@ py_quantity!(
     ],
     ops = linear,
     square = PyArea,
-    div = [PyTimeDelta => PyVelocity]
+    div = [PyTimeDelta => PyVelocity],
+    try_div = [PyVelocity => PyTimeDelta]
 );
 
 py_quantity!(
