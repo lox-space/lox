@@ -27,8 +27,9 @@ use lox_space::ephem::spk::parser::Spk;
 use lox_space::frames::providers::DefaultRotationProvider;
 use lox_space::frames::{Frame, Iau, Icrf};
 use lox_space::orbits::ground::EllipsoidLocation;
-use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
+use lox_space::orbits::propagators::sgp4::Sgp4;
 use lox_space::orbits::propagators::{OrbitSource, Propagator};
+use lox_space::orbits::tle::Tle;
 use lox_space::orbits::{Ensemble, Trajectory};
 use lox_space::time::TimeDelta;
 use lox_space::time::intervals::{Interval, TimeInterval};
@@ -140,7 +141,7 @@ pub fn propagate_oneweb_trajectories(n: usize, window_hours: i64) -> Vec<(String
     let propagators: Vec<(String, Sgp4)> = tles[..n]
         .iter()
         .map(|(name, l1, l2)| {
-            let el = Elements::from_tle(Some(name.clone()), l1, l2).unwrap();
+            let el = Tle::from_lines(Some(name.clone()), l1, l2).unwrap();
             (name.clone(), Sgp4::new(el).unwrap())
         })
         .collect();
@@ -242,13 +243,13 @@ pub fn build_groundspace_scenario(n: usize) -> (Scenario, DynamicEnsemble) {
 // ---------------------------------------------------------------------------
 
 fn oneweb_pair_trajectories() -> (Trajectory, Trajectory) {
-    let tle1 = Elements::from_tle(
+    let tle1 = Tle::from_lines(
         Some("ONEWEB-0012".to_string()),
         b"1 44057U 19010A   24322.58825131  .00000088  00000+0  19693-3 0  9993",
         b"2 44057  87.9092 343.6767 0002420  76.7970 283.3431 13.16592150275693",
     )
     .unwrap();
-    let tle2 = Elements::from_tle(
+    let tle2 = Tle::from_lines(
         Some("ONEWEB-0017".to_string()),
         b"1 45132U 20008B   24322.88240834 -.00000016  00000+0 -81930-4 0  9998",
         b"2 45132  87.8896 151.0343 0001369  78.1189 282.0092 13.10376984232476",

@@ -2189,16 +2189,17 @@ mod tests {
 
     fn oneweb_trajectories() -> (Trajectory, Trajectory) {
         use lox_orbits::propagators::Propagator;
-        use lox_orbits::propagators::sgp4::{Elements, Sgp4};
+        use lox_orbits::propagators::sgp4::Sgp4;
+        use lox_orbits::tle::Tle;
         use lox_time::intervals::Interval;
 
-        let tle1 = Elements::from_tle(
+        let tle1 = Tle::from_lines(
             Some("ONEWEB-0012".to_string()),
             b"1 44057U 19010A   24322.58825131  .00000088  00000+0  19693-3 0  9993",
             b"2 44057  87.9092 343.6767 0002420  76.7970 283.3431 13.16592150275693",
         )
         .unwrap();
-        let tle2 = Elements::from_tle(
+        let tle2 = Tle::from_lines(
             Some("ONEWEB-0017".to_string()),
             b"1 45132U 20008B   24322.88240834 -.00000016  00000+0 -81930-4 0  9998",
             b"2 45132  87.8896 151.0343 0001369  78.1189 282.0092 13.10376984232476",
@@ -2581,11 +2582,12 @@ mod tests {
     #[test]
     fn test_inter_satellite_with_occulting_body() {
         use lox_orbits::propagators::Propagator;
-        use lox_orbits::propagators::sgp4::{Elements, Sgp4};
+        use lox_orbits::propagators::sgp4::Sgp4;
+        use lox_orbits::tle::Tle;
         use lox_time::intervals::Interval;
 
         // ISS TLE near the lunar trajectory epoch (2022-02-01).
-        let iss_tle = Elements::from_tle(
+        let iss_tle = Tle::from_lines(
             Some("ISS".to_string()),
             b"1 25544U 98067A   22032.58348611  .00006730  00000+0  12674-3 0  9993",
             b"2 25544  51.6444 273.4162 0006808 335.0825 135.5682 15.49587047324581",

@@ -18,6 +18,7 @@ use lox_odm::types::common::OdmTimeSystem;
 use lox_orbits::odm::OmmBuildError;
 use lox_orbits::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory};
 use lox_orbits::propagators::sgp4::Sgp4;
+use lox_orbits::tle::Tle;
 use lox_time::time::Time;
 use lox_time::time_scales::TimeScale;
 use lox_time::{TimeDelta, TimeDeltaUnit};
@@ -348,11 +349,12 @@ const ISS_OMM_JSON: &str = r#"{
     "MEAN_MOTION_DDOT": "0"
 }"#;
 
-/// `Sgp4::from_omm_str` builds a working SGP4 propagator and a one-orbital-
+/// `Tle::from_omm_str` yields elements for a working SGP4 propagator and a one-orbital-
 /// period propagation comes back with the same orbital period.
 #[test]
-fn sgp4_from_omm_str_iss() {
-    let sgp4 = Sgp4::from_omm_str(ISS_OMM_JSON).expect("from_omm_str");
+fn tle_from_omm_str_iss() {
+    let tle = Tle::from_omm_str(ISS_OMM_JSON).expect("from_omm_str");
+    let sgp4 = Sgp4::new(tle).expect("valid elements");
 
     // Propagate to t + one orbital period (≈ 92.82 min from the ISS mean motion).
     let orbital_period = 92.821;

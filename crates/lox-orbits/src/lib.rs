@@ -21,3 +21,5 @@ pub mod odm;
 pub mod orbits;
 /// Orbit propagators (Vallado, J2, SGP4, trajectory replay).
 pub mod propagators;
+/// Two-Line Element sets.
+pub mod tle;

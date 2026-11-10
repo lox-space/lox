@@ -9,6 +9,7 @@ pub use lox_orbits::constellations;
 pub use lox_orbits::ground;
 pub use lox_orbits::orbits::*;
 pub use lox_orbits::propagators;
+pub use lox_orbits::tle;
 
 #[cfg(feature = "python")]
 /// Python bindings exposed via PyO3.
