@@ -14,8 +14,8 @@
 //! Calendar dates, Julian dates, time of day and instants in time scales live in `lox-time`.
 
 use core::fmt::Display;
-use core::iter::Sum;
-use core::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
+use core::iter::{self, Sum};
+use core::ops::{Add, AddAssign, Div, Mul, Neg, Rem, Sub, SubAssign};
 
 use self::constants::{
     ATTOSECONDS_IN_FEMTOSECOND, ATTOSECONDS_IN_MICROSECOND, ATTOSECONDS_IN_MILLISECOND,
@@ -358,6 +358,26 @@ impl TimeDelta {
 
         Self::try_from_seconds_f64(attoseconds_product + seconds_product)
     }
+
+    /// Split delta into n roughly equal sized parts
+    ///
+    /// The remainder of the division is added to the last element,
+    /// ensuring that the sum of the parts is equal to the original
+    /// delta.
+    ///
+    /// ```
+    /// # use lox_core::time::TimeDelta;
+    /// let delta = TimeDelta::from_seconds(10);
+    /// let parts = delta.split_into(3).collect::<Vec<_>>();
+    /// assert_eq!(parts.len(), 3);
+    /// assert_eq!(parts.iter().map(|part| part).sum::<TimeDelta>(), delta);
+    /// ```
+    pub fn split_into(self, n: usize) -> impl Iterator<Item = Self> {
+        let part = self / n as i64;
+        let remaining = self % n as i64;
+
+        iter::repeat_n(part, n - 1).chain(iter::once(part + remaining))
+    }
 }
 
 /// Error returned when trying to create a `TimeDelta` from an out-of-range `f64`.
@@ -446,6 +466,24 @@ impl Mul<TimeDelta> for f64 {
     /// [`TimeDelta::try_mul`] for a fallible alternative.
     fn mul(self, rhs: TimeDelta) -> Self::Output {
         rhs.mul_const(self)
+    }
+}
+
+impl Div<i64> for TimeDelta {
+    type Output = TimeDelta;
+
+    fn div(self, rhs: i64) -> Self::Output {
+        let total = self.total_attoseconds();
+        Self::from_total_attoseconds(total / rhs as i128).expect("seconds overflow")
+    }
+}
+
+impl Rem<i64> for TimeDelta {
+    type Output = TimeDelta;
+
+    fn rem(self, rhs: i64) -> Self::Output {
+        let total = self.total_attoseconds();
+        Self::from_total_attoseconds(total % rhs as i128).expect("seconds overflow")
     }
 }
 
@@ -1005,5 +1043,92 @@ mod tests {
         let sum = deltas.iter().sum::<TimeDelta>();
 
         assert_eq!(sum, TimeDelta::from_seconds(85));
+    }
+
+    #[rstest]
+    #[case::whole_seconds(TimeDelta::from_seconds(10), 2, TimeDelta::from_seconds(5))]
+    #[case::into_attoseconds(
+        TimeDelta::from_seconds(1),
+        4,
+        TimeDelta::new(0, 250_000_000_000_000_000)
+    )]
+    #[case::seconds_and_attoseconds(
+        TimeDelta::new(3, 300_000_000_000_000_000),
+        3,
+        TimeDelta::new(1, 100_000_000_000_000_000)
+    )]
+    #[case::truncates(
+        TimeDelta::from_seconds(1),
+        3,
+        TimeDelta::new(0, 333_333_333_333_333_333)
+    )]
+    #[case::second_remainder_carries(
+        TimeDelta::from_seconds(16),
+        17,
+        TimeDelta::new(0, 941_176_470_588_235_294)
+    )]
+    #[case::negative(TimeDelta::from_seconds(-1), 4, TimeDelta::new(-1, 750_000_000_000_000_000))]
+    #[case::by_one(TimeDelta::new(7, 42), 1, TimeDelta::new(7, 42))]
+    fn test_div_i64(#[case] delta: TimeDelta, #[case] n: i64, #[case] expected: TimeDelta) {
+        assert_eq!(delta / n, expected);
+    }
+
+    #[rstest]
+    #[case::exact(TimeDelta::from_seconds(10), 2, TimeDelta::ZERO)]
+    #[case::one_attosecond(TimeDelta::from_seconds(10), 3, TimeDelta::new(0, 1))]
+    #[case::second_remainder_carries(TimeDelta::from_seconds(16), 17, TimeDelta::new(0, 2))]
+    #[case::attoseconds_only(TimeDelta::new(0, 10), 4, TimeDelta::new(0, 2))]
+    #[case::by_one(TimeDelta::new(7, 42), 1, TimeDelta::ZERO)]
+    fn test_rem_i64(#[case] delta: TimeDelta, #[case] n: i64, #[case] expected: TimeDelta) {
+        assert_eq!(delta % n, expected);
+    }
+
+    #[rstest]
+    #[case::whole_seconds(TimeDelta::from_seconds(10), 3)]
+    #[case::second_remainder_carries(TimeDelta::from_seconds(16), 17)]
+    #[case::link_window(TimeDelta::new(35_584, 635_534_652_785_281_664), 594)]
+    #[case::large_divisor(TimeDelta::new(1, 1), 1_000_000_007)]
+    #[case::negative_whole(TimeDelta::from_seconds(-1), 3)]
+    #[case::negative_fraction(TimeDelta::new(-1, 500_000_000_000_000_000), 3)]
+    #[case::negative_mixed(TimeDelta::new(-35_585, 364_465_347_214_718_336), 594)]
+    fn test_div_rem_i64_match_integer_division(#[case] delta: TimeDelta, #[case] n: i64) {
+        // Both operators behave like i64 `/` and `%` on the total attoseconds:
+        // division truncates towards zero and the remainder takes the sign of
+        // the dividend.
+        let total = delta.total_attoseconds();
+        let n_wide = n as i128;
+        assert_eq!(
+            delta / n,
+            TimeDelta::from_total_attoseconds(total / n_wide).unwrap(),
+            "quotient"
+        );
+        assert_eq!(
+            delta % n,
+            TimeDelta::from_total_attoseconds(total % n_wide).unwrap(),
+            "remainder"
+        );
+
+        let quotient = (delta / n).total_attoseconds();
+        let remainder = (delta % n).total_attoseconds();
+        assert_eq!(quotient * n_wide + remainder, total);
+        assert!(remainder.abs() < n_wide);
+    }
+
+    #[rstest]
+    #[case::single_part(TimeDelta::new(7, 42), 1)]
+    #[case::exact(TimeDelta::from_seconds(10), 2)]
+    #[case::whole_seconds(TimeDelta::from_seconds(10), 3)]
+    #[case::second_remainder_carries(TimeDelta::from_seconds(16), 17)]
+    #[case::link_window(TimeDelta::new(35_584, 635_534_652_785_281_664), 594)]
+    #[case::more_parts_than_attoseconds(TimeDelta::new(0, 3), 5)]
+    #[case::zero(TimeDelta::ZERO, 4)]
+    fn test_split_into(#[case] delta: TimeDelta, #[case] n: usize) {
+        let parts: alloc::vec::Vec<TimeDelta> = delta.split_into(n).collect();
+        let part = delta / n as i64;
+
+        assert_eq!(parts.len(), n);
+        assert_eq!(parts.iter().sum::<TimeDelta>(), delta);
+        assert!(parts[..n - 1].iter().all(|&p| p == part));
+        assert_eq!(parts[n - 1], part + delta % n as i64);
     }
 }

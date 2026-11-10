@@ -2107,7 +2107,7 @@ impl PyLinkWindow {
     /// The interval over which the link closes.
     #[getter]
     fn interval(&self) -> PyInterval {
-        PyInterval(*self.0.interval())
+        PyInterval(self.0.interval())
     }
 
     /// Direction of the link: "uplink", "downlink", or "crosslink".

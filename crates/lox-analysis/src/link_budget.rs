@@ -17,6 +17,7 @@
 //! terminals — terminals model hardware and know nothing about symbol rates.
 
 use std::collections::{BTreeMap, HashMap};
+use std::iter::{self};
 
 use lox_bodies::{CoordinateOrigin, TrySpheroid};
 use lox_comms::channel::{Channel, LinkDirection};
@@ -333,11 +334,10 @@ where
     }
 }
 
-/// An interval in which a link closes, with the throughput it supports.
+/// Part of `LinkWindow` with a constant rate
 #[derive(Debug, Clone)]
-pub struct LinkWindow {
-    interval: TimeInterval,
-    direction: LinkDirection,
+pub struct LinkWindowPart {
+    duration: TimeDelta,
     peak_margin: Decibel,
     min_margin: Decibel,
     peak_modcod: Option<ModCod>,
@@ -345,15 +345,10 @@ pub struct LinkWindow {
     data_volume: DataVolume,
 }
 
-impl LinkWindow {
-    /// Returns the interval over which the link closes.
-    pub fn interval(&self) -> &TimeInterval {
-        &self.interval
-    }
-
-    /// Returns the direction of the link.
-    pub fn direction(&self) -> LinkDirection {
-        self.direction
+impl LinkWindowPart {
+    /// Returns the duration of the part
+    pub fn duration(&self) -> TimeDelta {
+        self.duration
     }
 
     /// Returns the highest margin reached within the window, against the
@@ -380,8 +375,7 @@ impl LinkWindow {
     /// Returns the information rate supported at the peak, or zero when no
     /// entry in the table closes there.
     pub fn peak_information_rate(&self) -> DataRate {
-        self.peak_modcod
-            .as_ref()
+        self.peak_modcod()
             .map(|modcod| modcod.mode().information_rate(self.symbol_rate))
             .unwrap_or(DataRate::ZERO)
     }
@@ -390,6 +384,85 @@ impl LinkWindow {
     /// adaptively selected information rate.
     pub fn data_volume(&self) -> DataVolume {
         self.data_volume
+    }
+}
+
+/// An interval in which a link closes, with the throughput it supports.
+#[derive(Debug, Clone)]
+pub struct LinkWindow {
+    start: Time,
+    direction: LinkDirection,
+    parts: Vec<LinkWindowPart>,
+}
+
+impl LinkWindow {
+    /// Returns the interval over which the link closes.
+    pub fn interval(&self) -> TimeInterval {
+        TimeInterval::from_duration(
+            self.start,
+            self.parts.iter().map(|part| part.duration).sum(),
+        )
+    }
+
+    /// Returns the direction of the link.
+    pub fn direction(&self) -> LinkDirection {
+        self.direction
+    }
+
+    /// Returns parts as slice
+    pub fn parts(&self) -> &[LinkWindowPart] {
+        &self.parts
+    }
+
+    fn peak_part(&self) -> &LinkWindowPart {
+        self.parts
+            .iter()
+            .reduce(|peak, part| {
+                if part.peak_margin > peak.peak_margin {
+                    part
+                } else {
+                    peak
+                }
+            })
+            .expect("a link window has at least one part")
+    }
+
+    /// Returns the highest margin reached within the window, against the
+    /// plan's detection MODCOD.
+    pub fn peak_margin(&self) -> Decibel {
+        self.peak_part().peak_margin
+    }
+
+    /// Returns the lowest margin within the window.
+    ///
+    /// Zero at a boundary the root finder placed, and positive only where the
+    /// window was clipped against the start or the end of a visibility
+    /// interval.
+    pub fn min_margin(&self) -> Decibel {
+        let min = self
+            .parts
+            .iter()
+            .map(|part| part.min_margin().to_decibels())
+            .fold(f64::INFINITY, f64::min);
+        Decibel::decibels(min)
+    }
+
+    /// Returns the MODCOD adaptive coding and modulation selects at the peak,
+    /// or `None` when no entry in the table closes there.
+    pub fn peak_modcod(&self) -> Option<&ModCod> {
+        self.peak_part().peak_modcod()
+    }
+
+    /// Returns the information rate supported at the peak, or zero when no
+    /// entry in the table closes there.
+    pub fn peak_information_rate(&self) -> DataRate {
+        self.peak_part().peak_information_rate()
+    }
+
+    /// Returns the data volume deliverable over the window, integrating the
+    /// adaptively selected information rate.
+    pub fn data_volume(&self) -> DataVolume {
+        self.parts.iter().map(|part| part.data_volume()).sum()
     }
 }
 
@@ -724,13 +797,15 @@ where
     } else {
         2
     };
-    let dt = duration / subdivisions as f64;
 
     let mut peak_margin = f64::NEG_INFINITY;
     let mut min_margin = f64::INFINITY;
     let mut peak_modcod = None;
     let mut data_volume = 0.0;
     let mut previous_rate: Option<f64> = None;
+    let mut previous_start = start;
+    let mut offset = TimeDelta::ZERO;
+    let mut parts = Vec::new();
 
     // The rate the link is guaranteed at a boundary, where the detection
     // MODCOD's margin is zero by construction.
@@ -740,9 +815,16 @@ where
         .information_rate(plan.channel.symbol_rate())
         .to_bits_per_second();
 
-    for i in 0..=subdivisions {
-        let time = start + TimeDelta::from_seconds_f64(i as f64 * dt);
+    for (i, delta) in iter::once(TimeDelta::ZERO)
+        .chain(interval.duration().split_into(subdivisions))
+        .enumerate()
+    {
+        offset += delta;
+
+        let time = start + offset;
+
         let budget = link.budget(time)?;
+
         let margin = budget
             .modulate(&plan.channel, &plan.detection_modcod, plan.design_margin)
             .margin
@@ -768,20 +850,33 @@ where
         }
         min_margin = min_margin.min(margin);
 
-        if let Some(previous) = previous_rate {
-            data_volume += 0.5 * (previous + rate) * dt;
+        if let Some(prev_rate) = previous_rate {
+            data_volume += 0.5 * (prev_rate + rate) * delta.as_seconds_f64();
+
+            if rate != prev_rate || i == subdivisions {
+                parts.push(LinkWindowPart {
+                    duration: time - previous_start,
+                    peak_margin: Decibel::decibels(peak_margin),
+                    min_margin: Decibel::decibels(min_margin),
+                    peak_modcod,
+                    symbol_rate: plan.channel.symbol_rate(),
+                    data_volume: DataVolume::bits(data_volume),
+                });
+
+                previous_start = time;
+                peak_margin = f64::NEG_INFINITY;
+                min_margin = f64::INFINITY;
+                peak_modcod = None;
+                data_volume = 0.0;
+            }
         }
         previous_rate = Some(rate);
     }
 
     Ok(LinkWindow {
-        interval,
+        start,
+        parts,
         direction: link.direction,
-        peak_margin: Decibel::decibels(peak_margin),
-        min_margin: Decibel::decibels(min_margin),
-        peak_modcod,
-        symbol_rate: plan.channel.symbol_rate(),
-        data_volume: DataVolume::bits(data_volume),
     })
 }
 
@@ -1394,12 +1489,189 @@ mod tests {
         assert!(!windows.is_empty(), "expected the link to close somewhere");
 
         for window in windows {
+            dbg!(window);
             let duration = window.interval().duration().as_seconds_f64();
             assert_approx_eq!(
                 window.data_volume().to_bits(),
                 rate * duration,
                 rtol <= 1e-12
             );
+        }
+    }
+
+    #[test]
+    fn test_margin_extremes_bracket_the_window_edges() {
+        let f = fixture();
+        let (tx, rx) = lumped(20.0, 20.0);
+        let scenario = scenario(
+            &f.location,
+            &f.trajectory,
+            &[("downlink", tx)],
+            &[("main", rx)],
+        );
+        let analysis = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan());
+        let links = analysis.links().unwrap();
+        let link = links.first().expect("one downlink");
+        let results = analysis.compute().unwrap();
+        let (tx_id, rx_id) = downlink_ids();
+        let visibility = visibility_windows();
+
+        let windows = results.windows_for(&tx_id, &rx_id);
+        assert!(!windows.is_empty(), "expected the link to close somewhere");
+
+        for window in windows {
+            let peak = window.peak_margin().to_decibels();
+            let min = window.min_margin().to_decibels();
+            assert!(peak > 0.0, "the link must close inside its window");
+            assert!(min <= peak);
+
+            // Both edges are samples, so the extremes must bound them exactly.
+            let edges = [window.interval().start(), window.interval().end()];
+            for edge in edges {
+                let margin = link.margin(edge).unwrap();
+                assert!(min <= margin && margin <= peak);
+            }
+
+            // A boundary placed by the root finder pins the minimum to zero;
+            // only a window clipped at both ends may stay above it.
+            let interior = edges.iter().any(|&edge| {
+                visibility
+                    .iter()
+                    .any(|v| edge > v.start() && edge < v.end())
+            });
+            if interior {
+                assert_approx_eq!(min, 0.0, atol <= 1e-3);
+            } else {
+                assert!(min > 0.0);
+            }
+        }
+    }
+
+    #[test]
+    fn test_peak_margin_matches_a_dense_scan() {
+        // The peak must be the highest margin across the whole window, not
+        // just within whichever stretch held the final MODCOD.
+        let f = fixture();
+        let (tx, rx) = lumped(30.0, 20.0);
+        let scenario = scenario(
+            &f.location,
+            &f.trajectory,
+            &[("downlink", tx)],
+            &[("main", rx)],
+        );
+        let analysis = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan());
+        let links = analysis.links().unwrap();
+        let link = links.first().expect("one downlink");
+        let results = analysis.compute().unwrap();
+        let (tx_id, rx_id) = downlink_ids();
+
+        let windows = results.windows_for(&tx_id, &rx_id);
+        assert!(!windows.is_empty(), "expected the link to close somewhere");
+
+        for window in windows {
+            let interval = window.interval();
+            let duration = interval.duration().as_seconds_f64();
+            let samples = (duration / 10.0).ceil() as usize;
+            let dense = (0..=samples)
+                .map(|i| {
+                    let offset = TimeDelta::from_seconds_f64(duration * i as f64 / samples as f64);
+                    link.margin(interval.start() + offset).unwrap()
+                })
+                .fold(f64::NEG_INFINITY, f64::max);
+            assert_approx_eq!(window.peak_margin().to_decibels(), dense, atol <= 1e-3);
+        }
+    }
+
+    #[test]
+    fn test_peak_modcod_is_selected_at_the_peak_margin() {
+        // The margin against the detection MODCOD fixes Es/N0 at the peak, and
+        // from it the entry adaptive selection must have picked there.
+        let plan = plan().with_design_margin(Decibel::decibels(1.0));
+        let results = run(30.0, 20.0, plan.clone());
+        let (tx, rx) = downlink_ids();
+        let windows = results.windows_for(&tx, &rx);
+        assert!(!windows.is_empty(), "expected the link to close somewhere");
+
+        let mut distinct = Vec::new();
+        for window in windows {
+            let es_n0 = window.peak_margin()
+                + plan.detection_modcod().required_es_n0()
+                + plan.design_margin();
+            let expected = ModCod::select(es_n0, plan.design_margin(), plan.modcods());
+            assert_eq!(window.peak_modcod(), expected);
+
+            if let Some(modcod) = window.peak_modcod()
+                && !distinct.contains(&modcod)
+            {
+                distinct.push(modcod);
+            }
+        }
+        assert!(
+            distinct.len() > 1,
+            "expected the windows to peak at different MODCODs"
+        );
+    }
+
+    #[test]
+    fn test_overspecified_link_peaks_at_the_most_efficient_modcod() {
+        let plan = plan();
+        let best = plan
+            .modcods()
+            .iter()
+            .max_by(|a, b| {
+                a.mode()
+                    .info_bits_per_symbol()
+                    .total_cmp(&b.mode().info_bits_per_symbol())
+            })
+            .unwrap();
+        let best_rate = best.mode().information_rate(plan.channel().symbol_rate());
+
+        let results = run(200.0, 40.0, plan.clone());
+        let (tx, rx) = downlink_ids();
+        let windows = results.windows_for(&tx, &rx);
+        assert!(!windows.is_empty());
+
+        for window in windows {
+            assert_eq!(window.peak_modcod(), Some(best));
+            assert_eq!(
+                window.peak_information_rate().to_bits_per_second(),
+                best_rate.to_bits_per_second()
+            );
+        }
+    }
+
+    #[test]
+    fn test_peak_information_rate_bounds_the_data_volume() {
+        let plan = plan();
+        let symbol_rate = plan.channel().symbol_rate();
+        let detection_rate = plan
+            .detection_modcod()
+            .mode()
+            .information_rate(symbol_rate)
+            .to_bits_per_second();
+
+        let results = run(30.0, 20.0, plan);
+        let (tx, rx) = downlink_ids();
+        let windows = results.windows_for(&tx, &rx);
+        assert!(!windows.is_empty(), "expected the link to close somewhere");
+
+        for window in windows {
+            let modcod = window.peak_modcod().expect("a MODCOD closes at the peak");
+            let peak_rate = window.peak_information_rate().to_bits_per_second();
+            assert_eq!(
+                peak_rate,
+                modcod
+                    .mode()
+                    .information_rate(symbol_rate)
+                    .to_bits_per_second()
+            );
+
+            // Selection is monotonic in Es/N0, so the peak carries the highest
+            // rate in the window, and the detection MODCOD the lowest.
+            let duration = window.interval().duration().as_seconds_f64();
+            let volume = window.data_volume().to_bits();
+            assert!(volume <= peak_rate * duration * (1.0 + 1e-12));
+            assert!(volume >= detection_rate * duration * (1.0 - 1e-12));
         }
     }
 
