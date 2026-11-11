@@ -13,7 +13,11 @@
 //! - Kozai, Y. (1959). "The Motion of a Close Earth Satellite."
 //!   *The Astronomical Journal*, 64, 367.
 //! - Vallado, D. A. (2013). *Fundamentals of Astrodynamics and
-//!   Applications*, 4th ed. Microcosm Press. pp. 372, 647–654, 708–710.
+//!   Applications*, 4th ed. Microcosm Press. pp. 372, 647–654.
+//! - Vallado, D. A. (2022). *Fundamentals of Astrodynamics and
+//!   Applications*, 5th ed. Microcosm Press. p. 735.
+
+use std::f64::consts::{PI, TAU};
 
 use lox_core::anomalies::{AnomalyError, MeanAnomaly, TrueAnomaly};
 use lox_core::coords::Cartesian;
@@ -110,7 +114,7 @@ pub fn j4_secular_rates(
                 * (120.0 + 64.0 * beta - 40.0 * beta2
                     + (-240.0 - 192.0 * beta + 40.0 * beta2) * sin_i2
                     + (105.0 + 144.0 * beta + 25.0 * beta2) * sin_i4)
-            - (45.0 / 128.0) * kn4 * e2 * (-8.0 + 40.0 * sin_i2 - 35.0 * sin_i4));
+            - (45.0 / 128.0) * kn4 * e2 * (8.0 - 40.0 * sin_i2 + 35.0 * sin_i4));
 
     // Secular rate coefficients.
     // Leading J2 terms use perturbed n_bar; higher-order use unperturbed n0.
@@ -155,7 +159,6 @@ pub fn j4_secular_rates(
 ///
 /// Panics if `kep` is parabolic, since its semi-major axis is undefined.
 pub fn propagate_mean(kep: &Keplerian, m0: f64, rates: &SecularRates, dt: f64) -> MeanElements {
-    use std::f64::consts::TAU;
     MeanElements {
         a: kep
             .semi_major_axis()
@@ -193,11 +196,14 @@ pub fn mean_to_cartesian(
 /// Apply Kwok short-period J2 corrections to mean elements and return
 /// the osculating Cartesian state.
 ///
-/// The corrections are computed in the (r, ṙ, p, u) space which is
-/// non-singular at e = 0. The osculating eccentricity is recovered as
-/// `e_osc = √(A² + B²)` from the corrected radius and velocity.
+/// Valid for circular (e = 0) and equatorial (i = 0) orbits.
 ///
-/// Reference: Vallado (2013), pp. 708–710.
+/// # References
+///
+/// - Vallado, D. A. (2022). *Fundamentals of Astrodynamics and Applications*,
+///   5th ed. Microcosm Press. p. 735.
+/// - Kwok, J. H. (1986). *The Long-Term Orbit Predictor (LOP)*. JPL
+///   Engineering Memorandum EM 312/86-151.
 pub fn kwok_osculating_cartesian(
     el: &MeanElements,
     body: &BodyConstants,
@@ -232,8 +238,11 @@ pub fn kwok_osculating_cartesian(
 
     let e_cos_f = e * cos_f;
     let e_sin_f = e * sin_f;
+    // `f` and `m` may come from different branches of the angle, so a raw
+    // difference can jump by 2π.
+    let f_minus_m = (f - m + PI).rem_euclid(TAU) - PI;
 
-    // Auxiliary combinations (Vallado p. 709).
+    // Auxiliary combinations.
     let aux1 = 3.0 * cos_2u + 3.0 * e * (aop * 2.0 + f).cos() + e * (aop * 2.0 + 3.0 * f).cos();
 
     // Short-period corrections.
@@ -242,7 +251,7 @@ pub fn kwok_osculating_cartesian(
     let dp = kj2 * sin_i2 / (2.0 * p) * aux1;
 
     let draan = -kj2 * cos_i / (4.0 * p * p)
-        * (6.0 * (f - m + e_sin_f)
+        * (6.0 * (f_minus_m + e_sin_f)
             - 3.0 * sin_2u
             - 3.0 * e * (aop * 2.0 + f).sin()
             - e * (aop * 2.0 + 3.0 * f).sin());
@@ -251,12 +260,17 @@ pub fn kwok_osculating_cartesian(
         * ((3.0 * cos_i2 - 1.0) * (2.0 * beta / (1.0 + e_cos_f) + e_cos_f / (1.0 + beta) + 1.0)
             - sin_i2 * cos_2u);
 
-    let drdot = kj2 * (mu / p).sqrt() / (4.0 * p * p.sqrt())
+    let drdot = kj2 * (mu / p).sqrt() / (4.0 * p * p)
         * ((3.0 * cos_i2 - 1.0) * e_sin_f * (beta + (1.0 + e_cos_f).powi(2) / (1.0 + beta))
-            - 2.0 * sin_i2 * (1.0 - e_cos_f).powi(2) * sin_2u);
+            - 2.0 * sin_i2 * (1.0 + e_cos_f).powi(2) * sin_2u);
 
-    let du = kj2 / (8.0 * p * p)
-        * ((6.0 - 30.0 * cos_i2) * (f - m)
+    // The 4th edition of Vallado prints this bracket with a positive prefactor;
+    // the 5th edition flips only the `sin 2u` term. Both disagree with numerical
+    // J2 integration and with the invariance of equatorial orbits under
+    // redistributing the periapsis longitude between RAAN and argument of
+    // periapsis, which require the whole bracket to change sign.
+    let du = -kj2 / (8.0 * p * p)
+        * ((6.0 - 30.0 * cos_i2) * f_minus_m
             + 4.0 * e_sin_f * (1.0 - 6.0 * cos_i2 - (3.0 * cos_i2 - 1.0) / (1.0 + beta))
             - (3.0 * cos_i2 - 1.0) / (1.0 + beta) * e * e * (2.0 * f).sin()
             + (5.0 * cos_i2 - 2.0) * 2.0 * e * (aop * 2.0 + f).sin()
@@ -331,5 +345,125 @@ mod tests {
         // The correction should be O(J4/J2) ≈ 1e-3 relative.
         assert!(draan / r2.raan_dot.abs() < 0.01);
         assert!(daop / r2.aop_dot.abs() < 0.01);
+    }
+
+    #[test]
+    fn test_j4_mean_motion_j4_term() {
+        // First-order J4 contribution to the mean motion, obtained from Lagrange's
+        // equation for the mean anomaly applied to the secular J4 disturbing
+        // function (Brouwer, 1959):
+        //   ΔṀ = −(45/128) n₀ J₄ (R/p)⁴ η e² (3 − 30 cos²i + 35 cos⁴i)
+        let a = 9_000_000.0;
+        let e = 0.2;
+        let i = 70.0_f64.to_radians();
+
+        let without_j4 = j4_secular_rates(a, e, i, MU_EARTH, J2_EARTH, 0.0, R_EQ);
+        let with_j4 = j4_secular_rates(a, e, i, MU_EARTH, J2_EARTH, J4_EARTH, R_EQ);
+
+        let p = a * (1.0 - e * e);
+        let eta = (1.0 - e * e).sqrt();
+        let n0 = (MU_EARTH / (a * a * a)).sqrt();
+        let cos_i2 = i.cos().powi(2);
+        let expected = -45.0 / 128.0
+            * n0
+            * J4_EARTH
+            * (R_EQ / p).powi(4)
+            * eta
+            * e
+            * e
+            * (3.0 - 30.0 * cos_i2 + 35.0 * cos_i2 * cos_i2);
+
+        // The difference of two mean motions cancels ~10 significant digits.
+        assert_approx_eq!(with_j4.n_bar - without_j4.n_bar, expected, rtol <= 1e-5);
+    }
+
+    fn earth() -> BodyConstants {
+        BodyConstants {
+            mu: GravitationalParameter::m3_per_s2(MU_EARTH),
+            j2: J2_EARTH,
+            r_eq: R_EQ,
+        }
+    }
+
+    #[test]
+    fn test_kwok_circular_equatorial_is_exact_circular_orbit() {
+        // In the equatorial plane the J2 field is central, so a circular
+        // equatorial orbit stays circular. With the Kozai mean semi-major axis
+        // ā, consistency with the secular rates n̄ + Ω̇ + ω̇ = n₀(1 + 3 J₂ R²/ā²)
+        // fixes its radius at r = ā − (3/2) J₂ R²/ā, independent of the
+        // argument of latitude, with zero radial velocity, the exact circular
+        // speed √(μ/r)(1 + (3/4) J₂ R²/r²), and true longitude equal to M.
+        let body = earth();
+        let a = 7_000_000.0;
+        let r_expected = a - 1.5 * J2_EARTH * R_EQ * R_EQ / a;
+        for m in [0.0, 0.7, 2.5, 4.0] {
+            let el = MeanElements {
+                a,
+                e: 0.0,
+                i: 0.0,
+                raan: 0.0,
+                aop: 0.0,
+                m,
+            };
+            let s = kwok_osculating_cartesian(&el, &body).unwrap();
+            let r = s.position().length();
+            let v_expected = (MU_EARTH / r).sqrt() * (1.0 + 0.75 * J2_EARTH * (R_EQ / r).powi(2));
+            assert_approx_eq!(r, r_expected, rtol <= 1e-12);
+            assert_approx_eq!(s.position().dot(s.velocity()) / r, 0.0, atol <= 1e-9);
+            // The first-order theory reproduces the speed up to O(J₂²).
+            assert_approx_eq!(s.velocity().length(), v_expected, rtol <= 1e-5);
+            let longitude = s.position().y.atan2(s.position().x).rem_euclid(TAU);
+            assert_approx_eq!(longitude, m, atol <= 1e-12);
+        }
+    }
+
+    #[test]
+    fn test_kwok_equatorial_node_split_invariance() {
+        // For an equatorial orbit (Ω, ω) and (Ω + α, ω − α) describe the same
+        // physical orbit, so they must yield the same osculating state. Since
+        // the corrections never depend on Ω, this forces the ω-dependent terms
+        // of ΔΩ and Δu to cancel. It fixes the sign of Δu relative to ΔΩ only;
+        // the absolute sign rests on the numerical comparison in `j2.rs`.
+        let body = earth();
+        for e in [0.0, 0.05, 0.1, 0.2] {
+            for shift in [0.3_f64, 1.2, 2.5] {
+                let base = MeanElements {
+                    a: 7_500_000.0,
+                    e,
+                    i: 0.0,
+                    raan: 0.4,
+                    aop: shift,
+                    m: 0.7,
+                };
+                let rotated = MeanElements {
+                    raan: 0.4 + shift,
+                    aop: 0.0,
+                    ..base
+                };
+                let s1 = kwok_osculating_cartesian(&base, &body).unwrap();
+                let s2 = kwok_osculating_cartesian(&rotated, &body).unwrap();
+                assert_approx_eq!(s1.position(), s2.position(), atol <= 1e-6);
+                assert_approx_eq!(s1.velocity(), s2.velocity(), atol <= 1e-9);
+            }
+        }
+    }
+
+    #[test]
+    fn test_kwok_continuous_across_mean_anomaly_wrap() {
+        // M just below 2π and just below 0 describe the same mean state.
+        let body = earth();
+        let el = MeanElements {
+            a: 7_000_000.0,
+            e: 0.05,
+            i: 0.5,
+            raan: 0.1,
+            aop: 1.0,
+            m: TAU - 1e-12,
+        };
+        let wrapped = MeanElements { m: -1e-12, ..el };
+        let s1 = kwok_osculating_cartesian(&el, &body).unwrap();
+        let s2 = kwok_osculating_cartesian(&wrapped, &body).unwrap();
+        assert_approx_eq!(s1.position(), s2.position(), atol <= 1e-3);
+        assert_approx_eq!(s1.velocity(), s2.velocity(), atol <= 1e-6);
     }
 }

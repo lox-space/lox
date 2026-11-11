@@ -13,7 +13,9 @@
 //!
 //! - Kozai, Y. (1959). *The Astronomical Journal*, 64, 367.
 //! - Vallado, D. A. (2013). *Fundamentals of Astrodynamics and
-//!   Applications*, 4th ed. pp. 647–654, 708–710.
+//!   Applications*, 4th ed. pp. 647–654.
+//! - Vallado, D. A. (2022). *Fundamentals of Astrodynamics and
+//!   Applications*, 5th ed. p. 735.
 //! - Hoots, F. R. & Roehrich, R. L. (1980). Spacetrack Report No. 3.
 
 use lox_bodies::{
