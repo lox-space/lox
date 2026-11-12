@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2026 Torkil Rein Gustavsen <torkilrg@ksat.no>
 //
 // SPDX-License-Identifier: MPL-2.0
 
@@ -428,7 +429,6 @@ mod tests {
             ]
         );
         assert_approx_eq!(merged.total().to_decibels(), 3.1, atol <= 1e-12);
-        // Overlaying nothing changes nothing.
         assert_eq!(plan.overlaid_with(&PropagationLosses::none()), plan);
     }
 
