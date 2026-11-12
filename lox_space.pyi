@@ -37,6 +37,7 @@ __all__ = [
     "AreaToMass",
     "AreaToMassUnit",
     "AreaUnit",
+    "AtmosphericLosses",
     "B",
     "CarrierPlan",
     "Cartesian",
@@ -2484,7 +2485,7 @@ class LinkWindow:
     def loss_source(self) -> str:
         """Where the propagation losses of this window come from: "plan" for
         the carrier plan's fixed losses, "site_profile" for the ground
-        station's elevation profile overlaid on them."""
+        station's elevation profile replacing their atmospheric lines."""
         ...
     @property
     def peak_margin(self) -> Decibel:
@@ -2535,8 +2536,8 @@ class LinkBudgetAnalysis:
             its SitePropagation or None; the callable is invoked once per
             ground station of the scenario. Each ground-space link whose
             carrier one of the station's profiles describes then follows that
-            profile along the pass. The profile replaces the plan's losses of
-            the kinds it lists and keeps the others. Every other link keeps
+            profile along the pass. The profile replaces the plan's atmospheric
+            losses (rain, gaseous, cloud, scintillation) and keeps the others. Every other link keeps
             the plan's fixed losses. Omitted by default: all links use the
             plan's losses.
 
@@ -5034,10 +5035,63 @@ class PropagationLosses:
     def __eq__(self, other: object, /) -> bool: ...
 
 @final
+class AtmosphericLosses:
+    """The atmospheric excess losses of an Earth–space path: rain, gaseous,
+    cloud and scintillation.
+
+    The fixed set of elevation-dependent losses tabulated by an
+    `ElevationProfile`.
+
+    Args:
+        rain: Rain attenuation. Defaults to 0 dB.
+        gaseous: Gaseous absorption. Defaults to 0 dB.
+        cloud: Cloud attenuation. Defaults to 0 dB.
+        scintillation: Scintillation loss. Defaults to 0 dB.
+
+    Raises:
+        ValueError: If a value is negative or not finite.
+    """
+    def __new__(
+        cls,
+        rain: Decibel | None = None,
+        gaseous: Decibel | None = None,
+        cloud: Decibel | None = None,
+        scintillation: Decibel | None = None,
+    ) -> Self: ...
+    @property
+    def rain(self) -> Decibel:
+        """Rain attenuation."""
+        ...
+    @property
+    def gaseous(self) -> Decibel:
+        """Gaseous absorption."""
+        ...
+    @property
+    def cloud(self) -> Decibel:
+        """Cloud attenuation."""
+        ...
+    @property
+    def scintillation(self) -> Decibel:
+        """Scintillation loss."""
+        ...
+    def total(self) -> Decibel:
+        """Returns the total atmospheric loss."""
+        ...
+    def absorptive(self) -> Decibel:
+        """Returns the absorptive part — rain, gaseous and cloud — which also
+        raises the receive antenna noise temperature."""
+        ...
+    def to_propagation_losses(self) -> PropagationLosses:
+        """Returns these losses as PropagationLosses with four lines: rain,
+        gaseous, cloud and scintillation."""
+        ...
+    def __eq__(self, other: object, /) -> bool: ...
+
+@final
 class ElevationProfile:
     """Propagation losses of one site at one carrier, as a function of elevation.
 
-    Tabulates `PropagationLosses` over a grid of elevations and interpolates
+    Tabulates `AtmosphericLosses` over a grid of elevations and interpolates
     between them, linearly in the cosecant of the elevation. Outside the grid
     the profile holds its end values. A single sample yields an
     elevation-independent profile.
@@ -5045,8 +5099,7 @@ class ElevationProfile:
     Args:
         carrier: The carrier frequency the profile was computed for.
         samples: (elevation, losses) pairs. The elevations must be strictly
-            increasing and lie in (0°, 90°], and every sample must list the
-            same loss kinds in the same order.
+            increasing and lie in (0°, 90°].
 
     Raises:
         ValueError: If the samples do not form a valid profile.
@@ -5054,17 +5107,17 @@ class ElevationProfile:
     def __new__(
         cls,
         carrier: Frequency,
-        samples: list[tuple[Angle, PropagationLosses]],
+        samples: list[tuple[Angle, AtmosphericLosses]],
     ) -> Self: ...
     @property
     def carrier(self) -> Frequency:
         """The carrier frequency the profile was computed for."""
         ...
     @property
-    def samples(self) -> list[tuple[Angle, PropagationLosses]]:
+    def samples(self) -> list[tuple[Angle, AtmosphericLosses]]:
         """The (elevation, losses) samples in increasing elevation."""
         ...
-    def at(self, elevation: Angle) -> PropagationLosses:
+    def at(self, elevation: Angle) -> AtmosphericLosses:
         """Return the losses at the given elevation, interpolated between
         the neighbouring samples."""
         ...

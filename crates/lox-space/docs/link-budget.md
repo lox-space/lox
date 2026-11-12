@@ -91,14 +91,14 @@ The callable is invoked once per ground station of the scenario; return `None`
 to leave a station out. To cover individual stations instead, pass a dict of
 ground-station ids to `SitePropagation`.
 
-A `SitePropagation` holds one `ElevationProfile` per carrier — losses tabulated
-over a grid of elevations and interpolated in between. Each ground-space link
+A `SitePropagation` holds one `ElevationProfile` per carrier — atmospheric
+losses tabulated over a grid of elevations and interpolated in between. Each ground-space link
 looks its profile up by the carrier of its plan, within 1 %, so the uplink and
 the downlink each find their own. Then:
 
-- The profile is **overlaid** on the plan's losses: it replaces the kinds it
-  lists (rain, gaseous, cloud, scintillation for an ITU-R profile) and keeps
-  the plan's other lines, such as a pointing margin. This applies to
+- The profile **replaces the atmospheric lines** of the plan's losses — rain,
+  gaseous, cloud and scintillation — and keeps the plan's other lines, such
+  as a pointing margin. This applies to
   overridden terminal pairs as well.
 - On a downlink the receive noise temperature degrades with the absorptive
   part of the loss, so G/T follows the elevation too.

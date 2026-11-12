@@ -61,7 +61,7 @@ pub mod provider;
 
 pub use provider::{ItuProvider, ItuProviderError};
 
-use lox_comms::{ElevationProfile, PropagationLosses, SitePropagation};
+use lox_comms::{AtmosphericLosses, ElevationProfile, PropagationLosses, SitePropagation};
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 /// Builds a serialized manifest for the packager.
@@ -119,6 +119,31 @@ impl ItuProvider {
         diameter: Distance,
         polarisation_tilt: Angle,
     ) -> Result<PropagationLosses, ItuProviderError> {
+        self.atmospheric_losses(
+            lat,
+            lon,
+            frequency,
+            elevation,
+            p,
+            diameter,
+            polarisation_tilt,
+        )
+        .map(PropagationLosses::from)
+    }
+
+    /// Computes the losses of [`Self::propagation_losses`] as typed
+    /// [`AtmosphericLosses`], with the same arguments.
+    #[allow(clippy::too_many_arguments)]
+    pub fn atmospheric_losses(
+        &self,
+        lat: Angle,
+        lon: Angle,
+        frequency: Frequency,
+        elevation: Angle,
+        p: f64,
+        diameter: Distance,
+        polarisation_tilt: Angle,
+    ) -> Result<AtmosphericLosses, ItuProviderError> {
         let f_ghz = frequency.to_gigahertz();
         // ITU-R P.618/P.676 approximate methods are only valid for el ≥ 5°.
         let el_deg = elevation.to_degrees().max(5.0);
@@ -168,15 +193,15 @@ impl ItuProvider {
         let a_total = a_gas + ((a_rain + a_cloud).powi(2) + a_scint.powi(2)).sqrt();
         let a_scint_eff = (a_total - a_gas - a_rain - a_cloud).max(0.0);
 
-        Ok(PropagationLosses::builder()
-            .rain(Decibel::decibels(a_rain))
-            .gaseous(Decibel::decibels(a_gas))
-            .cloud(Decibel::decibels(a_cloud))
-            .scintillation(Decibel::decibels(a_scint_eff))
-            .build()?)
+        Ok(AtmosphericLosses::new(
+            Decibel::decibels(a_rain),
+            Decibel::decibels(a_gas),
+            Decibel::decibels(a_cloud),
+            Decibel::decibels(a_scint_eff),
+        )?)
     }
 
-    /// Tabulates [`Self::propagation_losses`] over a grid of elevations.
+    /// Tabulates [`Self::atmospheric_losses`] over a grid of elevations.
     ///
     /// The resulting [`ElevationProfile`] lets a link budget follow the loss
     /// along a pass instead of applying one fixed figure. `elevations` must be
@@ -205,7 +230,7 @@ impl ItuProvider {
         let samples = elevations
             .iter()
             .map(|&elevation| {
-                self.propagation_losses(
+                self.atmospheric_losses(
                     lat,
                     lon,
                     frequency,
@@ -367,7 +392,7 @@ mod tests {
         assert_eq!(profile.samples().len(), 3);
         for &elevation in &elevations {
             let direct = p
-                .propagation_losses(lat, lon, frequency, elevation, 5.0, diameter, tilt)
+                .atmospheric_losses(lat, lon, frequency, elevation, 5.0, diameter, tilt)
                 .unwrap();
             assert_eq!(profile.at(elevation), direct);
         }

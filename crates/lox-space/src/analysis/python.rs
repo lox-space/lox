@@ -2119,7 +2119,7 @@ impl PyLinkWindow {
 
     /// Where the propagation losses of this window come from: "plan" for the
     /// carrier plan's fixed losses, "site_profile" for the ground station's
-    /// elevation profile overlaid on them.
+    /// elevation profile replacing their atmospheric lines.
     #[getter]
     fn loss_source(&self) -> &'static str {
         match self.0.loss_source() {
@@ -2193,8 +2193,8 @@ impl PyLinkWindow {
 ///         its SitePropagation or None; the callable is invoked once per
 ///         ground station of the scenario. Each ground-space link whose
 ///         carrier one of the station's profiles describes then follows that
-///         profile along the pass. The profile replaces the plan's losses of
-///         the kinds it lists and keeps the others. Every other link keeps
+///         profile along the pass. The profile replaces the plan's atmospheric
+///         losses (rain, gaseous, cloud, scintillation) and keeps the others. Every other link keeps
 ///         the plan's fixed losses. Omitted by default: all links use the
 ///         plan's losses.
 ///
