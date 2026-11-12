@@ -11,7 +11,7 @@
 
 use lox_core::units::{Angle, Decibel, Distance, Frequency, Pressure, Temperature};
 
-// ── Oxygen spectral line data (P.676-12 Table 1) ───────────────────────────
+// P.676-13 Table 1 (unchanged from P.676-12): oxygen spectral line data.
 // Columns: f0 (GHz), a1, a2, a3, a4, a5, a6
 #[rustfmt::skip]
 const OXYGEN_LINES: &[(f64, f64, f64, f64, f64, f64, f64)] = &[
@@ -61,7 +61,8 @@ const OXYGEN_LINES: &[(f64, f64, f64, f64, f64, f64, f64)] = &[
     (834.145546, 183.1, 0.145, 14.7, 0.0, 0.0, 0.0),
 ];
 
-// ── Water vapour spectral line data (P.676-12 Table 2) ─────────────────────
+// P.676-13 Table 2 (unchanged from P.676-12): water vapour spectral line data.
+// Columns: f0 (GHz), b1, b2, b3, b4, b5, b6
 #[rustfmt::skip]
 const WATER_VAPOUR_LINES: &[(f64, f64, f64, f64, f64, f64, f64)] = &[
     (22.235080, 0.1079, 2.144, 26.38, 0.76, 5.087, 1.0),
@@ -340,6 +341,8 @@ pub(crate) fn gaseous_attenuation_slant_path_raw(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lox_approx::assert_approx_eq;
+    use rstest::rstest;
 
     #[test]
     fn test_gamma0_sea_level() {
@@ -348,14 +351,74 @@ mod tests {
         assert!(g > 10.0, "gamma0 at 60 GHz should be >10 dB/km, got {}", g);
     }
 
-    #[test]
-    fn test_gamma0_positive_at_26ghz() {
-        // Regression: wrong line-shift coefficients made this negative
-        // (about -0.022 dB/km) at cold, dry sites.
-        for t_k in [220.0, 250.0, 288.15] {
-            let g = gamma0_raw(26.0, 1013.25, 0.1, t_k);
-            assert!(g > 0.0 && g < 0.05, "gamma0 at 26 GHz, {t_k} K: {g}");
-        }
+    // Regression: wrong line-shift coefficients made this negative
+    // (about -0.022 dB/km) at cold, dry sites.
+    #[rstest]
+    #[case(220.0)]
+    #[case(250.0)]
+    #[case(288.15)]
+    fn test_gamma0_positive_at_26ghz(#[case] t_k: f64) {
+        let g = gamma0_raw(26.0, 1013.25, 0.1, t_k);
+        assert!(g > 0.0 && g < 0.05, "gamma0 at 26 GHz, {t_k} K: {g}");
+    }
+
+    // Reference values from the ITU-R SG3 validation examples for P.676-13
+    // (CG-3M3J-13-ValEx-Rev8.3.0.xlsx, sheet SpAtt), at P = 1013.25 hPa,
+    // T = 288.15 K, rho = 7.5 g/m³. Cases: f (GHz), gamma0, gammaw (dB/km).
+    #[rstest]
+    #[case(1.0, 0.00538865816790655, 5.09046173249644e-05)]
+    #[case(10.0, 0.00822441670270988, 0.00597412524547672)]
+    #[case(22.0, 0.0131302229653917, 0.17420703333692)]
+    #[case(26.0, 0.0164634876138852, 0.108564633254083)]
+    #[case(50.0, 0.277268638530969, 0.111158547270094)]
+    #[case(54.0, 2.21154202637198, 0.127361672749424)]
+    #[case(57.0, 10.0652376721386, 0.140613831253581)]
+    #[case(60.0, 14.6234747964861, 0.154841840636247)]
+    #[case(63.0, 10.8310875114297, 0.170254841544846)]
+    #[case(66.0, 1.96661794477072, 0.187577774155081)]
+    #[case(70.0, 0.304105097147173, 0.209887930364388)]
+    #[case(100.0, 0.033625442078135, 0.424433522672505)]
+    #[case(118.0, 1.13486620187051, 0.605921952594212)]
+    #[case(119.0, 1.30637904078462, 0.617993479946656)]
+    #[case(183.0, 0.0127339088358709, 27.6650083141665)]
+    #[case(200.0, 0.0137235611329728, 2.87482447791876)]
+    #[case(325.0, 0.0300989585941093, 37.8621105311468)]
+    #[case(350.0, 0.0368056270504571, 10.1226731395126)]
+    fn test_specific_attenuation_itu_validation(
+        #[case] f_ghz: f64,
+        #[case] gamma0_ref: f64,
+        #[case] gammaw_ref: f64,
+    ) {
+        let g0 = gamma0_raw(f_ghz, 1013.25, 7.5, 288.15);
+        let gw = gammaw_raw(f_ghz, 1013.25, 7.5, 288.15);
+        assert_approx_eq!(g0, gamma0_ref, rtol <= 1e-10);
+        assert_approx_eq!(gw, gammaw_ref, rtol <= 1e-10);
+    }
+
+    // Reference values from the ITU-R SG3 validation examples for P.676-13
+    // (CG-3M3J-13-ValEx-Rev8.3.0.xlsx, sheet A_Gas_A2_INST), at 45° elevation.
+    // Cases: f (GHz), rho (g/m³), P (hPa), T (K), A_gas (dB).
+    #[rustfmt::skip]
+    #[rstest]
+    #[case(38.5, 13.998103358274586, 988.3342860812425, 295.15, 0.6724061393008622)]
+    #[case(38.5, 14.04229126442994, 988.8194616390798, 294.45, 0.6783244181497916)]
+    #[case(38.5, 14.205904949340969, 989.4840337179357, 294.65, 0.6833829361095082)]
+    #[case(38.5, 14.295215863202152, 989.4976770016127, 297.15, 0.6721249815284822)]
+    #[case(38.5, 13.172371197621427, 990.712469428683, 300.85, 0.6171528309720985)]
+    #[case(38.5, 12.932952957874935, 990.6016244371225, 303.25, 0.5981110294418397)]
+    #[case(38.5, 13.503193794315951, 989.3537790809332, 304.05, 0.6104970109958014)]
+    #[case(38.5, 14.83285126546697, 987.9839758399005, 302.65, 0.6579285461427736)]
+    #[case(38.5, 14.53449059438436, 989.3878692172694, 301.35, 0.6566089491834671)]
+    #[case(39.5, 15.942511766465097, 988.9020367914704, 297.65, 0.7707708981960036)]
+    fn test_slant_path_itu_validation(
+        #[case] f_ghz: f64,
+        #[case] rho: f64,
+        #[case] p_hpa: f64,
+        #[case] t_k: f64,
+        #[case] a_ref: f64,
+    ) {
+        let (a_o, a_w) = gaseous_attenuation_slant_path_raw(f_ghz, 45.0, p_hpa, rho, t_k);
+        assert_approx_eq!(a_o + a_w, a_ref, rtol <= 1e-9);
     }
 
     #[test]
@@ -415,8 +478,9 @@ mod tests {
         let g_high = gamma0_raw(14.25, 1013.25, 7.5, 288.15);
         assert!(g_low.is_finite());
         assert!(g_high.is_finite());
+        assert!(g_low > 0.0, "gamma0 at 500 hPa = {g_low}");
         // Higher pressure → higher attenuation (at same frequency)
-        assert!(g_high.abs() > g_low.abs());
+        assert!(g_high > g_low);
     }
 
     #[test]

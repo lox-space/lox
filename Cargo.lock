@@ -1104,6 +1104,7 @@ dependencies = [
  "lox-approx",
  "lox-comms",
  "lox-core",
+ "rstest",
  "serde",
  "serde_json",
  "sha2",
