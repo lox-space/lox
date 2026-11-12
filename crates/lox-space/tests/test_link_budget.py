@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
+import math
+
 import pytest
 
 import lox_space as lox
@@ -305,3 +307,112 @@ class TestLinkBudgetResults:
 
     def test_repr(self, results):
         assert repr(results).startswith("LinkBudgetResults(")
+
+
+# ---------------------------------------------------------------------------
+# Site propagation
+# ---------------------------------------------------------------------------
+
+
+def cosecant_site(carrier, zenith_db=0.5):
+    """A site whose gaseous loss follows the cosecant law from `zenith_db`."""
+    samples = [
+        (
+            el * lox.deg,
+            lox.PropagationLosses(
+                gaseous=zenith_db / math.sin(math.radians(el)) * lox.dB
+            ),
+        )
+        for el in (5.0, 10.0, 20.0, 40.0, 90.0)
+    ]
+    return lox.SitePropagation([lox.ElevationProfile(carrier, samples)])
+
+
+def windows_by_link(results):
+    return {(tx, rx): results.windows(tx, rx) for tx, rx in results.link_ids()}
+
+
+class TestSitePropagation:
+    def test_losses_come_from_the_plan_by_default(self, results):
+        windows = [w for ws in windows_by_link(results).values() for w in ws]
+        assert windows
+        assert {w.loss_source for w in windows} == {"plan"}
+
+    def test_dict_applies_to_the_named_station_only(
+        self, scenario, visibility, plan, results, space_assets, ground_assets
+    ):
+        first, second = (gs.id() for gs in ground_assets)
+        profiled = lox.LinkBudgetAnalysis(
+            scenario,
+            visibility,
+            plan,
+            site_propagation={first: cosecant_site(CARRIER)},
+        ).compute()
+
+        for (_, rx), windows in windows_by_link(profiled).items():
+            expected = "site_profile" if rx.asset == first else "plan"
+            assert {w.loss_source for w in windows} == {expected}
+
+        # The untouched station is unchanged; the profiled one loses volume.
+        for sc in space_assets:
+            tx = lox.TerminalId(sc.id(), "downlink")
+            for station, shrinks in ((first, True), (second, False)):
+                rx = lox.TerminalId(station, "main")
+                before = results.data_volume(tx, rx).to_bits()
+                after = profiled.data_volume(tx, rx).to_bits()
+                if shrinks and before > 0.0:
+                    assert after < before
+                else:
+                    assert after == pytest.approx(before)
+
+    def test_callable_is_invoked_once_per_ground_station(
+        self, scenario, visibility, plan, ground_assets
+    ):
+        seen = []
+
+        def site_for(station):
+            seen.append(station.id())
+            # Only the first station gets a profile.
+            if station.id() == ground_assets[0].id():
+                return cosecant_site(CARRIER)
+            return None
+
+        profiled = lox.LinkBudgetAnalysis(
+            scenario, visibility, plan, site_propagation=site_for
+        ).compute()
+
+        assert seen == [gs.id() for gs in ground_assets]
+        sources = {
+            rx.asset: {w.loss_source for w in windows}
+            for (_, rx), windows in windows_by_link(profiled).items()
+        }
+        assert sources[ground_assets[0].id()] == {"site_profile"}
+        assert sources.get(ground_assets[1].id(), {"plan"}) == {"plan"}
+
+    def test_profile_for_another_carrier_falls_back_to_the_plan(
+        self, scenario, visibility, plan, results, ground_assets
+    ):
+        sites = {gs.id(): cosecant_site(26.0 * lox.GHz, 5.0) for gs in ground_assets}
+        fallback = lox.LinkBudgetAnalysis(
+            scenario, visibility, plan, site_propagation=sites
+        ).compute()
+        assert fallback.total_windows() == results.total_windows()
+        for key, windows in windows_by_link(fallback).items():
+            assert {w.loss_source for w in windows} == {"plan"}
+            assert fallback.data_volume(*key).to_bits() == pytest.approx(
+                results.data_volume(*key).to_bits()
+            )
+
+    def test_unknown_station_is_rejected(self, scenario, visibility, plan):
+        analysis = lox.LinkBudgetAnalysis(
+            scenario,
+            visibility,
+            plan,
+            site_propagation={"nowhere": cosecant_site(CARRIER)},
+        )
+        with pytest.raises(ValueError, match="not a ground station"):
+            analysis.compute()
+
+    def test_wrong_argument_type_is_rejected(self, scenario, visibility, plan):
+        with pytest.raises(TypeError, match="dict .* or a callable"):
+            lox.LinkBudgetAnalysis(scenario, visibility, plan, site_propagation=42)

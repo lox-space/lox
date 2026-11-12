@@ -58,6 +58,65 @@ Note that ITU-R attenuation is quoted against an exceedance probability, so a
 plan built that way answers "when does the link close at that availability?"
 rather than "when does the link close right now".
 
+### Losses that follow the elevation
+
+A fixed loss is one figure for the whole pass, yet atmospheric loss grows
+steeply towards the horizon: at 5° elevation it is roughly five times the loss
+at 30°. To let the loss follow the spacecraft along the pass, describe each
+ground station's site with a `SitePropagation` and hand it to the analysis
+through `site_propagation`:
+
+```python
+itu = lox.ItuProvider("lox-itur-data.npz")
+
+
+def site_for(station: lox.GroundStation) -> lox.SitePropagation:
+    location = station.location()
+    return itu.site_propagation(
+        lat=location.latitude(),
+        lon=location.longitude(),
+        carriers=[8.2 * lox.GHz, 7.2 * lox.GHz],  # downlink, uplink
+        probability=5.0,
+        diameter=3.0 * lox.m,
+    )
+
+
+results = lox.LinkBudgetAnalysis(
+    scenario, visibility, plan, site_propagation=site_for
+).compute()
+```
+
+The callable is invoked once per ground station of the scenario; return `None`
+to leave a station out. To cover individual stations instead, pass a dict of
+ground-station ids to `SitePropagation`.
+
+A `SitePropagation` holds one `ElevationProfile` per carrier — losses tabulated
+over a grid of elevations and interpolated in between. Each ground-space link
+looks its profile up by the carrier of its plan, within 1 %, so the uplink and
+the downlink each find their own. Then:
+
+- The profile is **overlaid** on the plan's losses: it replaces the kinds it
+  lists (rain, gaseous, cloud, scintillation for an ITU-R profile) and keeps
+  the plan's other lines, such as a pointing margin. This applies to
+  overridden terminal pairs as well.
+- On a downlink the receive noise temperature degrades with the absorptive
+  part of the loss, so G/T follows the elevation too.
+- A link whose carrier no profile describes **keeps the plan's losses**, and
+  so does every inter-satellite link. `LinkWindow.loss_source` reports which
+  was used — `"site_profile"` or `"plan"` — so a silent fallback is visible.
+
+Site propagation is opt-in: without the argument every link uses the plan's
+fixed losses.
+
+The exceedance probability, the antenna diameter and the polarisation are part
+of the profile. To compare availabilities, build one `SitePropagation` per
+probability and run the analysis once for each.
+
+!!! note
+    The ITU-R models are valid from 5° elevation upwards and hold their 5°
+    value below it, and so does a profile built from them. For a station
+    tracking below 5° the loss near the horizon is underestimated.
+
 ## Pointing
 
 Both ends are evaluated at antenna boresight, which is the right model for a
