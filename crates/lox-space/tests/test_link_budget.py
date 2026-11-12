@@ -320,7 +320,7 @@ def cosecant_site(carrier, zenith_db=0.5):
     samples = [
         (
             el * lox.deg,
-            lox.PropagationLosses(
+            lox.AtmosphericLosses(
                 gaseous=zenith_db / math.sin(math.radians(el)) * lox.dB
             ),
         )

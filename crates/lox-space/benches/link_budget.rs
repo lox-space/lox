@@ -21,7 +21,7 @@ use lox_space::bodies::Origin;
 use lox_space::comms::channel::Channel;
 use lox_space::comms::modcod::dvb_s2;
 use lox_space::comms::terminal::{EirpModel, GtModel};
-use lox_space::comms::{ElevationProfile, FrequencyBand, PropagationLosses, SitePropagation};
+use lox_space::comms::{AtmosphericLosses, ElevationProfile, FrequencyBand, SitePropagation};
 use lox_space::core::units::{Angle, Decibel, Frequency};
 use lox_space::frames::Frame;
 
@@ -62,7 +62,7 @@ fn plan() -> CarrierPlan {
     CarrierPlan::new(CARRIER, channel, dvb_s2().to_vec()).unwrap()
 }
 
-/// Four atmospheric lines following the cosecant law, on a 14-point grid like
+/// Atmospheric losses following the cosecant law, on a 14-point grid like
 /// the one the ITU-R provider produces.
 fn site() -> SitePropagation {
     let samples = [
@@ -71,13 +71,13 @@ fn site() -> SitePropagation {
     .into_iter()
     .map(|el_deg| {
         let csc = 1.0 / el_deg.to_radians().sin();
-        let losses = PropagationLosses::builder()
-            .rain(Decibel::decibels(0.4 * csc))
-            .gaseous(Decibel::decibels(0.1 * csc))
-            .cloud(Decibel::decibels(0.1 * csc))
-            .scintillation(Decibel::decibels(0.05 * csc))
-            .build()
-            .unwrap();
+        let losses = AtmosphericLosses::new(
+            Decibel::decibels(0.4 * csc),
+            Decibel::decibels(0.1 * csc),
+            Decibel::decibels(0.1 * csc),
+            Decibel::decibels(0.05 * csc),
+        )
+        .unwrap();
         (Angle::degrees(el_deg), losses)
     })
     .collect();

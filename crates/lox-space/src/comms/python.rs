@@ -27,7 +27,8 @@ use lox_comms::terminal::{EirpModel, GtModel, RxChain, RxTerminal, TxChain, TxTe
 use lox_comms::transmitter::AmplifierTransmitter;
 use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
 use lox_comms::{
-    ElevationProfile, FrequencyBand, FrequencyRange, PropagationLosses, SitePropagation,
+    AtmosphericLosses, ElevationProfile, FrequencyBand, FrequencyRange, PropagationLosses,
+    SitePropagation,
 };
 use lox_core::units::{Angle, Decibel};
 
@@ -1172,9 +1173,109 @@ impl PyPropagationLosses {
     }
 }
 
+/// The atmospheric excess losses of an Earth–space path: rain, gaseous,
+/// cloud and scintillation.
+///
+/// The fixed set of elevation-dependent losses tabulated by an
+/// `ElevationProfile`.
+///
+/// Args:
+///     rain: Rain attenuation. Defaults to 0 dB.
+///     gaseous: Gaseous absorption. Defaults to 0 dB.
+///     cloud: Cloud attenuation. Defaults to 0 dB.
+///     scintillation: Scintillation loss. Defaults to 0 dB.
+///
+/// Raises:
+///     ValueError: If a value is negative or not finite.
+#[pyclass(
+    name = "AtmosphericLosses",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
+#[derive(Debug, Clone)]
+pub struct PyAtmosphericLosses(pub AtmosphericLosses);
+
+#[pymethods]
+impl PyAtmosphericLosses {
+    #[new]
+    #[pyo3(signature = (rain=None, gaseous=None, cloud=None, scintillation=None))]
+    fn new(
+        rain: Option<PyDecibel>,
+        gaseous: Option<PyDecibel>,
+        cloud: Option<PyDecibel>,
+        scintillation: Option<PyDecibel>,
+    ) -> PyResult<Self> {
+        let value = |v: Option<PyDecibel>| v.map_or(Decibel::decibels(0.0), |v| v.0);
+        AtmosphericLosses::new(
+            value(rain),
+            value(gaseous),
+            value(cloud),
+            value(scintillation),
+        )
+        .map(Self)
+        .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Rain attenuation.
+    #[getter]
+    fn rain(&self) -> PyDecibel {
+        PyDecibel(self.0.rain())
+    }
+
+    /// Gaseous absorption.
+    #[getter]
+    fn gaseous(&self) -> PyDecibel {
+        PyDecibel(self.0.gaseous())
+    }
+
+    /// Cloud attenuation.
+    #[getter]
+    fn cloud(&self) -> PyDecibel {
+        PyDecibel(self.0.cloud())
+    }
+
+    /// Scintillation loss.
+    #[getter]
+    fn scintillation(&self) -> PyDecibel {
+        PyDecibel(self.0.scintillation())
+    }
+
+    /// Returns the total atmospheric loss.
+    fn total(&self) -> PyDecibel {
+        PyDecibel(self.0.total())
+    }
+
+    /// Returns the absorptive part — rain, gaseous and cloud — which also
+    /// raises the receive antenna noise temperature.
+    fn absorptive(&self) -> PyDecibel {
+        PyDecibel(self.0.absorptive())
+    }
+
+    /// Returns these losses as PropagationLosses with four lines: rain,
+    /// gaseous, cloud and scintillation.
+    fn to_propagation_losses(&self) -> PyPropagationLosses {
+        PyPropagationLosses(self.0.into())
+    }
+
+    fn __eq__(&self, other: &PyAtmosphericLosses) -> bool {
+        self.0 == other.0
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "AtmosphericLosses(rain={}, gaseous={}, cloud={}, scintillation={})",
+            self.rain().__repr__(),
+            self.gaseous().__repr__(),
+            self.cloud().__repr__(),
+            self.scintillation().__repr__(),
+        )
+    }
+}
+
 /// Propagation losses of one site at one carrier, as a function of elevation.
 ///
-/// Tabulates `PropagationLosses` over a grid of elevations and interpolates
+/// Tabulates `AtmosphericLosses` over a grid of elevations and interpolates
 /// between them, linearly in the cosecant of the elevation. Outside the grid
 /// the profile holds its end values. A single sample yields an
 /// elevation-independent profile.
@@ -1182,8 +1283,7 @@ impl PyPropagationLosses {
 /// Args:
 ///     carrier: The carrier frequency the profile was computed for.
 ///     samples: (elevation, losses) pairs. The elevations must be strictly
-///         increasing and lie in (0°, 90°], and every sample must list the
-///         same loss kinds in the same order.
+///         increasing and lie in (0°, 90°].
 ///
 /// Raises:
 ///     ValueError: If the samples do not form a valid profile.
@@ -1199,7 +1299,7 @@ pub struct PyElevationProfile(pub ElevationProfile);
 #[pymethods]
 impl PyElevationProfile {
     #[new]
-    fn new(carrier: PyFrequency, samples: Vec<(PyAngle, PyPropagationLosses)>) -> PyResult<Self> {
+    fn new(carrier: PyFrequency, samples: Vec<(PyAngle, PyAtmosphericLosses)>) -> PyResult<Self> {
         let samples = samples
             .into_iter()
             .map(|(elevation, losses)| (elevation.0, losses.0))
@@ -1217,11 +1317,11 @@ impl PyElevationProfile {
 
     /// The (elevation, losses) samples in increasing elevation.
     #[getter]
-    fn samples(&self) -> Vec<(PyAngle, PyPropagationLosses)> {
+    fn samples(&self) -> Vec<(PyAngle, PyAtmosphericLosses)> {
         self.0
             .samples()
             .iter()
-            .map(|(elevation, losses)| (PyAngle(*elevation), PyPropagationLosses(losses.clone())))
+            .map(|(elevation, losses)| (PyAngle(*elevation), PyAtmosphericLosses(*losses)))
             .collect()
     }
 
@@ -1231,9 +1331,9 @@ impl PyElevationProfile {
     ///     elevation: Elevation angle.
     ///
     /// Returns:
-    ///     PropagationLosses interpolated between the neighbouring samples.
-    fn at(&self, elevation: PyAngle) -> PyPropagationLosses {
-        PyPropagationLosses(self.0.at(elevation.0))
+    ///     AtmosphericLosses interpolated between the neighbouring samples.
+    fn at(&self, elevation: PyAngle) -> PyAtmosphericLosses {
+        PyAtmosphericLosses(self.0.at(elevation.0))
     }
 
     fn __eq__(&self, other: &PyElevationProfile) -> bool {
