@@ -5,6 +5,7 @@
 
 """Tests for ITU-R atmospheric propagation models."""
 
+import math
 import os
 import pathlib
 
@@ -281,6 +282,18 @@ def test_elevation_profile_default_grid_and_invalid_grid(itur_provider):
     with pytest.raises(ValueError, match="strictly increasing"):
         itur_provider.elevation_profile(
             **args, elevations=[30.0 * lox.deg, 10.0 * lox.deg]
+        )
+
+
+def test_elevation_profile_reports_model_failures(itur_provider):
+    """A model failure is a RuntimeError, unlike an invalid grid."""
+    with pytest.raises(RuntimeError, match="must be finite and non-negative"):
+        itur_provider.elevation_profile(
+            lat=math.nan * lox.deg,
+            lon=-3.7 * lox.deg,
+            frequency=20.0 * lox.GHz,
+            probability=1.0,
+            diameter=1.2 * lox.m,
         )
 
 
