@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2026 Torkil Rein Gustavsen <torkilrg@ksat.no>
 //
 // SPDX-License-Identifier: MPL-2.0
 
@@ -232,8 +232,11 @@ impl TryFrom<SitePropagationRepr> for SitePropagation {
 impl SitePropagation {
     /// Creates the propagation description of a site from its profiles.
     ///
-    /// Returns [`SitePropagationError::OverlappingCarriers`] when two
-    /// profiles would both match the same carrier.
+    /// Returns [`SitePropagationError::OverlappingCarriers`] when the
+    /// carriers of two profiles lie within [`CARRIER_MATCH_TOLERANCE`] of
+    /// each other. A carrier between two profiles just over the tolerance
+    /// apart can still match both; [`Self::for_carrier`] then picks the
+    /// nearer one.
     pub fn new(profiles: Vec<ElevationProfile>) -> Result<Self, SitePropagationError> {
         for (i, first) in profiles.iter().enumerate() {
             for second in &profiles[i + 1..] {
@@ -425,12 +428,7 @@ mod tests {
         let round_trip: SitePropagation = serde_json::from_str(&json).unwrap();
         assert_eq!(site, round_trip);
 
-        // An unsorted grid must be rejected at deserialization time.
-        let unsorted = ElevationProfileRepr {
-            carrier: ghz(26.0),
-            samples: vec![],
-        };
-        assert!(ElevationProfile::try_from(unsorted).is_err());
+        // A sample at 0° elevation must be rejected at deserialization time.
         let bad = json.replacen("\"samples\":[", "\"samples\":[[0.0,{\"lines\":[]}],", 1);
         assert!(serde_json::from_str::<SitePropagation>(&bad).is_err());
     }

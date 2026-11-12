@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2026 Torkil Rein Gustavsen <torkilrg@ksat.no>
 //
 // SPDX-License-Identifier: MPL-2.0
 
@@ -370,7 +371,6 @@ mod tests {
                 .unwrap();
             assert_eq!(profile.at(elevation), direct);
         }
-        // The loss grows towards the horizon.
         let total = |deg: f64| profile.at(Angle::degrees(deg)).total().to_decibels();
         assert!(total(10.0) > 2.0 * total(30.0));
         assert!(total(30.0) > total(60.0));
