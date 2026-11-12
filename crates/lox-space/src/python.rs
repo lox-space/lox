@@ -11,12 +11,12 @@ use crate::analysis::python::{
 };
 use crate::bodies::python::{PyOrigin, UndefinedOriginPropertyError};
 use crate::comms::python::{
-    PyAmplifierTransmitter, PyAntennaFrame, PyCascadeReceiver, PyChannel, PyConstantAntenna,
-    PyDipolePattern, PyEirpModel, PyElevationProfile, PyFrequencyRange, PyGaussianPattern,
-    PyGtModel, PyInterferenceStats, PyLinkBudget, PyModCod, PyModulatedLinkBudget, PyModulation,
-    PyNoiseStage, PyNoiseTempReceiver, PyParabolicPattern, PyPatternedAntenna, PyPfdMask,
-    PyPropagationLosses, PyRxChain, PySitePropagation, PyTxChain, combine_carrier_to_noise,
-    freq_overlap, fspl, power_flux_density, slant_range,
+    PyAmplifierTransmitter, PyAntennaFrame, PyAtmosphericLosses, PyCascadeReceiver, PyChannel,
+    PyConstantAntenna, PyDipolePattern, PyEirpModel, PyElevationProfile, PyFrequencyRange,
+    PyGaussianPattern, PyGtModel, PyInterferenceStats, PyLinkBudget, PyModCod,
+    PyModulatedLinkBudget, PyModulation, PyNoiseStage, PyNoiseTempReceiver, PyParabolicPattern,
+    PyPatternedAntenna, PyPfdMask, PyPropagationLosses, PyRxChain, PySitePropagation, PyTxChain,
+    combine_carrier_to_noise, freq_overlap, fspl, power_flux_density, slant_range,
 };
 use crate::constellations::python::{PyConstellation, PyConstellationSatellite};
 use crate::earth::python::ut1::{EopParserError, EopProviderError, PyEopProvider};
@@ -70,6 +70,7 @@ pub fn register_types(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyModCod>()?;
     m.add_class::<PyItuProvider>()?;
     m.add_class::<PyPropagationLosses>()?;
+    m.add_class::<PyAtmosphericLosses>()?;
     m.add_class::<PyElevationProfile>()?;
     m.add_class::<PySitePropagation>()?;
     m.add_class::<PyLinkBudget>()?;

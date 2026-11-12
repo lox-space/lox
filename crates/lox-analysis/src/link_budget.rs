@@ -317,18 +317,11 @@ where
     /// Returns the modulation-agnostic budget at the given time.
     fn budget(&self, time: Time) -> Result<LinkBudget, LinkEvalError> {
         let (range, elevation) = self.geometry.sample(time, self.profile.is_some())?;
-        // The site profile replaces the kinds it describes — the atmospheric
-        // lines — and leaves the plan's other losses in place.
+        // The site profile replaces the plan's atmospheric lines and leaves
+        // its other losses in place.
         let losses = match (self.profile, elevation) {
             (Some(profile), Some(elevation)) => {
-                let site = profile.at(elevation);
-                // Nothing to overlay onto in the common case of a plan
-                // without losses of its own.
-                if self.plan.losses.lines().is_empty() {
-                    site
-                } else {
-                    self.plan.losses.overlaid_with(&site)
-                }
+                self.plan.losses.with_atmospheric(profile.at(elevation))
             }
             _ => self.plan.losses.clone(),
         };
@@ -385,8 +378,8 @@ where
 pub enum LossSource {
     /// The fixed losses of the carrier plan.
     Plan,
-    /// The ground station's elevation profile, overlaid on the plan's
-    /// losses.
+    /// The ground station's elevation profile, replacing the atmospheric
+    /// lines of the plan's losses.
     SiteProfile,
 }
 
@@ -651,10 +644,11 @@ where
     /// plan. With it, each ground-space link of the station whose carrier one
     /// of the profiles describes follows that profile along the pass — the
     /// loss, and on a downlink the receive noise temperature it degrades,
-    /// then vary with elevation. The profile is overlaid on the plan's losses
-    /// (see [`PropagationLosses::overlaid_with`]): it replaces the kinds it
-    /// lists and leaves the plan's other lines in place. This holds for
-    /// overridden terminal pairs too, at the override's carrier.
+    /// then vary with elevation. The profile replaces the atmospheric lines of
+    /// the plan's losses — rain, gaseous, cloud and scintillation — and leaves
+    /// the plan's other lines in place (see
+    /// [`PropagationLosses::with_atmospheric`]). This holds for overridden
+    /// terminal pairs too, at the override's carrier.
     ///
     /// A link whose carrier no profile describes keeps the plan's losses;
     /// [`LinkWindow::loss_source`] tells the two apart. Inter-satellite links
@@ -1038,7 +1032,7 @@ mod tests {
     use lox_comms::receiver::CascadeReceiver;
     use lox_comms::terminal::{EirpModel, GtModel, RxChain, TxChain};
     use lox_comms::transmitter::AmplifierTransmitter;
-    use lox_comms::{FrequencyBand, FrequencyRange};
+    use lox_comms::{AtmosphericLosses, FrequencyBand, FrequencyRange};
     use lox_core::coords::LonLatAlt;
     use lox_core::units::{Power, Temperature};
     use lox_orbits::propagators::OrbitSource;
@@ -1900,16 +1894,24 @@ mod tests {
         }
     }
 
-    /// A profile whose single gaseous line follows the cosecant law from
-    /// `zenith_db` at zenith.
+    fn atmospheric(rain_db: f64, gaseous_db: f64) -> AtmosphericLosses {
+        let zero = Decibel::decibels(0.0);
+        AtmosphericLosses::new(
+            Decibel::decibels(rain_db),
+            Decibel::decibels(gaseous_db),
+            zero,
+            zero,
+        )
+        .unwrap()
+    }
+
+    /// A profile whose gaseous loss follows the cosecant law from `zenith_db`
+    /// at zenith.
     fn cosecant_profile(carrier: Frequency, zenith_db: f64) -> ElevationProfile {
         let samples = [5.0_f64, 10.0, 20.0, 40.0, 90.0]
             .into_iter()
             .map(|el_deg| {
-                let losses = PropagationLosses::builder()
-                    .gaseous(Decibel::decibels(zenith_db / el_deg.to_radians().sin()))
-                    .build()
-                    .unwrap();
+                let losses = atmospheric(0.0, zenith_db / el_deg.to_radians().sin());
                 (Angle::degrees(el_deg), losses)
             })
             .collect();
@@ -1917,7 +1919,7 @@ mod tests {
     }
 
     /// A profile holding the same losses at every elevation.
-    fn flat_profile(carrier: Frequency, losses: PropagationLosses) -> ElevationProfile {
+    fn flat_profile(carrier: Frequency, losses: AtmosphericLosses) -> ElevationProfile {
         ElevationProfile::new(carrier, vec![(Angle::degrees(30.0), losses)]).unwrap()
     }
 
@@ -1958,17 +1960,13 @@ mod tests {
     fn test_flat_site_profile_equals_fixed_plan_losses() {
         let f = fixture();
         let scenario = overspecified_scenario();
-        let losses = PropagationLosses::builder()
-            .rain(Decibel::decibels(2.0))
-            .gaseous(Decibel::decibels(1.0))
-            .build()
-            .unwrap();
+        let losses = atmospheric(2.0, 1.0);
 
         let fixed = LinkBudgetAnalysis::new(
             &scenario,
             &f.ensemble,
             &f.visibility,
-            plan().with_losses(losses.clone()),
+            plan().with_losses(losses.into()),
         )
         .compute()
         .unwrap();
@@ -2065,7 +2063,7 @@ mod tests {
             assert_approx_eq!(range.to_meters(), range_only.to_meters(), rtol <= 1e-12);
 
             let budget = link.budget(time).unwrap();
-            assert_eq!(budget.losses, profile.at(elevation));
+            assert_eq!(budget.losses, profile.at(elevation).into());
             totals.push(budget.losses.total().to_decibels());
         }
         // The elevation, and with it the loss, changes along the window.
@@ -2074,10 +2072,9 @@ mod tests {
         assert!(spread > 0.1, "{totals:?}");
     }
 
-    /// The profile replaces the plan's lines of the kinds it lists and keeps
-    /// the others.
+    /// The profile replaces the plan's atmospheric lines and keeps the others.
     #[test]
-    fn test_site_profile_is_overlaid_on_the_plan_losses() {
+    fn test_site_profile_replaces_the_atmospheric_plan_losses() {
         let f = fixture();
         let scenario = overspecified_scenario();
         let pointing = Decibel::decibels(3.0);
@@ -2088,10 +2085,7 @@ mod tests {
             .rain(Decibel::decibels(50.0))
             .build()
             .unwrap();
-        let site_losses = PropagationLosses::builder()
-            .rain(Decibel::decibels(2.0))
-            .build()
-            .unwrap();
+        let site_losses = atmospheric(2.0, 0.0);
 
         let baseline = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
             .compute()

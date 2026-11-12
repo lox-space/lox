@@ -257,7 +257,7 @@ def test_elevation_profile_matches_propagation_losses(itur_provider):
     assert profile.carrier.to_gigahertz() == pytest.approx(26.0)
     for elevation in elevations:
         direct = itur_provider.propagation_losses(**site, **link, elevation=elevation)
-        assert profile.at(elevation) == direct
+        assert profile.at(elevation).to_propagation_losses() == direct
     # The loss grows steeply towards the horizon.
     low = profile.at(10.0 * lox.deg).total().to_decibels()
     high = profile.at(30.0 * lox.deg).total().to_decibels()

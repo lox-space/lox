@@ -1865,12 +1865,40 @@ def test_antenna_and_pattern_pickle_round_trips():
 
 
 # ---------------------------------------------------------------------------
-# ElevationProfile / SitePropagation
+# AtmosphericLosses / ElevationProfile / SitePropagation
 # ---------------------------------------------------------------------------
 
 
 def _gas(db):
-    return lox.PropagationLosses(gaseous=db * lox.dB)
+    return lox.AtmosphericLosses(gaseous=db * lox.dB)
+
+
+class TestAtmosphericLosses:
+    def test_accessors_and_defaults(self):
+        losses = lox.AtmosphericLosses(rain=2.0 * lox.dB, scintillation=0.3 * lox.dB)
+        assert losses.rain.to_decibels() == pytest.approx(2.0)
+        assert losses.gaseous.to_decibels() == 0.0
+        assert losses.cloud.to_decibels() == 0.0
+        assert losses.scintillation.to_decibels() == pytest.approx(0.3)
+        assert losses.total().to_decibels() == pytest.approx(2.3)
+        assert losses.absorptive().to_decibels() == pytest.approx(2.0)
+        assert losses == lox.AtmosphericLosses(
+            rain=2.0 * lox.dB, scintillation=0.3 * lox.dB
+        )
+        assert repr(losses).startswith("AtmosphericLosses(rain=")
+
+    def test_converts_to_propagation_losses(self):
+        losses = lox.AtmosphericLosses(rain=2.0 * lox.dB, gaseous=0.5 * lox.dB)
+        assert losses.to_propagation_losses() == lox.PropagationLosses(
+            rain=2.0 * lox.dB,
+            gaseous=0.5 * lox.dB,
+            cloud=0.0 * lox.dB,
+            scintillation=0.0 * lox.dB,
+        )
+
+    def test_negative_values_are_rejected(self):
+        with pytest.raises(ValueError, match="Rain attenuation"):
+            lox.AtmosphericLosses(rain=-1.0 * lox.dB)
 
 
 def _profile(carrier_ghz=26.0):
@@ -1908,14 +1936,6 @@ class TestElevationProfile:
             lox.ElevationProfile(
                 26.0 * lox.GHz,
                 [(30.0 * lox.deg, _gas(1.5)), (10.0 * lox.deg, _gas(4.0))],
-            )
-        with pytest.raises(ValueError, match="different loss kinds"):
-            lox.ElevationProfile(
-                26.0 * lox.GHz,
-                [
-                    (10.0 * lox.deg, _gas(4.0)),
-                    (30.0 * lox.deg, lox.PropagationLosses(rain=1.0 * lox.dB)),
-                ],
             )
 
 

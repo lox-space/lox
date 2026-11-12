@@ -186,10 +186,9 @@ budget = lox.LinkBudget(
 
 ## Elevation Profiles
 
-`propagation_losses` answers for one elevation. Along a pass the elevation —
-and with it the loss — changes continuously, so the provider can tabulate the
-losses over a grid of elevations into an `ElevationProfile`, which interpolates
-between its samples:
+Along a pass the elevation — and with it the loss — changes continuously, so the
+provider can tabulate the atmospheric losses over a grid of elevations into an `ElevationProfile`,
+which interpolates between its samples:
 
 ```python
 profile = provider.elevation_profile(
@@ -204,6 +203,10 @@ for elevation in (5.0, 10.0, 30.0):
     total = profile.at(elevation * lox.deg).total()
     print(f"{elevation:4.0f} deg: {total.to_decibels():.2f} dB")
 ```
+
+`at` returns `AtmosphericLosses` — the rain, gaseous, cloud and scintillation
+values as typed fields; `to_propagation_losses()` turns them into the itemized
+`PropagationLosses` a `LinkBudget` takes.
 
 The default grid has 14 elevations from 5° to 90°, denser towards the horizon;
 interpolation on it stays within about 1.5 % of the direct computation up to
@@ -257,6 +260,12 @@ for the packaging workflow.
 ---
 
 ::: lox_space.PropagationLosses
+    options:
+      show_source: false
+
+---
+
+::: lox_space.AtmosphericLosses
     options:
       show_source: false
 

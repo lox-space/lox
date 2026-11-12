@@ -6,14 +6,14 @@
 //!
 //! Atmospheric loss on an Earth–space path grows steeply towards the horizon:
 //! at 5° elevation it is roughly five times the loss at 30°. An
-//! [`ElevationProfile`] tabulates [`PropagationLosses`] over a grid of
+//! [`ElevationProfile`] tabulates [`AtmosphericLosses`] over a grid of
 //! elevations for one carrier and interpolates between them, so a link budget
 //! can follow the loss along a pass instead of applying one fixed figure.
 //! [`SitePropagation`] collects the profiles of one site, one per carrier.
 
 use lox_core::units::{Angle, Frequency};
 
-use crate::losses::PropagationLosses;
+use crate::losses::AtmosphericLosses;
 
 /// Relative carrier mismatch up to which a profile is considered to describe
 /// a carrier (1 %).
@@ -42,12 +42,6 @@ pub enum ElevationProfileError {
         /// First elevation, in degrees, that does not exceed its predecessor.
         elevation_deg: f64,
     },
-    /// A sample lists different loss kinds than the first one.
-    #[error("the sample at {elevation_deg}° lists different loss kinds than the first sample")]
-    MismatchedKinds {
-        /// Elevation of the offending sample in degrees.
-        elevation_deg: f64,
-    },
     /// The carrier frequency is not finite and positive.
     #[error("the carrier must be finite and positive, got {carrier_hz} Hz")]
     InvalidCarrier {
@@ -58,10 +52,10 @@ pub enum ElevationProfileError {
 
 /// Propagation losses of one site at one carrier, as a function of elevation.
 ///
-/// Holds [`PropagationLosses`] at a strictly increasing grid of elevations.
-/// Every sample lists the same loss kinds in the same order, so the profile
-/// interpolates line by line and the result keeps its itemization (and with
-/// it the absorptive share that degrades the receive noise temperature).
+/// Holds [`AtmosphericLosses`] at a strictly increasing grid of elevations
+/// and interpolates each of the four losses separately, so the result keeps
+/// its itemization (and with it the absorptive share that degrades the
+/// receive noise temperature).
 ///
 /// Interpolation is linear in the cosecant of the elevation — the slant path
 /// length through a plane-parallel atmosphere — which reproduces gaseous and
@@ -77,7 +71,7 @@ pub enum ElevationProfileError {
 )]
 pub struct ElevationProfile {
     carrier: Frequency,
-    samples: Vec<(Angle, PropagationLosses)>,
+    samples: Vec<(Angle, AtmosphericLosses)>,
 }
 
 /// Serde wire format for [`ElevationProfile`]: forces deserialization through
@@ -86,7 +80,7 @@ pub struct ElevationProfile {
 #[derive(serde::Deserialize)]
 struct ElevationProfileRepr {
     carrier: Frequency,
-    samples: Vec<(Angle, PropagationLosses)>,
+    samples: Vec<(Angle, AtmosphericLosses)>,
 }
 
 #[cfg(feature = "serde")]
@@ -101,22 +95,21 @@ impl TryFrom<ElevationProfileRepr> for ElevationProfile {
 impl ElevationProfile {
     /// Creates a profile for `carrier` from `(elevation, losses)` samples.
     ///
-    /// The elevations must be strictly increasing and lie in `(0°, 90°]`, and
-    /// every sample must list the same loss kinds in the same order. A single
-    /// sample yields an elevation-independent profile.
+    /// The elevations must be strictly increasing and lie in `(0°, 90°]`. A
+    /// single sample yields an elevation-independent profile.
     pub fn new(
         carrier: Frequency,
-        samples: Vec<(Angle, PropagationLosses)>,
+        samples: Vec<(Angle, AtmosphericLosses)>,
     ) -> Result<Self, ElevationProfileError> {
         let carrier_hz = carrier.to_hertz();
         if !carrier_hz.is_finite() || carrier_hz <= 0.0 {
             return Err(ElevationProfileError::InvalidCarrier { carrier_hz });
         }
-        let Some((_, first)) = samples.first() else {
+        if samples.is_empty() {
             return Err(ElevationProfileError::Empty);
-        };
+        }
         let mut previous = f64::NEG_INFINITY;
-        for (elevation, losses) in &samples {
+        for (elevation, _) in &samples {
             let elevation_deg = elevation.to_degrees();
             // `!(..)` so that NaN is rejected too.
             if !(elevation_deg > 0.0 && elevation_deg <= 90.0) {
@@ -124,9 +117,6 @@ impl ElevationProfile {
             }
             if elevation_deg <= previous {
                 return Err(ElevationProfileError::NotIncreasing { elevation_deg });
-            }
-            if !first.same_kinds(losses) {
-                return Err(ElevationProfileError::MismatchedKinds { elevation_deg });
             }
             previous = elevation_deg;
         }
@@ -139,7 +129,7 @@ impl ElevationProfile {
     }
 
     /// Returns the `(elevation, losses)` samples in increasing elevation.
-    pub fn samples(&self) -> &[(Angle, PropagationLosses)] {
+    pub fn samples(&self) -> &[(Angle, AtmosphericLosses)] {
         &self.samples
     }
 
@@ -159,14 +149,14 @@ impl ElevationProfile {
     ///
     /// Interpolates linearly in `1 / sin(elevation)` between the two
     /// neighbouring samples and holds the end values outside the grid.
-    pub fn at(&self, elevation: Angle) -> PropagationLosses {
+    pub fn at(&self, elevation: Angle) -> AtmosphericLosses {
         let el = elevation.to_radians();
         let upper = self.samples.partition_point(|(e, _)| e.to_radians() <= el);
         if upper == 0 {
-            return self.samples[0].1.clone();
+            return self.samples[0].1;
         }
         if upper == self.samples.len() {
-            return self.samples[upper - 1].1.clone();
+            return self.samples[upper - 1].1;
         }
         let (el_lo, lo) = &self.samples[upper - 1];
         let (el_hi, hi) = &self.samples[upper];
@@ -284,14 +274,14 @@ mod tests {
 
     /// Gaseous loss that follows the cosecant law exactly, plus a rain line
     /// that does not.
-    fn losses(zenith_gas_db: f64, elevation_deg: f64, rain_db: f64) -> PropagationLosses {
-        PropagationLosses::builder()
-            .gaseous(Decibel::decibels(
-                zenith_gas_db / elevation_deg.to_radians().sin(),
-            ))
-            .rain(Decibel::decibels(rain_db))
-            .build()
-            .unwrap()
+    fn losses(zenith_gas_db: f64, elevation_deg: f64, rain_db: f64) -> AtmosphericLosses {
+        AtmosphericLosses::new(
+            Decibel::decibels(rain_db),
+            Decibel::decibels(zenith_gas_db / elevation_deg.to_radians().sin()),
+            Decibel::decibels(0.0),
+            Decibel::decibels(0.0),
+        )
+        .unwrap()
     }
 
     fn profile() -> ElevationProfile {
@@ -319,27 +309,24 @@ mod tests {
     fn test_profile_reproduces_a_cosecant_law_between_samples() {
         let profile = profile();
         for elevation_deg in [6.0, 7.5, 12.0, 20.0, 45.0, 70.0] {
-            let gas = profile.at(deg(elevation_deg)).lines()[0]
-                .value()
-                .to_decibels();
+            let gas = profile.at(deg(elevation_deg)).gaseous().to_decibels();
             let expected = 0.2 / elevation_deg.to_radians().sin();
             assert_approx_eq!(gas, expected, rtol <= 1e-12);
         }
     }
 
     #[test]
-    fn test_profile_interpolates_every_line_and_keeps_the_itemization() {
+    fn test_profile_interpolates_each_loss_separately() {
         let at = profile().at(deg(20.0));
-        let labels: Vec<_> = at.lines().iter().map(|l| l.kind().label()).collect();
-        assert_eq!(labels, ["Gaseous absorption", "Rain attenuation"]);
-        let rain = at.lines()[1].value().to_decibels();
+        let rain = at.rain().to_decibels();
         assert!(rain > 1.0 && rain < 2.0, "rain at 20°: {rain}");
-        // Both lines are absorptive, so the absorptive share is the total.
         assert_approx_eq!(
-            at.absorptive().to_decibels(),
-            at.total().to_decibels(),
+            at.gaseous().to_decibels(),
+            0.2 / 20.0_f64.to_radians().sin(),
             rtol <= 1e-12
         );
+        assert_eq!(at.cloud().to_decibels(), 0.0);
+        assert_eq!(at.scintillation().to_decibels(), 0.0);
     }
 
     #[test]
@@ -353,7 +340,7 @@ mod tests {
     #[test]
     fn test_single_sample_profile_is_constant() {
         let only = losses(0.2, 30.0, 1.0);
-        let profile = ElevationProfile::new(ghz(26.0), vec![(deg(30.0), only.clone())]).unwrap();
+        let profile = ElevationProfile::new(ghz(26.0), vec![(deg(30.0), only)]).unwrap();
         for elevation_deg in [5.0, 30.0, 80.0] {
             assert_eq!(profile.at(deg(elevation_deg)), only);
         }
@@ -378,14 +365,6 @@ mod tests {
                 Err(ElevationProfileError::NotIncreasing { .. })
             ));
         }
-        let other_kinds = PropagationLosses::builder()
-            .rain(Decibel::decibels(1.0))
-            .build()
-            .unwrap();
-        assert!(matches!(
-            ElevationProfile::new(ghz(26.0), vec![sample(10.0), (deg(20.0), other_kinds)]),
-            Err(ElevationProfileError::MismatchedKinds { .. })
-        ));
         for carrier_hz in [0.0, -1.0, f64::NAN] {
             assert!(matches!(
                 ElevationProfile::new(Frequency::hertz(carrier_hz), vec![sample(10.0)]),
@@ -429,7 +408,10 @@ mod tests {
         assert_eq!(site, round_trip);
 
         // A sample at 0° elevation must be rejected at deserialization time.
-        let bad = json.replacen("\"samples\":[", "\"samples\":[[0.0,{\"lines\":[]}],", 1);
+        let zero = r#"{"rain":0.0,"gaseous":0.0,"cloud":0.0,"scintillation":0.0}"#;
+        let valid = json.replacen("\"samples\":[", &format!("\"samples\":[[0.01,{zero}],"), 1);
+        assert!(serde_json::from_str::<SitePropagation>(&valid).is_ok());
+        let bad = json.replacen("\"samples\":[", &format!("\"samples\":[[0.0,{zero}],"), 1);
         assert!(serde_json::from_str::<SitePropagation>(&bad).is_err());
     }
 }

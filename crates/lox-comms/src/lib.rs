@@ -27,7 +27,7 @@ pub mod utils;
 
 pub use error::LinkBudgetError;
 pub use frequency::{FrequencyBand, FrequencyRange, FrequencyRangeError, ParseFrequencyBandError};
-pub use losses::{LossKind, LossLine, PropagationLossError, PropagationLosses};
+pub use losses::{AtmosphericLosses, LossKind, LossLine, PropagationLossError, PropagationLosses};
 pub use profile::{ElevationProfile, ElevationProfileError, SitePropagation, SitePropagationError};
 
 use lox_core::units::Temperature;
