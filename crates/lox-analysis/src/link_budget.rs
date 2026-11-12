@@ -2218,16 +2218,13 @@ mod tests {
         ));
     }
 
-    /// A crosslink has no ground station, so site propagation cannot reach it.
+    /// A crosslink has no ground station, so its losses always come from the
+    /// plan.
     #[test]
-    fn test_site_propagation_leaves_crosslinks_alone() {
+    fn test_crosslinks_take_their_losses_from_the_plan() {
         let f = crosslink_fixture();
         let scenario = crosslink_scenario(f, false);
         let results = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
-            .with_site_propagation_from(|_| {
-                Ok::<_, std::convert::Infallible>(Some(site(cosecant_profile(CARRIER, 1.0))))
-            })
-            .unwrap()
             .compute()
             .unwrap();
         assert!(results.total_windows() > 0);
