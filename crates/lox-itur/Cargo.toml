@@ -31,6 +31,7 @@ zip = { workspace = true }
 [dev-dependencies]
 divan.workspace = true
 lox-approx = { workspace = true, features = ["std"] }
+rstest.workspace = true
 tempfile = { workspace = true }
 
 [features]
