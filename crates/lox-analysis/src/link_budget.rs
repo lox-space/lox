@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2026 Torkil Rein Gustavsen <torkilrg@ksat.no>
 //
 // SPDX-License-Identifier: MPL-2.0
 
@@ -337,14 +338,6 @@ where
             .build()
             .map_err(LinkBudgetError::from)?;
         Ok(LinkBudget::new(self.tx, self.rx, &conditions)?)
-    }
-
-    /// Returns where this link's propagation losses come from.
-    fn loss_source(&self) -> LossSource {
-        match self.profile {
-            Some(_) => LossSource::SiteProfile,
-            None => LossSource::Plan,
-        }
     }
 
     /// Returns the link margin in dB against the plan's detection MODCOD.
@@ -1027,7 +1020,10 @@ where
         start,
         parts,
         direction: link.direction,
-        loss_source: link.loss_source(),
+        loss_source: match link.profile {
+            Some(_) => LossSource::SiteProfile,
+            None => LossSource::Plan,
+        },
     })
 }
 

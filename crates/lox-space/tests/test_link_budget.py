@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+# SPDX-FileCopyrightText: 2026 Torkil Rein Gustavsen <torkilrg@ksat.no>
 #
 # SPDX-License-Identifier: MPL-2.0
 
@@ -372,7 +373,6 @@ class TestSitePropagation:
 
         def site_for(station):
             seen.append(station.id())
-            # Only the first station gets a profile.
             if station.id() == ground_assets[0].id():
                 return cosecant_site(CARRIER)
             return None

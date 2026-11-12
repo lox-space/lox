@@ -1,5 +1,6 @@
 <!--
 SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+SPDX-FileCopyrightText: 2026 Torkil Rein Gustavsen <torkilrg@ksat.no>
 
 SPDX-License-Identifier: MPL-2.0
 -->
