@@ -413,6 +413,23 @@ class TestSitePropagation:
         with pytest.raises(ValueError, match="not a ground station"):
             analysis.compute()
 
+    def test_wrong_site_types_are_rejected(self, scenario, visibility, plan):
+        with pytest.raises(TypeError):
+            lox.LinkBudgetAnalysis(
+                scenario, visibility, plan, site_propagation={"gs": "not a site"}
+            )
+        with pytest.raises(TypeError):
+            lox.LinkBudgetAnalysis(
+                scenario, visibility, plan, site_propagation=lambda _: "not a site"
+            )
+
+    def test_callable_errors_propagate(self, scenario, visibility, plan):
+        def failing(station):
+            raise KeyError(station.id())
+
+        with pytest.raises(KeyError):
+            lox.LinkBudgetAnalysis(scenario, visibility, plan, site_propagation=failing)
+
     def test_wrong_argument_type_is_rejected(self, scenario, visibility, plan):
         with pytest.raises(TypeError, match="dict .* or a callable"):
             lox.LinkBudgetAnalysis(scenario, visibility, plan, site_propagation=42)

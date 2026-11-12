@@ -1948,6 +1948,8 @@ class TestSitePropagation:
         assert site.for_carrier(26.2 * lox.GHz) == _profile(26.0)
         assert site.for_carrier(2.2 * lox.GHz) is None
         assert repr(site) == "SitePropagation([26.000 GHz, 8.000 GHz])"
+        assert site == lox.SitePropagation([_profile(26.0), _profile(8.0)])
+        assert site != lox.SitePropagation([_profile(26.0)])
 
     def test_overlapping_carriers_are_rejected(self):
         with pytest.raises(ValueError, match="overlap"):
