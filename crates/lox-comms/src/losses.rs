@@ -175,6 +175,58 @@ impl PropagationLosses {
     pub fn lines(&self) -> &[LossLine] {
         &self.lines
     }
+
+    /// Overlays `other` onto these losses, kind by kind.
+    ///
+    /// Every line of `self` whose kind also appears in `other` is dropped,
+    /// then the lines of `other` are appended. Lines of kinds `other` does not
+    /// describe — a pointing margin, a radome loss — are kept, so a site
+    /// model can replace the atmospheric lines of a fixed budget without
+    /// double-counting them or discarding the rest.
+    pub fn overlaid_with(&self, other: &Self) -> Self {
+        let lines = self
+            .lines
+            .iter()
+            .filter(|line| !other.lines.iter().any(|o| o.kind == line.kind))
+            .chain(&other.lines)
+            .cloned()
+            .collect();
+        Self { lines }
+    }
+
+    /// Returns whether both sets of losses list the same kinds in the same
+    /// order.
+    pub(crate) fn same_kinds(&self, other: &Self) -> bool {
+        self.lines.len() == other.lines.len()
+            && self
+                .lines
+                .iter()
+                .zip(&other.lines)
+                .all(|(a, b)| a.kind == b.kind)
+    }
+
+    /// Blends line by line towards `other`: `t = 0` yields `self`, `t = 1`
+    /// yields `other`.
+    ///
+    /// Requires [`Self::same_kinds`] and `t` in `[0, 1]`; the result is then a
+    /// convex combination of valid values and needs no re-validation.
+    pub(crate) fn lerp(&self, other: &Self, t: f64) -> Self {
+        debug_assert!(self.same_kinds(other));
+        debug_assert!((0.0..=1.0).contains(&t));
+        let lines = self
+            .lines
+            .iter()
+            .zip(&other.lines)
+            .map(|(a, b)| {
+                let (a_db, b_db) = (a.value.to_decibels(), b.value.to_decibels());
+                LossLine {
+                    kind: a.kind.clone(),
+                    value: Decibel::decibels(a_db + t * (b_db - a_db)),
+                }
+            })
+            .collect();
+        Self { lines }
+    }
 }
 
 /// Builder for [`PropagationLosses`].
@@ -346,6 +398,38 @@ mod tests {
         assert_eq!(LossKind::Gaseous.label(), "Gaseous absorption");
         let err = LossLine::new(LossKind::Cloud, Decibel::decibels(-1.0)).unwrap_err();
         assert!(err.to_string().contains("Cloud attenuation"));
+    }
+
+    #[test]
+    fn test_overlaid_with_replaces_matching_kinds_and_keeps_the_rest() {
+        let plan = PropagationLosses::builder()
+            .other("Pointing margin", 0.4.db(), false)
+            .rain(9.0.db())
+            .gaseous(9.0.db())
+            .build()
+            .unwrap();
+        let site = PropagationLosses::builder()
+            .rain(2.0.db())
+            .gaseous(0.5.db())
+            .cloud(0.2.db())
+            .build()
+            .unwrap();
+
+        let merged = plan.overlaid_with(&site);
+
+        let labels: Vec<_> = merged.lines().iter().map(|l| l.kind().label()).collect();
+        assert_eq!(
+            labels,
+            [
+                "Pointing margin",
+                "Rain attenuation",
+                "Gaseous absorption",
+                "Cloud attenuation"
+            ]
+        );
+        assert_approx_eq!(merged.total().to_decibels(), 3.1, atol <= 1e-12);
+        // Overlaying nothing changes nothing.
+        assert_eq!(plan.overlaid_with(&PropagationLosses::none()), plan);
     }
 
     #[cfg(feature = "serde")]

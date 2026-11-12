@@ -7,7 +7,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use pyo3::exceptions::PyRuntimeError;
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
 use crate::units::python::{
@@ -17,7 +17,7 @@ use crate::units::python::{
 use lox_core::units::{Angle, Decibel};
 use lox_itur::ItuProvider;
 
-use crate::comms::python::PyPropagationLosses;
+use crate::comms::python::{PyElevationProfile, PyPropagationLosses, PySitePropagation};
 
 /// An open ITU-R data bundle (`lox-itur-data.npz`).
 ///
@@ -256,6 +256,101 @@ impl PyItuProvider {
         Ok(PyPropagationLosses(losses))
     }
 
+    /// Tabulates `propagation_losses` over a grid of elevations.
+    ///
+    /// The models are only valid from 5° upwards and hold their 5° value
+    /// below it, and so does the profile.
+    ///
+    /// Args:
+    ///     lat: Latitude.
+    ///     lon: Longitude.
+    ///     frequency: Carrier frequency.
+    ///     probability: Exceedance probability (% of average year).
+    ///     diameter: Physical antenna diameter.
+    ///     polarisation_tilt: Polarisation tilt angle (default 45 deg for circular).
+    ///     elevations: Strictly increasing elevation grid in (0°, 90°].
+    ///         Defaults to 14 elevations from 5° to 90°, denser towards the
+    ///         horizon.
+    ///
+    /// Returns:
+    ///     ElevationProfile for the given carrier.
+    ///
+    /// Raises:
+    ///     ValueError: If the elevations do not form a valid grid.
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (lat, lon, frequency, probability, diameter, polarisation_tilt=None, elevations=None))]
+    fn elevation_profile(
+        &self,
+        lat: PyAngle,
+        lon: PyAngle,
+        frequency: PyFrequency,
+        probability: f64,
+        diameter: PyDistance,
+        polarisation_tilt: Option<PyAngle>,
+        elevations: Option<Vec<PyAngle>>,
+    ) -> PyResult<PyElevationProfile> {
+        let tau = polarisation_tilt
+            .map(|a| a.0)
+            .unwrap_or(Angle::degrees(45.0));
+        let elevations: Vec<Angle> = match elevations {
+            Some(elevations) => elevations.into_iter().map(|a| a.0).collect(),
+            None => lox_itur::DEFAULT_PROFILE_ELEVATIONS_DEG
+                .map(Angle::degrees)
+                .to_vec(),
+        };
+        self.0
+            .elevation_profile(
+                lat.0,
+                lon.0,
+                frequency.0,
+                probability,
+                diameter.0,
+                tau,
+                &elevations,
+            )
+            .map(PyElevationProfile)
+            .map_err(profile_error)
+    }
+
+    /// Computes the elevation-dependent propagation losses of a site: one
+    /// `ElevationProfile` per carrier, on the default elevation grid.
+    ///
+    /// Pass the downlink and the uplink carrier to cover both directions of
+    /// a ground station in one call.
+    ///
+    /// Args:
+    ///     lat: Latitude.
+    ///     lon: Longitude.
+    ///     carriers: Carrier frequencies, more than 1 % apart.
+    ///     probability: Exceedance probability (% of average year).
+    ///     diameter: Physical antenna diameter.
+    ///     polarisation_tilt: Polarisation tilt angle (default 45 deg for circular).
+    ///
+    /// Returns:
+    ///     SitePropagation, to be passed to `LinkBudgetAnalysis`.
+    ///
+    /// Raises:
+    ///     ValueError: If two carriers lie within 1 % of each other.
+    #[pyo3(signature = (lat, lon, carriers, probability, diameter, polarisation_tilt=None))]
+    fn site_propagation(
+        &self,
+        lat: PyAngle,
+        lon: PyAngle,
+        carriers: Vec<PyFrequency>,
+        probability: f64,
+        diameter: PyDistance,
+        polarisation_tilt: Option<PyAngle>,
+    ) -> PyResult<PySitePropagation> {
+        let tau = polarisation_tilt
+            .map(|a| a.0)
+            .unwrap_or(Angle::degrees(45.0));
+        let carriers: Vec<_> = carriers.into_iter().map(|f| f.0).collect();
+        self.0
+            .site_propagation(lat.0, lon.0, &carriers, probability, diameter.0, tau)
+            .map(PySitePropagation)
+            .map_err(profile_error)
+    }
+
     fn __repr__(&self) -> String {
         format!("ItuProvider(upstream={:?})", self.0.upstream_version())
     }
@@ -321,4 +416,15 @@ pub fn register_itur_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(gaseous_attenuation_slant_path, m)?)?;
     m.add_function(wrap_pyfunction!(rain_specific_attenuation_db_per_km, m)?)?;
     Ok(())
+}
+
+/// Maps a profile construction error: an invalid grid or carrier set is the
+/// caller's `ValueError`, anything else a `RuntimeError` like the other
+/// provider methods.
+fn profile_error(err: lox_itur::ItuProviderError) -> PyErr {
+    match err {
+        lox_itur::ItuProviderError::InvalidProfile(_)
+        | lox_itur::ItuProviderError::InvalidSite(_) => PyValueError::new_err(err.to_string()),
+        _ => PyRuntimeError::new_err(err.to_string()),
+    }
 }

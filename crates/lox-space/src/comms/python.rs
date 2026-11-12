@@ -25,7 +25,9 @@ use lox_comms::receiver::{CascadeReceiver, NoiseStage, NoiseTempReceiver, Receiv
 use lox_comms::terminal::{EirpModel, GtModel, RxChain, RxTerminal, TxChain, TxTerminal};
 use lox_comms::transmitter::AmplifierTransmitter;
 use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
-use lox_comms::{FrequencyBand, FrequencyRange, PropagationLosses};
+use lox_comms::{
+    ElevationProfile, FrequencyBand, FrequencyRange, PropagationLosses, SitePropagation,
+};
 use lox_core::units::{Angle, Decibel};
 
 use crate::units::python::{
@@ -1166,6 +1168,148 @@ impl PyPropagationLosses {
             })
             .collect();
         format!("PropagationLosses([{}])", lines.join(", "))
+    }
+}
+
+/// Propagation losses of one site at one carrier, as a function of elevation.
+///
+/// Tabulates `PropagationLosses` over a grid of elevations and interpolates
+/// between them, linearly in the cosecant of the elevation. Outside the grid
+/// the profile holds its end values. A single sample yields an
+/// elevation-independent profile.
+///
+/// Args:
+///     carrier: The carrier frequency the profile was computed for.
+///     samples: (elevation, losses) pairs. The elevations must be strictly
+///         increasing and lie in (0°, 90°], and every sample must list the
+///         same loss kinds in the same order.
+///
+/// Raises:
+///     ValueError: If the samples do not form a valid profile.
+#[pyclass(
+    name = "ElevationProfile",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
+#[derive(Debug, Clone)]
+pub struct PyElevationProfile(pub ElevationProfile);
+
+#[pymethods]
+impl PyElevationProfile {
+    #[new]
+    fn new(carrier: PyFrequency, samples: Vec<(PyAngle, PyPropagationLosses)>) -> PyResult<Self> {
+        let samples = samples
+            .into_iter()
+            .map(|(elevation, losses)| (elevation.0, losses.0))
+            .collect();
+        ElevationProfile::new(carrier.0, samples)
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// The carrier frequency the profile was computed for.
+    #[getter]
+    fn carrier(&self) -> PyFrequency {
+        PyFrequency(self.0.carrier())
+    }
+
+    /// The (elevation, losses) samples in increasing elevation.
+    #[getter]
+    fn samples(&self) -> Vec<(PyAngle, PyPropagationLosses)> {
+        self.0
+            .samples()
+            .iter()
+            .map(|(elevation, losses)| (PyAngle(*elevation), PyPropagationLosses(losses.clone())))
+            .collect()
+    }
+
+    /// Returns the losses at the given elevation.
+    ///
+    /// Args:
+    ///     elevation: Elevation angle.
+    ///
+    /// Returns:
+    ///     PropagationLosses interpolated between the neighbouring samples.
+    fn at(&self, elevation: PyAngle) -> PyPropagationLosses {
+        PyPropagationLosses(self.0.at(elevation.0))
+    }
+
+    fn __eq__(&self, other: &PyElevationProfile) -> bool {
+        self.0 == other.0
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "ElevationProfile({:.3} GHz, {} samples)",
+            self.0.carrier().to_gigahertz(),
+            self.0.samples().len()
+        )
+    }
+}
+
+/// The elevation-dependent propagation losses of one ground site: one
+/// `ElevationProfile` per carrier.
+///
+/// A link looks its profile up by carrier, within a 1 % tolerance, so a site
+/// typically carries one profile for the downlink carrier and one for the
+/// uplink carrier.
+///
+/// Args:
+///     profiles: The profiles of the site.
+///
+/// Raises:
+///     ValueError: If two profiles describe carriers within 1 % of each other.
+#[pyclass(name = "SitePropagation", module = "lox_space", frozen, from_py_object)]
+#[derive(Debug, Clone)]
+pub struct PySitePropagation(pub SitePropagation);
+
+#[pymethods]
+impl PySitePropagation {
+    #[new]
+    fn new(profiles: Vec<PyElevationProfile>) -> PyResult<Self> {
+        SitePropagation::new(profiles.into_iter().map(|p| p.0).collect())
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// The profiles of this site.
+    #[getter]
+    fn profiles(&self) -> Vec<PyElevationProfile> {
+        self.0
+            .profiles()
+            .iter()
+            .cloned()
+            .map(PyElevationProfile)
+            .collect()
+    }
+
+    /// Returns the profile describing a carrier.
+    ///
+    /// Args:
+    ///     carrier: Carrier frequency.
+    ///
+    /// Returns:
+    ///     The nearest ElevationProfile within 1 % of the carrier, or None.
+    fn for_carrier(&self, carrier: PyFrequency) -> Option<PyElevationProfile> {
+        self.0
+            .for_carrier(carrier.0)
+            .cloned()
+            .map(PyElevationProfile)
+    }
+
+    fn __eq__(&self, other: &PySitePropagation) -> bool {
+        self.0 == other.0
+    }
+
+    fn __repr__(&self) -> String {
+        let carriers: Vec<String> = self
+            .0
+            .profiles()
+            .iter()
+            .map(|p| format!("{:.3} GHz", p.carrier().to_gigahertz()))
+            .collect();
+        format!("SitePropagation([{}])", carriers.join(", "))
     }
 }
 

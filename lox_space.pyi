@@ -57,6 +57,7 @@ __all__ = [
     "DistanceUnit",
     "EOPProvider",
     "EirpModel",
+    "ElevationProfile",
     "Ellipsoid",
     "EllipsoidLocation",
     "Ensemble",
@@ -127,6 +128,7 @@ __all__ = [
     "SarPayload",
     "Scenario",
     "Series",
+    "SitePropagation",
     "Spacecraft",
     "SpecificAngularMomentum",
     "SpecificAngularMomentumUnit",
@@ -2478,6 +2480,12 @@ class LinkWindow:
         """Direction of the link: "uplink", "downlink", or "crosslink"."""
         ...
     @property
+    def loss_source(self) -> str:
+        """Where the propagation losses of this window come from: "plan" for
+        the carrier plan's fixed losses, "site_profile" for the ground
+        station's elevation profile overlaid on them."""
+        ...
+    @property
     def peak_margin(self) -> Decibel:
         """Highest margin reached within the window, against the detection MODCOD."""
         ...
@@ -2520,6 +2528,19 @@ class LinkBudgetAnalysis:
         ensemble: Optional propagated trajectories. Propagated automatically when omitted.
         step: Sampling step for detection. Must be positive. Defaults to 60 seconds.
         overrides: Optional list of (tx, rx, plan) triples overriding the default plan.
+        site_propagation: Optional elevation-dependent propagation losses per
+            ground station. Either a dict mapping ground-station ids to
+            SitePropagation, or a callable taking a GroundStation and returning
+            its SitePropagation or None; the callable is invoked once per
+            ground station of the scenario. Each ground-space link whose
+            carrier one of the station's profiles describes then follows that
+            profile along the pass. The profile replaces the plan's losses of
+            the kinds it lists and keeps the others. Every other link keeps
+            the plan's fixed losses. Omitted by default: all links use the
+            plan's losses.
+
+    Raises:
+        TypeError: If site_propagation is neither a dict nor a callable.
     """
     def __new__(
         cls,
@@ -2529,6 +2550,9 @@ class LinkBudgetAnalysis:
         ensemble: Ensemble | None = None,
         step: TimeDelta | None = None,
         overrides: list[tuple[TerminalId, TerminalId, CarrierPlan]] | None = None,
+        site_propagation: dict[str, SitePropagation]
+        | Callable[[GroundStation], SitePropagation | None]
+        | None = None,
     ) -> Self: ...
     def compute(self) -> LinkBudgetResults:
         """Compute the intervals in which each compatible link closes.
@@ -5009,6 +5033,68 @@ class PropagationLosses:
     def __eq__(self, other: object, /) -> bool: ...
 
 @final
+class ElevationProfile:
+    """Propagation losses of one site at one carrier, as a function of elevation.
+
+    Tabulates `PropagationLosses` over a grid of elevations and interpolates
+    between them, linearly in the cosecant of the elevation. Outside the grid
+    the profile holds its end values. A single sample yields an
+    elevation-independent profile.
+
+    Args:
+        carrier: The carrier frequency the profile was computed for.
+        samples: (elevation, losses) pairs. The elevations must be strictly
+            increasing and lie in (0°, 90°], and every sample must list the
+            same loss kinds in the same order.
+
+    Raises:
+        ValueError: If the samples do not form a valid profile.
+    """
+    def __new__(
+        cls,
+        carrier: Frequency,
+        samples: list[tuple[Angle, PropagationLosses]],
+    ) -> Self: ...
+    @property
+    def carrier(self) -> Frequency:
+        """The carrier frequency the profile was computed for."""
+        ...
+    @property
+    def samples(self) -> list[tuple[Angle, PropagationLosses]]:
+        """The (elevation, losses) samples in increasing elevation."""
+        ...
+    def at(self, elevation: Angle) -> PropagationLosses:
+        """Return the losses at the given elevation, interpolated between
+        the neighbouring samples."""
+        ...
+    def __eq__(self, other: object, /) -> bool: ...
+
+@final
+class SitePropagation:
+    """The elevation-dependent propagation losses of one ground site: one
+    `ElevationProfile` per carrier.
+
+    A link looks its profile up by carrier, within a 1 % tolerance, so a site
+    typically carries one profile for the downlink carrier and one for the
+    uplink carrier.
+
+    Args:
+        profiles: The profiles of the site.
+
+    Raises:
+        ValueError: If two profiles describe carriers within 1 % of each other.
+    """
+    def __new__(cls, profiles: list[ElevationProfile]) -> Self: ...
+    @property
+    def profiles(self) -> list[ElevationProfile]:
+        """The profiles of this site."""
+        ...
+    def for_carrier(self, carrier: Frequency) -> ElevationProfile | None:
+        """Return the nearest profile within 1 % of the carrier, or None."""
+        ...
+    def __eq__(self, other: object, /) -> bool: ...
+
+@final
 class FrequencyRange:
     """A contiguous frequency range with inclusive bounds.
 
@@ -5783,6 +5869,63 @@ class ItuProvider:
         Combines rain (P.618), gaseous (P.676), cloud (P.840), and
         scintillation (P.618) attenuation per ITU-R recommendations; the
         combination residual is booked on the scintillation line.
+        """
+        ...
+    def elevation_profile(
+        self,
+        lat: Angle,
+        lon: Angle,
+        frequency: Frequency,
+        probability: float,
+        diameter: Distance,
+        polarisation_tilt: Angle | None = None,
+        elevations: list[Angle] | None = None,
+    ) -> ElevationProfile:
+        """Tabulate `propagation_losses` over a grid of elevations.
+
+        The models are only valid from 5° upwards and hold their 5° value
+        below it, and so does the profile.
+
+        Args:
+            lat: Latitude.
+            lon: Longitude.
+            frequency: Carrier frequency.
+            probability: Exceedance probability (% of average year).
+            diameter: Physical antenna diameter.
+            polarisation_tilt: Polarisation tilt angle (default 45 deg for circular).
+            elevations: Strictly increasing elevation grid in (0°, 90°].
+                Defaults to 14 elevations from 5° to 90°, denser towards the
+                horizon.
+
+        Raises:
+            ValueError: If the elevations do not form a valid grid.
+        """
+        ...
+    def site_propagation(
+        self,
+        lat: Angle,
+        lon: Angle,
+        carriers: list[Frequency],
+        probability: float,
+        diameter: Distance,
+        polarisation_tilt: Angle | None = None,
+    ) -> SitePropagation:
+        """Compute the elevation-dependent propagation losses of a site: one
+        `ElevationProfile` per carrier, on the default elevation grid.
+
+        Pass the downlink and the uplink carrier to cover both directions of
+        a ground station in one call.
+
+        Args:
+            lat: Latitude.
+            lon: Longitude.
+            carriers: Carrier frequencies, more than 1 % apart.
+            probability: Exceedance probability (% of average year).
+            diameter: Physical antenna diameter.
+            polarisation_tilt: Polarisation tilt angle (default 45 deg for circular).
+
+        Raises:
+            ValueError: If two carriers lie within 1 % of each other.
         """
         ...
 
