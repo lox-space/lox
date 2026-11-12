@@ -19,6 +19,7 @@ pub mod modcod;
 pub mod pattern;
 pub mod pfd;
 pub mod pointing;
+pub mod profile;
 pub mod receiver;
 pub mod terminal;
 pub mod transmitter;
@@ -27,6 +28,7 @@ pub mod utils;
 pub use error::LinkBudgetError;
 pub use frequency::{FrequencyBand, FrequencyRange, FrequencyRangeError, ParseFrequencyBandError};
 pub use losses::{LossKind, LossLine, PropagationLossError, PropagationLosses};
+pub use profile::{ElevationProfile, ElevationProfileError, SitePropagation, SitePropagationError};
 
 use lox_core::units::Temperature;
 

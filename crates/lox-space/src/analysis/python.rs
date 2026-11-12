@@ -14,7 +14,7 @@ use crate::analysis::imaging::{
     SarPayload,
 };
 use crate::analysis::link_budget::{
-    CarrierPlan, LinkAnalysisError, LinkBudgetAnalysis, LinkBudgetResults, LinkWindow,
+    CarrierPlan, LinkAnalysisError, LinkBudgetAnalysis, LinkBudgetResults, LinkWindow, LossSource,
 };
 use crate::analysis::power::{
     PowerBudgetAnalysis, PowerBudgetResults, PowerError, SpacecraftFilter,
@@ -27,8 +27,8 @@ use crate::analysis::visibility::{
 use crate::bodies::Origin;
 use crate::bodies::python::PyOrigin;
 use crate::comms::python::{
-    PyChannel, PyModCod, PyPropagationLosses, build_rx_terminal, build_tx_terminal,
-    rx_terminal_to_py, tx_terminal_to_py,
+    PyChannel, PyModCod, PyPropagationLosses, PySitePropagation, build_rx_terminal,
+    build_tx_terminal, rx_terminal_to_py, tx_terminal_to_py,
 };
 use crate::ephem::python::PySpk;
 use crate::ephem::spk::parser::Spk;
@@ -2116,6 +2116,17 @@ impl PyLinkWindow {
         self.0.direction().to_string()
     }
 
+    /// Where the propagation losses of this window come from: "plan" for the
+    /// carrier plan's fixed losses, "site_profile" for the ground station's
+    /// elevation profile overlaid on them.
+    #[getter]
+    fn loss_source(&self) -> &'static str {
+        match self.0.loss_source() {
+            LossSource::Plan => "plan",
+            LossSource::SiteProfile => "site_profile",
+        }
+    }
+
     /// Highest margin reached within the window, against the detection MODCOD.
     #[getter]
     fn peak_margin(&self) -> PyDecibel {
@@ -2175,6 +2186,19 @@ impl PyLinkWindow {
 ///     ensemble: Optional propagated trajectories. Propagated automatically when omitted.
 ///     step: Sampling step for detection. Must be positive. Defaults to 60 seconds.
 ///     overrides: Optional list of (tx, rx, plan) triples overriding the default plan.
+///     site_propagation: Optional elevation-dependent propagation losses per
+///         ground station. Either a dict mapping ground-station ids to
+///         SitePropagation, or a callable taking a GroundStation and returning
+///         its SitePropagation or None; the callable is invoked once per
+///         ground station of the scenario. Each ground-space link whose
+///         carrier one of the station's profiles describes then follows that
+///         profile along the pass. The profile replaces the plan's losses of
+///         the kinds it lists and keeps the others. Every other link keeps
+///         the plan's fixed losses. Omitted by default: all links use the
+///         plan's losses.
+///
+/// Raises:
+///     TypeError: If site_propagation is neither a dict nor a callable.
 #[pyclass(name = "LinkBudgetAnalysis", module = "lox_space", frozen)]
 pub struct PyLinkBudgetAnalysis {
     scenario: Scenario,
@@ -2182,13 +2206,15 @@ pub struct PyLinkBudgetAnalysis {
     visibility: VisibilityResults,
     plan: CarrierPlan,
     overrides: Vec<(TerminalId, TerminalId, CarrierPlan)>,
+    site_propagation: Vec<(String, lox_comms::SitePropagation)>,
     step: TimeDelta,
 }
 
 #[pymethods]
 impl PyLinkBudgetAnalysis {
     #[new]
-    #[pyo3(signature = (scenario, visibility, plan, ensemble=None, step=None, overrides=None))]
+    #[pyo3(signature = (scenario, visibility, plan, ensemble=None, step=None, overrides=None, site_propagation=None))]
+    #[allow(clippy::too_many_arguments)]
     fn new(
         scenario: PyScenario,
         visibility: &PyVisibilityResults,
@@ -2196,8 +2222,13 @@ impl PyLinkBudgetAnalysis {
         ensemble: Option<PyEnsemble>,
         step: Option<PyTimeDelta>,
         overrides: Option<Vec<(PyTerminalId, PyTerminalId, PyCarrierPlan)>>,
-    ) -> Self {
-        Self {
+        site_propagation: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<Self> {
+        let site_propagation = match site_propagation {
+            None => Vec::new(),
+            Some(sites) => resolve_site_propagation(&scenario.0, sites)?,
+        };
+        Ok(Self {
             scenario: scenario.0,
             ensemble: ensemble.map(|e| e.0),
             visibility: visibility.results.clone(),
@@ -2207,10 +2238,11 @@ impl PyLinkBudgetAnalysis {
                 .into_iter()
                 .map(|(tx, rx, plan)| (tx.0, rx.0, plan.0))
                 .collect(),
+            site_propagation,
             step: step
                 .map(|s| s.0)
                 .unwrap_or_else(|| TimeDelta::from_seconds_f64(60.0)),
-        }
+        })
     }
 
     /// Compute the intervals in which each compatible link closes.
@@ -2220,8 +2252,9 @@ impl PyLinkBudgetAnalysis {
     ///
     /// Raises:
     ///     ValueError: If the step is not positive, if a spacecraft in the
-    ///         scenario has no trajectory in the ensemble, or if two assets
-    ///         share an id.
+    ///         scenario has no trajectory in the ensemble, if two assets
+    ///         share an id, or if site propagation was supplied for an id
+    ///         that is not a ground station of the scenario.
     fn compute(&self, py: Python<'_>) -> PyResult<PyLinkBudgetResults> {
         let scenario = &self.scenario;
         let step = self.step;
@@ -2245,6 +2278,9 @@ impl PyLinkBudgetAnalysis {
             for (tx, rx, plan) in &self.overrides {
                 analysis = analysis.with_override(tx.clone(), rx.clone(), plan.clone());
             }
+            for (station, propagation) in &self.site_propagation {
+                analysis = analysis.with_site_propagation(station.clone(), propagation.clone());
+            }
             analysis.compute()
         });
 
@@ -2261,6 +2297,40 @@ impl PyLinkBudgetAnalysis {
             self.overrides.len()
         )
     }
+}
+
+/// Resolves the `site_propagation` argument of `LinkBudgetAnalysis`: a dict
+/// keyed by ground-station id, or a callable invoked once per ground station
+/// of the scenario.
+fn resolve_site_propagation(
+    scenario: &Scenario,
+    sites: &Bound<'_, PyAny>,
+) -> PyResult<Vec<(String, lox_comms::SitePropagation)>> {
+    if let Ok(sites) = sites.cast::<pyo3::types::PyDict>() {
+        return sites
+            .iter()
+            .map(|(id, propagation)| {
+                Ok((
+                    id.extract::<String>()?,
+                    propagation.extract::<PySitePropagation>()?.0,
+                ))
+            })
+            .collect();
+    }
+    if !sites.is_callable() {
+        return Err(pyo3::exceptions::PyTypeError::new_err(
+            "site_propagation must be a dict of ground-station ids to SitePropagation, \
+             or a callable taking a GroundStation",
+        ));
+    }
+    let mut resolved = Vec::new();
+    for station in scenario.ground_stations() {
+        let result = sites.call1((PyGroundStation(station.clone()),))?;
+        if let Some(propagation) = result.extract::<Option<PySitePropagation>>()? {
+            resolved.push((station.id().as_str().to_string(), propagation.0));
+        }
+    }
+    Ok(resolved)
 }
 
 /// Results of a link budget analysis.

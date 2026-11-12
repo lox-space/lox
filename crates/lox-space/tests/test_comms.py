@@ -1861,3 +1861,73 @@ def test_antenna_and_pattern_pickle_round_trips():
     receiver = lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K)
     restored = pickle.loads(pickle.dumps(receiver))
     assert restored == receiver
+
+
+# ---------------------------------------------------------------------------
+# ElevationProfile / SitePropagation
+# ---------------------------------------------------------------------------
+
+
+def _gas(db):
+    return lox.PropagationLosses(gaseous=db * lox.dB)
+
+
+def _profile(carrier_ghz=26.0):
+    return lox.ElevationProfile(
+        carrier_ghz * lox.GHz,
+        [(10.0 * lox.deg, _gas(4.0)), (30.0 * lox.deg, _gas(1.5))],
+    )
+
+
+class TestElevationProfile:
+    def test_accessors(self):
+        profile = _profile()
+        assert profile.carrier.to_gigahertz() == pytest.approx(26.0)
+        assert [el.to_degrees() for el, _ in profile.samples] == pytest.approx(
+            [10.0, 30.0]
+        )
+        assert repr(profile) == "ElevationProfile(26.000 GHz, 2 samples)"
+        assert profile == _profile()
+
+    def test_exact_at_samples_and_clamped_outside(self):
+        profile = _profile()
+        assert profile.at(10.0 * lox.deg) == _gas(4.0)
+        assert profile.at(30.0 * lox.deg) == _gas(1.5)
+        assert profile.at(2.0 * lox.deg) == _gas(4.0)
+        assert profile.at(80.0 * lox.deg) == _gas(1.5)
+
+    def test_interpolates_between_samples(self):
+        total = _profile().at(20.0 * lox.deg).total().to_decibels()
+        assert 1.5 < total < 4.0
+
+    def test_invalid_samples_are_rejected(self):
+        with pytest.raises(ValueError, match="at least one sample"):
+            lox.ElevationProfile(26.0 * lox.GHz, [])
+        with pytest.raises(ValueError, match="strictly increasing"):
+            lox.ElevationProfile(
+                26.0 * lox.GHz,
+                [(30.0 * lox.deg, _gas(1.5)), (10.0 * lox.deg, _gas(4.0))],
+            )
+        with pytest.raises(ValueError, match="different loss kinds"):
+            lox.ElevationProfile(
+                26.0 * lox.GHz,
+                [
+                    (10.0 * lox.deg, _gas(4.0)),
+                    (30.0 * lox.deg, lox.PropagationLosses(rain=1.0 * lox.dB)),
+                ],
+            )
+
+
+class TestSitePropagation:
+    def test_lookup_by_carrier(self):
+        site = lox.SitePropagation([_profile(26.0), _profile(8.0)])
+        assert len(site.profiles) == 2
+        assert site.for_carrier(26.0 * lox.GHz) == _profile(26.0)
+        # Within the 1 % tolerance.
+        assert site.for_carrier(26.2 * lox.GHz) == _profile(26.0)
+        assert site.for_carrier(2.2 * lox.GHz) is None
+        assert repr(site) == "SitePropagation([26.000 GHz, 8.000 GHz])"
+
+    def test_overlapping_carriers_are_rejected(self):
+        with pytest.raises(ValueError, match="overlap"):
+            lox.SitePropagation([_profile(26.0), _profile(26.1)])

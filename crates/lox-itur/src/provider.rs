@@ -170,6 +170,12 @@ pub enum ItuProviderError {
     /// A computed attenuation was non-physical.
     #[error(transparent)]
     InvalidLoss(#[from] lox_comms::PropagationLossError),
+    /// The requested elevation grid does not form a valid profile.
+    #[error(transparent)]
+    InvalidProfile(#[from] lox_comms::ElevationProfileError),
+    /// The requested carriers do not form a valid site description.
+    #[error(transparent)]
+    InvalidSite(#[from] lox_comms::SitePropagationError),
     /// The bundle file could not be opened.
     #[error("opening bundle at {path}: {source}")]
     Open {
