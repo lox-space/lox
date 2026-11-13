@@ -670,6 +670,33 @@ impl LinkBudgetResults {
     }
 }
 
+/// Derives the site propagation of every ground station of `scenario` for
+/// which `f` returns some, keyed by station id.
+///
+/// `f` is called once per ground station, in scenario order. Returning
+/// `Ok(None)` leaves a station out; the first error aborts and is returned.
+///
+/// This is what [`LinkBudgetAnalysis::with_site_propagation_from`] applies.
+/// Call it directly to resolve the sites ahead of the analysis — before the
+/// trajectories are propagated, say — and hand the result over with
+/// [`LinkBudgetAnalysis::with_site_propagation`].
+pub fn site_propagation_from<O, R, E>(
+    scenario: &Scenario<O, R>,
+    mut f: impl FnMut(&GroundStation) -> Result<Option<SitePropagation>, E>,
+) -> Result<HashMap<AssetId, SitePropagation>, E>
+where
+    O: CoordinateOrigin + Copy + Send + Sync,
+    R: ReferenceFrame + Copy + Send + Sync,
+{
+    let mut sites = HashMap::new();
+    for station in scenario.ground_stations() {
+        if let Some(propagation) = f(station)? {
+            sites.insert(station.id().clone(), propagation);
+        }
+    }
+    Ok(sites)
+}
+
 /// Refines visibility windows into the intervals in which links close.
 ///
 /// Pairs every transmit terminal with every receive terminal on the other
@@ -768,14 +795,10 @@ where
     /// profiles are applied.
     pub fn with_site_propagation_from<E>(
         mut self,
-        mut f: impl FnMut(&GroundStation) -> Result<Option<SitePropagation>, E>,
+        f: impl FnMut(&GroundStation) -> Result<Option<SitePropagation>, E>,
     ) -> Result<Self, E> {
-        for station in self.scenario.ground_stations() {
-            if let Some(propagation) = f(station)? {
-                self.site_propagation
-                    .insert(station.id().clone(), propagation);
-            }
-        }
+        self.site_propagation
+            .extend(site_propagation_from(self.scenario, f)?);
         Ok(self)
     }
 
@@ -2360,6 +2383,26 @@ mod tests {
         let result = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
             .with_site_propagation_from(|_| Err("no data"));
         assert_eq!(result.err(), Some("no data"));
+    }
+
+    #[test]
+    fn test_site_propagation_from_keys_the_sites_by_station_id() {
+        let scenario = overspecified_scenario();
+        let propagation = site(cosecant_profile(CARRIER, 1.0));
+
+        let sites = site_propagation_from(&scenario, |_| {
+            Ok::<_, std::convert::Infallible>(Some(propagation.clone()))
+        })
+        .unwrap();
+        assert_eq!(sites, HashMap::from([(AssetId::new(GS), propagation)]));
+
+        let none =
+            site_propagation_from(&scenario, |_| Ok::<_, std::convert::Infallible>(None)).unwrap();
+        assert!(none.is_empty());
+        assert_eq!(
+            site_propagation_from(&scenario, |_| Err("no data")).err(),
+            Some("no data")
+        );
     }
 
     #[test]
