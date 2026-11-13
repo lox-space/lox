@@ -73,7 +73,7 @@ required-features = ["analysis"]
 [[bench]]
 name = "link_budget"
 harness = false
-required-features = ["analysis", "comms"]
+required-features = ["analysis", "comms", "itur"]
 
 [[bench]]
 name = "imaging"
