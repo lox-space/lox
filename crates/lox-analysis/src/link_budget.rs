@@ -286,8 +286,13 @@ impl GroundSite {
     fn range_and_elevation(&self, position: DVec3) -> (Distance, Angle) {
         let line_of_sight = position - self.position;
         let range = line_of_sight.length();
-        let elevation = (self.up.dot(line_of_sight) / range).asin();
-        (Distance::meters(range), Angle::radians(elevation))
+        // Straight overhead the ratio is 1 up to rounding, and rounding can
+        // carry it just past the domain of the arcsine.
+        let sin_elevation = (self.up.dot(line_of_sight) / range).clamp(-1.0, 1.0);
+        (
+            Distance::meters(range),
+            Angle::radians(sin_elevation.asin()),
+        )
     }
 }
 
@@ -2014,6 +2019,22 @@ mod tests {
             );
             // The same range whether or not the elevation is asked for.
             assert_eq!(site.range(position), range);
+        }
+    }
+
+    /// Straight above the station the sine of the elevation is 1 up to
+    /// rounding, and rounding must not push it out of the arcsine's domain.
+    #[test]
+    fn test_ground_site_elevation_is_finite_at_the_zenith() {
+        for (lon, lat) in [(-4.3676, 40.4527), (15.4, 78.2), (-70.7, -30.2), (0.0, 0.0)] {
+            let coords = LonLatAlt::from_degrees(lon, lat, 0.0).unwrap();
+            let gs = EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap();
+            let site = GroundSite::new(&gs);
+            for i in 0..2000 {
+                let height = 2.0e5 + 1.0e3 * f64::from(i) + 0.137;
+                let (_, elevation) = site.range_and_elevation(site.position + site.up * height);
+                assert_approx_eq!(elevation.to_degrees(), 90.0, atol <= 1e-5);
+            }
         }
     }
 
