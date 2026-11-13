@@ -11,7 +11,7 @@
 //! can follow the loss along a pass instead of applying one fixed figure.
 //! [`SitePropagation`] collects the profiles of one site, one per carrier.
 
-use lox_core::units::{Angle, Frequency};
+use lox_core::units::{Angle, AngleUnit, Frequency, FrequencyUnit};
 
 use crate::losses::AtmosphericLosses;
 
@@ -31,22 +31,28 @@ pub enum ElevationProfileError {
     #[error("an elevation profile requires at least one sample")]
     Empty,
     /// A sample elevation lies outside `(0°, 90°]`.
-    #[error("sample elevations must lie in (0°, 90°], got {elevation_deg}°")]
+    #[error(
+        "sample elevations must lie in (0°, 90°], got {}",
+        .elevation.display_in(AngleUnit::Degrees)
+    )]
     ElevationOutOfRange {
-        /// Offending elevation in degrees.
-        elevation_deg: f64,
+        /// Offending elevation.
+        elevation: Angle,
     },
     /// The sample elevations are not strictly increasing.
-    #[error("sample elevations must be strictly increasing, but {elevation_deg}° is not")]
+    #[error(
+        "sample elevations must be strictly increasing, but {} is not",
+        .elevation.display_in(AngleUnit::Degrees)
+    )]
     NotIncreasing {
-        /// First elevation, in degrees, that does not exceed its predecessor.
-        elevation_deg: f64,
+        /// First elevation that does not exceed its predecessor.
+        elevation: Angle,
     },
     /// The carrier frequency is not finite and positive.
-    #[error("the carrier must be finite and positive, got {carrier_hz} Hz")]
+    #[error("the carrier must be finite and positive, got {carrier}")]
     InvalidCarrier {
-        /// Offending carrier in Hz.
-        carrier_hz: f64,
+        /// Offending carrier.
+        carrier: Frequency,
     },
 }
 
@@ -112,20 +118,20 @@ impl ElevationProfile {
     ) -> Result<Self, ElevationProfileError> {
         let carrier_hz = carrier.to_hertz();
         if !carrier_hz.is_finite() || carrier_hz <= 0.0 {
-            return Err(ElevationProfileError::InvalidCarrier { carrier_hz });
+            return Err(ElevationProfileError::InvalidCarrier { carrier });
         }
         if samples.is_empty() {
             return Err(ElevationProfileError::Empty);
         }
         let mut previous = f64::NEG_INFINITY;
-        for (elevation, _) in &samples {
+        for &(elevation, _) in &samples {
             let elevation_deg = elevation.to_degrees();
             // `!(..)` so that NaN is rejected too.
             if !(elevation_deg > 0.0 && elevation_deg <= 90.0) {
-                return Err(ElevationProfileError::ElevationOutOfRange { elevation_deg });
+                return Err(ElevationProfileError::ElevationOutOfRange { elevation });
             }
             if elevation_deg <= previous {
-                return Err(ElevationProfileError::NotIncreasing { elevation_deg });
+                return Err(ElevationProfileError::NotIncreasing { elevation });
             }
             previous = elevation_deg;
         }
@@ -198,14 +204,16 @@ impl ElevationProfile {
 pub enum SitePropagationError {
     /// Two profiles describe carriers too close to tell apart.
     #[error(
-        "profiles at {first_ghz} GHz and {second_ghz} GHz overlap; \
-         carriers must differ by more than {tolerance_percent} %"
+        "profiles at {} and {} overlap; \
+         carriers must differ by more than {tolerance_percent} %",
+        .first.display_in(FrequencyUnit::Gigahertz),
+        .second.display_in(FrequencyUnit::Gigahertz)
     )]
     OverlappingCarriers {
-        /// Carrier of the first profile in GHz.
-        first_ghz: f64,
-        /// Carrier of the second profile in GHz.
-        second_ghz: f64,
+        /// Carrier of the first profile.
+        first: Frequency,
+        /// Carrier of the second profile.
+        second: Frequency,
         /// The matching tolerance in percent.
         tolerance_percent: f64,
     },
@@ -257,8 +265,8 @@ impl SitePropagation {
             for second in &profiles[i + 1..] {
                 if first.matches(second.carrier) || second.matches(first.carrier) {
                     return Err(SitePropagationError::OverlappingCarriers {
-                        first_ghz: first.carrier.to_gigahertz(),
-                        second_ghz: second.carrier.to_gigahertz(),
+                        first: first.carrier,
+                        second: second.carrier,
                         tolerance_percent: CARRIER_MATCH_TOLERANCE * 100.0,
                     });
                 }
@@ -422,6 +430,38 @@ mod tests {
                 Err(ElevationProfileError::InvalidCarrier { .. })
             ));
         }
+    }
+
+    #[test]
+    fn test_errors_name_the_offending_value_in_its_customary_unit() {
+        let sample = |el: f64| (deg(el), losses(0.2, 10.0, 1.0));
+        let message = |result: Result<ElevationProfile, ElevationProfileError>| {
+            result.unwrap_err().to_string()
+        };
+        assert_eq!(
+            message(ElevationProfile::new(ghz(26.0), vec![sample(-5.0)])),
+            "sample elevations must lie in (0°, 90°], got -5 deg"
+        );
+        assert_eq!(
+            message(ElevationProfile::new(
+                ghz(26.0),
+                vec![sample(45.0), sample(45.0)]
+            )),
+            "sample elevations must be strictly increasing, but 45 deg is not"
+        );
+        assert_eq!(
+            message(ElevationProfile::new(
+                Frequency::hertz(-1.0),
+                vec![sample(10.0)]
+            )),
+            "the carrier must be finite and positive, got -1 Hz"
+        );
+        assert_eq!(
+            SitePropagation::new(vec![profile_at(26.0), profile_at(26.125)])
+                .unwrap_err()
+                .to_string(),
+            "profiles at 26 GHz and 26.125 GHz overlap; carriers must differ by more than 1 %"
+        );
     }
 
     fn profile_at(carrier_ghz: f64) -> ElevationProfile {
