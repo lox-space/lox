@@ -14,8 +14,8 @@ use lox_space::time::time_scales::Tdb;
 
 fn main() {
     let time = time!(Tdb, 2016, 5, 30, 12, 0, 0.0).unwrap();
-    let position = DVec3::new(6068.27927, -1692.84394, -2516.61918);
-    let velocity = DVec3::new(-0.660415582, 5.495938726, -5.303093233);
+    let position = DVec3::new(6068279.27, -1692843.94, -2516619.18);
+    let velocity = DVec3::new(-660.415582, 5495.938726, -5303.093233);
     let iss_cartesian = CartesianOrbit::new(
         Cartesian::from_vecs(position, velocity),
         time.into_dynamic(),
@@ -27,7 +27,7 @@ fn main() {
         .expect("the ISS state should be a valid orbit");
 
     let title = format!(
-        "ISS Orbit for Julian Day Number {} ({})",
+        "ISS Orbit at {} days since J2000 ({})",
         iss.time().days_since_j2000(),
         time
     );
@@ -49,7 +49,7 @@ fn main() {
         iss.longitude_of_ascending_node().as_f64().to_degrees()
     );
     println!(
-        "Argument of perigee: {}°",
+        "Argument of perigee: {:.3}°",
         iss.argument_of_periapsis().as_f64().to_degrees()
     );
     println!(
