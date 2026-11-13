@@ -11,6 +11,8 @@
 //! can follow the loss along a pass instead of applying one fixed figure.
 //! [`SitePropagation`] collects the profiles of one site, one per carrier.
 
+use std::sync::Arc;
+
 use lox_core::units::{Angle, AngleUnit, Frequency, FrequencyUnit};
 
 use crate::losses::AtmosphericLosses;
@@ -225,6 +227,8 @@ pub enum SitePropagationError {
 /// A site typically carries two profiles, one for the downlink carrier and
 /// one for the uplink carrier. A link looks its profile up by carrier via
 /// [`Self::for_carrier`], so the direction never has to be spelled out.
+///
+/// Cloning is cheap: the profiles are shared, not copied.
 #[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(
     feature = "serde",
@@ -232,7 +236,7 @@ pub enum SitePropagationError {
     serde(try_from = "SitePropagationRepr")
 )]
 pub struct SitePropagation {
-    profiles: Vec<ElevationProfile>,
+    profiles: Arc<[ElevationProfile]>,
 }
 
 /// Serde wire format for [`SitePropagation`]: forces deserialization through
@@ -272,7 +276,9 @@ impl SitePropagation {
                 }
             }
         }
-        Ok(Self { profiles })
+        Ok(Self {
+            profiles: profiles.into(),
+        })
     }
 
     /// Returns the profiles of this site.
