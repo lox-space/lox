@@ -22,8 +22,9 @@ use lox_space::comms::channel::Channel;
 use lox_space::comms::modcod::dvb_s2;
 use lox_space::comms::terminal::{EirpModel, GtModel};
 use lox_space::comms::{AtmosphericLosses, ElevationProfile, FrequencyBand, SitePropagation};
-use lox_space::core::units::{Angle, Decibel, Frequency};
+use lox_space::core::units::{Decibel, Frequency};
 use lox_space::frames::Frame;
+use lox_space::itur::DEFAULT_PROFILE_ELEVATIONS;
 
 #[path = "common/mod.rs"]
 mod common;
@@ -62,25 +63,23 @@ fn plan() -> CarrierPlan {
     CarrierPlan::new(CARRIER, channel, dvb_s2().to_vec()).unwrap()
 }
 
-/// Atmospheric losses following the cosecant law, on a 14-point grid like
-/// the one the ITU-R provider produces.
+/// Atmospheric losses following the cosecant law, on the default elevation
+/// grid of the ITU-R provider.
 fn site() -> SitePropagation {
-    let samples = [
-        5.0_f64, 6.0, 7.5, 10.0, 12.5, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0, 65.0, 80.0, 90.0,
-    ]
-    .into_iter()
-    .map(|el_deg| {
-        let csc = 1.0 / el_deg.to_radians().sin();
-        let losses = AtmosphericLosses::new(
-            Decibel::decibels(0.4 * csc),
-            Decibel::decibels(0.1 * csc),
-            Decibel::decibels(0.1 * csc),
-            Decibel::decibels(0.05 * csc),
-        )
-        .unwrap();
-        (Angle::degrees(el_deg), losses)
-    })
-    .collect();
+    let samples = DEFAULT_PROFILE_ELEVATIONS
+        .into_iter()
+        .map(|elevation| {
+            let csc = 1.0 / elevation.to_radians().sin();
+            let losses = AtmosphericLosses::new(
+                Decibel::decibels(0.4 * csc),
+                Decibel::decibels(0.1 * csc),
+                Decibel::decibels(0.1 * csc),
+                Decibel::decibels(0.05 * csc),
+            )
+            .unwrap();
+            (elevation, losses)
+        })
+        .collect();
     SitePropagation::new(vec![ElevationProfile::new(CARRIER, samples).unwrap()]).unwrap()
 }
 
