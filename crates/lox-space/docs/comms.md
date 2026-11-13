@@ -493,6 +493,24 @@ link = lox.LinkBudget(
 
 ---
 
+::: lox_space.AtmosphericLosses
+    options:
+      show_source: false
+
+---
+
+::: lox_space.ElevationProfile
+    options:
+      show_source: false
+
+---
+
+::: lox_space.SitePropagation
+    options:
+      show_source: false
+
+---
+
 ::: lox_space.LinkBudget
     options:
       show_source: false
