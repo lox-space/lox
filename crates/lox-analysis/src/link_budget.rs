@@ -273,11 +273,6 @@ impl GroundSite {
         }
     }
 
-    /// Returns the slant range to a body-fixed position in metres.
-    fn range(&self, position: DVec3) -> Distance {
-        Distance::meters((position - self.position).length())
-    }
-
     /// Returns the slant range to a body-fixed position in metres and its
     /// elevation above the station's horizon.
     ///
@@ -305,17 +300,13 @@ where
         std::error::Error + Send + Sync + 'static,
 {
     /// Returns the slant range between the two ends at the given time and,
-    /// when `with_elevation` is set, the elevation of the spacecraft above
-    /// the ground station's horizon.
+    /// on a ground-space link, the elevation of the spacecraft above the
+    /// ground station's horizon.
     ///
     /// The elevation is resolved from the same line of sight as the range, so
-    /// asking for it costs a dot product and an arcsine rather than a second
-    /// trajectory lookup. An inter-satellite link has no elevation.
-    fn sample(
-        &self,
-        time: Time,
-        with_elevation: bool,
-    ) -> Result<(Distance, Option<Angle>), EvalError> {
+    /// it costs a dot product and an arcsine on top. An inter-satellite link
+    /// has no elevation.
+    fn sample(&self, time: Time) -> Result<(Distance, Option<Angle>), EvalError> {
         match self {
             Self::GroundSpace { gs, site, sc } => {
                 let state = sc.state_at(time.into_dynamic())?;
@@ -323,12 +314,8 @@ where
                     .try_to_frame(gs.frame(), &DefaultRotationProvider)
                     .map_err(|e| EvalError::Rotation(Box::new(e)))?
                     .position();
-                if with_elevation {
-                    let (range, elevation) = site.range_and_elevation(position);
-                    Ok((range, Some(elevation)))
-                } else {
-                    Ok((site.range(position), None))
-                }
+                let (range, elevation) = site.range_and_elevation(position);
+                Ok((range, Some(elevation)))
             }
             Self::InterSatellite { sc1, sc2 } => {
                 let r1 = sc1.state_at(time.into_dynamic())?.position();
@@ -390,7 +377,7 @@ where
 {
     /// Returns the modulation-agnostic budget at the given time.
     fn budget(&self, time: Time) -> Result<LinkBudget, LinkEvalError> {
-        let (range, elevation) = self.geometry.sample(time, self.site.is_some())?;
+        let (range, elevation) = self.geometry.sample(time)?;
         let losses = match (&self.site, elevation) {
             (Some(site), Some(elevation)) => site.at(elevation),
             _ => self.plan.losses.clone(),
@@ -1574,7 +1561,7 @@ mod tests {
         let link = links.first().expect("one downlink");
 
         let time = visibility_windows()[0].start();
-        let (range, _) = link.geometry.sample(time, false).unwrap();
+        let (range, _) = link.geometry.sample(time).unwrap();
         let actual = link.budget(time).unwrap();
 
         let downlink = LinkConditions::builder(CARRIER, range)
@@ -1913,7 +1900,7 @@ mod tests {
         );
 
         let delay_at = |time: Time| {
-            (link.geometry.sample(time, false).unwrap().0 / SPEED_OF_LIGHT)
+            (link.geometry.sample(time).unwrap().0 / SPEED_OF_LIGHT)
                 .unwrap()
                 .as_seconds_f64()
         };
@@ -2017,8 +2004,6 @@ mod tests {
                 expected.elevation().to_radians(),
                 atol <= 1e-12
             );
-            // The same range whether or not the elevation is asked for.
-            assert_eq!(site.range(position), range);
         }
     }
 
@@ -2186,12 +2171,8 @@ mod tests {
         for fraction in [0.0, 0.25, 0.5] {
             let offset = window.duration().as_seconds_f64() * fraction;
             let time = window.start() + TimeDelta::from_seconds_f64(offset);
-            let (range, elevation) = link.geometry.sample(time, true).unwrap();
+            let (_, elevation) = link.geometry.sample(time).unwrap();
             let elevation = elevation.expect("a ground-space link has an elevation");
-            // Asking for the elevation must not change the range.
-            let (range_only, none) = link.geometry.sample(time, false).unwrap();
-            assert!(none.is_none());
-            assert_approx_eq!(range.to_meters(), range_only.to_meters(), rtol <= 1e-12);
 
             let budget = link.budget(time).unwrap();
             assert_eq!(budget.losses, profile.at(elevation).into());
