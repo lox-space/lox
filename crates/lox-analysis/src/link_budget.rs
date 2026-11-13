@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2026 Torkil Rein Gustavsen <torkilrg@ksat.no>
 //
 // SPDX-License-Identifier: MPL-2.0
 
@@ -24,10 +25,11 @@ use lox_comms::channel::{Channel, LinkDirection};
 use lox_comms::link_budget::{Eirp, GOverT, LinkBudget, LinkConditions};
 use lox_comms::modcod::ModCod;
 use lox_comms::terminal::{RxTerminal, TxTerminal};
-use lox_comms::{LinkBudgetError, PropagationLosses};
+use lox_comms::{ElevationProfile, LinkBudgetError, PropagationLosses, SitePropagation};
 use lox_core::constants::SPEED_OF_LIGHT;
 use lox_core::error::LoxError;
-use lox_core::units::{DataRate, DataVolume, Decibel, Distance, Frequency};
+use lox_core::glam::DVec3;
+use lox_core::units::{Angle, DataRate, DataVolume, Decibel, Distance, Frequency};
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_frames::{Frame, ReferenceFrame};
@@ -60,6 +62,14 @@ pub enum LinkEvalError {
         /// The time at which the margin was evaluated.
         time: Time,
     },
+    /// A ground station's elevation profile is attached to a link that has
+    /// no elevation, i.e. one that does not end at a ground station.
+    ///
+    /// The analysis never builds such a link; this guards the invariant
+    /// instead of applying the plan's losses under
+    /// [`LossSource::SiteProfile`].
+    #[error("a site elevation profile is attached to a link without a ground station")]
+    ProfileWithoutElevation,
 }
 
 // `events::DetectFn` requires `Error: Into<LoxError>` so the lazy machinery can
@@ -88,6 +98,12 @@ pub enum LinkAnalysisError {
     /// Two ground stations, or two spacecraft, share an id.
     #[error("duplicate asset id `{0}`; ids must be unique within a scenario")]
     DuplicateAssetId(AssetId),
+    /// Site propagation was supplied for an id that is not a ground station
+    /// of the scenario.
+    #[error(
+        "site propagation was supplied for `{0}`, which is not a ground station in the scenario"
+    )]
+    UnknownSite(AssetId),
     /// Event detection failed.
     #[error(transparent)]
     Detect(#[from] DetectError),
@@ -232,6 +248,8 @@ enum LinkGeometry<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     /// A ground station and a spacecraft.
     GroundSpace {
         gs: &'a EllipsoidLocation,
+        /// What `gs` contributes to every sample, resolved once.
+        site: GroundSite,
         sc: &'a Trajectory<O, R>,
     },
     /// Two spacecraft.
@@ -239,6 +257,46 @@ enum LinkGeometry<'a, O: CoordinateOrigin, R: ReferenceFrame> {
         sc1: &'a Trajectory<O, R>,
         sc2: &'a Trajectory<O, R>,
     },
+}
+
+/// The time-invariant part of a ground station's geometry.
+///
+/// Resolving it per sample would repeat the geodetic trigonometry of the
+/// station at every step of every link, so it is cached per link instead.
+#[derive(Debug, Clone, Copy)]
+struct GroundSite {
+    /// The station's position in its body-fixed frame, in metres.
+    position: DVec3,
+    /// The local vertical at the station, as a unit vector in that frame.
+    up: DVec3,
+}
+
+impl GroundSite {
+    fn new(gs: &EllipsoidLocation) -> Self {
+        Self {
+            position: gs.body_fixed_position(),
+            // The topocentric frame is south-east-zenith, so the zenith axis
+            // is the third row of the rotation into it.
+            up: gs.rotation_to_topocentric().row(2),
+        }
+    }
+
+    /// Returns the slant range to a body-fixed position in metres and its
+    /// elevation above the station's horizon.
+    ///
+    /// Only what a link budget needs of the topocentric observables: neither
+    /// azimuth nor range rate is computed.
+    fn range_and_elevation(&self, position: DVec3) -> (Distance, Angle) {
+        let line_of_sight = position - self.position;
+        let range = line_of_sight.length();
+        // Straight overhead the ratio is 1 up to rounding, and rounding can
+        // carry it just past the domain of the arcsine.
+        let sin_elevation = (self.up.dot(line_of_sight) / range).clamp(-1.0, 1.0);
+        (
+            Distance::meters(range),
+            Angle::radians(sin_elevation.asin()),
+        )
+    }
 }
 
 impl<O, R> LinkGeometry<'_, O, R>
@@ -249,22 +307,67 @@ where
     <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
-    /// Returns the slant range between the two ends at the given time.
-    fn range(&self, time: Time) -> Result<Distance, EvalError> {
+    /// Returns the slant range between the two ends at the given time and,
+    /// on a ground-space link, the elevation of the spacecraft above the
+    /// ground station's horizon.
+    ///
+    /// The elevation is resolved from the same line of sight as the range, so
+    /// it costs a dot product and an arcsine on top. An inter-satellite link
+    /// has no elevation.
+    ///
+    /// The spacecraft must be centred on the ground station's body. That is
+    /// not enforced by the types — a mismatch yields a silently wrong range
+    /// and elevation rather than an error — so it is asserted in debug
+    /// builds.
+    fn sample(&self, time: Time) -> Result<(Distance, Option<Angle>), EvalError> {
         match self {
-            Self::GroundSpace { gs, sc } => {
+            Self::GroundSpace { gs, site, sc } => {
                 let state = sc.state_at(time.into_dynamic())?;
-                let state = state
+                debug_assert_eq!(
+                    state.origin().id(),
+                    gs.origin().id(),
+                    "state origin `{}` is not the ground station's body `{}`",
+                    state.origin().name(),
+                    gs.origin().name(),
+                );
+                let position = state
                     .try_to_frame(gs.frame(), &DefaultRotationProvider)
-                    .map_err(|e| EvalError::Rotation(Box::new(e)))?;
-                Ok(gs.range_to(state))
+                    .map_err(|e| EvalError::Rotation(Box::new(e)))?
+                    .position();
+                let (range, elevation) = site.range_and_elevation(position);
+                Ok((range, Some(elevation)))
             }
             Self::InterSatellite { sc1, sc2 } => {
                 let r1 = sc1.state_at(time.into_dynamic())?.position();
                 let r2 = sc2.state_at(time.into_dynamic())?.position();
-                Ok(Distance::meters((r1 - r2).length()))
+                Ok((Distance::meters((r1 - r2).length()), None))
             }
         }
+    }
+}
+
+/// The elevation-dependent losses of a link at a ground station.
+struct SiteLosses<'a> {
+    /// The station's elevation profile for the plan's carrier.
+    profile: &'a ElevationProfile,
+    /// The plan's non-atmospheric losses, which the profile leaves in place.
+    /// They are the same at every sample, so they are filtered out of the
+    /// plan once, here, rather than per sample.
+    fixed: PropagationLosses,
+}
+
+impl<'a> SiteLosses<'a> {
+    fn new(profile: &'a ElevationProfile, plan: &CarrierPlan) -> Self {
+        Self {
+            profile,
+            fixed: plan.losses.without_atmospheric(),
+        }
+    }
+
+    /// Returns the losses at the given elevation: the profile's atmospheric
+    /// lines in place of the plan's, next to the plan's other losses.
+    fn at(&self, elevation: Angle) -> PropagationLosses {
+        self.fixed.append_atmospheric(self.profile.at(elevation))
     }
 }
 
@@ -277,6 +380,9 @@ struct Link<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     tx: &'a TxTerminal,
     rx: &'a RxTerminal,
     plan: &'a CarrierPlan,
+    /// The ground station's losses for the plan's carrier, when site
+    /// propagation was supplied and describes that carrier.
+    site: Option<SiteLosses<'a>>,
     geometry: LinkGeometry<'a, O, R>,
     visibility: &'a [TimeInterval],
 }
@@ -289,11 +395,26 @@ where
     <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
+    /// Returns where [`budget`](Self::budget) takes its losses from.
+    fn loss_source(&self) -> LossSource {
+        match self.site {
+            Some(_) => LossSource::SiteProfile,
+            None => LossSource::Plan,
+        }
+    }
+
     /// Returns the modulation-agnostic budget at the given time.
     fn budget(&self, time: Time) -> Result<LinkBudget, LinkEvalError> {
-        let range = self.geometry.range(time)?;
+        let (range, elevation) = self.geometry.sample(time)?;
+        let losses = match (&self.site, elevation) {
+            (Some(site), Some(elevation)) => site.at(elevation),
+            (None, _) => self.plan.losses.clone(),
+            // Falling back to the plan here would report plan losses under
+            // `LossSource::SiteProfile`.
+            (Some(_), None) => return Err(LinkEvalError::ProfileWithoutElevation),
+        };
         let conditions = LinkConditions::builder(self.plan.carrier, range)
-            .losses(self.plan.losses.clone())
+            .losses(losses)
             .direction(self.direction)
             .build()
             .map_err(LinkBudgetError::from)?;
@@ -333,6 +454,21 @@ where
     fn eval(&self, time: Time) -> Result<f64, Self::Error> {
         self.0.margin(time)
     }
+}
+
+/// Where the propagation losses of a link come from.
+///
+/// Site propagation is applied per link, and only where the ground station
+/// has a profile for the link's carrier; every other link silently keeps the
+/// carrier plan's fixed losses. This records which of the two a window was
+/// computed with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LossSource {
+    /// The fixed losses of the carrier plan.
+    Plan,
+    /// The ground station's elevation profile, replacing the atmospheric
+    /// lines of the plan's losses.
+    SiteProfile,
 }
 
 /// Part of `LinkWindow` with a constant rate
@@ -399,6 +535,7 @@ impl LinkWindowPart {
 pub struct LinkWindow {
     start: Time,
     direction: LinkDirection,
+    loss_source: LossSource,
     parts: Vec<LinkWindowPart>,
 }
 
@@ -414,6 +551,12 @@ impl LinkWindow {
     /// Returns the direction of the link.
     pub fn direction(&self) -> LinkDirection {
         self.direction
+    }
+
+    /// Returns where the propagation losses of this window come from: the
+    /// carrier plan, or the ground station's elevation profile.
+    pub fn loss_source(&self) -> LossSource {
+        self.loss_source
     }
 
     /// Returns parts as slice
@@ -527,6 +670,33 @@ impl LinkBudgetResults {
     }
 }
 
+/// Derives the site propagation of every ground station of `scenario` for
+/// which `f` returns some, keyed by station id.
+///
+/// `f` is called once per ground station, in scenario order. Returning
+/// `Ok(None)` leaves a station out; the first error aborts and is returned.
+///
+/// This is what [`LinkBudgetAnalysis::with_site_propagation_from`] applies.
+/// Call it directly to resolve the sites ahead of the analysis — before the
+/// trajectories are propagated, say — and hand the result over with
+/// [`LinkBudgetAnalysis::with_site_propagation`].
+pub fn site_propagation_from<O, R, E>(
+    scenario: &Scenario<O, R>,
+    mut f: impl FnMut(&GroundStation) -> Result<Option<SitePropagation>, E>,
+) -> Result<HashMap<AssetId, SitePropagation>, E>
+where
+    O: CoordinateOrigin + Copy + Send + Sync,
+    R: ReferenceFrame + Copy + Send + Sync,
+{
+    let mut sites = HashMap::new();
+    for station in scenario.ground_stations() {
+        if let Some(propagation) = f(station)? {
+            sites.insert(station.id().clone(), propagation);
+        }
+    }
+    Ok(sites)
+}
+
 /// Refines visibility windows into the intervals in which links close.
 ///
 /// Pairs every transmit terminal with every receive terminal on the other
@@ -538,6 +708,7 @@ pub struct LinkBudgetAnalysis<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     visibility: &'a VisibilityResults,
     plan: CarrierPlan,
     overrides: HashMap<(TerminalId, TerminalId), CarrierPlan>,
+    site_propagation: HashMap<AssetId, SitePropagation>,
     step: TimeDelta,
 }
 
@@ -562,6 +733,7 @@ where
             visibility,
             plan,
             overrides: HashMap::new(),
+            site_propagation: HashMap::new(),
             step: TimeDelta::from_seconds(60),
         }
     }
@@ -579,6 +751,55 @@ where
     pub fn with_override(mut self, tx: TerminalId, rx: TerminalId, plan: CarrierPlan) -> Self {
         self.overrides.insert((tx, rx), plan);
         self
+    }
+
+    /// Applies elevation-dependent propagation losses at one ground station.
+    ///
+    /// Opt-in: without it every link uses the fixed losses of its carrier
+    /// plan. With it, each ground-space link of the station whose carrier one
+    /// of the profiles describes follows that profile along the pass — the
+    /// loss, and on a downlink the receive noise temperature it degrades,
+    /// then vary with elevation. The profile replaces the atmospheric lines of
+    /// the plan's losses — rain, gaseous, cloud and scintillation — and leaves
+    /// the plan's other lines in place (see
+    /// [`PropagationLosses::with_atmospheric`]). This holds for overridden
+    /// terminal pairs too, at the override's carrier.
+    ///
+    /// A link whose carrier no profile describes keeps the plan's losses;
+    /// [`LinkWindow::loss_source`] tells the two apart. Inter-satellite links
+    /// are never affected.
+    ///
+    /// Replaces any propagation supplied for the same station before.
+    /// [`compute`](Self::compute) returns
+    /// [`LinkAnalysisError::UnknownSite`] when `station` is not a ground
+    /// station of the scenario.
+    pub fn with_site_propagation(
+        mut self,
+        station: impl Into<String>,
+        propagation: SitePropagation,
+    ) -> Self {
+        self.site_propagation
+            .insert(AssetId::new(station), propagation);
+        self
+    }
+
+    /// Applies elevation-dependent propagation losses at every ground station
+    /// of the scenario for which `f` returns some.
+    ///
+    /// `f` is called once per ground station, so the stations of a whole
+    /// network are covered by one call that derives each site's propagation
+    /// from its own location. Returning `Ok(None)` leaves a station on the
+    /// plan's losses; the first error aborts and is returned.
+    ///
+    /// See [`with_site_propagation`](Self::with_site_propagation) for how the
+    /// profiles are applied.
+    pub fn with_site_propagation_from<E>(
+        mut self,
+        f: impl FnMut(&GroundStation) -> Result<Option<SitePropagation>, E>,
+    ) -> Result<Self, E> {
+        self.site_propagation
+            .extend(site_propagation_from(self.scenario, f)?);
+        Ok(self)
     }
 
     /// Returns the time step.
@@ -643,6 +864,14 @@ where
         let ground_stations = index_by_id(self.scenario.ground_stations(), GroundStation::id)?;
         let spacecraft = index_by_id(self.scenario.spacecraft(), Spacecraft::id)?;
 
+        if let Some(unknown) = self
+            .site_propagation
+            .keys()
+            .find(|id| !ground_stations.contains_key(id))
+        {
+            return Err(LinkAnalysisError::UnknownSite(unknown.clone()));
+        }
+
         let mut links = Vec::new();
         for ((id1, id2), visibility) in self.visibility.all_intervals() {
             if visibility.is_empty() {
@@ -655,8 +884,11 @@ where
                         continue;
                     };
                     let sc_traj = self.trajectory(sc.id())?;
+                    let site = self.site_propagation.get(gs.id());
+                    let ground_site = GroundSite::new(gs.location());
                     let geometry = || LinkGeometry::GroundSpace {
                         gs: gs.location(),
+                        site: ground_site,
                         sc: sc_traj,
                     };
                     self.push_links(
@@ -667,6 +899,7 @@ where
                         gs.rx_terminals(),
                         LinkDirection::Downlink,
                         visibility,
+                        site,
                         geometry,
                     );
                     self.push_links(
@@ -677,6 +910,7 @@ where
                         sc.rx_terminals(),
                         LinkDirection::Uplink,
                         visibility,
+                        site,
                         geometry,
                     );
                 }
@@ -697,6 +931,7 @@ where
                         sc2.rx_terminals(),
                         LinkDirection::Crosslink,
                         visibility,
+                        None,
                         geometry,
                     );
                     self.push_links(
@@ -707,6 +942,7 @@ where
                         sc1.rx_terminals(),
                         LinkDirection::Crosslink,
                         visibility,
+                        None,
                         geometry,
                     );
                 }
@@ -728,6 +964,7 @@ where
         rx_terminals: &'s BTreeMap<String, RxTerminal>,
         direction: LinkDirection,
         visibility: &'s [TimeInterval],
+        site: Option<&'s SitePropagation>,
         geometry: F,
     ) where
         F: Fn() -> LinkGeometry<'s, O, R>,
@@ -750,6 +987,9 @@ where
                     tx,
                     rx,
                     plan,
+                    site: site
+                        .and_then(|site| site.for_carrier(plan.carrier))
+                        .map(|profile| SiteLosses::new(profile, plan)),
                     geometry: geometry(),
                     visibility,
                 });
@@ -889,6 +1129,7 @@ where
         start,
         parts,
         direction: link.direction,
+        loss_source: link.loss_source(),
     })
 }
 
@@ -903,7 +1144,7 @@ mod tests {
     use lox_comms::receiver::CascadeReceiver;
     use lox_comms::terminal::{EirpModel, GtModel, RxChain, TxChain};
     use lox_comms::transmitter::AmplifierTransmitter;
-    use lox_comms::{FrequencyBand, FrequencyRange};
+    use lox_comms::{AtmosphericLosses, FrequencyBand, FrequencyRange};
     use lox_core::coords::LonLatAlt;
     use lox_core::units::{Power, Temperature};
     use lox_orbits::propagators::OrbitSource;
@@ -1371,7 +1612,7 @@ mod tests {
         let link = links.first().expect("one downlink");
 
         let time = visibility_windows()[0].start();
-        let range = link.geometry.range(time).unwrap();
+        let (range, _) = link.geometry.sample(time).unwrap();
         let actual = link.budget(time).unwrap();
 
         let downlink = LinkConditions::builder(CARRIER, range)
@@ -1710,7 +1951,7 @@ mod tests {
         );
 
         let delay_at = |time: Time| {
-            (link.geometry.range(time).unwrap() / SPEED_OF_LIGHT)
+            (link.geometry.sample(time).unwrap().0 / SPEED_OF_LIGHT)
                 .unwrap()
                 .as_seconds_f64()
         };
@@ -1763,5 +2004,456 @@ mod tests {
             assert_eq!(links.len(), 1, "reversed = {reversed}");
             assert_eq!(links[0].direction, LinkDirection::Crosslink);
         }
+    }
+
+    fn atmospheric(rain_db: f64, gaseous_db: f64) -> AtmosphericLosses {
+        let zero = Decibel::decibels(0.0);
+        AtmosphericLosses::new(
+            Decibel::decibels(rain_db),
+            Decibel::decibels(gaseous_db),
+            zero,
+            zero,
+        )
+        .unwrap()
+    }
+
+    /// The cached station geometry reproduces the range and elevation of the
+    /// full topocentric observables.
+    #[test]
+    fn test_ground_site_matches_topocentric_observables() {
+        use lox_core::coords::Cartesian;
+        use lox_orbits::orbits::CartesianOrbit;
+
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
+        let gs = EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap();
+        let site = GroundSite::new(&gs);
+        let time = Time::j2000(TimeScale::Tai);
+
+        for position in [
+            // Near zenith, near the horizon, and below it.
+            gs.body_fixed_position() * 1.1,
+            DVec3::new(6.9e6, 1.2e6, 0.4e6),
+            DVec3::new(-2.0e6, -6.0e6, 3.0e6),
+            DVec3::new(-7.0e6, 0.0, 0.0),
+        ] {
+            let state = CartesianOrbit::new(
+                Cartesian::from_vecs(position, DVec3::new(1.0e3, -7.0e3, 2.0e3)),
+                time,
+                gs.origin(),
+                gs.frame(),
+            );
+            let expected = gs.observables(state);
+
+            let (range, elevation) = site.range_and_elevation(position);
+            assert_approx_eq!(
+                range.to_meters(),
+                expected.range().to_meters(),
+                rtol <= 1e-14
+            );
+            assert_approx_eq!(
+                elevation.to_radians(),
+                expected.elevation().to_radians(),
+                atol <= 1e-12
+            );
+        }
+    }
+
+    /// Straight above the station the sine of the elevation is 1 up to
+    /// rounding, and rounding must not push it out of the arcsine's domain.
+    #[test]
+    fn test_ground_site_elevation_is_finite_at_the_zenith() {
+        for (lon, lat) in [(-4.3676, 40.4527), (15.4, 78.2), (-70.7, -30.2), (0.0, 0.0)] {
+            let coords = LonLatAlt::from_degrees(lon, lat, 0.0).unwrap();
+            let gs = EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap();
+            let site = GroundSite::new(&gs);
+            for i in 0..2000 {
+                let height = 2.0e5 + 1.0e3 * f64::from(i) + 0.137;
+                let (_, elevation) = site.range_and_elevation(site.position + site.up * height);
+                assert_approx_eq!(elevation.to_degrees(), 90.0, atol <= 1e-5);
+            }
+        }
+    }
+
+    /// A spacecraft centred on another body than the ground station's would
+    /// yield a meaningless range and elevation; debug builds refuse it.
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(expected = "is not the ground station's body")]
+    fn test_ground_space_geometry_asserts_a_common_origin() {
+        let f = fixture();
+        let (epoch, _, frame, data) = f.trajectory.clone().into_parts();
+        let moon_centred = Trajectory::from_parts(epoch, Origin::Moon, frame, data);
+        let geometry = LinkGeometry::GroundSpace {
+            gs: &f.location,
+            site: GroundSite::new(&f.location),
+            sc: &moon_centred,
+        };
+        let _ = geometry.sample(moon_centred.start_time());
+    }
+
+    /// A profile whose gaseous loss follows the cosecant law from `zenith_db`
+    /// at zenith.
+    fn cosecant_profile(carrier: Frequency, zenith_db: f64) -> ElevationProfile {
+        let samples = [5.0_f64, 10.0, 20.0, 40.0, 90.0]
+            .into_iter()
+            .map(|el_deg| {
+                let losses = atmospheric(0.0, zenith_db / el_deg.to_radians().sin());
+                (Angle::degrees(el_deg), losses)
+            })
+            .collect();
+        ElevationProfile::new(carrier, samples).unwrap()
+    }
+
+    /// A profile holding the same losses at every elevation.
+    fn flat_profile(carrier: Frequency, losses: AtmosphericLosses) -> ElevationProfile {
+        ElevationProfile::new(carrier, vec![(Angle::degrees(30.0), losses)]).unwrap()
+    }
+
+    fn site(profile: ElevationProfile) -> SitePropagation {
+        SitePropagation::new(vec![profile]).unwrap()
+    }
+
+    /// The overspecified downlink: it closes over every visibility window
+    /// whatever the losses below, so margins can be compared sample for
+    /// sample.
+    fn overspecified_scenario() -> Scenario<Origin, Frame> {
+        let f = fixture();
+        let (tx, rx) = lumped(200.0, 40.0);
+        scenario(
+            &f.location,
+            &f.trajectory,
+            &[("downlink", tx)],
+            &[("main", rx)],
+        )
+    }
+
+    fn downlink_windows(results: &LinkBudgetResults) -> &[LinkWindow] {
+        let (tx, rx) = downlink_ids();
+        results.windows_for(&tx, &rx)
+    }
+
+    #[test]
+    fn test_losses_come_from_the_plan_unless_site_propagation_is_supplied() {
+        let results = run(200.0, 40.0, plan());
+        let windows = downlink_windows(&results);
+        assert!(!windows.is_empty());
+        assert!(windows.iter().all(|w| w.loss_source() == LossSource::Plan));
+    }
+
+    /// A flat site profile is indistinguishable from the same losses fixed on
+    /// the plan — apart from being reported as a site profile.
+    #[test]
+    fn test_flat_site_profile_equals_fixed_plan_losses() {
+        let f = fixture();
+        let scenario = overspecified_scenario();
+        let losses = atmospheric(2.0, 1.0);
+
+        let fixed = LinkBudgetAnalysis::new(
+            &scenario,
+            &f.ensemble,
+            &f.visibility,
+            plan().with_losses(losses.into()),
+        )
+        .compute()
+        .unwrap();
+        let profiled = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
+            .with_site_propagation(GS, site(flat_profile(CARRIER, losses)))
+            .compute()
+            .unwrap();
+
+        let (fixed, profiled) = (downlink_windows(&fixed), downlink_windows(&profiled));
+        assert!(!fixed.is_empty());
+        assert_eq!(fixed.len(), profiled.len());
+        for (a, b) in fixed.iter().zip(profiled) {
+            assert_eq!(a.interval(), b.interval());
+            assert_approx_eq!(
+                a.peak_margin().to_decibels(),
+                b.peak_margin().to_decibels(),
+                atol <= 1e-9
+            );
+            assert_approx_eq!(
+                a.min_margin().to_decibels(),
+                b.min_margin().to_decibels(),
+                atol <= 1e-9
+            );
+            assert_approx_eq!(
+                a.data_volume().to_bits(),
+                b.data_volume().to_bits(),
+                rtol <= 1e-12
+            );
+            assert_eq!(a.loss_source(), LossSource::Plan);
+            assert_eq!(b.loss_source(), LossSource::SiteProfile);
+        }
+    }
+
+    /// The point of the feature: the loss follows the elevation along the
+    /// pass, so the margin drops far more at the horizon than at the peak.
+    #[test]
+    fn test_site_profile_costs_more_margin_at_low_elevation() {
+        const ZENITH_DB: f64 = 1.0;
+        let f = fixture();
+        let scenario = overspecified_scenario();
+
+        let baseline = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
+            .compute()
+            .unwrap();
+        let profiled = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
+            .with_site_propagation(GS, site(cosecant_profile(CARRIER, ZENITH_DB)))
+            .compute()
+            .unwrap();
+
+        let (baseline, profiled) = (downlink_windows(&baseline), downlink_windows(&profiled));
+        assert!(!baseline.is_empty());
+        assert_eq!(baseline.len(), profiled.len());
+        let horizon_db = ZENITH_DB / 5.0_f64.to_radians().sin();
+        for (a, b) in baseline.iter().zip(profiled) {
+            assert_eq!(a.interval(), b.interval());
+            let peak_drop = (a.peak_margin() - b.peak_margin()).to_decibels();
+            let min_drop = (a.min_margin() - b.min_margin()).to_decibels();
+            // Never less than the zenith loss, never more than the profile's
+            // value at its lowest sample.
+            assert!(peak_drop >= ZENITH_DB - 1e-9, "peak drop {peak_drop} dB");
+            assert!(min_drop <= horizon_db + 1e-9, "min drop {min_drop} dB");
+            assert!(
+                min_drop > peak_drop + 1.0,
+                "expected the margin to drop more at the horizon ({min_drop} dB) \
+                 than at the peak ({peak_drop} dB)"
+            );
+        }
+    }
+
+    /// Per sample, the budget carries exactly the profile's losses at the
+    /// elevation of that sample.
+    #[test]
+    fn test_budget_applies_the_profile_at_the_sample_elevation() {
+        let f = fixture();
+        let scenario = overspecified_scenario();
+        let profile = cosecant_profile(CARRIER, 1.0);
+        let analysis = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
+            .with_site_propagation(GS, site(profile.clone()));
+        let links = analysis.links().unwrap();
+        let link = links.first().expect("one downlink");
+
+        let window = visibility_windows()[0];
+        let mut totals = Vec::new();
+        for fraction in [0.0, 0.25, 0.5] {
+            let offset = window.duration().as_seconds_f64() * fraction;
+            let time = window.start() + TimeDelta::from_seconds_f64(offset);
+            let (_, elevation) = link.geometry.sample(time).unwrap();
+            let elevation = elevation.expect("a ground-space link has an elevation");
+
+            let budget = link.budget(time).unwrap();
+            assert_eq!(budget.losses, profile.at(elevation).into());
+            totals.push(budget.losses.total().to_decibels());
+        }
+        // The elevation, and with it the loss, changes along the window.
+        let spread = totals.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+            - totals.iter().copied().fold(f64::INFINITY, f64::min);
+        assert!(spread > 0.1, "{totals:?}");
+    }
+
+    /// The profile replaces the plan's atmospheric lines and keeps the others.
+    #[test]
+    fn test_site_profile_replaces_the_atmospheric_plan_losses() {
+        let f = fixture();
+        let scenario = overspecified_scenario();
+        let pointing = Decibel::decibels(3.0);
+        // The plan's rain line would cost 50 dB; the site profile supersedes
+        // it with 2 dB and leaves the pointing margin alone.
+        let plan_losses = PropagationLosses::builder()
+            .other("Pointing margin", pointing, false)
+            .rain(Decibel::decibels(50.0))
+            .build()
+            .unwrap();
+        let site_losses = atmospheric(2.0, 0.0);
+
+        let baseline = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
+            .compute()
+            .unwrap();
+        let profiled = LinkBudgetAnalysis::new(
+            &scenario,
+            &f.ensemble,
+            &f.visibility,
+            plan().with_losses(plan_losses),
+        )
+        .with_site_propagation(GS, site(flat_profile(CARRIER, site_losses)))
+        .compute()
+        .unwrap();
+
+        let (baseline, profiled) = (downlink_windows(&baseline), downlink_windows(&profiled));
+        assert!(!baseline.is_empty());
+        for (a, b) in baseline.iter().zip(profiled) {
+            assert_approx_eq!(
+                (a.peak_margin() - b.peak_margin()).to_decibels(),
+                5.0,
+                atol <= 1e-9
+            );
+        }
+    }
+
+    /// A station without a profile for the plan's carrier keeps the plan's
+    /// losses, and the windows say so.
+    #[test]
+    fn test_site_profile_for_another_carrier_falls_back_to_the_plan() {
+        let f = fixture();
+        let scenario = overspecified_scenario();
+        let other_carrier = Frequency::gigahertz(26.0);
+
+        let baseline = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
+            .compute()
+            .unwrap();
+        let profiled = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
+            .with_site_propagation(GS, site(cosecant_profile(other_carrier, 5.0)))
+            .compute()
+            .unwrap();
+
+        let (baseline, profiled) = (downlink_windows(&baseline), downlink_windows(&profiled));
+        assert!(!baseline.is_empty());
+        assert_eq!(baseline.len(), profiled.len());
+        for (a, b) in baseline.iter().zip(profiled) {
+            assert_eq!(a.peak_margin(), b.peak_margin());
+            assert_eq!(a.min_margin(), b.min_margin());
+            assert_eq!(b.loss_source(), LossSource::Plan);
+        }
+    }
+
+    /// An overridden pair still gets the station's profile, at the override's
+    /// carrier.
+    #[test]
+    fn test_site_profile_applies_to_overridden_pairs() {
+        let f = fixture();
+        let scenario = overspecified_scenario();
+        let (tx_id, rx_id) = downlink_ids();
+        let override_plan = plan().with_design_margin(Decibel::decibels(1.0));
+        let analysis = |profiled: bool| {
+            let analysis = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
+                .with_override(tx_id.clone(), rx_id.clone(), override_plan.clone());
+            if profiled {
+                analysis.with_site_propagation(GS, site(cosecant_profile(CARRIER, 1.0)))
+            } else {
+                analysis
+            }
+            .compute()
+            .unwrap()
+        };
+
+        let (baseline, profiled) = (analysis(false), analysis(true));
+        let (baseline, profiled) = (downlink_windows(&baseline), downlink_windows(&profiled));
+        assert!(!baseline.is_empty());
+        for (a, b) in baseline.iter().zip(profiled) {
+            assert_eq!(b.loss_source(), LossSource::SiteProfile);
+            assert!(b.peak_margin() < a.peak_margin());
+        }
+    }
+
+    #[test]
+    fn test_site_propagation_from_covers_every_ground_station() {
+        let f = fixture();
+        let scenario = overspecified_scenario();
+        let mut visited = Vec::new();
+
+        let results = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
+            .with_site_propagation_from(|gs| {
+                visited.push(gs.id().clone());
+                Ok::<_, std::convert::Infallible>(Some(site(cosecant_profile(CARRIER, 1.0))))
+            })
+            .unwrap()
+            .compute()
+            .unwrap();
+        assert_eq!(visited, [AssetId::new(GS)]);
+        assert!(
+            downlink_windows(&results)
+                .iter()
+                .all(|w| w.loss_source() == LossSource::SiteProfile)
+        );
+
+        // `None` leaves the station on the plan's losses.
+        let results = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
+            .with_site_propagation_from(|_| Ok::<_, std::convert::Infallible>(None))
+            .unwrap()
+            .compute()
+            .unwrap();
+        assert!(
+            downlink_windows(&results)
+                .iter()
+                .all(|w| w.loss_source() == LossSource::Plan)
+        );
+
+        // The first error aborts.
+        let result = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
+            .with_site_propagation_from(|_| Err("no data"));
+        assert_eq!(result.err(), Some("no data"));
+    }
+
+    #[test]
+    fn test_site_propagation_from_keys_the_sites_by_station_id() {
+        let scenario = overspecified_scenario();
+        let propagation = site(cosecant_profile(CARRIER, 1.0));
+
+        let sites = site_propagation_from(&scenario, |_| {
+            Ok::<_, std::convert::Infallible>(Some(propagation.clone()))
+        })
+        .unwrap();
+        assert_eq!(sites, HashMap::from([(AssetId::new(GS), propagation)]));
+
+        let none =
+            site_propagation_from(&scenario, |_| Ok::<_, std::convert::Infallible>(None)).unwrap();
+        assert!(none.is_empty());
+        assert_eq!(
+            site_propagation_from(&scenario, |_| Err("no data")).err(),
+            Some("no data")
+        );
+    }
+
+    #[test]
+    fn test_site_propagation_for_an_unknown_station_is_reported() {
+        let f = fixture();
+        let scenario = overspecified_scenario();
+        let result = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
+            .with_site_propagation("cebrero", site(cosecant_profile(CARRIER, 1.0)))
+            .compute();
+        assert!(matches!(
+            result,
+            Err(LinkAnalysisError::UnknownSite(id)) if id == AssetId::new("cebrero")
+        ));
+    }
+
+    /// A profile on a link without an elevation is an error, not a silent
+    /// fallback to the plan's losses.
+    #[test]
+    fn test_profile_on_a_crosslink_is_an_error() {
+        let f = crosslink_fixture();
+        let scenario = crosslink_scenario(f, false);
+        let analysis = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan());
+        let mut links = analysis.links().unwrap();
+        let link = links.first_mut().expect("one crosslink");
+        let profile = cosecant_profile(CARRIER, 1.0);
+        link.site = Some(SiteLosses::new(&profile, link.plan));
+
+        let time = link.visibility[0].start();
+        assert!(matches!(
+            link.budget(time),
+            Err(LinkEvalError::ProfileWithoutElevation)
+        ));
+        assert_eq!(link.loss_source(), LossSource::SiteProfile);
+    }
+
+    /// A crosslink has no ground station, so its losses always come from the
+    /// plan.
+    #[test]
+    fn test_crosslinks_take_their_losses_from_the_plan() {
+        let f = crosslink_fixture();
+        let scenario = crosslink_scenario(f, false);
+        let results = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan())
+            .compute()
+            .unwrap();
+        assert!(results.total_windows() > 0);
+        assert!(
+            results
+                .all_windows()
+                .values()
+                .flatten()
+                .all(|w| w.loss_source() == LossSource::Plan)
+        );
     }
 }

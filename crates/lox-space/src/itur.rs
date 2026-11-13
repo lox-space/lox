@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-pub use lox_itur::{ItuProvider, ItuProviderError};
+pub use lox_itur::{DEFAULT_PROFILE_ELEVATIONS, ItuProvider, ItuProviderError};
 
 #[cfg(feature = "python")]
 pub mod python;

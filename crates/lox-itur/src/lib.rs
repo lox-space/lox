@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2026 Torkil Rein Gustavsen <torkilrg@ksat.no>
 //
 // SPDX-License-Identifier: MPL-2.0
 
@@ -60,7 +61,7 @@ pub mod provider;
 
 pub use provider::{ItuProvider, ItuProviderError};
 
-use lox_comms::PropagationLosses;
+use lox_comms::{AtmosphericLosses, ElevationProfile, PropagationLosses, SitePropagation};
 use lox_core::units::{Angle, Decibel, Distance, Frequency};
 
 /// Builds a serialized manifest for the packager.
@@ -76,6 +77,29 @@ pub fn manifest_for_packager(upstream: &str, grids: Vec<String>) -> Vec<u8> {
     }
     .to_json_bytes()
 }
+
+/// Default elevation grid of the profiles built by
+/// [`ItuProvider::site_propagation`]: 5°, 6°, 7.5°, 10°, 12.5°, 15°, 20°, 25°,
+/// 30°, 40°, 50°, 65°, 80° and 90°.
+///
+/// Denser towards the horizon, where the loss changes fastest; it starts at
+/// 5°, below which the ITU-R models are not valid.
+pub const DEFAULT_PROFILE_ELEVATIONS: [Angle; 14] = [
+    Angle::degrees(5.0),
+    Angle::degrees(6.0),
+    Angle::degrees(7.5),
+    Angle::degrees(10.0),
+    Angle::degrees(12.5),
+    Angle::degrees(15.0),
+    Angle::degrees(20.0),
+    Angle::degrees(25.0),
+    Angle::degrees(30.0),
+    Angle::degrees(40.0),
+    Angle::degrees(50.0),
+    Angle::degrees(65.0),
+    Angle::degrees(80.0),
+    Angle::degrees(90.0),
+];
 
 impl ItuProvider {
     /// Computes excess propagation losses on a slant path from ITU-R models.
@@ -109,6 +133,31 @@ impl ItuProvider {
         diameter: Distance,
         polarisation_tilt: Angle,
     ) -> Result<PropagationLosses, ItuProviderError> {
+        self.atmospheric_losses(
+            lat,
+            lon,
+            frequency,
+            elevation,
+            p,
+            diameter,
+            polarisation_tilt,
+        )
+        .map(PropagationLosses::from)
+    }
+
+    /// Computes the losses of [`Self::propagation_losses`] as typed
+    /// [`AtmosphericLosses`], with the same arguments.
+    #[allow(clippy::too_many_arguments)]
+    pub fn atmospheric_losses(
+        &self,
+        lat: Angle,
+        lon: Angle,
+        frequency: Frequency,
+        elevation: Angle,
+        p: f64,
+        diameter: Distance,
+        polarisation_tilt: Angle,
+    ) -> Result<AtmosphericLosses, ItuProviderError> {
         let f_ghz = frequency.to_gigahertz();
         // ITU-R P.618/P.676 approximate methods are only valid for el ≥ 5°.
         let el_deg = elevation.to_degrees().max(5.0);
@@ -158,12 +207,89 @@ impl ItuProvider {
         let a_total = a_gas + ((a_rain + a_cloud).powi(2) + a_scint.powi(2)).sqrt();
         let a_scint_eff = (a_total - a_gas - a_rain - a_cloud).max(0.0);
 
-        Ok(PropagationLosses::builder()
-            .rain(Decibel::decibels(a_rain))
-            .gaseous(Decibel::decibels(a_gas))
-            .cloud(Decibel::decibels(a_cloud))
-            .scintillation(Decibel::decibels(a_scint_eff))
-            .build()?)
+        Ok(AtmosphericLosses::new(
+            Decibel::decibels(a_rain),
+            Decibel::decibels(a_gas),
+            Decibel::decibels(a_cloud),
+            Decibel::decibels(a_scint_eff),
+        )?)
+    }
+
+    /// Tabulates [`Self::atmospheric_losses`] over a grid of elevations.
+    ///
+    /// The resulting [`ElevationProfile`] lets a link budget follow the loss
+    /// along a pass instead of applying one fixed figure. `elevations` must be
+    /// strictly increasing and lie in `(0°, 90°]`;
+    /// [`DEFAULT_PROFILE_ELEVATIONS`] is a grid on which interpolation
+    /// stays within about 1.5 % of the direct computation up to 80°, and
+    /// within 4 % from there to zenith, where P.618 rain attenuation is itself
+    /// not monotonic.
+    ///
+    /// The underlying models are only valid from 5° upwards and hold their 5°
+    /// value below it, and so does the profile: for a station tracking below
+    /// 5° the loss near the horizon is underestimated.
+    ///
+    /// The remaining arguments are those of [`Self::propagation_losses`].
+    #[allow(clippy::too_many_arguments)]
+    pub fn elevation_profile(
+        &self,
+        lat: Angle,
+        lon: Angle,
+        frequency: Frequency,
+        p: f64,
+        diameter: Distance,
+        polarisation_tilt: Angle,
+        elevations: &[Angle],
+    ) -> Result<ElevationProfile, ItuProviderError> {
+        let samples = elevations
+            .iter()
+            .map(|&elevation| {
+                self.atmospheric_losses(
+                    lat,
+                    lon,
+                    frequency,
+                    elevation,
+                    p,
+                    diameter,
+                    polarisation_tilt,
+                )
+                .map(|losses| (elevation, losses))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(ElevationProfile::new(frequency, samples)?)
+    }
+
+    /// Computes the elevation-dependent propagation losses of a site: one
+    /// [`ElevationProfile`] per carrier, on the
+    /// [`DEFAULT_PROFILE_ELEVATIONS`] grid.
+    ///
+    /// Pass the downlink and the uplink carrier to cover both directions of a
+    /// ground station in one call. The remaining arguments are those of
+    /// [`Self::propagation_losses`].
+    pub fn site_propagation(
+        &self,
+        lat: Angle,
+        lon: Angle,
+        carriers: &[Frequency],
+        p: f64,
+        diameter: Distance,
+        polarisation_tilt: Angle,
+    ) -> Result<SitePropagation, ItuProviderError> {
+        let profiles = carriers
+            .iter()
+            .map(|&carrier| {
+                self.elevation_profile(
+                    lat,
+                    lon,
+                    carrier,
+                    p,
+                    diameter,
+                    polarisation_tilt,
+                    &DEFAULT_PROFILE_ELEVATIONS,
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(SitePropagation::new(profiles)?)
     }
 }
 
@@ -250,5 +376,125 @@ mod tests {
             a_rain + a_gas + a_cloud,
             rtol <= 1e-12
         );
+    }
+
+    /// (lat°, lon°, carrier GHz, exceedance %): Madrid, Svalbard, Nemea,
+    /// Singapore and Tromsø, from heavy rain to the median.
+    const PROFILE_FIXTURES: [(f64, f64, f64, f64); 5] = [
+        (40.4, -3.7, 20.0, 1.0),
+        (78.23, 15.39, 26.0, 5.0),
+        (37.8, 22.66, 26.0, 0.1),
+        (1.3, 103.8, 8.0, 0.01),
+        (69.66, 18.94, 26.0, 50.0),
+    ];
+
+    #[test]
+    fn test_elevation_profile_matches_direct_computation_at_its_samples() {
+        let p = provider();
+        let (lat, lon) = (Angle::degrees(78.23), Angle::degrees(15.39));
+        let frequency = Frequency::gigahertz(26.0);
+        let diameter = Distance::meters(3.0);
+        let tilt = Angle::degrees(45.0);
+        let elevations = [10.0, 30.0, 60.0].map(Angle::degrees);
+
+        let profile = p
+            .elevation_profile(lat, lon, frequency, 5.0, diameter, tilt, &elevations)
+            .unwrap();
+
+        assert_eq!(profile.carrier(), frequency);
+        assert_eq!(profile.samples().len(), 3);
+        for &elevation in &elevations {
+            let direct = p
+                .atmospheric_losses(lat, lon, frequency, elevation, 5.0, diameter, tilt)
+                .unwrap();
+            assert_eq!(profile.at(elevation), direct);
+        }
+        let total = |deg: f64| profile.at(Angle::degrees(deg)).total().to_decibels();
+        assert!(total(10.0) > 2.0 * total(30.0));
+        assert!(total(30.0) > total(60.0));
+    }
+
+    #[test]
+    fn test_elevation_profile_rejects_an_invalid_grid() {
+        let p = provider();
+        let result = p.elevation_profile(
+            Angle::degrees(40.4),
+            Angle::degrees(-3.7),
+            Frequency::gigahertz(20.0),
+            1.0,
+            Distance::meters(1.2),
+            Angle::degrees(45.0),
+            &[Angle::degrees(30.0), Angle::degrees(10.0)],
+        );
+        assert!(matches!(result, Err(ItuProviderError::InvalidProfile(_))));
+    }
+
+    /// The default grid must interpolate every loss line close to the direct
+    /// model output, or a profile-driven link budget drifts from the model it
+    /// stands in for.
+    #[test]
+    fn test_site_propagation_default_grid_tracks_direct_computation() {
+        let p = provider();
+        let diameter = Distance::meters(3.0);
+        let tilt = Angle::degrees(45.0);
+        for (lat, lon, f_ghz, exceedance) in PROFILE_FIXTURES {
+            let (lat, lon) = (Angle::degrees(lat), Angle::degrees(lon));
+            let frequency = Frequency::gigahertz(f_ghz);
+            let site = p
+                .site_propagation(lat, lon, &[frequency], exceedance, diameter, tilt)
+                .unwrap();
+            let profile = site.for_carrier(frequency).unwrap();
+
+            let mut el_deg = 5.0;
+            while el_deg <= 90.0 {
+                let elevation = Angle::degrees(el_deg);
+                let direct = p
+                    .propagation_losses(lat, lon, frequency, elevation, exceedance, diameter, tilt)
+                    .unwrap()
+                    .total()
+                    .to_decibels();
+                let interpolated = profile.at(elevation).total().to_decibels();
+                // P.618 rain attenuation is not monotonic in the last few
+                // degrees before zenith, which no smooth interpolant follows.
+                let rtol = if el_deg <= 80.0 { 0.015 } else { 0.04 };
+                assert_approx_eq!(interpolated, direct, rtol <= rtol);
+                el_deg += 0.25;
+            }
+        }
+    }
+
+    #[test]
+    fn test_site_propagation_holds_one_profile_per_carrier() {
+        let p = provider();
+        let (lat, lon) = (Angle::degrees(69.66), Angle::degrees(18.94));
+        let (down, up) = (Frequency::gigahertz(26.0), Frequency::gigahertz(8.0));
+        let site = p
+            .site_propagation(
+                lat,
+                lon,
+                &[down, up],
+                5.0,
+                Distance::meters(3.0),
+                Angle::degrees(45.0),
+            )
+            .unwrap();
+        assert_eq!(site.profiles().len(), 2);
+        assert_eq!(site.for_carrier(down).unwrap().carrier(), down);
+        assert_eq!(site.for_carrier(up).unwrap().carrier(), up);
+        assert_eq!(
+            site.for_carrier(down).unwrap().samples().len(),
+            DEFAULT_PROFILE_ELEVATIONS.len()
+        );
+
+        // Two carriers too close to tell apart cannot share a site.
+        let result = p.site_propagation(
+            lat,
+            lon,
+            &[down, Frequency::gigahertz(26.1)],
+            5.0,
+            Distance::meters(3.0),
+            Angle::degrees(45.0),
+        );
+        assert!(matches!(result, Err(ItuProviderError::InvalidSite(_))));
     }
 }

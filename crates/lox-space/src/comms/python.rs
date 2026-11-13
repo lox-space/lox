@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2026 Torkil Rein Gustavsen <torkilrg@ksat.no>
 //
 // SPDX-License-Identifier: MPL-2.0
 
@@ -25,7 +26,10 @@ use lox_comms::receiver::{CascadeReceiver, NoiseStage, NoiseTempReceiver, Receiv
 use lox_comms::terminal::{EirpModel, GtModel, RxChain, RxTerminal, TxChain, TxTerminal};
 use lox_comms::transmitter::AmplifierTransmitter;
 use lox_comms::utils::{free_space_path_loss, slant_range as comms_slant_range};
-use lox_comms::{FrequencyBand, FrequencyRange, PropagationLosses};
+use lox_comms::{
+    AtmosphericLosses, ElevationProfile, FrequencyBand, FrequencyRange, PropagationLosses,
+    SitePropagation,
+};
 use lox_core::units::{Angle, Decibel};
 
 use crate::units::python::{
@@ -1166,6 +1170,247 @@ impl PyPropagationLosses {
             })
             .collect();
         format!("PropagationLosses([{}])", lines.join(", "))
+    }
+}
+
+/// The atmospheric excess losses of an Earth–space path: rain, gaseous,
+/// cloud and scintillation.
+///
+/// The fixed set of elevation-dependent losses tabulated by an
+/// `ElevationProfile`.
+///
+/// Args:
+///     rain: Rain attenuation. Defaults to 0 dB.
+///     gaseous: Gaseous absorption. Defaults to 0 dB.
+///     cloud: Cloud attenuation. Defaults to 0 dB.
+///     scintillation: Scintillation loss. Defaults to 0 dB.
+///
+/// Raises:
+///     ValueError: If a value is negative or not finite.
+#[pyclass(
+    name = "AtmosphericLosses",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
+#[derive(Debug, Clone)]
+pub struct PyAtmosphericLosses(pub AtmosphericLosses);
+
+#[pymethods]
+impl PyAtmosphericLosses {
+    #[new]
+    #[pyo3(signature = (rain=None, gaseous=None, cloud=None, scintillation=None))]
+    fn new(
+        rain: Option<PyDecibel>,
+        gaseous: Option<PyDecibel>,
+        cloud: Option<PyDecibel>,
+        scintillation: Option<PyDecibel>,
+    ) -> PyResult<Self> {
+        let value = |v: Option<PyDecibel>| v.map_or(Decibel::decibels(0.0), |v| v.0);
+        AtmosphericLosses::new(
+            value(rain),
+            value(gaseous),
+            value(cloud),
+            value(scintillation),
+        )
+        .map(Self)
+        .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// Rain attenuation.
+    #[getter]
+    fn rain(&self) -> PyDecibel {
+        PyDecibel(self.0.rain())
+    }
+
+    /// Gaseous absorption.
+    #[getter]
+    fn gaseous(&self) -> PyDecibel {
+        PyDecibel(self.0.gaseous())
+    }
+
+    /// Cloud attenuation.
+    #[getter]
+    fn cloud(&self) -> PyDecibel {
+        PyDecibel(self.0.cloud())
+    }
+
+    /// Scintillation loss.
+    #[getter]
+    fn scintillation(&self) -> PyDecibel {
+        PyDecibel(self.0.scintillation())
+    }
+
+    /// Returns the total atmospheric loss.
+    fn total(&self) -> PyDecibel {
+        PyDecibel(self.0.total())
+    }
+
+    /// Returns the absorptive part — rain, gaseous and cloud — which also
+    /// raises the receive antenna noise temperature.
+    fn absorptive(&self) -> PyDecibel {
+        PyDecibel(self.0.absorptive())
+    }
+
+    /// Returns these losses as PropagationLosses with four lines: rain,
+    /// gaseous, cloud and scintillation.
+    fn to_propagation_losses(&self) -> PyPropagationLosses {
+        PyPropagationLosses(self.0.into())
+    }
+
+    fn __eq__(&self, other: &PyAtmosphericLosses) -> bool {
+        self.0 == other.0
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "AtmosphericLosses(rain={}, gaseous={}, cloud={}, scintillation={})",
+            self.rain().__repr__(),
+            self.gaseous().__repr__(),
+            self.cloud().__repr__(),
+            self.scintillation().__repr__(),
+        )
+    }
+}
+
+/// Propagation losses of one site at one carrier, as a function of elevation.
+///
+/// Tabulates `AtmosphericLosses` over a grid of elevations and interpolates
+/// between them, linearly in the cosecant of the elevation. Outside the grid
+/// the profile holds its end values. A single sample yields an
+/// elevation-independent profile.
+///
+/// Args:
+///     carrier: The carrier frequency the profile was computed for.
+///     samples: (elevation, losses) pairs. The elevations must be strictly
+///         increasing and lie in (0°, 90°].
+///
+/// Raises:
+///     ValueError: If the samples do not form a valid profile.
+#[pyclass(
+    name = "ElevationProfile",
+    module = "lox_space",
+    frozen,
+    from_py_object
+)]
+#[derive(Debug, Clone)]
+pub struct PyElevationProfile(pub ElevationProfile);
+
+#[pymethods]
+impl PyElevationProfile {
+    #[new]
+    fn new(carrier: PyFrequency, samples: Vec<(PyAngle, PyAtmosphericLosses)>) -> PyResult<Self> {
+        let samples = samples
+            .into_iter()
+            .map(|(elevation, losses)| (elevation.0, losses.0))
+            .collect();
+        ElevationProfile::new(carrier.0, samples)
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// The carrier frequency the profile was computed for.
+    #[getter]
+    fn carrier(&self) -> PyFrequency {
+        PyFrequency(self.0.carrier())
+    }
+
+    /// The (elevation, losses) samples in increasing elevation.
+    #[getter]
+    fn samples(&self) -> Vec<(PyAngle, PyAtmosphericLosses)> {
+        self.0
+            .samples()
+            .iter()
+            .map(|(elevation, losses)| (PyAngle(*elevation), PyAtmosphericLosses(*losses)))
+            .collect()
+    }
+
+    /// Returns the losses at the given elevation.
+    ///
+    /// Args:
+    ///     elevation: Elevation angle.
+    ///
+    /// Returns:
+    ///     AtmosphericLosses interpolated between the neighbouring samples.
+    fn at(&self, elevation: PyAngle) -> PyAtmosphericLosses {
+        PyAtmosphericLosses(self.0.at(elevation.0))
+    }
+
+    fn __eq__(&self, other: &PyElevationProfile) -> bool {
+        self.0 == other.0
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "ElevationProfile({:.3} GHz, {} samples)",
+            self.0.carrier().to_gigahertz(),
+            self.0.samples().len()
+        )
+    }
+}
+
+/// The elevation-dependent propagation losses of one ground site: one
+/// `ElevationProfile` per carrier.
+///
+/// A link looks its profile up by carrier, within a 1 % tolerance, so a site
+/// typically carries one profile for the downlink carrier and one for the
+/// uplink carrier.
+///
+/// Args:
+///     profiles: The profiles of the site.
+///
+/// Raises:
+///     ValueError: If two profiles describe carriers within 1 % of each other.
+#[pyclass(name = "SitePropagation", module = "lox_space", frozen, from_py_object)]
+#[derive(Debug, Clone)]
+pub struct PySitePropagation(pub SitePropagation);
+
+#[pymethods]
+impl PySitePropagation {
+    #[new]
+    fn new(profiles: Vec<PyElevationProfile>) -> PyResult<Self> {
+        SitePropagation::new(profiles.into_iter().map(|p| p.0).collect())
+            .map(Self)
+            .map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// The profiles of this site.
+    #[getter]
+    fn profiles(&self) -> Vec<PyElevationProfile> {
+        self.0
+            .profiles()
+            .iter()
+            .cloned()
+            .map(PyElevationProfile)
+            .collect()
+    }
+
+    /// Returns the profile describing a carrier.
+    ///
+    /// Args:
+    ///     carrier: Carrier frequency.
+    ///
+    /// Returns:
+    ///     The nearest ElevationProfile within 1 % of the carrier, or None.
+    fn for_carrier(&self, carrier: PyFrequency) -> Option<PyElevationProfile> {
+        self.0
+            .for_carrier(carrier.0)
+            .cloned()
+            .map(PyElevationProfile)
+    }
+
+    fn __eq__(&self, other: &PySitePropagation) -> bool {
+        self.0 == other.0
+    }
+
+    fn __repr__(&self) -> String {
+        let carriers: Vec<String> = self
+            .0
+            .profiles()
+            .iter()
+            .map(|p| format!("{:.3} GHz", p.carrier().to_gigahertz()))
+            .collect();
+        format!("SitePropagation([{}])", carriers.join(", "))
     }
 }
 

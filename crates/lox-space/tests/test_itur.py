@@ -1,9 +1,11 @@
 # SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+# SPDX-FileCopyrightText: 2026 Torkil Rein Gustavsen <torkilrg@ksat.no>
 #
 # SPDX-License-Identifier: MPL-2.0
 
 """Tests for ITU-R atmospheric propagation models."""
 
+import math
 import os
 import pathlib
 
@@ -239,3 +241,76 @@ def test_pressure_unit():
     p = 1013.25 * lox.hPa
     assert abs(p.to_hectopascals() - 1013.25) < 1e-6
     assert abs(p.to_pascals() - 101325.0) < 0.1
+
+
+def test_elevation_profile_matches_propagation_losses(itur_provider):
+    """A profile holds the direct model output at each of its elevations."""
+    site = {"lat": 78.23 * lox.deg, "lon": 15.39 * lox.deg}
+    link = {
+        "frequency": 26.0 * lox.GHz,
+        "probability": 5.0,
+        "diameter": 3.0 * lox.m,
+    }
+    elevations = [10.0 * lox.deg, 30.0 * lox.deg]
+
+    profile = itur_provider.elevation_profile(**site, **link, elevations=elevations)
+
+    assert profile.carrier.to_gigahertz() == pytest.approx(26.0)
+    for elevation in elevations:
+        direct = itur_provider.propagation_losses(**site, **link, elevation=elevation)
+        assert profile.at(elevation).to_propagation_losses() == direct
+    # The loss grows steeply towards the horizon.
+    low = profile.at(10.0 * lox.deg).total().to_decibels()
+    high = profile.at(30.0 * lox.deg).total().to_decibels()
+    assert low > 2.0 * high
+
+
+def test_elevation_profile_default_grid_and_invalid_grid(itur_provider):
+    args = {
+        "lat": 40.4 * lox.deg,
+        "lon": -3.7 * lox.deg,
+        "frequency": 20.0 * lox.GHz,
+        "probability": 1.0,
+        "diameter": 1.2 * lox.m,
+    }
+    profile = itur_provider.elevation_profile(**args)
+    elevations = [el.to_degrees() for el, _ in profile.samples]
+    assert len(elevations) == 14
+    assert elevations[0] == pytest.approx(5.0)
+    assert elevations[-1] == pytest.approx(90.0)
+
+    with pytest.raises(ValueError, match="strictly increasing"):
+        itur_provider.elevation_profile(
+            **args, elevations=[30.0 * lox.deg, 10.0 * lox.deg]
+        )
+
+
+def test_elevation_profile_reports_model_failures(itur_provider):
+    """A model failure is a RuntimeError, unlike an invalid grid."""
+    with pytest.raises(RuntimeError, match="must be finite and non-negative"):
+        itur_provider.elevation_profile(
+            lat=math.nan * lox.deg,
+            lon=-3.7 * lox.deg,
+            frequency=20.0 * lox.GHz,
+            probability=1.0,
+            diameter=1.2 * lox.m,
+        )
+
+
+def test_site_propagation_has_one_profile_per_carrier(itur_provider):
+    args = {
+        "lat": 69.66 * lox.deg,
+        "lon": 18.94 * lox.deg,
+        "probability": 5.0,
+        "diameter": 3.0 * lox.m,
+    }
+    site = itur_provider.site_propagation(
+        **args, carriers=[26.0 * lox.GHz, 8.0 * lox.GHz]
+    )
+    assert len(site.profiles) == 2
+    assert site.for_carrier(8.0 * lox.GHz).carrier.to_gigahertz() == pytest.approx(8.0)
+
+    with pytest.raises(ValueError, match="overlap"):
+        itur_provider.site_propagation(
+            **args, carriers=[26.0 * lox.GHz, 26.1 * lox.GHz]
+        )

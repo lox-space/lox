@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+# SPDX-FileCopyrightText: 2026 Torkil Rein Gustavsen <torkilrg@ksat.no>
 #
 # SPDX-License-Identifier: MPL-2.0
 
@@ -1861,3 +1862,95 @@ def test_antenna_and_pattern_pickle_round_trips():
     receiver = lox.NoiseTempReceiver(noise_temperature=500.0 * lox.K)
     restored = pickle.loads(pickle.dumps(receiver))
     assert restored == receiver
+
+
+# ---------------------------------------------------------------------------
+# AtmosphericLosses / ElevationProfile / SitePropagation
+# ---------------------------------------------------------------------------
+
+
+def _gas(db):
+    return lox.AtmosphericLosses(gaseous=db * lox.dB)
+
+
+class TestAtmosphericLosses:
+    def test_accessors_and_defaults(self):
+        losses = lox.AtmosphericLosses(rain=2.0 * lox.dB, scintillation=0.3 * lox.dB)
+        assert losses.rain.to_decibels() == pytest.approx(2.0)
+        assert losses.gaseous.to_decibels() == 0.0
+        assert losses.cloud.to_decibels() == 0.0
+        assert losses.scintillation.to_decibels() == pytest.approx(0.3)
+        assert losses.total().to_decibels() == pytest.approx(2.3)
+        assert losses.absorptive().to_decibels() == pytest.approx(2.0)
+        assert losses == lox.AtmosphericLosses(
+            rain=2.0 * lox.dB, scintillation=0.3 * lox.dB
+        )
+        assert repr(losses).startswith("AtmosphericLosses(rain=")
+
+    def test_converts_to_propagation_losses(self):
+        losses = lox.AtmosphericLosses(rain=2.0 * lox.dB, gaseous=0.5 * lox.dB)
+        assert losses.to_propagation_losses() == lox.PropagationLosses(
+            rain=2.0 * lox.dB,
+            gaseous=0.5 * lox.dB,
+            cloud=0.0 * lox.dB,
+            scintillation=0.0 * lox.dB,
+        )
+
+    def test_negative_values_are_rejected(self):
+        with pytest.raises(ValueError, match="Rain attenuation"):
+            lox.AtmosphericLosses(rain=-1.0 * lox.dB)
+
+
+def _profile(carrier_ghz=26.0):
+    return lox.ElevationProfile(
+        carrier_ghz * lox.GHz,
+        [(10.0 * lox.deg, _gas(4.0)), (30.0 * lox.deg, _gas(1.5))],
+    )
+
+
+class TestElevationProfile:
+    def test_accessors(self):
+        profile = _profile()
+        assert profile.carrier.to_gigahertz() == pytest.approx(26.0)
+        assert [el.to_degrees() for el, _ in profile.samples] == pytest.approx(
+            [10.0, 30.0]
+        )
+        assert repr(profile) == "ElevationProfile(26.000 GHz, 2 samples)"
+        assert profile == _profile()
+
+    def test_exact_at_samples_and_clamped_outside(self):
+        profile = _profile()
+        assert profile.at(10.0 * lox.deg) == _gas(4.0)
+        assert profile.at(30.0 * lox.deg) == _gas(1.5)
+        assert profile.at(2.0 * lox.deg) == _gas(4.0)
+        assert profile.at(80.0 * lox.deg) == _gas(1.5)
+
+    def test_interpolates_between_samples(self):
+        total = _profile().at(20.0 * lox.deg).total().to_decibels()
+        assert 1.5 < total < 4.0
+
+    def test_invalid_samples_are_rejected(self):
+        with pytest.raises(ValueError, match="at least one sample"):
+            lox.ElevationProfile(26.0 * lox.GHz, [])
+        with pytest.raises(ValueError, match="strictly increasing"):
+            lox.ElevationProfile(
+                26.0 * lox.GHz,
+                [(30.0 * lox.deg, _gas(1.5)), (10.0 * lox.deg, _gas(4.0))],
+            )
+
+
+class TestSitePropagation:
+    def test_lookup_by_carrier(self):
+        site = lox.SitePropagation([_profile(26.0), _profile(8.0)])
+        assert len(site.profiles) == 2
+        assert site.for_carrier(26.0 * lox.GHz) == _profile(26.0)
+        # Within the 1 % tolerance.
+        assert site.for_carrier(26.2 * lox.GHz) == _profile(26.0)
+        assert site.for_carrier(2.2 * lox.GHz) is None
+        assert repr(site) == "SitePropagation([26.000 GHz, 8.000 GHz])"
+        assert site == lox.SitePropagation([_profile(26.0), _profile(8.0)])
+        assert site != lox.SitePropagation([_profile(26.0)])
+
+    def test_overlapping_carriers_are_rejected(self):
+        with pytest.raises(ValueError, match="overlap"):
+            lox.SitePropagation([_profile(26.0), _profile(26.1)])

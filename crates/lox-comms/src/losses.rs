@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+// SPDX-FileCopyrightText: 2026 Torkil Rein Gustavsen <torkilrg@ksat.no>
 //
 // SPDX-License-Identifier: MPL-2.0
 
 //! Itemized excess propagation losses.
 
 use std::fmt::{Display, Formatter, Result};
+use std::sync::Arc;
 
 use lox_core::units::Decibel;
 
@@ -46,6 +48,15 @@ impl LossKind {
             Self::Scintillation | Self::Depolarization => false,
             Self::Other { absorptive, .. } => *absorptive,
         }
+    }
+
+    /// Returns whether this loss belongs to the fixed atmospheric set
+    /// described by [`AtmosphericLosses`].
+    pub fn is_atmospheric(&self) -> bool {
+        matches!(
+            self,
+            Self::Rain | Self::Gaseous | Self::Cloud | Self::Scintillation
+        )
     }
 
     /// Returns the budget line label, e.g. `"Rain attenuation"`.
@@ -130,21 +141,27 @@ impl LossLine {
 /// them to the figures they need — [`Self::total`] for carrier attenuation
 /// and [`Self::absorptive`] for sky-noise degradation. Lines keep their
 /// insertion order for reporting.
+///
+/// Cloning is cheap: the lines are shared, not copied. A link analysis
+/// carries the same losses into every sample of every budget, so a clone must
+/// not cost an allocation.
 #[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PropagationLosses {
-    lines: Vec<LossLine>,
+    lines: Arc<[LossLine]>,
 }
 
 impl PropagationLosses {
     /// Returns zero propagation losses.
     pub fn none() -> Self {
-        Self { lines: Vec::new() }
+        Self::default()
     }
 
     /// Creates propagation losses from a list of lines.
     pub fn new(lines: Vec<LossLine>) -> Self {
-        Self { lines }
+        Self {
+            lines: lines.into(),
+        }
     }
 
     /// Starts building propagation losses line by line.
@@ -174,6 +191,184 @@ impl PropagationLosses {
     /// Returns the loss lines in insertion order.
     pub fn lines(&self) -> &[LossLine] {
         &self.lines
+    }
+
+    /// Replaces the atmospheric part of these losses.
+    ///
+    /// Drops every rain, gaseous, cloud and scintillation line and appends
+    /// the four lines of `atmospheric`. Other lines — a pointing margin, a
+    /// radome loss — are kept, so a site model can supersede the atmospheric
+    /// lines of a fixed budget without double-counting them or discarding
+    /// the rest.
+    ///
+    /// Equivalent to [`Self::without_atmospheric`] followed by
+    /// [`Self::append_atmospheric`]; when the same losses are merged with many
+    /// different `atmospheric` values, do the former once and the latter per
+    /// value.
+    pub fn with_atmospheric(&self, atmospheric: AtmosphericLosses) -> Self {
+        self.without_atmospheric().append_atmospheric(atmospheric)
+    }
+
+    /// Returns these losses without their atmospheric part: every rain,
+    /// gaseous, cloud and scintillation line is dropped, the others are kept
+    /// in order.
+    pub fn without_atmospheric(&self) -> Self {
+        let lines = self
+            .lines
+            .iter()
+            .filter(|line| !line.kind.is_atmospheric())
+            .cloned()
+            .collect();
+        Self { lines }
+    }
+
+    /// Returns these losses followed by the four lines of `atmospheric`.
+    ///
+    /// Existing atmospheric lines are kept and would be counted twice; use
+    /// [`Self::with_atmospheric`] to replace them, or call this on the result
+    /// of [`Self::without_atmospheric`].
+    pub fn append_atmospheric(&self, atmospheric: AtmosphericLosses) -> Self {
+        // Both halves know their length, so the lines are collected into
+        // their shared allocation directly.
+        let lines = self
+            .lines
+            .iter()
+            .cloned()
+            .chain(atmospheric.lines())
+            .collect();
+        Self { lines }
+    }
+}
+
+impl From<AtmosphericLosses> for PropagationLosses {
+    fn from(atmospheric: AtmosphericLosses) -> Self {
+        Self {
+            lines: atmospheric.lines().into(),
+        }
+    }
+}
+
+/// The atmospheric excess losses of an Earth–space path: rain, gaseous,
+/// cloud and scintillation.
+///
+/// The fixed set of elevation-dependent losses, as produced by the ITU-R
+/// models in `lox-itur`. Each value is valid by construction (finite,
+/// ≥ 0 dB). Converts into [`PropagationLosses`] as four lines in the order
+/// rain, gaseous, cloud, scintillation.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(try_from = "AtmosphericLossesRepr")
+)]
+pub struct AtmosphericLosses {
+    rain: Decibel,
+    gaseous: Decibel,
+    cloud: Decibel,
+    scintillation: Decibel,
+}
+
+/// Serde wire format for [`AtmosphericLosses`]: forces deserialization
+/// through the validated constructor.
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+struct AtmosphericLossesRepr {
+    rain: Decibel,
+    gaseous: Decibel,
+    cloud: Decibel,
+    scintillation: Decibel,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<AtmosphericLossesRepr> for AtmosphericLosses {
+    type Error = PropagationLossError;
+
+    fn try_from(repr: AtmosphericLossesRepr) -> core::result::Result<Self, Self::Error> {
+        AtmosphericLosses::new(repr.rain, repr.gaseous, repr.cloud, repr.scintillation)
+    }
+}
+
+impl AtmosphericLosses {
+    /// Creates atmospheric losses.
+    ///
+    /// Rejects non-finite and negative values — a gain is not a loss.
+    pub fn new(
+        rain: Decibel,
+        gaseous: Decibel,
+        cloud: Decibel,
+        scintillation: Decibel,
+    ) -> core::result::Result<Self, PropagationLossError> {
+        let losses = Self {
+            rain,
+            gaseous,
+            cloud,
+            scintillation,
+        };
+        for (kind, value) in losses.entries() {
+            LossLine::new(kind, value)?;
+        }
+        Ok(losses)
+    }
+
+    /// Returns the rain attenuation.
+    pub fn rain(&self) -> Decibel {
+        self.rain
+    }
+
+    /// Returns the gaseous absorption.
+    pub fn gaseous(&self) -> Decibel {
+        self.gaseous
+    }
+
+    /// Returns the cloud attenuation.
+    pub fn cloud(&self) -> Decibel {
+        self.cloud
+    }
+
+    /// Returns the scintillation loss.
+    pub fn scintillation(&self) -> Decibel {
+        self.scintillation
+    }
+
+    /// Returns the total atmospheric loss.
+    pub fn total(&self) -> Decibel {
+        self.absorptive() + self.scintillation
+    }
+
+    /// Returns the absorptive part — rain, gaseous and cloud — which also
+    /// raises the receive antenna noise temperature.
+    pub fn absorptive(&self) -> Decibel {
+        self.rain + self.gaseous + self.cloud
+    }
+
+    fn entries(&self) -> [(LossKind, Decibel); 4] {
+        [
+            (LossKind::Rain, self.rain),
+            (LossKind::Gaseous, self.gaseous),
+            (LossKind::Cloud, self.cloud),
+            (LossKind::Scintillation, self.scintillation),
+        ]
+    }
+
+    fn lines(&self) -> [LossLine; 4] {
+        self.entries().map(|(kind, value)| LossLine { kind, value })
+    }
+
+    /// Blends value by value towards `other`: `t = 0` yields `self`, `t = 1`
+    /// yields `other`. With `t` in `[0, 1]` the result is a convex
+    /// combination of valid values.
+    pub(crate) fn lerp(&self, other: &Self, t: f64) -> Self {
+        debug_assert!((0.0..=1.0).contains(&t));
+        let blend = |a: Decibel, b: Decibel| {
+            let (a, b) = (a.to_decibels(), b.to_decibels());
+            Decibel::decibels(a + t * (b - a))
+        };
+        Self {
+            rain: blend(self.rain, other.rain),
+            gaseous: blend(self.gaseous, other.gaseous),
+            cloud: blend(self.cloud, other.cloud),
+            scintillation: blend(self.scintillation, other.scintillation),
+        }
     }
 }
 
@@ -346,6 +541,94 @@ mod tests {
         assert_eq!(LossKind::Gaseous.label(), "Gaseous absorption");
         let err = LossLine::new(LossKind::Cloud, Decibel::decibels(-1.0)).unwrap_err();
         assert!(err.to_string().contains("Cloud attenuation"));
+    }
+
+    fn atmospheric() -> AtmosphericLosses {
+        AtmosphericLosses::new(2.0.db(), 0.5.db(), 0.2.db(), 0.3.db()).unwrap()
+    }
+
+    #[test]
+    fn test_atmospheric_losses_convert_to_the_p618_lines() {
+        let atmospheric = atmospheric();
+        assert_eq!(PropagationLosses::from(atmospheric), p618_losses());
+        assert_approx_eq!(atmospheric.total().to_decibels(), 3.0, atol <= 1e-12);
+        assert_approx_eq!(atmospheric.absorptive().to_decibels(), 2.7, atol <= 1e-12);
+    }
+
+    #[test]
+    fn test_atmospheric_losses_reject_negative_and_non_finite() {
+        for value in [-0.1, f64::NAN, f64::INFINITY] {
+            let err =
+                AtmosphericLosses::new(0.0.db(), 0.0.db(), Decibel::decibels(value), 0.0.db())
+                    .unwrap_err();
+            assert!(err.to_string().contains("Cloud attenuation"));
+        }
+        assert_eq!(
+            AtmosphericLosses::new(0.0.db(), 0.0.db(), 0.0.db(), 0.0.db()),
+            Ok(AtmosphericLosses::default())
+        );
+    }
+
+    #[test]
+    fn test_with_atmospheric_replaces_atmospheric_lines_and_keeps_the_rest() {
+        let plan = PropagationLosses::builder()
+            .other("Pointing margin", 0.4.db(), false)
+            .rain(9.0.db())
+            .rain(9.0.db())
+            .depolarization(0.1.db())
+            .gaseous(9.0.db())
+            .build()
+            .unwrap();
+
+        let merged = plan.with_atmospheric(atmospheric());
+
+        let labels: Vec<_> = merged.lines().iter().map(|l| l.kind().label()).collect();
+        assert_eq!(
+            labels,
+            [
+                "Pointing margin",
+                "Depolarization",
+                "Rain attenuation",
+                "Gaseous absorption",
+                "Cloud attenuation",
+                "Scintillation"
+            ]
+        );
+        assert_approx_eq!(merged.total().to_decibels(), 3.5, atol <= 1e-12);
+        assert_eq!(
+            PropagationLosses::none().with_atmospheric(atmospheric()),
+            p618_losses()
+        );
+    }
+
+    #[test]
+    fn test_without_then_append_atmospheric_equals_with_atmospheric() {
+        let plan = PropagationLosses::builder()
+            .other("Pointing margin", 0.4.db(), false)
+            .rain(9.0.db())
+            .depolarization(0.1.db())
+            .scintillation(9.0.db())
+            .build()
+            .unwrap();
+
+        let fixed = plan.without_atmospheric();
+
+        let labels: Vec<_> = fixed.lines().iter().map(|l| l.kind().label()).collect();
+        assert_eq!(labels, ["Pointing margin", "Depolarization"]);
+        assert_eq!(
+            fixed.append_atmospheric(atmospheric()),
+            plan.with_atmospheric(atmospheric())
+        );
+        // Appending does not replace: the plan's own lines are kept.
+        assert_eq!(plan.append_atmospheric(atmospheric()).lines().len(), 8);
+    }
+
+    #[test]
+    fn test_propagation_losses_clones_share_their_lines() {
+        let losses = p618_losses();
+        let clone = losses.clone();
+        assert_eq!(losses, clone);
+        assert!(std::ptr::eq(losses.lines(), clone.lines()));
     }
 
     #[cfg(feature = "serde")]

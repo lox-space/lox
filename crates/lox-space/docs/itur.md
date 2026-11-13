@@ -1,5 +1,6 @@
 <!--
 SPDX-FileCopyrightText: 2026 Helge Eichhorn <git@helgeeichhorn.de>
+SPDX-FileCopyrightText: 2026 Torkil Rein Gustavsen <torkilrg@ksat.no>
 
 SPDX-License-Identifier: MPL-2.0
 -->
@@ -180,6 +181,48 @@ budget = lox.LinkBudget(
     carrier=29.0 * lox.GHz,
     range=1000.0 * lox.km,
     losses=losses,
+)
+```
+
+## Elevation Profiles
+
+Along a pass the elevation — and with it the loss — changes continuously, so the
+provider can tabulate the atmospheric losses over a grid of elevations into an `ElevationProfile`,
+which interpolates between its samples:
+
+```python
+profile = provider.elevation_profile(
+    lat=78.23 * lox.deg,
+    lon=15.39 * lox.deg,
+    frequency=26.0 * lox.GHz,
+    probability=5.0,
+    diameter=3.0 * lox.m,
+)
+
+for elevation in (5.0, 10.0, 30.0):
+    total = profile.at(elevation * lox.deg).total()
+    print(f"{elevation:4.0f} deg: {total.to_decibels():.2f} dB")
+```
+
+`at` returns `AtmosphericLosses` — the rain, gaseous, cloud and scintillation
+values as typed fields; `to_propagation_losses()` turns them into the itemized
+`PropagationLosses` a `LinkBudget` takes.
+
+The default grid has 14 elevations from 5° to 90°, denser towards the horizon;
+interpolation on it stays within about 1.5 % of the direct computation up to
+80°. Pass `elevations` for a grid of your own.
+
+`site_propagation` builds one profile per carrier in a single call — typically
+the downlink and the uplink carrier of a ground station. The result plugs into
+[`LinkBudgetAnalysis`](link-budget.md#losses-that-follow-the-elevation):
+
+```python
+site = provider.site_propagation(
+    lat=78.23 * lox.deg,
+    lon=15.39 * lox.deg,
+    carriers=[26.0 * lox.GHz, 7.2 * lox.GHz],
+    probability=5.0,
+    diameter=3.0 * lox.m,
 )
 ```
 
