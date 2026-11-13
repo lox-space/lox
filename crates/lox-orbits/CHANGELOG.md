@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.42](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.41...lox-orbits-v0.1.0-alpha.42) - 2026-11-13
+
+### Added
+
+- *(lox-core)* [**breaking**] add SpecificEnergy and SpecificAngularMomentum
+- *(lox-core)* [**breaking**] add runtime unit enums, unit parsing, and SI display
+- *(lox-orbits)* [**breaking**] add equinoctial orbit types and Python bindings
+- *(lox-core)* [**breaking**] limit trajectory extrapolation and sample interval ends
+- *(lox-space)* accept semi_parameter in the Keplerian constructor
+- *(lox-core)* [**breaking**] validate every Keplerian element set
+- *(lox-core)* [**breaking**] return Option from Keplerian::semi_major_axis
+- *(lox-orbits)* add derived quantities to KeplerianOrbit
+- *(lox-core)* [**breaking**] store the semi-parameter in Keplerian
+
+### Fixed
+
+- *(lox-orbits)* check the frame before the origin in Vallado::try_new
+- *(lox-orbits)* [**breaking**] validate the frame when deserializing element orbits
+- *(lox-core)* [**breaking**] report Kepler's equation failures instead of panicking
+- *(lox-core)* [**breaking**] validate every equinoctial conversion
+- *(lox-orbits)* [**breaking**] reject rotating frames in Cartesian to Keplerian conversions
+- *(lox-orbits)* [**breaking**] reject precomputed trajectories that do not cover the interval
+- *(lox-orbits)* clamp trajectory resampling to its own states
+- *(lox-orbits)* preserve extrapolation limit in propagate_to and Python conversions
+- *(lox-orbits)* [**breaking**] return validation errors from trajectory importers and drop Trajectory::new
+- *(lox-core)* [**breaking**] validate trajectory states and drop panicking FromIterator impls
+- *(lox-orbits)* keep the epoch inside traced trajectories
+- *(lox-space)* clean up feature gates
+- *(lox-core)* [**breaking**] reject NaN and infinity in element and geodetic validators
+
+### Other
+
+- *(lox-orbits)* [**breaking**] stop leaking sgp4 error types from Sgp4Error
+- *(lox-time)* [**breaking**] re-export TimeDelta at the crate root
+- *(lox-core,lox-time)* [**breaking**] move calendar, Julian date and civil time types to lox-time
+- *(lox-orbits,lox-analysis)* drop module docs duplicated on mod declarations
+- *(lox-core)* [**breaking**] trim TimeDelta constructors and decouple Julian dates
+- *(lox-core)* [**breaking**] move the literal traits into units::literals
+- *(lox-core)* [**breaking**] merge the numeric constant modules into time::constants
+- *(lox-core)* [**breaking**] give GravitationalParameter the named-unit API
+- *(lox-core)* [**breaking**] rework angle wrapping and sexagesimal angles
+- *(lox-core)* [**breaking**] give all unit types a uniform named-unit API
+- document the physical-state requirement of the Cartesian conversions
+- *(lox-orbits)* note that Orbit::from_state does not check the frame
+- *(lox-orbits)* state the frame requirement of each orbital state type once
+- *(lox-orbits)* [**breaking**] take KeplerianOrbit in J2/J4 propagator constructors
+- *(lox-orbits)* inline trajectory lookups and build out-of-range errors lazily
+- *(lox-core)* [**breaking**] make CartesianTrajectory internals private and times relative
+- explain the mean motion discontinuity at the parabolic threshold
+- [**breaking**] rename perigee to periapsis
+- remove unnecessary Seconds type
+- repair changelogs broken by SPDX headers
+
 ## [0.1.0-alpha.41](https://github.com/lox-space/lox/compare/lox-orbits-v0.1.0-alpha.40...lox-orbits-v0.1.0-alpha.41) - 2026-10-14
 
 ### Added

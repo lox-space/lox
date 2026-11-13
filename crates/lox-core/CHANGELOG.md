@@ -7,6 +7,103 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.17](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.16...lox-core-v0.1.0-alpha.17) - 2026-11-13
+
+### Added
+
+- *(lox-core)* add fallible TimeDelta quotients of data volume, distance and angle
+- *(lox-core)* add an SI constant to the unit enums
+- *(lox-core)* add TimeDeltaUnit
+- *(lox-core)* [**breaking**] add typed physical constants
+- *(lox-core)* [**breaking**] add SpecificEnergy and SpecificAngularMomentum
+- *(lox-core)* add operators relating unit dimensions
+- *(lox-core)* add DataRate and DataVolume
+- *(lox-core)* [**breaking**] add DecibelWatts for absolute power levels
+- *(lox-core)* [**breaking**] add runtime unit enums, unit parsing, and SI display
+- *(lox-core)* [**breaking**] require physical Cartesian states for conversions to orbital elements
+- *(lox-core)* [**breaking**] add oriented bracket entry points to the bracketed root finders
+- *(lox-core)* [**breaking**] accept an initial guess in the bracketed root finders
+- *(lox-core)* add a safeguarded Halley root finder
+- *(lox-core)* [**breaking**] rework equinoctial elements and their conversion graph
+- *(lox-core)* [**breaking**] limit trajectory extrapolation and sample interval ends
+- *(lox-core)* add remaining float funcs
+- *(lox-approx)* compare periodic element angles modulo 2π
+- *(lox-core)* [**breaking**] validate every Keplerian element set
+- *(lox-core)* [**breaking**] return Option from Keplerian::semi_major_axis
+- *(lox-core)* [**breaking**] store the semi-parameter in Keplerian
+- *(lox-core)* add as_angle to element angle types
+
+### Fixed
+
+- *(lox-core)* panic on overflow in TimeDelta constructors and negation
+- *(lox-core)* handle short slices in Diff::diff
+- *(lox-core)* pivot in the tridiagonal solver
+- *(lox-core)* return NaN from Series::interpolate for NaN and document the spline
+- *(lox-core)* [**breaking**] make the anomaly conversions robust for open orbits
+- *(lox-core,lox-time)* [**breaking**] convert TimeDelta to chrono::TimeDelta as a duration
+- *(lox-core)* keep the safeguarded root finders exact at the limits of the float range
+- *(lox-core)* [**breaking**] report an invalid eccentricity vector separately from a failed Kepler solve
+- *(lox-core)* reject Cartesian states whose position magnitude overflows
+- *(lox-core)* report every Kepler solver failure as an error
+- *(lox-core)* avoid overflow in the safeguarded root finders
+- *(lox-core)* reject Cartesian states whose angular momentum overflows
+- *(lox-core)* [**breaking**] report Kepler's equation failures instead of panicking
+- *(lox-core)* share the safeguarded iteration of the bracketed root finders
+- *(lox-core)* raise the iteration cap of the Kepler solver
+- *(lox-core)* [**breaking**] validate every equinoctial conversion
+- *(lox-core)* [**breaking**] validate Series and CartesianTrajectory on construction and deserialization
+- *(lox-core)* handle empty and 1x1 tridiagonal matrices
+- *(lox-core)* [**breaking**] validate trajectory states and drop panicking FromIterator impls
+- *(lox-approx)* make periodic comparisons robust to overflow and rounding
+- *(lox-orbits)* keep the epoch inside traced trajectories
+- *(lox-core)* normalise node and periapsis angles in KeplerianBuilder
+- *(lox-core)* correct Halley step and initial guess in Kepler solver
+- *(lox-core)* [**breaking**] reject NaN and infinity in element and geodetic validators
+
+### Other
+
+- Split `LinkWindow` into parts, one for each rate
+- *(lox-core)* [**breaking**] flatten the lox_core::time module
+- *(lox-core,lox-time)* [**breaking**] move calendar, Julian date and civil time types to lox-time
+- *(lox-core)* [**breaking**] trim TimeDelta constructors and decouple Julian dates
+- *(lox-core)* [**breaking**] remove TimeDeltaBuilder
+- *(lox-core)* add an i64 fast path for f64 seconds in TimeDelta
+- *(lox-core)* clean-up imports and constants
+- *(lox-core)* improve data unit test coverage
+- *(lox-core)* [**breaking**] move the literal traits into units::literals
+- *(lox-core)* [**breaking**] merge the numeric constant modules into time::constants
+- *(lox-bodies)* [**breaking**] move the Earth rotation rate to lox-bodies
+- *(lox-core)* share the comparison methods of DecibelWatts and unit types
+- *(lox-core)* [**breaking**] give GravitationalParameter the named-unit API
+- *(lox-core)* [**breaking**] limit sexagesimal Display to precision and sign
+- *(lox-core)* [**breaking**] rework angle wrapping and sexagesimal angles
+- *(lox-core)* [**breaking**] give all unit types a uniform named-unit API
+- *(lox-core)* [**breaking**] move the comms module to lox-comms
+- document the physical-state requirement of the Cartesian conversions
+- *(lox-core)* state the Kepler solver's failure assumption and tidy the conversions
+- *(lox-core)* check every generated case in the modified equinoctial validity proptest
+- *(lox-core)* construct EquinoctialError::KeplerEquation explicitly
+- *(lox-core)* skip revalidating modified equinoctial elements derived from equinoctial elements
+- *(lox-core)* test the production mean to true longitude conversion
+- *(lox-core)* restore the initial guess for highly eccentric orbits in the Kepler solver
+- *(lox-core)* skip the bracket end evaluations in the Kepler solver
+- *(lox-core)* solve Kepler's equation with the bracketed Halley root finder
+- *(lox-core)* add property tests for the Kepler equation solvers
+- *(lox-core)* [**breaking**] merge the elliptic Kepler solvers
+- *(lox-core)* cover default extrapolation limit when deserializing
+- *(lox-core)* describe UNIX_EPOCH and Date::to_delta as durations since J2000
+- *(lox-core)* [**breaking**] align BrentMinimizer and Tridiagonal APIs with the root finders
+- *(lox-core)* [**breaking**] make series Interpolation enum private
+- *(lox-core)* [**breaking**] make CartesianTrajectory internals private and times relative
+- *(lox-core)* merge the duplicate anomaly test modules
+- explain the mean motion discontinuity at the parabolic threshold
+- *(lox-space)* [**breaking**] rename seconds accessors
+- remove unnecessary Seconds type
+- Implemented `Sum` trait for `TimeDelta`
+- *(lox-core)* [**breaking**] keep revolution in anomaly conversions
+- *(lox-core)* [**breaking**] replace generic Anomaly<K> with plain anomaly newtypes
+- *(core)* [**breaking**] remove primitive From impls for TimeDelta
+
 ## [0.1.0-alpha.16](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.15...lox-core-v0.1.0-alpha.16) - 2026-10-14
 
 ### Added

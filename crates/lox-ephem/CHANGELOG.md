@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.27](https://github.com/lox-space/lox/compare/lox-ephem-v0.1.0-alpha.26...lox-ephem-v0.1.0-alpha.27) - 2026-11-13
+
+### Fixed
+
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- *(lox-time)* [**breaking**] re-export TimeDelta at the crate root
+- *(lox-core)* [**breaking**] flatten the lox_core::time module
+- *(lox-time)* [**breaking**] remove the ToDelta trait
+- *(lox-core,lox-time)* [**breaking**] move calendar, Julian date and civil time types to lox-time
+- remove unnecessary Seconds type
+
 ## [0.1.0-alpha.26](https://github.com/lox-space/lox/compare/lox-ephem-v0.1.0-alpha.25...lox-ephem-v0.1.0-alpha.26) - 2026-10-14
 
 ### Other
