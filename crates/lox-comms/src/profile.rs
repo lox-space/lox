@@ -72,6 +72,15 @@ pub enum ElevationProfileError {
 pub struct ElevationProfile {
     carrier: Frequency,
     samples: Vec<(Angle, AtmosphericLosses)>,
+    /// `1 / sin(elevation)` of each sample — the abscissa the profile is
+    /// interpolated in. Derived from `samples` once, at construction.
+    #[cfg_attr(feature = "serde", serde(skip))]
+    cosecants: Vec<f64>,
+}
+
+/// Returns the cosecant of an elevation in radians.
+fn cosecant(elevation: f64) -> f64 {
+    1.0 / elevation.sin()
 }
 
 /// Serde wire format for [`ElevationProfile`]: forces deserialization through
@@ -120,7 +129,15 @@ impl ElevationProfile {
             }
             previous = elevation_deg;
         }
-        Ok(Self { carrier, samples })
+        let cosecants = samples
+            .iter()
+            .map(|(elevation, _)| cosecant(elevation.to_radians()))
+            .collect();
+        Ok(Self {
+            carrier,
+            samples,
+            cosecants,
+        })
     }
 
     /// Returns the carrier the profile was computed for.
@@ -148,9 +165,13 @@ impl ElevationProfile {
     /// Returns the losses at the given elevation.
     ///
     /// Interpolates linearly in `1 / sin(elevation)` between the two
-    /// neighbouring samples and holds the end values outside the grid.
+    /// neighbouring samples and holds the end values outside the grid. An
+    /// undefined (NaN) elevation yields the lowest sample, the most
+    /// conservative one, so the result is always a valid set of losses.
     pub fn at(&self, elevation: Angle) -> AtmosphericLosses {
         let el = elevation.to_radians();
+        // No sample compares `<=` to NaN, which therefore lands below the
+        // grid.
         let upper = self.samples.partition_point(|(e, _)| e.to_radians() <= el);
         if upper == 0 {
             return self.samples[0].1;
@@ -158,11 +179,15 @@ impl ElevationProfile {
         if upper == self.samples.len() {
             return self.samples[upper - 1].1;
         }
-        let (el_lo, lo) = &self.samples[upper - 1];
-        let (el_hi, hi) = &self.samples[upper];
-        let csc = |angle: f64| 1.0 / angle.sin();
-        let (x_lo, x_hi) = (csc(el_lo.to_radians()), csc(el_hi.to_radians()));
-        let t = ((csc(el) - x_lo) / (x_hi - x_lo)).clamp(0.0, 1.0);
+        let (lo, hi) = (&self.samples[upper - 1].1, &self.samples[upper].1);
+        let (x_lo, x_hi) = (self.cosecants[upper - 1], self.cosecants[upper]);
+        let span = x_hi - x_lo;
+        // Close to the zenith the cosecant is flat enough for two distinct
+        // elevations to share one: there is nothing to interpolate over.
+        if span == 0.0 {
+            return *lo;
+        }
+        let t = ((cosecant(el) - x_lo) / span).clamp(0.0, 1.0);
         lo.lerp(hi, t)
     }
 }
@@ -335,6 +360,32 @@ mod tests {
         assert_eq!(profile.at(deg(1.0)), profile.samples()[0].1);
         assert_eq!(profile.at(deg(-3.0)), profile.samples()[0].1);
         assert_eq!(profile.at(deg(90.0)), profile.samples()[3].1);
+    }
+
+    /// Two samples so close to the zenith that their cosecants coincide span
+    /// no interval to interpolate over: the lower one holds.
+    #[test]
+    fn test_profile_stays_finite_between_samples_of_equal_cosecant() {
+        let (lo, hi) = (losses(0.2, 90.0, 1.0), losses(0.2, 90.0, 0.5));
+        let profile = ElevationProfile::new(
+            ghz(26.0),
+            vec![
+                (deg(30.0), losses(0.2, 30.0, 2.0)),
+                (deg(89.9999999), lo),
+                (deg(90.0), hi),
+            ],
+        )
+        .unwrap();
+        assert_eq!(profile.at(deg(89.99999995)), lo);
+        assert_eq!(profile.at(deg(90.0)), hi);
+    }
+
+    /// An undefined elevation gets the lowest sample — the highest loss —
+    /// rather than NaN losses.
+    #[test]
+    fn test_profile_holds_its_lowest_sample_at_a_nan_elevation() {
+        let profile = profile();
+        assert_eq!(profile.at(Angle::radians(f64::NAN)), profile.samples()[0].1);
     }
 
     #[test]
