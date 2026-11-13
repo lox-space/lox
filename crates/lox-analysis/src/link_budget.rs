@@ -62,6 +62,14 @@ pub enum LinkEvalError {
         /// The time at which the margin was evaluated.
         time: Time,
     },
+    /// A ground station's elevation profile is attached to a link that has
+    /// no elevation, i.e. one that does not end at a ground station.
+    ///
+    /// The analysis never builds such a link; this guards the invariant
+    /// instead of applying the plan's losses under
+    /// [`LossSource::SiteProfile`].
+    #[error("a site elevation profile is attached to a link without a ground station")]
+    ProfileWithoutElevation,
 }
 
 // `events::DetectFn` requires `Error: Into<LoxError>` so the lazy machinery can
@@ -387,12 +395,23 @@ where
     <DefaultRotationProvider as TryRotation<R, Frame, TimeScale>>::Error:
         std::error::Error + Send + Sync + 'static,
 {
+    /// Returns where [`budget`](Self::budget) takes its losses from.
+    fn loss_source(&self) -> LossSource {
+        match self.site {
+            Some(_) => LossSource::SiteProfile,
+            None => LossSource::Plan,
+        }
+    }
+
     /// Returns the modulation-agnostic budget at the given time.
     fn budget(&self, time: Time) -> Result<LinkBudget, LinkEvalError> {
         let (range, elevation) = self.geometry.sample(time)?;
         let losses = match (&self.site, elevation) {
             (Some(site), Some(elevation)) => site.at(elevation),
-            _ => self.plan.losses.clone(),
+            (None, _) => self.plan.losses.clone(),
+            // Falling back to the plan here would report plan losses under
+            // `LossSource::SiteProfile`.
+            (Some(_), None) => return Err(LinkEvalError::ProfileWithoutElevation),
         };
         let conditions = LinkConditions::builder(self.plan.carrier, range)
             .losses(losses)
@@ -1087,10 +1106,7 @@ where
         start,
         parts,
         direction: link.direction,
-        loss_source: match link.site {
-            Some(_) => LossSource::SiteProfile,
-            None => LossSource::Plan,
-        },
+        loss_source: link.loss_source(),
     })
 }
 
@@ -2357,6 +2373,26 @@ mod tests {
             result,
             Err(LinkAnalysisError::UnknownSite(id)) if id == AssetId::new("cebrero")
         ));
+    }
+
+    /// A profile on a link without an elevation is an error, not a silent
+    /// fallback to the plan's losses.
+    #[test]
+    fn test_profile_on_a_crosslink_is_an_error() {
+        let f = crosslink_fixture();
+        let scenario = crosslink_scenario(f, false);
+        let analysis = LinkBudgetAnalysis::new(&scenario, &f.ensemble, &f.visibility, plan());
+        let mut links = analysis.links().unwrap();
+        let link = links.first_mut().expect("one crosslink");
+        let profile = cosecant_profile(CARRIER, 1.0);
+        link.site = Some(SiteLosses::new(&profile, link.plan));
+
+        let time = link.visibility[0].start();
+        assert!(matches!(
+            link.budget(time),
+            Err(LinkEvalError::ProfileWithoutElevation)
+        ));
+        assert_eq!(link.loss_source(), LossSource::SiteProfile);
     }
 
     /// A crosslink has no ground station, so its losses always come from the
