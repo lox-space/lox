@@ -90,6 +90,10 @@ harness = false
 required-features = ["analysis"]
 
 [[example]]
+name = "coordinate_transformation"
+required-features = ["orbits"]
+
+[[example]]
 name = "iss"
 required-features = ["orbits"]
 
