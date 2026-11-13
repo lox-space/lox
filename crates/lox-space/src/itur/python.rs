@@ -295,9 +295,7 @@ impl PyItuProvider {
             .unwrap_or(Angle::degrees(45.0));
         let elevations: Vec<Angle> = match elevations {
             Some(elevations) => elevations.into_iter().map(|a| a.0).collect(),
-            None => lox_itur::DEFAULT_PROFILE_ELEVATIONS_DEG
-                .map(Angle::degrees)
-                .to_vec(),
+            None => lox_itur::DEFAULT_PROFILE_ELEVATIONS.to_vec(),
         };
         self.0
             .elevation_profile(

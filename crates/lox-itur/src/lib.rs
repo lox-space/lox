@@ -78,13 +78,27 @@ pub fn manifest_for_packager(upstream: &str, grids: Vec<String>) -> Vec<u8> {
     .to_json_bytes()
 }
 
-/// Default elevation grid, in degrees, of the profiles built by
-/// [`ItuProvider::site_propagation`].
+/// Default elevation grid of the profiles built by
+/// [`ItuProvider::site_propagation`]: 5°, 6°, 7.5°, 10°, 12.5°, 15°, 20°, 25°,
+/// 30°, 40°, 50°, 65°, 80° and 90°.
 ///
 /// Denser towards the horizon, where the loss changes fastest; it starts at
 /// 5°, below which the ITU-R models are not valid.
-pub const DEFAULT_PROFILE_ELEVATIONS_DEG: [f64; 14] = [
-    5.0, 6.0, 7.5, 10.0, 12.5, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0, 65.0, 80.0, 90.0,
+pub const DEFAULT_PROFILE_ELEVATIONS: [Angle; 14] = [
+    Angle::degrees(5.0),
+    Angle::degrees(6.0),
+    Angle::degrees(7.5),
+    Angle::degrees(10.0),
+    Angle::degrees(12.5),
+    Angle::degrees(15.0),
+    Angle::degrees(20.0),
+    Angle::degrees(25.0),
+    Angle::degrees(30.0),
+    Angle::degrees(40.0),
+    Angle::degrees(50.0),
+    Angle::degrees(65.0),
+    Angle::degrees(80.0),
+    Angle::degrees(90.0),
 ];
 
 impl ItuProvider {
@@ -206,7 +220,7 @@ impl ItuProvider {
     /// The resulting [`ElevationProfile`] lets a link budget follow the loss
     /// along a pass instead of applying one fixed figure. `elevations` must be
     /// strictly increasing and lie in `(0°, 90°]`;
-    /// [`DEFAULT_PROFILE_ELEVATIONS_DEG`] is a grid on which interpolation
+    /// [`DEFAULT_PROFILE_ELEVATIONS`] is a grid on which interpolation
     /// stays within about 1.5 % of the direct computation up to 80°, and
     /// within 4 % from there to zenith, where P.618 rain attenuation is itself
     /// not monotonic.
@@ -247,7 +261,7 @@ impl ItuProvider {
 
     /// Computes the elevation-dependent propagation losses of a site: one
     /// [`ElevationProfile`] per carrier, on the
-    /// [`DEFAULT_PROFILE_ELEVATIONS_DEG`] grid.
+    /// [`DEFAULT_PROFILE_ELEVATIONS`] grid.
     ///
     /// Pass the downlink and the uplink carrier to cover both directions of a
     /// ground station in one call. The remaining arguments are those of
@@ -261,7 +275,6 @@ impl ItuProvider {
         diameter: Distance,
         polarisation_tilt: Angle,
     ) -> Result<SitePropagation, ItuProviderError> {
-        let elevations = DEFAULT_PROFILE_ELEVATIONS_DEG.map(Angle::degrees);
         let profiles = carriers
             .iter()
             .map(|&carrier| {
@@ -272,7 +285,7 @@ impl ItuProvider {
                     p,
                     diameter,
                     polarisation_tilt,
-                    &elevations,
+                    &DEFAULT_PROFILE_ELEVATIONS,
                 )
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -470,7 +483,7 @@ mod tests {
         assert_eq!(site.for_carrier(up).unwrap().carrier(), up);
         assert_eq!(
             site.for_carrier(down).unwrap().samples().len(),
-            DEFAULT_PROFILE_ELEVATIONS_DEG.len()
+            DEFAULT_PROFILE_ELEVATIONS.len()
         );
 
         // Two carriers too close to tell apart cannot share a site.
