@@ -199,14 +199,7 @@ impl PropagationLosses {
     /// different `atmospheric` values, do the former once and the latter per
     /// value.
     pub fn with_atmospheric(&self, atmospheric: AtmosphericLosses) -> Self {
-        let lines = self
-            .lines
-            .iter()
-            .filter(|line| !line.kind.is_atmospheric())
-            .cloned()
-            .chain(atmospheric.lines())
-            .collect();
-        Self { lines }
+        self.without_atmospheric().append_atmospheric(atmospheric)
     }
 
     /// Returns these losses without their atmospheric part: every rain,
