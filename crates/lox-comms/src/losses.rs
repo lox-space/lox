@@ -6,6 +6,7 @@
 //! Itemized excess propagation losses.
 
 use std::fmt::{Display, Formatter, Result};
+use std::sync::Arc;
 
 use lox_core::units::Decibel;
 
@@ -140,21 +141,27 @@ impl LossLine {
 /// them to the figures they need — [`Self::total`] for carrier attenuation
 /// and [`Self::absorptive`] for sky-noise degradation. Lines keep their
 /// insertion order for reporting.
+///
+/// Cloning is cheap: the lines are shared, not copied. A link analysis
+/// carries the same losses into every sample of every budget, so a clone must
+/// not cost an allocation.
 #[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PropagationLosses {
-    lines: Vec<LossLine>,
+    lines: Arc<[LossLine]>,
 }
 
 impl PropagationLosses {
     /// Returns zero propagation losses.
     pub fn none() -> Self {
-        Self { lines: Vec::new() }
+        Self::default()
     }
 
     /// Creates propagation losses from a list of lines.
     pub fn new(lines: Vec<LossLine>) -> Self {
-        Self { lines }
+        Self {
+            lines: lines.into(),
+        }
     }
 
     /// Starts building propagation losses line by line.
@@ -221,10 +228,14 @@ impl PropagationLosses {
     /// [`Self::with_atmospheric`] to replace them, or call this on the result
     /// of [`Self::without_atmospheric`].
     pub fn append_atmospheric(&self, atmospheric: AtmosphericLosses) -> Self {
-        let atmospheric = atmospheric.lines();
-        let mut lines = Vec::with_capacity(self.lines.len() + atmospheric.len());
-        lines.extend_from_slice(&self.lines);
-        lines.extend(atmospheric);
+        // Both halves know their length, so the lines are collected into
+        // their shared allocation directly.
+        let lines = self
+            .lines
+            .iter()
+            .cloned()
+            .chain(atmospheric.lines())
+            .collect();
         Self { lines }
     }
 }
@@ -610,6 +621,14 @@ mod tests {
         );
         // Appending does not replace: the plan's own lines are kept.
         assert_eq!(plan.append_atmospheric(atmospheric()).lines().len(), 8);
+    }
+
+    #[test]
+    fn test_propagation_losses_clones_share_their_lines() {
+        let losses = p618_losses();
+        let clone = losses.clone();
+        assert_eq!(losses, clone);
+        assert!(std::ptr::eq(losses.lines(), clone.lines()));
     }
 
     #[cfg(feature = "serde")]
