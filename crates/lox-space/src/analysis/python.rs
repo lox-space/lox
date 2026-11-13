@@ -16,6 +16,7 @@ use crate::analysis::imaging::{
 };
 use crate::analysis::link_budget::{
     CarrierPlan, LinkAnalysisError, LinkBudgetAnalysis, LinkBudgetResults, LinkWindow, LossSource,
+    site_propagation_from,
 };
 use crate::analysis::power::{
     PowerBudgetAnalysis, PowerBudgetResults, PowerError, SpacecraftFilter,
@@ -2207,7 +2208,7 @@ pub struct PyLinkBudgetAnalysis {
     visibility: VisibilityResults,
     plan: CarrierPlan,
     overrides: Vec<(TerminalId, TerminalId, CarrierPlan)>,
-    site_propagation: Vec<(String, lox_comms::SitePropagation)>,
+    site_propagation: HashMap<AssetId, lox_comms::SitePropagation>,
     step: TimeDelta,
 }
 
@@ -2226,7 +2227,7 @@ impl PyLinkBudgetAnalysis {
         site_propagation: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<Self> {
         let site_propagation = match site_propagation {
-            None => Vec::new(),
+            None => HashMap::new(),
             Some(sites) => resolve_site_propagation(&scenario.0, sites)?,
         };
         Ok(Self {
@@ -2280,7 +2281,7 @@ impl PyLinkBudgetAnalysis {
                 analysis = analysis.with_override(tx.clone(), rx.clone(), plan.clone());
             }
             for (station, propagation) in &self.site_propagation {
-                analysis = analysis.with_site_propagation(station.clone(), propagation.clone());
+                analysis = analysis.with_site_propagation(station.as_str(), propagation.clone());
             }
             analysis.compute()
         });
@@ -2306,13 +2307,13 @@ impl PyLinkBudgetAnalysis {
 fn resolve_site_propagation(
     scenario: &Scenario,
     sites: &Bound<'_, PyAny>,
-) -> PyResult<Vec<(String, lox_comms::SitePropagation)>> {
+) -> PyResult<HashMap<AssetId, lox_comms::SitePropagation>> {
     if let Ok(sites) = sites.cast::<pyo3::types::PyDict>() {
         return sites
             .iter()
             .map(|(id, propagation)| {
                 Ok((
-                    id.extract::<String>()?,
+                    AssetId::new(id.extract::<String>()?),
                     propagation.extract::<PySitePropagation>()?.0,
                 ))
             })
@@ -2324,14 +2325,11 @@ fn resolve_site_propagation(
              or a callable taking a GroundStation",
         ));
     }
-    let mut resolved = Vec::new();
-    for station in scenario.ground_stations() {
+    site_propagation_from(scenario, |station| {
         let result = sites.call1((PyGroundStation(station.clone()),))?;
-        if let Some(propagation) = result.extract::<Option<PySitePropagation>>()? {
-            resolved.push((station.id().as_str().to_string(), propagation.0));
-        }
-    }
-    Ok(resolved)
+        let propagation = result.extract::<Option<PySitePropagation>>()?;
+        Ok(propagation.map(|propagation| propagation.0))
+    })
 }
 
 /// Results of a link budget analysis.
