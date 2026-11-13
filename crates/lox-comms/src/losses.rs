@@ -193,6 +193,11 @@ impl PropagationLosses {
     /// radome loss — are kept, so a site model can supersede the atmospheric
     /// lines of a fixed budget without double-counting them or discarding
     /// the rest.
+    ///
+    /// Equivalent to [`Self::without_atmospheric`] followed by
+    /// [`Self::append_atmospheric`]; when the same losses are merged with many
+    /// different `atmospheric` values, do the former once and the latter per
+    /// value.
     pub fn with_atmospheric(&self, atmospheric: AtmosphericLosses) -> Self {
         let lines = self
             .lines
@@ -201,6 +206,32 @@ impl PropagationLosses {
             .cloned()
             .chain(atmospheric.lines())
             .collect();
+        Self { lines }
+    }
+
+    /// Returns these losses without their atmospheric part: every rain,
+    /// gaseous, cloud and scintillation line is dropped, the others are kept
+    /// in order.
+    pub fn without_atmospheric(&self) -> Self {
+        let lines = self
+            .lines
+            .iter()
+            .filter(|line| !line.kind.is_atmospheric())
+            .cloned()
+            .collect();
+        Self { lines }
+    }
+
+    /// Returns these losses followed by the four lines of `atmospheric`.
+    ///
+    /// Existing atmospheric lines are kept and would be counted twice; use
+    /// [`Self::with_atmospheric`] to replace them, or call this on the result
+    /// of [`Self::without_atmospheric`].
+    pub fn append_atmospheric(&self, atmospheric: AtmosphericLosses) -> Self {
+        let atmospheric = atmospheric.lines();
+        let mut lines = Vec::with_capacity(self.lines.len() + atmospheric.len());
+        lines.extend_from_slice(&self.lines);
+        lines.extend(atmospheric);
         Self { lines }
     }
 }
@@ -564,6 +595,28 @@ mod tests {
             PropagationLosses::none().with_atmospheric(atmospheric()),
             p618_losses()
         );
+    }
+
+    #[test]
+    fn test_without_then_append_atmospheric_equals_with_atmospheric() {
+        let plan = PropagationLosses::builder()
+            .other("Pointing margin", 0.4.db(), false)
+            .rain(9.0.db())
+            .depolarization(0.1.db())
+            .scintillation(9.0.db())
+            .build()
+            .unwrap();
+
+        let fixed = plan.without_atmospheric();
+
+        let labels: Vec<_> = fixed.lines().iter().map(|l| l.kind().label()).collect();
+        assert_eq!(labels, ["Pointing margin", "Depolarization"]);
+        assert_eq!(
+            fixed.append_atmospheric(atmospheric()),
+            plan.with_atmospheric(atmospheric())
+        );
+        // Appending does not replace: the plan's own lines are kept.
+        assert_eq!(plan.append_atmospheric(atmospheric()).lines().len(), 8);
     }
 
     #[cfg(feature = "serde")]

@@ -290,6 +290,31 @@ where
     }
 }
 
+/// The elevation-dependent losses of a link at a ground station.
+struct SiteLosses<'a> {
+    /// The station's elevation profile for the plan's carrier.
+    profile: &'a ElevationProfile,
+    /// The plan's non-atmospheric losses, which the profile leaves in place.
+    /// They are the same at every sample, so they are filtered out of the
+    /// plan once, here, rather than per sample.
+    fixed: PropagationLosses,
+}
+
+impl<'a> SiteLosses<'a> {
+    fn new(profile: &'a ElevationProfile, plan: &CarrierPlan) -> Self {
+        Self {
+            profile,
+            fixed: plan.losses.without_atmospheric(),
+        }
+    }
+
+    /// Returns the losses at the given elevation: the profile's atmospheric
+    /// lines in place of the plan's, next to the plan's other losses.
+    fn at(&self, elevation: Angle) -> PropagationLosses {
+        self.fixed.append_atmospheric(self.profile.at(elevation))
+    }
+}
+
 /// One directed link between two terminals, with the visibility windows it is
 /// refined within.
 struct Link<'a, O: CoordinateOrigin, R: ReferenceFrame> {
@@ -299,9 +324,9 @@ struct Link<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     tx: &'a TxTerminal,
     rx: &'a RxTerminal,
     plan: &'a CarrierPlan,
-    /// The ground station's elevation profile for the plan's carrier, when
-    /// site propagation was supplied and describes that carrier.
-    profile: Option<&'a ElevationProfile>,
+    /// The ground station's losses for the plan's carrier, when site
+    /// propagation was supplied and describes that carrier.
+    site: Option<SiteLosses<'a>>,
     geometry: LinkGeometry<'a, O, R>,
     visibility: &'a [TimeInterval],
 }
@@ -316,13 +341,9 @@ where
 {
     /// Returns the modulation-agnostic budget at the given time.
     fn budget(&self, time: Time) -> Result<LinkBudget, LinkEvalError> {
-        let (range, elevation) = self.geometry.sample(time, self.profile.is_some())?;
-        // The site profile replaces the plan's atmospheric lines and leaves
-        // its other losses in place.
-        let losses = match (self.profile, elevation) {
-            (Some(profile), Some(elevation)) => {
-                self.plan.losses.with_atmospheric(profile.at(elevation))
-            }
+        let (range, elevation) = self.geometry.sample(time, self.site.is_some())?;
+        let losses = match (&self.site, elevation) {
+            (Some(site), Some(elevation)) => site.at(elevation),
             _ => self.plan.losses.clone(),
         };
         let conditions = LinkConditions::builder(self.plan.carrier, range)
@@ -874,7 +895,9 @@ where
                     tx,
                     rx,
                     plan,
-                    profile: site.and_then(|site| site.for_carrier(plan.carrier)),
+                    site: site
+                        .and_then(|site| site.for_carrier(plan.carrier))
+                        .map(|profile| SiteLosses::new(profile, plan)),
                     geometry: geometry(),
                     visibility,
                 });
@@ -1014,7 +1037,7 @@ where
         start,
         parts,
         direction: link.direction,
-        loss_source: match link.profile {
+        loss_source: match link.site {
             Some(_) => LossSource::SiteProfile,
             None => LossSource::Plan,
         },
