@@ -306,10 +306,22 @@ where
     /// The elevation is resolved from the same line of sight as the range, so
     /// it costs a dot product and an arcsine on top. An inter-satellite link
     /// has no elevation.
+    ///
+    /// The spacecraft must be centred on the ground station's body. That is
+    /// not enforced by the types — a mismatch yields a silently wrong range
+    /// and elevation rather than an error — so it is asserted in debug
+    /// builds.
     fn sample(&self, time: Time) -> Result<(Distance, Option<Angle>), EvalError> {
         match self {
             Self::GroundSpace { gs, site, sc } => {
                 let state = sc.state_at(time.into_dynamic())?;
+                debug_assert_eq!(
+                    state.origin().id(),
+                    gs.origin().id(),
+                    "state origin `{}` is not the ground station's body `{}`",
+                    state.origin().name(),
+                    gs.origin().name(),
+                );
                 let position = state
                     .try_to_frame(gs.frame(), &DefaultRotationProvider)
                     .map_err(|e| EvalError::Rotation(Box::new(e)))?
@@ -2021,6 +2033,23 @@ mod tests {
                 assert_approx_eq!(elevation.to_degrees(), 90.0, atol <= 1e-5);
             }
         }
+    }
+
+    /// A spacecraft centred on another body than the ground station's would
+    /// yield a meaningless range and elevation; debug builds refuse it.
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(expected = "is not the ground station's body")]
+    fn test_ground_space_geometry_asserts_a_common_origin() {
+        let f = fixture();
+        let (epoch, _, frame, data) = f.trajectory.clone().into_parts();
+        let moon_centred = Trajectory::from_parts(epoch, Origin::Moon, frame, data);
+        let geometry = LinkGeometry::GroundSpace {
+            gs: &f.location,
+            site: GroundSite::new(&f.location),
+            sc: &moon_centred,
+        };
+        let _ = geometry.sample(moon_centred.start_time());
     }
 
     /// A profile whose gaseous loss follows the cosecant law from `zenith_db`
