@@ -28,6 +28,7 @@ use lox_comms::terminal::{RxTerminal, TxTerminal};
 use lox_comms::{ElevationProfile, LinkBudgetError, PropagationLosses, SitePropagation};
 use lox_core::constants::SPEED_OF_LIGHT;
 use lox_core::error::LoxError;
+use lox_core::glam::DVec3;
 use lox_core::units::{Angle, DataRate, DataVolume, Decibel, Distance, Frequency};
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
@@ -239,6 +240,8 @@ enum LinkGeometry<'a, O: CoordinateOrigin, R: ReferenceFrame> {
     /// A ground station and a spacecraft.
     GroundSpace {
         gs: &'a EllipsoidLocation,
+        /// What `gs` contributes to every sample, resolved once.
+        site: GroundSite,
         sc: &'a Trajectory<O, R>,
     },
     /// Two spacecraft.
@@ -246,6 +249,46 @@ enum LinkGeometry<'a, O: CoordinateOrigin, R: ReferenceFrame> {
         sc1: &'a Trajectory<O, R>,
         sc2: &'a Trajectory<O, R>,
     },
+}
+
+/// The time-invariant part of a ground station's geometry.
+///
+/// Resolving it per sample would repeat the geodetic trigonometry of the
+/// station at every step of every link, so it is cached per link instead.
+#[derive(Debug, Clone, Copy)]
+struct GroundSite {
+    /// The station's position in its body-fixed frame, in metres.
+    position: DVec3,
+    /// The local vertical at the station, as a unit vector in that frame.
+    up: DVec3,
+}
+
+impl GroundSite {
+    fn new(gs: &EllipsoidLocation) -> Self {
+        Self {
+            position: gs.body_fixed_position(),
+            // The topocentric frame is south-east-zenith, so the zenith axis
+            // is the third row of the rotation into it.
+            up: gs.rotation_to_topocentric().row(2),
+        }
+    }
+
+    /// Returns the slant range to a body-fixed position in metres.
+    fn range(&self, position: DVec3) -> Distance {
+        Distance::meters((position - self.position).length())
+    }
+
+    /// Returns the slant range to a body-fixed position in metres and its
+    /// elevation above the station's horizon.
+    ///
+    /// Only what a link budget needs of the topocentric observables: neither
+    /// azimuth nor range rate is computed.
+    fn range_and_elevation(&self, position: DVec3) -> (Distance, Angle) {
+        let line_of_sight = position - self.position;
+        let range = line_of_sight.length();
+        let elevation = (self.up.dot(line_of_sight) / range).asin();
+        (Distance::meters(range), Angle::radians(elevation))
+    }
 }
 
 impl<O, R> LinkGeometry<'_, O, R>
@@ -260,25 +303,26 @@ where
     /// when `with_elevation` is set, the elevation of the spacecraft above
     /// the ground station's horizon.
     ///
-    /// The elevation is resolved from the same state as the range, so asking
-    /// for it costs one topocentric rotation rather than a second trajectory
-    /// lookup. An inter-satellite link has no elevation.
+    /// The elevation is resolved from the same line of sight as the range, so
+    /// asking for it costs a dot product and an arcsine rather than a second
+    /// trajectory lookup. An inter-satellite link has no elevation.
     fn sample(
         &self,
         time: Time,
         with_elevation: bool,
     ) -> Result<(Distance, Option<Angle>), EvalError> {
         match self {
-            Self::GroundSpace { gs, sc } => {
+            Self::GroundSpace { gs, site, sc } => {
                 let state = sc.state_at(time.into_dynamic())?;
-                let state = state
+                let position = state
                     .try_to_frame(gs.frame(), &DefaultRotationProvider)
-                    .map_err(|e| EvalError::Rotation(Box::new(e)))?;
+                    .map_err(|e| EvalError::Rotation(Box::new(e)))?
+                    .position();
                 if with_elevation {
-                    let observables = gs.observables(state);
-                    Ok((observables.range(), Some(observables.elevation())))
+                    let (range, elevation) = site.range_and_elevation(position);
+                    Ok((range, Some(elevation)))
                 } else {
-                    Ok((gs.range_to(state), None))
+                    Ok((site.range(position), None))
                 }
             }
             Self::InterSatellite { sc1, sc2 } => {
@@ -795,8 +839,10 @@ where
                     };
                     let sc_traj = self.trajectory(sc.id())?;
                     let site = self.site_propagation.get(gs.id());
+                    let ground_site = GroundSite::new(gs.location());
                     let geometry = || LinkGeometry::GroundSpace {
                         gs: gs.location(),
+                        site: ground_site,
                         sc: sc_traj,
                     };
                     self.push_links(
@@ -1928,6 +1974,49 @@ mod tests {
         .unwrap()
     }
 
+    /// The cached station geometry reproduces the range and elevation of the
+    /// full topocentric observables.
+    #[test]
+    fn test_ground_site_matches_topocentric_observables() {
+        use lox_core::coords::Cartesian;
+        use lox_orbits::orbits::CartesianOrbit;
+
+        let coords = LonLatAlt::from_degrees(-4.3676, 40.4527, 0.0).unwrap();
+        let gs = EllipsoidLocation::try_new(coords, Frame::Iau(Origin::Earth)).unwrap();
+        let site = GroundSite::new(&gs);
+        let time = Time::j2000(TimeScale::Tai);
+
+        for position in [
+            // Near zenith, near the horizon, and below it.
+            gs.body_fixed_position() * 1.1,
+            DVec3::new(6.9e6, 1.2e6, 0.4e6),
+            DVec3::new(-2.0e6, -6.0e6, 3.0e6),
+            DVec3::new(-7.0e6, 0.0, 0.0),
+        ] {
+            let state = CartesianOrbit::new(
+                Cartesian::from_vecs(position, DVec3::new(1.0e3, -7.0e3, 2.0e3)),
+                time,
+                gs.origin(),
+                gs.frame(),
+            );
+            let expected = gs.observables(state);
+
+            let (range, elevation) = site.range_and_elevation(position);
+            assert_approx_eq!(
+                range.to_meters(),
+                expected.range().to_meters(),
+                rtol <= 1e-14
+            );
+            assert_approx_eq!(
+                elevation.to_radians(),
+                expected.elevation().to_radians(),
+                atol <= 1e-12
+            );
+            // The same range whether or not the elevation is asked for.
+            assert_eq!(site.range(position), range);
+        }
+    }
+
     /// A profile whose gaseous loss follows the cosecant law from `zenith_db`
     /// at zenith.
     fn cosecant_profile(carrier: Frequency, zenith_db: f64) -> ElevationProfile {
@@ -2003,8 +2092,6 @@ mod tests {
         assert_eq!(fixed.len(), profiled.len());
         for (a, b) in fixed.iter().zip(profiled) {
             assert_eq!(a.interval(), b.interval());
-            // The profiled link takes its range from the topocentric
-            // observables, which agrees with the plain range to rounding.
             assert_approx_eq!(
                 a.peak_margin().to_decibels(),
                 b.peak_margin().to_decibels(),
