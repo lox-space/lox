@@ -8,8 +8,7 @@
 //! RAAN, argument of periapsis, and mean anomaly. Semi-major axis,
 //! eccentricity, and inclination are held constant.
 //!
-//! Optionally applies Kwok short-period corrections (Vallado pp. 708–710)
-//! to produce osculating elements. Enable with
+//! Optionally applies Kwok short-period corrections to produce osculating elements. Enable with
 //! [`with_osculating`](crate::propagators::j2::J2Propagator::with_osculating).
 //!
 //! Non-singular for circular (e = 0) and equatorial (i = 0) orbits.
@@ -18,7 +17,9 @@
 //!
 //! - Kozai, Y. (1959). *The Astronomical Journal*, 64, 367.
 //! - Vallado, D. A. (2013). *Fundamentals of Astrodynamics and
-//!   Applications*, 4th ed. pp. 372, 708–710.
+//!   Applications*, 4th ed. p. 372.
+//! - Vallado, D. A. (2022). *Fundamentals of Astrodynamics and
+//!   Applications*, 5th ed. p. 735.
 
 use lox_bodies::{
     CoordinateOrigin, Origin, TryJ2, TryPointMass, TrySpheroid, UndefinedOriginPropertyError,
@@ -127,7 +128,7 @@ where
         })
     }
 
-    /// Enable or disable Kwok short-period corrections (Vallado pp. 708–710).
+    /// Enable or disable Kwok short-period corrections.
     ///
     /// When enabled, the propagator produces osculating elements; when
     /// disabled (default), it produces mean (secular-only) elements.
@@ -193,8 +194,13 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::f64::consts::TAU;
+
     use lox_approx::assert_approx_eq;
     use lox_bodies::{Earth, PointMass};
+    use rstest::rstest;
+
+    use crate::propagators::numerical::NumericalPropagator;
     use lox_core::units::literals::AngleLiterals;
     use lox_frames::Icrf;
     use lox_time::time;
@@ -315,6 +321,58 @@ mod tests {
 
         let osc = j2.with_osculating(true);
         assert!(osc.is_osculating());
+    }
+
+    #[rstest]
+    #[case::near_circular_sso(6_878_137.0, 0.001, 97.42, 69.3, 30.0, 100.0, 0.1)]
+    #[case::low_inclination(7_000_000.0, 0.05, 30.0, 10.0, 60.0, 1000.0, 1.0)]
+    #[case::moderate_eccentricity(7_500_000.0, 0.1, 50.0, 20.0, 30.0, 250.0, 0.25)]
+    #[case::high_eccentricity(9_000_000.0, 0.2, 70.0, 0.0, 100.0, 100.0, 0.1)]
+    fn test_osculating_matches_numerical_j2(
+        #[case] a: f64,
+        #[case] e: f64,
+        #[case] i_deg: f64,
+        #[case] raan_deg: f64,
+        #[case] aop_deg: f64,
+        #[case] pos_tol: f64,
+        #[case] vel_tol: f64,
+    ) {
+        // The tolerances are the residual of first-order short-period theory
+        // over three orbits; without the short-period terms the errors are
+        // several kilometres.
+        let time = time!(Tdb, 2025, 6, 1).unwrap().into_dynamic();
+        let kep = Keplerian::builder()
+            .with_semi_major_axis(Distance::meters(a), e)
+            .with_inclination(i_deg.to_radians().rad())
+            .with_longitude_of_ascending_node(raan_deg.to_radians().rad())
+            .with_argument_of_periapsis(aop_deg.to_radians().rad())
+            .with_true_anomaly(0.3.rad())
+            .build()
+            .unwrap();
+        let orbit = KeplerianOrbit::new(kep, time, Earth, Icrf);
+        let analytical = J2Propagator::try_new(orbit).unwrap().with_osculating(true);
+
+        let initial = analytical.state_at(time).unwrap();
+        let numerical = NumericalPropagator::new(initial)
+            .with_rtol(1e-12)
+            .with_atol(1e-6);
+
+        let period = TAU / analytical.rates.n_bar;
+        let times: Vec<_> = (0..=150)
+            .map(|k| time + TimeDelta::from_seconds_f64(3.0 * period * k as f64 / 150.0))
+            .collect();
+        let truth = numerical.propagate_to(times).unwrap();
+
+        for expected in truth.states() {
+            let actual = analytical.state_at(expected.time()).unwrap();
+            let dr = (actual.position() - expected.position()).length();
+            let dv = (actual.velocity() - expected.velocity()).length();
+            assert!(
+                dr < pos_tol && dv < vel_tol,
+                "at {}: position error {dr:.1} m (tol {pos_tol} m), velocity error {dv:.3} m/s (tol {vel_tol} m/s)",
+                expected.time()
+            );
+        }
     }
 
     #[test]
