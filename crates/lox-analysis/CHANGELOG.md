@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.17](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.16...lox-analysis-v0.1.0-alpha.17) - 2026-11-13
+
+### Added
+
+- *(lox-core)* [**breaking**] add typed physical constants
+- *(lox-core)* [**breaking**] limit trajectory extrapolation and sample interval ends
+
+### Fixed
+
+- *(lox-analysis)* [**breaking**] return errors instead of panicking when building passes
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- Added max propagation delay to `LinkWindowPart`
+- Split `LinkWindow` into parts, one for each rate
+- *(lox-time)* [**breaking**] re-export TimeDelta at the crate root
+- *(lox-time)* [**breaking**] remove the ToDelta trait
+- *(lox-orbits,lox-analysis)* drop module docs duplicated on mod declarations
+- *(lox-space)* [**breaking**] make dimensioned Python scalars unitful
+- *(lox-core)* [**breaking**] move the literal traits into units::literals
+- *(lox-core)* [**breaking**] rework angle wrapping and sexagesimal angles
+- *(lox-core)* [**breaking**] give all unit types a uniform named-unit API
+- *(lox-core)* [**breaking**] move the comms module to lox-comms
+- *(lox-orbits)* [**breaking**] take KeplerianOrbit in J2/J4 propagator constructors
+- *(lox-analysis)* convert trajectory once per pair in to_passes
+- remove unnecessary Seconds type
+- repair changelogs broken by SPDX headers
+
 ## [0.1.0-alpha.16](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.15...lox-analysis-v0.1.0-alpha.16) - 2026-10-14
 
 ### Added

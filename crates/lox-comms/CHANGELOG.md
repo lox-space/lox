@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.18](https://github.com/lox-space/lox/compare/lox-comms-v0.1.0-alpha.17...lox-comms-v0.1.0-alpha.18) - 2026-11-13
+
+### Added
+
+- *(lox-core)* [**breaking**] add typed physical constants
+- *(lox-core)* [**breaking**] add runtime unit enums, unit parsing, and SI display
+
+### Fixed
+
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- *(lox-space)* [**breaking**] make dimensioned Python scalars unitful
+- *(lox-core)* clean-up imports and constants
+- *(lox-core)* [**breaking**] move the literal traits into units::literals
+- *(lox-core)* [**breaking**] give all unit types a uniform named-unit API
+- *(lox-core)* [**breaking**] move the comms module to lox-comms
+- repair changelogs broken by SPDX headers
+
 ## [0.1.0-alpha.17](https://github.com/lox-space/lox/compare/lox-comms-v0.1.0-alpha.16...lox-comms-v0.1.0-alpha.17) - 2026-10-14
 
 ### Other

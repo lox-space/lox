@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.23](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.22...lox-frames-v0.1.0-alpha.23) - 2026-11-13
+
+### Fixed
+
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- *(lox-frames)* move module docs into the modules
+- *(lox-time)* [**breaking**] re-export TimeDelta at the crate root
+- *(lox-core,lox-time)* [**breaking**] move calendar, Julian date and civil time types to lox-time
+- *(lox-frames)* fix unresolved intra-doc links
+- *(lox-core)* [**breaking**] move the literal traits into units::literals
+- *(lox-core)* [**breaking**] merge the numeric constant modules into time::constants
+- *(lox-bodies)* [**breaking**] move the Earth rotation rate to lox-bodies
+- *(lox-core)* [**breaking**] rework angle wrapping and sexagesimal angles
+- *(lox-core)* [**breaking**] give all unit types a uniform named-unit API
+- repair changelogs broken by SPDX headers
+
 ## [0.1.0-alpha.22](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.21...lox-frames-v0.1.0-alpha.22) - 2026-10-14
 
 ### Other
