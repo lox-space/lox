@@ -9,15 +9,11 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use std::f64::consts::PI;
-
-use chrono::{DateTime, Utc as ChronoUtc};
 use lox_bodies::{CoordinateOrigin, Origin};
 use lox_core::anomalies::AnomalyError;
 use lox_core::coords::Cartesian;
 use lox_core::elements::{Keplerian, MeanElements};
-use lox_core::time::constants::SECONDS_PER_DAY;
-use lox_core::units::{Angle, Distance};
+use lox_core::units::{Angle, AngularRate, Distance};
 use lox_frames::{Frame, ReferenceFrame};
 use lox_odm::Format;
 use lox_odm::OdmError;
@@ -29,9 +25,10 @@ use lox_odm::types::omm::{Omm, OmmMeanElements, OmmMetadata};
 use lox_odm::types::opm::{Opm, OpmMetadata};
 use lox_time::offsets::{DefaultOffsetProvider, OffsetProvider};
 use lox_time::time::Time;
+use lox_time::utc::Utc;
 
 use crate::orbits::{CartesianOrbit, KeplerianOrbit, Orbit, Trajectory, TrajectoryError};
-use crate::propagators::sgp4::{Sgp4, Sgp4Error};
+use crate::tle::{Classification, Tle};
 
 /// Default value for the CCSDS `ORIGINATOR` header field used by all
 /// ODM builders unless overridden via `.originator(...)`.
@@ -856,18 +853,15 @@ pub enum OmmFromOdmError {
     /// No wire `GM` and the centre body has no canonical gravitational parameter.
     #[error("OMM has no `GM` and centre `{0}` has no canonical gravitational parameter")]
     MissingGm(String),
-    /// The epoch could not be converted to UTC (required by `sgp4::Elements`).
+    /// The epoch could not be converted to UTC (required by the TLE epoch).
     #[error("failed to convert OMM epoch to UTC: {0}")]
     EpochConversion(String),
-    /// SGP4 rejected the elements (e.g. unphysical mean motion).
-    #[error(transparent)]
-    Sgp4(#[from] Sgp4Error),
     /// An element-validation error from the typed Keplerian model.
     #[error("invalid Keplerian element: {0}")]
     InvalidElement(String),
 }
 
-/// Composite error for `Sgp4::from_omm_str` / `from_omm_file` and the
+/// Composite error for `Tle::from_omm_str` / `from_omm_file` and the
 /// analogous `KeplerianOrbit::from_omm_*` constructors.
 #[derive(Debug, thiserror::Error)]
 pub enum OmmReadError {
@@ -913,62 +907,54 @@ pub enum OmmWriteError {
 // Helpers
 // ----------------------------------------------------------------------------
 
-/// Convert an [`OdmTime`] to a UTC-naive timestamp for `sgp4::Elements`.
-fn omm_epoch_to_naive_utc(epoch: OdmTime) -> Result<chrono::NaiveDateTime, OmmFromOdmError> {
+/// Convert an [`OdmTime`] to the UTC epoch of a [`Tle`].
+fn omm_epoch_to_utc(epoch: OdmTime) -> Result<Utc, OmmFromOdmError> {
     let utc_epoch = epoch
         .try_in_scale(OdmTimeSystem::Utc)
         .map_err(|e| OmmFromOdmError::EpochConversion(e.to_string()))?;
     // `OdmTime::Utc(_)` is the only variant we expect after `try_in_scale(Utc)`.
-    let utc = match utc_epoch {
-        OdmTime::Utc(u) => u,
-        OdmTime::Time(_) => {
-            return Err(OmmFromOdmError::EpochConversion(
-                "expected UTC after in_scale; got continuous scale".to_string(),
-            ));
-        }
-    };
-    let dt: DateTime<ChronoUtc> = utc.try_into().map_err(|e: lox_time::chrono::ChronoError| {
-        OmmFromOdmError::EpochConversion(e.to_string())
-    })?;
-    Ok(dt.naive_utc())
+    match utc_epoch {
+        OdmTime::Utc(u) => Ok(u),
+        OdmTime::Time(_) => Err(OmmFromOdmError::EpochConversion(
+            "expected UTC after in_scale; got continuous scale".to_string(),
+        )),
+    }
 }
 
 /// Decode the single-letter TLE `CLASSIFICATION_TYPE` from the OMM
 /// TLE-parameters block (not the free-form `OdmHeader::classification`
 /// marker, which uses CCSDS labels like `UNCLASSIFIED`/`SECRET`).
-fn classification_from_str(s: Option<&str>) -> sgp4::Classification {
+fn classification_from_str(s: Option<&str>) -> Classification {
     match s.map(str::trim) {
-        Some("C") => sgp4::Classification::Classified,
-        Some("S") => sgp4::Classification::Secret,
-        _ => sgp4::Classification::Unclassified,
+        Some("C") => Classification::Classified,
+        Some("S") => Classification::Secret,
+        _ => Classification::Unclassified,
     }
 }
 
-/// Compute SGP4's `mean_motion` (rev/day) from semi-major axis (m). Inverse
-/// of [`mean_motion_to_sma`].
-fn sma_to_mean_motion(sma_m: f64, gm_m3_per_s2: f64) -> f64 {
-    let n_rad_per_s = (gm_m3_per_s2 / sma_m.powi(3)).sqrt();
-    n_rad_per_s * SECONDS_PER_DAY as f64 / (2.0 * PI)
+/// Compute the mean motion from semi-major axis (m). Inverse of
+/// [`mean_motion_to_sma`].
+fn sma_to_mean_motion(sma_m: f64, gm_m3_per_s2: f64) -> AngularRate {
+    AngularRate::radians_per_second((gm_m3_per_s2 / sma_m.powi(3)).sqrt())
 }
 
 // ----------------------------------------------------------------------------
-// Sgp4::from_omm / to_omm
+// Tle::from_omm
 // ----------------------------------------------------------------------------
 
-impl Sgp4 {
-    /// Constructs an [`Sgp4`] propagator from a typed [`Omm`].
+impl Tle {
+    /// Constructs a [`Tle`] from a typed [`Omm`].
     ///
     /// The OMM's mean elements (`SEMI_MAJOR_AXIS` or `MEAN_MOTION`),
     /// `BSTAR`, `MEAN_MOTION_DOT`/`DDOT`, and TLE-parameter block are
-    /// translated into an [`sgp4::Elements`]. The epoch is converted to UTC
-    /// (SGP4's wire format). Missing TLE parameters default to `0`.
+    /// translated into the TLE fields. The epoch is converted to UTC.
+    /// Missing TLE parameters default to `0`.
     ///
     /// # Errors
     ///
     /// - [`OmmFromOdmError::CustomCenter`] if the OMM centre is not Earth.
     /// - [`OmmFromOdmError::MissingGm`] if no `GM` is available to derive
     ///   the SGP4 `MEAN_MOTION` from `SEMI_MAJOR_AXIS`.
-    /// - [`OmmFromOdmError::Sgp4`] if SGP4 itself rejects the elements.
     pub fn from_omm(omm: &Omm) -> Result<Self, OmmFromOdmError> {
         let centre = omm.metadata.center.known().ok_or_else(|| {
             OmmFromOdmError::CustomCenter(omm.metadata.center.name().into_owned())
@@ -985,10 +971,10 @@ impl Sgp4 {
             .ok_or_else(|| OmmFromOdmError::MissingGm(omm.metadata.center.name().into_owned()))?;
 
         let me = &omm.mean_elements.elements;
-        let datetime = omm_epoch_to_naive_utc(omm.epoch)?;
+        let epoch = omm_epoch_to_utc(omm.epoch)?;
 
         let tle = omm.tle_parameters.as_ref();
-        let elements = sgp4::Elements {
+        Ok(Tle {
             object_name: Some(omm.metadata.object_name.clone()),
             international_designator: Some(omm.metadata.object_id.clone()),
             norad_id: tle
@@ -998,39 +984,37 @@ impl Sgp4 {
             classification: classification_from_str(
                 tle.and_then(|t| t.classification_type.as_deref()),
             ),
-            datetime,
-            mean_motion_dot: tle.and_then(|t| t.mean_motion_dot).unwrap_or(0.0),
-            mean_motion_ddot: tle.and_then(|t| t.mean_motion_ddot).unwrap_or(0.0),
-            drag_term: tle.and_then(|t| t.bstar).unwrap_or(0.0),
+            epoch,
+            half_mean_motion_dot_rev_per_day2: tle.and_then(|t| t.mean_motion_dot).unwrap_or(0.0),
+            sixth_mean_motion_ddot_rev_per_day3: tle
+                .and_then(|t| t.mean_motion_ddot)
+                .unwrap_or(0.0),
+            drag_term_per_earth_radius: tle.and_then(|t| t.bstar).unwrap_or(0.0),
             element_set_number: tle
                 .and_then(|t| t.element_set_no)
                 .map(|i| i.max(0) as u64)
                 .unwrap_or(0),
-            inclination: me.i.to_degrees(),
-            right_ascension: me.raan.to_degrees(),
+            inclination: Angle::radians(me.i),
+            right_ascension: Angle::radians(me.raan),
             eccentricity: me.e,
-            argument_of_perigee: me.aop.to_degrees(),
-            mean_anomaly: me.m.to_degrees(),
+            argument_of_perigee: Angle::radians(me.aop),
+            mean_anomaly: Angle::radians(me.m),
             mean_motion: sma_to_mean_motion(me.a, gm.to_m3_per_s2()),
             revolution_number: tle.and_then(|t| t.rev_at_epoch).unwrap_or(0),
             ephemeris_type: tle
                 .and_then(|t| t.ephemeris_type)
                 .map(|i| i.max(0) as u8)
                 .unwrap_or(0),
-        };
-
-        Ok(Self::new(elements)?)
+        })
     }
 
-    /// Parses an OMM from `input` (auto-detecting wire format) and
-    /// constructs an [`Sgp4`] propagator.
+    /// Parses an OMM from `input` (auto-detecting wire format) into a [`Tle`].
     pub fn from_omm_str(input: &str) -> Result<Self, OmmReadError> {
         let omm = lox_odm::read_omm(input)?;
         Ok(Self::from_omm(&omm)?)
     }
 
-    /// Reads an OMM from a file (auto-detecting format) and constructs an
-    /// [`Sgp4`] propagator.
+    /// Reads an OMM from a file (auto-detecting format) into a [`Tle`].
     pub fn from_omm_file(path: impl AsRef<Path>) -> Result<Self, OmmReadError> {
         let omm = lox_odm::read_omm_file(path)?;
         Ok(Self::from_omm(&omm)?)
@@ -1340,7 +1324,7 @@ impl KeplerianOrbit {
     /// theory (see [`OmmMetadata::mean_element_theory`]). For SGP4-tuned
     /// OMMs they live in TEME and are *not* osculating — converting them
     /// to a Cartesian state via [`KeplerianOrbit::to_cartesian`] will not
-    /// match the SGP4 prediction. Use [`Sgp4::from_omm`] for actual
+    /// match the SGP4 prediction. Use [`Tle::from_omm`] for actual
     /// propagation of SGP4-tuned OMMs.
     pub fn from_omm(omm: &Omm) -> Result<Self, OmmFromOdmError> {
         let origin = omm.metadata.center.known().ok_or_else(|| {

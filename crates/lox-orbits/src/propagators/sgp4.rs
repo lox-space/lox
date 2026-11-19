@@ -4,14 +4,17 @@
 
 //! SGP4 orbit propagator for TLE-based satellite prediction.
 
+use chrono::DateTime;
 use lox_core::coords::Cartesian;
 use lox_core::glam::DVec3;
-pub use sgp4::Elements;
 use sgp4::{Constants, ElementsError, KozaiElementsError, MinutesSinceEpoch};
+use std::f64::consts::TAU;
 use thiserror::Error;
 
 use lox_bodies::Earth;
-use lox_core::time::constants::SECONDS_PER_MINUTE;
+use lox_core::time::constants::{SECONDS_PER_DAY, SECONDS_PER_MINUTE};
+#[cfg(feature = "serde")]
+use lox_core::units::{Angle, AngularRate};
 use lox_frames::Teme;
 use lox_time::Time;
 use lox_time::TimeDelta;
@@ -20,6 +23,7 @@ use lox_time::time_scales::Tai;
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
 use crate::propagators::Propagator;
+use crate::tle::{Classification, Tle};
 
 /// Errors that can occur during SGP4 propagation.
 #[derive(Debug, Error)]
@@ -29,12 +33,13 @@ pub enum Sgp4Error {
     #[error("invalid SGP4 elements: {0}")]
     InvalidElements(InvalidElements),
     /// Propagation diverged, typically for a decayed or badly fitted object.
-    #[error("SGP4 propagation diverged {minutes_since_epoch} minutes after epoch: {kind}")]
+    #[error("SGP4 propagation diverged {}: {kind}", format_epoch_offset(.time_since_epoch))]
+    #[non_exhaustive]
     Diverged {
         /// How the propagation diverged.
         kind: Divergence,
-        /// Minutes since the element epoch at which propagation failed.
-        minutes_since_epoch: f64,
+        /// Time since the element epoch at which propagation failed.
+        time_since_epoch: TimeDelta,
     },
     /// Error constructing the output trajectory.
     #[error(transparent)]
@@ -54,6 +59,9 @@ pub enum InvalidElements {
     /// The eccentricity at epoch lies outside `[0, 1)`.
     #[error("the epoch eccentricity ({0}) is outside the range [0, 1)")]
     EpochEccentricityOutOfRange(f64),
+    /// The epoch cannot be represented by the SGP4 implementation.
+    #[error("the epoch is outside the supported range")]
+    EpochOutOfRange,
 }
 
 /// Ways in which SGP4 propagation can diverge.
@@ -71,37 +79,117 @@ pub enum Divergence {
     NegativeSemiLatusRectum,
 }
 
-impl From<ElementsError> for Sgp4Error {
-    fn from(err: ElementsError) -> Self {
-        Sgp4Error::InvalidElements(match err {
-            ElementsError::KozaiElementsError(KozaiElementsError::NegativeKozaiMeanMotion) => {
-                InvalidElements::NegativeKozaiMeanMotion
-            }
-            ElementsError::KozaiElementsError(KozaiElementsError::NegativeBrouwerMeanMotion) => {
-                InvalidElements::NegativeBrouwerMeanMotion
-            }
-            ElementsError::OutOfRangeEpochEccentricity(e) => {
-                InvalidElements::EpochEccentricityOutOfRange(e.0)
-            }
-        })
+fn invalid_elements(err: ElementsError) -> Sgp4Error {
+    Sgp4Error::InvalidElements(match err {
+        ElementsError::KozaiElementsError(KozaiElementsError::NegativeKozaiMeanMotion) => {
+            InvalidElements::NegativeKozaiMeanMotion
+        }
+        ElementsError::KozaiElementsError(KozaiElementsError::NegativeBrouwerMeanMotion) => {
+            InvalidElements::NegativeBrouwerMeanMotion
+        }
+        ElementsError::OutOfRangeEpochEccentricity(e) => {
+            InvalidElements::EpochEccentricityOutOfRange(e.0)
+        }
+    })
+}
+
+fn diverged(err: sgp4::Error, time_since_epoch: TimeDelta) -> Sgp4Error {
+    let kind = match err {
+        sgp4::Error::OutOfRangeEccentricity { eccentricity, .. } => {
+            Divergence::EccentricityOutOfRange(eccentricity)
+        }
+        sgp4::Error::OutOfRangePerturbedEccentricity { eccentricity, .. } => {
+            Divergence::PerturbedEccentricityOutOfRange(eccentricity)
+        }
+        sgp4::Error::NegativeSemiLatusRectum { .. } => Divergence::NegativeSemiLatusRectum,
+    };
+    Sgp4Error::Diverged {
+        kind,
+        time_since_epoch,
     }
 }
 
-impl From<sgp4::Error> for Sgp4Error {
-    fn from(err: sgp4::Error) -> Self {
-        let (kind, minutes_since_epoch) = match err {
-            sgp4::Error::OutOfRangeEccentricity { eccentricity, t } => {
-                (Divergence::EccentricityOutOfRange(eccentricity), t)
-            }
-            sgp4::Error::OutOfRangePerturbedEccentricity { eccentricity, t } => {
-                (Divergence::PerturbedEccentricityOutOfRange(eccentricity), t)
-            }
-            sgp4::Error::NegativeSemiLatusRectum { t } => (Divergence::NegativeSemiLatusRectum, t),
-        };
-        Sgp4Error::Diverged {
-            kind,
-            minutes_since_epoch,
-        }
+fn format_epoch_offset(delta: &TimeDelta) -> String {
+    let minutes = delta.as_seconds_f64().abs() / SECONDS_PER_MINUTE as f64;
+    let side = if delta.is_negative() {
+        "before"
+    } else {
+        "after"
+    };
+    format!("{minutes:.3} minutes {side} epoch")
+}
+
+fn to_sgp4_elements(tle: &Tle) -> Result<sgp4::Elements, Sgp4Error> {
+    let epoch: DateTime<chrono::Utc> = tle
+        .epoch
+        .try_into()
+        .map_err(|_| Sgp4Error::InvalidElements(InvalidElements::EpochOutOfRange))?;
+    Ok(sgp4::Elements {
+        object_name: tle.object_name.clone(),
+        international_designator: tle.international_designator.clone(),
+        norad_id: tle.norad_id,
+        classification: match tle.classification {
+            Classification::Unclassified => sgp4::Classification::Unclassified,
+            Classification::Classified => sgp4::Classification::Classified,
+            Classification::Secret => sgp4::Classification::Secret,
+        },
+        datetime: epoch.naive_utc(),
+        mean_motion_dot: tle.half_mean_motion_dot_rev_per_day2,
+        mean_motion_ddot: tle.sixth_mean_motion_ddot_rev_per_day3,
+        drag_term: tle.drag_term_per_earth_radius,
+        element_set_number: tle.element_set_number,
+        inclination: tle.inclination.to_degrees(),
+        right_ascension: tle.right_ascension.to_degrees(),
+        eccentricity: tle.eccentricity,
+        argument_of_perigee: tle.argument_of_perigee.to_degrees(),
+        mean_anomaly: tle.mean_anomaly.to_degrees(),
+        mean_motion: tle.mean_motion.to_radians_per_second() * SECONDS_PER_DAY as f64 / TAU,
+        revolution_number: tle.revolution_number,
+        ephemeris_type: tle.ephemeris_type,
+    })
+}
+
+#[cfg(feature = "serde")]
+fn from_sgp4_elements(elements: sgp4::Elements) -> Tle {
+    Tle {
+        object_name: elements.object_name,
+        international_designator: elements.international_designator,
+        norad_id: elements.norad_id,
+        classification: match elements.classification {
+            sgp4::Classification::Unclassified => Classification::Unclassified,
+            sgp4::Classification::Classified => Classification::Classified,
+            sgp4::Classification::Secret => Classification::Secret,
+        },
+        epoch: elements.datetime.and_utc().into(),
+        half_mean_motion_dot_rev_per_day2: elements.mean_motion_dot,
+        sixth_mean_motion_ddot_rev_per_day3: elements.mean_motion_ddot,
+        drag_term_per_earth_radius: elements.drag_term,
+        ephemeris_type: elements.ephemeris_type,
+        element_set_number: elements.element_set_number,
+        inclination: Angle::degrees(elements.inclination),
+        right_ascension: Angle::degrees(elements.right_ascension),
+        eccentricity: elements.eccentricity,
+        argument_of_perigee: Angle::degrees(elements.argument_of_perigee),
+        mean_anomaly: Angle::degrees(elements.mean_anomaly),
+        mean_motion: AngularRate::radians_per_second(
+            elements.mean_motion * TAU / SECONDS_PER_DAY as f64,
+        ),
+        revolution_number: elements.revolution_number,
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for Tle {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let elements = to_sgp4_elements(self).map_err(serde::ser::Error::custom)?;
+        serde::Serialize::serialize(&elements, serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Tle {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        <sgp4::Elements as serde::Deserialize>::deserialize(deserializer).map(from_sgp4_elements)
     }
 }
 
@@ -116,12 +204,14 @@ pub struct Sgp4 {
 
 impl Sgp4 {
     /// Create a new SGP4 propagator from TLE elements.
-    pub fn new(initial_state: Elements) -> Result<Self, Sgp4Error> {
-        let time: Time<Tai> = initial_state.datetime.and_utc().into();
+    pub fn new(initial_state: Tle) -> Result<Self, Sgp4Error> {
+        let elements = to_sgp4_elements(&initial_state)?;
+        let time = initial_state.epoch.to_time();
         // Use AFSPC compatibility mode because TLE data is fitted using
         // AFSPC constants (WGS72). Using WGS84 with WGS72-fitted data
         // introduces systematic errors.
-        let constants = Constants::from_elements_afspc_compatibility_mode(&initial_state)?;
+        let constants = Constants::from_elements_afspc_compatibility_mode(&elements)
+            .map_err(invalid_elements)?;
         Ok(Self {
             constants,
             time,
@@ -142,8 +232,12 @@ impl Sgp4 {
 
     /// Propagate to a single time, returning a TEME state.
     pub fn state_at(&self, time: Time<Tai>) -> Result<CartesianOrbit<Earth, Teme>, Sgp4Error> {
-        let dt = (time - self.time).as_seconds_f64() / SECONDS_PER_MINUTE as f64;
-        let prediction = self.constants.propagate(MinutesSinceEpoch(dt))?;
+        let delta = time - self.time;
+        let dt = delta.as_seconds_f64() / SECONDS_PER_MINUTE as f64;
+        let prediction = self
+            .constants
+            .propagate(MinutesSinceEpoch(dt))
+            .map_err(|err| diverged(err, delta))?;
         // sgp4 crate returns km and km/s, convert to m and m/s
         let position = DVec3::from_array(prediction.position) * 1e3;
         let velocity = DVec3::from_array(prediction.velocity) * 1e3;
@@ -181,6 +275,7 @@ impl Propagator<Earth> for Sgp4 {
 #[cfg(test)]
 mod tests {
     use lox_approx::assert_approx_eq;
+    use lox_core::units::AngularRate;
     use lox_frames::Icrf;
     use lox_frames::providers::DefaultRotationProvider;
     use lox_time::intervals::Interval;
@@ -190,7 +285,7 @@ mod tests {
 
     #[test]
     fn test_sgp4_state_at() {
-        let tle = Elements::from_tle(
+        let tle = Tle::from_lines(
             Some("ISS (ZARYA)".to_string()),
             "1 25544U 98067A   24170.37528350  .00016566  00000+0  30244-3 0  9996".as_bytes(),
             "2 25544  51.6410 309.3890 0010444 339.5369 107.8830 15.49495945458731".as_bytes(),
@@ -211,7 +306,7 @@ mod tests {
 
     #[test]
     fn test_sgp4_propagate() {
-        let tle = Elements::from_tle(
+        let tle = Tle::from_lines(
             Some("ISS (ZARYA)".to_string()),
             "1 25544U 98067A   24170.37528350  .00016566  00000+0  30244-3 0  9996".as_bytes(),
             "2 25544  51.6410 309.3890 0010444 339.5369 107.8830 15.49495945458731".as_bytes(),
@@ -228,7 +323,7 @@ mod tests {
 
     #[test]
     fn test_sgp4_propagate_in_frame() {
-        let tle = Elements::from_tle(
+        let tle = Tle::from_lines(
             Some("ISS (ZARYA)".to_string()),
             "1 25544U 98067A   24170.37528350  .00016566  00000+0  30244-3 0  9996".as_bytes(),
             "2 25544  51.6410 309.3890 0010444 339.5369 107.8830 15.49495945458731".as_bytes(),
@@ -259,14 +354,14 @@ mod tests {
     const DIVERGING_AT_EPOCH_LINE_2: &str =
         "2 33334  68.4714 236.1303 5602877 123.7484 302.5767  0.00001000 67521";
 
-    fn elements(line_1: &str, line_2: &str) -> Elements {
-        Elements::from_tle(None, line_1.as_bytes(), line_2.as_bytes()).unwrap()
+    fn elements(line_1: &str, line_2: &str) -> Tle {
+        Tle::from_lines(None, line_1, line_2).unwrap()
     }
 
     #[test]
     fn test_sgp4_invalid_elements() {
         let mut tle = elements(DIVERGING_LINE_1, DIVERGING_LINE_2);
-        tle.mean_motion = 0.0;
+        tle.mean_motion = AngularRate::radians_per_second(0.0);
         let err = Sgp4::new(tle).unwrap_err();
         assert!(matches!(
             err,
@@ -296,10 +391,11 @@ mod tests {
             err,
             Sgp4Error::Diverged {
                 kind: Divergence::NegativeSemiLatusRectum,
-                minutes_since_epoch,
-            } if (minutes_since_epoch - 25.0).abs() < 1e-9
+                time_since_epoch,
+                ..
+            } if time_since_epoch == TimeDelta::from_minutes(25)
         ));
-        assert!(err.to_string().contains("25 minutes after epoch"));
+        assert!(err.to_string().contains("25.000 minutes after epoch"));
     }
 
     #[test]
@@ -317,5 +413,121 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn test_invalid_elements_brouwer_mean_motion() {
+        let err = invalid_elements(ElementsError::KozaiElementsError(
+            KozaiElementsError::NegativeBrouwerMeanMotion,
+        ));
+        assert!(matches!(
+            err,
+            Sgp4Error::InvalidElements(InvalidElements::NegativeBrouwerMeanMotion)
+        ));
+    }
+
+    #[test]
+    fn test_diverged_eccentricity() {
+        let delta = TimeDelta::from_minutes(10);
+        let err = diverged(
+            sgp4::Error::OutOfRangeEccentricity {
+                eccentricity: 1.5,
+                t: 10.0,
+            },
+            delta,
+        );
+        assert!(matches!(
+            err,
+            Sgp4Error::Diverged {
+                kind: Divergence::EccentricityOutOfRange(e),
+                time_since_epoch,
+                ..
+            } if e == 1.5 && time_since_epoch == delta
+        ));
+    }
+
+    #[test]
+    fn test_diverged_message_before_epoch() {
+        let err = diverged(
+            sgp4::Error::NegativeSemiLatusRectum { t: -1440.0 },
+            TimeDelta::from_minutes(-1440),
+        );
+        assert!(err.to_string().contains("1440.000 minutes before epoch"));
+    }
+
+    #[test]
+    fn test_diverged_message_fractional_minutes() {
+        let err = diverged(
+            sgp4::Error::NegativeSemiLatusRectum { t: 1234.5666 },
+            TimeDelta::from_seconds_f64(1234.5666 * 60.0),
+        );
+        assert!(err.to_string().contains("1234.567 minutes after epoch"));
+    }
+
+    #[test]
+    fn test_epoch_out_of_chrono_range() {
+        let mut tle = elements(DIVERGING_LINE_1, DIVERGING_LINE_2);
+        tle.epoch = lox_time::utc::Utc::from_delta(TimeDelta::from_seconds(10_000_000_000_000));
+        let err = Sgp4::new(tle).unwrap_err();
+        assert!(matches!(
+            err,
+            Sgp4Error::InvalidElements(InvalidElements::EpochOutOfRange)
+        ));
+    }
+
+    /// The native parser and unit conversions must agree with the `sgp4` crate.
+    #[test]
+    fn test_tle_matches_sgp4_crate() {
+        let data = lox_test_utils::read_data_file("oneweb_tle.txt");
+        let lines: Vec<_> = data.lines().collect();
+        assert!(lines.len() >= 3);
+        for chunk in lines.as_chunks::<3>().0 {
+            let name = Some(chunk[0].trim().to_string());
+            let native = Tle::from_lines(name.clone(), chunk[1], chunk[2]).unwrap();
+            let actual = to_sgp4_elements(&native).unwrap();
+            let expected =
+                sgp4::Elements::from_tle(name, chunk[1].as_bytes(), chunk[2].as_bytes()).unwrap();
+
+            assert_eq!(actual.object_name, expected.object_name);
+            assert_eq!(
+                actual.international_designator,
+                expected.international_designator
+            );
+            assert_eq!(actual.norad_id, expected.norad_id);
+            assert_eq!(actual.classification, expected.classification);
+            assert_eq!(actual.datetime, expected.datetime);
+            assert_eq!(actual.mean_motion_dot, expected.mean_motion_dot);
+            assert_eq!(actual.mean_motion_ddot, expected.mean_motion_ddot);
+            assert_eq!(actual.drag_term, expected.drag_term);
+            assert_eq!(actual.eccentricity, expected.eccentricity);
+            assert_eq!(actual.element_set_number, expected.element_set_number);
+            assert_eq!(actual.revolution_number, expected.revolution_number);
+            assert_eq!(actual.ephemeris_type, expected.ephemeris_type);
+            assert_approx_eq!(actual.inclination, expected.inclination, rtol <= 1e-14);
+            assert_approx_eq!(
+                actual.right_ascension,
+                expected.right_ascension,
+                rtol <= 1e-14
+            );
+            assert_approx_eq!(
+                actual.argument_of_perigee,
+                expected.argument_of_perigee,
+                rtol <= 1e-14
+            );
+            assert_approx_eq!(actual.mean_anomaly, expected.mean_anomaly, rtol <= 1e-14);
+            assert_approx_eq!(actual.mean_motion, expected.mean_motion, rtol <= 1e-14);
+
+            let actual = Constants::from_elements_afspc_compatibility_mode(&actual).unwrap();
+            let expected = Constants::from_elements_afspc_compatibility_mode(&expected).unwrap();
+            for minutes in [0.0, 720.0, 1440.0] {
+                let a = actual.propagate(MinutesSinceEpoch(minutes)).unwrap();
+                let e = expected.propagate(MinutesSinceEpoch(minutes)).unwrap();
+                for i in 0..3 {
+                    // km and km/s: agreement to better than a micrometre.
+                    assert!((a.position[i] - e.position[i]).abs() < 1e-9);
+                    assert!((a.velocity[i] - e.velocity[i]).abs() < 1e-9);
+                }
+            }
+        }
     }
 }

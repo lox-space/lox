@@ -16,6 +16,7 @@ use crate::orbits::propagators::j4::J4Propagator;
 use crate::orbits::propagators::numerical::{NumericalError, NumericalPropagator};
 use crate::orbits::propagators::semi_analytical::{Vallado, ValladoError};
 use crate::orbits::propagators::sgp4::{Sgp4, Sgp4Error};
+use crate::orbits::tle::{Classification, Tle};
 use crate::orbits::{
     CartesianOrbit, EquinoctialOrbit, FromEquinoctialError, ModifiedEquinoctialOrbit,
     ToEquinoctialError, ToKeplerianError, ToModifiedEquinoctialError, Trajectory, TrajectoryError,
@@ -33,8 +34,7 @@ use crate::units::python::{
 use lox_core::coords::{Cartesian, Ellipsoid, LonLatAlt};
 use lox_core::elements::{Equinoctial, ModifiedEquinoctial, RetrogradeFactor};
 use lox_core::glam::DVec3;
-use lox_core::time::constants::SECONDS_PER_DAY;
-use lox_core::units::{Angle, AngularRate, Distance, Velocity};
+use lox_core::units::{Distance, Velocity};
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_time::intervals::Interval;
@@ -42,8 +42,6 @@ use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyList, PyString, PyType};
-use sgp4::{Classification, Elements};
-use std::f64::consts::TAU;
 
 struct PyTrajectoryTransformationError(TrajectoryTransformationError);
 
@@ -2273,7 +2271,7 @@ impl PyGroundPropagator {
 #[pyclass(name = "TLE", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
 pub struct PyTle {
-    elements: Elements,
+    elements: Tle,
     raw: String,
 }
 
@@ -2281,15 +2279,14 @@ impl PyTle {
     fn from_string(tle: &str) -> PyResult<Self> {
         let lines: Vec<&str> = tle.trim().split('\n').collect();
         let elements = if lines.len() == 3 {
-            Elements::from_tle(
+            Tle::from_lines(
                 Some(lines[0].to_string()),
                 lines[1].as_bytes(),
                 lines[2].as_bytes(),
             )
             .map_err(value_error)?
         } else if lines.len() == 2 {
-            Elements::from_tle(None, lines[0].as_bytes(), lines[1].as_bytes())
-                .map_err(value_error)?
+            Tle::from_lines(None, lines[0].as_bytes(), lines[1].as_bytes()).map_err(value_error)?
         } else {
             return Err(PyValueError::new_err("invalid TLE"));
         };
@@ -2342,18 +2339,17 @@ impl PyTle {
 
     /// TLE epoch as a Time (TAI scale).
     fn epoch(&self) -> PyTime {
-        let tai: lox_time::time::Time<Tai> = self.elements.datetime.and_utc().into();
-        PyTime(tai.into_dynamic())
+        PyTime(self.elements.epoch.to_time().into_dynamic())
     }
 
     /// Orbital inclination.
     fn inclination(&self) -> PyAngle {
-        PyAngle(Angle::degrees(self.elements.inclination))
+        PyAngle(self.elements.inclination)
     }
 
     /// Right ascension of the ascending node (RAAN).
     fn right_ascension(&self) -> PyAngle {
-        PyAngle(Angle::degrees(self.elements.right_ascension))
+        PyAngle(self.elements.right_ascension)
     }
 
     /// Orbital eccentricity (dimensionless).
@@ -2363,34 +2359,32 @@ impl PyTle {
 
     /// Argument of perigee.
     fn argument_of_perigee(&self) -> PyAngle {
-        PyAngle(Angle::degrees(self.elements.argument_of_perigee))
+        PyAngle(self.elements.argument_of_perigee)
     }
 
     /// Mean anomaly.
     fn mean_anomaly(&self) -> PyAngle {
-        PyAngle(Angle::degrees(self.elements.mean_anomaly))
+        PyAngle(self.elements.mean_anomaly)
     }
 
     /// Mean motion (Kozai convention).
     fn mean_motion(&self) -> PyAngularRate {
-        PyAngularRate(AngularRate::radians_per_second(
-            self.elements.mean_motion * TAU / SECONDS_PER_DAY as f64,
-        ))
+        PyAngularRate(self.elements.mean_motion)
     }
 
     /// Half the first derivative of mean motion, as stored in the TLE (rev/day²).
     fn half_mean_motion_dot_rev_per_day2(&self) -> f64 {
-        self.elements.mean_motion_dot
+        self.elements.half_mean_motion_dot_rev_per_day2
     }
 
     /// One sixth of the second derivative of mean motion, as stored in the TLE (rev/day³).
     fn sixth_mean_motion_ddot_rev_per_day3(&self) -> f64 {
-        self.elements.mean_motion_ddot
+        self.elements.sixth_mean_motion_ddot_rev_per_day3
     }
 
     /// BSTAR drag term (Earth radii⁻¹).
     fn drag_term_per_earth_radius(&self) -> f64 {
-        self.elements.drag_term
+        self.elements.drag_term_per_earth_radius
     }
 
     /// Element set number.
