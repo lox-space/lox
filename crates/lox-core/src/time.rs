@@ -16,6 +16,7 @@
 use core::fmt::Display;
 use core::iter::{self, Sum};
 use core::ops::{Add, AddAssign, Div, Mul, Neg, Rem, Sub, SubAssign};
+use core::time::Duration;
 
 use self::constants::{
     ATTOSECONDS_IN_FEMTOSECOND, ATTOSECONDS_IN_MICROSECOND, ATTOSECONDS_IN_MILLISECOND,
@@ -612,6 +613,39 @@ impl TimeDeltaLiterals for i64 {
     }
 }
 
+/// Error returned when a [`Duration`] is too long to be represented as a [`TimeDelta`].
+#[derive(Debug, Error, PartialEq, Eq)]
+#[error("{0:?} cannot be represented as a `TimeDelta`")]
+pub struct FromDurationError(pub Duration);
+
+/// Error returned when a negative [`TimeDelta`] is converted to a [`Duration`].
+#[derive(Debug, Error, PartialEq, Eq)]
+#[error("{0} is negative and cannot be represented as a `Duration`")]
+pub struct ToDurationError(pub TimeDelta);
+
+impl TryFrom<Duration> for TimeDelta {
+    type Error = FromDurationError;
+
+    fn try_from(value: Duration) -> Result<Self, Self::Error> {
+        let seconds = i64::try_from(value.as_secs()).map_err(|_| FromDurationError(value))?;
+        let attoseconds = value.subsec_nanos() as i64 * ATTOSECONDS_IN_NANOSECOND;
+        Ok(Self::new(seconds, attoseconds))
+    }
+}
+
+impl TryFrom<TimeDelta> for Duration {
+    type Error = ToDurationError;
+
+    /// Converts the time delta, rounding it down to whole nanoseconds.
+    fn try_from(value: TimeDelta) -> Result<Self, Self::Error> {
+        if value.is_negative() {
+            return Err(ToDurationError(value));
+        }
+        let nanos = (value.attoseconds() / ATTOSECONDS_IN_NANOSECOND) as u32;
+        Ok(Duration::new(value.seconds() as u64, nanos))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
@@ -1130,5 +1164,58 @@ mod tests {
         assert_eq!(parts.iter().sum::<TimeDelta>(), delta);
         assert!(parts[..n - 1].iter().all(|&p| p == part));
         assert_eq!(parts[n - 1], part + delta % n as i64);
+    }
+
+    #[rstest]
+    #[case(TimeDelta::ZERO, Duration::ZERO)]
+    #[case(TimeDelta::from_seconds(1), Duration::from_secs(1))]
+    #[case(TimeDelta::from_milliseconds(1_500), Duration::from_millis(1_500))]
+    #[case(
+        TimeDelta::from_nanoseconds(123_456_789),
+        Duration::from_nanos(123_456_789)
+    )]
+    #[case(TimeDelta::from_days(365), Duration::from_secs(365 * 86_400))]
+    #[case(
+        TimeDelta::new(i64::MAX, 999_999_999 * ATTOSECONDS_IN_NANOSECOND),
+        Duration::new(i64::MAX as u64, 999_999_999)
+    )]
+    fn test_std_duration(#[case] delta: TimeDelta, #[case] duration: Duration) {
+        assert_eq!(Duration::try_from(delta).unwrap(), duration);
+        assert_eq!(TimeDelta::try_from(duration).unwrap(), delta);
+    }
+
+    #[rstest]
+    #[case(TimeDelta::new(12, 14), TimeDelta::from_seconds(12))]
+    #[case(
+        TimeDelta::from_attoseconds(1_999_999_999),
+        TimeDelta::from_nanoseconds(1)
+    )]
+    #[case(TimeDelta::new(0, ATTOSECONDS_IN_SECOND - 1), TimeDelta::from_nanoseconds(999_999_999))]
+    fn test_std_duration_rounds_down_to_nanoseconds(
+        #[case] delta: TimeDelta,
+        #[case] exp: TimeDelta,
+    ) {
+        let act = TimeDelta::try_from(Duration::try_from(delta).unwrap()).unwrap();
+        assert_eq!(act, exp);
+        assert!(act <= delta);
+    }
+
+    #[rstest]
+    #[case(TimeDelta::from_attoseconds(-1))]
+    #[case(TimeDelta::from_seconds(-1))]
+    #[case(TimeDelta::from_milliseconds(-1_500))]
+    #[case(TimeDelta::new(i64::MIN, 0))]
+    fn test_std_duration_negative(#[case] delta: TimeDelta) {
+        assert_eq!(Duration::try_from(delta), Err(ToDurationError(delta)));
+    }
+
+    #[rstest]
+    #[case(Duration::new(i64::MAX as u64 + 1, 0))]
+    #[case(Duration::MAX)]
+    fn test_std_duration_out_of_range(#[case] duration: Duration) {
+        assert_eq!(
+            TimeDelta::try_from(duration),
+            Err(FromDurationError(duration))
+        );
     }
 }
