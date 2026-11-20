@@ -7,12 +7,17 @@
 // (e.g. `lox_space::time::Time` instead of `lox_space::time::time::Time`).
 pub use lox_time::calendar_dates;
 pub use lox_time::intervals;
+#[cfg(feature = "jiff")]
+pub use lox_time::jiff;
 pub use lox_time::julian_dates;
 pub use lox_time::offsets;
 pub use lox_time::series;
 pub use lox_time::subsecond;
+pub use lox_time::system_time;
 pub use lox_time::time::*;
 pub use lox_time::time_of_day;
+#[cfg(feature = "time-rs")]
+pub use lox_time::time_rs;
 pub use lox_time::time_scales;
 pub use lox_time::utc;
 pub use lox_time::{InvalidFloatSeconds, TimeDelta, TimeDeltaLiterals, TimeDeltaUnit};

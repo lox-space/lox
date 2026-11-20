@@ -37,16 +37,20 @@
 extern crate alloc;
 
 pub mod calendar_dates;
-#[cfg(feature = "chrono")]
-pub mod chrono;
 pub mod intervals;
 mod iso;
+#[cfg(feature = "jiff")]
+pub mod jiff;
 pub mod julian_dates;
 pub mod offsets;
 pub mod series;
 pub mod subsecond;
+#[cfg(feature = "std")]
+pub mod system_time;
 pub mod time;
 pub mod time_of_day;
+#[cfg(feature = "time-rs")]
+pub mod time_rs;
 pub mod time_scales;
 pub mod utc;
 
