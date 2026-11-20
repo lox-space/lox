@@ -45,6 +45,8 @@ pub mod julian_dates;
 pub mod offsets;
 pub mod series;
 pub mod subsecond;
+#[cfg(feature = "std")]
+pub mod system_time;
 pub mod time;
 pub mod time_of_day;
 pub mod time_scales;
