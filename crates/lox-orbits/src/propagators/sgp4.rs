@@ -17,6 +17,7 @@ use lox_time::Time;
 use lox_time::TimeDelta;
 use lox_time::intervals::TimeInterval;
 use lox_time::time_scales::Tai;
+use lox_time::utc::Utc;
 
 use crate::orbits::{CartesianOrbit, Trajectory, TrajectoryError};
 use crate::propagators::Propagator;
@@ -105,6 +106,14 @@ impl From<sgp4::Error> for Sgp4Error {
     }
 }
 
+/// Returns the epoch of a Two-Line Element set in TAI.
+fn tle_epoch(elements: &Elements) -> Time<Tai> {
+    let epoch = elements.datetime.and_utc();
+    Utc::from_unix_timestamp(epoch.timestamp(), epoch.timestamp_subsec_nanos() as i64)
+        .expect("a `chrono::DateTime` should be within the range of `Utc`")
+        .to_time()
+}
+
 /// SGP4/SDP4 orbit propagator for satellites described by Two-Line Element sets.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -117,7 +126,7 @@ pub struct Sgp4 {
 impl Sgp4 {
     /// Create a new SGP4 propagator from TLE elements.
     pub fn new(initial_state: Elements) -> Result<Self, Sgp4Error> {
-        let time: Time<Tai> = initial_state.datetime.and_utc().into();
+        let time = tle_epoch(&initial_state);
         // Use AFSPC compatibility mode because TLE data is fitted using
         // AFSPC constants (WGS72). Using WGS84 with WGS72-fitted data
         // introduces systematic errors.
@@ -187,6 +196,30 @@ mod tests {
     use lox_time::{TimeDelta, TimeDeltaUnit};
 
     use super::*;
+
+    #[test]
+    fn test_tle_epoch() {
+        // Day 170.37528350 of 2024 is 2024-06-18T09:00:24.4944 UTC, and TAI - UTC = 37 s.
+        let tle = Elements::from_tle(
+            Some("ISS (ZARYA)".to_string()),
+            "1 25544U 98067A   24170.37528350  .00016566  00000+0  30244-3 0  9996".as_bytes(),
+            "2 25544  51.6410 309.3890 0010444 339.5369 107.8830 15.49495945458731".as_bytes(),
+        )
+        .unwrap();
+        let utc = Utc::builder()
+            .with_ymd(2024, 6, 18)
+            .with_hms(9, 0, 24.4944)
+            .build()
+            .unwrap();
+        let act = tle_epoch(&tle);
+        assert_approx_eq!(act, utc.to_time(), atol <= 1e-6);
+        assert_approx_eq!(
+            act - Time::from_delta(Tai, utc.to_delta()),
+            TimeDelta::from_seconds(37),
+            atol <= 1e-6
+        );
+        assert_eq!(Sgp4::new(tle).unwrap().time(), act);
+    }
 
     #[test]
     fn test_sgp4_state_at() {
