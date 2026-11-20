@@ -23,7 +23,7 @@ lox-core = { workspace = true, features = ["std"] }
 lox-ephem.workspace = true
 lox-frames.workspace = true
 lox-orbits.workspace = true
-lox-time = { workspace = true, features = ["chrono"] }
+lox-time.workspace = true
 
 geo = { workspace = true, optional = true }
 geojson = { workspace = true, optional = true }
