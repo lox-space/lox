@@ -37,8 +37,6 @@
 extern crate alloc;
 
 pub mod calendar_dates;
-#[cfg(feature = "chrono")]
-pub mod chrono;
 pub mod intervals;
 mod iso;
 #[cfg(feature = "jiff")]
