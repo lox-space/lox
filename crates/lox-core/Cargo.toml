@@ -21,9 +21,11 @@ lox-approx = { workspace = true, default-features = false, features = ["derive",
 
 chrono = { workspace = true, optional = true }
 glam.workspace = true
+jiff = { workspace = true, optional = true }
 libm = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 thiserror.workspace = true
+time = { workspace = true, optional = true }
 
 [features]
 default = ["std"]
@@ -31,14 +33,18 @@ std = [
     "glam/std",
     "lox-approx/std",
     "chrono?/std",
+    "jiff?/std",
     "serde?/std",
+    "time?/std",
 ]
 libm = [
     "dep:libm",
     "glam/libm",
 ]
 chrono = ["dep:chrono"]
+jiff = ["dep:jiff"]
 serde = ["dep:serde", "glam/serde"]
+time-rs = ["dep:time"]
 
 [dev-dependencies]
 rstest.workspace = true
