@@ -11,7 +11,6 @@ use std::path::Path;
 
 use std::f64::consts::PI;
 
-use chrono::{DateTime, Utc as ChronoUtc};
 use lox_bodies::{CoordinateOrigin, Origin};
 use lox_core::anomalies::AnomalyError;
 use lox_core::coords::Cartesian;
@@ -37,10 +36,6 @@ use crate::propagators::sgp4::{Sgp4, Sgp4Error};
 /// ODM builders unless overridden via `.originator(...)`.
 const DEFAULT_ORIGINATOR: &str = "Lox (https://lox.rs)";
 
-// ----------------------------------------------------------------------------
-// Helper: convert a `Time` (where T: Into<TimeScale>) to `OdmTime`
-// ----------------------------------------------------------------------------
-
 fn orbit_epoch_to_odm_time(time: lox_time::Time) -> OdmTime {
     OdmTime::Time(time.into_dynamic())
 }
@@ -59,10 +54,6 @@ fn apply_time_system<P: OffsetProvider>(
         None => Ok(epoch),
     }
 }
-
-// ----------------------------------------------------------------------------
-// Conversion errors
-// ----------------------------------------------------------------------------
 
 /// Error when converting an OPM to a [`CartesianOrbit`].
 #[derive(Debug, thiserror::Error)]
@@ -157,10 +148,6 @@ pub enum OemWriteError {
     #[error(transparent)]
     Odm(#[from] OdmError),
 }
-
-// ----------------------------------------------------------------------------
-// OpmBuilder
-// ----------------------------------------------------------------------------
 
 /// Fluent builder for constructing an [`Opm`] from a typed orbit.
 ///
@@ -412,10 +399,6 @@ where
     }
 }
 
-// ----------------------------------------------------------------------------
-// Orbit::build_opm
-// ----------------------------------------------------------------------------
-
 impl<O, R> Orbit<Cartesian, O, R>
 where
     O: CoordinateOrigin,
@@ -434,10 +417,6 @@ where
         OpmBuilder::new(self, object_name, object_id)
     }
 }
-
-// ----------------------------------------------------------------------------
-// CartesianOrbit from_opm methods
-// ----------------------------------------------------------------------------
 
 impl CartesianOrbit {
     /// Constructs a [`CartesianOrbit`] from a typed OPM.
@@ -470,10 +449,6 @@ impl CartesianOrbit {
         Ok(Self::from_opm(&opm)?)
     }
 }
-
-// ----------------------------------------------------------------------------
-// OemBuilder
-// ----------------------------------------------------------------------------
 
 /// Fluent builder for constructing an [`Oem`] from a typed trajectory.
 ///
@@ -763,10 +738,6 @@ where
     }
 }
 
-// ----------------------------------------------------------------------------
-// Trajectory::build_oem
-// ----------------------------------------------------------------------------
-
 impl<O, R> Trajectory<O, R>
 where
     O: CoordinateOrigin,
@@ -785,10 +756,6 @@ where
         OemBuilder::new(self, object_name, object_id)
     }
 }
-
-// ----------------------------------------------------------------------------
-// Trajectory from_oem methods
-// ----------------------------------------------------------------------------
 
 impl Trajectory {
     /// Constructs a [`Trajectory`] from a typed OEM (first segment).
@@ -909,12 +876,8 @@ pub enum OmmWriteError {
     Odm(#[from] OdmError),
 }
 
-// ----------------------------------------------------------------------------
-// Helpers
-// ----------------------------------------------------------------------------
-
 /// Convert an [`OdmTime`] to a UTC-naive timestamp for `sgp4::Elements`.
-fn omm_epoch_to_naive_utc(epoch: OdmTime) -> Result<chrono::NaiveDateTime, OmmFromOdmError> {
+fn omm_epoch_to_naive_utc(epoch: OdmTime) -> Result<sgp4::chrono::NaiveDateTime, OmmFromOdmError> {
     let utc_epoch = epoch
         .try_in_scale(OdmTimeSystem::Utc)
         .map_err(|e| OmmFromOdmError::EpochConversion(e.to_string()))?;
@@ -927,10 +890,12 @@ fn omm_epoch_to_naive_utc(epoch: OdmTime) -> Result<chrono::NaiveDateTime, OmmFr
             ));
         }
     };
-    let dt: DateTime<ChronoUtc> = utc.try_into().map_err(|e: lox_time::chrono::ChronoError| {
-        OmmFromOdmError::EpochConversion(e.to_string())
-    })?;
-    Ok(dt.naive_utc())
+    utc.to_unix_timestamp()
+        .and_then(|(seconds, nanoseconds)| {
+            sgp4::chrono::DateTime::from_timestamp(seconds, nanoseconds)
+        })
+        .map(|epoch| epoch.naive_utc())
+        .ok_or_else(|| OmmFromOdmError::EpochConversion(format!("{utc} is out of range")))
 }
 
 /// Decode the single-letter TLE `CLASSIFICATION_TYPE` from the OMM
@@ -950,10 +915,6 @@ fn sma_to_mean_motion(sma_m: f64, gm_m3_per_s2: f64) -> f64 {
     let n_rad_per_s = (gm_m3_per_s2 / sma_m.powi(3)).sqrt();
     n_rad_per_s * SECONDS_PER_DAY as f64 / (2.0 * PI)
 }
-
-// ----------------------------------------------------------------------------
-// Sgp4::from_omm / to_omm
-// ----------------------------------------------------------------------------
 
 impl Sgp4 {
     /// Constructs an [`Sgp4`] propagator from a typed [`Omm`].
@@ -1036,10 +997,6 @@ impl Sgp4 {
         Ok(Self::from_omm(&omm)?)
     }
 }
-
-// ----------------------------------------------------------------------------
-// OmmBuilder (KeplerianOrbit → OMM)
-// ----------------------------------------------------------------------------
 
 /// Fluent builder for constructing an [`Omm`] from a [`KeplerianOrbit`].
 ///
@@ -1305,10 +1262,6 @@ where
     }
 }
 
-// ----------------------------------------------------------------------------
-// KeplerianOrbit::build_omm
-// ----------------------------------------------------------------------------
-
 impl<O, R> KeplerianOrbit<O, R>
 where
     O: CoordinateOrigin,
@@ -1327,10 +1280,6 @@ where
         OmmBuilder::new(self, object_name, object_id)
     }
 }
-
-// ----------------------------------------------------------------------------
-// KeplerianOrbit::from_omm
-// ----------------------------------------------------------------------------
 
 impl KeplerianOrbit {
     /// Constructs a [`KeplerianOrbit`] from a typed OMM by treating the
@@ -1382,10 +1331,6 @@ impl KeplerianOrbit {
         Ok(Self::from_omm(&omm)?)
     }
 }
-
-// ----------------------------------------------------------------------------
-// Tests
-// ----------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
