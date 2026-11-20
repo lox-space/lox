@@ -21,7 +21,6 @@ readme = "README.md"
 lox-approx = { workspace = true, default-features = false }
 lox-core = { workspace = true, default-features = false }
 
-chrono = { workspace = true, optional = true }
 jiff = { workspace = true, optional = true }
 nom = { workspace = true, features = ["alloc"] }
 serde = { workspace = true, optional = true }
@@ -42,7 +41,6 @@ std = [
     "time?/std",
 ]
 libm = ["lox-core/libm"]
-chrono = ["dep:chrono", "lox-core/chrono", "std"]
 jiff = ["dep:jiff", "lox-core/jiff"]
 serde = ["dep:serde", "lox-core/serde"]
 time-rs = ["dep:time", "lox-core/time-rs"]
