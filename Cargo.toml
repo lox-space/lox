@@ -45,6 +45,7 @@ geo = "0.33"
 geojson = "1.0"
 glam = { version = "0.34.1", default-features = false, features = ["f64"] }
 itertools = "0.15.0"
+jiff = { version = "1.0.1", default-features = false }
 libm = "0.2.16"
 nalgebra = "0.35.0"
 nom = { version = "8.0.0", default-features = false }
@@ -61,6 +62,7 @@ sgp4 = "2.4.0"
 sha2 = "0.11"
 tempfile = "3"
 thiserror = { version = "2", default-features = false }
+time = { version = "0.3.55", default-features = false }
 zip = { version = "9", default-features = false, features = ["deflate"] }
 
 [profile.release]
