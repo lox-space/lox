@@ -41,6 +41,8 @@ pub mod calendar_dates;
 pub mod chrono;
 pub mod intervals;
 mod iso;
+#[cfg(feature = "jiff")]
+pub mod jiff;
 pub mod julian_dates;
 pub mod offsets;
 pub mod series;
@@ -49,6 +51,8 @@ pub mod subsecond;
 pub mod system_time;
 pub mod time;
 pub mod time_of_day;
+#[cfg(feature = "time-rs")]
+pub mod time_rs;
 pub mod time_scales;
 pub mod utc;
 
