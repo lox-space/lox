@@ -244,6 +244,17 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
+    fn test_system_time_earliest() {
+        // The earliest `SystemTime` whose offset from J2000 still fits in an `i64`.
+        let system_time = SystemTime::UNIX_EPOCH
+            .checked_sub(Duration::from_secs(i64::MAX as u64 - 946_728_000))
+            .unwrap();
+        let utc = Utc::try_from(system_time).unwrap();
+        assert_eq!(SystemTime::try_from(utc), Ok(system_time));
+    }
+
+    #[cfg(unix)]
+    #[test]
     fn test_system_time_out_of_range() {
         let system_time = SystemTime::UNIX_EPOCH
             .checked_sub(Duration::from_secs(i64::MAX as u64))

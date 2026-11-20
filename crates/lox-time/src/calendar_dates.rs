@@ -139,13 +139,19 @@ impl Date {
     ///
     /// # Errors
     ///
-    /// - [DateError::InvalidDate] if the input fields do not represent a valid date.
+    /// - [DateError::InvalidDate] if the input fields do not represent a valid date, or if the
+    ///   date is so distant (years beyond about ±2.5 × 10¹⁶) that its day number does not fit
+    ///   in an `i64`.
     pub fn new(year: i64, month: u8, day: u8) -> Result<Self, DateError> {
         if !(1..=12).contains(&month) {
             Err(DateError::InvalidDate(year, month, day))
         } else {
             let calendar = calendar(year, month, day);
-            let check = Date::from_days_since_j2000(j2000_day_number(calendar, year, month, day));
+            let Some(day_number) = checked_day_number(j2000_day_number(calendar, year, month, day))
+            else {
+                return Err(DateError::InvalidDate(year, month, day));
+            };
+            let check = Date::from_days_since_j2000(day_number);
 
             if check.year() != year || check.month() != month || check.day() != day {
                 Err(DateError::InvalidDate(year, month, day))
@@ -199,7 +205,7 @@ impl Date {
 
         let year = find_year(calendar, days);
         let leap = is_leap_year(calendar, year);
-        let day_of_year = (days - last_day_of_year_j2k(calendar, year - 1)) as u16;
+        let day_of_year = (days as i128 - last_day_of_year_j2k(calendar, year as i128 - 1)) as u16;
         let month = find_month(day_of_year, leap);
         let day = find_day(day_of_year, month, leap).unwrap_or_else(|err| {
             unreachable!("{} is not a valid day of the year: {}", day_of_year, err)
@@ -216,12 +222,10 @@ impl Date {
     /// Constructs a new [Date] from a signed number of seconds since J2000. The [Calendar] is
     /// inferred.
     pub fn from_seconds_since_j2000(seconds: i64) -> Self {
-        let seconds = seconds + SECONDS_PER_HALF_DAY;
-        let mut time = seconds % SECONDS_PER_DAY;
-        if time < 0 {
-            time += SECONDS_PER_DAY;
-        }
-        let days = (seconds - time) / SECONDS_PER_DAY;
+        // Days start at midnight, half a day before J2000. Shifting by the half day after the
+        // division keeps the arithmetic within `i64` for every input.
+        let days = seconds.div_euclid(SECONDS_PER_DAY)
+            + (seconds.rem_euclid(SECONDS_PER_DAY) + SECONDS_PER_HALF_DAY) / SECONDS_PER_DAY;
         Self::from_days_since_j2000(days)
     }
 
@@ -246,7 +250,21 @@ impl Date {
     }
 
     /// Returns the day number of `self` relative to J2000.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the day number does not fit in an `i64`, which only happens for years beyond
+    /// about ±2.5 × 10¹⁶. [`Date::new`] rejects such dates, so only one created with
+    /// [`Date::new_unchecked`] can reach this.
     pub const fn j2000_day_number(&self) -> i64 {
+        match checked_day_number(self.j2000_day_number_i128()) {
+            Some(day_number) => day_number,
+            None => panic!("the J2000 day number is out of range"),
+        }
+    }
+
+    /// Returns the day number of `self` relative to J2000 without narrowing it to an `i64`.
+    pub(crate) const fn j2000_day_number_i128(&self) -> i128 {
         j2000_day_number(self.calendar, self.year, self.month, self.day)
     }
 
@@ -271,7 +289,10 @@ impl JulianDate for Date {
 }
 
 fn find_year(calendar: Calendar, j2000day: i64) -> i64 {
-    match calendar {
+    // Formed in `i128`, because the intermediate products overflow an `i64` long before the
+    // day count does. The year itself is always smaller than the day count.
+    let j2000day = j2000day as i128;
+    let year = match calendar {
         Calendar::ProlepticJulian => -((-4 * j2000day - 2920488) / 1461),
         Calendar::Julian => -((-4 * j2000day - 2921948) / 1461),
         Calendar::Gregorian => {
@@ -282,10 +303,13 @@ fn find_year(calendar: Calendar, j2000day: i64) -> i64 {
                 year
             }
         }
-    }
+    };
+    year as i64
 }
 
-const fn last_day_of_year_j2k(calendar: Calendar, year: i64) -> i64 {
+/// Returns the day number of the last day of `year`, in `i128` because the result does not
+/// fit in an `i64` for every `i64` year.
+const fn last_day_of_year_j2k(calendar: Calendar, year: i128) -> i128 {
     match calendar {
         Calendar::ProlepticJulian => 365 * year + (year + 1) / 4 - 730123,
         Calendar::Julian => 365 * year + year / 4 - 730122,
@@ -352,10 +376,17 @@ const fn calendar(year: i64, month: u8, day: u8) -> Calendar {
     }
 }
 
-const fn j2000_day_number(calendar: Calendar, year: i64, month: u8, day: u8) -> i64 {
-    let d1 = last_day_of_year_j2k(calendar, year - 1);
+const fn j2000_day_number(calendar: Calendar, year: i64, month: u8, day: u8) -> i128 {
+    let d1 = last_day_of_year_j2k(calendar, year as i128 - 1);
     let d2 = find_day_in_year(month, day, is_leap_year(calendar, year));
-    d1 + d2 as i64
+    d1 + d2 as i128
+}
+
+const fn checked_day_number(day_number: i128) -> Option<i64> {
+    if day_number < i64::MIN as i128 || day_number > i64::MAX as i128 {
+        return None;
+    }
+    Some(day_number as i64)
 }
 
 /// `CalendarDate` allows any date-time format to report its date in a human-readable way.
@@ -392,6 +423,58 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
+
+    #[rstest]
+    #[case(70_000_000_000_000)]
+    #[case(-70_000_000_000_000)]
+    #[case(-10_000_000_000_000_000)]
+    #[case(25_000_000_000_000_000)]
+    #[case(-25_000_000_000_000_000)]
+    fn test_date_new_distant_years(#[case] year: i64) {
+        let date = Date::new(year, 3, 1).unwrap();
+        assert_eq!(Date::from_days_since_j2000(date.j2000_day_number()), date);
+    }
+
+    #[rstest]
+    #[case(26_000_000_000_000_000)]
+    #[case(-26_000_000_000_000_000)]
+    #[case(i64::MAX)]
+    #[case(i64::MIN)]
+    fn test_date_new_day_number_out_of_range(#[case] year: i64) {
+        assert_eq!(
+            Date::new(year, 1, 1),
+            Err(DateError::InvalidDate(year, 1, 1))
+        );
+    }
+
+    #[rstest]
+    #[case(i64::MIN)]
+    #[case(i64::MAX)]
+    fn test_date_from_days_since_j2000_extremes(#[case] days: i64) {
+        let date = Date::from_days_since_j2000(days);
+        assert_eq!(date.j2000_day_number(), days);
+    }
+
+    #[test]
+    #[should_panic(expected = "the J2000 day number is out of range")]
+    fn test_date_j2000_day_number_out_of_range() {
+        let _ = Date::new_unchecked(i64::MAX, 1, 1).j2000_day_number();
+    }
+
+    #[rstest]
+    #[case(0)]
+    #[case(-SECONDS_PER_HALF_DAY - 1)]
+    #[case(i64::MIN)]
+    #[case(i64::MAX)]
+    fn test_date_from_seconds_since_j2000(#[case] seconds: i64) {
+        // J2000 is at noon, so days start half a day earlier than the J2000 offset suggests.
+        let days = (seconds as i128 + SECONDS_PER_HALF_DAY as i128)
+            .div_euclid(SECONDS_PER_DAY as i128) as i64;
+        assert_eq!(
+            Date::from_seconds_since_j2000(seconds),
+            Date::from_days_since_j2000(days)
+        );
+    }
 
     #[rstest]
     #[case::equal_same_calendar(Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Date { calendar: Calendar::Gregorian, year: 2000, month: 1, day: 1}, Ordering::Equal)]
