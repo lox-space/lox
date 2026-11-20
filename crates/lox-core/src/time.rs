@@ -26,8 +26,6 @@ use self::constants::{
 use lox_approx::ApproxEq;
 use thiserror::Error;
 
-#[cfg(feature = "chrono")]
-mod chrono;
 pub mod constants;
 #[cfg(feature = "jiff")]
 mod jiff;
@@ -35,8 +33,6 @@ mod jiff;
 mod time_rs;
 mod unit;
 
-#[cfg(feature = "chrono")]
-pub use self::chrono::ChronoTimeDeltaError;
 #[cfg(feature = "jiff")]
 pub use self::jiff::FromJiffDurationError;
 #[cfg(feature = "time-rs")]
