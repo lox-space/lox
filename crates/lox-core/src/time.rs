@@ -29,10 +29,18 @@ use thiserror::Error;
 #[cfg(feature = "chrono")]
 mod chrono;
 pub mod constants;
+#[cfg(feature = "jiff")]
+mod jiff;
+#[cfg(feature = "time-rs")]
+mod time_rs;
 mod unit;
 
 #[cfg(feature = "chrono")]
 pub use self::chrono::ChronoTimeDeltaError;
+#[cfg(feature = "jiff")]
+pub use self::jiff::FromJiffDurationError;
+#[cfg(feature = "time-rs")]
+pub use self::time_rs::FromTimeRsDurationError;
 pub use unit::TimeDeltaUnit;
 
 /// A signed finite time delta with whole seconds and an attosecond remainder in `[0, 10¹⁸)`.
@@ -611,6 +619,25 @@ impl TimeDeltaLiterals for i64 {
     fn attos(&self) -> TimeDelta {
         TimeDelta::from_attoseconds(*self)
     }
+}
+
+/// Creates a `TimeDelta` from whole seconds and a nanosecond remainder with the same sign,
+/// returning `None` if a negative remainder borrows past [`i64::MIN`] seconds.
+#[cfg(any(feature = "jiff", feature = "time-rs"))]
+const fn checked_from_seconds_and_signed_nanos(seconds: i64, nanos: i32) -> Option<TimeDelta> {
+    if nanos >= 0 {
+        return Some(TimeDelta::new(
+            seconds,
+            nanos as i64 * ATTOSECONDS_IN_NANOSECOND,
+        ));
+    }
+    let Some(seconds) = seconds.checked_sub(1) else {
+        return None;
+    };
+    Some(TimeDelta::new(
+        seconds,
+        ATTOSECONDS_IN_SECOND + nanos as i64 * ATTOSECONDS_IN_NANOSECOND,
+    ))
 }
 
 /// Error returned when a [`Duration`] is too long to be represented as a [`TimeDelta`].
