@@ -35,7 +35,7 @@ lox-io = { workspace = true, optional = true }
 lox-itur = { workspace = true, optional = true }
 lox-odm = { workspace = true, optional = true }
 lox-orbits = { workspace = true, optional = true }
-lox-time = { workspace = true, optional = true, features = ["chrono"] }
+lox-time = { workspace = true, optional = true }
 
 geo = { workspace = true, optional = true }
 numpy = { workspace = true, optional = true }

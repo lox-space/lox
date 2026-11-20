@@ -26,6 +26,7 @@ use crate::time::TimeDelta;
 use crate::time::python::deltas::PyTimeDelta;
 use crate::time::python::time::PyTime;
 use crate::time::time_scales::Tai;
+use crate::time::utc::Utc;
 use crate::units::python::{
     PyAngle, PyAngularRate, PyDistance, PySpecificAngularMomentum, PySpecificEnergy, PyVelocity,
     repr_f64,
@@ -2342,8 +2343,11 @@ impl PyTle {
 
     /// TLE epoch as a Time (TAI scale).
     fn epoch(&self) -> PyTime {
-        let tai: lox_time::time::Time<Tai> = self.elements.datetime.and_utc().into();
-        PyTime(tai.into_dynamic())
+        let epoch = self.elements.datetime.and_utc();
+        let utc =
+            Utc::from_unix_timestamp(epoch.timestamp(), epoch.timestamp_subsec_nanos() as i64)
+                .expect("a `chrono::DateTime` should be within the range of `Utc`");
+        PyTime(utc.to_dynamic_time())
     }
 
     /// Orbital inclination.
