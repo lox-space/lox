@@ -37,7 +37,6 @@ lox-test-utils = { path = "crates/lox-test-utils" }
 lox-time = { path = "crates/lox-time", version = "0.1.0-alpha.28" }
 
 arrayvec = "0.7.8"
-chrono = "0.4.45"
 csv = "1.4.0"
 differential-equations = "0.7.0"
 divan = { package = "codspeed-divan-compat", version = "4.3.0" }
