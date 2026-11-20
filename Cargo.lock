@@ -1162,6 +1162,7 @@ version = "0.1.0-alpha.51"
 dependencies = [
  "codspeed-divan-compat",
  "geo",
+ "jiff",
  "lox-analysis",
  "lox-approx",
  "lox-bodies",
@@ -1181,6 +1182,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sgp4",
+ "time",
 ]
 
 [[package]]

@@ -45,10 +45,12 @@ sgp4 = { workspace = true, optional = true }
 [dev-dependencies]
 divan.workspace = true
 geo.workspace = true
+jiff = { workspace = true, features = ["std"] }
 lox-test-utils.workspace = true
 pyo3 = { workspace = true, features = ["auto-initialize"] }
 serde = { workspace = true, features = ["std"] }
 serde_json.workspace = true
+time = { workspace = true, features = ["std"] }
 
 [[bench]]
 name = "spk"
@@ -154,6 +156,8 @@ python = [
   "dep:sgp4",
 ]
 time = ["io", "dep:lox-time"]
+jiff = ["time", "lox-time/jiff"]
+time-rs = ["time", "lox-time/time-rs"]
 serde = [
   "lox-analysis?/serde",
   "lox-bodies?/serde",
