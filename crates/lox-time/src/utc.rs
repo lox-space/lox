@@ -145,10 +145,34 @@ impl Utc {
 
 impl Utc {
     /// Returns the time since J2000, ignoring leap seconds.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the number of seconds does not fit in an `i64`, which only happens for years
+    /// beyond about ±2.9 × 10¹¹. Use [`Utc::checked_to_delta`] to handle that case.
     pub const fn to_delta(&self) -> TimeDelta {
-        let seconds = self.date.j2000_day_number() * SECONDS_PER_DAY + self.time.second_of_day()
-            - SECONDS_PER_HALF_DAY;
-        TimeDelta::new(seconds, self.time.subsecond().as_attoseconds())
+        match self.checked_to_delta() {
+            Some(delta) => delta,
+            None => panic!("the time since J2000 is out of range"),
+        }
+    }
+
+    /// Returns the time since J2000, ignoring leap seconds, or `None` if the number of seconds
+    /// does not fit in an `i64`.
+    pub const fn checked_to_delta(&self) -> Option<TimeDelta> {
+        // The whole sum is formed in `i128`: for distant years the day number alone overflows
+        // an `i64`, and within a day of `i64::MIN` the start of the day does even when the
+        // instant does not.
+        let seconds = self.date.j2000_day_number_i128() * SECONDS_PER_DAY as i128
+            + self.time.second_of_day() as i128
+            - SECONDS_PER_HALF_DAY as i128;
+        if seconds < i64::MIN as i128 || seconds > i64::MAX as i128 {
+            return None;
+        }
+        Some(TimeDelta::new(
+            seconds as i64,
+            self.time.subsecond().as_attoseconds(),
+        ))
     }
 
     /// Constructs a [Utc] instance from a Unix timestamp.
@@ -174,7 +198,7 @@ impl Utc {
     ///
     /// Returns `None` if the number of seconds overflows an `i64`.
     pub fn to_unix_timestamp(&self) -> Option<(i64, u32)> {
-        let delta = self.to_delta().checked_sub(UNIX_EPOCH)?;
+        let delta = self.checked_to_delta()?.checked_sub(UNIX_EPOCH)?;
         let nanoseconds = (delta.attoseconds() / ATTOSECONDS_IN_NANOSECOND) as u32;
         Some((delta.seconds(), nanoseconds))
     }
@@ -347,6 +371,15 @@ mod tests {
         );
     }
 
+    #[rstest]
+    // The earliest timestamp whose offset from J2000 still fits in an `i64`.
+    #[case(i64::MIN + 946_728_000)]
+    #[case(i64::MAX)]
+    fn test_utc_from_unix_timestamp_extremes(#[case] seconds: i64) {
+        let utc = Utc::from_unix_timestamp(seconds, 0).unwrap();
+        assert_eq!(utc.to_unix_timestamp(), Some((seconds, 0)));
+    }
+
     #[test]
     fn test_utc_to_unix_timestamp_leap_second_is_next_midnight() {
         let leap_second = Utc::from_iso("2016-12-31T23:59:60").unwrap();
@@ -365,6 +398,32 @@ mod tests {
     #[case(i64::MIN, 0)]
     fn test_utc_from_unix_timestamp_out_of_range(#[case] seconds: i64, #[case] nanoseconds: i64) {
         assert_eq!(Utc::from_unix_timestamp(seconds, nanoseconds), None);
+    }
+
+    #[rstest]
+    #[case(300_000_000_000)]
+    #[case(-300_000_000_000)]
+    fn test_utc_checked_to_delta_far_future_and_past(#[case] year: i64) {
+        let utc = Utc::builder().with_ymd(year, 1, 1).build().unwrap();
+        assert_eq!(utc.checked_to_delta(), None);
+        assert_eq!(utc.to_unix_timestamp(), None);
+    }
+
+    #[test]
+    fn test_utc_from_iso_distant_year() {
+        let utc: Utc = "100000000000000-01-01T00:00:00".parse().unwrap();
+        assert_eq!(utc.year(), 100_000_000_000_000);
+        assert_eq!(utc.to_unix_timestamp(), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "out of range")]
+    fn test_utc_to_delta_panics_out_of_range() {
+        let utc = Utc::builder()
+            .with_ymd(300_000_000_000, 1, 1)
+            .build()
+            .unwrap();
+        let _ = utc.to_delta();
     }
 
     #[test]

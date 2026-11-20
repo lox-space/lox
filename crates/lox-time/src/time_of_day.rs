@@ -295,7 +295,9 @@ impl TimeOfDay {
     ///
     /// Note that this constructor is not leap-second aware.
     pub const fn from_seconds_since_j2000(seconds: i64) -> Self {
-        let second_of_day = (seconds + SECONDS_PER_HALF_DAY).rem_euclid(SECONDS_PER_DAY);
+        // Shifting by the half day after the division keeps the arithmetic within `i64`.
+        let second_of_day =
+            (seconds.rem_euclid(SECONDS_PER_DAY) + SECONDS_PER_HALF_DAY) % SECONDS_PER_DAY;
         Self::new_unchecked(
             (second_of_day / SECONDS_PER_HOUR) as u8,
             (second_of_day % SECONDS_PER_HOUR / SECONDS_PER_MINUTE) as u8,
@@ -417,6 +419,18 @@ mod tests {
         assert_eq!(
             TimeOfDay::from_seconds_since_j2000(-SECONDS_PER_HALF_DAY - 1),
             TimeOfDay::new(23, 59, 59).unwrap()
+        );
+    }
+
+    #[rstest]
+    #[case(i64::MIN)]
+    #[case(i64::MAX)]
+    fn test_time_of_day_from_seconds_since_j2000_extremes(#[case] seconds: i64) {
+        let second_of_day = (seconds as i128 + SECONDS_PER_HALF_DAY as i128)
+            .rem_euclid(SECONDS_PER_DAY as i128) as u64;
+        assert_eq!(
+            TimeOfDay::from_seconds_since_j2000(seconds),
+            TimeOfDay::from_second_of_day(second_of_day).unwrap()
         );
     }
 
