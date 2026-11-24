@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.8](https://github.com/lox-space/lox/compare/lox-itur-v0.1.0-alpha.7...lox-itur-v0.1.0-alpha.8) - 2026-11-24
+
+### Added
+
+- *(lox-analysis)* apply elevation-dependent propagation losses per ground station
+
+### Fixed
+
+- *(lox-itur)* fix oxygen absorption constants
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- remove redundant homepage metadata
+- *(lox-itur)* type the default profile elevations as angles
+- *(lox-comms)* type the atmospheric losses of an elevation profile
+- tidy site-propagation review findings and add SPDX attribution
+- *(lox-core)* [**breaking**] move the literal traits into units::literals
+- *(lox-core)* [**breaking**] give all unit types a uniform named-unit API
+- *(lox-core)* [**breaking**] move the comms module to lox-comms
+
 ## [0.1.0-alpha.7](https://github.com/lox-space/lox/compare/lox-itur-v0.1.0-alpha.6...lox-itur-v0.1.0-alpha.7) - 2026-10-14
 
 ### Other
