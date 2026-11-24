@@ -1249,6 +1249,7 @@ version = "0.1.0-alpha.11"
 name = "lox-time"
 version = "0.1.0-alpha.29"
 dependencies = [
+ "hifitime",
  "jiff",
  "lox-approx",
  "lox-core",

@@ -20,6 +20,7 @@ readme = "README.md"
 lox-approx = { workspace = true, default-features = false }
 lox-core = { workspace = true, default-features = false }
 
+hifitime = { workspace = true, optional = true }
 jiff = { workspace = true, optional = true }
 nom = { workspace = true, features = ["alloc"] }
 serde = { workspace = true, optional = true }
@@ -35,11 +36,13 @@ std = [
     "lox-core/std",
     "lox-approx/std",
     "nom/std",
+    "hifitime?/std",
     "jiff?/std",
     "serde?/std",
     "time?/std",
 ]
 libm = ["lox-core/libm"]
+hifitime = ["dep:hifitime", "lox-core/hifitime"]
 jiff = ["dep:jiff", "lox-core/jiff"]
 serde = ["dep:serde", "lox-core/serde"]
 time-rs = ["dep:time", "lox-core/time-rs"]

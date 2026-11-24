@@ -37,6 +37,8 @@
 extern crate alloc;
 
 pub mod calendar_dates;
+#[cfg(feature = "hifitime")]
+pub mod hifitime;
 pub mod intervals;
 mod iso;
 #[cfg(feature = "jiff")]
