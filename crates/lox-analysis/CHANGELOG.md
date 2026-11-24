@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.17](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.16...lox-analysis-v0.1.0-alpha.17) - 2026-11-24
+
+### Added
+
+- *(lox-analysis)* apply elevation-dependent propagation losses per ground station
+- *(lox-core)* [**breaking**] add typed physical constants
+- *(lox-core)* [**breaking**] limit trajectory extrapolation and sample interval ends
+
+### Fixed
+
+- *(lox-analysis)* refuse a site profile on a link without an elevation
+- *(lox-analysis)* assert that a spacecraft is centred on the station's body
+- *(lox-analysis)* keep the elevation finite straight overhead
+- *(lox-analysis)* [**breaking**] return errors instead of panicking when building passes
+- *(lox-space)* clean up feature gates
+
+### Other
+
+- remove redundant homepage metadata
+- *(lox-analysis)* drop the unused chrono feature of lox-time
+- *(lox-analysis)* share the per-station loop of site propagation
+- *(lox-analysis)* always resolve the elevation of a ground-space link
+- *(lox-analysis)* cache the ground station geometry of a link
+- *(lox-analysis)* filter the plan's losses once per profiled link
+- cover site-propagation error paths and SitePropagation equality
+- *(lox-comms)* type the atmospheric losses of an elevation profile
+- tidy site-propagation review findings and add SPDX attribution
+- Added max propagation delay to `LinkWindowPart`
+- Split `LinkWindow` into parts, one for each rate
+- *(lox-time)* [**breaking**] re-export TimeDelta at the crate root
+- *(lox-time)* [**breaking**] remove the ToDelta trait
+- *(lox-orbits,lox-analysis)* drop module docs duplicated on mod declarations
+- *(lox-space)* [**breaking**] make dimensioned Python scalars unitful
+- *(lox-core)* [**breaking**] move the literal traits into units::literals
+- *(lox-core)* [**breaking**] rework angle wrapping and sexagesimal angles
+- *(lox-core)* [**breaking**] give all unit types a uniform named-unit API
+- *(lox-core)* [**breaking**] move the comms module to lox-comms
+- *(lox-orbits)* [**breaking**] take KeplerianOrbit in J2/J4 propagator constructors
+- *(lox-analysis)* convert trajectory once per pair in to_passes
+- remove unnecessary Seconds type
+- repair changelogs broken by SPDX headers
+
 ## [0.1.0-alpha.16](https://github.com/lox-space/lox/compare/lox-analysis-v0.1.0-alpha.15...lox-analysis-v0.1.0-alpha.16) - 2026-10-14
 
 ### Added
