@@ -3971,16 +3971,62 @@ class TLE:
     """Two-Line Element set (TLE) for satellite orbit data.
 
     Parses and exposes the orbital elements from a NORAD Two-Line Element set.
+    Objects with catalog numbers that do not fit the two-line format are only
+    distributed in other formats; load those with `TLE.from_json`,
+    `TLE.from_json_list`, or `TLE.from_omm`.
 
     Args:
         tle: TLE as a string (2 or 3 lines) or a list of 2–3 strings.
     """
     def __new__(cls, tle: str | list[str]) -> Self: ...
+    @classmethod
+    def from_omm(cls, omm: str) -> Self:
+        """Create a TLE from a single Orbit Mean-Elements Message.
+
+        Args:
+            omm: A complete OMM, including its header, as KVN, XML, or JSON. The format
+                is detected. Use `from_json` for CelesTrak's JSON, which has no header.
+
+        Returns:
+            The elements of the message.
+
+        Raises:
+            ValueError: If the message is malformed or does not describe an Earth orbit.
+        """
+        ...
+    @classmethod
+    def from_json(cls, json: str) -> Self:
+        """Create a TLE from one CelesTrak or Space-Track general perturbations JSON record.
+
+        Args:
+            json: A single JSON object. Use `from_json_list` for a whole download.
+
+        Returns:
+            The elements of the record.
+
+        Raises:
+            ValueError: If the JSON is malformed or the record is invalid.
+        """
+        ...
+    @classmethod
+    def from_json_list(cls, json: str) -> list[Self]:
+        """Create TLEs from a CelesTrak or Space-Track general perturbations JSON download.
+
+        Args:
+            json: A JSON array of records.
+
+        Returns:
+            The elements of every record, in order.
+
+        Raises:
+            ValueError: If the JSON is malformed or any record is invalid.
+        """
+        ...
     def object_name(self) -> str | None:
-        """Satellite name, if present (line 0 of a 3-line TLE)."""
+        """Satellite name, if present (line 0 of a 3-line TLE, or the OMM object name)."""
         ...
     def international_designator(self) -> str | None:
-        """International designator (e.g. '98067A')."""
+        """International designator (e.g. '1998-067A')."""
         ...
     def norad_id(self) -> int:
         """NORAD catalog number."""
@@ -4027,7 +4073,7 @@ class TLE:
     def ephemeris_type(self) -> int:
         """Ephemeris type (always 0 in distributed data)."""
         ...
-    def __getnewargs__(self) -> tuple[str]: ...
+    def __reduce__(self) -> tuple[Callable[[str], Self], tuple[str]]: ...
 
 @final
 class SGP4:

@@ -27,15 +27,16 @@ mod imaging_benches {
     };
     use lox_space::core::units::{Angle, Distance};
     use lox_space::orbits::Trajectory;
-    use lox_space::orbits::propagators::sgp4::{Elements, Sgp4};
+    use lox_space::orbits::propagators::sgp4::Sgp4;
     use lox_space::orbits::propagators::{OrbitSource, Propagator};
+    use lox_space::orbits::tle::Tle;
     use lox_space::time::TimeDelta;
     use lox_space::time::intervals::Interval;
 
     use super::common::{self, DynamicEnsemble};
 
     fn sentinel2_trajectory(name: &str, line1: &[u8], line2: &[u8]) -> Trajectory {
-        let tle = Elements::from_tle(Some(name.to_string()), line1, line2).unwrap();
+        let tle = Tle::from_lines(Some(name.to_string()), line1, line2).unwrap();
         let sgp4 = Sgp4::new(tle).unwrap();
         let t0 = sgp4.time();
         let t1 = t0 + TimeDelta::from_hours(6);

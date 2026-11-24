@@ -16,6 +16,7 @@ use crate::orbits::propagators::j4::J4Propagator;
 use crate::orbits::propagators::numerical::{NumericalError, NumericalPropagator};
 use crate::orbits::propagators::semi_analytical::{Vallado, ValladoError};
 use crate::orbits::propagators::sgp4::{Sgp4, Sgp4Error};
+use crate::orbits::tle::{Classification, Tle};
 use crate::orbits::{
     CartesianOrbit, EquinoctialOrbit, FromEquinoctialError, ModifiedEquinoctialOrbit,
     ToEquinoctialError, ToKeplerianError, ToModifiedEquinoctialError, Trajectory, TrajectoryError,
@@ -33,8 +34,7 @@ use crate::units::python::{
 use lox_core::coords::{Cartesian, Ellipsoid, LonLatAlt};
 use lox_core::elements::{Equinoctial, ModifiedEquinoctial, RetrogradeFactor};
 use lox_core::glam::DVec3;
-use lox_core::time::constants::SECONDS_PER_DAY;
-use lox_core::units::{Angle, AngularRate, Distance, Velocity};
+use lox_core::units::{Distance, Velocity};
 use lox_frames::providers::DefaultRotationProvider;
 use lox_frames::rotations::TryRotation;
 use lox_time::intervals::Interval;
@@ -42,8 +42,6 @@ use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyList, PyString, PyType};
-use sgp4::{Classification, Elements};
-use std::f64::consts::TAU;
 
 struct PyTrajectoryTransformationError(TrajectoryTransformationError);
 
@@ -2264,38 +2262,66 @@ impl PyGroundPropagator {
     }
 }
 
+/// The text format a [`PyTle`] was built from, which determines how it is rebuilt.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum TleSource {
+    Lines,
+    Json,
+    Omm,
+}
+
 /// Two-Line Element set (TLE) for satellite orbit data.
 ///
 /// Parses and exposes the orbital elements from a NORAD Two-Line Element set.
+/// Objects with catalog numbers that do not fit the two-line format are only
+/// distributed in other formats; load those with `TLE.from_json`,
+/// `TLE.from_json_list`, or `TLE.from_omm`.
 ///
 /// Args:
 ///     tle: TLE as a string (2 or 3 lines) or a list of 2–3 strings.
 #[pyclass(name = "TLE", module = "lox_space", frozen, from_py_object)]
 #[derive(Clone)]
 pub struct PyTle {
-    elements: Elements,
+    elements: Tle,
     raw: String,
+    source: TleSource,
 }
 
 impl PyTle {
+    fn from_omm_text(omm: &str) -> PyResult<Self> {
+        Ok(PyTle {
+            elements: Tle::from_omm_str(omm).map_err(value_error)?,
+            raw: omm.trim().to_string(),
+            source: TleSource::Omm,
+        })
+    }
+
+    fn from_json_record(record: &str) -> PyResult<Self> {
+        Ok(PyTle {
+            elements: serde_json::from_str(record).map_err(value_error)?,
+            raw: record.trim().to_string(),
+            source: TleSource::Json,
+        })
+    }
+
     fn from_string(tle: &str) -> PyResult<Self> {
         let lines: Vec<&str> = tle.trim().split('\n').collect();
         let elements = if lines.len() == 3 {
-            Elements::from_tle(
+            Tle::from_lines(
                 Some(lines[0].to_string()),
                 lines[1].as_bytes(),
                 lines[2].as_bytes(),
             )
             .map_err(value_error)?
         } else if lines.len() == 2 {
-            Elements::from_tle(None, lines[0].as_bytes(), lines[1].as_bytes())
-                .map_err(value_error)?
+            Tle::from_lines(None, lines[0].as_bytes(), lines[1].as_bytes()).map_err(value_error)?
         } else {
             return Err(PyValueError::new_err("invalid TLE"));
         };
         Ok(PyTle {
             elements,
             raw: tle.trim().to_string(),
+            source: TleSource::Lines,
         })
     }
 }
@@ -2316,12 +2342,62 @@ impl PyTle {
         }
     }
 
-    /// Satellite name, if present (line 0 of a 3-line TLE).
+    /// Create a TLE from a single Orbit Mean-Elements Message.
+    ///
+    /// Args:
+    ///     omm: A complete OMM, including its header, as KVN, XML, or JSON. The format
+    ///         is detected. Use `from_json` for CelesTrak's JSON, which has no header.
+    ///
+    /// Returns:
+    ///     The elements of the message.
+    ///
+    /// Raises:
+    ///     ValueError: If the message is malformed or does not describe an Earth orbit.
+    #[classmethod]
+    fn from_omm(_cls: &Bound<'_, PyType>, omm: &str) -> PyResult<Self> {
+        Self::from_omm_text(omm)
+    }
+
+    /// Create a TLE from one CelesTrak or Space-Track general perturbations JSON record.
+    ///
+    /// Args:
+    ///     json: A single JSON object. Use `from_json_list` for a whole download.
+    ///
+    /// Returns:
+    ///     The elements of the record.
+    ///
+    /// Raises:
+    ///     ValueError: If the JSON is malformed or the record is invalid.
+    #[classmethod]
+    fn from_json(_cls: &Bound<'_, PyType>, json: &str) -> PyResult<Self> {
+        Self::from_json_record(json)
+    }
+
+    /// Create TLEs from a CelesTrak or Space-Track general perturbations JSON download.
+    ///
+    /// Args:
+    ///     json: A JSON array of records.
+    ///
+    /// Returns:
+    ///     The elements of every record, in order.
+    ///
+    /// Raises:
+    ///     ValueError: If the JSON is malformed or any record is invalid.
+    #[classmethod]
+    fn from_json_list(_cls: &Bound<'_, PyType>, json: &str) -> PyResult<Vec<Self>> {
+        let records: Vec<serde_json::Value> = serde_json::from_str(json).map_err(value_error)?;
+        records
+            .iter()
+            .map(|record| Self::from_json_record(&record.to_string()))
+            .collect()
+    }
+
+    /// Satellite name, if present (line 0 of a 3-line TLE, or the OMM object name).
     fn object_name(&self) -> Option<String> {
         self.elements.object_name.clone()
     }
 
-    /// International designator (e.g. "98067A").
+    /// International designator (e.g. "1998-067A").
     fn international_designator(&self) -> Option<String> {
         self.elements.international_designator.clone()
     }
@@ -2342,55 +2418,52 @@ impl PyTle {
 
     /// TLE epoch as a Time (TAI scale).
     fn epoch(&self) -> PyTime {
-        let tai: lox_time::time::Time<Tai> = self.elements.datetime.and_utc().into();
-        PyTime(tai.into_dynamic())
+        PyTime(self.elements.epoch.to_time().into_dynamic())
     }
 
     /// Orbital inclination.
     fn inclination(&self) -> PyAngle {
-        PyAngle(Angle::degrees(self.elements.inclination))
+        PyAngle(self.elements.inclination)
     }
 
     /// Right ascension of the ascending node (RAAN).
     fn right_ascension(&self) -> PyAngle {
-        PyAngle(Angle::degrees(self.elements.right_ascension))
+        PyAngle(self.elements.right_ascension)
     }
 
     /// Orbital eccentricity (dimensionless).
     fn eccentricity(&self) -> f64 {
-        self.elements.eccentricity
+        self.elements.eccentricity.as_f64()
     }
 
     /// Argument of perigee.
     fn argument_of_perigee(&self) -> PyAngle {
-        PyAngle(Angle::degrees(self.elements.argument_of_perigee))
+        PyAngle(self.elements.argument_of_perigee)
     }
 
     /// Mean anomaly.
     fn mean_anomaly(&self) -> PyAngle {
-        PyAngle(Angle::degrees(self.elements.mean_anomaly))
+        PyAngle(self.elements.mean_anomaly)
     }
 
     /// Mean motion (Kozai convention).
     fn mean_motion(&self) -> PyAngularRate {
-        PyAngularRate(AngularRate::radians_per_second(
-            self.elements.mean_motion * TAU / SECONDS_PER_DAY as f64,
-        ))
+        PyAngularRate(self.elements.mean_motion)
     }
 
     /// Half the first derivative of mean motion, as stored in the TLE (rev/day²).
     fn half_mean_motion_dot_rev_per_day2(&self) -> f64 {
-        self.elements.mean_motion_dot
+        self.elements.half_mean_motion_dot_rev_per_day2
     }
 
     /// One sixth of the second derivative of mean motion, as stored in the TLE (rev/day³).
     fn sixth_mean_motion_ddot_rev_per_day3(&self) -> f64 {
-        self.elements.mean_motion_ddot
+        self.elements.sixth_mean_motion_ddot_rev_per_day3
     }
 
     /// BSTAR drag term (Earth radii⁻¹).
     fn drag_term_per_earth_radius(&self) -> f64 {
-        self.elements.drag_term
+        self.elements.drag_term_per_earth_radius
     }
 
     /// Element set number.
@@ -2409,16 +2482,31 @@ impl PyTle {
     }
 
     fn __repr__(&self) -> String {
-        let escaped = self.raw.replace('\\', "\\\\").replace('\n', "\\n");
-        format!("TLE(\"{}\")", escaped)
+        let escaped = self
+            .raw
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"")
+            .replace('\r', "\\r")
+            .replace('\n', "\\n");
+        match self.source {
+            TleSource::Lines => format!("TLE(\"{escaped}\")"),
+            TleSource::Json => format!("TLE.from_json(\"{escaped}\")"),
+            TleSource::Omm => format!("TLE.from_omm(\"{escaped}\")"),
+        }
     }
 
     fn __str__(&self) -> &str {
         &self.raw
     }
 
-    fn __getnewargs__(&self) -> (String,) {
-        (self.raw.clone(),)
+    fn __reduce__<'py>(&self, py: Python<'py>) -> PyResult<(Bound<'py, PyAny>, (String,))> {
+        let class = py.get_type::<Self>();
+        let constructor = match self.source {
+            TleSource::Lines => class.into_any(),
+            TleSource::Json => class.getattr("from_json")?,
+            TleSource::Omm => class.getattr("from_omm")?,
+        };
+        Ok((constructor, (self.raw.clone(),)))
     }
 }
 
