@@ -1218,6 +1218,7 @@ version = "0.1.0-alpha.52"
 dependencies = [
  "codspeed-divan-compat",
  "geo",
+ "hifitime",
  "jiff",
  "lox-analysis",
  "lox-approx",

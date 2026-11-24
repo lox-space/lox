@@ -41,6 +41,29 @@ fn test_system_time() {
     assert_eq!(back, Ok(utc()));
 }
 
+#[cfg(feature = "hifitime")]
+#[test]
+fn test_hifitime() {
+    use lox_space::core::time::ToHifitimeDurationError;
+    use lox_space::time::Time;
+    use lox_space::time::hifitime::ToHifitimeEpochError;
+    use lox_space::time::time_scales::Tai;
+
+    let tai = utc().to_time();
+    let epoch: Result<hifitime::Epoch, ToHifitimeEpochError> = tai.try_into();
+    let epoch = epoch.unwrap();
+    assert_eq!(epoch.time_scale, hifitime::TimeScale::TAI);
+    assert_eq!(Time::<Tai>::from(epoch), tai);
+    assert_eq!(Time::from(epoch), tai.into_dynamic());
+
+    let duration: Result<hifitime::Duration, ToHifitimeDurationError> =
+        TimeDelta::from_milliseconds(-1_500).try_into();
+    assert_eq!(
+        TimeDelta::from(duration.unwrap()),
+        TimeDelta::from_milliseconds(-1_500)
+    );
+}
+
 #[cfg(feature = "jiff")]
 #[test]
 fn test_jiff() {

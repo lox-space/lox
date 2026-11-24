@@ -44,6 +44,7 @@ sgp4 = { workspace = true, optional = true }
 [dev-dependencies]
 divan.workspace = true
 geo.workspace = true
+hifitime.workspace = true
 jiff = { workspace = true, features = ["std"] }
 lox-test-utils.workspace = true
 pyo3 = { workspace = true, features = ["auto-initialize"] }
@@ -155,6 +156,7 @@ python = [
   "dep:sgp4",
 ]
 time = ["io", "dep:lox-time"]
+hifitime = ["time", "lox-time/hifitime"]
 jiff = ["time", "lox-time/jiff"]
 time-rs = ["time", "lox-time/time-rs"]
 serde = [
