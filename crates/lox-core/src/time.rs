@@ -27,12 +27,16 @@ use lox_approx::ApproxEq;
 use thiserror::Error;
 
 pub mod constants;
+#[cfg(feature = "hifitime")]
+mod hifitime;
 #[cfg(feature = "jiff")]
 mod jiff;
 #[cfg(feature = "time-rs")]
 mod time_rs;
 mod unit;
 
+#[cfg(feature = "hifitime")]
+pub use self::hifitime::ToHifitimeDurationError;
 #[cfg(feature = "jiff")]
 pub use self::jiff::FromJiffDurationError;
 #[cfg(feature = "time-rs")]
