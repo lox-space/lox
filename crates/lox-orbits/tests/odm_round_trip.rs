@@ -349,6 +349,13 @@ const ISS_OMM_JSON: &str = r#"{
     "MEAN_MOTION_DDOT": "0"
 }"#;
 
+#[test]
+fn tle_from_omm_rejects_negative_eccentricity() {
+    let json = ISS_OMM_JSON.replace("\"0.0010444\"", "\"-0.0010444\"");
+    let err = Tle::from_omm_str(&json).unwrap_err();
+    assert!(err.to_string().contains("eccentricity"), "{err}");
+}
+
 /// `Tle::from_omm_str` yields elements for a working SGP4 propagator and a one-orbital-
 /// period propagation comes back with the same orbital period.
 #[test]

@@ -6,8 +6,8 @@
 
 use std::f64::consts::TAU;
 use std::fmt;
-use std::str::FromStr;
 
+use lox_core::elements::Eccentricity;
 use lox_core::time::constants::SECONDS_PER_DAY;
 use lox_core::units::{Angle, AngularRate};
 use lox_time::calendar_dates::Date;
@@ -18,8 +18,15 @@ use lox_time::utc::leap_seconds::DefaultLeapSecondsProvider;
 use thiserror::Error;
 
 const LINE_LENGTH: usize = 69;
-const LINE_1_SPACES: [usize; 8] = [1, 8, 17, 32, 43, 52, 61, 63];
-const LINE_2_SPACES: [usize; 7] = [1, 7, 16, 25, 33, 42, 51];
+
+/// Zero-based columns of line 1 that must be blank.
+const LINE_1_SEPARATORS: [usize; 8] = [1, 8, 17, 32, 43, 52, 61, 63];
+
+/// Zero-based columns of line 2 that must be blank.
+const LINE_2_SEPARATORS: [usize; 7] = [1, 7, 16, 25, 33, 42, 51];
+
+const NANOSECONDS_PER_SECOND: u64 = 1_000_000_000;
+const NANOSECONDS_PER_DAY: u64 = SECONDS_PER_DAY as u64 * NANOSECONDS_PER_SECOND;
 const ATTOSECONDS_PER_NANOSECOND: i64 = 1_000_000_000;
 
 /// One of the two data lines of a TLE.
@@ -127,7 +134,7 @@ pub struct Tle {
     /// The right ascension of the ascending node.
     pub right_ascension: Angle,
     /// The eccentricity.
-    pub eccentricity: f64,
+    pub eccentricity: Eccentricity,
     /// The argument of perigee.
     pub argument_of_perigee: Angle,
     /// The mean anomaly.
@@ -145,207 +152,280 @@ impl Tle {
         line_1: impl AsRef<[u8]>,
         line_2: impl AsRef<[u8]>,
     ) -> Result<Self, TleError> {
-        let l1 = line_1.as_ref();
-        let l2 = line_2.as_ref();
-        check_layout(l1, TleLine::One, b'1', &LINE_1_SPACES)?;
-        check_layout(l2, TleLine::Two, b'2', &LINE_2_SPACES)?;
+        let line_1 = line_1.as_ref();
+        let line_2 = line_2.as_ref();
+        check_line(line_1, TleLine::One, b'1', &LINE_1_SEPARATORS)?;
+        check_line(line_2, TleLine::Two, b'2', &LINE_2_SEPARATORS)?;
 
-        let norad_id = parse_norad_id(&l1[2..7], TleLine::One)?;
-        if norad_id != parse_norad_id(&l2[2..7], TleLine::Two)? {
+        let invalid_1 = |field| TleError::InvalidField {
+            line: TleLine::One,
+            field,
+        };
+        let invalid_2 = |field| TleError::InvalidField {
+            line: TleLine::Two,
+            field,
+        };
+
+        let norad_id = parse_catalog_number(&line_1[2..7]).ok_or(invalid_1("norad_id"))?;
+        let norad_id_2 = parse_catalog_number(&line_2[2..7]).ok_or(invalid_2("norad_id"))?;
+        if norad_id != norad_id_2 {
             return Err(TleError::NoradIdMismatch);
         }
-        check_checksum(l1, TleLine::One)?;
-        check_checksum(l2, TleLine::Two)?;
 
-        use TleLine::{One, Two};
+        let classification = match line_1[7] {
+            b'U' => Classification::Unclassified,
+            b'C' => Classification::Classified,
+            b'S' => Classification::Secret,
+            _ => return Err(invalid_1("classification")),
+        };
+
+        let designator = &line_1[9..17];
+        let international_designator = if designator.iter().all(|&b| b == b' ') {
+            None
+        } else {
+            Some(
+                parse_international_designator(designator)
+                    .ok_or(invalid_1("international_designator"))?,
+            )
+        };
+
+        let epoch = parse_epoch(&line_1[18..20], &line_1[20..32]).ok_or(invalid_1("epoch"))?;
+        let half_mean_motion_dot_rev_per_day2 =
+            parse_decimal(&line_1[33..43]).ok_or(invalid_1("mean_motion_dot"))?;
+        let sixth_mean_motion_ddot_rev_per_day3 =
+            parse_exponential(&line_1[44..52]).ok_or(invalid_1("mean_motion_ddot"))?;
+        let drag_term_per_earth_radius =
+            parse_exponential(&line_1[53..61]).ok_or(invalid_1("drag_term"))?;
+        let ephemeris_type = parse_integer(&line_1[62..63])
+            .and_then(|value| u8::try_from(value).ok())
+            .ok_or(invalid_1("ephemeris_type"))?;
+        let element_set_number =
+            parse_integer(&line_1[64..68]).ok_or(invalid_1("element_set_number"))?;
+
+        let inclination = parse_decimal(&line_2[8..16]).ok_or(invalid_2("inclination"))?;
+        let right_ascension = parse_decimal(&line_2[17..25]).ok_or(invalid_2("right_ascension"))?;
+        let eccentricity = parse_eccentricity(&line_2[26..33]).ok_or(invalid_2("eccentricity"))?;
+        let argument_of_perigee =
+            parse_decimal(&line_2[34..42]).ok_or(invalid_2("argument_of_perigee"))?;
+        let mean_anomaly = parse_decimal(&line_2[43..51]).ok_or(invalid_2("mean_anomaly"))?;
+        let mean_motion = parse_decimal(&line_2[52..63]).ok_or(invalid_2("mean_motion"))?;
+        let revolution_number =
+            parse_integer(&line_2[63..68]).ok_or(invalid_2("revolution_number"))?;
+
         Ok(Self {
             object_name,
-            international_designator: parse_designator(&l1[9..17])?,
+            international_designator,
             norad_id,
-            classification: parse_classification(l1[7])?,
-            epoch: parse_epoch(&l1[18..20], &l1[20..32])?,
-            half_mean_motion_dot_rev_per_day2: float(&l1[33..43], One, "mean_motion_dot")?,
-            sixth_mean_motion_ddot_rev_per_day3: exponential(
-                &l1[44..50],
-                &l1[50..52],
-                "mean_motion_ddot",
-            )?,
-            drag_term_per_earth_radius: exponential(&l1[53..59], &l1[59..61], "drag_term")?,
-            ephemeris_type: integer(&l1[62..63], One, "ephemeris_type")?,
-            element_set_number: integer(&l1[64..68], One, "element_set_number")?,
-            inclination: Angle::degrees(float(&l2[8..16], Two, "inclination")?),
-            right_ascension: Angle::degrees(float(&l2[17..25], Two, "right_ascension")?),
-            eccentricity: assumed_decimal(&l2[26..33], Two, "eccentricity")?,
-            argument_of_perigee: Angle::degrees(float(&l2[34..42], Two, "argument_of_perigee")?),
-            mean_anomaly: Angle::degrees(float(&l2[43..51], Two, "mean_anomaly")?),
+            classification,
+            epoch,
+            half_mean_motion_dot_rev_per_day2,
+            sixth_mean_motion_ddot_rev_per_day3,
+            drag_term_per_earth_radius,
+            ephemeris_type,
+            element_set_number,
+            inclination: Angle::degrees(inclination),
+            right_ascension: Angle::degrees(right_ascension),
+            eccentricity,
+            argument_of_perigee: Angle::degrees(argument_of_perigee),
+            mean_anomaly: Angle::degrees(mean_anomaly),
             mean_motion: AngularRate::radians_per_second(
-                float(&l2[52..63], Two, "mean_motion")? * TAU / SECONDS_PER_DAY as f64,
+                mean_motion * TAU / SECONDS_PER_DAY as f64,
             ),
-            revolution_number: integer(&l2[63..68], Two, "revolution_number")?,
+            revolution_number,
         })
     }
 }
 
-fn check_layout(
-    raw: &[u8],
+/// Checks the length, line number, separator columns and checksum of a data line.
+///
+/// All other parsing relies on this check for the line being [`LINE_LENGTH`] bytes long.
+fn check_line(
+    bytes: &[u8],
     line: TleLine,
-    line_number: u8,
-    spaces: &[usize],
+    number: u8,
+    separators: &[usize],
 ) -> Result<(), TleError> {
-    if raw.len() != LINE_LENGTH {
+    if bytes.len() != LINE_LENGTH {
         return Err(TleError::BadLength {
             line,
-            found: raw.len(),
+            found: bytes.len(),
         });
     }
-    if raw[0] != line_number {
+    if bytes[0] != number {
         return Err(TleError::BadLineNumber { line });
     }
-    match spaces.iter().find(|&&column| raw[column] != b' ') {
-        Some(&column) => Err(TleError::ExpectedSpace { line, column }),
-        None => Ok(()),
+    if let Some(&column) = separators.iter().find(|&&column| bytes[column] != b' ') {
+        return Err(TleError::ExpectedSpace { line, column });
     }
-}
-
-fn check_checksum(raw: &[u8], line: TleLine) -> Result<(), TleError> {
-    let sum: u32 = raw[..LINE_LENGTH - 1]
+    let checksum = bytes[LINE_LENGTH - 1];
+    let sum: u32 = bytes[..LINE_LENGTH - 1]
         .iter()
-        .map(|byte| match byte {
+        .map(|&b| match b {
+            b'0'..=b'9' => u32::from(b - b'0'),
             b'-' => 1,
-            b'0'..=b'9' => (byte - b'0') as u32,
             _ => 0,
         })
         .sum();
-    let checksum = raw[LINE_LENGTH - 1];
-    if checksum.is_ascii_digit() && sum % 10 == (checksum - b'0') as u32 {
-        Ok(())
-    } else {
-        Err(TleError::BadChecksum { line })
+    if !checksum.is_ascii_digit() || u32::from(checksum - b'0') != sum % 10 {
+        return Err(TleError::BadChecksum { line });
     }
+    Ok(())
 }
 
-fn text<'a>(raw: &'a [u8], line: TleLine, field: &'static str) -> Result<&'a str, TleError> {
-    std::str::from_utf8(raw)
-        .map(str::trim_ascii_start)
-        .map_err(|_| TleError::InvalidField { line, field })
+/// Removes the blanks a numeric field may be left-padded with.
+fn strip_padding(field: &[u8]) -> &[u8] {
+    let start = field.iter().position(|&b| b != b' ').unwrap_or(field.len());
+    &field[start..]
 }
 
-fn integer<T: FromStr>(raw: &[u8], line: TleLine, field: &'static str) -> Result<T, TleError> {
-    text(raw, line, field)?
+/// Returns `bytes` as text if it is a non-empty run of ASCII digits.
+fn digits(bytes: &[u8]) -> Option<&str> {
+    if bytes.is_empty() || !bytes.iter().all(u8::is_ascii_digit) {
+        return None;
+    }
+    std::str::from_utf8(bytes).ok()
+}
+
+fn parse_integer(field: &[u8]) -> Option<u64> {
+    digits(strip_padding(field))?.parse().ok()
+}
+
+/// Parses a decimal number with an optional sign and an optional decimal point.
+///
+/// The syntax is checked here because `f64::from_str` also accepts `NaN`, `inf` and exponents.
+fn parse_decimal(field: &[u8]) -> Option<f64> {
+    let text = strip_padding(field);
+    let unsigned = match text {
+        [b'-' | b'+', rest @ ..] => rest,
+        _ => text,
+    };
+    let digit_count = unsigned.iter().filter(|b| b.is_ascii_digit()).count();
+    let dot_count = unsigned.iter().filter(|&&b| b == b'.').count();
+    if digit_count == 0 || dot_count > 1 || digit_count + dot_count != unsigned.len() {
+        return None;
+    }
+    std::str::from_utf8(text).ok()?.parse().ok()
+}
+
+/// Parses a field with a sign, five digits behind an implied leading decimal point and a signed
+/// one-digit power of ten, e.g. `-11606-4` for -0.11606e-4.
+///
+/// Padding blanks stand in for the leading digits, so they do not move the decimal point.
+fn parse_exponential(field: &[u8]) -> Option<f64> {
+    let (mantissa, exponent) = field.split_at_checked(6)?;
+    let padded = strip_padding(mantissa);
+    let (sign, mantissa) = match padded {
+        [b'-', rest @ ..] => ("-", rest),
+        [b'+', rest @ ..] => ("", rest),
+        rest if rest.len() < 6 => ("", rest),
+        _ => return None,
+    };
+    let mantissa = digits(mantissa)?;
+    let (exponent_sign, exponent) = match exponent {
+        [b'-', digit] => ('-', digit),
+        [b'+' | b' ', digit] => ('+', digit),
+        _ => return None,
+    };
+    let exponent = digits(std::slice::from_ref(exponent))?;
+    format!("{sign}.{mantissa:0>5}e{exponent_sign}{exponent}")
         .parse()
-        .map_err(|_| TleError::InvalidField { line, field })
+        .ok()
 }
 
-fn finite(value: Option<f64>, line: TleLine, field: &'static str) -> Result<f64, TleError> {
-    value
-        .filter(|value| value.is_finite())
-        .ok_or(TleError::InvalidField { line, field })
+/// Parses the seven digits behind the implied leading decimal point of the eccentricity.
+///
+/// A sign is not part of the field, which rejects negative values.
+fn parse_eccentricity(field: &[u8]) -> Option<Eccentricity> {
+    let digits = digits(strip_padding(field))?;
+    let value = format!(".{digits:0>7}").parse().ok()?;
+    Eccentricity::try_new(value).ok()
 }
 
-fn float(raw: &[u8], line: TleLine, field: &'static str) -> Result<f64, TleError> {
-    finite(text(raw, line, field)?.parse().ok(), line, field)
-}
-
-/// Parses a fraction whose leading decimal point is implied, e.g. `0010444`.
-fn assumed_decimal(raw: &[u8], line: TleLine, field: &'static str) -> Result<f64, TleError> {
-    let trimmed = text(raw, line, field)?;
-    let (sign, digits) = match trimmed.strip_prefix('-') {
-        Some(digits) => ("-", digits),
-        None => ("", trimmed.strip_prefix('+').unwrap_or(trimmed)),
+/// Maps the leading letter of an Alpha-5 catalog number to the value it stands for.
+///
+/// The letters I and O are not used.
+fn alpha5_value(letter: u8) -> Option<u64> {
+    let value = match letter {
+        b'A'..=b'H' => letter - b'A' + 10,
+        b'J'..=b'N' => letter - b'J' + 18,
+        b'P'..=b'Z' => letter - b'P' + 23,
+        _ => return None,
     };
-    if !digits.bytes().all(|byte| byte.is_ascii_digit()) {
-        return Err(TleError::InvalidField { line, field });
-    }
-    finite(format!("{sign}.{digits}").parse().ok(), line, field)
+    Some(u64::from(value))
 }
 
-/// Parses a line 1 field in the TLE exponential notation, e.g. `30244-3`.
-fn exponential(mantissa: &[u8], exponent: &[u8], field: &'static str) -> Result<f64, TleError> {
-    let line = TleLine::One;
-    let exponent: i8 = integer(exponent, line, field)?;
-    Ok(assumed_decimal(mantissa, line, field)? * 10.0_f64.powi(exponent as i32))
+fn parse_catalog_number(field: &[u8]) -> Option<u64> {
+    let (&first, rest) = field.split_first()?;
+    match alpha5_value(first) {
+        Some(value) => {
+            let rest: u64 = digits(rest)?.parse().ok()?;
+            Some(value * 10_000 + rest)
+        }
+        None => parse_integer(field),
+    }
 }
 
-/// Parses a catalog number in the legacy or the Alpha-5 format.
-fn parse_norad_id(raw: &[u8], line: TleLine) -> Result<u64, TleError> {
-    let field = "norad_id";
-    let invalid = TleError::InvalidField { line, field };
-    let trimmed = text(raw, line, field)?;
-    if trimmed.len() != 5 {
-        return integer(trimmed.as_bytes(), line, field);
+/// Expands a two-digit year: 57 to 99 are 1957 to 1999, and 00 to 56 are 2000 to 2056.
+fn expand_year(two_digits: u64) -> i64 {
+    let two_digits = two_digits as i64;
+    if two_digits < 57 {
+        2000 + two_digits
+    } else {
+        1900 + two_digits
     }
-    let leading = match trimmed.as_bytes()[0] {
-        digit @ b'0'..=b'9' => (digit - b'0') as u64,
-        letter @ b'A'..=b'H' => (letter - b'A' + 10) as u64,
-        letter @ b'J'..=b'N' => (letter - b'J' + 18) as u64,
-        letter @ b'P'..=b'Z' => (letter - b'P' + 23) as u64,
-        _ => return Err(invalid),
+}
+
+/// Parses a non-blank international designator into e.g. `1998-067A`.
+fn parse_international_designator(field: &[u8]) -> Option<String> {
+    let year = expand_year(parse_integer(field.get(..2)?)?);
+    let number = parse_integer(field.get(2..5)?)?;
+    let piece = field.get(5..)?;
+    let end = piece.iter().rposition(|&b| b != b' ')? + 1;
+    let piece = &piece[..end];
+    if !piece.iter().all(u8::is_ascii_uppercase) {
+        return None;
+    }
+    let piece = std::str::from_utf8(piece).ok()?;
+    Some(format!("{year:04}-{number:03}{piece}"))
+}
+
+/// Parses the epoch from its two-digit year and its day of year, where day 1.0 is the start of
+/// January 1.
+///
+/// The fraction is converted in integer arithmetic. A day has 864 * 10^11 nanoseconds and the
+/// field has room for at most ten fractional digits, so the conversion is exact, which also makes
+/// it the nearest whole nanosecond.
+fn parse_epoch(year: &[u8], day: &[u8]) -> Option<Utc> {
+    let year = expand_year(parse_integer(year)?);
+    let day = strip_padding(day);
+    let (whole, fraction) = match day.iter().position(|&b| b == b'.') {
+        Some(dot) => (&day[..dot], &day[dot + 1..]),
+        None => (day, &day[day.len()..]),
     };
-    let rest: u64 = trimmed[1..].parse().map_err(|_| invalid)?;
-    Ok(leading * 10_000 + rest)
-}
-
-fn parse_classification(byte: u8) -> Result<Classification, TleError> {
-    match byte {
-        b'U' => Ok(Classification::Unclassified),
-        b'C' => Ok(Classification::Classified),
-        b'S' => Ok(Classification::Secret),
-        _ => Err(TleError::InvalidField {
-            line: TleLine::One,
-            field: "classification",
-        }),
+    let day_of_year: u16 = digits(whole)?.parse().ok()?;
+    // `Date::from_day_of_year` does not reject every out-of-range day by itself.
+    if !(1..=366).contains(&day_of_year) {
+        return None;
     }
-}
+    let nanoseconds = if fraction.is_empty() {
+        0
+    } else {
+        let scale = 10u64.checked_pow(fraction.len() as u32)?;
+        let value: u64 = digits(fraction)?.parse().ok()?;
+        value.checked_mul(NANOSECONDS_PER_DAY / scale)?
+    };
 
-/// Expands a two-digit year, using the NORAD convention that 57–99 are 19xx.
-fn full_year(two_digits: u8) -> i64 {
-    match two_digits {
-        year if year < 57 => 2000 + year as i64,
-        year => 1900 + year as i64,
-    }
-}
-
-fn parse_designator(raw: &[u8]) -> Result<Option<String>, TleError> {
-    let line = TleLine::One;
-    let field = "international_designator";
-    if raw.iter().all(u8::is_ascii_whitespace) {
-        return Ok(None);
-    }
-    let year = full_year(integer(&raw[..2], line, field)?);
-    let piece = text(&raw[2..], line, field)?.trim_ascii_end();
-    Ok(Some(format!("{year}-{piece}")))
-}
-
-fn parse_epoch(year: &[u8], day: &[u8]) -> Result<Utc, TleError> {
-    let line = TleLine::One;
-    let field = "epoch";
-    let invalid = TleError::InvalidField { line, field };
-
-    let year = full_year(integer(year, line, field)?);
-    let day = float(day, line, field)?;
-    if !(1.0..367.0).contains(&day) {
-        return Err(invalid);
-    }
-    // Rounds the day fraction to whole nanoseconds, the resolution SGP4 works in.
-    let seconds = day.fract() * SECONDS_PER_DAY as f64;
-    let mut nanos = (seconds.fract() * 1e9).round() as i64;
-    let mut seconds = seconds as u32;
-    if nanos >= 1_000_000_000 {
-        nanos -= 1_000_000_000;
-        seconds += 1;
-    }
-
-    let date = Date::from_day_of_year(year, day as u16).map_err(|_| invalid.clone())?;
+    let seconds = nanoseconds / NANOSECONDS_PER_SECOND;
+    let attoseconds = (nanoseconds % NANOSECONDS_PER_SECOND) as i64 * ATTOSECONDS_PER_NANOSECOND;
     let time = TimeOfDay::new(
         (seconds / 3600) as u8,
         (seconds / 60 % 60) as u8,
         (seconds % 60) as u8,
     )
-    .map_err(|_| invalid.clone())?
-    .with_subsecond(Subsecond::from_attoseconds(
-        nanos * ATTOSECONDS_PER_NANOSECOND,
-    ));
-    Utc::new(date, time, &DefaultLeapSecondsProvider).map_err(|_| invalid)
+    .ok()?
+    .with_subsecond(Subsecond::from_attoseconds(attoseconds));
+    let date = Date::from_day_of_year(year, day_of_year).ok()?;
+    Utc::new(date, time, &DefaultLeapSecondsProvider).ok()
 }
 
 #[cfg(test)]
@@ -384,7 +464,7 @@ mod tests {
         assert_eq!(tle.epoch.to_string(), "2024-06-18T09:00:24.494 UTC");
         assert_approx_eq!(tle.inclination.to_degrees(), 51.6410, rtol <= 1e-12);
         assert_approx_eq!(tle.right_ascension.to_degrees(), 309.3890, rtol <= 1e-12);
-        assert_eq!(tle.eccentricity, 0.0010444);
+        assert_eq!(tle.eccentricity.as_f64(), 0.0010444);
         assert_approx_eq!(
             tle.argument_of_perigee.to_degrees(),
             339.5369,
@@ -513,6 +593,7 @@ mod tests {
     #[case::inclination(8, "     NaN", "inclination")]
     #[case::right_ascension(17, "     inf", "right_ascension")]
     #[case::eccentricity(26, "XXXXXXX", "eccentricity")]
+    #[case::negative_eccentricity(26, "-001044", "eccentricity")]
     #[case::argument_of_perigee(34, "XXXXXXXX", "argument_of_perigee")]
     #[case::mean_anomaly(43, "XXXXXXXX", "mean_anomaly")]
     #[case::mean_motion(52, "XXXXXXXXXXX", "mean_motion")]

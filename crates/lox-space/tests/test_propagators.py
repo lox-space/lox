@@ -93,6 +93,212 @@ def test_tle_invalid():
         lox.TLE(42)
 
 
+def celestrak_record(replacements=()):
+    """The ISS as a single CelesTrak GP JSON object."""
+    record = """{
+        "OBJECT_NAME": "ISS (ZARYA)",
+        "OBJECT_ID": "1998-067A",
+        "EPOCH": "2024-06-18T09:00:24.494400",
+        "MEAN_MOTION": 15.49495945,
+        "ECCENTRICITY": 0.0010444,
+        "INCLINATION": 51.641,
+        "RA_OF_ASC_NODE": 309.389,
+        "ARG_OF_PERICENTER": 339.5369,
+        "MEAN_ANOMALY": 107.883,
+        "EPHEMERIS_TYPE": 0,
+        "CLASSIFICATION_TYPE": "U",
+        "NORAD_CAT_ID": 25544,
+        "ELEMENT_SET_NO": 999,
+        "REV_AT_EPOCH": 45873,
+        "BSTAR": 0.00030244,
+        "MEAN_MOTION_DOT": 0.00016566,
+        "MEAN_MOTION_DDOT": 0
+    }"""
+    for old, new in replacements:
+        record = record.replace(old, new)
+    return record
+
+
+def assert_same_elements(actual, expected):
+    assert actual.object_name() == expected.object_name()
+    assert actual.international_designator() == expected.international_designator()
+    assert actual.norad_id() == expected.norad_id()
+    assert actual.classification() == expected.classification()
+    assert actual.epoch() == expected.epoch()
+    assert actual.eccentricity() == expected.eccentricity()
+    assert actual.inclination() == expected.inclination()
+    assert actual.right_ascension() == expected.right_ascension()
+    assert actual.argument_of_perigee() == expected.argument_of_perigee()
+    assert actual.mean_anomaly() == expected.mean_anomaly()
+    assert actual.mean_motion() == expected.mean_motion()
+    assert actual.drag_term_per_earth_radius() == expected.drag_term_per_earth_radius()
+    assert actual.element_set_number() == expected.element_set_number()
+    assert actual.revolution_number() == expected.revolution_number()
+
+
+def spacetrack_record(replacements=()):
+    """The ISS as a complete OMM, with the header that CelesTrak's JSON leaves out."""
+    header = """{
+        "CCSDS_OMM_VERS": "2.0",
+        "CREATION_DATE": "2024-06-18T00:00:00",
+        "ORIGINATOR": "18 SPCS",
+        "CENTER_NAME": "EARTH",
+        "REF_FRAME": "TEME",
+        "TIME_SYSTEM": "UTC",
+        "MEAN_ELEMENT_THEORY": "SGP4","""
+    return celestrak_record(replacements).replace("{", header, 1)
+
+
+def test_tle_from_json():
+    tle = lox.TLE.from_json(celestrak_record())
+    assert tle.object_name() == "ISS (ZARYA)"
+    assert tle.international_designator() == "1998-067A"
+    assert tle.norad_id() == 25544
+    assert tle.classification() == "U"
+    assert tle.element_set_number() == 999
+    assert tle.revolution_number() == 45873
+    npt.assert_allclose(tle.eccentricity(), 0.0010444)
+    npt.assert_allclose(tle.inclination().to(lox.deg), 51.641)
+    npt.assert_allclose(tle.drag_term_per_earth_radius(), 0.00030244)
+    npt.assert_allclose(tle.half_mean_motion_dot_rev_per_day2(), 0.00016566)
+
+
+@pytest.mark.parametrize(
+    "tle",
+    [
+        pytest.param(lambda: lox.TLE.from_json(celestrak_record()), id="json"),
+        pytest.param(lambda: lox.TLE.from_omm(spacetrack_record()), id="omm"),
+    ],
+)
+def test_tle_formats_match_two_line_elements(tle):
+    tle = tle()
+    from_lines = lox.TLE(ISS_TLE)
+    assert tle.norad_id() == from_lines.norad_id()
+    npt.assert_allclose(tle.eccentricity(), from_lines.eccentricity())
+    npt.assert_allclose(
+        tle.mean_motion().to(lox.rad_per_s),
+        from_lines.mean_motion().to(lox.rad_per_s),
+    )
+    assert abs((tle.epoch() - from_lines.epoch()).to_seconds()) < 1e-3
+
+
+def test_tle_from_omm_kvn():
+    kvn = """CCSDS_OMM_VERS = 3.0
+CREATION_DATE = 2024-06-18T00:00:00
+ORIGINATOR = TEST
+
+OBJECT_NAME = ISS (ZARYA)
+OBJECT_ID = 1998-067A
+CENTER_NAME = EARTH
+REF_FRAME = TEME
+TIME_SYSTEM = UTC
+MEAN_ELEMENT_THEORY = SGP/SGP4
+
+EPOCH = 2024-06-18T09:00:24.214400
+MEAN_MOTION = 15.49495945 [rev/day]
+ECCENTRICITY = 0.0010444
+INCLINATION = 51.641 [deg]
+RA_OF_ASC_NODE = 309.389 [deg]
+ARG_OF_PERICENTER = 339.5369 [deg]
+MEAN_ANOMALY = 107.883 [deg]
+EPHEMERIS_TYPE = 0
+CLASSIFICATION_TYPE = U
+NORAD_CAT_ID = 25544
+ELEMENT_SET_NO = 999
+REV_AT_EPOCH = 45873
+BSTAR = 0.00030244 [1/ER]
+MEAN_MOTION_DOT = 0.00016566 [rev/day**2]
+MEAN_MOTION_DDOT = 0 [rev/day**3]
+"""
+    tle = lox.TLE.from_omm(kvn)
+    assert tle.norad_id() == 25544
+    assert tle.object_name() == "ISS (ZARYA)"
+
+
+def test_tle_from_json_six_digit_catalog_number():
+    # CelesTrak stopped publishing TLEs for new objects once 5-digit numbers ran out.
+    tle = lox.TLE.from_json(
+        celestrak_record([('"NORAD_CAT_ID": 25544', '"NORAD_CAT_ID": 100123')])
+    )
+    assert tle.norad_id() == 100123
+    sgp4 = lox.SGP4(tle)
+    assert sgp4.tle().norad_id() == 100123
+    sgp4.propagate(tle.epoch() + lox.TimeDelta.from_minutes(10.0))
+
+
+NEGATIVE_ECCENTRICITY = [("0.0010444", "-0.0010444")]
+
+
+@pytest.mark.parametrize(
+    ("constructor", "text", "match"),
+    [
+        ("from_json", "not json", None),
+        ("from_json", "{}", None),
+        ("from_json", celestrak_record(NEGATIVE_ECCENTRICITY), "eccentricity"),
+        ("from_omm", "not an OMM", None),
+        ("from_omm", spacetrack_record(NEGATIVE_ECCENTRICITY), "eccentricity"),
+        ("from_json_list", "not json", None),
+        ("from_json_list", "[{}]", None),
+        ("from_json_list", celestrak_record(), None),
+    ],
+)
+def test_tle_alternative_constructors_reject_invalid_input(constructor, text, match):
+    with pytest.raises(ValueError, match=match):
+        getattr(lox.TLE, constructor)(text)
+
+
+def test_tle_from_json_rejects_a_download():
+    with pytest.raises(ValueError):
+        lox.TLE.from_json(f"[{celestrak_record()}]")
+
+
+def test_tle_from_json_list_download(data_dir):
+    tles = lox.TLE.from_json_list((data_dir / "oneweb.json").read_text())
+    assert len(tles) == 651
+    assert tles[0].object_name() == "ONEWEB-0012"
+    assert tles[0].international_designator() == "2019-010A"
+    assert tles[0].norad_id() == 44057
+    npt.assert_allclose(tles[0].eccentricity(), 0.00015119)
+    npt.assert_allclose(tles[0].drag_term_per_earth_radius(), -5.6171168e-5)
+    for tle in tles:
+        lox.SGP4(tle)
+
+
+def test_tle_from_json_list_empty():
+    assert lox.TLE.from_json_list("[]") == []
+
+
+def test_tle_from_json_list_pickle(data_dir):
+    import pickle
+
+    tles = lox.TLE.from_json_list((data_dir / "oneweb.json").read_text())
+    for tle in tles:
+        assert_same_elements(pickle.loads(pickle.dumps(tle)), tle)
+
+
+@pytest.mark.parametrize(
+    ("tle", "prefix"),
+    [
+        pytest.param(lambda: lox.TLE(ISS_TLE), "TLE(", id="lines"),
+        pytest.param(
+            lambda: lox.TLE.from_json(celestrak_record()), "TLE.from_json(", id="json"
+        ),
+        pytest.param(
+            lambda: lox.TLE.from_omm(spacetrack_record()), "TLE.from_omm(", id="omm"
+        ),
+    ],
+)
+def test_tle_rebuilds_from_pickle_and_repr(tle, prefix):
+    import pickle
+
+    tle = tle()
+    roundtripped = pickle.loads(pickle.dumps(tle))
+    assert_same_elements(roundtripped, tle)
+    assert str(roundtripped) == str(tle)
+    assert repr(tle).startswith(prefix)
+    assert_same_elements(eval(repr(tle), {"TLE": lox.TLE}), tle)
+
+
 def test_sgp4_from_tle_object():
     tle = lox.TLE(ISS_TLE)
     sgp4 = lox.SGP4(tle)

@@ -16,7 +16,7 @@ Orbit propagation methods for predicting future states.
 | `J2` | Kozai J2 secular (± Kwok osculating) | Fast J2 oblateness, works for all orbits |
 | `J4` | Kozai J4 secular (± Kwok osculating) | Higher-order J2²+J4 effects |
 | `Numerical` | Numerical orbit propagator (J2 perturbation) | High-fidelity oblateness |
-| `TLE` | Two-Line Element set parser | Satellite catalog data |
+| `TLE` | Mean elements from two-line, JSON or OMM text | Satellite catalog data |
 | `SGP4` | Simplified General Perturbations | TLE-based propagation |
 | `GroundPropagator` | Ground station state | Earth-fixed locations |
 
@@ -74,6 +74,24 @@ tle = """ISS (ZARYA)
 
 sgp4 = lox.SGP4(tle)
 state = sgp4.propagate(t)
+```
+
+CelesTrak no longer publishes two-line elements for newly catalogued objects, whose
+catalog numbers have six digits. Load their general perturbations JSON or an Orbit
+Mean-Elements Message instead:
+
+```python
+from pathlib import Path
+
+# A whole CelesTrak or Space-Track JSON download
+tles = lox.TLE.from_json_list(Path("oneweb.json").read_text())
+propagators = [lox.SGP4(tle) for tle in tles]
+
+# A single JSON record
+tle = lox.TLE.from_json(record)
+
+# A complete OMM as KVN, XML, or JSON
+tle = lox.TLE.from_omm(omm)
 ```
 
 ---

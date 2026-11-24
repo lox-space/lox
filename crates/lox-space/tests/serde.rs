@@ -601,24 +601,24 @@ fn test_sgp4() {
     round_trip_no_eq(&sgp4);
 }
 
-/// A general perturbations record in CelesTrak's JSON format.
+/// The first general perturbations record of `data/oneweb.json`, as served by CelesTrak.
 const CELESTRAK_JSON: &str = r#"{
-    "OBJECT_NAME": "ISS (ZARYA)",
-    "OBJECT_ID": "1998-067A",
-    "EPOCH": "2020-07-12T01:19:07.402656",
-    "MEAN_MOTION": 15.49560532,
-    "ECCENTRICITY": 0.0001771,
-    "INCLINATION": 51.6435,
-    "RA_OF_ASC_NODE": 225.4004,
-    "ARG_OF_PERICENTER": 44.9625,
-    "MEAN_ANOMALY": 5.1087,
+    "OBJECT_NAME": "ONEWEB-0012",
+    "OBJECT_ID": "2019-010A",
+    "EPOCH": "2026-11-08T22:49:59.632032",
+    "MEAN_MOTION": 13.16594166,
+    "ECCENTRICITY": 0.00015119,
+    "INCLINATION": 87.9174,
+    "RA_OF_ASC_NODE": 200.0727,
+    "ARG_OF_PERICENTER": 55.8268,
+    "MEAN_ANOMALY": 304.3007,
     "EPHEMERIS_TYPE": 0,
     "CLASSIFICATION_TYPE": "U",
-    "NORAD_CAT_ID": 25544,
+    "NORAD_CAT_ID": 44057,
     "ELEMENT_SET_NO": 999,
-    "REV_AT_EPOCH": 23587,
-    "BSTAR": 0.0049645,
-    "MEAN_MOTION_DOT": 0.00289036,
+    "REV_AT_EPOCH": 37061,
+    "BSTAR": -5.6171168e-5,
+    "MEAN_MOTION_DOT": -9.0e-8,
     "MEAN_MOTION_DDOT": 0
 }"#;
 
@@ -634,26 +634,81 @@ fn test_tle_deserializes_celestrak_json() {
     use lox_space::orbits::tle::{Classification, Tle};
 
     let tle: Tle = serde_json::from_str(CELESTRAK_JSON).unwrap();
-    assert_eq!(tle.object_name.as_deref(), Some("ISS (ZARYA)"));
-    assert_eq!(tle.international_designator.as_deref(), Some("1998-067A"));
-    assert_eq!(tle.norad_id, 25544);
+    assert_eq!(tle.object_name.as_deref(), Some("ONEWEB-0012"));
+    assert_eq!(tle.international_designator.as_deref(), Some("2019-010A"));
+    assert_eq!(tle.norad_id, 44057);
     assert_eq!(tle.classification, Classification::Unclassified);
-    assert_eq!(tle.epoch.to_string(), "2020-07-12T01:19:07.402 UTC");
-    assert_eq!(tle.eccentricity, 0.0001771);
-    assert_close(tle.inclination.to_degrees(), 51.6435);
-    assert_close(tle.right_ascension.to_degrees(), 225.4004);
-    assert_close(tle.argument_of_perigee.to_degrees(), 44.9625);
-    assert_close(tle.mean_anomaly.to_degrees(), 5.1087);
+    assert_eq!(tle.epoch.to_string(), "2026-11-08T22:49:59.632 UTC");
+    assert_eq!(tle.eccentricity.as_f64(), 0.00015119);
+    assert_close(tle.inclination.to_degrees(), 87.9174);
+    assert_close(tle.right_ascension.to_degrees(), 200.0727);
+    assert_close(tle.argument_of_perigee.to_degrees(), 55.8268);
+    assert_close(tle.mean_anomaly.to_degrees(), 304.3007);
     assert_close(
         tle.mean_motion.to_radians_per_second(),
-        15.49560532 * std::f64::consts::TAU / 86400.0,
+        13.16594166 * std::f64::consts::TAU / 86400.0,
     );
-    assert_eq!(tle.half_mean_motion_dot_rev_per_day2, 0.00289036);
+    assert_eq!(tle.half_mean_motion_dot_rev_per_day2, -9.0e-8);
     assert_eq!(tle.sixth_mean_motion_ddot_rev_per_day3, 0.0);
-    assert_eq!(tle.drag_term_per_earth_radius, 0.0049645);
+    assert_eq!(tle.drag_term_per_earth_radius, -5.6171168e-5);
     assert_eq!(tle.ephemeris_type, 0);
     assert_eq!(tle.element_set_number, 999);
-    assert_eq!(tle.revolution_number, 23587);
+    assert_eq!(tle.revolution_number, 37061);
+}
+
+/// Every record of a real CelesTrak download must load, initialize the propagator and
+/// serialize back to the values it was read from.
+#[test]
+fn test_tle_round_trips_celestrak_constellation() {
+    use lox_space::orbits::propagators::sgp4::Sgp4;
+    use lox_space::orbits::tle::Tle;
+
+    let json = lox_test_utils::read_data_file("oneweb.json");
+    let records: Vec<serde_json::Value> = serde_json::from_str(&json).unwrap();
+    let tles: Vec<Tle> = serde_json::from_str(&json).unwrap();
+    assert_eq!(tles.len(), 651);
+
+    for (record, tle) in records.iter().zip(tles) {
+        let name = record["OBJECT_NAME"].as_str().unwrap();
+        let actual = serde_json::to_value(&tle).unwrap();
+        for key in [
+            "OBJECT_NAME",
+            "OBJECT_ID",
+            "EPHEMERIS_TYPE",
+            "CLASSIFICATION_TYPE",
+            "NORAD_CAT_ID",
+            "ELEMENT_SET_NO",
+            "REV_AT_EPOCH",
+        ] {
+            assert_eq!(actual[key], record[key], "{name}: {key}");
+        }
+        // CelesTrak always writes six fractional digits, whereas trailing zeros are trimmed here.
+        let epoch = format!("{:0<26}", actual["EPOCH"].as_str().unwrap());
+        assert_eq!(epoch, record["EPOCH"].as_str().unwrap(), "{name}: EPOCH");
+        for key in [
+            "MEAN_MOTION",
+            "ECCENTRICITY",
+            "INCLINATION",
+            "RA_OF_ASC_NODE",
+            "ARG_OF_PERICENTER",
+            "MEAN_ANOMALY",
+            "BSTAR",
+            "MEAN_MOTION_DOT",
+            "MEAN_MOTION_DDOT",
+        ] {
+            assert_close(actual[key].as_f64().unwrap(), record[key].as_f64().unwrap());
+        }
+        Sgp4::new(tle).unwrap_or_else(|err| panic!("{name}: {err}"));
+    }
+}
+
+#[test]
+fn test_tle_rejects_negative_eccentricity_json() {
+    use lox_space::orbits::tle::Tle;
+
+    let json = CELESTRAK_JSON.replace("0.00015119", "-0.00015119");
+    let err = serde_json::from_str::<Tle>(&json).unwrap_err();
+    assert!(err.to_string().contains("eccentricity"), "{err}");
 }
 
 #[test]

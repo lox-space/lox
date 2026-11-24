@@ -40,6 +40,7 @@ lox-time = { workspace = true, optional = true, features = ["chrono"] }
 geo = { workspace = true, optional = true }
 numpy = { workspace = true, optional = true }
 pyo3 = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
 divan.workspace = true
@@ -138,9 +139,12 @@ python = [
   "comms",
   "imaging",
   "itur",
+  "odm",
   "time",
   "dep:numpy",
   "dep:pyo3",
+  "dep:serde_json",
+  "lox-orbits?/serde",
 ]
 time = ["io", "dep:lox-time"]
 serde = [

@@ -12,7 +12,7 @@ use std::path::Path;
 use lox_bodies::{CoordinateOrigin, Origin};
 use lox_core::anomalies::AnomalyError;
 use lox_core::coords::Cartesian;
-use lox_core::elements::{Keplerian, MeanElements};
+use lox_core::elements::{Eccentricity, Keplerian, MeanElements};
 use lox_core::units::{Angle, AngularRate, Distance};
 use lox_frames::{Frame, ReferenceFrame};
 use lox_odm::Format;
@@ -996,7 +996,8 @@ impl Tle {
                 .unwrap_or(0),
             inclination: Angle::radians(me.i),
             right_ascension: Angle::radians(me.raan),
-            eccentricity: me.e,
+            eccentricity: Eccentricity::try_new(me.e)
+                .map_err(|e| OmmFromOdmError::InvalidElement(e.to_string()))?,
             argument_of_perigee: Angle::radians(me.aop),
             mean_anomaly: Angle::radians(me.m),
             mean_motion: sma_to_mean_motion(me.a, gm.to_m3_per_s2()),

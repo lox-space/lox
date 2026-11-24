@@ -12,6 +12,8 @@ use std::f64::consts::TAU;
 use thiserror::Error;
 
 use lox_bodies::Earth;
+#[cfg(feature = "serde")]
+use lox_core::elements::{Eccentricity, EccentricityError};
 use lox_core::time::constants::{SECONDS_PER_DAY, SECONDS_PER_MINUTE};
 #[cfg(feature = "serde")]
 use lox_core::units::{Angle, AngularRate};
@@ -140,7 +142,7 @@ fn to_sgp4_elements(tle: &Tle) -> Result<sgp4::Elements, Sgp4Error> {
         element_set_number: tle.element_set_number,
         inclination: tle.inclination.to_degrees(),
         right_ascension: tle.right_ascension.to_degrees(),
-        eccentricity: tle.eccentricity,
+        eccentricity: tle.eccentricity.as_f64(),
         argument_of_perigee: tle.argument_of_perigee.to_degrees(),
         mean_anomaly: tle.mean_anomaly.to_degrees(),
         mean_motion: tle.mean_motion.to_radians_per_second() * SECONDS_PER_DAY as f64 / TAU,
@@ -150,8 +152,8 @@ fn to_sgp4_elements(tle: &Tle) -> Result<sgp4::Elements, Sgp4Error> {
 }
 
 #[cfg(feature = "serde")]
-fn from_sgp4_elements(elements: sgp4::Elements) -> Tle {
-    Tle {
+fn from_sgp4_elements(elements: sgp4::Elements) -> Result<Tle, EccentricityError> {
+    Ok(Tle {
         object_name: elements.object_name,
         international_designator: elements.international_designator,
         norad_id: elements.norad_id,
@@ -168,14 +170,14 @@ fn from_sgp4_elements(elements: sgp4::Elements) -> Tle {
         element_set_number: elements.element_set_number,
         inclination: Angle::degrees(elements.inclination),
         right_ascension: Angle::degrees(elements.right_ascension),
-        eccentricity: elements.eccentricity,
+        eccentricity: Eccentricity::try_new(elements.eccentricity)?,
         argument_of_perigee: Angle::degrees(elements.argument_of_perigee),
         mean_anomaly: Angle::degrees(elements.mean_anomaly),
         mean_motion: AngularRate::radians_per_second(
             elements.mean_motion * TAU / SECONDS_PER_DAY as f64,
         ),
         revolution_number: elements.revolution_number,
-    }
+    })
 }
 
 #[cfg(feature = "serde")]
@@ -189,7 +191,8 @@ impl serde::Serialize for Tle {
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for Tle {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        <sgp4::Elements as serde::Deserialize>::deserialize(deserializer).map(from_sgp4_elements)
+        let elements = <sgp4::Elements as serde::Deserialize>::deserialize(deserializer)?;
+        from_sgp4_elements(elements).map_err(serde::de::Error::custom)
     }
 }
 
@@ -275,6 +278,7 @@ impl Propagator<Earth> for Sgp4 {
 #[cfg(test)]
 mod tests {
     use lox_approx::assert_approx_eq;
+    use lox_core::elements::Eccentricity;
     use lox_core::units::AngularRate;
     use lox_frames::Icrf;
     use lox_frames::providers::DefaultRotationProvider;
@@ -373,7 +377,7 @@ mod tests {
     #[test]
     fn test_sgp4_invalid_epoch_eccentricity() {
         let mut tle = elements(DIVERGING_LINE_1, DIVERGING_LINE_2);
-        tle.eccentricity = 1.5;
+        tle.eccentricity = Eccentricity::try_new(1.5).unwrap();
         let err = Sgp4::new(tle).unwrap_err();
         assert!(matches!(
             err,
@@ -475,7 +479,8 @@ mod tests {
         ));
     }
 
-    /// The native parser and unit conversions must agree with the `sgp4` crate.
+    /// The native parser and unit conversions must agree with the `sgp4` crate, up to its
+    /// floating-point noise: `Tle` converts the epoch exactly and rounds decimals correctly.
     #[test]
     fn test_tle_matches_sgp4_crate() {
         let data = lox_test_utils::read_data_file("oneweb_tle.txt");
@@ -495,11 +500,23 @@ mod tests {
             );
             assert_eq!(actual.norad_id, expected.norad_id);
             assert_eq!(actual.classification, expected.classification);
-            assert_eq!(actual.datetime, expected.datetime);
-            assert_eq!(actual.mean_motion_dot, expected.mean_motion_dot);
-            assert_eq!(actual.mean_motion_ddot, expected.mean_motion_ddot);
-            assert_eq!(actual.drag_term, expected.drag_term);
-            assert_eq!(actual.eccentricity, expected.eccentricity);
+            let epoch_error = (actual.datetime - expected.datetime)
+                .num_nanoseconds()
+                .unwrap()
+                .abs();
+            assert!(epoch_error <= 2, "epoch differs by {epoch_error} ns");
+            assert_approx_eq!(
+                actual.mean_motion_dot,
+                expected.mean_motion_dot,
+                rtol <= 1e-14
+            );
+            assert_approx_eq!(
+                actual.mean_motion_ddot,
+                expected.mean_motion_ddot,
+                rtol <= 1e-14
+            );
+            assert_approx_eq!(actual.drag_term, expected.drag_term, rtol <= 1e-14);
+            assert_approx_eq!(actual.eccentricity, expected.eccentricity, rtol <= 1e-14);
             assert_eq!(actual.element_set_number, expected.element_set_number);
             assert_eq!(actual.revolution_number, expected.revolution_number);
             assert_eq!(actual.ephemeris_type, expected.ephemeris_type);
