@@ -6,6 +6,8 @@
 // Re-export lox_time submodule contents at this level to avoid stutter
 // (e.g. `lox_space::time::Time` instead of `lox_space::time::time::Time`).
 pub use lox_time::calendar_dates;
+#[cfg(feature = "hifitime")]
+pub use lox_time::hifitime;
 pub use lox_time::intervals;
 #[cfg(feature = "jiff")]
 pub use lox_time::jiff;
