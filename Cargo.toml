@@ -41,6 +41,7 @@ differential-equations = "0.7.0"
 divan = { package = "codspeed-divan-compat", version = "4.3.0" }
 geo = "0.33"
 geojson = "1.0"
+hifitime = { version = "4.3.2", default-features = false }
 glam = { version = "0.34.1", default-features = false, features = ["f64"] }
 itertools = "0.15.0"
 jiff = { version = "1.0.1", default-features = false }

@@ -19,6 +19,7 @@ readme = "README.md"
 lox-approx = { workspace = true, default-features = false, features = ["derive", "glam"] }
 
 glam.workspace = true
+hifitime = { workspace = true, optional = true }
 jiff = { workspace = true, optional = true }
 libm = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
@@ -30,6 +31,7 @@ default = ["std"]
 std = [
     "glam/std",
     "lox-approx/std",
+    "hifitime?/std",
     "jiff?/std",
     "serde?/std",
     "time?/std",
@@ -38,6 +40,7 @@ libm = [
     "dep:libm",
     "glam/libm",
 ]
+hifitime = ["dep:hifitime"]
 jiff = ["dep:jiff"]
 serde = ["dep:serde", "glam/serde"]
 time-rs = ["dep:time"]
