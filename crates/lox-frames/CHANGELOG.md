@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.24](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.23...lox-frames-v0.1.0-alpha.24) - 2026-11-25
+
+### Other
+
+- updated the following local packages: lox-core, lox-time, lox-bodies
+
 ## [0.1.0-alpha.23](https://github.com/lox-space/lox/compare/lox-frames-v0.1.0-alpha.22...lox-frames-v0.1.0-alpha.23) - 2026-11-24
 
 ### Fixed
