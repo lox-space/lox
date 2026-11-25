@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.53](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.52...lox-space-v0.1.0-alpha.53) - 2026-11-25
+
+### Added
+
+- *(lox-space)* add hifitime feature
+
 ## [0.1.0-alpha.52](https://github.com/lox-space/lox/compare/lox-space-v0.1.0-alpha.51...lox-space-v0.1.0-alpha.52) - 2026-11-24
 
 ### Added

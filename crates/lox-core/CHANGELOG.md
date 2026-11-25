@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.18](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.17...lox-core-v0.1.0-alpha.18) - 2026-11-25
+
+### Added
+
+- *(lox-core)* convert between TimeDelta and hifitime durations
+
 ## [0.1.0-alpha.17](https://github.com/lox-space/lox/compare/lox-core-v0.1.0-alpha.16...lox-core-v0.1.0-alpha.17) - 2026-11-24
 
 ### Added

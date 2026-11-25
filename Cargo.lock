@@ -1018,7 +1018,7 @@ checksum = "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
 
 [[package]]
 name = "lox-analysis"
-version = "0.1.0-alpha.17"
+version = "0.1.0-alpha.18"
 dependencies = [
  "codspeed-divan-compat",
  "csv",
@@ -1050,7 +1050,7 @@ dependencies = [
 
 [[package]]
 name = "lox-bodies"
-version = "0.1.0-alpha.29"
+version = "0.1.0-alpha.30"
 dependencies = [
  "lox-approx",
  "lox-core",
@@ -1061,7 +1061,7 @@ dependencies = [
 
 [[package]]
 name = "lox-comms"
-version = "0.1.0-alpha.18"
+version = "0.1.0-alpha.19"
 dependencies = [
  "lox-approx",
  "lox-core",
@@ -1073,7 +1073,7 @@ dependencies = [
 
 [[package]]
 name = "lox-core"
-version = "0.1.0-alpha.17"
+version = "0.1.0-alpha.18"
 dependencies = [
  "glam 0.34.3",
  "hifitime",
@@ -1100,7 +1100,7 @@ dependencies = [
 
 [[package]]
 name = "lox-earth"
-version = "0.1.0-alpha.32"
+version = "0.1.0-alpha.33"
 dependencies = [
  "csv",
  "lox-approx",
@@ -1116,7 +1116,7 @@ dependencies = [
 
 [[package]]
 name = "lox-ephem"
-version = "0.1.0-alpha.27"
+version = "0.1.0-alpha.28"
 dependencies = [
  "arrayvec",
  "itertools 0.15.0",
@@ -1130,7 +1130,7 @@ dependencies = [
 
 [[package]]
 name = "lox-frames"
-version = "0.1.0-alpha.23"
+version = "0.1.0-alpha.24"
 dependencies = [
  "lox-approx",
  "lox-bodies",
@@ -1144,7 +1144,7 @@ dependencies = [
 
 [[package]]
 name = "lox-io"
-version = "0.1.0-alpha.27"
+version = "0.1.0-alpha.28"
 dependencies = [
  "lox-core",
  "lox-test-utils",
@@ -1156,7 +1156,7 @@ dependencies = [
 
 [[package]]
 name = "lox-itur"
-version = "0.1.0-alpha.8"
+version = "0.1.0-alpha.9"
 dependencies = [
  "codspeed-divan-compat",
  "libm",
@@ -1174,7 +1174,7 @@ dependencies = [
 
 [[package]]
 name = "lox-odm"
-version = "0.1.0-alpha.6"
+version = "0.1.0-alpha.7"
 dependencies = [
  "codspeed-divan-compat",
  "lox-approx",
@@ -1192,7 +1192,7 @@ dependencies = [
 
 [[package]]
 name = "lox-orbits"
-version = "0.1.0-alpha.42"
+version = "0.1.0-alpha.43"
 dependencies = [
  "csv",
  "differential-equations",
@@ -1214,7 +1214,7 @@ dependencies = [
 
 [[package]]
 name = "lox-space"
-version = "0.1.0-alpha.52"
+version = "0.1.0-alpha.53"
 dependencies = [
  "codspeed-divan-compat",
  "geo",
@@ -1248,7 +1248,7 @@ version = "0.1.0-alpha.11"
 
 [[package]]
 name = "lox-time"
-version = "0.1.0-alpha.29"
+version = "0.1.0-alpha.30"
 dependencies = [
  "hifitime",
  "jiff",
